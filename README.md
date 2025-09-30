@@ -30,6 +30,7 @@ Eso es exactamente lo que hace este sistema.
 - **Fuentes Premium**: Nature, Science, Cell, NEJM, MIT News, Stanford News, NASA, y más
 - **Múltiples Formatos**: RSS, Atom, feeds institucionales
 - **Respeto por Servidores**: Rate limiting inteligente, manejo de errores robusto
+  - Feeds comunitarios (ej. r/science) se consultan como máximo una vez por minuto para respetar el rate limit de Reddit (intervalos >=30s y user-agent dedicado)
 - **Deduplicación**: Detección automática de contenido duplicado
 
 ### 🧠 Scoring Multidimensional
@@ -170,6 +171,9 @@ python run_collector.py --check-deps
 ### 📑 Repositorios de Preprints
 - **arXiv** - Preprints de IA y Machine Learning
 - **bioRxiv** - Preprints de biología y ciencias de la vida
+
+### 🌐 Fuentes Comunitarias
+- **r/science** - Subreddit moderado de divulgación científica (consulta limitada para respetar a Reddit)
 
 ---
 
