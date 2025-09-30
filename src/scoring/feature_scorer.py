@@ -54,6 +54,48 @@ class FeatureBasedScorer:
         self.diversity_max_penalty = diversity_cfg.get("max_penalty", 0.3)
         self.minimum_score = self.config.get("minimum_score", 0.3)
 
+        content_quality_cfg = self.config.get("content_quality_heuristics", {})
+        self.content_title_length_divisor = float(
+            content_quality_cfg.get("title_length_divisor", 120.0)
+        )
+        self.content_summary_length_divisor = float(
+            content_quality_cfg.get("summary_length_divisor", 400.0)
+        )
+        self.content_entity_target_count = float(
+            content_quality_cfg.get("entity_target_count", 5.0)
+        )
+        weights = content_quality_cfg.get("weights", {})
+        self.content_weights = {
+            "title": float(weights.get("title", 0.4)),
+            "summary": float(weights.get("summary", 0.4)),
+            "entity": float(weights.get("entity", 0.2)),
+        }
+
+        engagement_cfg = self.config.get("engagement_heuristics", {})
+        sentiment_cfg = engagement_cfg.get("sentiment_scores", {})
+        self.sentiment_scores = {
+            "positive": float(sentiment_cfg.get("positive", 0.7)),
+            "negative": float(sentiment_cfg.get("negative", 0.6)),
+            "neutral": float(sentiment_cfg.get("neutral", 0.5)),
+        }
+        # Allow additional custom sentiment labels
+        for label, value in sentiment_cfg.items():
+            self.sentiment_scores[str(label).lower()] = float(value)
+
+        self.fallback_sentiment = float(
+            engagement_cfg.get("fallback_sentiment", 0.5)
+        )
+        self.word_count_divisor = float(
+            engagement_cfg.get("word_count_divisor", 800.0)
+        )
+        self.engagement_weights = {
+            "external": float(engagement_cfg.get("external_weight", 0.6)),
+            "length": float(engagement_cfg.get("length_weight", 0.4)),
+        }
+
+        self._validate_content_quality_config()
+        self._validate_engagement_config()
+
     def score_article(
         self, article: Any, source_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -182,31 +224,40 @@ class FeatureBasedScorer:
                 title, summary
             )
 
-        title_score = min(len(normalized_title) / 120.0, 1.0)
-        summary_score = min(len(normalized_summary) / 400.0, 1.0)
+        title_score = min(
+            len(normalized_title) / self.content_title_length_divisor, 1.0
+        )
+        summary_score = min(
+            len(normalized_summary) / self.content_summary_length_divisor, 1.0
+        )
 
         richness = 0.0
         entities = metadata.get("enrichment", {}).get("entities") if metadata else None
         if entities:
-            richness = min(len(entities) / 5.0, 1.0)
+            richness = min(len(entities) / self.content_entity_target_count, 1.0)
 
-        quality = 0.4 * title_score + 0.4 * summary_score + 0.2 * richness
+        quality = (
+            self.content_weights["title"] * title_score
+            + self.content_weights["summary"] * summary_score
+            + self.content_weights["entity"] * richness
+        )
         return max(0.0, min(1.0, quality))
 
     def _engagement_score(self, article: Any) -> float:
         metadata = _get_attr(article, "article_metadata", {}) or {}
         enrichment = metadata.get("enrichment", {}) if metadata else {}
         sentiment = enrichment.get("sentiment")
-        sentiment_score = 0.5
-        if sentiment == "positive":
-            sentiment_score = 0.7
-        elif sentiment == "negative":
-            sentiment_score = 0.6
-        elif sentiment == "neutral":
-            sentiment_score = 0.5
+        sentiment_score = self.fallback_sentiment
+        if isinstance(sentiment, str):
+            sentiment_score = self.sentiment_scores.get(
+                sentiment.lower(), self.fallback_sentiment
+            )
+        elif isinstance(sentiment, dict):
+            label = str(sentiment.get("label", "")).lower()
+            sentiment_score = self.sentiment_scores.get(label, self.fallback_sentiment)
 
         word_count = _get_attr(article, "word_count", 400) or 400
-        length_score = min(word_count / 800.0, 1.0)
+        length_score = min(word_count / self.word_count_divisor, 1.0)
 
         engagement_features = (
             metadata.get("engagement_features", {}) if metadata else {}
@@ -217,7 +268,11 @@ class FeatureBasedScorer:
         else:
             external = sentiment_score
 
-        return max(0.0, min(1.0, 0.6 * external + 0.4 * length_score))
+        combined = (
+            self.engagement_weights["external"] * external
+            + self.engagement_weights["length"] * length_score
+        )
+        return max(0.0, min(1.0, combined))
 
     def _diversity_penalty(self, article: Any) -> tuple[float, str]:
         duplication_confidence = (
@@ -232,6 +287,49 @@ class FeatureBasedScorer:
             else "no penalty"
         )
         return penalty, reason
+
+    # Configuration validators ---------------------------------------------
+
+    def _validate_content_quality_config(self) -> None:
+        if self.content_title_length_divisor <= 0:
+            raise ValueError("content_quality_heuristics.title_length_divisor must be > 0")
+        if self.content_summary_length_divisor <= 0:
+            raise ValueError("content_quality_heuristics.summary_length_divisor must be > 0")
+        if self.content_entity_target_count <= 0:
+            raise ValueError("content_quality_heuristics.entity_target_count must be > 0")
+
+        weight_sum = sum(self.content_weights.values())
+        if weight_sum <= 0.0:
+            raise ValueError("content_quality_heuristics.weights must sum to a positive value")
+        for key, value in self.content_weights.items():
+            if value < 0.0 or value > 1.0:
+                raise ValueError(
+                    f"content_quality_heuristics.weights.{key} must be between 0 and 1"
+                )
+        if abs(weight_sum - 1.0) > 1e-3:
+            raise ValueError("content_quality_heuristics.weights must sum to 1.0")
+
+    def _validate_engagement_config(self) -> None:
+        for label, value in self.sentiment_scores.items():
+            if value < 0.0 or value > 1.0:
+                raise ValueError(
+                    f"engagement_heuristics.sentiment_scores.{label} must be between 0 and 1"
+                )
+        if self.fallback_sentiment < 0.0 or self.fallback_sentiment > 1.0:
+            raise ValueError("engagement_heuristics.fallback_sentiment must be between 0 and 1")
+        if self.word_count_divisor <= 0:
+            raise ValueError("engagement_heuristics.word_count_divisor must be > 0")
+
+        weight_sum = sum(self.engagement_weights.values())
+        if weight_sum <= 0.0:
+            raise ValueError("engagement_heuristics weights must sum to a positive value")
+        if abs(weight_sum - 1.0) > 1e-3:
+            raise ValueError("engagement_heuristics weights must sum to 1.0")
+        for key, value in self.engagement_weights.items():
+            if value < 0.0 or value > 1.0:
+                raise ValueError(
+                    f"engagement_heuristics.{key}_weight must be between 0 and 1"
+                )
 
 
 __all__ = ["FeatureBasedScorer"]
