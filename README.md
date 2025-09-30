@@ -95,8 +95,13 @@ source .venv/bin/activate
 ### 3. Instalar Dependencias
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install --require-hashes -r requirements.lock
 ```
+
+> 💡 ¿Actualizaste `requirements.txt`? Regenera el lock ejecutando:
+> ```bash
+> python -m piptools compile --generate-hashes --output-file requirements.lock requirements.txt
+> ```
 
 ### 4. Configurar Entorno
 ```bash
@@ -378,7 +383,7 @@ news_collector/
 python run_collector.py --check-deps
 
 # Reinstalar dependencias
-pip install -r requirements.txt --upgrade
+python -m pip install --require-hashes -r requirements.lock
 ```
 
 #### Problemas de Red
