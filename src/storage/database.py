@@ -114,7 +114,10 @@ class DatabaseManager:
 
             # Crear sesión factory
             self.SessionLocal = sessionmaker(
-                autocommit=False, autoflush=False, bind=self.engine
+                autocommit=False,
+                autoflush=False,
+                bind=self.engine,
+                expire_on_commit=False,
             )
 
             # Crear todas las tablas
@@ -591,12 +594,14 @@ class DatabaseManager:
         sido catalogados apropiadamente.
         """
         with self.get_session() as session:
-            return (
+            pending_articles = (
                 session.query(Article)
                 .filter(Article.processing_status == "pending")
                 .order_by(Article.collected_date)
                 .all()
             )
+            session.expunge_all()
+            return pending_articles
 
     def update_article_score(self, article_id: int, score_data: Dict[str, Any]) -> bool:
         """
