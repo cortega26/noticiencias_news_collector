@@ -61,6 +61,9 @@ class DatabaseManager:
         self.simhash_candidate_window = DEDUP_CONFIG.get(
             "simhash_candidate_window", 500
         )
+        self.recent_candidate_hours = DEDUP_CONFIG.get(
+            "recent_candidate_hours", 168
+        )
         self._setup_database()
 
     def _setup_database(self):
@@ -277,6 +280,7 @@ class DatabaseManager:
 
         candidates: List[Article] = []
         remaining = self.simhash_candidate_window
+        cutoff = self._dedupe_cutoff(published_date)
 
         for pref in sorted(
             dict.fromkeys(candidate_prefixes), key=lambda p: abs(p - prefix)
@@ -298,6 +302,8 @@ class DatabaseManager:
                 .order_by(Article.collected_date.desc())
                 .limit(remaining)
             )
+            if cutoff is not None:
+                query = query.filter(Article.collected_date >= cutoff)
             pref_candidates = query.all()
             candidates.extend(pref_candidates)
             remaining = self.simhash_candidate_window - len(candidates)
@@ -305,7 +311,7 @@ class DatabaseManager:
                 break
 
         if not candidates:
-            candidates = (
+            fallback_query = (
                 session.query(Article)
                 .options(
                     load_only(
@@ -320,8 +326,12 @@ class DatabaseManager:
                 .filter(Article.simhash.isnot(None))
                 .order_by(Article.collected_date.desc())
                 .limit(self.simhash_candidate_window)
-                .all()
             )
+            if cutoff is not None:
+                fallback_query = fallback_query.filter(
+                    Article.collected_date >= cutoff
+                )
+            candidates = fallback_query.all()
 
         if not candidates:
             return generate_cluster_id(), 0.0
@@ -380,6 +390,17 @@ class DatabaseManager:
             return float("inf")
         return abs((a - b).total_seconds())
 
+    def _dedupe_cutoff(self, reference: Optional[datetime]) -> Optional[datetime]:
+        """Return the earliest collected_date to consider for dedupe lookups."""
+
+        if not self.recent_candidate_hours or self.recent_candidate_hours <= 0:
+            return None
+
+        base = reference or datetime.now(timezone.utc)
+        if base.tzinfo is None:
+            base = base.replace(tzinfo=timezone.utc)
+        return base - timedelta(hours=self.recent_candidate_hours)
+
     def _revalidate_cluster(self, session: Session, cluster_id: Optional[str]) -> None:
         if not cluster_id:
             return
@@ -387,6 +408,7 @@ class DatabaseManager:
             session.query(Article)
             .options(load_only(Article.id, Article.simhash, Article.cluster_id))
             .filter(Article.cluster_id == cluster_id)
+            .order_by(Article.collected_date.desc())
             .all()
         )
         if len(articles) <= 1:

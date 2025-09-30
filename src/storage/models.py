@@ -26,6 +26,7 @@ from sqlalchemy import (
     Index,
     BigInteger,
     text,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -54,7 +55,7 @@ class Article(Base):
     url = Column(String(500), unique=True, nullable=False, index=True)
 
     # Hash del contenido para detectar duplicados con URLs diferentes
-    content_hash = Column(String(64), index=True)
+    content_hash = Column(String(64))
 
     # SimHash para detección de near-duplicates
     simhash = Column(BigInteger, index=True)
@@ -140,29 +141,42 @@ class Article(Base):
     # Índices compuestos para optimizar consultas comunes
     # ==================================================
     __table_args__ = (
+        UniqueConstraint("content_hash", name="uq_articles_content_hash"),
         Index(
-            "idx_articles_completed_category_score_date",
-            "category",
-            "processing_status",
-            "final_score",
-            "collected_date",
+            "idx_articles_completed_category_score_recent",
+            category,
+            final_score,
+            collected_date,
+            sqlite_where=text("processing_status = 'completed'"),
         ),
         Index(
             "idx_articles_status_date_source",
-            "processing_status",
-            "collected_date",
-            "source_id",
+            processing_status,
+            collected_date,
+            source_id,
         ),
-        Index("idx_articles_cluster_recency", "cluster_id", "collected_date"),
         Index(
-            "idx_articles_simhash_prefix_collected",
-            "simhash_prefix",
-            "collected_date",
-            sqlite_where=text("simhash_prefix IS NOT NULL"),
+            "idx_articles_cluster_recent_notnull",
+            cluster_id,
+            collected_date,
+            sqlite_where=text("cluster_id IS NOT NULL"),
+        ),
+        Index(
+            "idx_articles_simhash_prefix_recent",
+            simhash_prefix,
+            collected_date,
+            sqlite_where=text(
+                "simhash_prefix IS NOT NULL AND simhash IS NOT NULL"
+            ),
+        ),
+        Index(
+            "idx_articles_recent_dedupe_pool",
+            collected_date,
+            sqlite_where=text("simhash IS NOT NULL"),
         ),
         Index(
             "idx_articles_cleanup_low_score",
-            "collected_date",
+            collected_date,
             sqlite_where=text("final_score < 0.3"),
         ),
     )

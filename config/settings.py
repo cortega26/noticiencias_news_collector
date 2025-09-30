@@ -169,6 +169,7 @@ ROBOTS_CONFIG = {
 DEDUP_CONFIG = {
     "simhash_threshold": int(os.getenv("SIMHASH_THRESHOLD", 10)),
     "simhash_candidate_window": int(os.getenv("SIMHASH_CANDIDATE_WINDOW", 500)),
+    "recent_candidate_hours": int(os.getenv("DEDUP_RECENT_CANDIDATE_HOURS", 168)),
 }
 
 
