@@ -78,7 +78,7 @@ ELITE_JOURNALS = {
 SCIENCE_MEDIA = {
     "scientific_american": {
         "name": "Scientific American",
-        "url": "https://rss.sciam.com/ScientificAmerican-Global",
+        "url": "https://www.scientificamerican.com/platform/syndication/rss/",
         "credibility_score": 0.85,
         "update_frequency": "daily",
         "category": "popular_science",
