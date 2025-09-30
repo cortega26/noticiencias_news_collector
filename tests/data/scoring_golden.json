@@ -1,0 +1,255 @@
+{
+  "frozen_at": "2025-01-15T12:00:00Z",
+  "articles": [
+    {
+      "id": "astro-lab-breakthrough",
+      "article": {
+        "id": "astro-lab-breakthrough",
+        "title": "New Chilean astro lab reveals cosmic ray patterns",
+        "summary": "Researchers in Santiago publish detailed measurements of cosmic rays with AI assistance.",
+        "published_date": "2025-01-15T09:45:00+00:00",
+        "word_count": 920,
+        "duplication_confidence": 0.05,
+        "article_metadata": {
+          "source_metadata": {
+            "credibility_score": 0.92
+          },
+          "normalized_title": "new chilean astro lab reveals cosmic ray patterns",
+          "normalized_summary": "researchers in santiago publish detailed measurements of cosmic rays with ai assistance",
+          "enrichment": {
+            "entities": [
+              {
+                "text": "Santiago",
+                "type": "LOC"
+              },
+              {
+                "text": "cosmic rays",
+                "type": "SCI"
+              },
+              {
+                "text": "AI",
+                "type": "TECH"
+              },
+              {
+                "text": "Chile",
+                "type": "LOC"
+              }
+            ],
+            "sentiment": "positive"
+          },
+          "engagement_features": {
+            "score": 0.82
+          }
+        }
+      },
+      "expected": {
+        "final_score": 0.7787343441345013,
+        "should_include": true,
+        "components": {
+          "source_credibility": 0.92,
+          "recency": 0.9170040432046712,
+          "content_quality": 0.4103333333333334,
+          "engagement": 0.8919999999999999,
+          "engagement_potential": null
+        },
+        "penalties": {
+          "diversity_penalty": 0.0075
+        },
+        "rank": 1
+      }
+    },
+    {
+      "id": "community-lab-upgrade",
+      "article": {
+        "id": "community-lab-upgrade",
+        "title": "Community lab upgrades shared microscopes",
+        "summary": "Volunteer technicians refurbish optics for public bio labs across Chile.",
+        "word_count": 520,
+        "duplication_confidence": 0.1,
+        "published_date": null,
+        "article_metadata": {
+          "credibility_score": 0.58,
+          "normalized_title": "community lab upgrades shared microscopes",
+          "normalized_summary": "volunteer technicians refurbish optics for public bio labs across chile",
+          "enrichment": {
+            "entities": [
+              {
+                "text": "Chile",
+                "type": "LOC"
+              },
+              {
+                "text": "bio labs",
+                "type": "ORG"
+              },
+              {
+                "text": "microscopes",
+                "type": "SCI"
+              }
+            ],
+            "sentiment": "positive"
+          }
+        }
+      },
+      "expected": {
+        "final_score": 0.5019166666666667,
+        "should_include": true,
+        "components": {
+          "source_credibility": 0.58,
+          "recency": 0.5,
+          "content_quality": 0.32766666666666666,
+          "engagement": 0.6799999999999999,
+          "engagement_potential": null
+        },
+        "penalties": {
+          "diversity_penalty": 0.015
+        },
+        "rank": 2
+      }
+    },
+    {
+      "id": "legacy-observatory-archive",
+      "article": {
+        "id": "legacy-observatory-archive",
+        "title": "Legacy observatory releases 20-year archive",
+        "summary": "Digitized sky survey unlocks star catalogs for citizen scientists.",
+        "published_date": "2024-12-20T11:00:00+00:00",
+        "word_count": 480,
+        "duplication_confidence": 0.0,
+        "article_metadata": {
+          "source_metadata": {
+            "credibility_score": 0.88
+          },
+          "normalized_title": "legacy observatory releases 20 year archive",
+          "normalized_summary": "digitized sky survey unlocks star catalogs for citizen scientists",
+          "enrichment": {
+            "entities": [
+              {
+                "text": "observatory",
+                "type": "ORG"
+              },
+              {
+                "text": "sky survey",
+                "type": "SCI"
+              }
+            ],
+            "sentiment": "positive"
+          }
+        }
+      },
+      "expected": {
+        "final_score": 0.4680833333333333,
+        "should_include": true,
+        "components": {
+          "source_credibility": 0.88,
+          "recency": 0.0,
+          "content_quality": 0.28833333333333333,
+          "engagement": 0.6599999999999999,
+          "engagement_potential": null
+        },
+        "penalties": {
+          "diversity_penalty": 0.0
+        },
+        "rank": 3
+      }
+    },
+    {
+      "id": "andes-climate-model",
+      "article": {
+        "id": "andes-climate-model",
+        "title": "Open-source climate model captures Andes microclimates",
+        "summary": "University consortium validates new climate simulations comparing Andean glaciers and rainfall.",
+        "published_date": "2025-01-13T07:30:00+00:00",
+        "word_count": 640,
+        "duplication_confidence": 0.2,
+        "article_metadata": {
+          "source_metadata": {
+            "credibility_score": 0.74
+          },
+          "normalized_title": "open source climate model captures andes microclimates",
+          "normalized_summary": "university consortium validates new climate simulations comparing andean glaciers and rainfall",
+          "enrichment": {
+            "entities": [
+              {
+                "text": "Andes",
+                "type": "LOC"
+              },
+              {
+                "text": "glaciers",
+                "type": "SCI"
+              },
+              {
+                "text": "rainfall",
+                "type": "SCI"
+              }
+            ],
+            "sentiment": "neutral"
+          }
+        }
+      },
+      "expected": {
+        "final_score": 0.44760822169872805,
+        "should_include": true,
+        "components": {
+          "source_credibility": 0.74,
+          "recency": 0.13243288679491189,
+          "content_quality": 0.394,
+          "engagement": 0.6200000000000001,
+          "engagement_potential": null
+        },
+        "penalties": {
+          "diversity_penalty": 0.03
+        },
+        "rank": 4
+      }
+    },
+    {
+      "id": "duplicate-research-note",
+      "article": {
+        "id": "duplicate-research-note",
+        "title": "Research note mirrors previous AI ethics finding",
+        "summary": "Short communication reiterates community guidelines on AI transparency.",
+        "published_date": "2025-01-12T20:00:00+00:00",
+        "word_count": 350,
+        "duplication_confidence": 0.85,
+        "article_metadata": {
+          "source_metadata": {
+            "credibility_score": 0.66
+          },
+          "normalized_title": "research note mirrors previous ai ethics finding",
+          "normalized_summary": "short communication reiterates community guidelines on ai transparency",
+          "enrichment": {
+            "entities": [
+              {
+                "text": "AI",
+                "type": "TECH"
+              },
+              {
+                "text": "ethics",
+                "type": "THEME"
+              }
+            ],
+            "sentiment": "neutral"
+          },
+          "engagement_features": {
+            "score": 0.45
+          }
+        }
+      },
+      "expected": {
+        "final_score": 0.25826234375272467,
+        "should_include": false,
+        "components": {
+          "source_credibility": 0.66,
+          "recency": 0.08504937501089856,
+          "content_quality": 0.31000000000000005,
+          "engagement": 0.44500000000000006,
+          "engagement_potential": null
+        },
+        "penalties": {
+          "diversity_penalty": 0.1275
+        },
+        "rank": 5
+      }
+    }
+  ]
+}
