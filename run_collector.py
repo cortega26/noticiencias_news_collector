@@ -335,7 +335,34 @@ Ejemplos de uso:
         "--check-deps", action="store_true", help="Verificar dependencias y salir"
     )
 
+    parser.add_argument(
+        "--healthcheck",
+        action="store_true",
+        help="Ejecutar healthcheck operativo (DB, cola, ingest) y salir",
+    )
+    parser.add_argument(
+        "--healthcheck-max-pending",
+        type=int,
+        default=None,
+        help="Umbral máximo de artículos pendientes para el healthcheck",
+    )
+    parser.add_argument(
+        "--healthcheck-max-ingest-minutes",
+        type=int,
+        default=None,
+        help="Umbral máximo de minutos de lag en la última ingesta",
+    )
+
     args = parser.parse_args()
+
+    if args.healthcheck:
+        from scripts.healthcheck import run_cli as run_healthcheck
+
+        success = run_healthcheck(
+            max_pending=args.healthcheck_max_pending,
+            max_ingest_lag_minutes=args.healthcheck_max_ingest_minutes,
+        )
+        sys.exit(0 if success else 1)
 
     # Verificar dependencias si se solicita
     if args.check_deps:
