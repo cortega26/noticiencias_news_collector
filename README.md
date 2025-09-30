@@ -160,6 +160,13 @@ python run_collector.py --list-sources
 python run_collector.py --check-deps
 ```
 
+### Healthcheck Operativo
+```bash
+python run_collector.py --healthcheck
+```
+- Verifica conectividad con la base de datos, backlog en la cola de artículos pendientes y la frescura de la última ingesta.
+- Consulta el runbook completo en [`docs/runbook.md`](docs/runbook.md) para flujos de diagnóstico y resolución cuando el healthcheck falle.
+
 ---
 
 ## 📚 Fuentes Configuradas
