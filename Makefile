@@ -15,6 +15,11 @@ RUFF := $(VENV)/$(BIN_DIR)/ruff
 MYPY := $(VENV)/$(BIN_DIR)/mypy
 PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
+SECURITY_DIR := reports/security
+PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
+BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
+TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
+SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 
 .DEFAULT_GOAL := help
@@ -24,7 +29,8 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PYTHON) -m venv $(VENV)
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --require-hashes -r requirements.lock
-	@$(PIP) install ruff mypy pip-audit bandit
+	@$(PIP) install --require-hashes -r requirements-security.lock
+	@$(PIP) install ruff mypy
 	@touch $(BOOTSTRAP_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
@@ -49,8 +55,16 @@ perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@$(PYTEST) -m "perf" || { echo "Performance tests not defined; skipped."; true; }
 
 security: bootstrap ## Run security and dependency scans
-	@$(PIP_AUDIT) -r requirements.txt || { echo "pip-audit detected vulnerabilities (see above)."; true; }
-	@$(BANDIT) -q -r src || { echo "Bandit detected issues (see above)."; true; }
+	@mkdir -p $(SECURITY_DIR)
+	@echo "[security] Running pip-audit"
+	@$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[security] Running bandit"
+	@$(BANDIT) -q -r src scripts -c .bandit -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
+	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[security] Running trufflehog3"
+	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
+	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) .pytest_cache .mypy_cache
