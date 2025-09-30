@@ -194,6 +194,7 @@ PREPRINT_SOURCES = {
         "description": "Preprints de inteligencia artificial y machine learning",
         "typical_delay": 0,
         "special_handling": "preprint",  # Marca especial para procesamiento
+        "min_delay_seconds": 20,
     },
     "biorxiv": {
         "name": "bioRxiv",
@@ -226,6 +227,7 @@ COMMUNITY_FEEDS = {
         "description": "Subreddit de divulgación científica con moderación especializada",
         "typical_delay": 0,
         "rate_limit_notes": "Usar user-agent dedicado y no superar 60 requests por minuto",
+        "min_delay_seconds": 30,
     }
 }
 
