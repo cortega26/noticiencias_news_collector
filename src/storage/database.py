@@ -206,6 +206,22 @@ class DatabaseManager:
                 )
             )
 
+        if "feed_etag" not in existing_columns:
+            migrations.append(
+                (
+                    "ALTER TABLE sources ADD COLUMN feed_etag TEXT",
+                    "feed_etag",
+                )
+            )
+
+        if "feed_last_modified" not in existing_columns:
+            migrations.append(
+                (
+                    "ALTER TABLE sources ADD COLUMN feed_last_modified TEXT",
+                    "feed_last_modified",
+                )
+            )
+
         if not migrations:
             return
 
@@ -678,6 +694,12 @@ class DatabaseManager:
                     existing_source.update_frequency = source_config.get(
                         "update_frequency"
                     )
+                    if source_config.get("etag"):
+                        existing_source.feed_etag = source_config["etag"]
+                    if source_config.get("last_modified"):
+                        existing_source.feed_last_modified = source_config[
+                            "last_modified"
+                        ]
                 else:
                     # Crear nueva fuente
                     new_source = Source(
@@ -688,10 +710,45 @@ class DatabaseManager:
                         category=source_config["category"],
                         update_frequency=source_config.get("update_frequency"),
                         is_active=True,
+                        feed_etag=source_config.get("etag"),
+                        feed_last_modified=source_config.get("last_modified"),
                     )
                     session.add(new_source)
 
             logger.info(f"✅ {len(sources_config)} fuentes inicializadas/actualizadas")
+
+    def get_source_feed_metadata(self, source_id: str) -> Dict[str, Optional[str]]:
+        """Devuelve los encabezados HTTP cacheados para una fuente."""
+
+        with self.get_session() as session:
+            source = session.query(Source).filter_by(id=source_id).first()
+            if not source:
+                return {"etag": None, "last_modified": None}
+            return {
+                "etag": source.feed_etag,
+                "last_modified": source.feed_last_modified,
+            }
+
+    def update_source_feed_metadata(
+        self,
+        source_id: str,
+        *,
+        etag: Optional[str] = None,
+        last_modified: Optional[str] = None,
+    ) -> None:
+        """Actualiza los encabezados HTTP cacheados después de un fetch."""
+
+        if etag is None and last_modified is None:
+            return
+
+        with self.get_session() as session:
+            source = session.query(Source).filter_by(id=source_id).first()
+            if not source:
+                return
+            if etag is not None:
+                source.feed_etag = etag
+            if last_modified is not None:
+                source.feed_last_modified = last_modified
 
     def update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
         """

@@ -2,6 +2,8 @@
 # Catálogo de fuentes RSS para News Collector
 # ===========================================
 
+from typing import Any, Dict
+
 """
 Este archivo define todas las fuentes de información que nuestro sistema
 monitoreará. Piensa en esto como crear una biblioteca curada de las mejores
@@ -231,13 +233,26 @@ COMMUNITY_FEEDS = {
 # ==================================
 # Aquí combinamos todas las categorías en una estructura unificada
 
-ALL_SOURCES = {
-    **ELITE_JOURNALS,
-    **SCIENCE_MEDIA,
-    **INSTITUTIONAL_SOURCES,
-    **PREPRINT_SOURCES,
-    **COMMUNITY_FEEDS,
-}
+def _with_feed_cache_fields(
+    sources: Dict[str, Dict[str, Any]]
+) -> Dict[str, Dict[str, Any]]:
+    """Ensure every source has optional feed cache metadata keys."""
+
+    for source in sources.values():
+        source.setdefault("etag", None)
+        source.setdefault("last_modified", None)
+    return sources
+
+
+ALL_SOURCES = _with_feed_cache_fields(
+    {
+        **ELITE_JOURNALS,
+        **SCIENCE_MEDIA,
+        **INSTITUTIONAL_SOURCES,
+        **PREPRINT_SOURCES,
+        **COMMUNITY_FEEDS,
+    }
+)
 
 # Configuraciones específicas por categoría
 # =========================================

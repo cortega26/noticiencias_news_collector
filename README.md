@@ -31,6 +31,7 @@ Eso es exactamente lo que hace este sistema.
 - **Múltiples Formatos**: RSS, Atom, feeds institucionales
 - **Respeto por Servidores**: Rate limiting inteligente, manejo de errores robusto
   - Feeds comunitarios (ej. r/science) se consultan como máximo una vez por minuto para respetar el rate limit de Reddit (intervalos >=30s y user-agent dedicado)
+- **Caching Condicional**: Persistimos `ETag` y `Last-Modified` por fuente para enviar `If-None-Match`/`If-Modified-Since`, reduciendo ancho de banda y evitando descargas innecesarias cuando no hay contenido nuevo.
 - **Deduplicación**: Detección automática de contenido duplicado
 
 ### 🧠 Scoring Multidimensional
