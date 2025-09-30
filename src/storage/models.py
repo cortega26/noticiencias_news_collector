@@ -309,6 +309,15 @@ class Source(Base):
     consecutive_failures = Column(Integer, default=0)
     error_message = Column(Text)  # Último error encontrado
 
+    # Supresión automática y monitoreo avanzado
+    # =========================================
+    suppressed_until = Column(DateTime(timezone=True))
+    suppression_reason = Column(Text)
+    auto_suppressed = Column(Boolean, default=False)
+    dq_consecutive_anomalies = Column(Integer, default=0)
+    last_canary_check = Column(DateTime(timezone=True))
+    last_canary_status = Column(String(20))
+
     # Configuración específica por fuente
     # ===================================
     custom_config = Column(JSON)  # Configuraciones especiales para esta fuente
