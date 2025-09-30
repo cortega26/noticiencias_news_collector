@@ -1,3 +1,4 @@
+import random
 import sys
 import time
 from pathlib import Path
@@ -5,6 +6,9 @@ from types import MethodType
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import pytest
+
+from config.settings import RATE_LIMITING_CONFIG
 from src.collectors.rss_collector import RSSCollector
 from src.storage.database import DatabaseManager
 
@@ -113,7 +117,9 @@ def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
 
     collector.session.get = MethodType(fake_get, collector.session)
     collector._respect_robots = lambda url: (True, None)
-    collector._enforce_domain_rate_limit = lambda domain, robots_delay: None
+    collector._enforce_domain_rate_limit = (
+        lambda domain, robots_delay, source_min_delay=None: None
+    )
 
     stats = collector.collect_from_source("test_source", source_config)
 
@@ -125,3 +131,66 @@ def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
     metadata = db_manager.get_source_feed_metadata("test_source")
     assert metadata["etag"] == '"cached"'
     assert metadata["last_modified"] == "Tue, 02 Jan 2024 00:00:00 GMT"
+
+
+def test_rate_limit_chooses_strictest_override(monkeypatch):
+    collector = RSSCollector()
+    domain = "example.com"
+    collector._domain_last_request[domain] = 100.0
+
+    monkeypatch.setitem(RATE_LIMITING_CONFIG, "domain_overrides", {domain: 5.0})
+    monkeypatch.setattr(random, "uniform", lambda _a, _b: 0.0)
+
+    timeline = [110.0]
+    sleeps = []
+
+    def fake_time():
+        return timeline[-1]
+
+    def fake_sleep(duration):
+        sleeps.append(duration)
+        timeline.append(timeline[-1] + duration)
+
+    monkeypatch.setattr(time, "time", fake_time)
+    monkeypatch.setattr(time, "sleep", fake_sleep)
+
+    collector._enforce_domain_rate_limit(
+        domain, robots_delay=1.0, source_min_delay=20.0
+    )
+
+    assert sleeps == [10.0]
+    assert pytest.approx(timeline[-1]) == collector._domain_last_request[domain]
+
+
+def test_rate_limit_applies_jitter(monkeypatch):
+    collector = RSSCollector()
+    domain = "jitter.test"
+    collector._domain_last_request[domain] = 50.0
+
+    monkeypatch.setitem(RATE_LIMITING_CONFIG, "domain_overrides", {})
+    jitter_value = 0.42
+    monkeypatch.setattr(random, "uniform", lambda _a, _b: jitter_value)
+
+    timeline = [51.0]
+    sleeps = []
+
+    def fake_time():
+        return timeline[-1]
+
+    def fake_sleep(duration):
+        sleeps.append(duration)
+        timeline.append(timeline[-1] + duration)
+
+    monkeypatch.setattr(time, "time", fake_time)
+    monkeypatch.setattr(time, "sleep", fake_sleep)
+
+    collector._enforce_domain_rate_limit(domain, robots_delay=None)
+
+    base_delay = RATE_LIMITING_CONFIG.get(
+        "domain_default_delay", RATE_LIMITING_CONFIG["delay_between_requests"]
+    )
+    global_min = RATE_LIMITING_CONFIG["delay_between_requests"]
+    effective_delay = max(base_delay, global_min)
+    expected_wait = (50.0 + effective_delay + jitter_value) - 51.0
+    assert pytest.approx(expected_wait, rel=1e-6) == sleeps[0]
+    assert pytest.approx(timeline[-1], rel=1e-6) == collector._domain_last_request[domain]

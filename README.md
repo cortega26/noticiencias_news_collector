@@ -31,6 +31,7 @@ Eso es exactamente lo que hace este sistema.
 - **Múltiples Formatos**: RSS, Atom, feeds institucionales
 - **Respeto por Servidores**: Rate limiting inteligente, manejo de errores robusto
   - Feeds comunitarios (ej. r/science) se consultan como máximo una vez por minuto para respetar el rate limit de Reddit (intervalos >=30s y user-agent dedicado)
+  - Configuraciones como `min_delay_seconds` por fuente y `RATE_LIMITING_CONFIG["domain_overrides"]` aseguran tiempos de espera adicionales cuando un host lo exige (ej. arXiv = 20s, Reddit = 30s)
 - **Caching Condicional**: Persistimos `ETag` y `Last-Modified` por fuente para enviar `If-None-Match`/`If-Modified-Since`, reduciendo ancho de banda y evitando descargas innecesarias cuando no hay contenido nuevo.
 - **Deduplicación**: Detección automática de contenido duplicado
 

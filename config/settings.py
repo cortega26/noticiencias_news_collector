@@ -149,6 +149,13 @@ RATE_LIMITING_CONFIG = {
     "delay_between_requests": float(os.getenv("REQUEST_DELAY", 1.0)),
     # Delay mínimo por dominio (puede ser aumentado por robots.txt)
     "domain_default_delay": float(os.getenv("DOMAIN_DEFAULT_DELAY", 1.0)),
+    # Overrides específicos por dominio cuando se requiere más paciencia
+    "domain_overrides": {
+        "export.arxiv.org": 20.0,
+        "arxiv.org": 20.0,
+        "www.reddit.com": 30.0,
+        "reddit.com": 30.0,
+    },
     # Número máximo de reintentos para requests fallidos
     "max_retries": int(os.getenv("MAX_RETRIES", 3)),
     # Tiempo de espera entre reintentos (segundos)

@@ -15,6 +15,7 @@ import urllib.robotparser as robotparser
 import httpx
 import feedparser
 
+from .rate_limit_utils import calculate_effective_delay
 from .rss_collector import RSSCollector, logger
 from config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG, ROBOTS_CONFIG
 
@@ -70,18 +71,16 @@ class AsyncRSSCollector(RSSCollector):
         return (allowed, delay)
 
     async def _a_enforce_domain_rate_limit(
-        self, domain: str, robots_delay: Optional[float]
+        self,
+        domain: str,
+        robots_delay: Optional[float],
+        source_min_delay: Optional[float] = None,
     ):
         lock = self._domain_locks.setdefault(domain, asyncio.Lock())
         async with lock:
             now = time.time()
-            base_delay = RATE_LIMITING_CONFIG.get(
-                "domain_default_delay", RATE_LIMITING_CONFIG["delay_between_requests"]
-            )
-            effective_delay = max(
-                base_delay,
-                robots_delay or 0.0,
-                RATE_LIMITING_CONFIG["delay_between_requests"],
+            effective_delay = calculate_effective_delay(
+                domain, robots_delay, source_min_delay
             )
             jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
             next_time = self._domain_next_time.get(domain, 0.0)
@@ -167,7 +166,9 @@ class AsyncRSSCollector(RSSCollector):
                 self._send_to_dlq(source_id, source_config["url"], "robots_disallowed")
                 return stats
             domain = urlparse(source_config["url"]).netloc
-            await self._a_enforce_domain_rate_limit(domain, robots_delay)
+            await self._a_enforce_domain_rate_limit(
+                domain, robots_delay, source_config.get("min_delay_seconds")
+            )
 
             feed_content = await self._fetch_feed_async(client, source_config["url"])
             if not feed_content:
