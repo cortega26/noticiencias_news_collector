@@ -59,7 +59,7 @@ ELITE_JOURNALS = {
     },
     "nejm": {
         "name": "New England Journal of Medicine",
-        "url": "https://www.nejm.org/action/showFeed?type=etoc&feed=rss",
+        "url": "https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss",
         "credibility_score": 0.99,
         "update_frequency": "weekly",
         "category": "medicine",
