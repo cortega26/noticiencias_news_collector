@@ -16,6 +16,11 @@ The RSS collector fetches scientific feeds on a fixed cadence, applies polite ra
   sqlite3 data/news.db "UPDATE sources SET feed_etag=NULL, feed_last_modified=NULL WHERE id='nature';"
   ```
 
+## Rate Limiting Overrides
+- `config/settings.py` exposes `RATE_LIMITING_CONFIG["domain_overrides"]` for hosts that require extra back-off (e.g. `export.arxiv.org: 20s`, `www.reddit.com: 30s`).
+- Individual feeds can enforce stricter pacing via `min_delay_seconds` in `config/sources.py`. This value is merged with robots.txt `crawl-delay` and the domain defaults; the collector uses the most restrictive option.
+- When adding a new source, verify Grafana's "collector wait time" panel stays within expectations after a dry run. If the host throttles aggressively, bump the override instead of reducing concurrency.
+
 ## Incident Checklist
 1. **Spike in HTTP 304s**
    - Confirm schedules: repeated 304s with zero articles are expected when no new stories land.

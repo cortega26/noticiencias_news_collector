@@ -26,6 +26,7 @@ import requests
 import feedparser
 
 from .base_collector import BaseCollector
+from .rate_limit_utils import calculate_effective_delay
 from ..storage.database import get_database_manager
 from config.settings import (
     COLLECTION_CONFIG,
@@ -146,17 +147,15 @@ class RSSCollector(BaseCollector):
 
     # Per-domain rate limiting with robots.txt crawl-delay
     def _enforce_domain_rate_limit(
-        self, domain: str, robots_delay: Optional[float] = None
+        self,
+        domain: str,
+        robots_delay: Optional[float] = None,
+        source_min_delay: Optional[float] = None,
     ):
         now = time.time()
         last = self._domain_last_request.get(domain, 0.0)
-        base_delay = RATE_LIMITING_CONFIG.get(
-            "domain_default_delay", RATE_LIMITING_CONFIG["delay_between_requests"]
-        )
-        effective_delay = max(
-            base_delay,
-            robots_delay or 0.0,
-            RATE_LIMITING_CONFIG["delay_between_requests"],
+        effective_delay = calculate_effective_delay(
+            domain, robots_delay, source_min_delay
         )
         jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
         wait = (last + effective_delay + jitter) - now
@@ -219,7 +218,9 @@ class RSSCollector(BaseCollector):
                 self._send_to_dlq(source_id, source_config["url"], "robots_disallowed")
                 return stats
             domain = urlparse(source_config["url"]).netloc
-            self._enforce_domain_rate_limit(domain, robots_delay)
+            self._enforce_domain_rate_limit(
+                domain, robots_delay, source_config.get("min_delay_seconds")
+            )
 
             # Obtener el feed RSS
             feed_content, status_code = self._fetch_feed(
