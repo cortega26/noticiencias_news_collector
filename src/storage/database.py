@@ -15,7 +15,7 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy import create_engine, desc, func
+from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.orm import sessionmaker, Session, load_only
 from sqlalchemy.exc import IntegrityError
 
@@ -116,6 +116,9 @@ class DatabaseManager:
             # Crear todas las tablas
             Base.metadata.create_all(self.engine)
 
+            # Ejecutar migraciones ligeras para mantener el esquema al día
+            self._run_schema_migrations()
+
             logger.info(
                 f"✅ Base de datos configurada exitosamente: {self.config['type']}"
             )
@@ -123,6 +126,89 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"❌ Error configurando base de datos: {e}")
             raise
+
+    def _run_schema_migrations(self) -> None:
+        """Aplica migraciones ligeras necesarias para el esquema actual."""
+
+        try:
+            inspector = inspect(self.engine)
+            tables = inspector.get_table_names()
+        except Exception as exc:  # pragma: no cover - solo en errores del driver
+            logger.error("No se pudo inspeccionar la base de datos: %s", exc)
+            return
+
+        if "sources" not in tables:
+            return
+
+        existing_columns = {col["name"] for col in inspector.get_columns("sources")}
+
+        db_type = self.config.get("type", "sqlite")
+        timestamp_type = (
+            "TIMESTAMP WITH TIME ZONE" if db_type == "postgresql" else "TIMESTAMP"
+        )
+        boolean_type = "BOOLEAN" if db_type != "sqlite" else "INTEGER"
+
+        migrations: List[Tuple[str, str]] = []
+
+        if "suppressed_until" not in existing_columns:
+            migrations.append(
+                (
+                    f"ALTER TABLE sources ADD COLUMN suppressed_until {timestamp_type}",
+                    "suppressed_until",
+                )
+            )
+
+        if "suppression_reason" not in existing_columns:
+            migrations.append(
+                (
+                    "ALTER TABLE sources ADD COLUMN suppression_reason TEXT",
+                    "suppression_reason",
+                )
+            )
+
+        if "auto_suppressed" not in existing_columns:
+            default_clause = "DEFAULT 0" if db_type == "sqlite" else "DEFAULT FALSE"
+            migrations.append(
+                (
+                    f"ALTER TABLE sources ADD COLUMN auto_suppressed {boolean_type} {default_clause}",
+                    "auto_suppressed",
+                )
+            )
+
+        if "dq_consecutive_anomalies" not in existing_columns:
+            migrations.append(
+                (
+                    "ALTER TABLE sources ADD COLUMN dq_consecutive_anomalies INTEGER DEFAULT 0",
+                    "dq_consecutive_anomalies",
+                )
+            )
+
+        if "last_canary_check" not in existing_columns:
+            migrations.append(
+                (
+                    f"ALTER TABLE sources ADD COLUMN last_canary_check {timestamp_type}",
+                    "last_canary_check",
+                )
+            )
+
+        if "last_canary_status" not in existing_columns:
+            migrations.append(
+                (
+                    "ALTER TABLE sources ADD COLUMN last_canary_status TEXT",
+                    "last_canary_status",
+                )
+            )
+
+        if not migrations:
+            return
+
+        with self.engine.begin() as connection:
+            for statement, column_name in migrations:
+                connection.execute(text(statement))
+                logger.info(
+                    "🛠️  Columna '%s' agregada a la tabla sources mediante migración automática",
+                    column_name,
+                )
 
     @contextmanager
     def get_session(self):
