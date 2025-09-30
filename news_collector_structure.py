@@ -36,7 +36,8 @@
 # ├── tests/
 # │   ├── __init__.py
 # │   └── test_collectors.py      # Tests unitarios
-# ├── requirements.txt            # Dependencias Python
+# ├── requirements.txt            # Declaración de dependencias (entrada para pip-compile)
+# ├── requirements.lock           # Dependencias congeladas con hashes
 # ├── README.md                   # Documentación del proyecto
 # └── run_collector.py            # Script para ejecutar el colector
 

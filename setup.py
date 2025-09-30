@@ -165,15 +165,23 @@ class NewsCollectorSetup:
 
     def _install_dependencies(self):
         """Instala todas las dependencias de Python."""
-        requirements_file = self.project_root / "requirements.txt"
+        requirements_spec = self.project_root / "requirements.txt"
+        lock_file = self.project_root / "requirements.lock"
 
-        if not requirements_file.exists():
+        if not requirements_spec.exists():
             self.errors.append(
-                f"Archivo requirements.txt no encontrado en {requirements_file}"
+                f"Archivo requirements.txt no encontrado en {requirements_spec}"
             )
             return False
 
-        print(f"  • Instalando desde {requirements_file}...")
+        if not lock_file.exists():
+            self.errors.append(
+                "Archivo requirements.lock no encontrado. Ejecuta "
+                "'python -m piptools compile --generate-hashes --output-file requirements.lock requirements.txt'"
+            )
+            return False
+
+        print(f"  • Instalando desde {lock_file}...")
 
         try:
             # Actualizar pip primero
@@ -187,8 +195,15 @@ class NewsCollectorSetup:
             # Instalar dependencias
             print("    • Instalando dependencias principales...")
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "install",
-                    "-r", str(requirements_file)],
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--require-hashes",
+                    "-r",
+                    str(lock_file),
+                ],
                 capture_output=True,
                 text=True,
             )
@@ -445,7 +460,7 @@ class NewsCollectorSetup:
 def main():
     """Función principal del instalador."""
     # Verificar que estamos en el directorio correcto
-    expected_files = ["main.py", "requirements.txt", "config"]
+    expected_files = ["main.py", "requirements.txt", "requirements.lock", "config"]
     current_dir = Path.cwd()
 
     missing_files = [f for f in expected_files if not (
