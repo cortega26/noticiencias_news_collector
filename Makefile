@@ -15,7 +15,10 @@ RUFF := $(VENV)/$(BIN_DIR)/ruff
 MYPY := $(VENV)/$(BIN_DIR)/mypy
 PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
-SECURITY_DIR := reports/security
+REPORTS_DIR := reports
+COVERAGE_DIR := $(REPORTS_DIR)/coverage
+PERF_DIR := $(REPORTS_DIR)/perf
+SECURITY_DIR := $(REPORTS_DIR)/security
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
 TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
@@ -45,14 +48,16 @@ lint-fix: bootstrap ## Run Ruff with autofix enabled
 typecheck: bootstrap ## Static type checking with mypy
 	@$(MYPY) src tests
 
-test: bootstrap ## Execute the unit test suite
-	@$(PYTEST)
+test: bootstrap ## Execute the unit test suite with coverage reporting
+	@mkdir -p $(COVERAGE_DIR)
+	@$(PYTEST) --cov=src --cov-report=term --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
 
 e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 	@$(PYTEST) -m "e2e" || { echo "E2E tests require additional setup and were skipped."; true; }
 
 perf: bootstrap ## Run performance-focused pytest suite (marked tests)
-	@$(PYTEST) -m "perf" || { echo "Performance tests not defined; skipped."; true; }
+	@mkdir -p $(PERF_DIR)
+	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml || { echo "Performance tests not defined; skipped."; touch $(PERF_DIR)/SKIPPED; true; }
 
 security: bootstrap ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
