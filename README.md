@@ -79,22 +79,33 @@ cd news-collector
 
 ### 2. Crear y activar entorno virtual (recomendado)
 ```bash
+# Crea el entorno usando uv (equivalente a python -m venv .venv)
+uv venv
+
 # Windows (PowerShell)
-python -m venv .venv
 .venv\Scripts\Activate.ps1
 
 # macOS/Linux
-python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Instalar Dependencias
+### 3. Instalar Dependencias Bloqueadas
 ```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-# (Opcional pero recomendado para desarrollo)
-python -m pip install -r requirements-dev.txt
+# Instalación mínima para ejecutar el colector
+uv pip sync requirements.txt
+
+# Toolkit completo para desarrollo y CI
+uv pip sync requirements-dev.txt
 ```
+
+> ℹ️  Ambos archivos `.txt` están generados con `uv pip compile --generate-hashes` a partir de `requirements.in` y `requirements-dev.in`.
+> Para actualizar versiones ejecuta:
+> 
+> ```bash
+> uv pip compile requirements.in --output-file requirements.txt --generate-hashes
+> uv pip compile requirements-dev.in --output-file requirements-dev.txt --generate-hashes
+> ```
+
 
 ### 4. Activar hooks de seguridad (pre-commit)
 ```bash
@@ -335,7 +346,12 @@ Score <  0.2  ⭐          Bajo - Probablemente descartado
 news_collector/
 ├── main.py                 # Orquestador principal
 ├── run_collector.py        # Script de ejecución simple
-├── requirements.txt        # Dependencias Python
+├── requirements.in         # Fuentes de dependencias base
+├── requirements.txt        # Lockfile base generado con uv/pip-tools
+├── requirements-dev.in     # Fuentes de dependencias de desarrollo
+├── requirements-dev.txt    # Lockfile de desarrollo
+├── pyproject.toml          # Configuración de linters y cobertura
+├── Dockerfile              # Imagen reproducible del colector
 ├── .env.example           # Configuración de ejemplo
 │
 ├── config/                # Configuración del sistema
@@ -381,7 +397,7 @@ news_collector/
 python run_collector.py --check-deps
 
 # Reinstalar dependencias
-pip install -r requirements.txt --upgrade
+uv pip sync requirements.txt
 ```
 
 #### Problemas de Red

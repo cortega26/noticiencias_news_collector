@@ -752,14 +752,6 @@ class DatabaseManager:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
 
         with self.get_session() as session:
-            # Eliminar artículos muy antiguos con score bajo
-            old_articles = (
-                session.query(Article)
-                .filter(Article.collected_date < cutoff_date)
-                .filter(Article.final_score < 0.3)
-                .count()
-            )
-
             deleted_articles = (
                 session.query(Article)
                 .filter(Article.collected_date < cutoff_date)
@@ -809,7 +801,7 @@ class DatabaseManager:
 
             active_sources = (
                 session.query(func.count(Source.id))
-                .filter(Source.is_active == True)
+                .filter(Source.is_active.is_(True))
                 .scalar()
             )
 

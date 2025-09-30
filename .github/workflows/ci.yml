@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    env:
+      HF_HOME: ${{ runner.temp }}/hf-cache
+      UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv with Python 3.11
+        uses: astral-sh/setup-uv@v2
+        with:
+          python-version: '3.11'
+
+      - name: Cache uv and model artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.UV_CACHE_DIR }}
+            ${{ env.HF_HOME }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          mkdir -p "$HF_HOME"
+          mkdir -p "$UV_CACHE_DIR"
+          uv venv
+          uv pip sync requirements-dev.txt
+
+      - name: Ruff
+        run: uv run ruff check src tests
+
+      - name: Mypy
+        run: uv run mypy src
+
+      - name: Pytest with coverage
+        run: |
+          mkdir -p reports
+          uv run pytest --junitxml=reports/pytest.xml
+
+      - name: Summarize caches
+        if: always()
+        run: |
+          mkdir -p reports
+          {
+            echo "uv cache: $UV_CACHE_DIR"
+            find "$UV_CACHE_DIR" -maxdepth 2 -type f -print || true
+            echo "huggingface cache: $HF_HOME"
+            find "$HF_HOME" -maxdepth 2 -type f -print || true
+          } > reports/cache-manifest.txt
+
+      - name: Upload coverage and test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-test-artifacts
+          path: |
+            reports/coverage.xml
+            reports/pytest.xml
+            reports/cache-manifest.txt
+          if-no-files-found: error
