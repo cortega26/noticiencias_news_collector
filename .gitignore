@@ -119,3 +119,4 @@ scalene_profile.*
 tmp_config_init.txt
 *.log
 .vscode/
+reports/

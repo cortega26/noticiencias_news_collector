@@ -1,3 +1,18 @@
+[project]
+name = "noticiencias-news-collector"
+version = "0.0.0"
+description = "Scientific news aggregation pipeline for the Noticiencias project"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Noticiencias Team" }]
+
+[project.optional-dependencies]
+security = [
+    "bandit>=1.7.9",
+    "pip-audit>=2.9.0",
+    "trufflehog3>=3.0.10",
+]
+
 [build-system]
 requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"

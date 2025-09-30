@@ -31,4 +31,20 @@ jobs:
       - name: Performance checks
         run: make perf
       - name: Security checks
+        id: security
+        continue-on-error: true
         run: make security
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: reports/security
+          if-no-files-found: warn
+
+      - name: Enforce security gate
+        if: steps.security.outcome == 'failure'
+        run: |
+          echo "High severity security findings detected. See security reports for details." >&2
+          exit 1
