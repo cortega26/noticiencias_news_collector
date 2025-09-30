@@ -154,8 +154,17 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
 
     database_logger = dummy_logger.modules.get("database")
     assert database_logger is not None
-    assert any("fuentes" in msg.lower() for msg in database_logger.warnings)
+    assert any(
+        isinstance(event, dict)
+        and event.get("event") == "database.health.warning"
+        and event.get("details", {}).get("failed_sources") == 1
+        for event in database_logger.warnings
+    )
 
     system_logger = dummy_logger.modules.get("system")
     assert system_logger is not None
-    assert any("advertencias" in msg.lower() for msg in system_logger.warnings)
+    assert any(
+        isinstance(event, dict)
+        and event.get("event") == "system.initialize.warning"
+        for event in system_logger.warnings
+    )
