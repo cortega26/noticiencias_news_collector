@@ -11,7 +11,7 @@ from .collectors import RSSCollector, BaseCollector
 from .scoring import BasicScorer, score_multiple_articles
 from .storage import get_database_manager, DatabaseManager
 from .serving import create_app
-from .utils import get_logger, setup_logging
+from .utils import get_logger, setup_logging, get_metrics_reporter
 
 __version__ = "1.0.0"
 __description__ = (
@@ -36,5 +36,6 @@ __all__ = [
     "DatabaseManager",
     "get_logger",
     "setup_logging",
+    "get_metrics_reporter",
     "create_app",
 ]

@@ -20,12 +20,13 @@ Este archivo coordina:
 Todo esto de manera robusta, observable, y extensible.
 """
 
+import argparse
 import asyncio
+import sys
+import time
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import argparse
-import sys
+from typing import Any, Dict, List, Optional
 
 # Importar nuestros componentes
 from config import (
@@ -35,7 +36,7 @@ from config import (
     COLLECTION_CONFIG,
     SCORING_CONFIG,
 )
-from src import RSSCollector, get_database_manager, setup_logging
+from src import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
 
 
 class NewsCollectorSystem:
@@ -62,6 +63,8 @@ class NewsCollectorSystem:
         self.collector = None
         self.scorer = None
         self.logger = None
+        self.system_logger = None
+        self.metrics = None
 
         # Estado del sistema
         self.is_initialized = False
@@ -80,38 +83,62 @@ class NewsCollectorSystem:
         Returns:
             True si la inicialización fue exitosa, False en caso contrario
         """
+        trace_id = str(uuid.uuid4())
+        init_session_id = f"init-{self.system_id}"
+        start = time.perf_counter()
+
         try:
-            print("🔧 Fase 1: Configurando logging...")
             self._setup_logging()
+            init_logger = self.system_logger or self.logger.create_module_logger("system")
 
-            print("📋 Fase 2: Validando configuración...")
+            init_logger.info(
+                {
+                    "event": "system.initialize.start",
+                    "trace_id": trace_id,
+                    "session_id": init_session_id,
+                    "source_id": "system",
+                    "latency": 0.0,
+                    "details": {"system_id": self.system_id},
+                }
+            )
+
+            self._setup_metrics()
+
             self._validate_configuration()
+            init_logger.info(
+                {
+                    "event": "system.configuration.validated",
+                    "trace_id": trace_id,
+                    "session_id": init_session_id,
+                    "source_id": "system",
+                    "latency": 0.0,
+                    "details": {"override_count": len(self.config_override)},
+                }
+            )
 
-            print("💾 Fase 3: Inicializando base de datos...")
             self._setup_database()
-
-            print("🤖 Fase 4: Configurando colectores...")
             self._setup_collectors()
-
-            print("🧠 Fase 5: Configurando sistema de scoring...")
             self._setup_scoring()
 
-            print("🎯 Fase 6: Verificando salud del sistema...")
             health_status = self._check_system_health()
 
             if not health_status["healthy"]:
                 raise Exception(f"Sistema no saludable: {health_status['issues']}")
 
             if health_status.get("warnings"):
-                warning_logger = self.logger.create_module_logger("system")
-                warning_logger.warning(
-                    "Inicialización completada con advertencias: "
-                    f"{health_status['warnings']}"
+                init_logger.warning(
+                    {
+                        "event": "system.initialize.warning",
+                        "trace_id": trace_id,
+                        "session_id": init_session_id,
+                        "source_id": "system",
+                        "latency": 0.0,
+                        "details": {"warnings": health_status["warnings"]},
+                    }
                 )
 
             self.is_initialized = True
 
-            # Log de inicio exitoso
             self.logger.log_system_startup(
                 version="1.0.0",
                 config_summary={
@@ -122,19 +149,37 @@ class NewsCollectorSystem:
                 },
             )
 
-            print("✅ Sistema inicializado exitosamente!")
+            init_logger.info(
+                {
+                    "event": "system.initialize.completed",
+                    "trace_id": trace_id,
+                    "session_id": init_session_id,
+                    "source_id": "system",
+                    "latency": time.perf_counter() - start,
+                    "details": {"system_id": self.system_id},
+                }
+            )
+
             return True
 
         except Exception as e:
-            print(f"❌ Error durante inicialización: {str(e)}")
             if self.logger:
                 self.logger.log_error_with_context(
-                    e, {"system_id": self.system_id, "initialization_phase": "unknown"}
+                    e,
+                    {
+                        "system_id": self.system_id,
+                        "initialization_phase": "failed",
+                        "trace_id": trace_id,
+                        "session_id": init_session_id,
+                    },
                 )
             return False
 
     def run_collection_cycle(
-        self, sources_filter: Optional[List[str]] = None, dry_run: bool = False
+        self,
+        sources_filter: Optional[List[str]] = None,
+        dry_run: bool = False,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Ejecuta un ciclo completo de recolección de noticias.
@@ -154,58 +199,95 @@ class NewsCollectorSystem:
                 "Sistema no inicializado. Ejecutar initialize() primero."
             )
 
-        # Crear ID único para esta sesión
+        trace_id = trace_id or str(uuid.uuid4())
+
         session_id = (
             f"{self.system_id}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
         )
         self.current_session = session_id
 
-        # Configurar logger para la sesión
         session_logger = self.logger.create_module_logger(f"session.{session_id}")
+        cycle_start = time.perf_counter()
+
+        session_logger.info(
+            {
+                "event": "collection_cycle.start",
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "source_id": "system",
+                "latency": 0.0,
+                "details": {
+                    "dry_run": dry_run,
+                    "source_filter": sources_filter or "all",
+                },
+            }
+        )
 
         try:
+            sources_to_process = self._get_sources_to_process(sources_filter)
             session_logger.info(
-                f"🚀 INICIANDO CICLO DE RECOLECCIÓN (Sesión: {session_id})"
+                {
+                    "event": "collection_cycle.sources.selected",
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "source_id": "system",
+                    "latency": 0.0,
+                    "details": {"count": len(sources_to_process)},
+                }
             )
 
-            # Determinar fuentes a procesar
-            sources_to_process = self._get_sources_to_process(sources_filter)
-            session_logger.info(f"📍 Procesando {len(sources_to_process)} fuentes")
-
-            if dry_run:
-                session_logger.info("🧪 MODO DRY RUN - No se guardarán datos")
-
-            # Fase 1: Recolección de artículos
-            session_logger.info("📡 Fase 1: Recolectando artículos...")
             collection_results = self._execute_collection(sources_to_process, dry_run)
+            self._record_collection_observability(
+                collection_results, session_id=session_id, trace_id=trace_id
+            )
 
-            # Fase 2: Scoring de artículos
-            session_logger.info("🎯 Fase 2: Calculando scores...")
             scoring_results = self._execute_scoring(collection_results, dry_run)
+            session_logger.info(
+                {
+                    "event": "collection_cycle.scoring.completed",
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "source_id": "system",
+                    "latency": 0.0,
+                    "details": scoring_results.get("statistics", {}),
+                }
+            )
 
-            # Fase 3: Selección final
-            session_logger.info("⭐ Fase 3: Seleccionando mejores artículos...")
             final_selection = self._execute_final_selection(scoring_results)
-
-            # Fase 4: Generar reporte
-            session_logger.info("📊 Fase 4: Generando reporte...")
             final_report = self._generate_session_report(
                 collection_results, scoring_results, final_selection, session_id
             )
 
-            # Log métricas de performance
             self.logger.log_performance_metrics(
                 final_report["performance_metrics"], "CICLO COMPLETO"
             )
 
-            session_logger.info("🎉 CICLO DE RECOLECCIÓN COMPLETADO EXITOSAMENTE")
+            session_logger.info(
+                {
+                    "event": "collection_cycle.completed",
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "source_id": "system",
+                    "latency": time.perf_counter() - cycle_start,
+                    "details": final_report["summary"],
+                }
+            )
 
             return final_report
 
         except Exception as e:
-            session_logger.error(f"💥 Error en ciclo de recolección: {str(e)}")
+            session_logger.error(
+                {
+                    "event": "collection_cycle.error",
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "source_id": "system",
+                    "latency": time.perf_counter() - cycle_start,
+                    "details": {"error": str(e)},
+                }
+            )
             self.logger.log_error_with_context(
-                e, {"session_id": session_id, "system_id": self.system_id}
+                e, {"session_id": session_id, "system_id": self.system_id, "trace_id": trace_id}
             )
             raise
 
@@ -305,9 +387,15 @@ class NewsCollectorSystem:
     def _setup_logging(self):
         """Configura el sistema de logging."""
         self.logger = setup_logging()
+        self.system_logger = self.logger.create_module_logger("system")
 
         # Log información del sistema al inicio
         self.logger.log_system_health()
+
+    def _setup_metrics(self) -> None:
+        """Inicializa el emisor de métricas del sistema."""
+        if self.metrics is None:
+            self.metrics = get_metrics_reporter()
 
     def _validate_configuration(self):
         """Valida toda la configuración del sistema."""
@@ -380,27 +468,61 @@ class NewsCollectorSystem:
 
                 # Registrar la advertencia para visibilidad operativa
                 self.logger.create_module_logger("database").warning(
-                    f"⚠️ Fuentes fallando detectadas: {db_health['failed_sources']}"
+                    {
+                        "event": "database.health.warning",
+                        "trace_id": None,
+                        "session_id": None,
+                        "source_id": "database",
+                        "latency": 0.0,
+                        "details": {"failed_sources": db_health["failed_sources"]},
+                    }
                 )
         except Exception as e:
             issue_message = f"Error verificando base de datos: {str(e)}"
             issues.append(issue_message)
             critical_issues.append(issue_message)
-            self.logger.create_module_logger("database").error(issue_message)
+            self.logger.create_module_logger("database").error(
+                {
+                    "event": "database.health.error",
+                    "trace_id": None,
+                    "session_id": None,
+                    "source_id": "database",
+                    "latency": 0.0,
+                    "details": {"error": issue_message},
+                }
+            )
 
         # Verificar colector
         if not self.collector.is_healthy():
             collector_issue = "Colector en estado no saludable"
             issues.append(collector_issue)
             critical_issues.append(collector_issue)
-            self.logger.create_module_logger("collectors").error(collector_issue)
+            self.logger.create_module_logger("collectors").error(
+                {
+                    "event": "collector.health.error",
+                    "trace_id": None,
+                    "session_id": None,
+                    "source_id": "collectors",
+                    "latency": 0.0,
+                    "details": {"error": collector_issue},
+                }
+            )
 
         # Verificar que tengamos fuentes configuradas
         if len(ALL_SOURCES) == 0:
             config_issue = "No hay fuentes configuradas"
             issues.append(config_issue)
             critical_issues.append(config_issue)
-            self.logger.create_module_logger("config").error(config_issue)
+            self.logger.create_module_logger("config").error(
+                {
+                    "event": "config.health.error",
+                    "trace_id": None,
+                    "session_id": None,
+                    "source_id": "config",
+                    "latency": 0.0,
+                    "details": {"error": config_issue},
+                }
+            )
 
         return {
             "healthy": len(critical_issues) == 0,
@@ -442,6 +564,54 @@ class NewsCollectorSystem:
                     self.collector.collect_from_multiple_sources_async(sources)
                 )
             return self.collector.collect_from_multiple_sources(sources)
+
+    def _record_collection_observability(
+        self, collection_results: Dict[str, Any], session_id: str, trace_id: str
+    ) -> None:
+        """Loggea resultados por fuente y emite métricas asociadas."""
+
+        source_details = collection_results.get("source_details") or {}
+        if not source_details:
+            return
+
+        collector_logger = self.logger.create_module_logger("collectors")
+
+        for source_id, result in source_details.items():
+            latency = float(result.get("processing_time") or 0.0)
+            payload = {
+                "event": "collector.source.completed"
+                if result.get("success", False)
+                else "collector.source.failed",
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "source_id": source_id,
+                "latency": latency,
+                "details": {
+                    "articles_found": result.get("articles_found", 0),
+                    "articles_saved": result.get("articles_saved", 0),
+                    "error_message": result.get("error_message"),
+                },
+            }
+
+            if result.get("success", False):
+                collector_logger.info(payload)
+                if self.metrics:
+                    self.metrics.record_ingest(
+                        source_id=source_id,
+                        article_count=result.get("articles_saved", 0),
+                        latency=latency,
+                        trace_id=trace_id,
+                        session_id=session_id,
+                    )
+            else:
+                collector_logger.warning(payload)
+                if self.metrics:
+                    self.metrics.record_error(
+                        source_id=source_id,
+                        error=result.get("error_message", "unknown"),
+                        trace_id=trace_id,
+                        session_id=session_id,
+                    )
 
     def _execute_scoring(
         self, collection_results: Dict[str, Any], dry_run: bool
@@ -619,7 +789,14 @@ class NewsCollectorSystem:
         }
 
         self.logger.create_module_logger("simulation").info(
-            f"Simulando recolección de {len(sources)} fuentes"
+            {
+                "event": "collection.simulation",
+                "trace_id": None,
+                "session_id": self.current_session,
+                "source_id": "simulation",
+                "latency": 0.0,
+                "details": {"sources": len(sources)},
+            }
         )
 
         return simulated_results
