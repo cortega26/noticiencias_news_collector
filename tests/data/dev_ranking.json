@@ -1,0 +1,212 @@
+[
+  {
+    "query": "science-morning",
+    "articles": [
+      {
+        "article": {
+          "id": 1,
+          "source_id": "nature",
+          "source_name": "Nature",
+          "category": "science",
+          "published_date": "2025-09-30T12:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.95},
+            "normalized_title": "CRISPR breakthrough in gene therapy",
+            "normalized_summary": "Researchers at MIT announce a breakthrough in CRISPR gene therapy with promising results.",
+            "enrichment": {"sentiment": "positive", "entities": ["MIT", "CRISPR"], "topics": ["science", "health"]},
+            "engagement_features": {"score": 0.8}
+          },
+          "word_count": 650,
+          "duplication_confidence": 0.05,
+          "cluster_id": "cluster-1"
+        },
+        "relevance": 3
+      },
+      {
+        "article": {
+          "id": 2,
+          "source_id": "scientific_american",
+          "source_name": "Scientific American",
+          "category": "science",
+          "published_date": "2025-09-28T08:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.85},
+            "normalized_title": "New telescope maps distant galaxies",
+            "normalized_summary": "An international team maps distant galaxies using a new telescope array.",
+            "enrichment": {"sentiment": "neutral", "entities": ["international team"], "topics": ["space", "science"]},
+            "engagement_features": {"score": 0.6}
+          },
+          "word_count": 500,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-2"
+        },
+        "relevance": 2
+      },
+      {
+        "article": {
+          "id": 3,
+          "source_id": "random_blog",
+          "source_name": "ScienceBlog",
+          "category": "science",
+          "published_date": "2025-09-20T12:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.4},
+            "normalized_title": "Speculation on alien microbes",
+            "normalized_summary": "A blogger speculates on alien microbes without evidence.",
+            "enrichment": {"sentiment": "neutral", "entities": [], "topics": ["space"]},
+            "engagement_features": {"score": 0.3}
+          },
+          "word_count": 400,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-3"
+        },
+        "relevance": 0
+      },
+      {
+        "article": {
+          "id": 4,
+          "source_id": "nature",
+          "source_name": "Nature",
+          "category": "science",
+          "published_date": "2025-09-29T15:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.95},
+            "normalized_title": "CRISPR breakthrough in gene therapy",
+            "normalized_summary": "Duplicate wire report about CRISPR results.",
+            "enrichment": {"sentiment": "positive", "entities": ["MIT", "CRISPR"], "topics": ["science", "health"]},
+            "engagement_features": {"score": 0.75}
+          },
+          "word_count": 600,
+          "duplication_confidence": 0.9,
+          "cluster_id": "cluster-1"
+        },
+        "relevance": 1
+      },
+      {
+        "article": {
+          "id": 5,
+          "source_id": "science_daily",
+          "source_name": "Science Daily",
+          "category": "science",
+          "published_date": "2025-09-27T10:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.7},
+            "normalized_title": "New climate model predicts rainfall",
+            "normalized_summary": "Climate scientists model rainfall changes in South America.",
+            "enrichment": {"sentiment": "neutral", "entities": ["Climate scientists"], "topics": ["climate", "science"]},
+            "engagement_features": {"score": 0.5}
+          },
+          "word_count": 450,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-4"
+        },
+        "relevance": 1
+      }
+    ]
+  },
+  {
+    "query": "health-evening",
+    "articles": [
+      {
+        "article": {
+          "id": 6,
+          "source_id": "nejm",
+          "source_name": "NEJM",
+          "category": "health",
+          "published_date": "2025-09-30T14:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.98},
+            "normalized_title": "Clinical trial shows vaccine success",
+            "normalized_summary": "Clinical trial results show significant vaccine efficacy in phase 3 study.",
+            "enrichment": {"sentiment": "positive", "entities": ["Clinical trial", "vaccine"], "topics": ["health"]},
+            "engagement_features": {"score": 0.85}
+          },
+          "word_count": 700,
+          "duplication_confidence": 0.1,
+          "cluster_id": "cluster-5"
+        },
+        "relevance": 3
+      },
+      {
+        "article": {
+          "id": 7,
+          "source_id": "who",
+          "source_name": "WHO",
+          "category": "health",
+          "published_date": "2025-09-29T09:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.9},
+            "normalized_title": "WHO reports neutral update on cases",
+            "normalized_summary": "WHO provides a neutral update on global case counts.",
+            "enrichment": {"sentiment": "neutral", "entities": ["WHO"], "topics": ["health"]},
+            "engagement_features": {"score": 0.55}
+          },
+          "word_count": 420,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-6"
+        },
+        "relevance": 1
+      },
+      {
+        "article": {
+          "id": 8,
+          "source_id": "random_blog",
+          "source_name": "HealthBuzz",
+          "category": "health",
+          "published_date": "2025-09-25T12:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.3},
+            "normalized_title": "Miracle cure claims",
+            "normalized_summary": "Blogger claims miracle cure without evidence.",
+            "enrichment": {"sentiment": "positive", "entities": [], "topics": ["health"]},
+            "engagement_features": {"score": 0.2}
+          },
+          "word_count": 350,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-7"
+        },
+        "relevance": 0
+      },
+      {
+        "article": {
+          "id": 9,
+          "source_id": "nejm",
+          "source_name": "NEJM",
+          "category": "health",
+          "published_date": "2025-09-28T18:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.98},
+            "normalized_title": "Clinical trial shows vaccine success",
+            "normalized_summary": "Duplicate write-up of the same vaccine study.",
+            "enrichment": {"sentiment": "positive", "entities": ["Clinical trial", "vaccine"], "topics": ["health"]},
+            "engagement_features": {"score": 0.8}
+          },
+          "word_count": 680,
+          "duplication_confidence": 0.85,
+          "cluster_id": "cluster-5"
+        },
+        "relevance": 1
+      },
+      {
+        "article": {
+          "id": 10,
+          "source_id": "healthline",
+          "source_name": "Healthline",
+          "category": "health",
+          "published_date": "2025-09-26T07:00:00+00:00",
+          "article_metadata": {
+            "source_metadata": {"credibility_score": 0.6},
+            "normalized_title": "Diet study shows mixed results",
+            "normalized_summary": "Study shows mixed results for new diet program.",
+            "enrichment": {"sentiment": "neutral", "entities": [], "topics": ["health"]},
+            "engagement_features": {"score": 0.4}
+          },
+          "word_count": 480,
+          "duplication_confidence": 0.0,
+          "cluster_id": "cluster-8"
+        },
+        "relevance": 1
+      }
+    ]
+  }
+]

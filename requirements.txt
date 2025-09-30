@@ -1,0 +1,45 @@
+# requirements.txt
+# Dependencias del News Collector System (compatibles con Python 3.13)
+# ===================================================================
+
+# NOTA IMPORTANTE
+# - Usa un entorno virtual y asegura que pip corresponda al intérprete:
+#     python -m venv .venv
+#     .venv\Scripts\Activate.ps1      # PowerShell
+#     python -m pip install -r requirements.txt
+
+# Core parsing y web scraping
+feedparser                 # RSS/Atom feed parser - robusto y confiable
+requests                   # HTTP requests - estándar de la industria
+beautifulsoup4             # HTML parsing para contenido adicional
+lxml                       # XML parser rápido para feeds
+
+# Procesamiento de texto y NLP
+nltk==3.9.1                # Natural Language Toolkit - análisis básico de texto
+textblob==0.19.0           # Análisis de sentimientos simple
+python-dateutil            # Parsing inteligente de fechas
+
+# Base de datos y ORM
+sqlalchemy                 # ORM potente y flexible
+
+# Utilities y helpers
+python-dotenv              # Manejo de variables de entorno
+schedule                   # Scheduling de tareas simple
+click                      # CLI interface elegante
+
+# Logging y monitoreo
+loguru                     # Logger moderno y bonito
+
+# Testing (para desarrollo futuro)
+pytest                    # Framework de testing
+pytest-cov                # Coverage de tests
+
+# Opcional: Machine Learning básico (para scoring)
+scikit-learn              # ML algorithms básicos
+numpy                     # Operaciones numéricas
+
+# HTTP async client (para colector asíncrono opcional)
+httpx
+
+# ¿Por qué estas dependencias específicas?
+# =======================================
