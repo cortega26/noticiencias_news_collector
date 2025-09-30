@@ -8,6 +8,7 @@ almacenamiento y utilidades.
 from .collectors import RSSCollector, BaseCollector
 from .scoring import BasicScorer, score_multiple_articles
 from .storage import get_database_manager, DatabaseManager
+from .serving import create_app
 from .utils import get_logger, setup_logging
 
 __version__ = "1.0.0"
@@ -33,4 +34,5 @@ __all__ = [
     "DatabaseManager",
     "get_logger",
     "setup_logging",
+    "create_app",
 ]
