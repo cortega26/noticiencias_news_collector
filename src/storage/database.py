@@ -29,6 +29,7 @@ from ..utils.dedupe import (
     duplication_confidence,
     generate_cluster_id,
 )
+from ..utils import get_observability
 
 import logging
 
@@ -65,6 +66,7 @@ class DatabaseManager:
             "recent_candidate_hours", 168
         )
         self._setup_database()
+        self.observability = get_observability()
 
     def _setup_database(self):
         """
@@ -178,6 +180,9 @@ class DatabaseManager:
                 )
                 if existing:
                     logger.debug(f"Artículo ya existe: {article_data['url']}")
+                    self.observability.record_dedupe_result(
+                        "duplicate_url", article_id=existing.id
+                    )
                     return None
 
                 norm_title, norm_summary, normalized_text = normalize_article_text(
@@ -194,6 +199,9 @@ class DatabaseManager:
                 if existing_by_content:
                     logger.debug(
                         f"Contenido duplicado encontrado para: {article_data['title']}"
+                    )
+                    self.observability.record_dedupe_result(
+                        "duplicate_content", article_id=existing_by_content.id
                     )
                     return None
 
@@ -247,13 +255,22 @@ class DatabaseManager:
                     self._revalidate_cluster(session, cluster_id)
 
                 logger.info(f"✅ Artículo guardado: {article.title[:50]}...")
+                outcome = "near_duplicate" if confidence > 0 else "new"
+                self.observability.record_dedupe_result(
+                    outcome,
+                    article_id=article.id,
+                    cluster_id=cluster_id,
+                    confidence=confidence,
+                )
                 return article
 
             except IntegrityError as e:
                 logger.warning(f"Intento de guardar artículo duplicado: {e}")
+                self.observability.record_dedupe_result("duplicate_integrity")
                 return None
             except Exception as e:
                 logger.error(f"Error guardando artículo: {e}")
+                self.observability.record_error("database", type(e).__name__)
                 raise
 
     @staticmethod
@@ -522,10 +539,17 @@ class DatabaseManager:
                 logger.info(
                     f"✅ Score actualizado para artículo {article_id}: {score_data['final_score']}"
                 )
+                self.observability.log_event(
+                    stage="scoring",
+                    event="article_scored",
+                    article_id=article_id,
+                    final_score=score_data["final_score"],
+                )
                 return True
 
             except Exception as e:
                 logger.error(f"Error actualizando score: {e}")
+                self.observability.record_error("scoring", type(e).__name__)
                 return False
 
     # =====================================

@@ -1,0 +1,32 @@
+groups:
+  - name: news-pipeline-slos
+    interval: 1m
+    rules:
+      - alert: PipelineLatencyBreached
+        expr: histogram_quantile(0.95, sum(rate(news_pipeline_visibility_latency_seconds_bucket[5m])) by (le)) > 900
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ingesta a visible supera 15 minutos"
+          description: |
+            El p95 del tiempo ingestión→visible superó los 15 minutos durante más de 5 minutos.
+      - alert: PipelineErrorRateHigh
+        expr: sum(rate(news_pipeline_errors_total[5m])) by (stage) / ignoring(error_type) sum(rate(news_ingest_sources_total[5m])) by (stage)
+          > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate del pipeline >1%"
+          description: |
+            La tasa de errores en {{ $labels.stage }} superó el 1% en la ventana de 5 minutos.
+      - alert: FreshnessDegradation
+        expr: avg_over_time(news_pipeline_topk_freshness_ratio[15m]) < 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Freshness de top-K degradado"
+          description: |
+            La proporción de artículos recientes cayó por debajo del 70% durante 10 minutos.
