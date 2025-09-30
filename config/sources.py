@@ -207,6 +207,26 @@ PREPRINT_SOURCES = {
     },
 }
 
+# Fuentes Comunitarias y Foros
+# ============================
+# Feeds moderados por comunidades científicas. Mantener frecuencias
+# de sondeo conservadoras para respetar lineamientos de uso.
+
+COMMUNITY_FEEDS = {
+    "reddit_science": {
+        "name": "r/science",
+        "url": "https://www.reddit.com/r/science/.rss",
+        "credibility_score": 0.6,  # Comunidad moderada (AMA verificados)
+        "update_frequency": "hourly",  # Respetar rate limit de Reddit (>=30s entre requests)
+        "category": "community_science",
+        "language": "en",
+        "impact_factor": None,
+        "description": "Subreddit de divulgación científica con moderación especializada",
+        "typical_delay": 0,
+        "rate_limit_notes": "Usar user-agent dedicado y no superar 60 requests por minuto",
+    }
+}
+
 # Consolidación de todas las fuentes
 # ==================================
 # Aquí combinamos todas las categorías en una estructura unificada
@@ -216,6 +236,7 @@ ALL_SOURCES = {
     **SCIENCE_MEDIA,
     **INSTITUTIONAL_SOURCES,
     **PREPRINT_SOURCES,
+    **COMMUNITY_FEEDS,
 }
 
 # Configuraciones específicas por categoría
@@ -256,6 +277,11 @@ CATEGORY_CONFIG = {
         "priority_multiplier": 0.8,  # Menos peso por ser divulgación
         "min_score_threshold": 0.25,
         "max_daily_articles": 5,
+    },
+    "community_science": {
+        "priority_multiplier": 0.6,  # Fuentes impulsadas por la comunidad
+        "min_score_threshold": 0.2,
+        "max_daily_articles": 4,
     },
 }
 
