@@ -5,6 +5,8 @@ Contiene los módulos funcionales del sistema: colectores, scoring,
 almacenamiento y utilidades.
 """
 
+from config.version import PYTHON_REQUIRES_SPECIFIER
+
 from .collectors import RSSCollector, BaseCollector
 from .scoring import BasicScorer, score_multiple_articles
 from .storage import get_database_manager, DatabaseManager
@@ -22,7 +24,7 @@ __package_info__ = {
     "description": __description__,
     "author": "News Collector Team",
     "license": "MIT",
-    "python_requires": ">=3.8",
+    "python_requires": PYTHON_REQUIRES_SPECIFIER,
 }
 
 __all__ = [

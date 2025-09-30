@@ -21,6 +21,28 @@ import subprocess
 import platform
 from pathlib import Path
 import time
+import importlib.util
+from types import ModuleType
+
+
+def _load_version_metadata() -> ModuleType:
+    """Load the version metadata module without importing the full config package."""
+
+    version_module_path = Path(__file__).parent / "config" / "version.py"
+    spec = importlib.util.spec_from_file_location(
+        "config._version_metadata", version_module_path
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError("No se pudo cargar config/version.py")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_version_metadata = _load_version_metadata()
+MIN_PYTHON_VERSION = _version_metadata.MIN_PYTHON_VERSION
+PYTHON_REQUIRES_SPECIFIER = _version_metadata.PYTHON_REQUIRES_SPECIFIER
 
 
 class NewsCollectorSetup:
@@ -95,14 +117,18 @@ class NewsCollectorSetup:
 
         # Verificar versión de Python
         print("  • Verificando versión de Python...")
-        if self.python_version < (3, 8):
+        if (self.python_version.major, self.python_version.minor) < MIN_PYTHON_VERSION:
             self.errors.append(
-                f"Python 3.8+ requerido, encontrado {self.python_version.major}.{self.python_version.minor}"
+                "Python "
+                f"{PYTHON_REQUIRES_SPECIFIER} requerido, encontrado "
+                f"{self.python_version.major}.{self.python_version.minor}"
             )
             success = False
         else:
             print(
-                f"    ✅ Python {self.python_version.major}.{self.python_version.minor} OK"
+                "    ✅ Python "
+                f"{self.python_version.major}.{self.python_version.minor} "
+                f"cumple {PYTHON_REQUIRES_SPECIFIER}"
             )
 
         # Verificar pip
@@ -452,7 +478,7 @@ def main():
 
         print("\n🆘 Para obtener ayuda:")
         print("  • Revisa el README.md")
-        print("  • Verifica que tienes Python 3.8+")
+        print(f"  • Verifica que tienes Python {PYTHON_REQUIRES_SPECIFIER}")
         print("  • Asegúrate de tener conexión a internet")
         print("  • Reporta el issue en GitHub con los errores mostrados")
 
