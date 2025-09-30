@@ -19,6 +19,8 @@ from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.orm import sessionmaker, Session, load_only
 from sqlalchemy.exc import IntegrityError
 
+from pydantic import ValidationError
+
 from ..storage.models import Base, Article, Source, ScoreLog
 from config.settings import DATABASE_CONFIG, DEDUP_CONFIG
 from ..utils.dedupe import (
@@ -29,6 +31,7 @@ from ..utils.dedupe import (
     duplication_confidence,
     generate_cluster_id,
 )
+from src.contracts import CollectorArticleModel, ScoringRequestModel
 
 import logging
 
@@ -262,7 +265,9 @@ class DatabaseManager:
     # OPERACIONES CON ARTÍCULOS
     # =====================================
 
-    def save_article(self, article_data: Dict[str, Any]) -> Optional[Article]:
+    def save_article(
+        self, article_data: CollectorArticleModel | Dict[str, Any]
+    ) -> Optional[Article]:
         """
         Guarda un nuevo artículo en la base de datos.
 
@@ -271,31 +276,40 @@ class DatabaseManager:
         y que lo catalogue apropiadamente.
 
         Args:
-            article_data: Diccionario con toda la información del artículo
+            article_data: Instancia validada del contrato del colector o un
+                diccionario compatible con el esquema.
 
         Returns:
             El artículo guardado o None si ya existía
         """
-        article_data = dict(article_data)
-        normalized_published = self._ensure_timezone(article_data.get("published_date"))
+        if isinstance(article_data, CollectorArticleModel):
+            model = article_data
+        else:
+            try:
+                model = CollectorArticleModel.model_validate(article_data)
+            except ValidationError as exc:
+                raise ValueError(f"Invalid collector payload: {exc}") from exc
+
+        payload = model.model_dump_for_storage()
+        normalized_published = self._ensure_timezone(payload.get("published_date"))
         if normalized_published:
-            article_data["published_date"] = normalized_published
+            payload["published_date"] = normalized_published
 
         with self.get_session() as session:
             try:
                 # Verificar si ya existe por URL
                 existing = (
-                    session.query(Article).filter_by(url=article_data["url"]).first()
+                    session.query(Article).filter_by(url=payload["url"]).first()
                 )
                 if existing:
-                    logger.debug(f"Artículo ya existe: {article_data['url']}")
+                    logger.debug(f"Artículo ya existe: {payload['url']}")
                     return None
 
                 norm_title, norm_summary, normalized_text = normalize_article_text(
-                    article_data.get("title", ""),
-                    article_data.get("summary", ""),
+                    payload.get("title", ""),
+                    payload.get("summary", ""),
                 )
-                normalized_basis = normalized_text or article_data["url"]
+                normalized_basis = normalized_text or payload["url"]
                 content_hash = sha256_hex(normalized_basis)
 
                 # Verificar duplicados exactos por hash
@@ -304,7 +318,7 @@ class DatabaseManager:
                 )
                 if existing_by_content:
                     logger.debug(
-                        f"Contenido duplicado encontrado para: {article_data['title']}"
+                        f"Contenido duplicado encontrado para: {payload['title']}"
                     )
                     return None
 
@@ -313,39 +327,39 @@ class DatabaseManager:
                 )
                 simhash_prefix = self._simhash_prefix_value(simhash_value)
                 cluster_id, confidence = self._assign_cluster(
-                    session, simhash_value, article_data.get("published_date")
+                    session, simhash_value, payload.get("published_date")
                 )
 
-                article_metadata = article_data.get("article_metadata", {}) or {}
+                article_metadata = payload.get("article_metadata", {}) or {}
                 article_metadata.setdefault("normalized_title", norm_title)
                 article_metadata.setdefault("normalized_summary", norm_summary)
                 article_metadata.setdefault(
                     "original_url",
-                    article_data.get("original_url", article_data["url"]),
+                    payload.get("original_url", payload["url"]),
                 )
 
                 # Crear nuevo artículo
                 article = Article(
-                    url=article_data["url"],
+                    url=payload["url"],
                     content_hash=content_hash,
                     simhash=self._simhash_to_storage(simhash_value),
                     simhash_prefix=simhash_prefix,
-                    title=article_data["title"],
-                    summary=article_data.get("summary"),
-                    content=article_data.get("content"),
-                    source_id=article_data["source_id"],
-                    source_name=article_data["source_name"],
-                    published_date=article_data.get("published_date"),
-                    published_tz_offset_minutes=article_data.get(
+                    title=payload["title"],
+                    summary=payload.get("summary"),
+                    content=payload.get("content"),
+                    source_id=payload["source_id"],
+                    source_name=payload["source_name"],
+                    published_date=payload.get("published_date"),
+                    published_tz_offset_minutes=payload.get(
                         "published_tz_offset_minutes"
                     ),
-                    published_tz_name=article_data.get("published_tz_name"),
-                    authors=article_data.get("authors"),
-                    category=article_data["category"],
-                    doi=article_data.get("doi"),
-                    journal=article_data.get("journal"),
-                    is_preprint=article_data.get("is_preprint", False),
-                    language=article_data.get("language", "en"),
+                    published_tz_name=payload.get("published_tz_name"),
+                    authors=payload.get("authors"),
+                    category=payload["category"],
+                    doi=payload.get("doi"),
+                    journal=payload.get("journal"),
+                    is_preprint=payload.get("is_preprint", False),
+                    language=payload.get("language", "en"),
                     processing_status="pending",
                     article_metadata=article_metadata,
                     cluster_id=cluster_id,
@@ -619,13 +633,28 @@ class DatabaseManager:
             session.expunge_all()
             return pending_articles
 
-    def update_article_score(self, article_id: int, score_data: Dict[str, Any]) -> bool:
+    def update_article_score(
+        self, article_id: int, score_data: ScoringRequestModel | Dict[str, Any]
+    ) -> bool:
         """
         Actualiza el score de un artículo y registra el cálculo en ScoreLog.
 
         Es como actualizar la calificación de un libro y mantener un registro
         de por qué recibió esa calificación.
         """
+        if isinstance(score_data, ScoringRequestModel):
+            score_model = score_data
+        else:
+            try:
+                score_model = ScoringRequestModel.model_validate(score_data)
+            except ValidationError as exc:
+                raise ValueError(
+                    f"Invalid scoring payload for article {article_id}: {exc}"
+                ) from exc
+
+        payload = score_model.model_dump_for_storage()
+        components_model = score_model.components
+
         with self.get_session() as session:
             try:
                 article = session.query(Article).filter_by(id=article_id).first()
@@ -636,31 +665,31 @@ class DatabaseManager:
                     return False
 
                 # Actualizar scores en el artículo
-                article.final_score = score_data["final_score"]
-                article.score_components = score_data.get("components", {})
+                article.final_score = payload["final_score"]
+                article.score_components = payload.get("components", {})
                 article.processing_status = "completed"
 
                 # Crear registro en ScoreLog
                 score_log = ScoreLog(
                     article_id=article_id,
-                    score_version=score_data.get("version", "1.0"),
-                    source_credibility_score=score_data["components"].get(
+                    score_version=payload.get("version", "1.0"),
+                    source_credibility_score=payload["components"].get(
                         "source_credibility"
                     ),
-                    recency_score=score_data["components"].get("recency"),
-                    content_quality_score=score_data["components"].get(
+                    recency_score=payload["components"].get("recency"),
+                    content_quality_score=payload["components"].get(
                         "content_quality"
                     ),
-                    engagement_score=score_data["components"].get("engagement"),
-                    final_score=score_data["final_score"],
-                    score_explanation=score_data.get("explanation", {}),
-                    algorithm_weights=score_data.get("weights", {}),
+                    engagement_score=components_model.get_engagement_value(),
+                    final_score=payload["final_score"],
+                    score_explanation=payload.get("explanation", {}),
+                    algorithm_weights=payload.get("weights", {}),
                 )
 
                 session.add(score_log)
 
                 logger.info(
-                    f"✅ Score actualizado para artículo {article_id}: {score_data['final_score']}"
+                    f"✅ Score actualizado para artículo {article_id}: {payload['final_score']}"
                 )
                 return True
 
