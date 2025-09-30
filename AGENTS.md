@@ -163,7 +163,7 @@
 
 ## 7) Failure Modes & Runbooks
 
-- **Collector outage:** check rate-limit config, robots.txt changes, and HTTP errors. Fall back to cached ETag if available.
+- **Collector outage:** check rate-limit config, and HTTP errors. Fall back to cached ETag if available.
 - **Duplicate flood:** inspect `utils/url_canonicalizer.py`; adjust regex rules and reprocess last 48h.
 - **Stale ranking:** verify scheduler health and scoring decay parameters; run `pytest tests/test_reranker.py` before rollout.
 - **Enrichment drift:** compare embedding/topic distributions; retrain or roll back model version.
@@ -172,7 +172,6 @@
 
 ## 8) Security & Compliance
 
-- Respect `robots.txt` and ToS; maintain per-source policy snapshots.
 - Strip PII before logging or persisting; redact emails and phone numbers.
 - Run SBOM/dependency scan in CI; fail build on high-severity vulnerabilities.
 - API auth (serving layer) via OAuth2 bearer tokens; rotate keys every 90 days.
@@ -190,7 +189,6 @@
 
 ## 10) Checklists
 
-- [ ] Robots.txt cached per source & updated daily
 - [ ] ETag/If-Modified-Since implemented in collectors
 - [ ] Canonical URL rules tested (`pytest tests/test_url_canonicalizer.py`)
 - [ ] SimHash thresholds tuned and regression-tested
