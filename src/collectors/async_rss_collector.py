@@ -1,14 +1,11 @@
 # src/collectors/async_rss_collector.py
-"""
-Colector RSS asíncrono usando httpx y asyncio.
-Mantiene compatibilidad con RSSCollector pero permite concurrencia controlada
-entre múltiples dominios/fuentes.
-"""
+"""Async RSS collector with parity to the synchronous implementation."""
 
 import asyncio
-import time
 import random
-from typing import Dict, Any, Optional, Tuple
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlparse
 import urllib.robotparser as robotparser
 
@@ -90,15 +87,37 @@ class AsyncRSSCollector(RSSCollector):
             self._domain_next_time[domain] = time.time()
 
     async def _fetch_feed_async(
-        self, client: httpx.AsyncClient, feed_url: str
-    ) -> Optional[str]:
+        self, client: httpx.AsyncClient, source_id: str, feed_url: str
+    ) -> Tuple[Optional[str], Optional[int]]:
+        """Fetches a feed using conditional headers and async-friendly backoff."""
+
         max_retries = RATE_LIMITING_CONFIG["max_retries"]
+        cached_headers: Dict[str, Optional[str]] = {"etag": None, "last_modified": None}
+
+        try:
+            cached_headers = self.db_manager.get_source_feed_metadata(source_id)
+        except Exception as metadata_error:
+            logger.warning(
+                "No se pudo obtener metadata HTTP previa para %s: %s",
+                source_id,
+                metadata_error,
+            )
+
         for attempt in range(0, max_retries + 1):
             try:
-                resp = await client.get(
-                    feed_url, timeout=COLLECTION_CONFIG["request_timeout"]
+                conditional_headers: Dict[str, str] = {}
+                if cached_headers.get("etag"):
+                    conditional_headers["If-None-Match"] = cached_headers["etag"]
+                if cached_headers.get("last_modified"):
+                    conditional_headers["If-Modified-Since"] = cached_headers["last_modified"]
+
+                response = await client.get(
+                    feed_url,
+                    timeout=COLLECTION_CONFIG["request_timeout"],
+                    headers=conditional_headers or None,
                 )
-                if resp.status_code in (429, 500, 502, 503, 504):
+
+                if response.status_code in (429, 500, 502, 503, 504):
                     if attempt < max_retries:
                         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
                         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
@@ -108,20 +127,58 @@ class AsyncRSSCollector(RSSCollector):
                         delay = min(max_b, (base * (2**attempt)) + jitter)
                         await asyncio.sleep(delay)
                         continue
-                    else:
-                        logger.warning(
-                            f"HTTP {resp.status_code} agotó reintentos para {feed_url}"
-                        )
-                        return None
-                resp.raise_for_status()
-                ct = resp.headers.get("content-type", "").lower()
-                if not any(x in ct for x in ["xml", "rss", "atom"]):
-                    logger.warning(f"⚠️  Content-Type sospechoso: {ct} para {feed_url}")
-                if len(resp.content) > 10 * 1024 * 1024:
+                    logger.warning(
+                        f"HTTP {response.status_code} agotó reintentos para {feed_url}"
+                    )
+                    return (None, response.status_code)
+
+                if response.status_code == 304:
+                    if response.headers.get("ETag") or response.headers.get(
+                        "Last-Modified"
+                    ):
+                        try:
+                            self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                etag=response.headers.get("ETag"),
+                                last_modified=response.headers.get("Last-Modified"),
+                            )
+                        except Exception as update_error:
+                            logger.warning(
+                                "No se pudo actualizar metadata HTTP para %s tras 304: %s",
+                                source_id,
+                                update_error,
+                            )
+                    return (None, 304)
+
+                response.raise_for_status()
+
+                content_type = response.headers.get("content-type", "").lower()
+                if not any(xml_type in content_type for xml_type in ["xml", "rss", "atom"]):
+                    logger.warning(
+                        f"⚠️  Content-Type sospechoso: {content_type} para {feed_url}"
+                    )
+
+                if len(response.content) > 10 * 1024 * 1024:
                     logger.warning(f"⚠️  Feed muy grande (>10MB): {feed_url}")
-                    return None
-                return resp.text
-            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as re:
+                    return (None, response.status_code)
+
+                if response.headers.get("ETag") or response.headers.get("Last-Modified"):
+                    try:
+                        self.db_manager.update_source_feed_metadata(
+                            source_id,
+                            etag=response.headers.get("ETag"),
+                            last_modified=response.headers.get("Last-Modified"),
+                        )
+                    except Exception as update_error:
+                        logger.warning(
+                            "No se pudo actualizar metadata HTTP para %s: %s",
+                            source_id,
+                            update_error,
+                        )
+
+                return (response.text, response.status_code)
+
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as exc:
                 if attempt < max_retries:
                     base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
                     max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
@@ -131,12 +188,18 @@ class AsyncRSSCollector(RSSCollector):
                     delay = min(max_b, (base * (2**attempt)) + jitter)
                     await asyncio.sleep(delay)
                     continue
-                else:
-                    logger.warning(
-                        f"⏰ Timeout/ConnError tras reintentos: {feed_url} | {re}"
-                    )
-                    return None
-        return None
+                logger.warning(
+                    f"⏰ Timeout/ConnError tras reintentos: {feed_url} | {exc}"
+                )
+                return (None, None)
+            except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
+                logger.error(f"Error HTTP crítico obteniendo feed {feed_url}: {exc}")
+                return (None, None)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.error(f"Error inesperado obteniendo feed {feed_url}: {exc}")
+                return (None, None)
+
+        return (None, None)
 
     async def _process_source_async(
         self, client: httpx.AsyncClient, source_id: str, source_config: Dict[str, Any]
@@ -170,7 +233,13 @@ class AsyncRSSCollector(RSSCollector):
                 domain, robots_delay, source_config.get("min_delay_seconds")
             )
 
-            feed_content = await self._fetch_feed_async(client, source_config["url"])
+            feed_content, status_code = await self._fetch_feed_async(
+                client, source_id, source_config["url"]
+            )
+            if status_code == 304:
+                stats["success"] = True
+                return stats
+
             if not feed_content:
                 stats["error_message"] = "No se pudo obtener el feed"
                 return stats
@@ -215,7 +284,7 @@ class AsyncRSSCollector(RSSCollector):
     async def collect_from_multiple_sources_async(
         self, sources_config: Dict[str, Dict[str, Any]]
     ) -> Dict[str, Any]:
-        self.start_time = time.time()
+        self.start_time = datetime.now(timezone.utc)
         self._reset_stats()
 
         headers = {
@@ -233,12 +302,58 @@ class AsyncRSSCollector(RSSCollector):
         async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
 
             async def run_one(sid: str, cfg: Dict[str, Any]):
-                async with sem:
-                    res = await self._process_source_async(client, sid, cfg)
-                    source_results[sid] = res
+                try:
+                    async with sem:
+                        result = await self._process_source_async(client, sid, cfg)
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.error(f"Error crítico procesando {sid}: {exc}")
+                    result = {
+                        "source_id": sid,
+                        "success": False,
+                        "articles_found": 0,
+                        "articles_saved": 0,
+                        "error_message": f"Error inesperado: {exc}",
+                        "processing_time": 0,
+                    }
+                source_results[sid] = result
+
+            for source_id, source_config in sources_config.items():
+                try:
+                    self._pre_process_source(source_id, source_config)
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.warning(
+                        "Pre-proceso falló para %s: %s", source_id, exc
+                    )
 
             tasks = [run_one(sid, cfg) for sid, cfg in sources_config.items()]
             await asyncio.gather(*tasks)
 
-        # Generate report like base class
+        for source_id, source_config in sources_config.items():
+            result = source_results.get(
+                source_id,
+                {
+                    "source_id": source_id,
+                    "success": False,
+                    "articles_found": 0,
+                    "articles_saved": 0,
+                    "error_message": "Sin resultados",
+                    "processing_time": 0,
+                },
+            )
+            self._update_global_stats(result)
+            try:
+                self._post_process_source(source_id, source_config, result)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("Post-proceso falló para %s: %s", source_id, exc)
+
+        end_time = datetime.now(timezone.utc)
+        self.stats["processing_time_seconds"] = (
+            end_time - self.start_time
+        ).total_seconds()
+
+        try:
+            self._post_process_collection(source_results)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Post-proceso global falló: %s", exc)
+
         return self._generate_collection_report(source_results)
