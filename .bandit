@@ -1,0 +1,17 @@
+# Bandit configuration tuned for Noticiencias News Collector
+exclude_dirs:
+  - tests/data
+  - docs
+  - build
+  - reports
+  - .venv
+  - .git
+skips:
+  - B101  # assert used in tests
+  - B110  # insecure temp usage in controlled contexts
+  - B324  # hashlib.md5 used for non-cryptographic hashing in dedupe utilities
+  - B411
+  - B603
+targets:
+  - src
+  - scripts
