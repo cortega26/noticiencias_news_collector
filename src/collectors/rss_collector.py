@@ -24,6 +24,7 @@ import httpx
 
 import requests
 import feedparser
+from pydantic import ValidationError
 
 from .base_collector import BaseCollector
 from .rate_limit_utils import calculate_effective_delay
@@ -36,6 +37,7 @@ from config.settings import (
 )
 from src.utils.url_canonicalizer import canonicalize_url
 from src.enrichment import enrichment_pipeline
+from src.contracts import CollectorArticleModel
 
 logger = logging.getLogger(__name__)
 
@@ -684,7 +686,7 @@ class RSSCollector(BaseCollector):
 
     def _process_article(
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[CollectorArticleModel]:
         """
         Procesa un artículo crudo para prepararlo para almacenamiento.
 
@@ -766,7 +768,20 @@ class RSSCollector(BaseCollector):
             except Exception as exc:  # pragma: no cover - enrichment should not fail
                 logger.warning(f"Enrichment failed: {exc}")
 
-            return processed_article
+            try:
+                return CollectorArticleModel.model_validate(processed_article)
+            except ValidationError as exc:
+                logger.warning(
+                    "Payload validation failed for %s: %s",
+                    raw_article.get("url", "unknown"),
+                    exc,
+                )
+                self._send_to_dlq(
+                    source_id,
+                    raw_article.get("original_url", raw_article.get("url", "")),
+                    "collector_payload_invalid",
+                )
+                return None
 
         except Exception as e:
             logger.error(
@@ -774,7 +789,7 @@ class RSSCollector(BaseCollector):
             )
             return None
 
-    def _save_article(self, article_data: Dict[str, Any]) -> bool:
+    def _save_article(self, article_data: CollectorArticleModel | Dict[str, Any]) -> bool:
         """
         Guarda un artículo procesado en la base de datos.
 
@@ -785,14 +800,30 @@ class RSSCollector(BaseCollector):
         try:
             saved_article = self.db_manager.save_article(article_data)
             if saved_article:
-                logger.debug(f"📚 Artículo guardado: {article_data['title'][:50]}...")
+                title = (
+                    article_data.title
+                    if isinstance(article_data, CollectorArticleModel)
+                    else article_data["title"]
+                )
+                logger.debug(f"📚 Artículo guardado: {title[:50]}...")
                 return True
             else:
-                logger.debug(
-                    f"📋 Artículo duplicado omitido: {article_data['title'][:50]}..."
+                title = (
+                    article_data.title
+                    if isinstance(article_data, CollectorArticleModel)
+                    else article_data["title"]
                 )
+                logger.debug(f"📋 Artículo duplicado omitido: {title[:50]}...")
                 return False
 
+        except ValueError as exc:
+            title = (
+                article_data.title
+                if isinstance(article_data, CollectorArticleModel)
+                else article_data.get("title", "sin título")
+            )
+            logger.error(f"Error de validación guardando artículo {title[:50]}: {exc}")
+            return False
         except Exception as e:
             logger.error(f"Error guardando artículo: {e}")
             return False

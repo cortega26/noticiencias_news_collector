@@ -20,8 +20,11 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 import logging
 
+from pydantic import ValidationError
+
 from ..storage.models import Article
 from config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
+from src.contracts import ScoringRequestModel
 
 logger = logging.getLogger(__name__)
 
@@ -134,20 +137,36 @@ class BasicScorer:
                 f"📊 Artículo scored: {final_score:.3f} - {article.title[:50]}..."
             )
 
-            return result
+            try:
+                validated = ScoringRequestModel.model_validate(result)
+            except ValidationError as exc:
+                identifier = getattr(article, "id", getattr(article, "url", "unknown"))
+                raise ValueError(
+                    f"Invalid scoring payload for article {identifier}: {exc}"
+                ) from exc
+
+            return validated.model_dump()
 
         except Exception as e:
             logger.error(f"Error calculando score para artículo {article.id}: {e}")
-            # Retornar score neutral en caso de error
-            return {
-                "final_score": 0.5,
+            fallback = {
+                "final_score": 0.0,
                 "should_include": False,
-                "components": {"error": str(e)},
+                "components": {
+                    "source_credibility": 0.0,
+                    "recency": 0.0,
+                    "content_quality": 0.0,
+                    "engagement": 0.0,
+                },
                 "weights": self.weights.copy(),
                 "explanation": {"error": f"Error en cálculo: {str(e)}"},
                 "version": self.version,
                 "calculated_at": datetime.now(timezone.utc).isoformat(),
             }
+            try:
+                return ScoringRequestModel.model_validate(fallback).model_dump()
+            except ValidationError:
+                return fallback
 
     def _calculate_source_credibility_score(
         self, article: Article, source_config: Dict[str, Any] = None

@@ -9,6 +9,10 @@ from src.utils.dedupe import normalize_article_text, sha256_hex
 from src.utils.text_cleaner import detect_language_simple
 from textblob import TextBlob
 
+from src.contracts import (
+    ArticleEnrichmentModel,
+    ArticleForEnrichmentModel,
+)
 
 TOPIC_KEYWORDS = {
     "space": {
@@ -183,10 +187,17 @@ class EnrichmentPipeline:
     def __init__(self):
         self._cache: Dict[str, Dict[str, object]] = {}
 
-    def enrich_article(self, article: Dict[str, object]) -> Dict[str, object]:
-        title = str(article.get("title", "") or "")
-        summary = str(article.get("summary", "") or "")
-        content = str(article.get("content", "") or "")
+    def enrich_article(
+        self, article: Dict[str, object] | ArticleForEnrichmentModel
+    ) -> Dict[str, object]:
+        payload = (
+            article
+            if isinstance(article, ArticleForEnrichmentModel)
+            else ArticleForEnrichmentModel.model_validate(article)
+        )
+        title = payload.title
+        summary = payload.summary
+        content = payload.content
 
         normalized_title, normalized_summary, normalized_text = normalize_article_text(
             title, summary or content
@@ -195,9 +206,7 @@ class EnrichmentPipeline:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        language = article.get("language") or detect_language_simple(
-            f"{title} {summary}"
-        )
+        language = payload.language or detect_language_simple(f"{title} {summary}")
         language = language if language in ("en", "es") else "en"
 
         combined_text = (
@@ -229,8 +238,10 @@ class EnrichmentPipeline:
         if result is None:
             raise last_exception or RuntimeError("Enrichment pipeline failed")
 
-        self._cache[cache_key] = result
-        return result
+        validated = ArticleEnrichmentModel.model_validate(result)
+        result_dict = validated.model_dump()
+        self._cache[cache_key] = result_dict
+        return result_dict
 
 
 enrichment_pipeline = EnrichmentPipeline()
