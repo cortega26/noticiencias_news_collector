@@ -29,6 +29,12 @@ from .sources import (
     validate_sources,
 )
 
+from .version import (
+    MIN_PYTHON_VERSION,
+    MIN_PYTHON_VERSION_STR,
+    PYTHON_REQUIRES_SPECIFIER,
+)
+
 __version__ = "1.0.0"
 __author__ = "News Collector Team"
 
@@ -52,4 +58,7 @@ __all__ = [
     "get_high_credibility_sources",
     "get_sources_by_update_frequency",
     "validate_sources",
+    "MIN_PYTHON_VERSION",
+    "MIN_PYTHON_VERSION_STR",
+    "PYTHON_REQUIRES_SPECIFIER",
 ]
