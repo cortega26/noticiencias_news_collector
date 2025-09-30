@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT / "src"
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from src.scoring import feature_scorer
 from src.scoring.feature_scorer import FeatureBasedScorer

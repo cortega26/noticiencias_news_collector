@@ -227,6 +227,23 @@ FRESHNESS_MAX_DECAY_HOURS=168
 DIVERSITY_PENALTY_WEIGHT=0.15
 DIVERSITY_MAX_PENALTY=0.3
 
+# Heurísticas de calidad de contenido
+SCORING_TITLE_LENGTH_DIVISOR=120
+SCORING_SUMMARY_LENGTH_DIVISOR=400
+SCORING_ENTITY_TARGET_COUNT=5
+SCORING_CONTENT_WEIGHT_TITLE=0.4
+SCORING_CONTENT_WEIGHT_SUMMARY=0.4
+SCORING_CONTENT_WEIGHT_ENTITY=0.2
+
+# Heurísticas de engagement
+SCORING_SENTIMENT_POSITIVE=0.7
+SCORING_SENTIMENT_NEUTRAL=0.5
+SCORING_SENTIMENT_NEGATIVE=0.6
+SCORING_SENTIMENT_FALLBACK=0.5
+SCORING_WORD_COUNT_DIVISOR=800
+SCORING_ENGAGEMENT_EXTERNAL_WEIGHT=0.6
+SCORING_ENGAGEMENT_LENGTH_WEIGHT=0.4
+
 # Concurrencia de scoring
 SCORING_WORKERS=4
 
@@ -255,6 +272,16 @@ FEATURE_WEIGHT_ENGAGEMENT=0.10
 ```
 
 ¿Necesitas volver al algoritmo previo? Configura `SCORING_MODE=basic`.
+
+### Ajustar heurísticas sin romper el scoring
+
+El modo *advanced* expone controles finos para ajustar la sensibilidad del algoritmo sin introducir efectos secundarios inesperados:
+
+- **Divisores de longitud (`SCORING_TITLE_LENGTH_DIVISOR`, `SCORING_SUMMARY_LENGTH_DIVISOR`, `SCORING_WORD_COUNT_DIVISOR`)**: definen cuántos caracteres/palabras consideramos "suficientes" antes de dar puntuación máxima. Útiles para adaptar el sistema a resúmenes más cortos o notas largas.
+- **Peso de entidades (`SCORING_ENTITY_TARGET_COUNT`, `SCORING_CONTENT_WEIGHT_*`)**: controla cuánta relevancia damos a artículos con entidades enriquecidas. Mantén la suma de los pesos en `1.0` para conservar una escala estable.
+- **Sentimiento y engagement (`SCORING_SENTIMENT_*`, `SCORING_ENGAGEMENT_*`)**: permite reforzar o suavizar la señal emocional del contenido. Todos los valores se validan para permanecer en el rango `[0, 1]` y los pesos deben sumar `1.0` para evitar sesgos.
+
+El scorer valida estos parámetros al arrancar y levantará un `ValueError` si detecta divisores no positivos, pesos fuera de rango o sumas incorrectas. Así evitamos despliegues con configuraciones inconsistentes.
 
 ---
 

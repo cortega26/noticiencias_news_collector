@@ -85,6 +85,37 @@ SCORING_CONFIG = {
         "weight": float(os.getenv("DIVERSITY_PENALTY_WEIGHT", 0.15)),
         "max_penalty": float(os.getenv("DIVERSITY_MAX_PENALTY", 0.3)),
     },
+    "content_quality_heuristics": {
+        "title_length_divisor": float(
+            os.getenv("SCORING_TITLE_LENGTH_DIVISOR", 120.0)
+        ),
+        "summary_length_divisor": float(
+            os.getenv("SCORING_SUMMARY_LENGTH_DIVISOR", 400.0)
+        ),
+        "entity_target_count": float(
+            os.getenv("SCORING_ENTITY_TARGET_COUNT", 5.0)
+        ),
+        "weights": {
+            "title": float(os.getenv("SCORING_CONTENT_WEIGHT_TITLE", 0.4)),
+            "summary": float(os.getenv("SCORING_CONTENT_WEIGHT_SUMMARY", 0.4)),
+            "entity": float(os.getenv("SCORING_CONTENT_WEIGHT_ENTITY", 0.2)),
+        },
+    },
+    "engagement_heuristics": {
+        "sentiment_scores": {
+            "positive": float(os.getenv("SCORING_SENTIMENT_POSITIVE", 0.7)),
+            "negative": float(os.getenv("SCORING_SENTIMENT_NEGATIVE", 0.6)),
+            "neutral": float(os.getenv("SCORING_SENTIMENT_NEUTRAL", 0.5)),
+        },
+        "fallback_sentiment": float(os.getenv("SCORING_SENTIMENT_FALLBACK", 0.5)),
+        "word_count_divisor": float(os.getenv("SCORING_WORD_COUNT_DIVISOR", 800.0)),
+        "external_weight": float(
+            os.getenv("SCORING_ENGAGEMENT_EXTERNAL_WEIGHT", 0.6)
+        ),
+        "length_weight": float(
+            os.getenv("SCORING_ENGAGEMENT_LENGTH_WEIGHT", 0.4)
+        ),
+    },
     "reranker_seed": int(os.getenv("RERANKER_SEED", 1337)),
     "source_cap_percentage": float(os.getenv("SOURCE_CAP_PERCENTAGE", 0.5)),
     "topic_cap_percentage": float(os.getenv("TOPIC_CAP_PERCENTAGE", 0.6)),
