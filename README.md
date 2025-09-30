@@ -56,6 +56,9 @@ Cada artículo incluye un payload de "why ranked" con contribuciones por feature
 - `python scripts/evaluate_ranking.py` → NDCG@5, Precision@5, MRR sobre un dev set.
 - `python scripts/reranker_distribution.py` → distribución de fuentes/temas antes vs. después del reranker.
 - `python scripts/enrichment_sanity.py` → sanity check de enriquecimiento (lenguaje, sentimiento, tópicos, entidades).
+- `python scripts/weekly_quality_report.py tests/data/monitoring/outage_replay.json` → genera reporte semanal en formato común.
+- `python scripts/replay_outage.py tests/data/monitoring/outage_replay.json` → replay de outage histórico con alertas canario.
+- Ver especificación del formato en `docs/common_output_format.md`.
 
 ### 🛠️ Facilidad de Uso
 - **Instalación Simple**: Una línea de comando
