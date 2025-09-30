@@ -102,6 +102,13 @@ class NewsCollectorSystem:
             if not health_status["healthy"]:
                 raise Exception(f"Sistema no saludable: {health_status['issues']}")
 
+            if health_status.get("warnings"):
+                warning_logger = self.logger.create_module_logger("system")
+                warning_logger.warning(
+                    "Inicialización completada con advertencias: "
+                    f"{health_status['warnings']}"
+                )
+
             self.is_initialized = True
 
             # Log de inicio exitoso
@@ -359,27 +366,46 @@ class NewsCollectorSystem:
         Returns:
             Diccionario con estado de salud y posibles issues
         """
-        issues = []
+        issues: List[str] = []
+        warnings: List[str] = []
+        critical_issues: List[str] = []
 
         # Verificar base de datos
         try:
             db_health = self.db_manager.get_health_status()
             if db_health.get("failed_sources", 0) > 0:
-                issues.append(f"{db_health['failed_sources']} fuentes fallando")
+                warning_message = f"{db_health['failed_sources']} fuentes fallando"
+                warnings.append(warning_message)
+                issues.append(warning_message)
+
+                # Registrar la advertencia para visibilidad operativa
+                self.logger.create_module_logger("database").warning(
+                    f"⚠️ Fuentes fallando detectadas: {db_health['failed_sources']}"
+                )
         except Exception as e:
-            issues.append(f"Error verificando base de datos: {str(e)}")
+            issue_message = f"Error verificando base de datos: {str(e)}"
+            issues.append(issue_message)
+            critical_issues.append(issue_message)
+            self.logger.create_module_logger("database").error(issue_message)
 
         # Verificar colector
         if not self.collector.is_healthy():
-            issues.append("Colector en estado no saludable")
+            collector_issue = "Colector en estado no saludable"
+            issues.append(collector_issue)
+            critical_issues.append(collector_issue)
+            self.logger.create_module_logger("collectors").error(collector_issue)
 
         # Verificar que tengamos fuentes configuradas
         if len(ALL_SOURCES) == 0:
-            issues.append("No hay fuentes configuradas")
+            config_issue = "No hay fuentes configuradas"
+            issues.append(config_issue)
+            critical_issues.append(config_issue)
+            self.logger.create_module_logger("config").error(config_issue)
 
         return {
-            "healthy": len(issues) == 0,
+            "healthy": len(critical_issues) == 0,
             "issues": issues,
+            "warnings": warnings,
             "check_time": datetime.now(timezone.utc).isoformat(),
         }
 
