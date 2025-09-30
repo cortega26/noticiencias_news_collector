@@ -163,7 +163,7 @@ INSTITUTIONAL_SOURCES = {
     },
     "nih_news": {
         "name": "NIH News",
-        "url": "https://www.nih.gov/news-events/news-releases/rss.xml",
+        "url": "https://www.nih.gov/news-releases/feed.xml",
         "credibility_score": 0.95,
         "update_frequency": "weekly",
         "category": "medicine",
