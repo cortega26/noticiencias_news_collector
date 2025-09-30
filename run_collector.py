@@ -21,11 +21,13 @@ Uso:
     python run_collector.py --quiet                     # Modo silencioso
 """
 
-import sys
-import os
-from pathlib import Path
 import argparse
+import os
+import sys
+import time
+import uuid
 from datetime import datetime
+from pathlib import Path
 
 # Agregar el directorio raíz al path para imports
 project_root = Path(__file__).parent
@@ -33,6 +35,8 @@ sys.path.insert(0, str(project_root))
 
 try:
     from config import ALL_SOURCES
+    from main import create_system
+    from src import setup_logging
 except ImportError as e:
     print(f"❌ Error importando módulos: {e}")
     print(
@@ -86,16 +90,30 @@ def run_simple_collection(args):
             print_banner()
 
         # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
-        from main import create_system
 
         print("🔧 Inicializando sistema...")
         system = create_system()
+
+        logger_factory = setup_logging()
+        run_logger = logger_factory.create_module_logger("cli.run")
+        trace_id = str(uuid.uuid4())
 
         if not system.initialize():
             print("❌ Error durante inicialización del sistema")
             return False
 
         print("✅ Sistema inicializado correctamente")
+
+        run_logger.info(
+            {
+                "event": "cli.initialize.completed",
+                "trace_id": trace_id,
+                "session_id": None,
+                "source_id": "cli",
+                "latency": 0.0,
+                "details": {"sources": len(ALL_SOURCES)},
+            }
+        )
 
         # Mostrar información sobre lo que se va a hacer
         if args.sources:
@@ -120,8 +138,17 @@ def run_simple_collection(args):
 
         # Ejecutar recolección
         print("\n🚀 Iniciando recolección...")
+        run_start = time.perf_counter()
         results = system.run_collection_cycle(
-            sources_filter=args.sources if args.sources else None, dry_run=args.dry_run
+            sources_filter=args.sources if args.sources else None,
+            dry_run=args.dry_run,
+            trace_id=trace_id,
+        )
+
+        session_id = (
+            results.get("session_info", {}).get("session_id")
+            if isinstance(results, dict)
+            else None
         )
 
         # Mostrar resultados
@@ -131,6 +158,17 @@ def run_simple_collection(args):
         # Mostrar mejores artículos si no es dry run
         if not args.dry_run and args.show_articles > 0:
             print_top_articles(system, args.show_articles)
+
+        run_logger.info(
+            {
+                "event": "cli.collection.completed",
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "source_id": "cli",
+                "latency": time.perf_counter() - run_start,
+                "details": results.get("summary", {}) if isinstance(results, dict) else {},
+            }
+        )
 
         print("🎉 ¡Recolección completada exitosamente!")
         return True
@@ -144,6 +182,19 @@ def run_simple_collection(args):
             import traceback
 
             traceback.print_exc()
+        try:
+            setup_logging().create_module_logger("cli.run").error(
+                {
+                    "event": "cli.collection.error",
+                    "trace_id": str(uuid.uuid4()),
+                    "session_id": None,
+                    "source_id": "cli",
+                    "latency": 0.0,
+                    "details": {"error": str(e)},
+                }
+            )
+        except Exception:
+            pass
         return False
 
 
