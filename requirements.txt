@@ -29,6 +29,9 @@ click                      # CLI interface elegante
 
 # Logging y monitoreo
 loguru                     # Logger moderno y bonito
+opentelemetry-api          # API para trazas y métricas distribuidas
+opentelemetry-sdk          # SDK base para exportar trazas localmente
+prometheus-client          # Exposición de métricas para scraping/alerting
 
 # Testing (para desarrollo futuro)
 pytest                    # Framework de testing

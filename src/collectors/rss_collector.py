@@ -196,6 +196,7 @@ class RSSCollector(BaseCollector):
             "articles_saved": 0,
             "error_message": None,
             "processing_time": 0,
+            "collector": self.collector_type,
         }
 
         try:

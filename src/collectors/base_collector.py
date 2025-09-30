@@ -22,6 +22,7 @@ import json
 from pathlib import Path
 
 from config.settings import DLQ_DIR
+from src.utils import get_observability
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ class BaseCollector(ABC):
         logger.info(f"🚀 Inicializando colector: {self.collector_type}")
         # Idempotency tracking for this run
         self._job_keys_seen = set()
+        self.observability = get_observability()
 
     @abstractmethod
     def collect_from_source(
@@ -100,6 +102,12 @@ class BaseCollector(ABC):
         logger.info(
             f"🎯 Iniciando recolección masiva con {len(sources_config)} fuentes"
         )
+        self.observability.log_event(
+            stage="ingestion",
+            event="batch.start",
+            collector=self.collector_type,
+            sources=len(sources_config),
+        )
 
         # Resetear estadísticas para esta sesión
         self._reset_stats()
@@ -114,7 +122,14 @@ class BaseCollector(ABC):
                 self._pre_process_source(source_id, source_config)
 
                 # Recolectar de la fuente específica
-                source_result = self.collect_from_source(source_id, source_config)
+                with self.observability.instrument_stage(
+                    "ingestion.source",
+                    source_id=source_id,
+                    collector=self.collector_type,
+                ):
+                    source_result = self.collect_from_source(
+                        source_id, source_config
+                    )
 
                 # Actualizar estadísticas globales
                 self._update_global_stats(source_result)
@@ -148,6 +163,7 @@ class BaseCollector(ABC):
                 self.stats["total_errors"] += 1
 
                 logger.error(f"💥 Error crítico procesando {source_id}: {e}")
+                self.observability.record_error("ingestion", type(e).__name__)
 
         # Finalizar y generar reporte
         end_time = datetime.now(timezone.utc)
@@ -160,6 +176,15 @@ class BaseCollector(ABC):
 
         # Generar reporte final
         final_report = self._generate_collection_report(source_results)
+
+        self.observability.log_event(
+            stage="ingestion",
+            event="batch.completed",
+            collector=self.collector_type,
+            duration_seconds=self.stats["processing_time_seconds"],
+            sources_processed=self.stats["total_sources_processed"],
+            errors=self.stats["total_errors"],
+        )
 
         logger.info(
             f"🎉 Recolección completada: {self.stats['total_articles_saved']} artículos guardados en {self.stats['processing_time_seconds']:.1f}s"

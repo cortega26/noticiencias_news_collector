@@ -35,7 +35,13 @@ from config import (
     COLLECTION_CONFIG,
     SCORING_CONFIG,
 )
-from src import RSSCollector, get_database_manager, setup_logging
+from config.observability import OBSERVABILITY_CONFIG
+from src import (
+    RSSCollector,
+    get_database_manager,
+    setup_logging,
+    get_observability,
+)
 
 
 class NewsCollectorSystem:
@@ -62,6 +68,7 @@ class NewsCollectorSystem:
         self.collector = None
         self.scorer = None
         self.logger = None
+        self.observability = get_observability()
 
         # Estado del sistema
         self.is_initialized = False
@@ -156,50 +163,145 @@ class NewsCollectorSystem:
         # Configurar logger para la sesión
         session_logger = self.logger.create_module_logger(f"session.{session_id}")
 
+        cycle_context = {
+            "session_id": session_id,
+            "system_id": self.system_id,
+            "dry_run": dry_run,
+        }
+
         try:
-            session_logger.info(
-                f"🚀 INICIANDO CICLO DE RECOLECCIÓN (Sesión: {session_id})"
-            )
+            with self.observability.start_trace(
+                "pipeline.cycle", **cycle_context, sources_filter=bool(sources_filter)
+            ):
+                session_logger.info(
+                    f"🚀 INICIANDO CICLO DE RECOLECCIÓN (Sesión: {session_id})"
+                )
+                self.observability.log_event(
+                    stage="pipeline",
+                    event="cycle.start",
+                    session_id=session_id,
+                    sources_filter=sources_filter or [],
+                )
 
-            # Determinar fuentes a procesar
-            sources_to_process = self._get_sources_to_process(sources_filter)
-            session_logger.info(f"📍 Procesando {len(sources_to_process)} fuentes")
+                # Determinar fuentes a procesar
+                sources_to_process = self._get_sources_to_process(sources_filter)
+                session_logger.info(
+                    f"📍 Procesando {len(sources_to_process)} fuentes"
+                )
+                self.observability.log_event(
+                    stage="ingestion",
+                    event="sources_selected",
+                    count=len(sources_to_process),
+                )
 
-            if dry_run:
-                session_logger.info("🧪 MODO DRY RUN - No se guardarán datos")
+                if dry_run:
+                    session_logger.info("🧪 MODO DRY RUN - No se guardarán datos")
 
-            # Fase 1: Recolección de artículos
-            session_logger.info("📡 Fase 1: Recolectando artículos...")
-            collection_results = self._execute_collection(sources_to_process, dry_run)
+                # Fase 1: Recolección de artículos
+                session_logger.info("📡 Fase 1: Recolectando artículos...")
+                with self.observability.instrument_stage(
+                    "pipeline.ingestion",
+                    session_id=session_id,
+                    sources=len(sources_to_process),
+                ):
+                    collection_results = self._execute_collection(
+                        sources_to_process, dry_run
+                    )
 
-            # Fase 2: Scoring de artículos
-            session_logger.info("🎯 Fase 2: Calculando scores...")
-            scoring_results = self._execute_scoring(collection_results, dry_run)
+                for source_id, result in (
+                    collection_results.get("source_details") or {}
+                ).items():
+                    self.observability.record_ingestion_result(
+                        source_id, result, trace_id=session_id
+                    )
 
-            # Fase 3: Selección final
-            session_logger.info("⭐ Fase 3: Seleccionando mejores artículos...")
-            final_selection = self._execute_final_selection(scoring_results)
+                # Fase 2: Scoring de artículos
+                session_logger.info("🎯 Fase 2: Calculando scores...")
+                with self.observability.instrument_stage(
+                    "pipeline.scoring", session_id=session_id
+                ):
+                    scoring_results = self._execute_scoring(
+                        collection_results, dry_run
+                    )
+                scoring_stats = scoring_results.get("statistics", {})
+                self.observability.log_event(
+                    stage="scoring",
+                    event="batch_statistics",
+                    **scoring_stats,
+                )
 
-            # Fase 4: Generar reporte
-            session_logger.info("📊 Fase 4: Generando reporte...")
-            final_report = self._generate_session_report(
-                collection_results, scoring_results, final_selection, session_id
-            )
+                # Fase 3: Selección final
+                session_logger.info("⭐ Fase 3: Seleccionando mejores artículos...")
+                with self.observability.instrument_stage(
+                    "pipeline.ranking", session_id=session_id
+                ):
+                    final_selection = self._execute_final_selection(scoring_results)
+                self.observability.log_event(
+                    stage="ranking",
+                    event="selection_summary",
+                    selected_count=final_selection.get("selected_count", 0),
+                )
 
-            # Log métricas de performance
-            self.logger.log_performance_metrics(
-                final_report["performance_metrics"], "CICLO COMPLETO"
-            )
+                # Fase 4: Generar reporte
+                session_logger.info("📊 Fase 4: Generando reporte...")
+                with self.observability.instrument_stage(
+                    "pipeline.reporting", session_id=session_id
+                ):
+                    final_report = self._generate_session_report(
+                        collection_results,
+                        scoring_results,
+                        final_selection,
+                        session_id,
+                    )
 
-            session_logger.info("🎉 CICLO DE RECOLECCIÓN COMPLETADO EXITOSAMENTE")
+                performance = final_report["performance_metrics"]
+                self.logger.log_performance_metrics(
+                    performance, "CICLO COMPLETO"
+                )
 
-            return final_report
+                duration_seconds = performance.get("total_duration_seconds", 0.0)
+                self.observability.observe_visibility_latency(duration_seconds)
+
+                collection_summary = collection_results.get(
+                    "collection_summary", {}
+                )
+                sources_processed = collection_summary.get("sources_processed", 0)
+                errors = collection_summary.get("errors_encountered", 0)
+                error_rate = (
+                    errors / max(sources_processed, 1)
+                    if sources_processed
+                    else 0.0
+                )
+                freshness_ratio = self._compute_topk_freshness_ratio(final_selection)
+                self.observability.record_topk_freshness(freshness_ratio)
+
+                slo_results = self.observability.evaluate_slos(
+                    ingest_visible_minutes=duration_seconds / 60.0,
+                    error_rate=error_rate,
+                    freshness_ratio=freshness_ratio,
+                )
+                final_report["slo_evaluations"] = slo_results
+
+                self.observability.log_event(
+                    stage="pipeline",
+                    event="cycle.completed",
+                    session_id=session_id,
+                    duration_seconds=duration_seconds,
+                    error_rate=error_rate,
+                )
+
+                session_logger.info(
+                    "🎉 CICLO DE RECOLECCIÓN COMPLETADO EXITOSAMENTE"
+                )
+
+                return final_report
 
         except Exception as e:
             session_logger.error(f"💥 Error en ciclo de recolección: {str(e)}")
             self.logger.log_error_with_context(
                 e, {"session_id": session_id, "system_id": self.system_id}
             )
+            self.observability.record_error("pipeline", type(e).__name__)
             raise
 
     def get_top_articles(
@@ -298,6 +400,9 @@ class NewsCollectorSystem:
     def _setup_logging(self):
         """Configura el sistema de logging."""
         self.logger = setup_logging()
+        self.observability.initialize(
+            environment=self.config_override.get("environment")
+        )
 
         # Log información del sistema al inicio
         self.logger.log_system_health()
@@ -576,6 +681,36 @@ class NewsCollectorSystem:
         }
 
         return report
+
+    def _compute_topk_freshness_ratio(
+        self, selection_results: Dict[str, Any]
+    ) -> float:
+        """Calcula la proporción de artículos recientes en el top-K."""
+
+        articles = selection_results.get("articles", []) or []
+        if not articles:
+            return 0.0
+
+        now = datetime.now(timezone.utc)
+        threshold_hours = OBSERVABILITY_CONFIG.get("freshness", {}).get(
+            "target_hours", 12
+        )
+        fresh = 0
+        for article in articles:
+            published = article.get("published_date")
+            if not published:
+                continue
+            try:
+                published_dt = datetime.fromisoformat(published)
+            except ValueError:
+                continue
+            if published_dt.tzinfo is None:
+                published_dt = published_dt.replace(tzinfo=timezone.utc)
+            age_hours = (now - published_dt).total_seconds() / 3600
+            if age_hours <= threshold_hours:
+                fresh += 1
+
+        return fresh / max(len(articles), 1)
 
     def _simulate_collection(
         self, sources: Dict[str, Dict[str, Any]]

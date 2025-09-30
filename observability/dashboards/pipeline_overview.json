@@ -1,0 +1,90 @@
+{
+  "dashboard": {
+    "title": "News Pipeline Overview",
+    "uid": "news-pipeline-overview",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Ingest Rate (sources/min)",
+        "type": "timeseries",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(news_ingest_sources_total{outcome=\"success\"}[5m]) * 60",
+            "legendFormat": "{{source_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "sources/min"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Dedupe Outcome Rate",
+        "type": "timeseries",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(news_dedupe_outcomes_total[10m])",
+            "legendFormat": "{{outcome}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Top-K Freshness Ratio",
+        "type": "stat",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "avg_over_time(news_pipeline_topk_freshness_ratio[15m])"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": 0.6 },
+                { "color": "orange", "value": 0.7 },
+                { "color": "green", "value": 0.8 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Classes (5m)",
+        "type": "bargauge",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum by (stage, error_type) (increase(news_pipeline_errors_total[5m]))"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "version": 1,
+    "generated": "local-dev"
+  }
+}
