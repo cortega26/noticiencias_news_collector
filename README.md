@@ -92,10 +92,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Instalar Dependencias
+> 💡 Si prefieres automatizar estos pasos, el comando `make bootstrap` crea el entorno virtual e instala todo por ti.
+
+### 3. Instalar Dependencias (Makefile recomendado)
 ```bash
-python -m pip install --upgrade pip
-python -m pip install --require-hashes -r requirements.lock
+make bootstrap
 ```
 
 > 💡 ¿Actualizaste `requirements.txt`? Regenera el lock ejecutando:
@@ -103,13 +104,18 @@ python -m pip install --require-hashes -r requirements.lock
 > python -m piptools compile --generate-hashes --output-file requirements.lock requirements.txt
 > ```
 
-### 4. Configurar Entorno
+### 4. Verificar Instalación
+```bash
+make test
+```
+
+### 5. Configurar Entorno
 ```bash
 cp .env.example .env
 # Edita .env con tus preferencias (opcional)
 ```
 
-### 5. Ejecutar Primera Recolección
+### 6. Ejecutar Primera Recolección
 ```bash
 python run_collector.py --dry-run
 ```
