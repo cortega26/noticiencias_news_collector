@@ -39,7 +39,7 @@ except ImportError as e:
         "Asegúrate de estar en el directorio correcto y tener todas las dependencias instaladas."
     )
     print(
-        "Ejecuta: python -m pip install -r requirements.txt (asegurando que pip corresponda a tu Python)"
+        "Ejecuta: python -m pip install --require-hashes -r requirements.lock (asegurando que pip corresponda a tu Python)"
     )
     sys.exit(1)
 
@@ -226,7 +226,9 @@ def check_dependencies():
 
     if missing_deps:
         print(f"❌ Dependencias faltantes: {', '.join(missing_deps)}")
-        print("Instala las dependencias con: python -m pip install -r requirements.txt")
+        print(
+            "Instala las dependencias con: python -m pip install --require-hashes -r requirements.lock"
+        )
         return False
 
     return True

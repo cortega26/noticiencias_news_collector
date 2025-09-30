@@ -128,7 +128,7 @@
 ## 4) Local Development
 
 - Create a virtual environment: `python -m venv .venv && source .venv/bin/activate`.
-- Install dependencies: `pip install -r requirements.txt`.
+- Install dependencies: `pip install --require-hashes -r requirements.lock`.
 - Sample commands:
   - `python run_collector.py --sources config/sources.yaml` — end-to-end pipeline run.
   - `pytest` — full test suite (fast, runs under 2 minutes on laptop).
