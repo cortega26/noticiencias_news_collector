@@ -4,6 +4,8 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -37,6 +39,8 @@ fastapi_stub.Depends = lambda dependency=None: dependency
 fastapi_stub.Query = lambda default=None, alias=None: default
 
 sys.modules.setdefault("fastapi", fastapi_stub)
+
+pytestmark = pytest.mark.e2e
 
 pydantic_stub = types.ModuleType("pydantic")
 

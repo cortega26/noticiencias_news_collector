@@ -14,6 +14,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from config import ALL_SOURCES
+
+pytestmark = pytest.mark.e2e
 from main import NewsCollectorSystem
 from src.storage.database import DatabaseManager
 from src.storage.models import Article

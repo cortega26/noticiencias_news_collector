@@ -8,6 +8,8 @@ from src.serving import create_app
 from src.storage.database import DatabaseManager
 from src.storage.models import Article, ScoreLog
 
+pytestmark = pytest.mark.e2e
+
 
 @pytest.fixture()
 def db_manager(tmp_path) -> DatabaseManager:
