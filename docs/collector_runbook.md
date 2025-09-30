@@ -1,7 +1,7 @@
 # 🛠️ Collector Runbook
 
 ## Overview
-The RSS collector fetches scientific feeds on a fixed cadence, applies polite rate limiting, and stores feed metadata for incremental polling. Operators can use this runbook to triage incidents and validate that caching is behaving as expected.
+The RSS collector fetches scientific feeds on a fixed cadence, applies polite rate limiting, and stores feed metadata for incremental polling. Operators can use this runbook to triage incidents and validate that caching is behaving as expected. For alerting workflows (ingest lag, dedupe drift, etc.) refer to the [Operations Runbook](runbook.md).
 
 ## Conditional Fetch Caching
 - We persist the latest `ETag` and `Last-Modified` headers per source in the `sources` table (`feed_etag`, `feed_last_modified`).
