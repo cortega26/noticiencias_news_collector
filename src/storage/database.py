@@ -35,6 +35,10 @@ import logging
 # Configurar logging para este módulo
 logger = logging.getLogger(__name__)
 
+SIMHASH_BITS = 64
+SIMHASH_MASK = (1 << SIMHASH_BITS) - 1
+SIMHASH_SIGN_BIT = 1 << (SIMHASH_BITS - 1)
+
 
 class DatabaseManager:
     """
@@ -253,6 +257,11 @@ class DatabaseManager:
         Returns:
             El artículo guardado o None si ya existía
         """
+        article_data = dict(article_data)
+        normalized_published = self._ensure_timezone(article_data.get("published_date"))
+        if normalized_published:
+            article_data["published_date"] = normalized_published
+
         with self.get_session() as session:
             try:
                 # Verificar si ya existe por URL
@@ -280,7 +289,9 @@ class DatabaseManager:
                     )
                     return None
 
-                simhash_value = simhash64(normalized_basis)
+                simhash_value = self._simhash_normalize_unsigned(
+                    simhash64(normalized_basis)
+                )
                 simhash_prefix = self._simhash_prefix_value(simhash_value)
                 cluster_id, confidence = self._assign_cluster(
                     session, simhash_value, article_data.get("published_date")
@@ -298,7 +309,7 @@ class DatabaseManager:
                 article = Article(
                     url=article_data["url"],
                     content_hash=content_hash,
-                    simhash=simhash_value,
+                    simhash=self._simhash_to_storage(simhash_value),
                     simhash_prefix=simhash_prefix,
                     title=article_data["title"],
                     summary=article_data.get("summary"),
@@ -343,11 +354,44 @@ class DatabaseManager:
     def _simhash_prefix_value(simhash_value: Optional[int]) -> Optional[int]:
         if simhash_value is None:
             return None
-        return ((simhash_value & ((1 << 64) - 1)) >> 48) & 0xFFFF
+        normalized = simhash_value & SIMHASH_MASK
+        return (normalized >> 48) & 0xFFFF
+
+    @staticmethod
+    def _ensure_timezone(dt: Optional[datetime]) -> Optional[datetime]:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+    @staticmethod
+    def _simhash_normalize_unsigned(simhash_value: Optional[int]) -> Optional[int]:
+        if simhash_value is None:
+            return None
+        return simhash_value & SIMHASH_MASK
+
+    @staticmethod
+    def _simhash_to_storage(simhash_value: Optional[int]) -> Optional[int]:
+        if simhash_value is None:
+            return None
+        normalized = simhash_value & SIMHASH_MASK
+        if normalized >= SIMHASH_SIGN_BIT:
+            return normalized - (1 << SIMHASH_BITS)
+        return normalized
+
+    @staticmethod
+    def _simhash_from_storage(simhash_value: Optional[int]) -> Optional[int]:
+        if simhash_value is None:
+            return None
+        if simhash_value < 0:
+            return simhash_value + (1 << SIMHASH_BITS)
+        return simhash_value
 
     def _assign_cluster(
         self, session: Session, simhash_value: int, published_date: Optional[datetime]
     ) -> Tuple[str, float]:
+        simhash_value = self._simhash_normalize_unsigned(simhash_value) or 0
         if not simhash_value:
             return generate_cluster_id(), 0.0
 
@@ -420,9 +464,10 @@ class DatabaseManager:
 
         hits: List[Tuple[Article, int]] = []
         for candidate in candidates:
-            if candidate.simhash is None:
+            candidate_simhash = self._simhash_from_storage(candidate.simhash)
+            if candidate_simhash is None:
                 continue
-            distance = hamming_distance(simhash_value, candidate.simhash)
+            distance = hamming_distance(simhash_value, candidate_simhash)
             if distance <= self.simhash_threshold:
                 hits.append((candidate, distance))
 
@@ -464,7 +509,11 @@ class DatabaseManager:
     def _time_distance_seconds(a: Optional[datetime], b: Optional[datetime]) -> float:
         if not a or not b:
             return float("inf")
-        return abs((a - b).total_seconds())
+        normalized_a = DatabaseManager._ensure_timezone(a)
+        normalized_b = DatabaseManager._ensure_timezone(b)
+        if normalized_a is None or normalized_b is None:
+            return float("inf")
+        return abs((normalized_a - normalized_b).total_seconds())
 
     def _revalidate_cluster(self, session: Session, cluster_id: Optional[str]) -> None:
         if not cluster_id:
@@ -480,10 +529,16 @@ class DatabaseManager:
         anchor = next((a for a in articles if a.simhash is not None), None)
         if anchor is None or anchor.simhash is None:
             return
+        anchor_simhash = self._simhash_from_storage(anchor.simhash)
+        if anchor_simhash is None:
+            return
         for article in articles:
             if article.id == anchor.id or article.simhash is None:
                 continue
-            distance = hamming_distance(article.simhash, anchor.simhash)
+            article_simhash = self._simhash_from_storage(article.simhash)
+            if article_simhash is None:
+                continue
+            distance = hamming_distance(article_simhash, anchor_simhash)
             if distance > self.simhash_threshold * 2:
                 new_cluster = generate_cluster_id()
                 article.cluster_id = new_cluster
