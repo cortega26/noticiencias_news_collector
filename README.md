@@ -92,15 +92,25 @@ source .venv/bin/activate
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+# (Opcional pero recomendado para desarrollo)
+python -m pip install -r requirements-dev.txt
 ```
 
-### 4. Configurar Entorno
+### 4. Activar hooks de seguridad (pre-commit)
+```bash
+pre-commit install
+pre-commit run --all-files  # Opcional para validar el estado inicial
+```
+
+### 5. Configurar secretos y entorno
 ```bash
 cp .env.example .env
-# Edita .env con tus preferencias (opcional)
+# Completa únicamente valores no sensibles. Para credenciales usa:
+#   export DATABASE_URL=postgresql://usuario:pass@host:puerto/db
+# o define SECRET_MANAGER_FILE=/path/a/secrets.json
 ```
 
-### 5. Ejecutar Primera Recolección
+### 6. Ejecutar Primera Recolección
 ```bash
 python run_collector.py --dry-run
 ```
@@ -149,7 +159,7 @@ python run_collector.py --check-deps
 ### 🏆 Journals de Élite
 - **Nature** - La revista científica más prestigiosa del mundo
 - **Science** - Revista insignia de la AAAS
-- **Cell** - Líder en biología celular y molecular  
+- **Cell** - Líder en biología celular y molecular
 - **NEJM** - La biblia de la medicina clínica
 
 ### 🎓 Fuentes Institucionales
@@ -413,6 +423,11 @@ grep "ERROR" data/logs/collector.log
 grep "Artículo guardado" data/logs/collector.log | wc -l
 ```
 
+## 📜 Cumplimiento y políticas de fuentes
+
+- Consulta la [matriz de ToS/robots](docs/policies/source_policy_matrix.md) antes de agregar nuevas fuentes o automatizar backfills masivos.
+- Respeta los `crawl-delay` configurados por dominio y documenta excepciones aprobadas en el runbook de operaciones.
+
 ---
 
 ## 🚀 Optimización y Performance
@@ -421,12 +436,18 @@ grep "Artículo guardado" data/logs/collector.log | wc -l
 
 1. **Usar PostgreSQL**:
 ```bash
-# En .env
-DB_TYPE=postgresql
-DB_HOST=localhost
-DB_NAME=news_collector
-DB_USER=collector
-DB_PASSWORD=secure_password
+# Exportar credenciales desde un gestor de secretos (ejemplo)
+export POSTGRES_PASSWORD="<valor gestionado>"
+# Genera la URL completa en tu Vault/Secret Manager (sin hardcodear el password)
+export DATABASE_URL="postgresql://collector:<PASSWORD>@localhost:5432/news_collector"
+
+# O bien crear un archivo seguro administrado por Vault/SM
+cat > /secure/path/news-collector.json <<'JSON'
+{
+  "DATABASE_URL": "postgresql://collector:<PASSWORD>@localhost:5432/news_collector"
+}
+JSON
+export SECRET_MANAGER_FILE=/secure/path/news-collector.json
 ```
 
 2. **Ajustar Paralelismo**:

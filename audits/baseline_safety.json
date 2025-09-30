@@ -1,0 +1,3015 @@
+
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+
+{
+    "report_meta": {
+        "scan_target": "files",
+        "scanned": [
+            "requirements.txt"
+        ],
+        "scanned_full_path": [
+            "/workspace/noticiencias_news_collector/requirements.txt"
+        ],
+        "target_languages": [
+            "python"
+        ],
+        "policy_file": null,
+        "policy_file_source": "local",
+        "audit_and_monitor": false,
+        "api_key": false,
+        "account": "",
+        "local_database_path": null,
+        "safety_version": "3.6.2",
+        "timestamp": "2025-09-30 16:08:02",
+        "packages_found": 20,
+        "vulnerabilities_found": 0,
+        "vulnerabilities_ignored": 41,
+        "remediations_recommended": 0,
+        "telemetry": {
+            "safety_options": {
+                "files": {
+                    "-r": 1
+                },
+                "json": {
+                    "--json": 1
+                }
+            },
+            "safety_version": "3.6.2",
+            "safety_source": "cli",
+            "os_type": "Linux",
+            "os_release": "6.12.13",
+            "os_description": "Linux-6.12.13-x86_64-with-glibc2.39",
+            "python_version": "3.12.10",
+            "safety_command": "check"
+        },
+        "git": {
+            "branch": "work",
+            "tag": "",
+            "commit": "3894a53583b81538e50970a995ad922e93f4b7ee",
+            "dirty": "False",
+            "origin": ""
+        },
+        "project": null,
+        "json_version": "1.1",
+        "remediations_attempted": 0,
+        "remediations_completed": 0,
+        "remediation_mode": "NON_INTERACTIVE"
+    },
+    "scanned_packages": {
+        "feedparser": {
+            "name": "feedparser",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                    "extras": [],
+                    "marker": null,
+                    "name": "feedparser",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "requests": {
+            "name": "requests",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                    "extras": [],
+                    "marker": null,
+                    "name": "requests",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "beautifulsoup4": {
+            "name": "beautifulsoup4",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "beautifulsoup4             # HTML parsing para contenido adicional",
+                    "extras": [],
+                    "marker": null,
+                    "name": "beautifulsoup4",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "lxml": {
+            "name": "lxml",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                    "extras": [],
+                    "marker": null,
+                    "name": "lxml",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "nltk": {
+            "name": "nltk",
+            "version": "3.9.1",
+            "requirements": [
+                {
+                    "raw": "nltk==3.9.1                # Natural Language Toolkit - an\u00e1lisis b\u00e1sico de texto",
+                    "extras": [],
+                    "marker": null,
+                    "name": "nltk",
+                    "specifier": "==3.9.1",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "textblob": {
+            "name": "textblob",
+            "version": "0.19.0",
+            "requirements": [
+                {
+                    "raw": "textblob==0.19.0           # An\u00e1lisis de sentimientos simple",
+                    "extras": [],
+                    "marker": null,
+                    "name": "textblob",
+                    "specifier": "==0.19.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "python-dateutil": {
+            "name": "python-dateutil",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "python-dateutil            # Parsing inteligente de fechas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dateutil",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "sqlalchemy": {
+            "name": "sqlalchemy",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "sqlalchemy                 # ORM potente y flexible",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sqlalchemy",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "python-dotenv": {
+            "name": "python-dotenv",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "python-dotenv              # Manejo de variables de entorno",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dotenv",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "schedule": {
+            "name": "schedule",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "schedule                   # Scheduling de tareas simple",
+                    "extras": [],
+                    "marker": null,
+                    "name": "schedule",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "click": {
+            "name": "click",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "click                      # CLI interface elegante",
+                    "extras": [],
+                    "marker": null,
+                    "name": "click",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "loguru": {
+            "name": "loguru",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "loguru                     # Logger moderno y bonito",
+                    "extras": [],
+                    "marker": null,
+                    "name": "loguru",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "opentelemetry-api": {
+            "name": "opentelemetry-api",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "opentelemetry-api          # API para trazas y m\u00e9tricas distribuidas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "opentelemetry-api",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "opentelemetry-sdk": {
+            "name": "opentelemetry-sdk",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "opentelemetry-sdk          # SDK base para exportar trazas localmente",
+                    "extras": [],
+                    "marker": null,
+                    "name": "opentelemetry-sdk",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "prometheus-client": {
+            "name": "prometheus-client",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "prometheus-client          # Exposici\u00f3n de m\u00e9tricas para scraping/alerting",
+                    "extras": [],
+                    "marker": null,
+                    "name": "prometheus-client",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "pytest": {
+            "name": "pytest",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "pytest                    # Framework de testing",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "pytest-cov": {
+            "name": "pytest-cov",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "pytest-cov                # Coverage de tests",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-cov",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "scikit-learn": {
+            "name": "scikit-learn",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "scikit-learn              # ML algorithms b\u00e1sicos",
+                    "extras": [],
+                    "marker": null,
+                    "name": "scikit-learn",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "numpy": {
+            "name": "numpy",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "numpy                     # Operaciones num\u00e9ricas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "numpy",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "httpx": {
+            "name": "httpx",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "httpx",
+                    "extras": [],
+                    "marker": null,
+                    "name": "httpx",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        }
+    },
+    "affected_packages": {
+        "httpx": {
+            "name": "httpx",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "httpx",
+                    "extras": [],
+                    "marker": null,
+                    "name": "httpx",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.0.1",
+                "0.10.0",
+                "0.10.1",
+                "0.11.0",
+                "0.11.1",
+                "0.12.0",
+                "0.12.1",
+                "0.13.0",
+                "0.13.0.dev1",
+                "0.13.0.dev2",
+                "0.13.1",
+                "0.13.2",
+                "0.13.3",
+                "0.13.dev0",
+                "0.14.0",
+                "0.14.1",
+                "0.14.2",
+                "0.14.3",
+                "0.15.0",
+                "0.15.1",
+                "0.15.2",
+                "0.15.3",
+                "0.15.4",
+                "0.15.5",
+                "0.16.0",
+                "0.16.1",
+                "0.17.0",
+                "0.17.1",
+                "0.18.0",
+                "0.18.1",
+                "0.18.2",
+                "0.19.0",
+                "0.20.0",
+                "0.21.0",
+                "0.21.1",
+                "0.21.2",
+                "0.21.3",
+                "0.22.0",
+                "0.6.7",
+                "0.6.8",
+                "0.7.0",
+                "0.7.1",
+                "0.7.2",
+                "0.7.3",
+                "0.7.4",
+                "0.7.5",
+                "0.7.6",
+                "0.7.7",
+                "0.7.8",
+                "0.8.0",
+                "0.9.0",
+                "0.9.1",
+                "0.9.2",
+                "0.9.3",
+                "0.9.4",
+                "0.9.5"
+            ],
+            "secure_versions": [
+                "1.0.dev3",
+                "1.0.dev2",
+                "1.0.dev1",
+                "0.28.1",
+                "0.28.0",
+                "0.27.2",
+                "0.27.1",
+                "0.27.0",
+                "0.26.0",
+                "0.25.2",
+                "0.25.1",
+                "0.25.0",
+                "0.24.1",
+                "0.24.0",
+                "0.23.3",
+                "0.23.2",
+                "0.23.1",
+                "0.23.0"
+            ],
+            "latest_version_without_known_vulnerabilities": "1.0.dev3",
+            "latest_version": "0.28.1",
+            "more_info_url": "https://data.safetycli.com/p/pypi/httpx/97c/"
+        },
+        "numpy": {
+            "name": "numpy",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "numpy                     # Operaciones num\u00e9ricas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "numpy",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.9.6",
+                "0.9.8",
+                "1.0",
+                "1.0.3",
+                "1.0.4",
+                "1.0b1",
+                "1.0b4",
+                "1.0b5",
+                "1.0rc1",
+                "1.0rc2",
+                "1.0rc3",
+                "1.10.0",
+                "1.10.1",
+                "1.10.2",
+                "1.10.3",
+                "1.10.4",
+                "1.1.1",
+                "1.11.0",
+                "1.11.1",
+                "1.11.2",
+                "1.11.3",
+                "1.12.0",
+                "1.12.1",
+                "1.13.0",
+                "1.13.1",
+                "1.13.3",
+                "1.14.0",
+                "1.14.1",
+                "1.14.2",
+                "1.14.3",
+                "1.14.4",
+                "1.14.5",
+                "1.14.6",
+                "1.15.0",
+                "1.15.1",
+                "1.15.2",
+                "1.15.3",
+                "1.15.4",
+                "1.16.0",
+                "1.16.1",
+                "1.16.2",
+                "1.16.3",
+                "1.16.4",
+                "1.16.5",
+                "1.16.6",
+                "1.17.0",
+                "1.17.1",
+                "1.17.2",
+                "1.17.3",
+                "1.17.4",
+                "1.17.5",
+                "1.18.0",
+                "1.18.1",
+                "1.18.2",
+                "1.18.3",
+                "1.18.4",
+                "1.18.5",
+                "1.19.0",
+                "1.19.1",
+                "1.19.2",
+                "1.19.3",
+                "1.19.4",
+                "1.19.5",
+                "1.2.0",
+                "1.20.0",
+                "1.20.1",
+                "1.20.2",
+                "1.20.3",
+                "1.2.1",
+                "1.21.0",
+                "1.21.1",
+                "1.21.2",
+                "1.21.3",
+                "1.21.4",
+                "1.21.5",
+                "1.21.6",
+                "1.22.0",
+                "1.22.1",
+                "1.3.0",
+                "1.4.0",
+                "1.4.1",
+                "1.5.0",
+                "1.5.1",
+                "1.6.0",
+                "1.6.1",
+                "1.6.2",
+                "1.7.0",
+                "1.7.1",
+                "1.7.2",
+                "1.8.0",
+                "1.8.1",
+                "1.8.2",
+                "1.9.0",
+                "1.9.1",
+                "1.9.2",
+                "1.9.3"
+            ],
+            "secure_versions": [
+                "2.3.3",
+                "2.3.2",
+                "2.3.1",
+                "2.3.0",
+                "2.2.6",
+                "2.2.5",
+                "2.2.4",
+                "2.2.3",
+                "2.2.2",
+                "2.2.1",
+                "2.2.0",
+                "2.1.3",
+                "2.1.2",
+                "2.1.1",
+                "2.1.0",
+                "2.0.2",
+                "2.0.1",
+                "2.0.0",
+                "1.26.4",
+                "1.26.3",
+                "1.26.2",
+                "1.26.1",
+                "1.26.0",
+                "1.25.2",
+                "1.25.1",
+                "1.25.0",
+                "1.24.4",
+                "1.24.3",
+                "1.24.2",
+                "1.24.1",
+                "1.24.0",
+                "1.23.5",
+                "1.23.4",
+                "1.23.3",
+                "1.23.2",
+                "1.23.1",
+                "1.23.0",
+                "1.22.4",
+                "1.22.3",
+                "1.22.2"
+            ],
+            "latest_version_without_known_vulnerabilities": "2.3.3",
+            "latest_version": "2.3.3",
+            "more_info_url": "https://data.safetycli.com/p/pypi/numpy/97c/"
+        },
+        "scikit-learn": {
+            "name": "scikit-learn",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "scikit-learn              # ML algorithms b\u00e1sicos",
+                    "extras": [],
+                    "marker": null,
+                    "name": "scikit-learn",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.10",
+                "0.11",
+                "0.12",
+                "0.12.1",
+                "0.13",
+                "0.13.1",
+                "0.14",
+                "0.14.1",
+                "0.15.0",
+                "0.15.1",
+                "0.15.2",
+                "0.16.0",
+                "0.16.1",
+                "0.17",
+                "0.17.1",
+                "0.18",
+                "0.18.1",
+                "0.18.2",
+                "0.19.0",
+                "0.19.1",
+                "0.19.2",
+                "0.20.0",
+                "0.20.1",
+                "0.20.2",
+                "0.20.3",
+                "0.20.4",
+                "0.21.0",
+                "0.21.1",
+                "0.21.2",
+                "0.21.3",
+                "0.22",
+                "0.22.1",
+                "0.22.2",
+                "0.22.2.post1",
+                "0.23.0",
+                "0.23.1",
+                "0.23.2",
+                "0.24.0",
+                "0.24.1",
+                "0.24.2",
+                "0.9",
+                "1.0",
+                "1.0.1",
+                "1.0.2",
+                "1.1.0",
+                "1.1.1",
+                "1.1.2",
+                "1.1.3",
+                "1.2.0",
+                "1.2.0rc1",
+                "1.2.1",
+                "1.2.2",
+                "1.3.0",
+                "1.3.0rc1",
+                "1.3.1",
+                "1.3.2",
+                "1.4.0",
+                "1.4.0rc1",
+                "1.4.1.post1",
+                "1.4.2",
+                "1.5.0rc1"
+            ],
+            "secure_versions": [
+                "1.7.2",
+                "1.7.1",
+                "1.7.0",
+                "1.7.0rc1",
+                "1.6.1",
+                "1.6.0",
+                "1.6.0rc1",
+                "1.5.2",
+                "1.5.1",
+                "1.5.0"
+            ],
+            "latest_version_without_known_vulnerabilities": "1.7.2",
+            "latest_version": "1.7.2",
+            "more_info_url": "https://data.safetycli.com/p/pypi/scikit-learn/97c/"
+        },
+        "pytest-cov": {
+            "name": "pytest-cov",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "pytest-cov                # Coverage de tests",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-cov",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.10",
+                "0.11",
+                "0.12",
+                "0.13",
+                "0.14",
+                "0.15",
+                "0.6",
+                "0.7",
+                "0.8",
+                "0.9",
+                "1.0",
+                "1.1",
+                "1.2",
+                "1.3",
+                "1.4",
+                "1.5",
+                "1.6",
+                "1.7.0",
+                "1.8.0",
+                "1.8.1"
+            ],
+            "secure_versions": [
+                "7.0.0",
+                "6.3.0",
+                "6.2.1",
+                "6.2.0",
+                "6.1.1",
+                "6.1.0",
+                "6.0.0",
+                "5.0.0",
+                "4.1.0",
+                "4.0.0",
+                "3.0.0",
+                "2.12.1",
+                "2.12.0",
+                "2.11.1",
+                "2.11.0",
+                "2.10.1",
+                "2.10.0",
+                "2.9.0",
+                "2.8.1",
+                "2.8.0",
+                "2.7.1",
+                "2.7.0",
+                "2.6.1",
+                "2.6.0",
+                "2.5.1",
+                "2.5.0",
+                "2.4.0",
+                "2.3.1",
+                "2.3.0",
+                "2.2.1",
+                "2.2.0",
+                "2.1.0",
+                "2.0.0"
+            ],
+            "latest_version_without_known_vulnerabilities": "7.0.0",
+            "latest_version": "7.0.0",
+            "more_info_url": "https://data.safetycli.com/p/pypi/pytest-cov/97c/"
+        },
+        "loguru": {
+            "name": "loguru",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "loguru                     # Logger moderno y bonito",
+                    "extras": [],
+                    "marker": null,
+                    "name": "loguru",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.1.0",
+                "0.2.0",
+                "0.2.1",
+                "0.2.2",
+                "0.2.3",
+                "0.2.4",
+                "0.2.5",
+                "0.3.0",
+                "0.3.1",
+                "0.3.2",
+                "0.4.0",
+                "0.4.1",
+                "0.5.0",
+                "0.5.1",
+                "0.5.2"
+            ],
+            "secure_versions": [
+                "0.7.3",
+                "0.7.2",
+                "0.7.1",
+                "0.7.0",
+                "0.6.0",
+                "0.5.3"
+            ],
+            "latest_version_without_known_vulnerabilities": "0.7.3",
+            "latest_version": "0.7.3",
+            "more_info_url": "https://data.safetycli.com/p/pypi/loguru/97c/"
+        },
+        "click": {
+            "name": "click",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "click                      # CLI interface elegante",
+                    "extras": [],
+                    "marker": null,
+                    "name": "click",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.1",
+                "0.2",
+                "0.3",
+                "0.4",
+                "0.5",
+                "0.5.1",
+                "0.6",
+                "0.7",
+                "1.0",
+                "1.1",
+                "2.0",
+                "2.1",
+                "2.2",
+                "2.3",
+                "2.4",
+                "2.5",
+                "2.6",
+                "3.0",
+                "3.1",
+                "3.2",
+                "3.3",
+                "4.0",
+                "4.1",
+                "5.0",
+                "5.1",
+                "6.0",
+                "6.1",
+                "6.2",
+                "6.3",
+                "6.4",
+                "6.5",
+                "6.6",
+                "6.7",
+                "6.7.dev0",
+                "7.0",
+                "7.1",
+                "7.1.1",
+                "7.1.2",
+                "8.0.0a1",
+                "8.0.0rc1"
+            ],
+            "secure_versions": [
+                "8.3.0",
+                "8.2.2",
+                "8.2.1",
+                "8.2.0",
+                "8.1.8",
+                "8.1.7",
+                "8.1.6",
+                "8.1.5",
+                "8.1.4",
+                "8.1.3",
+                "8.1.2",
+                "8.1.1",
+                "8.1.0",
+                "8.0.4",
+                "8.0.3",
+                "8.0.2",
+                "8.0.1",
+                "8.0.0"
+            ],
+            "latest_version_without_known_vulnerabilities": "8.3.0",
+            "latest_version": "8.3.0",
+            "more_info_url": "https://data.safetycli.com/p/pypi/click/97c/"
+        },
+        "sqlalchemy": {
+            "name": "sqlalchemy",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "sqlalchemy                 # ORM potente y flexible",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sqlalchemy",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.1.0",
+                "0.1.1",
+                "0.1.2",
+                "0.1.3",
+                "0.1.4",
+                "0.1.5",
+                "0.1.6",
+                "0.1.7",
+                "0.2.0",
+                "0.2.1",
+                "0.2.2",
+                "0.2.3",
+                "0.2.4",
+                "0.2.5",
+                "0.2.6",
+                "0.2.7",
+                "0.2.8",
+                "0.3.0",
+                "0.3.1",
+                "0.3.10",
+                "0.3.11",
+                "0.3.2",
+                "0.3.3",
+                "0.3.4",
+                "0.3.5",
+                "0.3.6",
+                "0.3.7",
+                "0.3.8",
+                "0.3.9",
+                "0.4.0",
+                "0.4.0b1",
+                "0.4.0b2",
+                "0.4.0b3",
+                "0.4.0b4",
+                "0.4.0b5",
+                "0.4.0b6",
+                "0.4.1",
+                "0.4.2",
+                "0.4.2a0",
+                "0.4.2b0",
+                "0.4.3",
+                "0.4.4",
+                "0.4.5",
+                "0.4.6",
+                "0.4.7",
+                "0.4.8",
+                "0.5.0",
+                "0.5.0b1",
+                "0.5.0b2",
+                "0.5.0b3",
+                "0.5.0rc1",
+                "0.5.0rc2",
+                "0.5.0rc3",
+                "0.5.0rc4",
+                "0.5.1",
+                "0.5.2",
+                "0.5.3",
+                "0.5.4",
+                "0.5.5",
+                "0.5.6",
+                "0.5.7",
+                "0.5.8",
+                "0.6.0",
+                "0.6.1",
+                "0.6.2",
+                "0.6.3",
+                "0.6.4",
+                "0.6.5",
+                "0.6.6",
+                "0.6.7",
+                "0.6.8",
+                "0.6.9",
+                "0.6b1",
+                "0.6b2",
+                "0.6b3",
+                "0.7.0",
+                "0.7.1",
+                "0.7.10",
+                "0.7.2",
+                "0.7.3",
+                "0.7.4",
+                "0.7.5",
+                "0.7.6",
+                "0.7.7",
+                "0.7.8",
+                "0.7.9",
+                "0.8.0",
+                "0.8.0b2",
+                "0.8.1",
+                "0.8.2",
+                "0.8.3",
+                "0.8.4",
+                "0.8.5",
+                "0.8.6",
+                "0.8.7",
+                "0.9.0",
+                "0.9.1",
+                "0.9.10",
+                "0.9.2",
+                "0.9.3",
+                "0.9.4",
+                "0.9.5",
+                "0.9.6",
+                "0.9.7",
+                "0.9.8",
+                "0.9.9",
+                "1.0.0",
+                "1.0.0b1",
+                "1.0.0b2",
+                "1.0.0b3",
+                "1.0.0b4",
+                "1.0.0b5",
+                "1.0.1",
+                "1.0.10",
+                "1.0.11",
+                "1.0.12",
+                "1.0.13",
+                "1.0.14",
+                "1.0.15",
+                "1.0.16",
+                "1.0.17",
+                "1.0.18",
+                "1.0.19",
+                "1.0.2",
+                "1.0.3",
+                "1.0.4",
+                "1.0.5",
+                "1.0.6",
+                "1.0.7",
+                "1.0.8",
+                "1.0.9",
+                "1.1.0",
+                "1.1.0b1",
+                "1.1.0b2",
+                "1.1.0b3",
+                "1.1.1",
+                "1.1.10",
+                "1.1.11",
+                "1.1.12",
+                "1.1.13",
+                "1.1.14",
+                "1.1.15",
+                "1.1.16",
+                "1.1.17",
+                "1.1.18",
+                "1.1.2",
+                "1.1.3",
+                "1.1.4",
+                "1.1.5",
+                "1.1.6",
+                "1.1.7",
+                "1.1.8",
+                "1.1.9",
+                "1.2.0",
+                "1.2.0b1",
+                "1.2.0b2",
+                "1.2.0b3",
+                "1.2.1",
+                "1.2.10",
+                "1.2.11",
+                "1.2.12",
+                "1.2.13",
+                "1.2.14",
+                "1.2.15",
+                "1.2.16",
+                "1.2.17",
+                "1.2.18",
+                "1.2.19",
+                "1.2.2",
+                "1.2.3",
+                "1.2.4",
+                "1.2.5",
+                "1.2.6",
+                "1.2.7",
+                "1.2.8",
+                "1.2.9",
+                "1.3.0",
+                "1.3.0b1",
+                "1.3.0b2",
+                "1.3.0b3",
+                "1.3.1",
+                "1.3.10",
+                "1.3.11",
+                "1.3.12",
+                "1.3.13",
+                "1.3.14",
+                "1.3.15",
+                "1.3.16",
+                "1.3.17",
+                "1.3.18",
+                "1.3.19",
+                "1.3.2",
+                "1.3.20",
+                "1.3.21",
+                "1.3.22",
+                "1.3.23",
+                "1.3.24",
+                "1.3.3",
+                "1.3.4",
+                "1.3.5",
+                "1.3.6",
+                "1.3.7",
+                "1.3.8",
+                "1.3.9",
+                "1.4.0",
+                "1.4.0b1",
+                "1.4.0b2",
+                "1.4.0b3",
+                "1.4.1",
+                "1.4.10",
+                "1.4.11",
+                "1.4.12",
+                "1.4.13",
+                "1.4.14",
+                "1.4.15",
+                "1.4.16",
+                "1.4.17",
+                "1.4.18",
+                "1.4.19",
+                "1.4.2",
+                "1.4.20",
+                "1.4.21",
+                "1.4.22",
+                "1.4.23",
+                "1.4.24",
+                "1.4.25",
+                "1.4.26",
+                "1.4.27",
+                "1.4.28",
+                "1.4.29",
+                "1.4.3",
+                "1.4.30",
+                "1.4.31",
+                "1.4.32",
+                "1.4.33",
+                "1.4.34",
+                "1.4.35",
+                "1.4.36",
+                "1.4.37",
+                "1.4.38",
+                "1.4.39",
+                "1.4.4",
+                "1.4.40",
+                "1.4.41",
+                "1.4.42",
+                "1.4.43",
+                "1.4.44",
+                "1.4.45",
+                "1.4.46",
+                "1.4.47",
+                "1.4.48",
+                "1.4.49",
+                "1.4.5",
+                "1.4.50",
+                "1.4.51",
+                "1.4.52",
+                "1.4.53",
+                "1.4.54",
+                "1.4.6",
+                "1.4.7",
+                "1.4.8",
+                "1.4.9"
+            ],
+            "secure_versions": [
+                "2.0.43",
+                "2.0.42",
+                "2.0.41",
+                "2.0.40",
+                "2.0.39",
+                "2.0.38",
+                "2.0.37",
+                "2.0.36",
+                "2.0.35",
+                "2.0.34",
+                "2.0.33",
+                "2.0.32",
+                "2.0.31",
+                "2.0.30",
+                "2.0.29",
+                "2.0.28",
+                "2.0.27",
+                "2.0.26",
+                "2.0.25",
+                "2.0.24",
+                "2.0.23",
+                "2.0.22",
+                "2.0.21",
+                "2.0.20",
+                "2.0.19",
+                "2.0.18",
+                "2.0.17",
+                "2.0.16",
+                "2.0.15",
+                "2.0.14",
+                "2.0.13",
+                "2.0.12",
+                "2.0.11",
+                "2.0.10",
+                "2.0.9",
+                "2.0.8",
+                "2.0.7",
+                "2.0.6",
+                "2.0.5.post1",
+                "2.0.5",
+                "2.0.4",
+                "2.0.3",
+                "2.0.2",
+                "2.0.1",
+                "2.0.0",
+                "2.0.0rc3",
+                "2.0.0rc2",
+                "2.0.0rc1",
+                "2.0.0b4",
+                "2.0.0b3",
+                "2.0.0b2",
+                "2.0.0b1"
+            ],
+            "latest_version_without_known_vulnerabilities": "2.0.43",
+            "latest_version": "2.0.43",
+            "more_info_url": "https://data.safetycli.com/p/pypi/sqlalchemy/97c/"
+        },
+        "lxml": {
+            "name": "lxml",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                    "extras": [],
+                    "marker": null,
+                    "name": "lxml",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "1.3.2",
+                "1.3.3",
+                "1.3.4",
+                "1.3.5",
+                "1.3.6",
+                "2.0",
+                "2.0.10",
+                "2.0.11",
+                "2.0.4",
+                "2.0.5",
+                "2.0.6",
+                "2.0.7",
+                "2.0.8",
+                "2.0.9",
+                "2.1",
+                "2.1.1",
+                "2.1.2",
+                "2.1.3",
+                "2.1.4",
+                "2.1.5",
+                "2.2",
+                "2.2.1",
+                "2.2.2",
+                "2.2.3",
+                "2.2.4",
+                "2.2.5",
+                "2.2.6",
+                "2.2.7",
+                "2.2.8",
+                "2.3",
+                "2.3.1",
+                "2.3.2",
+                "2.3.3",
+                "2.3.4",
+                "2.3.5",
+                "2.3.6",
+                "3.0",
+                "3.0.2",
+                "3.1.0",
+                "3.1.1",
+                "3.1.2",
+                "3.2.0",
+                "3.2.1",
+                "3.2.2",
+                "3.2.3",
+                "3.2.4",
+                "3.2.5",
+                "3.3.0",
+                "3.3.1",
+                "3.3.2",
+                "3.3.3",
+                "3.3.4",
+                "3.3.5",
+                "3.3.6",
+                "3.4.0",
+                "3.4.1",
+                "3.4.2",
+                "3.4.3",
+                "3.4.4",
+                "3.5.0",
+                "3.6.0",
+                "3.6.1",
+                "3.6.2",
+                "3.6.3",
+                "3.6.4",
+                "3.7.0",
+                "3.7.1",
+                "3.7.2",
+                "3.7.3",
+                "3.8.0",
+                "4.0.0",
+                "4.1.0",
+                "4.1.1",
+                "4.2.0",
+                "4.2.1",
+                "4.2.2",
+                "4.2.3",
+                "4.2.4",
+                "4.2.5",
+                "4.2.6",
+                "4.3.0",
+                "4.3.2",
+                "4.3.3",
+                "4.3.4",
+                "4.3.5",
+                "4.4.0",
+                "4.4.1",
+                "4.4.2",
+                "4.4.3",
+                "4.5.0",
+                "4.5.1",
+                "4.5.2",
+                "4.6.0",
+                "4.6.1",
+                "4.6.2",
+                "4.6.3",
+                "4.6.4",
+                "4.6.5",
+                "4.7.1",
+                "4.8.0",
+                "4.9.0"
+            ],
+            "secure_versions": [
+                "6.0.2",
+                "6.0.1",
+                "6.0.0",
+                "5.4.0",
+                "5.3.2",
+                "5.3.1",
+                "5.3.0",
+                "5.2.2",
+                "5.2.1",
+                "5.2.0",
+                "5.1.1",
+                "5.1.0",
+                "5.0.2",
+                "5.0.1",
+                "5.0.0",
+                "4.9.4",
+                "4.9.3",
+                "4.9.2",
+                "4.9.1"
+            ],
+            "latest_version_without_known_vulnerabilities": "6.0.2",
+            "latest_version": "6.0.2",
+            "more_info_url": "https://data.safetycli.com/p/pypi/lxml/97c/"
+        },
+        "requests": {
+            "name": "requests",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                    "extras": [],
+                    "marker": null,
+                    "name": "requests",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.0.1",
+                "0.10.0",
+                "0.10.1",
+                "0.10.2",
+                "0.10.3",
+                "0.10.4",
+                "0.10.6",
+                "0.10.7",
+                "0.10.8",
+                "0.11.1",
+                "0.11.2",
+                "0.12.0",
+                "0.12.1",
+                "0.13.0",
+                "0.13.1",
+                "0.13.2",
+                "0.13.3",
+                "0.13.4",
+                "0.13.5",
+                "0.13.6",
+                "0.13.7",
+                "0.13.8",
+                "0.13.9",
+                "0.14.0",
+                "0.14.1",
+                "0.14.2",
+                "0.2.0",
+                "0.2.1",
+                "0.2.2",
+                "0.2.3",
+                "0.2.4",
+                "0.3.0",
+                "0.3.1",
+                "0.3.2",
+                "0.3.3",
+                "0.3.4",
+                "0.4.0",
+                "0.4.1",
+                "0.5.0",
+                "0.5.1",
+                "0.6.0",
+                "0.6.1",
+                "0.6.2",
+                "0.6.3",
+                "0.6.4",
+                "0.6.5",
+                "0.6.6",
+                "0.7.0",
+                "0.7.1",
+                "0.7.2",
+                "0.7.3",
+                "0.7.4",
+                "0.7.5",
+                "0.7.6",
+                "0.8.0",
+                "0.8.1",
+                "0.8.2",
+                "0.8.3",
+                "0.8.4",
+                "0.8.5",
+                "0.8.6",
+                "0.8.7",
+                "0.8.8",
+                "0.8.9",
+                "0.9.0",
+                "0.9.1",
+                "0.9.2",
+                "0.9.3",
+                "1.0.0",
+                "1.0.1",
+                "1.0.2",
+                "1.0.3",
+                "1.0.4",
+                "1.1.0",
+                "1.2.0",
+                "1.2.1",
+                "1.2.2",
+                "1.2.3",
+                "2.0.0",
+                "2.0.1",
+                "2.1.0",
+                "2.10.0",
+                "2.11.0",
+                "2.11.1",
+                "2.12.0",
+                "2.12.1",
+                "2.12.2",
+                "2.12.3",
+                "2.12.4",
+                "2.12.5",
+                "2.13.0",
+                "2.14.0",
+                "2.14.1",
+                "2.14.2",
+                "2.15.0",
+                "2.15.1",
+                "2.16.0",
+                "2.16.1",
+                "2.16.2",
+                "2.16.3",
+                "2.16.4",
+                "2.16.5",
+                "2.17.0",
+                "2.17.1",
+                "2.17.2",
+                "2.17.3",
+                "2.18.0",
+                "2.18.1",
+                "2.18.2",
+                "2.18.3",
+                "2.18.4",
+                "2.19.0",
+                "2.19.1",
+                "2.2.0",
+                "2.20.0",
+                "2.20.1",
+                "2.2.1",
+                "2.21.0",
+                "2.22.0",
+                "2.23.0",
+                "2.24.0",
+                "2.25.0",
+                "2.25.1",
+                "2.26.0",
+                "2.27.0",
+                "2.27.1",
+                "2.28.0",
+                "2.28.1",
+                "2.28.2",
+                "2.29.0",
+                "2.3.0",
+                "2.30.0",
+                "2.31.0",
+                "2.32.0",
+                "2.32.1",
+                "2.32.2",
+                "2.32.3",
+                "2.4.0",
+                "2.4.1",
+                "2.4.2",
+                "2.4.3",
+                "2.5.0",
+                "2.5.1",
+                "2.5.2",
+                "2.5.3",
+                "2.6.0",
+                "2.6.1",
+                "2.6.2",
+                "2.7.0",
+                "2.8.0",
+                "2.8.1",
+                "2.9.0",
+                "2.9.1",
+                "2.9.2"
+            ],
+            "secure_versions": [
+                "2.32.5",
+                "2.32.4"
+            ],
+            "latest_version_without_known_vulnerabilities": "2.32.5",
+            "latest_version": "2.32.5",
+            "more_info_url": "https://data.safetycli.com/p/pypi/requests/97c/"
+        },
+        "feedparser": {
+            "name": "feedparser",
+            "version": null,
+            "requirements": [
+                {
+                    "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                    "extras": [],
+                    "marker": null,
+                    "name": "feedparser",
+                    "specifier": ">=0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "4.1",
+                "5.0",
+                "5.0.1",
+                "5.1",
+                "5.1.1"
+            ],
+            "secure_versions": [
+                "6.0.12",
+                "6.0.11",
+                "6.0.10",
+                "6.0.9",
+                "6.0.8",
+                "6.0.7",
+                "6.0.6",
+                "6.0.5",
+                "6.0.4",
+                "6.0.3",
+                "6.0.2",
+                "6.0.1",
+                "6.0.0",
+                "6.0.0b3",
+                "6.0.0b2",
+                "6.0.0b1",
+                "5.2.1",
+                "5.2.0",
+                "5.1.3",
+                "5.1.2"
+            ],
+            "latest_version_without_known_vulnerabilities": "6.0.12",
+            "latest_version": "6.0.12",
+            "more_info_url": "https://data.safetycli.com/p/pypi/feedparser/97c/"
+        }
+    },
+    "announcements": [
+        {
+            "type": "warning",
+            "message": "Warning: feedparser, requests, beautifulsoup4, lxml, python-dateutil, sqlalchemy, python-dotenv, schedule, click, loguru, opentelemetry-api, opentelemetry-sdk, prometheus-client, pytest, pytest-cov, scikit-learn, numpy and httpx are unpinned. Safety by default does not report on potential vulnerabilities in unpinned packages. It is recommended to pin your dependencies unless this is a library meant for distribution. To learn more about reporting these, specifier range handling, and options for scanning unpinned packages visit https://docs.pyup.io/docs/safety-range-specs"
+        }
+    ],
+    "vulnerabilities": [],
+    "ignored_vulnerabilities": [
+        {
+            "vulnerability_id": "52983",
+            "package_name": "httpx",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<0.23.0"
+            ],
+            "all_vulnerable_specs": [
+                "<0.23.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "httpx",
+                "extras": [],
+                "marker": null,
+                "name": "httpx",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Httpx 0.23.0 includes a fix for CVE-2021-41945: Encode OSS httpx < 0.23.0 is affected by improper input validation in 'httpx.URL', 'httpx.Client' and some functions using 'httpx.URL.copy_with'.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-41945",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/52983/97c"
+        },
+        {
+            "vulnerability_id": "43453",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.21.0rc1"
+            ],
+            "all_vulnerable_specs": [
+                "<1.21.0rc1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.21.0rc1 includes a fix for CVE-2021-33430: A Buffer Overflow vulnerability in the PyArray_NewFromDescr_int function of ctors.c when specifying arrays of large dimensions (over 32) from Python code, which could let a malicious user cause a Denial of Service. \r\nNOTE: The vendor does not agree this is a vulnerability. In (very limited) circumstances a user may be able provoke the buffer overflow, the user is most likely already privileged to at least provoke denial of service by exhausting memory. Triggering this further requires the use of uncommon API (complicated structured dtypes), which is very unlikely to be available to an unprivileged user.\r\nhttps://github.com/numpy/numpy/issues/18939",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-33430",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/43453/97c"
+        },
+        {
+            "vulnerability_id": "44715",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.22.2"
+            ],
+            "all_vulnerable_specs": [
+                "<1.22.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.22.2  includes a fix for CVE-2021-41495: Null Pointer Dereference vulnerability exists in numpy.sort in NumPy in the PyArray_DescrNew function due to missing return-value validation, which allows attackers to conduct DoS attacks by repetitively creating sort arrays. \r\nNOTE: While correct that validation is missing, an error can only occur due to an exhaustion of memory. If the user can exhaust memory, they are already privileged. Further, it should be practically impossible to construct an attack which can target the memory exhaustion to occur at exactly this place.\r\nNOTE2: The specs we include in this advisory differ from the publicly available on other sources. For example, the advisory posted by the NVD indicate that versions up to and including 1.19.0 are affected. However, research by Safety CLI Cybersecurity confirms that the vulnerability remained unaddressed until version 1.22.2.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-41495",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/44715/97c"
+        },
+        {
+            "vulnerability_id": "44720",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.13.2"
+            ],
+            "all_vulnerable_specs": [
+                "<1.13.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.13.2 includes a fix for CVE-2017-12852: The numpy.pad function in Numpy 1.13.1 and older versions is missing input validation. An empty list or ndarray will stick into an infinite loop, which can allow attackers to cause a DoS attack.\r\nhttps://github.com/numpy/numpy/issues/9560#issuecomment-322395292",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2017-12852",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/44720/97c"
+        },
+        {
+            "vulnerability_id": "44717",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.22.0"
+            ],
+            "all_vulnerable_specs": [
+                "<1.22.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.22.0 includes a fix for CVE-2021-34141: An incomplete string comparison in the numpy.core component in NumPy before 1.22.0 allows attackers to trigger slightly incorrect copying by constructing specific string objects. \r\nNOTE: the vendor states that this reported code behavior is \"completely harmless.\"\r\nhttps://github.com/numpy/numpy/issues/18993",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-34141",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/44717/97c"
+        },
+        {
+            "vulnerability_id": "44716",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.22.0"
+            ],
+            "all_vulnerable_specs": [
+                "<1.22.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.22.0 includes a fix for CVE-2021-41496: Buffer overflow in the array_from_pyobj function of fortranobject.c, which allows attackers to conduct a Denial of Service attacks by carefully constructing an array with negative values. \r\nNOTE: The vendor does not agree this is a vulnerability; the negative dimensions can only be created by an already privileged user (or internally).\r\nhttps://github.com/numpy/numpy/issues/19000",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-41496",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/44716/97c"
+        },
+        {
+            "vulnerability_id": "44719",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.8.1"
+            ],
+            "all_vulnerable_specs": [
+                "<1.8.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.8.1 includes a fix for CVE-2014-1858: __init__.py in f2py in NumPy before 1.8.1 allows local users to write to arbitrary files via a symlink attack on a temporary file.\r\nhttps://github.com/numpy/numpy/commit/0bb46c1448b0d3f5453d5182a17ea7ac5854ee15",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2014-1858",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/44719/97c"
+        },
+        {
+            "vulnerability_id": "34726",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.8.1"
+            ],
+            "all_vulnerable_specs": [
+                "<1.8.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Numpy 1.8.1 includes a fix for CVE-2014-1859: (1) core/tests/test_memmap.py, (2) core/tests/test_multiarray.py, (3) f2py/f2py2e.py, and (4) lib/tests/test_io.py in NumPy before 1.8.1 allow local users to write to arbitrary files via a symlink attack on a temporary file.\r\nhttps://github.com/numpy/numpy/pull/4262",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2014-1859",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/34726/97c"
+        },
+        {
+            "vulnerability_id": "36810",
+            "package_name": "numpy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.16.3"
+            ],
+            "all_vulnerable_specs": [
+                "<1.16.3"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "numpy                     # Operaciones num\u00e9ricas",
+                "extras": [],
+                "marker": null,
+                "name": "numpy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "*Disputed* Numpy 1.16.3 includes a fix for CVE-2019-6446: It uses the pickle Python module unsafely, which allows remote attackers to execute arbitrary code via a crafted serialized object, as demonstrated by a numpy.load call.\r\nNOTE: Third parties dispute this issue because it is  a behavior that might have legitimate applications in (for example) loading serialized Python object arrays from trusted and authenticated  sources.\r\nhttps://github.com/numpy/numpy/commit/89b688732b37616c9d26623f81aaee1703c30ffb",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2019-6446",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/36810/97c"
+        },
+        {
+            "vulnerability_id": "71596",
+            "package_name": "scikit-learn",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.5.0"
+            ],
+            "all_vulnerable_specs": [
+                "<1.5.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "scikit-learn              # ML algorithms b\u00e1sicos",
+                "extras": [],
+                "marker": null,
+                "name": "scikit-learn",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "A sensitive data leakage vulnerability was identified in affected versions of scikit-learn TfidfVectorizer. The vulnerability arises from the unexpected storage of all tokens present in the training data within the `stop_words_` attribute, rather than only storing the subset of tokens required for the TF-IDF technique to function. This behavior leads to the potential leakage of sensitive information, as the `stop_words_` attribute could contain tokens that were meant to be discarded and not stored, such as passwords or keys. The impact of this vulnerability varies based on the nature of the data being processed by the vectorizer.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2024-5206",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/71596/97c"
+        },
+        {
+            "vulnerability_id": "54297",
+            "package_name": "scikit-learn",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.1.0rc1"
+            ],
+            "all_vulnerable_specs": [
+                "<1.1.0rc1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "scikit-learn              # ML algorithms b\u00e1sicos",
+                "extras": [],
+                "marker": null,
+                "name": "scikit-learn",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "* Disputed * Scikit-learn 1.1.0rc1 includes a fix for CVE-2020-28975: svm_predict_values in svm.cpp in Libsvm v324, as used in scikit-learn and other products, allows attackers to cause a denial of service (segmentation fault) via a crafted model SVM (introduced via pickle, json, or any other model permanence standard) with a large value in the _n_support array. \r\nNOTE: the scikit-learn vendor's position is that the behavior can only occur if the library's API is violated by an application that changes a private attribute.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2020-28975",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/54297/97c"
+        },
+        {
+            "vulnerability_id": "52255",
+            "package_name": "scikit-learn",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<0.24.2"
+            ],
+            "all_vulnerable_specs": [
+                "<0.24.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "scikit-learn              # ML algorithms b\u00e1sicos",
+                "extras": [],
+                "marker": null,
+                "name": "scikit-learn",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Scikit-learn 0.24.2 includes a fix for a ReDoS vulnerability.\r\nhttps://github.com/scikit-learn/scikit-learn/issues/19522",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/52255/97c"
+        },
+        {
+            "vulnerability_id": "66922",
+            "package_name": "pytest-cov",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.0.0"
+            ],
+            "all_vulnerable_specs": [
+                "<2.0.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "pytest-cov                # Coverage de tests",
+                "extras": [],
+                "marker": null,
+                "name": "pytest-cov",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Pytest-cov 2.0.0 resolves a race condition issue experienced when utilizing xdist, where multiple workers attempted to combine files simultaneously, leading to potential conflicts. This update ensures coverage data isn't combined by the workers, mitigating the risk of race conditions due to the non-atomic nature of the combining process.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/66922/97c"
+        },
+        {
+            "vulnerability_id": "54272",
+            "package_name": "loguru",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=0,<0.5.3"
+            ],
+            "all_vulnerable_specs": [
+                ">=0,<0.5.3"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "loguru                     # Logger moderno y bonito",
+                "extras": [],
+                "marker": null,
+                "name": "loguru",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Insertion of Sensitive Information into Log File in Conda loguru prior to 0.5.3.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2022-0338",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/54272/97c"
+        },
+        {
+            "vulnerability_id": "47833",
+            "package_name": "click",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<8.0.0"
+            ],
+            "all_vulnerable_specs": [
+                "<8.0.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "click                      # CLI interface elegante",
+                "extras": [],
+                "marker": null,
+                "name": "click",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Click 8.0.0 uses 'mkstemp()' instead of the deprecated & insecure 'mktemp()'.\r\nhttps://github.com/pallets/click/issues/1752",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/47833/97c"
+        },
+        {
+            "vulnerability_id": "52946",
+            "package_name": "sqlalchemy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<0.7.0"
+            ],
+            "all_vulnerable_specs": [
+                "<0.7.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "sqlalchemy                 # ORM potente y flexible",
+                "extras": [],
+                "marker": null,
+                "name": "sqlalchemy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Sqlalchemy 0.7.0 includes a fix for CVE-2012-0805: Multiple SQL injection vulnerabilities in SQLAlchemy before 0.7.0b4, as used in Keystone, allow remote attackers to execute arbitrary SQL commands via the (1) limit or (2) offset keyword to the select function, or unspecified vectors to the (3) select.limit or (4) select.offset function.\r\nhttps://docs.sqlalchemy.org/en/20/changelog/changelog_07.html#change-0.7.0",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2012-0805",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/52946/97c"
+        },
+        {
+            "vulnerability_id": "38497",
+            "package_name": "sqlalchemy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<=1.2.17",
+                ">=1.3.0b1,<=1.3.0b2"
+            ],
+            "all_vulnerable_specs": [
+                "<=1.2.17",
+                ">=1.3.0b1,<=1.3.0b2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "sqlalchemy                 # ORM potente y flexible",
+                "extras": [],
+                "marker": null,
+                "name": "sqlalchemy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "SQLAlchemy through 1.2.17 and 1.3.x through 1.3.0b2 allows SQL Injection via the order_by parameter.\r\nhttps://github.com/sqlalchemy/sqlalchemy/issues/4481",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2019-7164",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/38497/97c"
+        },
+        {
+            "vulnerability_id": "71592",
+            "package_name": "sqlalchemy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.3.0"
+            ],
+            "all_vulnerable_specs": [
+                "<1.3.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "sqlalchemy                 # ORM potente y flexible",
+                "extras": [],
+                "marker": null,
+                "name": "sqlalchemy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "SQLAlchemy affected versions has SQL Injection when the group_by parameter can be controlled.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2019-7548",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/71592/97c"
+        },
+        {
+            "vulnerability_id": "51668",
+            "package_name": "sqlalchemy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.0.0b1"
+            ],
+            "all_vulnerable_specs": [
+                "<2.0.0b1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "sqlalchemy                 # ORM potente y flexible",
+                "extras": [],
+                "marker": null,
+                "name": "sqlalchemy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Sqlalchemy 2.0.0b1 avoids leaking cleartext passwords to the open for careless uses of str(engine.URL()) in logs and prints.\r\nhttps://github.com/sqlalchemy/sqlalchemy/pull/8563",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/51668/97c"
+        },
+        {
+            "vulnerability_id": "60424",
+            "package_name": "sqlalchemy",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<1.1.14"
+            ],
+            "all_vulnerable_specs": [
+                "<1.1.14"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "sqlalchemy                 # ORM potente y flexible",
+                "extras": [],
+                "marker": null,
+                "name": "sqlalchemy",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Sqlalchemy 1.1.14 includes a fix for a Race Condition vulnerability.\r\nhttps://github.com/sqlalchemy/sqlalchemy/commit/a3965ea5ff198114c477d18cc8e3c34012c16a0b",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/60424/97c"
+        },
+        {
+            "vulnerability_id": "50747",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.2.5"
+            ],
+            "all_vulnerable_specs": [
+                "<4.2.5"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml 4.2.5 includes a fix for CVE-2018-19787: lxml/html/clean.py in the lxml.html.clean module does not remove javascript: URLs that use escaping, allowing a remote attacker to conduct XSS attacks, as demonstrated by \"j a v a s c r i p t:\" in Internet Explorer. This is a similar issue to CVE-2014-3146.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2018-19787",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/50747/97c"
+        },
+        {
+            "vulnerability_id": "39194",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.6.2"
+            ],
+            "all_vulnerable_specs": [
+                "<4.6.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml 4.6.2 includes a fix for CVE-2020-27783: A XSS vulnerability was discovered in python-lxml's clean module. The module's parser didn't properly imitate browsers, which caused different behaviors between the sanitizer and the user's page. A remote attacker could exploit this flaw to run arbitrary HTML/JS code.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2020-27783",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/39194/97c"
+        },
+        {
+            "vulnerability_id": "43366",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.6.5"
+            ],
+            "all_vulnerable_specs": [
+                "<4.6.5"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml 4.6.5 includes a fix for CVE-2021-43818: Prior to version 4.6.5, the HTML Cleaner in lxml.html lets certain crafted script content pass through, as well as script content in SVG files embedded using data URIs. Users that employ the HTML cleaner in a security relevant context should upgrade to lxml 4.6.5 to receive a patch.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-43818",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/43366/97c"
+        },
+        {
+            "vulnerability_id": "63015",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.3.4"
+            ],
+            "all_vulnerable_specs": [
+                "<2.3.4"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml 2.3.4 fixes a crash due to race condition when errors (or user messages) occur during threaded XSLT processing.\r\nhttps://github.com/lxml/lxml/commit/26ae51c60462ba1567a123bc9701ff18f9c10789",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/63015/97c"
+        },
+        {
+            "vulnerability_id": "35549",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<3.3.5"
+            ],
+            "all_vulnerable_specs": [
+                "<3.3.5"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Incomplete blacklist vulnerability in the lxml.html.clean module in lxml before 3.3.5 allows remote attackers to conduct cross-site scripting (XSS) attacks via control characters in the link scheme to the clean_html function.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2014-3146",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/35549/97c"
+        },
+        {
+            "vulnerability_id": "50748",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.9.1"
+            ],
+            "all_vulnerable_specs": [
+                "<4.9.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml 4.9.1 includes a fix for CVE-2022-2309: NULL Pointer Dereference allows attackers to cause a denial of service (or application crash). This only applies when lxml is used together with libxml2 2.9.10 through 2.9.14. libxml2 2.9.9 and earlier are not affected. It allows triggering crashes through forged input data, given a vulnerable code sequence in the application. The vulnerability is caused by the iterwalk function (also used by the canonicalize function). Such code shouldn't be in wide-spread use, given that parsing + iterwalk would usually be replaced with the more efficient iterparse function. However, an XML converter that serialises to C14N would also be vulnerable, for example, and there are legitimate use cases for this code sequence. If untrusted input is received (also remotely) and processed via iterwalk function, a crash can be triggered.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2022-2309",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/50748/97c"
+        },
+        {
+            "vulnerability_id": "40072",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.6.3"
+            ],
+            "all_vulnerable_specs": [
+                "<4.6.3"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Lxml version 4.6.3 includes a fix for CVE-2021-28957: An XSS vulnerability was discovered in python-lxml's clean module versions before 4.6.3. When disabling the safe_attrs_only and forms arguments, the Cleaner class does not remove the formation attribute allowing for JS to bypass the sanitizer. A remote attacker could exploit this flaw to run arbitrary JS code on users who interact with incorrectly sanitized HTML.\r\nhttps://bugs.launchpad.net/lxml/+bug/1888153",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2021-28957",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/40072/97c"
+        },
+        {
+            "vulnerability_id": "39195",
+            "package_name": "lxml",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<4.4.0"
+            ],
+            "all_vulnerable_specs": [
+                "<4.4.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "lxml                       # XML parser r\u00e1pido para feeds",
+                "extras": [],
+                "marker": null,
+                "name": "lxml",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "In lxml before 4.4.0, when writing to file paths that contain the URL escape character '%', the file path could wrongly be mangled by URL unescaping and thus write to a different file or directory.  Code that writes to file paths that are provided by untrusted sources, but that must work with previous versions of lxml, should best either reject paths that contain '%' characters, or otherwise make sure that the path does not contain maliciously injected '%XX' URL hex escapes for paths like '../'.\r\nhttps://github.com/lxml/lxml/commit/0245aba002f069a0b157282707bdf77418d1b5be",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/39195/97c"
+        },
+        {
+            "vulnerability_id": "77680",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.32.4"
+            ],
+            "all_vulnerable_specs": [
+                "<2.32.4"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Requests is an HTTP library. Due to a URL parsing issue, Requests releases prior to 2.32.4 may leak .netrc credentials to third parties for specific maliciously-crafted URLs. Users should upgrade to version 2.32.4 to receive a fix. For older versions of Requests, use of the .netrc file can be disabled with `trust_env=False` on one's Requests Session.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2024-47081",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/77680/97c"
+        },
+        {
+            "vulnerability_id": "36546",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<=2.19.1"
+            ],
+            "all_vulnerable_specs": [
+                "<=2.19.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Requests before 2.20.0 sends an HTTP Authorization header to an http URI upon receiving a same-hostname https-to-http redirect, which makes it easier for remote attackers to discover credentials by sniffing the network.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2018-18074",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/36546/97c"
+        },
+        {
+            "vulnerability_id": "26103",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=2.1,<=2.5.3"
+            ],
+            "all_vulnerable_specs": [
+                ">=2.1,<=2.5.3"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "The resolve_redirects function in sessions.py in requests 2.1.0 through 2.5.3 allows remote attackers to conduct session fixation attacks via a cookie without a host value in a redirect.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2015-2296",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/26103/97c"
+        },
+        {
+            "vulnerability_id": "65531",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<0.13.4"
+            ],
+            "all_vulnerable_specs": [
+                "<0.13.4"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Specific versions of Requests are susceptible to a Denial of Service (DoS) attack. This vulnerability is triggered when an incorrect password is sent in a digest authentication request, causing the library to indefinitely retry the request. Such behavior can be exploited by an attacker to send numerous requests, leading to a service outage by overwhelming the system's resources.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/65531/97c"
+        },
+        {
+            "vulnerability_id": "58755",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=2.3.0,<2.31.0"
+            ],
+            "all_vulnerable_specs": [
+                ">=2.3.0,<2.31.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Affected versions of Requests are vulnerable to proxy credential leakage. When redirected to an HTTPS endpoint, the Proxy-Authorization header is forwarded to the destination server due to the use of rebuild_proxies to reattach the header. This may allow a malicious actor to exfiltrate sensitive information.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2023-32681",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/58755/97c"
+        },
+        {
+            "vulnerability_id": "71064",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.32.2"
+            ],
+            "all_vulnerable_specs": [
+                "<2.32.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Affected versions of Requests, when making requests through a Requests `Session`, if the first request is made with `verify=False` to disable cert verification, all subsequent requests to the same host will continue to ignore cert verification regardless of changes to the value of `verify`. This behavior will continue for the lifecycle of the connection in the connection pool. Requests 2.32.0 fixes the issue, but versions 2.32.0 and 2.32.1 were yanked due to conflicts with CVE-2024-35195 mitigation.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2024-35195",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/71064/97c"
+        },
+        {
+            "vulnerability_id": "26101",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.3.0"
+            ],
+            "all_vulnerable_specs": [
+                "<2.3.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Requests before 2.3.0 exposes Authorization or Proxy-Authorization headers on redirect. See: CVE-2014-1829.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2014-1829",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/26101/97c"
+        },
+        {
+            "vulnerability_id": "39575",
+            "package_name": "requests",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<2.3.0"
+            ],
+            "all_vulnerable_specs": [
+                "<2.3.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "requests                   # HTTP requests - est\u00e1ndar de la industria",
+                "extras": [],
+                "marker": null,
+                "name": "requests",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Requests before 2.3.0 exposes Authorization or Proxy-Authorization headers on redirect. This fixes CVE-2014-1830.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2014-1830",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/39575/97c"
+        },
+        {
+            "vulnerability_id": "25815",
+            "package_name": "feedparser",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<5.0"
+            ],
+            "all_vulnerable_specs": [
+                "<5.0"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                "extras": [],
+                "marker": null,
+                "name": "feedparser",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Cross-site scripting (XSS) vulnerability in feedparser.py in Universal Feed Parser (aka feedparser or python-feedparser) before 5.0 allows remote attackers to inject arbitrary web script or HTML via vectors involving nested CDATA stanzas.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2009-5065",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/25815/97c"
+        },
+        {
+            "vulnerability_id": "33125",
+            "package_name": "feedparser",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<5.0.1"
+            ],
+            "all_vulnerable_specs": [
+                "<5.0.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                "extras": [],
+                "marker": null,
+                "name": "feedparser",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "feedparser.py in Universal Feed Parser (aka feedparser or python-feedparser) before 5.0.1 allows remote attackers to cause a denial of service (application crash) via a malformed DOCTYPE declaration.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2011-1156",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/33125/97c"
+        },
+        {
+            "vulnerability_id": "33126",
+            "package_name": "feedparser",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<5.0.1"
+            ],
+            "all_vulnerable_specs": [
+                "<5.0.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                "extras": [],
+                "marker": null,
+                "name": "feedparser",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Cross-site scripting (XSS) vulnerability in feedparser.py in Universal Feed Parser (aka feedparser or python-feedparser) 5.x before 5.0.1 allows remote attackers to inject arbitrary web script or HTML via malformed XML comments.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2011-1157",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/33126/97c"
+        },
+        {
+            "vulnerability_id": "33127",
+            "package_name": "feedparser",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<5.0.1"
+            ],
+            "all_vulnerable_specs": [
+                "<5.0.1"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                "extras": [],
+                "marker": null,
+                "name": "feedparser",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Cross-site scripting (XSS) vulnerability in feedparser.py in Universal Feed Parser (aka feedparser or python-feedparser) 5.x before 5.0.1 allows remote attackers to inject arbitrary web script or HTML via an unexpected URI scheme, as demonstrated by a javascript: URI.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2011-1158",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/33127/97c"
+        },
+        {
+            "vulnerability_id": "25819",
+            "package_name": "feedparser",
+            "ignored": true,
+            "ignored_reason": "This vulnerability is being ignored due to the 'ignore-unpinned-requirements' flag (default True). To change this, set 'ignore-unpinned-requirements' to False under 'security' in your policy file. See https://docs.pyup.io/docs/safety-20-policy-file for more information.",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                "<5.1.2"
+            ],
+            "all_vulnerable_specs": [
+                "<5.1.2"
+            ],
+            "analyzed_version": null,
+            "analyzed_requirement": {
+                "raw": "feedparser                 # RSS/Atom feed parser - robusto y confiable",
+                "extras": [],
+                "marker": null,
+                "name": "feedparser",
+                "specifier": ">=0",
+                "url": null,
+                "found": "/workspace/noticiencias_news_collector/requirements.txt"
+            },
+            "advisory": "Universal Feed Parser (aka feedparser or python-feedparser) before 5.1.2 allows remote attackers to cause a denial of service (memory consumption) via a crafted XML ENTITY declaration in a non-ASCII encoded document.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2012-2921",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://data.safetycli.com/v/25819/97c"
+        }
+    ],
+    "remediations": {},
+    "remediations_results": {
+        "vulnerabilities_fixed": [],
+        "remediations_applied": {},
+        "remediations_skipped": {}
+    }
+}
+
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+

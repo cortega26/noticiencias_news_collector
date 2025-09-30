@@ -6,6 +6,8 @@ import hashlib
 import uuid
 from typing import Tuple
 
+_BLAKE_PERSONALIZATION = b"noti-simhash"
+
 from src.utils.text_cleaner import clean_html, normalize_text
 
 
@@ -32,8 +34,14 @@ def simhash64(text: str, num_bits: int = SIMHASH_BITS) -> int:
     if not tokens:
         return 0
     vector = [0] * num_bits
+    digest_size = max(1, (num_bits + 7) // 8)
     for token in tokens:
-        h = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16)
+        digest = hashlib.blake2b(
+            token.encode("utf-8"),
+            digest_size=digest_size,
+            person=_BLAKE_PERSONALIZATION,
+        )
+        h = int.from_bytes(digest.digest(), "big")
         for i in range(num_bits):
             bit = (h >> i) & 1
             vector[i] += 1 if bit else -1

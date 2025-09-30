@@ -372,4 +372,3 @@ def get_observability() -> ObservabilityManager:
     if _observability_instance is None:
         _observability_instance = ObservabilityManager()
     return _observability_instance
-

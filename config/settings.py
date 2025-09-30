@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from .secret_manager import secret_loader
+
 # Cargar variables de entorno desde archivo .env
 load_dotenv()
 
@@ -24,16 +26,8 @@ DLQ_DIR.mkdir(exist_ok=True)
 
 # Configuración de Base de Datos
 # ==============================
-DATABASE_CONFIG = {
-    "type": "sqlite",
-    "path": DATA_DIR / "news.db",
-    # Para PostgreSQL futuro:
-    # 'host': os.getenv('DB_HOST', 'localhost'),
-    # 'port': os.getenv('DB_PORT', 5432),
-    # 'name': os.getenv('DB_NAME', 'news_collector'),
-    # 'user': os.getenv('DB_USER', 'collector'),
-    # 'password': os.getenv('DB_PASSWORD', ''),
-}
+# Preferimos DATABASE_URL proveniente de un Secret Manager o variables de entorno.
+DATABASE_CONFIG = secret_loader.database_config(DATA_DIR / "news.db")
 
 # Configuración de Colección
 # ==========================
@@ -200,6 +194,10 @@ def validate_config():
         raise ValueError(
             f"Tipo de base de datos no soportado: {DATABASE_CONFIG['type']}"
         )
+    if DATABASE_CONFIG["type"] == "sqlite" and "path" not in DATABASE_CONFIG:
+        raise ValueError("La configuración de SQLite requiere la clave 'path'")
+    if DATABASE_CONFIG["type"] != "sqlite" and "url" not in DATABASE_CONFIG:
+        raise ValueError("Las bases de datos servidoras requieren 'DATABASE_URL'")
 
     print("✅ Configuración validada correctamente")
 
