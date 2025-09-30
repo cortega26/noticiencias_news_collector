@@ -2,7 +2,7 @@
 
 ## Sistema Automatizado de Recopilación y Scoring de Noticias Científicas
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: MVP](https://img.shields.io/badge/Status-MVP-green.svg)]()
 
@@ -72,7 +72,7 @@ Cada artículo incluye un payload de "why ranked" con contribuciones por feature
 ## 🚀 Instalación Rápida
 
 ### Prerrequisitos
-- Python 3.8 o superior (probado en 3.13)
+- Python 3.10 o superior (probado en 3.13)
 - Git
 
 ### 1. Clonar el Repositorio
