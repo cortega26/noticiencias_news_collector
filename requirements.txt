@@ -9,41 +9,41 @@
 #     python -m pip install -r requirements.txt
 
 # Core parsing y web scraping
-feedparser                 # RSS/Atom feed parser - robusto y confiable
-requests                   # HTTP requests - estándar de la industria
-beautifulsoup4             # HTML parsing para contenido adicional
-lxml                       # XML parser rápido para feeds
+feedparser==6.0.12         # RSS/Atom feed parser - robusto y confiable
+requests==2.32.5           # HTTP requests - estándar de la industria
+beautifulsoup4==4.14.2     # HTML parsing para contenido adicional
+lxml==6.0.2                # XML parser rápido para feeds
 
 # Procesamiento de texto y NLP
 nltk==3.9.1                # Natural Language Toolkit - análisis básico de texto
 textblob==0.19.0           # Análisis de sentimientos simple
-python-dateutil            # Parsing inteligente de fechas
+python-dateutil==2.9.0.post0  # Parsing inteligente de fechas
 
 # Base de datos y ORM
-sqlalchemy                 # ORM potente y flexible
+sqlalchemy==2.0.43         # ORM potente y flexible
 
 # Utilities y helpers
-python-dotenv              # Manejo de variables de entorno
-schedule                   # Scheduling de tareas simple
-click                      # CLI interface elegante
+python-dotenv==1.1.1       # Manejo de variables de entorno
+schedule==1.2.2            # Scheduling de tareas simple
+click==8.3.0               # CLI interface elegante
 
 # API y Serving
-fastapi                    # Framework para exponer APIs modernas
-pydantic>=2,<3              # Validación y serialización robusta
+fastapi==0.118.0           # Framework para exponer APIs modernas
+pydantic==2.11.9           # Validación y serialización robusta
 
 # Logging y monitoreo
-loguru                     # Logger moderno y bonito
+loguru==0.7.3              # Logger moderno y bonito
 
 # Testing (para desarrollo futuro)
-pytest                    # Framework de testing
-pytest-cov                # Coverage de tests
+pytest==8.4.2             # Framework de testing
+pytest-cov==7.0.0         # Coverage de tests
 
 # Opcional: Machine Learning básico (para scoring)
-scikit-learn              # ML algorithms básicos
-numpy                     # Operaciones numéricas
+scikit-learn==1.7.2       # ML algorithms básicos
+numpy==2.3.3              # Operaciones numéricas
 
 # HTTP async client (para colector asíncrono opcional)
-httpx<0.28                 # Compatibilidad con Starlette TestClient
+httpx==0.27.2             # Compatibilidad con Starlette TestClient
 
 # ¿Por qué estas dependencias específicas?
 # =======================================
