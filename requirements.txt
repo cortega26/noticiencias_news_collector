@@ -27,6 +27,10 @@ python-dotenv              # Manejo de variables de entorno
 schedule                   # Scheduling de tareas simple
 click                      # CLI interface elegante
 
+# API y Serving
+fastapi                    # Framework para exponer APIs modernas
+pydantic>=2,<3              # Validación y serialización robusta
+
 # Logging y monitoreo
 loguru                     # Logger moderno y bonito
 
@@ -39,7 +43,7 @@ scikit-learn              # ML algorithms básicos
 numpy                     # Operaciones numéricas
 
 # HTTP async client (para colector asíncrono opcional)
-httpx
+httpx<0.28                 # Compatibilidad con Starlette TestClient
 
 # ¿Por qué estas dependencias específicas?
 # =======================================
