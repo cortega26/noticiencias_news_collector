@@ -1,0 +1,23 @@
+title = "Noticiencias Secret Scan"
+
+[allowlist]
+description = "Ignore known non-sensitive fixtures and generated assets."
+paths = [
+  '''^tests/data/''',
+  '''^docs/fixtures/''',
+  '''^docs/examples/''',
+  '''^reports/''',
+  '''^\.venv/''',
+]
+regexes = [
+  '''dummy(_|-)secret''',
+  '''test(_|-)api(_|-)key''',
+]
+commits = []
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API or secret token"
+regex = '''(?i)(api|token|secret|key)["'=:\s]+[A-Za-z0-9_\-]{16,}'''
+secretGroup = 0
+tags = ["secret", "generic"]
