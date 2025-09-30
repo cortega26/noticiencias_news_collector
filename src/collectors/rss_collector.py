@@ -222,7 +222,17 @@ class RSSCollector(BaseCollector):
             self._enforce_domain_rate_limit(domain, robots_delay)
 
             # Obtener el feed RSS
-            feed_content = self._fetch_feed(source_config["url"])
+            feed_content, status_code = self._fetch_feed(
+                source_id, source_config["url"]
+            )
+            if status_code == 304:
+                logger.info(
+                    "📭 Feed sin cambios para %s (HTTP 304 If-Modified-Since/ETag)",
+                    source_id,
+                )
+                stats["success"] = True
+                return stats
+
             if not feed_content:
                 stats["error_message"] = "No se pudo obtener el feed"
                 return stats
@@ -287,7 +297,9 @@ class RSSCollector(BaseCollector):
 
         return stats
 
-    def _fetch_feed(self, feed_url: str) -> Optional[str]:
+    def _fetch_feed(
+        self, source_id: str, feed_url: str
+    ) -> Tuple[Optional[str], Optional[int]]:
         """
         Obtiene el contenido de un feed RSS de manera robusta.
 
@@ -297,10 +309,29 @@ class RSSCollector(BaseCollector):
         """
         try:
             max_retries = RATE_LIMITING_CONFIG["max_retries"]
+            cached_headers: Dict[str, Optional[str]] = {"etag": None, "last_modified": None}
+            try:
+                cached_headers = self.db_manager.get_source_feed_metadata(source_id)
+            except Exception as metadata_error:
+                logger.warning(
+                    "No se pudo obtener metadata HTTP previa para %s: %s",
+                    source_id,
+                    metadata_error,
+                )
             for attempt in range(0, max_retries + 1):
                 try:
+                    conditional_headers = {}
+                    if cached_headers.get("etag"):
+                        conditional_headers["If-None-Match"] = cached_headers["etag"]
+                    if cached_headers.get("last_modified"):
+                        conditional_headers["If-Modified-Since"] = cached_headers[
+                            "last_modified"
+                        ]
+
                     response = self.session.get(
-                        feed_url, timeout=COLLECTION_CONFIG["request_timeout"]
+                        feed_url,
+                        timeout=COLLECTION_CONFIG["request_timeout"],
+                        headers=conditional_headers or None,
                     )
                     if response.status_code in (429, 500, 502, 503, 504):
                         if attempt < max_retries:
@@ -310,7 +341,25 @@ class RSSCollector(BaseCollector):
                             logger.warning(
                                 f"HTTP {response.status_code} agotó reintentos para {feed_url}"
                             )
-                            return None
+                            return (None, response.status_code)
+
+                    if response.status_code == 304:
+                        if response.headers.get("ETag") or response.headers.get(
+                            "Last-Modified"
+                        ):
+                            try:
+                                self.db_manager.update_source_feed_metadata(
+                                    source_id,
+                                    etag=response.headers.get("ETag"),
+                                    last_modified=response.headers.get("Last-Modified"),
+                                )
+                            except Exception as update_error:
+                                logger.warning(
+                                    "No se pudo actualizar metadata HTTP para %s tras 304: %s",
+                                    source_id,
+                                    update_error,
+                                )
+                        return (None, 304)
                     response.raise_for_status()
                     # Verificar que el contenido sea XML válido
                     content_type = response.headers.get("content-type", "").lower()
@@ -326,8 +375,25 @@ class RSSCollector(BaseCollector):
                         logger.warning(
                             f"⚠️  Feed muy grande ({content_length} bytes): {feed_url}"
                         )
-                        return None
-                    return response.text
+                        return (None, response.status_code)
+
+                    if response.headers.get("ETag") or response.headers.get(
+                        "Last-Modified"
+                    ):
+                        try:
+                            self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                etag=response.headers.get("ETag"),
+                                last_modified=response.headers.get("Last-Modified"),
+                            )
+                        except Exception as update_error:
+                            logger.warning(
+                                "No se pudo actualizar metadata HTTP para %s: %s",
+                                source_id,
+                                update_error,
+                            )
+
+                    return (response.text, response.status_code)
                 except (
                     requests.exceptions.Timeout,
                     requests.exceptions.ConnectionError,
@@ -339,14 +405,14 @@ class RSSCollector(BaseCollector):
                         logger.warning(
                             f"⏰ Timeout/ConnError tras reintentos: {feed_url} | {re}"
                         )
-                        return None
+                        return (None, None)
                 except requests.exceptions.TooManyRedirects:
                     logger.warning(f"🔄 Demasiados redirects: {feed_url}")
-                    return None
-            return None
+                    return (None, None)
+            return (None, None)
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ Error obteniendo feed {feed_url}: {e}")
-            return None
+            return (None, None)
 
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
         """

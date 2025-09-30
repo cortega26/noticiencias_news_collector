@@ -322,6 +322,10 @@ class Source(Base):
     # ===================================
     custom_config = Column(JSON)  # Configuraciones especiales para esta fuente
 
+    # Metadatos HTTP para caching condicional
+    feed_etag = Column(String(512))
+    feed_last_modified = Column(String(100))
+
     def __repr__(self):
         return f"<Source(id='{self.id}', name='{self.name}', active={self.is_active})>"
 
