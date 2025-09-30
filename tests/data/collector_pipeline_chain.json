@@ -1,0 +1,116 @@
+[
+  {
+    "id": "en-01",
+    "source": {
+      "id": "test_science_daily",
+      "name": "Science Daily Test",
+      "url": "https://example.com/science/rss",
+      "category": "science",
+      "credibility_score": 0.92,
+      "language": "en"
+    },
+    "collector_raw": {
+      "url": "https://example.com/articles/nasa-confirms-water-on-mars",
+      "title": "NASA Confirms Water on Mars",
+      "summary": "NASA scientists announced that Mars shows positive water traces during research. The mission team confirmed repeated detections using multiple instruments, offering robust evidence for hydrating minerals across the planet's surface with ongoing analysis providing further validation.",
+      "authors": ["NASA Science Team"],
+      "published_offset_hours": -6,
+      "source_metadata": {
+        "feed_title": "Science Daily",
+        "content": "NASA scientists announced that Mars shows positive water traces during research, confirming hydrated minerals across the surface and outlining the next mission milestones.",
+        "doi": "10.1000/nasa-mars-water"
+      }
+    },
+    "enrichment_expected": {
+      "language": "en",
+      "sentiment": "positive",
+      "topics": ["space", "science"],
+      "entities": ["NASA", "Mars"]
+    },
+    "expected_storage": {
+      "fields": {
+        "language": "en",
+        "category": "science",
+        "source_id": "test_science_daily"
+      },
+      "final_score_min": 0.4,
+      "should_include": true
+    }
+  },
+  {
+    "id": "en-04",
+    "source": {
+      "id": "test_market_watch",
+      "name": "Market Watch Test",
+      "url": "https://example.com/markets/rss",
+      "category": "economy",
+      "credibility_score": 0.68,
+      "language": "en"
+    },
+    "collector_raw": {
+      "url": "https://example.com/articles/markets-face-global-decline",
+      "title": "Markets Face Global Decline",
+      "summary": "Wall Street analysts warned about market decline and economic crisis in a lengthy briefing. The report highlighted sustained losses, liquidity concerns, and macroeconomic uncertainty that continues to pressure investors across major exchanges worldwide.",
+      "authors": ["Financial Research Desk"],
+      "published_offset_hours": -20,
+      "source_metadata": {
+        "feed_title": "Market Watch",
+        "content": "Wall Street analysts warned about market decline and economic crisis, citing macroeconomic uncertainty and liquidity stress in international exchanges.",
+        "doi": null
+      }
+    },
+    "enrichment_expected": {
+      "language": "en",
+      "sentiment": "negative",
+      "topics": ["economy"],
+      "entities": ["Wall Street"]
+    },
+    "expected_storage": {
+      "fields": {
+        "language": "en",
+        "category": "economy",
+        "source_id": "test_market_watch"
+      },
+      "final_score_min": 0.3,
+      "should_include": true
+    }
+  },
+  {
+    "id": "es-08",
+    "source": {
+      "id": "test_tecnologia",
+      "name": "Tecnología Hoy Test",
+      "url": "https://example.com/tecnologia/rss",
+      "category": "technology",
+      "credibility_score": 0.88,
+      "language": "es"
+    },
+    "collector_raw": {
+      "url": "https://example.com/articulos/google-y-telefonica-colaboran",
+      "title": "Google y Telefónica colaboran en IA",
+      "summary": "Google y Telefónica anunciaron un proyecto de tecnología IA con impacto positivo en software y redes. La alianza destaca inversiones en investigación, capacitación regional y despliegue de plataformas inteligentes para clientes empresariales.",
+      "authors": ["Redacción Innovación"],
+      "published_offset_hours": -3,
+      "source_metadata": {
+        "feed_title": "Tecnología Hoy",
+        "content": "Google y Telefónica anunciaron un proyecto de tecnología IA con impacto positivo en software, capacitación y redes latinoamericanas.",
+        "doi": null
+      }
+    },
+    "enrichment_expected": {
+      "language": "es",
+      "sentiment": "positive",
+      "topics": ["technology"],
+      "entities": ["Google", "Telefónica", "IA"]
+    },
+    "expected_storage": {
+      "fields": {
+        "language": "es",
+        "category": "technology",
+        "source_id": "test_tecnologia"
+      },
+      "final_score_min": 0.4,
+      "should_include": true
+    }
+  }
+]
