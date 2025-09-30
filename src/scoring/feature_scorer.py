@@ -9,6 +9,9 @@ from typing import Dict, Any, Optional
 
 from config import SCORING_CONFIG
 from src.utils.dedupe import normalize_article_text
+from pydantic import ValidationError
+
+from src.contracts import ScoringRequestModel
 
 
 def _get_attr(obj: Any, name: str, default=None):
@@ -105,7 +108,7 @@ class FeatureBasedScorer:
             "engagement": engagement_score,
         }
 
-        return {
+        result = {
             "final_score": final_score,
             "should_include": final_score >= self.minimum_score,
             "components": components,
@@ -119,6 +122,16 @@ class FeatureBasedScorer:
             "why_ranked": explanation,
             "explanation": explanation,
         }
+
+        try:
+            validated = ScoringRequestModel.model_validate(result)
+        except ValidationError as exc:
+            identifier = getattr(article, "id", getattr(article, "url", "unknown"))
+            raise ValueError(
+                f"Invalid scoring payload for article {identifier}: {exc}"
+            ) from exc
+
+        return validated.model_dump()
 
     # Feature calculators -------------------------------------------------
 
