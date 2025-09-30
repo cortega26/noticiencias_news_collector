@@ -33,6 +33,7 @@ Eso es exactamente lo que hace este sistema.
   - Feeds comunitarios (ej. r/science) se consultan como máximo una vez por minuto para respetar el rate limit de Reddit (intervalos >=30s y user-agent dedicado)
   - Configuraciones como `min_delay_seconds` por fuente y `RATE_LIMITING_CONFIG["domain_overrides"]` aseguran tiempos de espera adicionales cuando un host lo exige (ej. arXiv = 20s, Reddit = 30s)
 - **Caching Condicional**: Persistimos `ETag` y `Last-Modified` por fuente para enviar `If-None-Match`/`If-Modified-Since`, reduciendo ancho de banda y evitando descargas innecesarias cuando no hay contenido nuevo.
+- **Modo Asíncrono Opcional**: al activar `ASYNC_ENABLED=true` el colector usa `httpx.AsyncClient` y un `asyncio.Semaphore` controlado por `MAX_CONCURRENT_REQUESTS` para paralelizar dominios distintos sin saltarse `robots.txt`, deduplicación ni límites por dominio.
 - **Deduplicación**: Detección automática de contenido duplicado
 
 ### 🧠 Scoring Multidimensional
@@ -195,6 +196,10 @@ python run_collector.py --check-deps
 ### Variables de Entorno Principales
 
 ```bash
+# Colector RSS (sincrónico por defecto)
+ASYNC_ENABLED=false               # true → usa AsyncRSSCollector
+MAX_CONCURRENT_REQUESTS=8         # techo global de corrutinas
+
 # Frecuencia de recolección (horas)
 COLLECTION_INTERVAL=6
 
@@ -252,6 +257,20 @@ SOURCE_CAP_PERCENTAGE=0.5
 TOPIC_CAP_PERCENTAGE=0.6
 RERANKER_SEED=1337
 ```
+
+### Modo Asíncrono del Colector
+
+Activa `ASYNC_ENABLED=true` cuando:
+
+- Necesitas abarcar muchas fuentes I/O-bound en la misma ventana de recolección.
+- Los tiempos de respuesta promedio de las fuentes son altos (>2 s) y quieres mejorar throughput sin abrir múltiples procesos.
+- Ya validaste en `staging` que los hosts respetan `If-None-Match`/`If-Modified-Since` (el modo async mantiene los mismos validadores y dedupe).
+
+Recomendaciones:
+
+- Ajusta `MAX_CONCURRENT_REQUESTS` según la capacidad de salida del entorno (8–12 suele funcionar; valores mayores pueden saturar DNS o proxies).
+- El colector sigue aplicando `robots.txt` y `min_delay_seconds` por dominio mediante locks; revisa Grafana → panel "collector wait time" tras el despliegue.
+- Mantén `RATE_LIMITING_CONFIG["domain_overrides"]` actualizado: la ejecución asíncrona respeta esos límites pero incrementará la presión si hay muchos dominios sin override.
 
 ### Personalizar Pesos de Scoring
 
