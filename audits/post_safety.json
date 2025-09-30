@@ -1,0 +1,395 @@
+
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+
+{
+    "report_meta": {
+        "scan_target": "files",
+        "scanned": [
+            "requirements.txt"
+        ],
+        "scanned_full_path": [
+            "/workspace/noticiencias_news_collector/requirements.txt"
+        ],
+        "target_languages": [
+            "python"
+        ],
+        "policy_file": null,
+        "policy_file_source": "local",
+        "audit_and_monitor": false,
+        "api_key": false,
+        "account": "",
+        "local_database_path": null,
+        "safety_version": "3.6.2",
+        "timestamp": "2025-09-30 16:20:04",
+        "packages_found": 20,
+        "vulnerabilities_found": 0,
+        "vulnerabilities_ignored": 0,
+        "remediations_recommended": 0,
+        "telemetry": {
+            "safety_options": {
+                "files": {
+                    "-r": 1
+                },
+                "json": {
+                    "--json": 1
+                }
+            },
+            "safety_version": "3.6.2",
+            "safety_source": "cli",
+            "os_type": "Linux",
+            "os_release": "6.12.13",
+            "os_description": "Linux-6.12.13-x86_64-with-glibc2.39",
+            "python_version": "3.12.10",
+            "safety_command": "check"
+        },
+        "git": {
+            "branch": "work",
+            "tag": "",
+            "commit": "3894a53583b81538e50970a995ad922e93f4b7ee",
+            "dirty": "True",
+            "origin": ""
+        },
+        "project": null,
+        "json_version": "1.1",
+        "remediations_attempted": 0,
+        "remediations_completed": 0,
+        "remediation_mode": "NON_INTERACTIVE"
+    },
+    "scanned_packages": {
+        "feedparser": {
+            "name": "feedparser",
+            "version": "6.0.12",
+            "requirements": [
+                {
+                    "raw": "feedparser==6.0.12           # RSS/Atom feed parser - robusto y confiable",
+                    "extras": [],
+                    "marker": null,
+                    "name": "feedparser",
+                    "specifier": "==6.0.12",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "requests": {
+            "name": "requests",
+            "version": "2.32.5",
+            "requirements": [
+                {
+                    "raw": "requests==2.32.5             # HTTP requests - est\u00e1ndar de la industria",
+                    "extras": [],
+                    "marker": null,
+                    "name": "requests",
+                    "specifier": "==2.32.5",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "beautifulsoup4": {
+            "name": "beautifulsoup4",
+            "version": "4.14.2",
+            "requirements": [
+                {
+                    "raw": "beautifulsoup4==4.14.2        # HTML parsing para contenido adicional",
+                    "extras": [],
+                    "marker": null,
+                    "name": "beautifulsoup4",
+                    "specifier": "==4.14.2",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "lxml": {
+            "name": "lxml",
+            "version": "5.4.0",
+            "requirements": [
+                {
+                    "raw": "lxml==5.4.0                  # XML parser r\u00e1pido para feeds",
+                    "extras": [],
+                    "marker": null,
+                    "name": "lxml",
+                    "specifier": "==5.4.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "nltk": {
+            "name": "nltk",
+            "version": "3.9.1",
+            "requirements": [
+                {
+                    "raw": "nltk==3.9.1                  # Natural Language Toolkit - an\u00e1lisis b\u00e1sico de texto",
+                    "extras": [],
+                    "marker": null,
+                    "name": "nltk",
+                    "specifier": "==3.9.1",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "textblob": {
+            "name": "textblob",
+            "version": "0.19.0",
+            "requirements": [
+                {
+                    "raw": "textblob==0.19.0             # An\u00e1lisis de sentimientos simple",
+                    "extras": [],
+                    "marker": null,
+                    "name": "textblob",
+                    "specifier": "==0.19.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "python-dateutil": {
+            "name": "python-dateutil",
+            "version": "2.9.0.post0",
+            "requirements": [
+                {
+                    "raw": "python-dateutil==2.9.0.post0 # Parsing inteligente de fechas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dateutil",
+                    "specifier": "==2.9.0.post0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "sqlalchemy": {
+            "name": "sqlalchemy",
+            "version": "2.0.43",
+            "requirements": [
+                {
+                    "raw": "sqlalchemy==2.0.43           # ORM potente y flexible",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sqlalchemy",
+                    "specifier": "==2.0.43",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "python-dotenv": {
+            "name": "python-dotenv",
+            "version": "1.1.1",
+            "requirements": [
+                {
+                    "raw": "python-dotenv==1.1.1         # Manejo de variables de entorno",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dotenv",
+                    "specifier": "==1.1.1",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "schedule": {
+            "name": "schedule",
+            "version": "1.2.2",
+            "requirements": [
+                {
+                    "raw": "schedule==1.2.2              # Scheduling de tareas simple",
+                    "extras": [],
+                    "marker": null,
+                    "name": "schedule",
+                    "specifier": "==1.2.2",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "click": {
+            "name": "click",
+            "version": "8.3.0",
+            "requirements": [
+                {
+                    "raw": "click==8.3.0                 # CLI interface elegante",
+                    "extras": [],
+                    "marker": null,
+                    "name": "click",
+                    "specifier": "==8.3.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "loguru": {
+            "name": "loguru",
+            "version": "0.7.3",
+            "requirements": [
+                {
+                    "raw": "loguru==0.7.3                # Logger moderno y bonito",
+                    "extras": [],
+                    "marker": null,
+                    "name": "loguru",
+                    "specifier": "==0.7.3",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "opentelemetry-api": {
+            "name": "opentelemetry-api",
+            "version": "1.37.0",
+            "requirements": [
+                {
+                    "raw": "opentelemetry-api==1.37.0    # API para trazas y m\u00e9tricas distribuidas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "opentelemetry-api",
+                    "specifier": "==1.37.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "opentelemetry-sdk": {
+            "name": "opentelemetry-sdk",
+            "version": "1.37.0",
+            "requirements": [
+                {
+                    "raw": "opentelemetry-sdk==1.37.0    # SDK base para exportar trazas localmente",
+                    "extras": [],
+                    "marker": null,
+                    "name": "opentelemetry-sdk",
+                    "specifier": "==1.37.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "prometheus-client": {
+            "name": "prometheus-client",
+            "version": "0.23.1",
+            "requirements": [
+                {
+                    "raw": "prometheus-client==0.23.1    # Exposici\u00f3n de m\u00e9tricas para scraping/alerting",
+                    "extras": [],
+                    "marker": null,
+                    "name": "prometheus-client",
+                    "specifier": "==0.23.1",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "pytest": {
+            "name": "pytest",
+            "version": "8.4.2",
+            "requirements": [
+                {
+                    "raw": "pytest==8.4.2                # Framework de testing",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest",
+                    "specifier": "==8.4.2",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "pytest-cov": {
+            "name": "pytest-cov",
+            "version": "7.0.0",
+            "requirements": [
+                {
+                    "raw": "pytest-cov==7.0.0            # Coverage de tests",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-cov",
+                    "specifier": "==7.0.0",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "scikit-learn": {
+            "name": "scikit-learn",
+            "version": "1.7.2",
+            "requirements": [
+                {
+                    "raw": "scikit-learn==1.7.2          # ML algorithms b\u00e1sicos",
+                    "extras": [],
+                    "marker": null,
+                    "name": "scikit-learn",
+                    "specifier": "==1.7.2",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "numpy": {
+            "name": "numpy",
+            "version": "2.3.3",
+            "requirements": [
+                {
+                    "raw": "numpy==2.3.3                 # Operaciones num\u00e9ricas",
+                    "extras": [],
+                    "marker": null,
+                    "name": "numpy",
+                    "specifier": "==2.3.3",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        },
+        "httpx": {
+            "name": "httpx",
+            "version": "0.28.1",
+            "requirements": [
+                {
+                    "raw": "httpx==0.28.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "httpx",
+                    "specifier": "==0.28.1",
+                    "url": null,
+                    "found": "/workspace/noticiencias_news_collector/requirements.txt"
+                }
+            ]
+        }
+    },
+    "affected_packages": {},
+    "announcements": [],
+    "vulnerabilities": [],
+    "ignored_vulnerabilities": [],
+    "remediations": {},
+    "remediations_results": {
+        "vulnerabilities_fixed": [],
+        "remediations_applied": {},
+        "remediations_skipped": {}
+    }
+}
+
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+

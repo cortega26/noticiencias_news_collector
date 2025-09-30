@@ -14,6 +14,7 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy import create_engine, desc, func
 from sqlalchemy.orm import sessionmaker, Session, load_only
@@ -77,36 +78,39 @@ class DatabaseManager:
         todos los sistemas estén operativos.
         """
         try:
+            engine_kwargs: Dict[str, Any] = {
+                "echo": False,
+                "pool_pre_ping": True,
+            }
+
             if self.config["type"] == "sqlite":
                 # Para SQLite, creamos el archivo si no existe
-                db_path = self.config["path"]
+                db_path = Path(self.config["path"])
                 db_path.parent.mkdir(parents=True, exist_ok=True)
                 database_url = f"sqlite:///{db_path}"
 
-                # SQLite con configuraciones optimizadas
-                self.engine = create_engine(
-                    database_url,
-                    echo=False,  # Cambiar a True para ver todas las consultas SQL
-                    connect_args={
+                sqlite_kwargs = {
+                    "connect_args": {
                         "check_same_thread": False,  # Necesario para SQLite con threads
                         "timeout": 20,  # Timeout de 20 segundos para locks
-                    },
-                    pool_pre_ping=True,  # Verifica conexiones antes de usarlas
-                )
+                    }
+                }
+                engine_kwargs.update(sqlite_kwargs)
+                engine_kwargs.update(self.config.get("options", {}))
+                self.engine = create_engine(database_url, **engine_kwargs)
 
             elif self.config["type"] == "postgresql":
-                # Para PostgreSQL futuro
-                database_url = (
-                    f"postgresql://{self.config['user']}:{self.config['password']}"
-                    f"@{self.config['host']}:{self.config['port']}/{self.config['name']}"
-                )
-                self.engine = create_engine(
-                    database_url,
-                    echo=False,
-                    pool_size=5,  # Pool de conexiones para mejor performance
-                    max_overflow=10,
-                    pool_pre_ping=True,
-                )
+                database_url = self.config.get("url")
+                if not database_url:
+                    database_url = (
+                        f"postgresql://{self.config['user']}:{self.config['password']}"
+                        f"@{self.config['host']}:{self.config['port']}/{self.config['name']}"
+                    )
+
+                pg_defaults = {"pool_size": 5, "max_overflow": 10}
+                engine_kwargs.update(pg_defaults)
+                engine_kwargs.update(self.config.get("options", {}))
+                self.engine = create_engine(database_url, **engine_kwargs)
 
             else:
                 raise ValueError(

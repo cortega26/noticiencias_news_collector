@@ -7,7 +7,7 @@ entre múltiples dominios/fuentes.
 
 import asyncio
 import time
-import random
+from secrets import SystemRandom
 from typing import Dict, Any, Optional, Tuple
 from urllib.parse import urlparse
 import urllib.robotparser as robotparser
@@ -16,6 +16,8 @@ import httpx
 import feedparser
 
 from .rss_collector import RSSCollector, logger
+
+_ASYNC_RNG = SystemRandom()
 from config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG, ROBOTS_CONFIG
 
 
@@ -83,7 +85,7 @@ class AsyncRSSCollector(RSSCollector):
                 robots_delay or 0.0,
                 RATE_LIMITING_CONFIG["delay_between_requests"],
             )
-            jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+            jitter = _ASYNC_RNG.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
             next_time = self._domain_next_time.get(domain, 0.0)
             wait = (next_time + effective_delay + jitter) - now
             if wait > 0:
@@ -103,7 +105,7 @@ class AsyncRSSCollector(RSSCollector):
                     if attempt < max_retries:
                         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
                         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-                        jitter = random.uniform(
+                        jitter = _ASYNC_RNG.uniform(
                             0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
                         )
                         delay = min(max_b, (base * (2**attempt)) + jitter)
@@ -126,7 +128,7 @@ class AsyncRSSCollector(RSSCollector):
                 if attempt < max_retries:
                     base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
                     max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-                    jitter = random.uniform(
+                    jitter = _ASYNC_RNG.uniform(
                         0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
                     )
                     delay = min(max_b, (base * (2**attempt)) + jitter)

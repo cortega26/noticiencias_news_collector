@@ -1,0 +1,7 @@
+# Herramientas de seguridad y automatización (instalar sólo para desarrollo)
+pre-commit==4.3.0
+pip-audit==2.9.0
+safety==3.6.2
+bandit==1.8.6
+cyclonedx-bom==7.1.0
+detect-secrets==1.5.0

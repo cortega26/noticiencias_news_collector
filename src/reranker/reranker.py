@@ -17,7 +17,10 @@ def rerank_articles(
     if not articles:
         return []
 
-    rng = random.Random(seed)
+    # Deterministic PRNG is required for reproducible reranking in tests and auditing.
+    # Bandit rule B311 flags random.* usage, but this is not used for security sensitive
+    # purposes (only tie-breaking), so we silence it explicitly.
+    rng = random.Random(seed)  # nosec B311
     shuffled = articles[:]
     rng.shuffle(shuffled)
 

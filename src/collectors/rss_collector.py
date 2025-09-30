@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from urllib.parse import urlparse
 import logging
-import random
+from secrets import SystemRandom
 import urllib.robotparser as robotparser
 import httpx
 
@@ -37,6 +37,7 @@ from src.utils.url_canonicalizer import canonicalize_url
 from src.enrichment import enrichment_pipeline
 
 logger = logging.getLogger(__name__)
+_RNG = SystemRandom()
 
 
 class RSSCollector(BaseCollector):
@@ -158,7 +159,7 @@ class RSSCollector(BaseCollector):
             robots_delay or 0.0,
             RATE_LIMITING_CONFIG["delay_between_requests"],
         )
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        jitter = _RNG.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
         wait = (last + effective_delay + jitter) - now
         if wait > 0:
             time.sleep(wait)
@@ -167,7 +168,7 @@ class RSSCollector(BaseCollector):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        jitter = _RNG.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
         delay = min(max_b, (base * (2**attempt)) + jitter)
         time.sleep(delay)
 

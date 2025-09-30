@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import html as _html
+import logging
 import re
 import unicodedata
 from typing import Iterable
 from bs4 import BeautifulSoup
+
+
+logger = logging.getLogger(__name__)
 
 
 _BOILERPLATE_PATTERNS: Iterable[re.Pattern] = [
@@ -40,7 +44,7 @@ def clean_html(html: str) -> str:
             try:
                 el.extract()
             except Exception:
-                pass
+                logger.debug("Failed to strip boilerplate node", exc_info=True)
     text = soup.get_text(" ")
     return normalize_text(text)
 

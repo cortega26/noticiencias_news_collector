@@ -89,4 +89,3 @@ DASHBOARD_REFERENCES: Dict[str, Any] = {
         ],
     }
 }
-

@@ -1,7 +1,7 @@
 # AGENTS.md — Python News Aggregator & Impact Scoring
 
-> **Audience:** engineers and operators.  
-> **Purpose:** define the agents (workers/services), their contracts, SLAs, failure modes, metrics, and runbooks for a news collector/aggregator with an impact-scoring and ranking pipeline.  
+> **Audience:** engineers and operators.
+> **Purpose:** define the agents (workers/services), their contracts, SLAs, failure modes, metrics, and runbooks for a news collector/aggregator with an impact-scoring and ranking pipeline.
 > **Style:** practical, testable, and reproducible. No essays—each agent has clear inputs/outputs, config, and checks.
 
 ---
@@ -50,7 +50,7 @@
 ```json
 {
   "article_id": "sha256(content|title|pub_time|source_url)",
-  "source_id": "string",              
+  "source_id": "string",
   "fetched_at": "ISO-UTC",
   "pub_time": "ISO-UTC (original if known)",
   "orig_tz": "IANA or null",
@@ -160,15 +160,15 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 - `source_id + url + (etag || last_modified || date_floor_hour)`
 
 **Config**
-- `HTTP_TIMEOUT_S`: `10`  
-- `CONCURRENCY`: per-domain  
+- `HTTP_TIMEOUT_S`: `10`
+- `CONCURRENCY`: per-domain
 - `USER_AGENT`: descriptive, contact email
 
 **Metrics**
 - p50/p95 fetch time, HTTP status mix, 304 hit rate, bytes saved, retries.
 
 **Failure Modes**
-- Blocked by bot protections → back off, mark **needs proxy** flag (manual approval).  
+- Blocked by bot protections → back off, mark **needs proxy** flag (manual approval).
 - HTML atypical → pass through to parser; do not drop.
 
 **Tests**
@@ -208,7 +208,7 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 - Near-dup: **SimHash/MinHash + LSH** on tokens; set `dedupe_cluster_id`.
 
 **Config**
-- `CANON_STRIP_PARAMS`: list  
+- `CANON_STRIP_PARAMS`: list
 - `LSH_BANDS`, `SIMHASH_THRESHOLD`
 
 **Metrics**
@@ -243,13 +243,13 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.6 Scoring Agent
 **Responsibilities**
-- Compute impact score from features (reliability, recency decay, entity/topic salience, duplication penalty, social signals if available).  
+- Compute impact score from features (reliability, recency decay, entity/topic salience, duplication penalty, social signals if available).
 - Produce **explanations** per item (feature contributions or rule trail).
 - Deterministic given same inputs; versioned.
 
 **Config**
-- `SCORER_VERSION=YYYYMMDD`  
-- `DECAY_HALF_LIFE_H=12`  
+- `SCORER_VERSION=YYYYMMDD`
+- `DECAY_HALF_LIFE_H=12`
 - `SOURCE_CAP_TOPK=0.4` (used downstream)
 
 **Metrics**
@@ -265,7 +265,7 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.7 Rerank & Diversity Agent
 **Responsibilities**
-- Enforce caps (max % per source), topic diversification, stable tie-breaking (recency > source > seeded random).  
+- Enforce caps (max % per source), topic diversification, stable tie-breaking (recency > source > seeded random).
 - Output ranked snapshot for a time window (e.g., last 6–12h).
 
 **Config**
@@ -281,7 +281,7 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.8 Persist Agent
 **Responsibilities**
-- Upsert articles, clusters, score explanations, and ranked snapshots.  
+- Upsert articles, clusters, score explanations, and ranked snapshots.
 - TTL policies on raw stages; compact historical partitions.
 
 **Config**
@@ -297,11 +297,11 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.9 Serving Agent (API/UI)
 **Responsibilities**
-- Serve paginated, filterable lists and item details; expose `why_ranked`.  
+- Serve paginated, filterable lists and item details; expose `why_ranked`.
 - Health/readiness probes; rate-limited public endpoints.
 
 **Contracts**
-- `GET /v1/top?window=6h&k=50&topic=...&source=...&lang=...`  
+- `GET /v1/top?window=6h&k=50&topic=...&source=...&lang=...`
 - `GET /v1/article/{id}` with `score_explain`
 
 **Metrics**
@@ -314,7 +314,7 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.10 Evaluation Agent (Offline)
 **Responsibilities**
-- Compute NDCG@k, Precision@k, MRR per segment (source, lang, topic).  
+- Compute NDCG@k, Precision@k, MRR per segment (source, lang, topic).
 - Compare `SCORER_VERSION` vs baseline; produce report artifacts.
 
 **Inputs**
@@ -333,7 +333,7 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.11 Data Quality (DQ) & Drift Agent
 **Responsibilities**
-- Detect source outages, schema drift, sudden topic/language shifts, excess duplicates, stale top-K.  
+- Detect source outages, schema drift, sudden topic/language shifts, excess duplicates, stale top-K.
 - Auto-suppress broken sources (cooldown) and alert.
 
 **Config**
@@ -349,8 +349,8 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 
 ### 3.12 Backfill & Reindex Agent
 **Responsibilities**
-- Safe re-ingest or re-score after rule/model changes.  
-- Checkpoints, backpressure, and resumability.  
+- Safe re-ingest or re-score after rule/model changes.
+- Checkpoints, backpressure, and resumability.
 - Never disturb live serving tables until cutover.
 
 **Runbook**
@@ -381,11 +381,11 @@ Each agent below includes responsibilities, config, metrics, tests, and failure 
 - `backfill.ctrl` – backfill control commands
 
 ### 4.2 Storage Layout (example)
-- `articles` (PK: `article_id`)  
-- `clusters` (PK: `cluster_id`)  
-- `rank_snapshots` (PK: `window_id`, `k`)  
-- `score_explanations` (PK: `article_id`, `scorer_version`)  
-- `source_policies` (PK: `source_id`)  
+- `articles` (PK: `article_id`)
+- `clusters` (PK: `cluster_id`)
+- `rank_snapshots` (PK: `window_id`, `k`)
+- `score_explanations` (PK: `article_id`, `scorer_version`)
+- `source_policies` (PK: `source_id`)
 - `ingest_raw_*` (TTL)
 
 Indexes: by `pub_time`, `canonical_url`, `cluster_id`, `topics[]`, `language`, composite on (`pub_time`, `source_id`).
@@ -394,8 +394,8 @@ Indexes: by `pub_time`, `canonical_url`, `cluster_id`, `topics[]`, `language`, c
 
 ## 5) Configuration & Secrets
 
-- `.env`-style vars for local; secrets live in Vault/Secret Manager in prod.  
-- Rotate keys quarterly; never commit secrets.  
+- `.env`-style vars for local; secrets live in Vault/Secret Manager in prod.
+- Rotate keys quarterly; never commit secrets.
 - Per-source policy file with contact email and crawl budget.
 
 **Key Vars**
@@ -428,8 +428,8 @@ MAX_PER_SOURCE=0.4
 
 ## 7) Observability
 
-- **Structured logs** at each stage: include `trace_id`, `article_id`, `source_id`, timings, sizes, and decisions (e.g., "dedupe=merge cluster_id=...").  
-- **Metrics**: counters (ingested, deduped, enriched), histograms (latency), gauges (queue lag), percentiles.  
+- **Structured logs** at each stage: include `trace_id`, `article_id`, `source_id`, timings, sizes, and decisions (e.g., "dedupe=merge cluster_id=...").
+- **Metrics**: counters (ingested, deduped, enriched), histograms (latency), gauges (queue lag), percentiles.
 - **Tracing**: one span per stage, propagate `trace_id` across.
 
 Dashboards: ingest rate, queue lag, dedupe F1 (rolling), freshness, source concentration, serving latency.
@@ -438,34 +438,34 @@ Dashboards: ingest rate, queue lag, dedupe F1 (rolling), freshness, source conce
 
 ## 8) Testing Matrix
 
-- **Unit:** URL rules, parsers, scoring functions (deterministic).  
-- **Property-based:** parsers never return empty for valid HTML; canonicalization idempotent.  
-- **Golden tests:** 50 articles locked to expected entities/topics/scores.  
-- **Load tests:** N sources × M articles with realistic errors.  
+- **Unit:** URL rules, parsers, scoring functions (deterministic).
+- **Property-based:** parsers never return empty for valid HTML; canonicalization idempotent.
+- **Golden tests:** 50 articles locked to expected entities/topics/scores.
+- **Load tests:** N sources × M articles with realistic errors.
 - **Chaos:** kill a worker mid-run; ensure no dupes and job resumes.
 
 ---
 
 ## 9) Failure Modes & DLQs
 
-- Each agent writes to a **Dead Letter Queue** with `{event, error, last_stage, retries}`.  
-- Automatic retry policy with exponential backoff; cap retries; emit alert at threshold.  
+- Each agent writes to a **Dead Letter Queue** with `{event, error, last_stage, retries}`.
+- Automatic retry policy with exponential backoff; cap retries; emit alert at threshold.
 - Operators can replay DLQ after a code/config fix.
 
 ---
 
 ## 10) Security & Compliance
 
-- Respect robots.txt; keep a cached snapshot per source and revalidate daily.  
-- Track ToS notes (allowed endpoints, rate limits).  
-- SBOM/dependency audit on every build; secret scanning pre-commit and in CI.  
+- Respect robots.txt; keep a cached snapshot per source and revalidate daily.
+- Track ToS notes (allowed endpoints, rate limits).
+- SBOM/dependency audit on every build; secret scanning pre-commit and in CI.
 - PII: store only what is necessary; redact before logs.
 
 ---
 
 ## 11) Deployment & Rollout
 
-- **Versioning:** tag each agent image `YYYYMMDD.sha`.  
+- **Versioning:** tag each agent image `YYYYMMDD.sha`.
 - **Blue/Green for scorer & ranking:** write to shadow tables, compare metrics, then cut over.
 - **Autoscaling:** scale ingestors by queue depth; cap per-domain concurrency.
 
@@ -488,27 +488,27 @@ make prof              # profile a pipeline slice
 ## 13) Operational Runbooks (high-level)
 
 ### 13.1 Pipeline Slowness
-1) Check queue lag dashboards; identify the stage bottleneck.  
-2) Inspect p95 span times; profile if a regression.  
-3) Scale the slow agent replicas; verify DB headroom.  
+1) Check queue lag dashboards; identify the stage bottleneck.
+2) Inspect p95 span times; profile if a regression.
+3) Scale the slow agent replicas; verify DB headroom.
 4) If parsing, reduce concurrency for problematic domains temporarily.
 
 ### 13.2 Duplicate Flood
-1) Inspect canonicalization rules; recent URL param change?  
-2) Lower `SIMHASH_THRESHOLD` temporarily; re-cluster recent window.  
+1) Inspect canonicalization rules; recent URL param change?
+2) Lower `SIMHASH_THRESHOLD` temporarily; re-cluster recent window.
 3) Patch rules; run backfill on last 48h.
 
 ### 13.3 Stale Top-K
-1) Check scheduler health and ingestion 304 ratio (too high?).  
-2) Verify scorer decay settings; recent version change?  
+1) Check scheduler health and ingestion 304 ratio (too high?).
+2) Verify scorer decay settings; recent version change?
 3) Run eval; compare to baseline; roll back if necessary.
 
 ---
 
 ## 14) Optional LLM-Backed Agents (if enabled)
 
-- **Headline/Summary Agent:** produce concise summaries; bounded token budgets; prompt pinned and versioned.  
-- **Explainability Agent:** turn `score_explain` features into a human-friendly "Why this matters" line.  
+- **Headline/Summary Agent:** produce concise summaries; bounded token budgets; prompt pinned and versioned.
+- **Explainability Agent:** turn `score_explain` features into a human-friendly "Why this matters" line.
 - **Safety:** deterministic prompts, profanity/PII filters; cost guardrails.
 
 > If LLMs are off, keep these fields null.
@@ -517,23 +517,23 @@ make prof              # profile a pipeline slice
 
 ## 15) Glossary
 
-- **Idempotency:** running the same job twice yields one stored result.  
-- **Shadow table:** a parallel write target used before cutover.  
+- **Idempotency:** running the same job twice yields one stored result.
+- **Shadow table:** a parallel write target used before cutover.
 - **Near-dup:** articles with high textual overlap but different URLs.
 
 ---
 
 ## 16) Checklists
 
-- [ ] Robots.txt respected & cached per source  
-- [ ] ETag/If-Modified-Since implemented  
-- [ ] Canonical URL rules with tests  
-- [ ] SimHash/MinHash thresholds tuned  
-- [ ] Enrichment models versioned & cached  
-- [ ] Scorer deterministic & explained  
-- [ ] Diversity caps active  
-- [ ] DLQs wired and replayable  
-- [ ] SLO dashboards & alerts live  
+- [ ] Robots.txt respected & cached per source
+- [ ] ETag/If-Modified-Since implemented
+- [ ] Canonical URL rules with tests
+- [ ] SimHash/MinHash thresholds tuned
+- [ ] Enrichment models versioned & cached
+- [ ] Scorer deterministic & explained
+- [ ] Diversity caps active
+- [ ] DLQs wired and replayable
+- [ ] SLO dashboards & alerts live
 - [ ] Backfill runbook tested on 1% partition
 
 ---
