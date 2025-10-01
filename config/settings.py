@@ -247,21 +247,3 @@ else:
     COLLECTION_CONFIG["max_articles_per_source"] = 20
     RATE_LIMITING_CONFIG["delay_between_requests"] = 2.0
 
-# ¿Por qué esta estructura de configuración?
-# ==========================================
-#
-# 1. CENTRALIZACIÓN: Todo está en un lugar, fácil de encontrar y modificar
-#
-# 2. FLEXIBILIDAD: Usa variables de entorno para producción pero defaults
-#    sensatos para desarrollo
-#
-# 3. VALIDACIÓN: La función validate_config() previene errores comunes
-#
-# 4. ESCALABILIDAD: Preparado para múltiples tipos de base de datos
-#
-# 5. RATE LIMITING: Respeta los servidores de las fuentes, evita ser bloqueado
-#
-# 6. DEBUGGING: Diferentes configuraciones para desarrollo y producción
-#
-# Esta configuración es como el cerebro del sistema: controla todo el
-# comportamiento sin necesidad de tocar el código de lógica de negocio.

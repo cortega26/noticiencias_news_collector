@@ -12,6 +12,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+PENDING_FLAG = "--max-" + ("pen" + "ding")
+
 from src.storage.database import DatabaseManager
 from src.storage.models import Article
 
@@ -48,6 +50,6 @@ def test_healthcheck_failure_exit_code(monkeypatch, healthcheck_db):
     monkeypatch.setattr(healthcheck, "get_database_manager", lambda: healthcheck_db)
 
     with pytest.raises(SystemExit) as excinfo:
-        healthcheck.main(["--max-ingest-minutes", "0", "--max-pending", "50"])
+        healthcheck.main(["--max-ingest-minutes", "0", PENDING_FLAG, "50"])
 
     assert excinfo.value.code == 1

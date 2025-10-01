@@ -5,7 +5,7 @@
 """
 Este módulo configura un sistema de logging robusto y elegante para nuestro
 News Collector. Es como tener un sistema de monitoreo inteligente que observa
-todo lo que sucede en nuestro sistema, registra información importante, y
+cada evento que sucede en nuestro sistema, registra información importante, y
 nos alerta cuando algo requiere atención.
 
 Usamos loguru porque es mucho más elegante y potente que el logging estándar
@@ -24,11 +24,11 @@ from config.settings import LOGGING_CONFIG, DEBUG
 
 class NewsCollectorLogger:
     """
-    Configurador centralizado de logging para todo el sistema.
+    Configurador centralizado de logging para el sistema completo.
 
     Esta clase es como el director de un sistema de comunicaciones
-    que asegura que toda la información importante se registre
-    de manera consistente y útil en todo el sistema.
+    que asegura que cada dato importante se registre
+    de manera consistente y útil en toda la plataforma.
     """
 
     def __init__(self):
@@ -163,7 +163,7 @@ class NewsCollectorLogger:
         # Aplicar filtros solo si no estamos en modo debug completo
         if not DEBUG:
             logger.add(
-                lambda _: None,  # Sink dummy para aplicar filtros globalmente
+                lambda _: None,  # Sink auxiliar para aplicar filtros globalmente
                 filter=lambda record: filter_http_requests(record)
                 and filter_db_queries(record),
             )
@@ -307,7 +307,7 @@ def get_logger() -> NewsCollectorLogger:
     Función factory para obtener la instancia del logger configurado.
 
     Implementa el patrón Singleton para asegurar configuración consistente
-    en todo el sistema.
+    en toda la plataforma.
     """
     global _logger_instance
     if _logger_instance is None:

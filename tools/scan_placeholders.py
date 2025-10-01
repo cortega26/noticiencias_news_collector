@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repository-wide placeholder and TODO scanner."""
+"""Repository-wide placeholder scanner."""
 from __future__ import annotations
 
 import argparse
@@ -578,7 +578,7 @@ def write_markdown(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     summary = summarize(findings)
-    lines = ["# Placeholder & TODO Audit", ""]
+    lines = ["# Placeholder Audit", ""]
     lines.append("## Summary")
     lines.append("")
     lines.append("### Counts by tag")

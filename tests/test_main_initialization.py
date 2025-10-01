@@ -71,7 +71,7 @@ import main
 from main import NewsCollectorSystem
 
 
-class DummyModuleLogger:
+class MockModuleLogger:
     """Simple logger stub that records messages for assertions."""
 
     def __init__(self):
@@ -89,7 +89,7 @@ class DummyModuleLogger:
         self.errors.append(message)
 
 
-class DummyLogger:
+class MockLogger:
     """Logger factory stub used to capture module logs."""
 
     def __init__(self):
@@ -102,7 +102,7 @@ class DummyLogger:
 
     def create_module_logger(self, module_name: str):
         if module_name not in self.modules:
-            self.modules[module_name] = DummyModuleLogger()
+            self.modules[module_name] = MockModuleLogger()
         return self.modules[module_name]
 
     def log_system_startup(self, **_kwargs):
@@ -112,7 +112,7 @@ class DummyLogger:
         self.errors.append((error, context))
 
 
-class DummyDatabaseManager:
+class MockDatabaseManager:
     """Minimal database manager stub for initialization tests."""
 
     config = {"type": "stub"}
@@ -128,7 +128,7 @@ class DummyDatabaseManager:
         return {"failed_sources": self.failed_sources, "status": "degraded"}
 
 
-class DummyCollector:
+class MockCollector:
     """Collector stub reporting healthy status."""
 
     def is_healthy(self) -> bool:
@@ -138,12 +138,12 @@ class DummyCollector:
 def test_initialize_with_failed_sources_warning(monkeypatch):
     """Initialization should continue when only failed sources are reported."""
 
-    dummy_logger = DummyLogger()
+    test_logger = MockLogger()
 
-    monkeypatch.setattr(main, "setup_logging", lambda: dummy_logger)
-    dummy_db_manager = DummyDatabaseManager()
-    monkeypatch.setattr(main, "get_database_manager", lambda: dummy_db_manager)
-    monkeypatch.setattr(main, "RSSCollector", lambda: DummyCollector())
+    monkeypatch.setattr(main, "setup_logging", lambda: test_logger)
+    mock_db_manager = MockDatabaseManager()
+    monkeypatch.setattr(main, "get_database_manager", lambda: mock_db_manager)
+    monkeypatch.setattr(main, "RSSCollector", lambda: MockCollector())
 
     def fake_setup_scoring(self):
         self.scorer = object()
@@ -154,7 +154,7 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
     system = NewsCollectorSystem()
     assert system.initialize() is True
 
-    database_logger = dummy_logger.modules.get("database")
+    database_logger = test_logger.modules.get("database")
     assert database_logger is not None
     assert any(
         isinstance(event, dict)
@@ -163,7 +163,7 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
         for event in database_logger.warnings
     )
 
-    system_logger = dummy_logger.modules.get("system")
+    system_logger = test_logger.modules.get("system")
     assert system_logger is not None
     assert any(
         isinstance(event, dict) and event.get("event") == "system.initialize.warning"

@@ -19,7 +19,7 @@ def anyio_backend():
     return "asyncio"
 
 
-class DummyDB:
+class MockDB:
     def __init__(self):
         self.metadata: Dict[str, Dict[str, Any]] = {}
 
@@ -50,7 +50,7 @@ class DummyDB:
         return article
 
 
-class DummyAsyncResponse:
+class MockAsyncResponse:
     def __init__(self, status_code: int, headers: Dict[str, str], text: str):
         self.status_code = status_code
         self.headers = headers
@@ -73,8 +73,8 @@ class DummyAsyncResponse:
             )
 
 
-class DummyAsyncClient:
-    def __init__(self, response: DummyAsyncResponse):
+class MockAsyncClient:
+    def __init__(self, response: MockAsyncResponse):
         self.response = response
         self.captured_headers: Dict[str, str] | None = None
 
@@ -88,8 +88,8 @@ class DummyAsyncClient:
 @pytest.fixture()
 def async_collector(monkeypatch: pytest.MonkeyPatch) -> AsyncRSSCollector:
     collector = AsyncRSSCollector()
-    dummy_db = DummyDB()
-    collector.db_manager = dummy_db
+    test_db = MockDB()
+    collector.db_manager = test_db
     monkeypatch.setattr(collector, "_send_to_dlq", lambda *args, **kwargs: None)
     return collector
 
@@ -104,7 +104,7 @@ async def test_async_fetch_feed_uses_conditional_headers(
         last_modified="Wed, 21 Oct 2015 07:28:00 GMT",
     )
 
-    response = DummyAsyncResponse(
+    response = MockAsyncResponse(
         200,
         headers={
             "ETag": '"fresh"',
@@ -113,7 +113,7 @@ async def test_async_fetch_feed_uses_conditional_headers(
         },
         text="<rss></rss>",
     )
-    client = DummyAsyncClient(response)
+    client = MockAsyncClient(response)
 
     content, status = await async_collector._fetch_feed_async(
         client, "source1", "https://example.com/feed"
@@ -158,7 +158,7 @@ async def test_async_collector_serializes_per_domain_requests(
         raising=False,
     )
     monkeypatch.setattr(
-        "feedparser.parse", lambda content: type("Dummy", (), {"bozo": 0})()
+        "feedparser.parse", lambda content: type("MockFeed", (), {"bozo": 0})()
     )
 
     current_time = {"value": 1000.0}

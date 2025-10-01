@@ -373,22 +373,3 @@ def validate_sources():
     print(f"✅ {len(ALL_SOURCES)} fuentes validadas correctamente")
 
 
-# ¿Por qué esta estructura de fuentes?
-# ====================================
-#
-# 1. JERARQUÍA DE CREDIBILIDAD: Journals > Instituciones > Medios > Preprints
-#    Esto nos permite pesar las noticias según su fuente
-#
-# 2. DIVERSIDAD TEMÁTICA: Cubrimos todas las áreas principales de ciencia
-#    para ser comprehensivos
-#
-# 3. METADATOS RICOS: Cada fuente tiene información que nos ayuda a
-#    procesarla apropiadamente
-#
-# 4. ESCALABILIDAD: Fácil agregar nuevas fuentes sin tocar código
-#
-# 5. CONFIGURACIÓN POR CATEGORÍA: Diferentes reglas para diferentes tipos
-#    de ciencia
-#
-# Este catálogo es como tener un bibliotecario experto que conoce
-# perfectamente cada fuente y puede recomendarte la mejor para cada tema.

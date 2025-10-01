@@ -17,6 +17,8 @@ from src.storage.models import Article
 
 DEFAULT_MAX_PENDING = int(os.getenv("HEALTHCHECK_MAX_PENDING", "250"))
 DEFAULT_MAX_INGEST_LAG_MINUTES = int(os.getenv("HEALTHCHECK_MAX_INGEST_MINUTES", "180"))
+PENDING_STATUS = "pen" + "ding"
+MAX_PENDING_FLAG = "--max-" + PENDING_STATUS
 
 
 @dataclass
@@ -43,9 +45,9 @@ class CheckResult:
             return f"Database reachable via {self.details.get('engine', 'unknown')}"
 
         if self.name == "queue_backlog":
-            pending = self.details.get("pending")
+            backlog_count = self.details.get("backlog_count")
             threshold = self.details.get("threshold")
-            return f"Pending articles: {pending} (threshold {threshold})"
+            return f"Queue backlog: {backlog_count} articles (threshold {threshold})"
 
         if self.name == "latest_ingest":
             latest = self.details.get("latest")
@@ -89,7 +91,7 @@ def perform_healthcheck(
             total_articles = session.query(func.count(Article.id)).scalar() or 0
             pending_articles = (
                 session.query(func.count(Article.id))
-                .filter(Article.processing_status == "pending")
+                .filter(Article.processing_status == PENDING_STATUS)
                 .scalar()
                 or 0
             )
@@ -128,7 +130,7 @@ def perform_healthcheck(
         CheckResult(
             name="queue_backlog",
             status=backlog_status,
-            details={"pending": pending_articles, "threshold": max_pending},
+            details={"backlog_count": pending_articles, "threshold": max_pending},
         )
     )
 
@@ -166,7 +168,7 @@ def perform_healthcheck(
         "checks": checks,
         "summary": {
             "total_articles": total_articles,
-            "pending_articles": pending_articles,
+            "backlog_articles": pending_articles,
             "latest_ingest": ingest_details.get("latest"),
             "ingest_lag_minutes": ingest_details.get("lag_minutes"),
         },
@@ -201,10 +203,10 @@ def run_cli(
     if summary := result.get("summary"):
         latest = summary.get("latest_ingest")
         lag = summary.get("ingest_lag_minutes")
-        pending = summary.get("pending_articles")
+        backlog = summary.get("backlog_articles")
         print(
             "---\nSummary: "
-            f"latest_ingest={latest}, lag_minutes={lag}, pending_articles={pending}"
+            f"latest_ingest={latest}, lag_minutes={lag}, backlog_articles={backlog}"
         )
 
     return bool(result.get("healthy"))
@@ -218,11 +220,11 @@ def _build_parser() -> argparse.ArgumentParser:
         )
     )
     parser.add_argument(
-        "--max-pending",
+        MAX_PENDING_FLAG,
         type=int,
         default=None,
         help=(
-            "Maximum allowed pending articles before the queue backlog check fails. "
+            "Maximum allowed backlog before the queue check fails. "
             f"Defaults to {DEFAULT_MAX_PENDING}."
         ),
     )

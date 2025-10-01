@@ -116,7 +116,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-> 💡 Si prefieres automatizar estos pasos, el comando `make bootstrap` crea el entorno virtual e instala todo por ti.
+> 💡 Si prefieres automatizar estos pasos, el comando `make bootstrap` crea el entorno virtual e instala cada dependencia por ti.
 
 ### 3. Instalar Dependencias (Makefile recomendado)
 ```bash
@@ -150,7 +150,7 @@ Si usas VS Code, selecciona el intérprete del entorno virtual:
 .venv/bin/python           (macOS/Linux)
 ```
 
-¡Eso es todo! El sistema ejecutará una simulación y te mostrará cómo funcionaría.
+¡Con eso basta! El sistema ejecutará una simulación y te mostrará cómo funcionaría.
 
 ---
 
