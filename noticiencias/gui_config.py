@@ -82,6 +82,14 @@ FIELD_GROUPS: Tuple[FieldGroup, ...] = (
 )
 
 
+LANGUAGE_LABELS: Dict[str, str] = {
+    "en": "English",
+    "es": "Spanish",
+    "pt": "Portuguese",
+    "fr": "French",
+}
+
+
 class ConfigEditor:
     """Small Tkinter wrapper for editing the TOML configuration."""
 
@@ -92,6 +100,8 @@ class ConfigEditor:
         self._field_docs: Dict[str, FieldDoc] = self._build_docs()
         self._widgets: Dict[str, tk.Widget] = {}
         self._variables: Dict[str, tk.Variable] = {}
+        self._choice_mappings: Dict[str, Dict[str, Any]] = {}
+        self._choice_reverse: Dict[str, Dict[str, str]] = {}
         self._field_groups: Dict[str, str] = {}
         self._group_descriptions: Dict[str, str] = {}
         self._root = tk.Tk()
@@ -131,6 +141,38 @@ class ConfigEditor:
                 is_secret=_is_secret(name),
             )
         return docs
+
+    def _language_options(self) -> List[Tuple[str, str]]:
+        codes: set[str] = set()
+        for config in (DEFAULT_CONFIG, self._config):
+            codes.update(getattr(config.text_processing, "supported_languages", []))
+            codes.add(getattr(config.news, "default_language", ""))
+            for model in getattr(config.enrichment, "models", {}).values():
+                codes.update(getattr(model, "languages", []))
+                default_language = getattr(model, "default_language", "")
+                if default_language:
+                    codes.add(default_language)
+        cleaned_codes = [code for code in codes if code]
+        options = [
+            (LANGUAGE_LABELS.get(code, code.upper()), code)
+            for code in cleaned_codes
+        ]
+        return sorted(options, key=lambda item: item[0])
+
+    def _format_choice_label(self, name: str, value: Any) -> str:
+        reverse = self._choice_reverse.get(name, {})
+        if value in reverse:
+            return reverse[value]
+        if isinstance(value, str) and value in reverse:
+            return reverse[value]
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return LANGUAGE_LABELS.get(value, value)
+        return str(value)
+
+    def _uses_language_dropdown(self, name: str) -> bool:
+        return name.endswith("default_language")
 
     def _build_ui(self) -> None:
         container = ttk.Frame(self._root, padding=12)
@@ -304,6 +346,31 @@ class ConfigEditor:
         self._variables[name] = variable
 
     def _build_widget(self, parent: ttk.Frame, doc: FieldDoc, value: Any) -> tuple[tk.Widget, tk.Variable]:
+        if self._uses_language_dropdown(doc.name):
+            options = self._language_options()
+            mapping: Dict[str, str] = {label: code for label, code in options}
+            reverse: Dict[str, str] = {code: label for label, code in options}
+            if isinstance(value, str) and value and value not in reverse:
+                reverse[value] = LANGUAGE_LABELS.get(value, value)
+                mapping[reverse[value]] = value
+            display_value: str
+            if value is None:
+                display_value = ""
+            else:
+                raw_value = value if isinstance(value, str) else str(value)
+                display_value = reverse.get(raw_value, LANGUAGE_LABELS.get(raw_value, raw_value))
+                if display_value not in mapping and raw_value:
+                    mapping[display_value] = raw_value
+                    reverse[raw_value] = display_value
+            values = list(mapping.keys())
+            var = tk.StringVar(value=display_value)
+            widget = ttk.Combobox(
+                parent, textvariable=var, values=values, state="readonly"
+            )
+            widget.bind("<<ComboboxSelected>>", lambda _event, name=doc.name: self._on_change(name))
+            self._choice_mappings[doc.name] = mapping
+            self._choice_reverse[doc.name] = reverse
+            return widget, var
         if isinstance(value, bool):
             var = tk.BooleanVar(value=value)
             widget = ttk.Checkbutton(parent, variable=var)
@@ -315,6 +382,8 @@ class ConfigEditor:
         return widget, var
 
     def _format_value(self, value: Any) -> str:
+        if value is None:
+            return ""
         serializable = self._to_serializable(value)
         if isinstance(serializable, (list, dict)):
             try:
@@ -367,8 +436,17 @@ class ConfigEditor:
         return updated
 
     def _parse_value(self, name: str, raw: str) -> Any:
-        default = self._field_docs[name].default
         raw = raw.strip()
+        if name in self._choice_mappings:
+            mapping = self._choice_mappings[name]
+            if not raw:
+                return ""
+            return mapping.get(raw, raw)
+        default = self._field_docs[name].default
+        if raw == "" and default is None:
+            return None
+        if raw.lower() == "none" and default is None:
+            return None
         if isinstance(default, int) and not isinstance(default, bool):
             return int(raw)
         if isinstance(default, float):
@@ -400,6 +478,8 @@ class ConfigEditor:
                 value = self._resolve_value(name)
                 if isinstance(var, tk.BooleanVar):
                     var.set(bool(value))
+                elif name in self._choice_mappings:
+                    var.set(self._format_choice_label(name, value))
                 else:
                     var.set(self._format_value(value))
             self._status.set("Reloaded configuration from disk")
