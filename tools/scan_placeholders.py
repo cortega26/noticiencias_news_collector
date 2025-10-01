@@ -12,9 +12,12 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-import yaml
+try:  # pragma: no cover - optional dependency
+    import yaml  # type: ignore[import-not-found]
+except ModuleNotFoundError:  # pragma: no cover - exercised in tests
+    yaml = None  # type: ignore[assignment]
 
 DEFAULT_EXTENSIONS = {
     ".py",
@@ -130,9 +133,98 @@ def parse_flags(flag_names: Sequence[str]) -> int:
     return flag_value
 
 
+def _parse_inline_list(value: str) -> List[Any]:
+    if value == "[]":
+        return []
+    items: List[str] = []
+    buffer = ""
+    in_quote = False
+    quote_char = ""
+    for char in value:
+        if char in {'"', "'"}:
+            if not in_quote:
+                in_quote = True
+                quote_char = char
+                continue
+            if quote_char == char:
+                in_quote = False
+                continue
+        if char == "," and not in_quote:
+            if buffer.strip():
+                items.append(_coerce_scalar(buffer.strip()))
+            buffer = ""
+        else:
+            buffer += char
+    if buffer.strip():
+        items.append(_coerce_scalar(buffer.strip()))
+    return items
+
+
+def _coerce_scalar(value: str) -> Any:
+    if not value:
+        return ""
+    if value.startswith("[") and value.endswith("]"):
+        return _parse_inline_list(value[1:-1].strip())
+    if value[0] in {'"', "'"} and value[-1] == value[0]:
+        raw = value[1:-1]
+        return bytes(raw, "utf-8").decode("unicode_escape")
+    if value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    return value
+
+
+def _fallback_yaml_load(text: str) -> Dict[str, Any]:
+    data: Dict[str, Any] = {}
+    current_list: List[Dict[str, Any]] | None = None
+    current_item: Dict[str, Any] | None = None
+    for raw_line in text.splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+        if indent == 0:
+            if ":" not in line:
+                continue
+            key, remainder = line.split(":", 1)
+            key = key.strip()
+            value = remainder.strip()
+            if value:
+                data[key] = _coerce_scalar(value)
+                current_list = None
+                current_item = None
+            else:
+                current_list = []
+                data[key] = current_list
+                current_item = None
+        elif indent >= 2:
+            if line.startswith("- "):
+                if current_list is None:
+                    continue
+                entry_line = line[2:]
+                if ":" not in entry_line:
+                    continue
+                key, value = entry_line.split(":", 1)
+                current_item = {key.strip(): _coerce_scalar(value.strip())}
+                current_list.append(current_item)
+            else:
+                if current_item is None:
+                    continue
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                current_item[key.strip()] = _coerce_scalar(value.strip())
+    return data
+
+
+def _load_patterns_data(pattern_path: Path) -> Dict[str, Any]:
+    text = pattern_path.read_text(encoding="utf-8")
+    if yaml is not None:
+        return yaml.safe_load(text) or {}
+    return _fallback_yaml_load(text)
+
+
 def load_patterns(pattern_path: Path) -> List[Pattern]:
-    with pattern_path.open("r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
+    data = _load_patterns_data(pattern_path)
     patterns = []
     for entry in data.get("patterns", []):
         flags = entry.get("flags", [])
