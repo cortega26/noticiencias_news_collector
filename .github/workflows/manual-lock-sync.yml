@@ -1,0 +1,50 @@
+name: Manual lockfile refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: "Base branch to compare against"
+        required: false
+        default: "main"
+      pr-title:
+        description: "Title for the generated pull request"
+        required: false
+        default: "chore: refresh dependency lockfiles"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-lockfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs['base-branch'] || 'main' }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refresh lockfiles
+        run: python scripts/sync_lockfiles.py --install-pip-tools
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: automation/lock-sync
+          branch-suffix: timestamp
+          base: ${{ github.event.inputs['base-branch'] || 'main' }}
+          commit-message: "chore: refresh dependency lockfiles"
+          title: ${{ github.event.inputs['pr-title'] || 'chore: refresh dependency lockfiles' }}
+          body: |
+            ## Summary
+            - Regenerated requirements.lock and requirements-security.lock using `scripts/sync_lockfiles.py`.
+
+            ## Details
+            - Triggered manually via workflow_dispatch.
+          add-paths: |
+            requirements.lock
+            requirements-security.lock
+          delete-branch: true
