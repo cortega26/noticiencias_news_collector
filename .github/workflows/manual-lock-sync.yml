@@ -37,7 +37,7 @@ jobs:
           branch-suffix: timestamp
           base: ${{ github.event.inputs['base-branch'] || 'main' }}
           commit-message: "chore: refresh dependency lockfiles"
-          title: ${{ github.event.inputs['pr-title'] || 'chore: refresh dependency lockfiles' }}
+          title: ${{ github.event.inputs['pr-title'] }}
           body: |
             ## Summary
             - Regenerated requirements.lock and requirements-security.lock using `scripts/sync_lockfiles.py`.
