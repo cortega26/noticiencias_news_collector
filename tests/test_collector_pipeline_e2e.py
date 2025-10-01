@@ -2,7 +2,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, cast
 
 import pytest
 
@@ -21,8 +21,11 @@ FIXTURE_PATH = (
 )
 
 
+JSONDict = Dict[str, Any]
+
+
 @pytest.fixture(scope="module")
-def pipeline_dataset() -> List[Dict[str, object]]:
+def pipeline_dataset() -> List[JSONDict]:
     with FIXTURE_PATH.open(encoding="utf-8") as fh:
         return json.load(fh)
 
@@ -45,8 +48,11 @@ def isolated_database(
     return manager
 
 
-def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
-    collector_raw = dict(entry["collector_raw"])  # shallow copy
+def _prepare_raw_article(entry: JSONDict) -> JSONDict:
+    collector_raw_obj = entry["collector_raw"]
+    if not isinstance(collector_raw_obj, dict):
+        raise TypeError("collector_raw must be a dictionary")
+    collector_raw = dict(cast(JSONDict, collector_raw_obj))  # shallow copy
     offset_hours = collector_raw.pop("published_offset_hours")
     published_dt = datetime.now(timezone.utc) + timedelta(hours=offset_hours)
     collector_raw["published_date"] = published_dt
@@ -59,7 +65,7 @@ def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
 
 def test_collector_pipeline_end_to_end(
     isolated_database: DatabaseManager,
-    pipeline_dataset: List[Dict[str, object]],
+    pipeline_dataset: List[JSONDict],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -89,7 +95,10 @@ def test_collector_pipeline_end_to_end(
     scorer = create_scorer()
 
     for entry in pipeline_dataset:
-        source = entry["source"]
+        source_obj = entry["source"]
+        if not isinstance(source_obj, dict):
+            raise TypeError("source must be a dictionary")
+        source = cast(JSONDict, source_obj)
         raw_article = _prepare_raw_article(entry)
         collector._test_articles = [raw_article]
 
@@ -115,7 +124,10 @@ def test_collector_pipeline_end_to_end(
             assert stored_article is not None, "article should be persisted"
             enrichment = stored_article.article_metadata.get("enrichment", {})
 
-        expected_enrichment = entry["enrichment_expected"]
+        expected_enrichment_obj = entry["enrichment_expected"]
+        if not isinstance(expected_enrichment_obj, dict):
+            raise TypeError("enrichment_expected must be a dictionary")
+        expected_enrichment = cast(JSONDict, expected_enrichment_obj)
         assert enrichment.get("language") == expected_enrichment["language"]
         assert enrichment.get("sentiment") == expected_enrichment["sentiment"]
         actual_topics = enrichment.get("topics", [])
@@ -151,7 +163,14 @@ def test_collector_pipeline_end_to_end(
         assert post_article is not None
         assert len(logs) == 1
 
-        expected_fields = entry["expected_storage"]["fields"]
+        expected_storage_obj = entry["expected_storage"]
+        if not isinstance(expected_storage_obj, dict):
+            raise TypeError("expected_storage must be a dictionary")
+        expected_storage = cast(JSONDict, expected_storage_obj)
+        expected_fields_obj = expected_storage["fields"]
+        if not isinstance(expected_fields_obj, dict):
+            raise TypeError("expected_storage['fields'] must be a dictionary")
+        expected_fields = cast(JSONDict, expected_fields_obj)
         for field_name, expected_value in expected_fields.items():
             assert getattr(post_article, field_name) == expected_value
 
@@ -174,8 +193,8 @@ def test_collector_pipeline_end_to_end(
             {
                 "id": entry["id"],
                 "expected": {
-                    **entry["expected_storage"],
-                    "enrichment": entry["enrichment_expected"],
+                    **expected_storage,
+                    "enrichment": expected_enrichment,
                 },
                 "actual": {
                     "language": post_article.language,
