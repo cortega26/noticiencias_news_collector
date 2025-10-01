@@ -209,3 +209,36 @@ jobs:
               repo: context.repo.repo,
               body,
             });
+
+  update-ci-badge:
+    name: Update CI badge
+    needs:
+      - setup
+      - lint
+      - type
+      - test
+      - e2e
+      - perf
+      - security
+      - audit-todos
+    if: ${{ github.event_name == 'push' && always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download CI badge
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p docs/assets
+          curl -H "Authorization: Bearer $GITHUB_TOKEN" -L "https://github.com/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml/badge.svg?branch=main" -o docs/assets/ci-status.svg
+      - name: Commit updated badge
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update CI status badge"
+          file_pattern: docs/assets/ci-status.svg
