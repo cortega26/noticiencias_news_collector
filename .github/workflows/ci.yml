@@ -247,25 +247,25 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows" \
             -o "${workflows_json}"
           WORKFLOWS_JSON="${workflows_json}" python - <<'PY'
-import json
-import os
+          import json
+          import os
 
-path = os.environ["WORKFLOWS_JSON"]
-with open(path, "r", encoding="utf-8") as handle:
-    payload = json.load(handle)
+          path = os.environ["WORKFLOWS_JSON"]
+          with open(path, "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
 
-workflows = payload.get("workflows", [])
-if not workflows:
-    print("No workflows found in API response.")
-else:
-    print("Workflows discovered via API:")
-    for workflow in workflows:
-        name = workflow.get("name")
-        wid = workflow.get("id")
-        path = workflow.get("path")
-        state = workflow.get("state")
-        print(f"- {name} (id={wid}, path={path}, state={state})")
-PY
+          workflows = payload.get("workflows", [])
+          if not workflows:
+              print("No workflows found in API response.")
+          else:
+              print("Workflows discovered via API:")
+              for workflow in workflows:
+                  name = workflow.get("name")
+                  wid = workflow.get("id")
+                  path = workflow.get("path")
+                  state = workflow.get("state")
+                  print(f"- {name} (id={wid}, path={path}, state={state})")
+          PY
           echo "Stored workflow metadata at ${workflows_json} for later inspection"
       - name: Inspect CI badge endpoints
         if: always()
