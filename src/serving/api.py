@@ -1,4 +1,5 @@
 """HTTP API surface for ranked articles and system health."""
+
 from __future__ import annotations
 
 import base64
@@ -125,9 +126,7 @@ def _extract_topics(article: Article) -> List[str]:
     return [str(keyword) for keyword in keywords] if keywords else []
 
 
-def _summarize_why_ranked(
-    article: Article, score_log: Optional[ScoreLog]
-) -> List[str]:
+def _summarize_why_ranked(article: Article, score_log: Optional[ScoreLog]) -> List[str]:
     if score_log and isinstance(score_log.score_explanation, dict):
         explanation = score_log.score_explanation
         strengths = explanation.get("key_strengths")
@@ -137,7 +136,9 @@ def _summarize_why_ranked(
         factors: List[str] = []
         if isinstance(breakdown, dict):
             for component in breakdown.values():
-                component_factors = component.get("factors") if isinstance(component, dict) else None
+                component_factors = (
+                    component.get("factors") if isinstance(component, dict) else None
+                )
                 if isinstance(component_factors, list):
                     factors.extend(str(factor) for factor in component_factors)
         if factors:
@@ -155,7 +156,9 @@ def _summarize_why_ranked(
                 score_value = float(value)
             except (TypeError, ValueError):
                 score_value = 0.0
-            summaries.append(f"{name.replace('_', ' ').title()} score {score_value:.2f}")
+            summaries.append(
+                f"{name.replace('_', ' ').title()} score {score_value:.2f}"
+            )
         if summaries:
             return summaries
     return ["Ranked by editorial scorer"]
@@ -174,7 +177,9 @@ def _apply_topic_filters(query, topics: Sequence[str]):
     return query
 
 
-def _build_article_payload(article: Article, score_log: Optional[ScoreLog]) -> Dict[str, Any]:
+def _build_article_payload(
+    article: Article, score_log: Optional[ScoreLog]
+) -> Dict[str, Any]:
     return {
         "id": article.id,
         "title": article.title,
@@ -282,7 +287,9 @@ def create_app(database_manager: Optional[DatabaseManager] = None) -> FastAPI:
             query = _apply_topic_filters(query, params.topic or [])
 
             if params.cursor:
-                cursor_score, cursor_collected, cursor_id = _decode_cursor(params.cursor)
+                cursor_score, cursor_collected, cursor_id = _decode_cursor(
+                    params.cursor
+                )
                 query = query.filter(
                     or_(
                         score_column < cursor_score,
@@ -326,7 +333,9 @@ def create_app(database_manager: Optional[DatabaseManager] = None) -> FastAPI:
                 filters={
                     "source": params.source or [],
                     "topic": params.topic or [],
-                    "date_from": params.date_from.isoformat() if params.date_from else None,
+                    "date_from": (
+                        params.date_from.isoformat() if params.date_from else None
+                    ),
                     "date_to": params.date_to.isoformat() if params.date_to else None,
                 },
                 meta={"generated_at": datetime.now(timezone.utc).isoformat()},

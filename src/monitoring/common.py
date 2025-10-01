@@ -136,7 +136,7 @@ class MonitoringPayload:
         """Build a payload inferring the status from anomalies/alerts."""
 
         highest = Severity.OK
-        for candidate in (alerts or []):
+        for candidate in alerts or []:
             if candidate.severity == Severity.CRITICAL:
                 highest = Severity.CRITICAL
                 break
@@ -145,7 +145,7 @@ class MonitoringPayload:
             }:
                 highest = Severity.WARNING
         else:
-            for anomaly in (anomalies or []):
+            for anomaly in anomalies or []:
                 if anomaly.severity == Severity.CRITICAL:
                     highest = Severity.CRITICAL
                     break
@@ -153,10 +153,10 @@ class MonitoringPayload:
                     Severity.CRITICAL,
                 }:
                     highest = Severity.WARNING
-                if (
-                    anomaly.severity == Severity.INFO
-                    and highest not in {Severity.CRITICAL, Severity.WARNING}
-                ):
+                if anomaly.severity == Severity.INFO and highest not in {
+                    Severity.CRITICAL,
+                    Severity.WARNING,
+                }:
                     highest = Severity.INFO
         payload = cls(
             status=highest,

@@ -82,12 +82,8 @@ class FeatureBasedScorer:
         for label, value in sentiment_cfg.items():
             self.sentiment_scores[str(label).lower()] = float(value)
 
-        self.fallback_sentiment = float(
-            engagement_cfg.get("fallback_sentiment", 0.5)
-        )
-        self.word_count_divisor = float(
-            engagement_cfg.get("word_count_divisor", 800.0)
-        )
+        self.fallback_sentiment = float(engagement_cfg.get("fallback_sentiment", 0.5))
+        self.word_count_divisor = float(engagement_cfg.get("word_count_divisor", 800.0))
         self.engagement_weights = {
             "external": float(engagement_cfg.get("external_weight", 0.6)),
             "length": float(engagement_cfg.get("length_weight", 0.4)),
@@ -292,15 +288,23 @@ class FeatureBasedScorer:
 
     def _validate_content_quality_config(self) -> None:
         if self.content_title_length_divisor <= 0:
-            raise ValueError("content_quality_heuristics.title_length_divisor must be > 0")
+            raise ValueError(
+                "content_quality_heuristics.title_length_divisor must be > 0"
+            )
         if self.content_summary_length_divisor <= 0:
-            raise ValueError("content_quality_heuristics.summary_length_divisor must be > 0")
+            raise ValueError(
+                "content_quality_heuristics.summary_length_divisor must be > 0"
+            )
         if self.content_entity_target_count <= 0:
-            raise ValueError("content_quality_heuristics.entity_target_count must be > 0")
+            raise ValueError(
+                "content_quality_heuristics.entity_target_count must be > 0"
+            )
 
         weight_sum = sum(self.content_weights.values())
         if weight_sum <= 0.0:
-            raise ValueError("content_quality_heuristics.weights must sum to a positive value")
+            raise ValueError(
+                "content_quality_heuristics.weights must sum to a positive value"
+            )
         for key, value in self.content_weights.items():
             if value < 0.0 or value > 1.0:
                 raise ValueError(
@@ -316,13 +320,17 @@ class FeatureBasedScorer:
                     f"engagement_heuristics.sentiment_scores.{label} must be between 0 and 1"
                 )
         if self.fallback_sentiment < 0.0 or self.fallback_sentiment > 1.0:
-            raise ValueError("engagement_heuristics.fallback_sentiment must be between 0 and 1")
+            raise ValueError(
+                "engagement_heuristics.fallback_sentiment must be between 0 and 1"
+            )
         if self.word_count_divisor <= 0:
             raise ValueError("engagement_heuristics.word_count_divisor must be > 0")
 
         weight_sum = sum(self.engagement_weights.values())
         if weight_sum <= 0.0:
-            raise ValueError("engagement_heuristics weights must sum to a positive value")
+            raise ValueError(
+                "engagement_heuristics weights must sum to a positive value"
+            )
         if abs(weight_sum - 1.0) > 1e-3:
             raise ValueError("engagement_heuristics weights must sum to 1.0")
         for key, value in self.engagement_weights.items():

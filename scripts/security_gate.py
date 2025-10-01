@@ -53,8 +53,12 @@ def load_allowlist(config_path: Path) -> tuple[list[str], list[str]]:
 
     data = tomllib.loads(config_path.read_text())
     allowlist = data.get("allowlist", {})
-    paths = [str(item).strip() for item in allowlist.get("paths", []) if str(item).strip()]
-    regexes = [str(item).strip() for item in allowlist.get("regexes", []) if str(item).strip()]
+    paths = [
+        str(item).strip() for item in allowlist.get("paths", []) if str(item).strip()
+    ]
+    regexes = [
+        str(item).strip() for item in allowlist.get("regexes", []) if str(item).strip()
+    ]
     return paths, regexes
 
 
@@ -84,9 +88,10 @@ def bandit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
     for issue in data.get("results", []):
         severity = (issue.get("issue_severity") or "LOW").upper()
         confidence = (issue.get("issue_confidence") or "LOW").upper()
-        if SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK[threshold] and SEVERITY_RANK.get(
-            confidence, 0
-        ) >= SEVERITY_RANK["MEDIUM"]:
+        if (
+            SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK[threshold]
+            and SEVERITY_RANK.get(confidence, 0) >= SEVERITY_RANK["MEDIUM"]
+        ):
             findings.append(
                 {
                     "filename": issue.get("filename"),

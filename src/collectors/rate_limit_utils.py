@@ -31,8 +31,10 @@ def resolve_domain_override(
 ) -> float:
     """Return the configured minimum delay (seconds) for a domain, if any."""
 
-    config_overrides = overrides if overrides is not None else RATE_LIMITING_CONFIG.get(
-        "domain_overrides", {}
+    config_overrides = (
+        overrides
+        if overrides is not None
+        else RATE_LIMITING_CONFIG.get("domain_overrides", {})
     )
     if not config_overrides:
         return 0.0
@@ -57,9 +59,9 @@ def calculate_effective_delay(
     )
     global_min = float(RATE_LIMITING_CONFIG["delay_between_requests"])
     robots_component = float(robots_delay) if robots_delay is not None else 0.0
-    source_component = (
-        float(source_min_delay) if source_min_delay is not None else 0.0
-    )
+    source_component = float(source_min_delay) if source_min_delay is not None else 0.0
     domain_component = resolve_domain_override(domain)
 
-    return max(base_delay, global_min, robots_component, domain_component, source_component)
+    return max(
+        base_delay, global_min, robots_component, domain_component, source_component
+    )

@@ -78,7 +78,9 @@ class MetricsReporter:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _emit(self, name: str, value: float, attributes: Optional[Dict[str, Any]] = None) -> None:
+    def _emit(
+        self, name: str, value: float, attributes: Optional[Dict[str, Any]] = None
+    ) -> None:
         event = MetricEvent(name=name, value=value, attributes=attributes or {})
         with self._lock:
             self._events.append(event)
@@ -94,4 +96,3 @@ def get_metrics_reporter() -> MetricsReporter:
     if _metrics_reporter is None:
         _metrics_reporter = MetricsReporter()
     return _metrics_reporter
-

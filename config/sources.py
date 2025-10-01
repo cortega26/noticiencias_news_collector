@@ -235,6 +235,7 @@ COMMUNITY_FEEDS = {
 # ==================================
 # Aquí combinamos todas las categorías en una estructura unificada
 
+
 def _with_feed_cache_fields(
     sources: Dict[str, Dict[str, Any]]
 ) -> Dict[str, Dict[str, Any]]:

@@ -19,8 +19,12 @@ class ChangelogUpdateError(RuntimeError):
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Update CHANGELOG.md with release notes")
-    parser.add_argument("--version", required=True, help="Release version without the leading 'v'")
+    parser = argparse.ArgumentParser(
+        description="Update CHANGELOG.md with release notes"
+    )
+    parser.add_argument(
+        "--version", required=True, help="Release version without the leading 'v'"
+    )
     parser.add_argument(
         "--notes-file",
         required=True,
@@ -55,7 +59,9 @@ def adjust_markdown_headings(notes: str) -> str:
 
 def extract_unreleased_block(changelog_text: str) -> tuple[str, str, str]:
     if UNRELEASED_HEADER not in changelog_text:
-        raise ChangelogUpdateError("CHANGELOG.md must include an '## [Unreleased]' heading")
+        raise ChangelogUpdateError(
+            "CHANGELOG.md must include an '## [Unreleased]' heading"
+        )
     start_index = changelog_text.index(UNRELEASED_HEADER)
     after_header = start_index + len(UNRELEASED_HEADER)
     next_release_index = changelog_text.find("\n## [", after_header)

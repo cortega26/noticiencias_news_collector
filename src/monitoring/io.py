@@ -37,9 +37,11 @@ def load_monitoring_dataset(payload: Mapping[str, Any]) -> MonitoringDataset:
                 window_end=_parse_iso(item["window_end"]),
                 articles_found=int(item["articles_found"]),
                 expected_count=int(item.get("expected_count", item["articles_found"])),
-                last_article_at=_parse_iso(item["last_article_at"])
-                if item.get("last_article_at")
-                else None,
+                last_article_at=(
+                    _parse_iso(item["last_article_at"])
+                    if item.get("last_article_at")
+                    else None
+                ),
                 consecutive_failures=int(item.get("consecutive_failures", 0)),
                 schema_violations=int(item.get("schema_violations", 0)),
                 languages=item.get("languages", {}),

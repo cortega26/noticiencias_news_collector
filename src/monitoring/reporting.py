@@ -69,7 +69,9 @@ class QualityReportGenerator:
             )
         )
         metadata = {
-            "suppressed_sources": [decision.source_id for decision in suppression_decisions],
+            "suppressed_sources": [
+                decision.source_id for decision in suppression_decisions
+            ],
         }
         return MonitoringPayload.from_components(
             window_start=dataset.window_start,

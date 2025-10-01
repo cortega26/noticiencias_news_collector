@@ -89,7 +89,9 @@ class NewsCollectorSystem:
 
         try:
             self._setup_logging()
-            init_logger = self.system_logger or self.logger.create_module_logger("system")
+            init_logger = self.system_logger or self.logger.create_module_logger(
+                "system"
+            )
 
             init_logger.info(
                 {
@@ -287,7 +289,12 @@ class NewsCollectorSystem:
                 }
             )
             self.logger.log_error_with_context(
-                e, {"session_id": session_id, "system_id": self.system_id, "trace_id": trace_id}
+                e,
+                {
+                    "session_id": session_id,
+                    "system_id": self.system_id,
+                    "trace_id": trace_id,
+                },
             )
             raise
 
@@ -579,9 +586,11 @@ class NewsCollectorSystem:
         for source_id, result in source_details.items():
             latency = float(result.get("processing_time") or 0.0)
             payload = {
-                "event": "collector.source.completed"
-                if result.get("success", False)
-                else "collector.source.failed",
+                "event": (
+                    "collector.source.completed"
+                    if result.get("success", False)
+                    else "collector.source.failed"
+                ),
                 "trace_id": trace_id,
                 "session_id": session_id,
                 "source_id": source_id,

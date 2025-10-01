@@ -166,7 +166,9 @@ def run_simple_collection(args):
                 "session_id": session_id,
                 "source_id": "cli",
                 "latency": time.perf_counter() - run_start,
-                "details": results.get("summary", {}) if isinstance(results, dict) else {},
+                "details": (
+                    results.get("summary", {}) if isinstance(results, dict) else {}
+                ),
             }
         )
 

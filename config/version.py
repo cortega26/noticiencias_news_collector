@@ -1,4 +1,5 @@
 """Project-level versioning and compatibility metadata."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

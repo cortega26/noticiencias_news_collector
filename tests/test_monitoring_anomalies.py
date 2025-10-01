@@ -47,7 +47,9 @@ def make_source_window(
     topics: dict[str, int] | None = None,
 ) -> SourceWindowStats:
     now = _now()
-    last_article = now - timedelta(hours=last_seen_hours) if last_seen_hours is not None else None
+    last_article = (
+        now - timedelta(hours=last_seen_hours) if last_seen_hours is not None else None
+    )
     return SourceWindowStats(
         source_id=source_id,
         window_start=now - timedelta(hours=6),
@@ -64,7 +66,9 @@ def make_source_window(
 
 def test_source_outage_detector_flags_drop() -> None:
     detector = SourceOutageDetector(
-        SourceOutageDetectorConfig(warn_ratio=0.6, alert_ratio=0.3, consecutive_failure_threshold=3),
+        SourceOutageDetectorConfig(
+            warn_ratio=0.6, alert_ratio=0.3, consecutive_failure_threshold=3
+        ),
         now=_now(),
     )
     baselines = {
@@ -139,7 +143,9 @@ def test_canary_alert_and_suppression() -> None:
         )
     }
     outage_result = SourceOutageDetector(now=_now()).evaluate(stats, baselines)
-    runner = CanaryRunner([CanaryCheck(source_id="nature", max_latency_ms=1000, max_idle_hours=12.0)])
+    runner = CanaryRunner(
+        [CanaryCheck(source_id="nature", max_latency_ms=1000, max_idle_hours=12.0)]
+    )
     canary_results = runner.execute(stats)
     alerts = build_canary_alerts(canary_results)
     assert alerts
@@ -163,10 +169,21 @@ def test_quality_report_generator_builds_payload() -> None:
         window_end=_now(),
         source_windows=stats,
         baselines=baselines,
-        schema_samples=[{"article_id": "a1", "title": "hello", "language": "en", "published_at": "2025-01-01T00:00:00Z", "topics": ["biology"], "source_id": "nature"}],
+        schema_samples=[
+            {
+                "article_id": "a1",
+                "title": "hello",
+                "language": "en",
+                "published_at": "2025-01-01T00:00:00Z",
+                "topics": ["biology"],
+                "source_id": "nature",
+            }
+        ],
     )
     generator = default_quality_report_generator(
-        canary_runner=CanaryRunner([CanaryCheck("nature", max_latency_ms=1000, max_idle_hours=12.0)])
+        canary_runner=CanaryRunner(
+            [CanaryCheck("nature", max_latency_ms=1000, max_idle_hours=12.0)]
+        )
     )
     payload = generator.generate(dataset)
     data = payload.to_dict()
@@ -177,7 +194,10 @@ def test_quality_report_generator_builds_payload() -> None:
 def test_load_monitoring_dataset_roundtrip(tmp_path) -> None:
     now = _now()
     payload = {
-        "window": {"start": (now - timedelta(days=7)).isoformat(), "end": now.isoformat()},
+        "window": {
+            "start": (now - timedelta(days=7)).isoformat(),
+            "end": now.isoformat(),
+        },
         "baselines": {
             "nature": {
                 "expected_articles_per_window": 5,
@@ -213,7 +233,9 @@ def test_load_monitoring_dataset_roundtrip(tmp_path) -> None:
     }
     dataset = load_monitoring_dataset(payload)
     generator = default_quality_report_generator(
-        canary_runner=CanaryRunner([CanaryCheck("nature", max_latency_ms=1000, max_idle_hours=6.0)])
+        canary_runner=CanaryRunner(
+            [CanaryCheck("nature", max_latency_ms=1000, max_idle_hours=6.0)]
+        )
     )
     report = generator.generate(dataset)
     assert report.metadata["suppressed_sources"] == ["nature"]

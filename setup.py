@@ -147,8 +147,7 @@ class NewsCollectorSetup:
         # Verificar git (opcional pero recomendado)
         print("  • Verificando git...")
         try:
-            subprocess.run(["git", "--version"],
-                           check=True, capture_output=True)
+            subprocess.run(["git", "--version"], check=True, capture_output=True)
             print("    ✅ git disponible")
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.warnings.append("git no disponible (opcional)")
@@ -255,8 +254,7 @@ class NewsCollectorSetup:
 
         # Crear directorios necesarios
         print("  • Creando directorios necesarios...")
-        directories = [self.project_root / "data",
-                       self.project_root / "data" / "logs"]
+        directories = [self.project_root / "data", self.project_root / "data" / "logs"]
 
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
@@ -287,8 +285,7 @@ class NewsCollectorSetup:
             # Verificar que las tablas se crearon
             health = db_manager.get_health_status()
             if health.get("status") != "healthy":
-                self.warnings.append(
-                    "Base de datos inicializada pero con advertencias")
+                self.warnings.append("Base de datos inicializada pero con advertencias")
 
             print("    ✅ Base de datos inicializada")
             return True
@@ -334,12 +331,10 @@ class NewsCollectorSetup:
             if system.initialize():
                 # Ejecutar en modo dry-run con una sola fuente
                 test_sources = {"nature": ALL_SOURCES["nature"]}
-                results = system.collector.collect_from_multiple_sources(
-                    test_sources)
+                results = system.collector.collect_from_multiple_sources(test_sources)
 
                 if (
-                    results.get("collection_summary", {}).get(
-                        "sources_processed", 0)
+                    results.get("collection_summary", {}).get("sources_processed", 0)
                     > 0
                 ):
                     print("    ✅ Test de recolección exitoso")
@@ -365,8 +360,7 @@ class NewsCollectorSetup:
             try:
                 with open(run_script, "w") as f:
                     f.write("#!/bin/bash\n")
-                    f.write(
-                        "# Script de conveniencia para ejecutar News Collector\n")
+                    f.write("# Script de conveniencia para ejecutar News Collector\n")
                     f.write('cd "$(dirname "$0")"\n')
                     f.write('python run_collector.py "$@"\n')
 
@@ -408,8 +402,7 @@ class NewsCollectorSetup:
             try:
                 __import__(import_name)
             except ImportError:
-                self.errors.append(
-                    f"Paquete {package} no instalado correctamente")
+                self.errors.append(f"Paquete {package} no instalado correctamente")
                 return False
 
         return True
@@ -463,8 +456,7 @@ def main():
     expected_files = ["main.py", "requirements.txt", "requirements.lock", "config"]
     current_dir = Path.cwd()
 
-    missing_files = [f for f in expected_files if not (
-        current_dir / f).exists()]
+    missing_files = [f for f in expected_files if not (current_dir / f).exists()]
     if missing_files:
         print("❌ Error: No pareces estar en el directorio del proyecto News Collector")
         print(f"Archivos/directorios faltantes: {', '.join(missing_files)}")

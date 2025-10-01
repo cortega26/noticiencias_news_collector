@@ -30,7 +30,11 @@ class DummyDB:
         return {"etag": None, "last_modified": None}
 
     def update_source_feed_metadata(
-        self, source_id: str, *, etag: str | None = None, last_modified: str | None = None
+        self,
+        source_id: str,
+        *,
+        etag: str | None = None,
+        last_modified: str | None = None,
     ) -> None:
         return None
 
@@ -89,7 +93,9 @@ def _stub_common_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
         process_passthrough,
         raising=False,
     )
-    monkeypatch.setattr(RSSCollector, "_save_article", lambda self, article: True, raising=False)
+    monkeypatch.setattr(
+        RSSCollector, "_save_article", lambda self, article: True, raising=False
+    )
     monkeypatch.setattr(
         AsyncRSSCollector,
         "_save_article",

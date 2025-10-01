@@ -67,14 +67,18 @@ def _article_payload(url: str, **overrides: object) -> dict[str, object]:
     return model.model_dump_for_storage()
 
 
-def test_save_article_persists_signed_simhash(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_save_article_persists_signed_simhash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     db_path = tmp_path / "simhash.db"
     manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
 
     high_value = (1 << 63) | 0x12345
     monkeypatch.setattr("src.storage.database.simhash64", lambda _: high_value)
 
-    payload = _article_payload("https://example.com/high-simhash", published_date=datetime(2024, 1, 2, 12, 30))
+    payload = _article_payload(
+        "https://example.com/high-simhash", published_date=datetime(2024, 1, 2, 12, 30)
+    )
 
     saved = manager.save_article(payload)
     assert saved is not None

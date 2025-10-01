@@ -193,4 +193,6 @@ def test_rate_limit_applies_jitter(monkeypatch):
     effective_delay = max(base_delay, global_min)
     expected_wait = (50.0 + effective_delay + jitter_value) - 51.0
     assert pytest.approx(expected_wait, rel=1e-6) == sleeps[0]
-    assert pytest.approx(timeline[-1], rel=1e-6) == collector._domain_last_request[domain]
+    assert (
+        pytest.approx(timeline[-1], rel=1e-6) == collector._domain_last_request[domain]
+    )

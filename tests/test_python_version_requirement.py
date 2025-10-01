@@ -1,4 +1,5 @@
 """Ensure Python compatibility requirements stay in sync across the project."""
+
 from __future__ import annotations
 
 import sys
