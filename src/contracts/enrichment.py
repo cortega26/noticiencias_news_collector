@@ -12,7 +12,7 @@ ConfigDict = _pydantic.ConfigDict
 Field = _pydantic.Field
 model_validator = _pydantic.model_validator
 
-SUPPORTED_LANGUAGES = {"en", "es"}
+SUPPORTED_LANGUAGES = {"en", "es", "pt", "fr"}
 
 
 class ArticleForEnrichment(TypedDict, total=False):
@@ -33,6 +33,7 @@ class ArticleEnrichment(TypedDict, total=False):
     entities: List[str]
     topics: List[str]
     sentiment: str
+    model_version: str
 
 
 class ArticleForEnrichmentModel(BaseModel):
@@ -65,6 +66,7 @@ class ArticleEnrichmentModel(BaseModel):
     entities: List[str] = Field(default_factory=list)
     topics: List[str] = Field(default_factory=list)
     sentiment: str = Field(min_length=3)
+    model_version: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="allow")
 
