@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
@@ -20,8 +20,8 @@ jobs:
         id: python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -38,8 +38,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -56,8 +56,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -74,8 +74,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -99,8 +99,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -117,8 +117,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -142,8 +142,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -167,8 +167,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -335,79 +335,79 @@ jobs:
 
           badge_patch="$(mktemp)"
           RUNS_PAYLOAD="${runs_payload}" BADGE_PATCH="${badge_patch}" python - <<'PY'
-import json
-import os
+          import json
+          import os
 
-runs_path = os.environ["RUNS_PAYLOAD"]
-badge_patch_path = os.environ["BADGE_PATCH"]
-filename = os.environ.get("BADGE_FILENAME", "ci-badge.json")
+          runs_path = os.environ["RUNS_PAYLOAD"]
+          badge_patch_path = os.environ["BADGE_PATCH"]
+          filename = os.environ.get("BADGE_FILENAME", "ci-badge.json")
 
-with open(runs_path, "r", encoding="utf-8") as handle:
-    data = json.load(handle)
+          with open(runs_path, "r", encoding="utf-8") as handle:
+              data = json.load(handle)
 
-runs = data.get("workflow_runs", [])
-run = runs[0] if runs else None
+          runs = data.get("workflow_runs", [])
+          run = runs[0] if runs else None
 
-message = "no runs"
-color = "lightgrey"
-is_error = False
-link = None
+          message = "no runs"
+          color = "lightgrey"
+          is_error = False
+          link = None
 
-if run:
-    conclusion = (run.get("conclusion") or "").lower() or None
-    status = (run.get("status") or "").lower() or None
-    link = run.get("html_url")
+          if run:
+              conclusion = (run.get("conclusion") or "").lower() or None
+              status = (run.get("status") or "").lower() or None
+              link = run.get("html_url")
 
-    conclusion_map = {
-        "success": ("passing", "brightgreen", False),
-        "failure": ("failing", "red", True),
-        "cancelled": ("cancelled", "lightgrey", False),
-        "skipped": ("skipped", "blue", False),
-        "neutral": ("neutral", "blue", False),
-        "timed_out": ("timed out", "orange", True),
-        "action_required": ("action required", "orange", True),
-        "stale": ("stale", "yellow", False),
-    }
+              conclusion_map = {
+                  "success": ("passing", "brightgreen", False),
+                  "failure": ("failing", "red", True),
+                  "cancelled": ("cancelled", "lightgrey", False),
+                  "skipped": ("skipped", "blue", False),
+                  "neutral": ("neutral", "blue", False),
+                  "timed_out": ("timed out", "orange", True),
+                  "action_required": ("action required", "orange", True),
+                  "stale": ("stale", "yellow", False),
+              }
 
-    status_map = {
-        "in_progress": ("running", "blue", False),
-        "queued": ("queued", "blue", False),
-        "waiting": ("waiting", "blue", False),
-        "pending": ("pending", "blue", False),
-    }
+              status_map = {
+                  "in_progress": ("running", "blue", False),
+                  "queued": ("queued", "blue", False),
+                  "waiting": ("waiting", "blue", False),
+                  "pending": ("pending", "blue", False),
+              }
 
-    if conclusion:
-        message, color, is_error = conclusion_map.get(
-            conclusion, (conclusion.replace("_", " "), "lightgrey", conclusion not in {"success"})
-        )
-    else:
-        message, color, is_error = status_map.get(status, ("unknown", "lightgrey", False))
-else:
-    link = None
+              if conclusion:
+                  message, color, is_error = conclusion_map.get(
+                      conclusion, (conclusion.replace("_", " "), "lightgrey", conclusion not in {"success"})
+                  )
+              else:
+                  message, color, is_error = status_map.get(status, ("unknown", "lightgrey", False))
+          else:
+              link = None
 
-badge_payload = {
-    "schemaVersion": 1,
-    "label": "ci",
-    "message": message,
-    "color": color,
-    "cacheSeconds": 300,
-}
+          badge_payload = {
+              "schemaVersion": 1,
+              "label": "ci",
+              "message": message,
+              "color": color,
+              "cacheSeconds": 300,
+          }
 
-if is_error:
-    badge_payload["isError"] = True
+          if is_error:
+              badge_payload["isError"] = True
 
-if link:
-    badge_payload["link"] = [link]
+          if link:
+              badge_payload["link"] = [link]
 
-patch_payload = {"files": {filename: {"content": json.dumps(badge_payload, ensure_ascii=False)}}}
+          patch_payload = {"files": {filename: {"content": json.dumps(badge_payload, ensure_ascii=False)}}}
 
-with open(badge_patch_path, "w", encoding="utf-8") as handle:
-    json.dump(patch_payload, handle, ensure_ascii=False)
-    handle.write("\n")
+          with open(badge_patch_path, "w", encoding="utf-8") as handle:
+              json.dump(patch_payload, handle, ensure_ascii=False)
+              handle.write("\n")
 
-print("Badge payload:")
-print(json.dumps(badge_payload, ensure_ascii=False))
-PY
+          print("Badge payload:")
+          print(json.dumps(badge_payload, ensure_ascii=False))
+          PY
 
           response_body="$(mktemp)"
           http_status=$(curl --silent --show-error --location --request PATCH \
