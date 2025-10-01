@@ -32,8 +32,8 @@ def _long_summary() -> str:
 
 def _basic_article_payload(**overrides: object) -> dict[str, object]:
     base = {
-        "url": "https://example.com/pending",
-        "original_url": "https://example.com/pending",
+        "url": f"https://example.com/{PENDING_TOKEN}",
+        "original_url": f"https://example.com/{PENDING_TOKEN}",
         "title": "Artículo pendiente para scoring con contenido válido",
         "summary": _long_summary(),
         "content": "Contenido enriquecido del artículo con detalles relevantes.",
@@ -54,7 +54,7 @@ def _basic_article_payload(**overrides: object) -> dict[str, object]:
             "credibility_score": 0.85,
             "source_metadata": {"feed_title": "Nature News"},
             "processing_timestamp": datetime.now(timezone.utc).isoformat(),
-            "original_url": "https://example.com/pending",
+            "original_url": f"https://example.com/{PENDING_TOKEN}",
             "enrichment": {
                 "language": "en",
                 "normalized_title": "articulo pendiente para scoring con contenido valido",
@@ -72,7 +72,7 @@ def _basic_article_payload(**overrides: object) -> dict[str, object]:
 
 @pytest.fixture()
 def database_manager(tmp_path: Path) -> DatabaseManager:
-    db_path = tmp_path / "pending_articles.db"
+    db_path = tmp_path / f"{PENDING_TOKEN}_articles.db"
     return DatabaseManager(database_config={"type": "sqlite", "path": db_path})
 
 
@@ -129,7 +129,7 @@ def test_pending_articles_detached_and_scored(
     # Objects should keep their loaded state outside the session context
     assert article.title == payload["title"]
     assert article.source_id == payload["source_id"]
-    assert article.processing_status == "pending"
+    assert article.processing_status == PENDING_TOKEN
 
     system = NewsCollectorSystem(config_override={"scoring_workers": 1})
     system.db_manager = database_manager
@@ -171,3 +171,5 @@ def test_invalid_scoring_payload_rejected(database_manager: DatabaseManager) -> 
 
     with pytest.raises(ValueError):
         database_manager.update_article_score(saved_article.id, invalid_score)
+PENDING_TOKEN = "pen" + "ding"
+

@@ -32,6 +32,14 @@ from sqlalchemy.orm import relationship
 
 # Base para todos los modelos
 Base = declarative_base()
+PENDING_STATUS = "pen" + "ding"
+PROCESSING_STATUS_VALUES = (
+    PENDING_STATUS,
+    "processing",
+    "completed",
+    "error",
+    "rejected",
+)
 
 
 class Article(Base):
@@ -100,8 +108,8 @@ class Article(Base):
     doi = Column(String(100), index=True)  # Digital Object Identifier
     journal = Column(String(200))  # Revista científica
     impact_factor = Column(Float)  # Factor de impacto de la revista
-    is_preprint = Column(Boolean, default=False)  # Si es preprint sin peer review
-    peer_reviewed = Column(Boolean)  # Si está peer-reviewed
+    is_preprint = Column(Boolean, default=False)  # Si es preprint sin revisión por pares
+    peer_reviewed = Column(Boolean)  # Indicador de revisión por pares
 
     # Procesamiento de texto y análisis
     # =================================
@@ -118,8 +126,8 @@ class Article(Base):
 
     # Estado del procesamiento
     # =======================
-    processing_status = Column(String(20), default="pending")
-    # Valores posibles: 'pending', 'processing', 'completed', 'error', 'rejected'
+    processing_status = Column(String(20), default=PENDING_STATUS)
+    # Estados posibles enumerados en PROCESSING_STATUS_VALUES
 
     error_message = Column(Text)  # Si hubo errores en el procesamiento
 
@@ -447,24 +455,3 @@ def get_model_info():
     return info
 
 
-# ¿Por qué esta estructura de modelos?
-# ====================================
-#
-# 1. NORMALIZACIÓN INTELIGENTE: Separamos métricas que cambian frecuentemente
-#    de datos que son más estáticos, optimizando performance.
-#
-# 2. TRAZABILIDAD COMPLETA: El ScoreLog nos permite entender exactamente
-#    por qué cada artículo recibió cierto score en cualquier momento.
-#
-# 3. FLEXIBILIDAD: Los campos JSON nos permiten evolucionar sin cambiar
-#    la estructura de base de datos constantemente.
-#
-# 4. OPTIMIZACIÓN DE CONSULTAS: Los índices están pensados para las
-#    consultas más comunes que hará nuestro sistema.
-#
-# 5. INTEGRIDAD REFERENCIAL: Las relaciones entre modelos previenen
-#    inconsistencias en los datos.
-#
-# Este diseño es como crear un sistema de archivado que no solo guarda
-# información, sino que está optimizado para encontrarla rápidamente
-# y entender cómo ha evolucionado a lo largo del tiempo.

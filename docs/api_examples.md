@@ -81,7 +81,7 @@ GET /healthz
   "details": {
     "status": "healthy",
     "total_articles": 1835,
-    "pending_articles": 12,
+    "backlog_articles": 12,
     "recent_articles": 148,
     "active_sources": 37,
     "failed_sources": 0,

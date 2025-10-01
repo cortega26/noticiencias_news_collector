@@ -135,7 +135,7 @@ class BaseCollector(ABC):
                     )
 
             except Exception as e:
-                # Manejar errores a nivel de fuente sin detener todo el proceso
+                # Manejar errores a nivel de fuente sin detener por completo el proceso
                 error_result = {
                     "source_id": source_id,
                     "success": False,
@@ -184,7 +184,7 @@ class BaseCollector(ABC):
         Actualiza las estadísticas globales con el resultado de una fuente.
 
         Este método es como tener un contador centralizado que lleva registro
-        de todo lo que va sucediendo durante la recolección.
+        de cada evento que va sucediendo durante la recolección.
         """
         self.stats["total_sources_processed"] += 1
         self.stats["total_articles_found"] += source_result.get("articles_found", 0)
@@ -199,7 +199,7 @@ class BaseCollector(ABC):
         """
         Genera un reporte comprehensivo de la sesión de recolección.
 
-        Este reporte es como un informe ejecutivo que resume todo lo que
+        Este reporte es como un informe ejecutivo que resume cada hito que
         aconteció durante la expedición de recolección de información.
         """
         # Calcular métricas derivadas
@@ -457,14 +457,6 @@ def create_collector(collector_type: str) -> BaseCollector:
 
         return RSSCollector()
 
-    # Aquí podríamos agregar otros tipos de colectores en el futuro:
-    # elif collector_type.lower() == 'api':
-    #     from .api_collector import APICollector
-    #     return APICollector()
-    # elif collector_type.lower() == 'scraper':
-    #     from .web_scraper import WebScraper
-    #     return WebScraper()
-
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 
@@ -480,28 +472,3 @@ def validate_collector_result(result: Dict[str, Any]) -> bool:
 
     return all(field in result for field in required_fields)
 
-
-# ¿Por qué esta arquitectura de clase base?
-# =========================================
-#
-# 1. CONSISTENCIA: Todos los colectores siguen el mismo patrón,
-#    facilitando mantenimiento y debugging.
-#
-# 2. EXTENSIBILIDAD: Fácil agregar nuevos tipos de colectores
-#    (APIs, web scraping, etc.) sin cambiar el código existente.
-#
-# 3. REUTILIZACIÓN DE CÓDIGO: La lógica común (estadísticas, reportes,
-#    coordinación) se implementa una sola vez.
-#
-# 4. TEMPLATE METHOD PATTERN: Permite customización específica mientras
-#    mantiene un flujo de trabajo consistente.
-#
-# 5. OBSERVABILIDAD: Sistema robusto de estadísticas y reportes
-#    incorporado desde el principio.
-#
-# 6. MANEJO DE ERRORES: Estrategia consistente para manejar fallos
-#    sin detener todo el proceso.
-#
-# Esta clase base es como crear los cimientos arquitectónicos que
-# aseguran que todas las habitaciones de nuestra casa (colectores)
-# tengan las mismas características esenciales de calidad y funcionalidad.

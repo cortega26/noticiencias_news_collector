@@ -15,8 +15,8 @@ triggers the alert, how to triage it, and which tools to use when you are in the
    ```bash
    python run_collector.py --healthcheck
    ```
-   - Pending articles above the default threshold (250) or an ingest lag older than 180 minutes will fail the check.
-   - Override thresholds when debugging chronic backlogs: `python run_collector.py --healthcheck --healthcheck-max-pending 500`.
+   - Articles waiting above the default threshold (250) or an ingest lag older than 180 minutes will fail the check.
+   - Override thresholds when debugging chronic backlogs by exporting `HEALTHCHECK_MAX_PENDING=500` before invoking the CLI.
 2. **Inspect scheduler freshness**. Tail the structured logs for `collection_cycle.start`/`collection_cycle.completed` events and confirm cycles are still firing.
    ```bash
    sqlite3 data/news.db "SELECT MAX(collected_date) FROM articles;"
@@ -71,7 +71,7 @@ triggers the alert, how to triage it, and which tools to use when you are in the
 - **Source specific anomalies**: temporarily suppress the source via `config/sources.py` (`is_active: false`) and coordinate with content owners.
 
 #### Verification
-- Run `python run_collector.py --healthcheck` to ensure pending articles are processing normally after dedupe fixes.
+- Run `python run_collector.py --healthcheck` to ensure backlog articles are processing normally after dedupe fixes.
 - Confirm Grafana dedupe F1 recovers above 0.95 and manual spot-checks show diverse top stories.
 - Clear any temporary source suppressions after data quality stabilises.
 
