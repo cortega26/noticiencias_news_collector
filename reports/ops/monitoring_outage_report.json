@@ -1,0 +1,212 @@
+{
+  "alerts": [],
+  "anomalies": [
+    {
+      "detector": "source_outage",
+      "labels": {
+        "source_id": "nature"
+      },
+      "message": "Source nature has 4 consecutive fetch failures; Source nature idle for 5918.9h (threshold 6.0h)",
+      "observations": {
+        "articles_found": 0,
+        "consecutive_failures": 4,
+        "expected": 5.0,
+        "last_seen_gap_hours": 5918.94,
+        "ratio": 0.0
+      },
+      "severity": "critical"
+    },
+    {
+      "detector": "source_outage",
+      "labels": {
+        "source_id": "science"
+      },
+      "message": "Source science idle for 5847.9h (threshold 8.0h)",
+      "observations": {
+        "articles_found": 6,
+        "consecutive_failures": 0,
+        "expected": 4.0,
+        "last_seen_gap_hours": 5847.94,
+        "ratio": 1.5
+      },
+      "severity": "critical"
+    },
+    {
+      "detector": "content_shift",
+      "message": "Topic mix diverged (JSD=0.55)",
+      "observations": {
+        "baseline": {
+          "astronomy": 0.25,
+          "biology": 0.55,
+          "physics": 0.2
+        },
+        "observed": {
+          "astronomy": 1.0
+        },
+        "topic_divergence": 0.549
+      },
+      "severity": "critical"
+    }
+  ],
+  "generated_at": "2025-10-01T14:56:18.257780+00:00",
+  "metadata": {
+    "suppressed_sources": [
+      "nature",
+      "science"
+    ]
+  },
+  "metrics": [
+    {
+      "labels": {
+        "field": "article_id"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "source_id"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "published_at"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "language"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "topics"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "title"
+      },
+      "name": "schema.missing_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "article_id"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "source_id"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "published_at"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "language"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "topics"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "title"
+      },
+      "name": "schema.type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "summary"
+      },
+      "name": "schema.optional_type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "content"
+      },
+      "name": "schema.optional_type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "field": "authors"
+      },
+      "name": "schema.optional_type_mismatch_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "source_id": "nature"
+      },
+      "name": "source.ingestion_ratio",
+      "value": 0.0
+    },
+    {
+      "labels": {
+        "source_id": "nature"
+      },
+      "name": "source.last_seen_gap_hours",
+      "value": 5918.938404855
+    },
+    {
+      "labels": {
+        "source_id": "science"
+      },
+      "name": "source.ingestion_ratio",
+      "value": 1.5
+    },
+    {
+      "labels": {
+        "source_id": "science"
+      },
+      "name": "source.last_seen_gap_hours",
+      "value": 5847.938404855
+    },
+    {
+      "name": "content.language_jsd",
+      "value": 0.025462452938692228
+    },
+    {
+      "name": "content.topic_jsd",
+      "value": 0.5487949406953986
+    },
+    {
+      "name": "sources.auto_suppressed",
+      "value": 2.0
+    }
+  ],
+  "status": "critical",
+  "version": "monitoring.v1",
+  "window": {
+    "end": "2025-01-31T00:00:00+00:00",
+    "start": "2025-01-24T00:00:00+00:00"
+  }
+}
+

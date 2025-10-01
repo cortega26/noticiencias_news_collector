@@ -1,0 +1,18 @@
+{
+  "backend": {
+    "dsn": "postgresql://collector:***@db.internal:5432/news_collector",
+    "pool": {
+      "size": 12,
+      "max_overflow": 6,
+      "timeout": 45,
+      "recycle": 1200
+    }
+  },
+  "total_articles": 60,
+  "warmup_samples": 5,
+  "metrics": {
+    "mean_seconds": 0.02395439621815802,
+    "p95_seconds": 0.05656609149982614,
+    "max_seconds": 0.09736537800017686
+  }
+}
