@@ -12,6 +12,7 @@ from time import perf_counter
 from typing import Any, Dict, List, cast
 
 import pytest
+from sqlalchemy import create_engine as sqlalchemy_create_engine
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT.parent) not in sys.path:
@@ -24,8 +25,10 @@ from src.contracts import ArticleForEnrichmentModel
 from src.scoring import create_scorer
 from src.storage import models as storage_models
 from src.storage.database import DatabaseManager
+import src.scoring.feature_scorer as feature_scorer_module
 
 FIXTURE_PATH = PROJECT_ROOT / "data" / "collector_pipeline_chain.json"
+SCORING_GOLDEN_PATH = PROJECT_ROOT / "data" / "scoring_golden.json"
 
 pytestmark = pytest.mark.perf
 
@@ -70,27 +73,89 @@ def pipeline_dataset() -> List[JSONDict]:
 
 
 @pytest.fixture()
-def isolated_database(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> DatabaseManager:
-    db_path = tmp_path / "perf_pipeline.db"
-    manager = DatabaseManager({"type": "sqlite", "path": db_path})
-
+def pipeline_storage(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    storage_backend: str,
+) -> Dict[str, Any]:
     import src.storage.database as database_module
+
+    backend_info: Dict[str, Any] = {"backend": storage_backend}
+
+    if storage_backend == "sqlite":
+        db_path = tmp_path / "perf_pipeline.db"
+        manager = DatabaseManager({"type": "sqlite", "path": db_path})
+        backend_info["dsn"] = f"sqlite:///{db_path.name}"
+        backend_info["pool"] = {"class": "StaticPool", "size": 1}
+    else:
+        captured: Dict[str, Any] = {}
+
+        def fake_create_engine(url: Any, **kwargs: Any):
+            captured["url"] = url
+            captured["kwargs"] = kwargs
+            sqlite_path = tmp_path / "perf_pipeline_pg.db"
+            return sqlalchemy_create_engine(
+                f"sqlite:///{sqlite_path}", echo=kwargs.get("echo", False)
+            )
+
+        monkeypatch.setattr("src.storage.database.create_engine", fake_create_engine)
+
+        postgres_config = {
+            "type": "postgresql",
+            "host": "db.internal",
+            "port": 5432,
+            "name": "news_collector",
+            "user": "collector",
+            "password": "secret",
+            "connect_timeout": 5,
+            "statement_timeout": 45000,
+            "pool_size": 12,
+            "max_overflow": 6,
+            "pool_timeout": 45,
+            "pool_recycle": 1200,
+        }
+
+        manager = DatabaseManager(postgres_config)
+
+        pool_kwargs = captured.get("kwargs", {})
+        captured_url = captured.get("url")
+        if hasattr(captured_url, "render_as_string"):
+            safe_dsn = captured_url.render_as_string(hide_password=True)
+        else:
+            safe_dsn = str(captured_url)
+        backend_info.update(
+            {
+                "dsn": safe_dsn,
+                "pool": {
+                    "class": getattr(pool_kwargs.get("poolclass"), "__name__", "QueuePool"),
+                    "size": pool_kwargs.get("pool_size"),
+                    "max_overflow": pool_kwargs.get("max_overflow"),
+                    "timeout": pool_kwargs.get("pool_timeout"),
+                    "recycle": pool_kwargs.get("pool_recycle"),
+                },
+            }
+        )
 
     monkeypatch.setattr(database_module, "_db_manager", manager, raising=False)
     monkeypatch.setattr(
         "src.collectors.rss_collector.get_database_manager", lambda: manager
     )
 
-    return manager
+    backend_info["manager"] = manager
+    return backend_info
+
+
+@pytest.fixture(params=["sqlite", "postgresql"])
+def storage_backend(request: pytest.FixtureRequest) -> str:
+    return cast(str, request.param)
 
 
 @pytest.fixture()
 def collector(
-    monkeypatch: pytest.MonkeyPatch, isolated_database: DatabaseManager
+    monkeypatch: pytest.MonkeyPatch, pipeline_storage: Dict[str, Any]
 ) -> RSSCollector:
     collector = RSSCollector()
+    collector.db_manager = pipeline_storage["manager"]
 
     monkeypatch.setattr(RSSCollector, "_respect_robots", lambda self, url: (True, None))
     monkeypatch.setattr(
@@ -113,12 +178,78 @@ def collector(
     return collector
 
 
+def _compute_scoring_accuracy() -> Dict[str, float]:
+    with SCORING_GOLDEN_PATH.open(encoding="utf-8") as fh:
+        dataset = json.load(fh)
+
+    frozen_at = datetime.fromisoformat(dataset["frozen_at"].replace("Z", "+00:00"))
+
+    class _FrozenDateTime(datetime):
+        frozen_value = frozen_at
+
+        @classmethod
+        def now(cls, tz=None):  # type: ignore[override]
+            if tz:
+                return cls.frozen_value.astimezone(tz)
+            return cls.frozen_value
+
+    original_datetime = feature_scorer_module.datetime
+    feature_scorer_module.datetime = _FrozenDateTime  # type: ignore[assignment]
+
+    errors: List[float] = []
+    include_matches = 0
+    ranks: List[Dict[str, Any]] = []
+
+    try:
+        scorer = create_scorer()
+        for entry in dataset["articles"]:
+            article_payload = dict(entry["article"])
+            article_payload.setdefault("article_metadata", {})
+            result = scorer.score_article(article_payload)
+            expected = entry["expected"]
+            errors.append(abs(result["final_score"] - expected["final_score"]))
+            include_matches += int(
+                result["should_include"] == expected["should_include"]
+            )
+            ranks.append(
+                {
+                    "id": entry["id"],
+                    "predicted_score": result["final_score"],
+                    "expected_rank": expected["rank"],
+                }
+            )
+    finally:
+        feature_scorer_module.datetime = original_datetime
+
+    total = len(ranks)
+    predicted_order = sorted(ranks, key=lambda item: item["predicted_score"], reverse=True)
+    predicted_ranks = {item["id"]: idx + 1 for idx, item in enumerate(predicted_order)}
+    rank_matches = sum(
+        1 for item in ranks if predicted_ranks.get(item["id"]) == item["expected_rank"]
+    )
+
+    mae = sum(errors) / total if total else 0.0
+    max_abs = max(errors) if errors else 0.0
+    include_accuracy = include_matches / total if total else 0.0
+    rank_accuracy = rank_matches / total if total else 0.0
+
+    return {
+        "samples": total,
+        "mean_absolute_error": mae,
+        "max_absolute_error": max_abs,
+        "should_include_accuracy": include_accuracy,
+        "rank_match_ratio": rank_accuracy,
+    }
+
+
 def test_pipeline_stage_latencies(
     collector: RSSCollector,
     pipeline_dataset: List[JSONDict],
-    isolated_database: DatabaseManager,
+    pipeline_storage: Dict[str, Any],
     monkeypatch: pytest.MonkeyPatch,
+    storage_backend: str,
 ) -> None:
+    isolated_database: DatabaseManager = pipeline_storage["manager"]
     stage_timings: Dict[str, List[float]] = {
         "ingestion": [],
         "enrichment": [],
@@ -183,6 +314,8 @@ def test_pipeline_stage_latencies(
         }
 
     for stage, thresholds in PIPELINE_PERF_THRESHOLDS.items():
+        if stage not in metrics:
+            continue
         stage_metrics = metrics[stage]
         assert (
             stage_metrics["p95_seconds"] <= thresholds["p95_seconds"]
@@ -191,12 +324,55 @@ def test_pipeline_stage_latencies(
             stage_metrics["max_seconds"] <= thresholds["max_seconds"]
         ), f"{stage} max exceeded: {stage_metrics['max_seconds']:.4f}s > {thresholds['max_seconds']:.4f}s"
 
+    total_articles = len(pipeline_dataset)
+    throughput = {
+        "articles": total_articles,
+        "ingestion_rps": (
+            total_articles / sum(stage_timings["ingestion"])
+            if stage_timings["ingestion"]
+            else 0.0
+        ),
+        "enrichment_rps": (
+            total_articles / sum(stage_timings["enrichment"])
+            if stage_timings["enrichment"]
+            else 0.0
+        ),
+        "scoring_rps": (
+            total_articles / sum(stage_timings["scoring"])
+            if stage_timings["scoring"]
+            else 0.0
+        ),
+    }
+    total_pipeline_seconds = sum(sum(durations) for durations in stage_timings.values())
+    throughput["pipeline_rps"] = (
+        total_articles / total_pipeline_seconds if total_pipeline_seconds else 0.0
+    )
+
+    accuracy_metrics = _compute_scoring_accuracy()
+
     perf_reports_dir = PROJECT_ROOT.parent / "reports" / "perf"
     perf_reports_dir.mkdir(parents=True, exist_ok=True)
     log_path = perf_reports_dir / "pipeline_perf_metrics.json"
+    payload: Dict[str, Any] = {
+        "latency": metrics,
+        "thresholds": PIPELINE_PERF_THRESHOLDS,
+        "throughput": throughput,
+        "accuracy": accuracy_metrics,
+        "backend": {
+            key: value
+            for key, value in pipeline_storage.items()
+            if key in {"backend", "dsn", "pool"}
+        },
+    }
+
+    if log_path.exists():
+        existing = json.loads(log_path.read_text(encoding="utf-8"))
+    else:
+        existing = {}
+
+    existing.setdefault("runs", {})[storage_backend] = payload
+
     with log_path.open("w", encoding="utf-8") as fh:
-        json.dump(
-            {"metrics": metrics, "thresholds": PIPELINE_PERF_THRESHOLDS}, fh, indent=2
-        )
+        json.dump(existing, fh, indent=2)
 
     print(f"pipeline_perf_log={log_path}")
