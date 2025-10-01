@@ -160,6 +160,17 @@ def test_baseline_comparison(repo_root, patterns):
     assert not new
     assert not resolved
 
+    shifted_baseline = [
+        {
+            **baseline[0],
+            "line_start": baseline[0]["line_start"] + 5,
+            "line_end": baseline[0]["line_end"] + 5,
+        }
+    ]
+    shifted_new, shifted_resolved = compare_to_baseline(findings, shifted_baseline)
+    assert not shifted_new
+    assert not shifted_resolved
+
     empty_new, resolved_only = compare_to_baseline([], baseline)
     assert len(empty_new) == 0
     assert len(resolved_only) == 1
