@@ -591,6 +591,38 @@ print(f"Tasa de éxito: {stats['database_health']['status']}")
 
 ---
 
+## 🛡️ Audit & Guardrail
+
+El repositorio incluye un escáner determinístico para encontrar TODOs, placeholders y código comentado que haya quedado pendiente.
+
+### Ejecutar el escáner localmente
+
+```bash
+make audit-todos
+```
+
+Este comando genera los reportes en `reports/placeholders.{csv,json,md}` con el mismo número de hallazgos en cada formato.
+
+### Actualizar la línea base
+
+```bash
+make audit-todos-baseline
+```
+
+Guarda los resultados actuales en `reports/placeholders.baseline.json`. Úsalo cuando conscientemente cierres o aceptes la deuda técnica existente.
+
+### Verificar regresiones en CI o localmente
+
+```bash
+make audit-todos-check
+```
+
+Compara el estado actual contra la baseline y falla si aparecen hallazgos nuevos. Puedes permitir cierta tolerancia ajustando la variable `AUDIT_TODOS_MAX_NEW` antes de ejecutar el comando.
+
+En GitHub Actions, el job `audit-todos` ejecuta esta verificación en cada push/PR, sube los reportes como artefactos y comenta en el Pull Request cuando aparecen pendientes nuevos.
+
+---
+
 ## 🤝 Contribuir
 
 ¡Las contribuciones son bienvenidas! Aquí's cómo puedes ayudar:

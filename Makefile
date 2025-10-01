@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix typecheck test e2e perf security clean help bump-version
+.PHONY: bootstrap lint lint-fix typecheck test e2e perf security clean help bump-version audit-todos audit-todos-baseline audit-todos-check
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -15,10 +15,17 @@ RUFF := $(VENV)/$(BIN_DIR)/ruff
 MYPY := $(VENV)/$(BIN_DIR)/mypy
 PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
+PYTHON_BIN := $(VENV)/$(BIN_DIR)/python
 REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
 PERF_DIR := $(REPORTS_DIR)/perf
 SECURITY_DIR := $(REPORTS_DIR)/security
+PLACEHOLDER_REPORT_CSV := $(REPORTS_DIR)/placeholders.csv
+PLACEHOLDER_REPORT_JSON := $(REPORTS_DIR)/placeholders.json
+PLACEHOLDER_REPORT_MD := $(REPORTS_DIR)/placeholders.md
+PLACEHOLDER_BASELINE := $(REPORTS_DIR)/placeholders.baseline.json
+PLACEHOLDER_SCANNER := tools/scan_placeholders.py
+PLACEHOLDER_PATTERNS := tools/placeholder_patterns.yml
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
 TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
@@ -71,19 +78,53 @@ security: bootstrap ## Run security and dependency scans
 	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
 	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 
+audit-todos: bootstrap ## Run placeholder scanner and generate CSV/JSON/MD reports
+	@mkdir -p $(REPORTS_DIR)
+	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
+	        --root . \
+	        --patterns $(PLACEHOLDER_PATTERNS) \
+	        --context 2 \
+	        --baseline $(PLACEHOLDER_BASELINE) \
+	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
+	        --output-json $(PLACEHOLDER_REPORT_JSON) \
+	        --output-md $(PLACEHOLDER_REPORT_MD)
+
+audit-todos-baseline: bootstrap ## Refresh the placeholder baseline with current findings
+	@$(MAKE) audit-todos
+	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
+	        --root . \
+	        --patterns $(PLACEHOLDER_PATTERNS) \
+	        --context 2 \
+	        --baseline $(PLACEHOLDER_BASELINE) \
+	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
+	        --output-json $(PLACEHOLDER_REPORT_JSON) \
+	        --output-md $(PLACEHOLDER_REPORT_MD) \
+	        --save-baseline
+
+audit-todos-check: bootstrap ## Compare current findings against baseline and fail on regressions
+	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
+	        --root . \
+	        --patterns $(PLACEHOLDER_PATTERNS) \
+	        --context 2 \
+	        --baseline $(PLACEHOLDER_BASELINE) \
+	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
+	        --output-json $(PLACEHOLDER_REPORT_JSON) \
+	        --output-md $(PLACEHOLDER_REPORT_MD) \
+	        --compare-baseline
+
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) .pytest_cache .mypy_cache
 
 help: ## Show this help message
-        @echo "Available targets:"
-        @grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
+	@echo "Available targets:"
+	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
 
 bump-version: ## Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)
-        @if [ -n "$(VERSION)" ]; then \
-                $(PYTHON) scripts/bump_version.py --set "$(VERSION)"; \
-        elif [ -n "$(PART)" ]; then \
-                $(PYTHON) scripts/bump_version.py --part "$(PART)"; \
-        else \
-                echo "Usage: make bump-version PART=major|minor|patch | VERSION=X.Y.Z"; \
-                exit 1; \
-        fi
+	@if [ -n "$(VERSION)" ]; then \
+	        $(PYTHON) scripts/bump_version.py --set "$(VERSION)"; \
+	elif [ -n "$(PART)" ]; then \
+	        $(PYTHON) scripts/bump_version.py --part "$(PART)"; \
+	else \
+	        echo "Usage: make bump-version PART=major|minor|patch | VERSION=X.Y.Z"; \
+	        exit 1; \
+	fi
