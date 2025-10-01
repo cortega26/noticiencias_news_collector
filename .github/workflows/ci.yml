@@ -299,20 +299,129 @@ jobs:
               echo "Response body saved to ${body} (not printed to avoid clutter)."
             fi
           done
-      - name: Download CI badge
+      - name: Update CI badge gist
         if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI_BADGE_PAT: ${{ secrets.CI_BADGE_PAT }}
+          CI_BADGE_GIST_ID: ${{ secrets.CI_BADGE_GIST_ID }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BADGE_FILENAME: ci-badge.json
         run: |
-          mkdir -p docs/assets
-          curl --fail --location --retry 3 --retry-delay 2 \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: image/svg+xml" \
-            -H "User-Agent: curl" \
-            "https://github.com/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml/badge.svg?branch=main" \
-            -o docs/assets/ci-status.svg
-      - name: Commit updated badge
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update CI status badge"
-          file_pattern: docs/assets/ci-status.svg
+          set -euo pipefail
+
+          if [ -z "${CI_BADGE_PAT:-}" ]; then
+            echo "CI_BADGE_PAT is not configured; skipping gist badge update."
+            exit 0
+          fi
+
+          if [ -z "${CI_BADGE_GIST_ID:-}" ]; then
+            echo "CI_BADGE_GIST_ID is not configured; skipping gist badge update."
+            exit 0
+          fi
+
+          runs_payload="$(mktemp)"
+          http_status=$(curl --silent --show-error --location \
+            -H "Authorization: Bearer ${CI_BADGE_PAT}" \
+            -H "Accept: application/vnd.github+json" \
+            -w '%{http_code}' \
+            -o "${runs_payload}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&per_page=1")
+
+          if [ "${http_status}" -ge 400 ]; then
+            echo "Failed to retrieve workflow runs (status: ${http_status})."
+            cat "${runs_payload}" || true
+            exit 1
+          fi
+
+          badge_patch="$(mktemp)"
+          RUNS_PAYLOAD="${runs_payload}" BADGE_PATCH="${badge_patch}" python - <<'PY'
+import json
+import os
+
+runs_path = os.environ["RUNS_PAYLOAD"]
+badge_patch_path = os.environ["BADGE_PATCH"]
+filename = os.environ.get("BADGE_FILENAME", "ci-badge.json")
+
+with open(runs_path, "r", encoding="utf-8") as handle:
+    data = json.load(handle)
+
+runs = data.get("workflow_runs", [])
+run = runs[0] if runs else None
+
+message = "no runs"
+color = "lightgrey"
+is_error = False
+link = None
+
+if run:
+    conclusion = (run.get("conclusion") or "").lower() or None
+    status = (run.get("status") or "").lower() or None
+    link = run.get("html_url")
+
+    conclusion_map = {
+        "success": ("passing", "brightgreen", False),
+        "failure": ("failing", "red", True),
+        "cancelled": ("cancelled", "lightgrey", False),
+        "skipped": ("skipped", "blue", False),
+        "neutral": ("neutral", "blue", False),
+        "timed_out": ("timed out", "orange", True),
+        "action_required": ("action required", "orange", True),
+        "stale": ("stale", "yellow", False),
+    }
+
+    status_map = {
+        "in_progress": ("running", "blue", False),
+        "queued": ("queued", "blue", False),
+        "waiting": ("waiting", "blue", False),
+        "pending": ("pending", "blue", False),
+    }
+
+    if conclusion:
+        message, color, is_error = conclusion_map.get(
+            conclusion, (conclusion.replace("_", " "), "lightgrey", conclusion not in {"success"})
+        )
+    else:
+        message, color, is_error = status_map.get(status, ("unknown", "lightgrey", False))
+else:
+    link = None
+
+badge_payload = {
+    "schemaVersion": 1,
+    "label": "ci",
+    "message": message,
+    "color": color,
+    "cacheSeconds": 300,
+}
+
+if is_error:
+    badge_payload["isError"] = True
+
+if link:
+    badge_payload["link"] = [link]
+
+patch_payload = {"files": {filename: {"content": json.dumps(badge_payload, ensure_ascii=False)}}}
+
+with open(badge_patch_path, "w", encoding="utf-8") as handle:
+    json.dump(patch_payload, handle, ensure_ascii=False)
+    handle.write("\n")
+
+print("Badge payload:")
+print(json.dumps(badge_payload, ensure_ascii=False))
+PY
+
+          response_body="$(mktemp)"
+          http_status=$(curl --silent --show-error --location --request PATCH \
+            -H "Authorization: Bearer ${CI_BADGE_PAT}" \
+            -H "Accept: application/vnd.github+json" \
+            -w '%{http_code}' \
+            -o "${response_body}" \
+            --data "@${badge_patch}" \
+            "https://api.github.com/gists/${CI_BADGE_GIST_ID}")
+
+          if [ "${http_status}" -ge 400 ]; then
+            echo "Failed to update gist badge (status: ${http_status})."
+            cat "${response_body}" || true
+            exit 1
+          fi
+
+          echo "Updated gist badge (status: ${http_status})."
