@@ -573,28 +573,28 @@ print(f"Tasa de éxito: {stats['database_health']['status']}")
 ## 🔮 Roadmap Futuro
 
 ### Versión 1.1 - Mejoras de Core
-- [ ] Procesamiento paralelo de fuentes
-- [ ] Cache inteligente para evitar re-processing
-- [ ] API REST para acceso externo
-- [ ] Dashboard web para monitoreo
+- Procesamiento paralelo de fuentes
+- Cache inteligente para evitar re-processing
+- API REST para acceso externo
+- Dashboard web para monitoreo
 
 ### Versión 1.2 - ML Avanzado
-- [ ] Modelos de ML para scoring mejorado
-- [ ] Análisis de sentimientos
-- [ ] Detección de temas trending automática
-- [ ] Personalización basada en feedback
+- Modelos de ML para scoring mejorado
+- Análisis de sentimientos
+- Detección de temas trending automática
+- Personalización basada en feedback
 
 ### Versión 1.3 - Integración
-- [ ] Webhooks para notificaciones
-- [ ] Integración con redes sociales
-- [ ] Export a diferentes formatos (JSON, RSS, email)
-- [ ] Slack/Discord bots
+- Webhooks para notificaciones
+- Integración con redes sociales
+- Export a diferentes formatos (JSON, RSS, email)
+- Slack/Discord bots
 
 ### Versión 2.0 - Escalabilidad
-- [ ] Arquitectura distribuida
-- [ ] Queue systems (Redis/RabbitMQ)
-- [ ] Multi-idioma support
-- [ ] Cloud deployment automático
+- Arquitectura distribuida
+- Queue systems (Redis/RabbitMQ)
+- Multi-idioma support
+- Cloud deployment automático
 
 ---
 
