@@ -388,7 +388,7 @@ class NewsCollectorSetup:
             # Verificar que hay al menos 100MB libres
             min_free_mb = 100 * 1024 * 1024  # 100MB
             return free >= min_free_mb
-        except:
+        except OSError:
             return True  # Asumir OK si no podemos verificar
 
     def _verify_package_installation(self):
