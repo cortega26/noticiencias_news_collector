@@ -71,10 +71,10 @@ perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml || { echo "Performance tests not defined; skipped."; touch $(PERF_DIR)/SKIPPED; true; }
 
 security: bootstrap ## Run security and dependency scans
-        @mkdir -p $(SECURITY_DIR)
-        @echo "[security] Running pip-audit"
-        @$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
-        @$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@mkdir -p $(SECURITY_DIR)
+	@echo "[security] Running pip-audit"
+	@$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running bandit"
 	@$(BANDIT) -q -r src scripts -c .bandit -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
@@ -106,45 +106,45 @@ audit-todos-baseline: bootstrap ## Refresh the placeholder baseline with current
 	        --save-baseline
 
 audit-todos-check: bootstrap ## Compare current findings against baseline and fail on regressions
-        @$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
-                --root . \
-                --patterns $(PLACEHOLDER_PATTERNS) \
-                --context 2 \
-                --baseline $(PLACEHOLDER_BASELINE) \
-                --output-csv $(PLACEHOLDER_REPORT_CSV) \
-                --output-json $(PLACEHOLDER_REPORT_JSON) \
-                --output-md $(PLACEHOLDER_REPORT_MD) \
-                --compare-baseline
+	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
+	        --root . \
+	        --patterns $(PLACEHOLDER_PATTERNS) \
+	        --context 2 \
+	        --baseline $(PLACEHOLDER_BASELINE) \
+	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
+	        --output-json $(PLACEHOLDER_REPORT_JSON) \
+	        --output-md $(PLACEHOLDER_REPORT_MD) \
+	        --compare-baseline
 
 config-gui: bootstrap ## Launch the desktop configuration editor
-        @CMD="$(PYTHON_BIN) -m noticiencias.gui_config \"$(CONFIG_FILE)\""; \
-        echo "[config-gui] $$CMD"; \
-        eval $$CMD
+	@CMD="$(PYTHON_BIN) -m noticiencias.gui_config \"$(CONFIG_FILE)\""; \
+	echo "[config-gui] $$CMD"; \
+	eval $$CMD
 
 config-set: bootstrap ## Update configuration without opening the GUI (KEY=section.name=value)
-        @if [ -z "$(KEY)" ]; then \
-                echo "Usage: make config-set KEY=section.key=value [CONFIG_FILE=path] [EXTRA=\"other.key=value\"]"; \
-                exit 1; \
-        fi
-        @CMD="$(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --set \"$(KEY)\""; \
-        for kv in $(EXTRA); do \
-                CMD="$$CMD --set \"$$kv\""; \
-        done; \
-        echo "[config-set] $$CMD"; \
-        eval $$CMD
+	@if [ -z "$(KEY)" ]; then \
+	        echo "Usage: make config-set KEY=section.key=value [CONFIG_FILE=path] [EXTRA=\"other.key=value\"]"; \
+	        exit 1; \
+	fi
+	@CMD="$(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --set \"$(KEY)\""; \
+	for kv in $(EXTRA); do \
+	        CMD="$$CMD --set \"$$kv\""; \
+	done; \
+	echo "[config-set] $$CMD"; \
+	eval $$CMD
 
 config-validate: bootstrap ## Validate active configuration sources
-        @echo "[config-validate] $(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --validate"
-        @$(PYTHON_BIN) -m noticiencias.config_manager --config "$(CONFIG_FILE)" --validate
+	@echo "[config-validate] $(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --validate"
+	@$(PYTHON_BIN) -m noticiencias.config_manager --config "$(CONFIG_FILE)" --validate
 
 config-dump: bootstrap ## Print the built-in default configuration
-        @$(PYTHON_BIN) -m noticiencias.config_manager --dump-defaults
+	@$(PYTHON_BIN) -m noticiencias.config_manager --dump-defaults
 
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
-        @$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
+	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
 clean: ## Remove virtual environment and caches
-        @rm -rf $(VENV) .pytest_cache .mypy_cache
+	@rm -rf $(VENV) .pytest_cache .mypy_cache
 
 help: ## Show this help message
 	@echo "Available targets:"
