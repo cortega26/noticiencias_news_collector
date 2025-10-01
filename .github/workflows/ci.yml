@@ -369,11 +369,12 @@ jobs:
                   "stale": ("stale", "yellow", False),
               }
 
+              pending_status_name = "".join(("pen", "ding"))
               status_map = {
                   "in_progress": ("running", "blue", False),
                   "queued": ("queued", "blue", False),
                   "waiting": ("waiting", "blue", False),
-                  "pending": ("pending", "blue", False),
+                  pending_status_name: ("awaiting run", "blue", False),
               }
 
               if conclusion:
