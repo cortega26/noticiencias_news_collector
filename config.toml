@@ -37,17 +37,12 @@ user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
 [rate_limiting]
 delay_between_requests_seconds = 1.0
 domain_default_delay_seconds = 1.0
+domain_overrides = { "export.arxiv.org" = 20.0, "arxiv.org" = 20.0, "www.reddit.com" = 30.0, "reddit.com" = 30.0 }
 max_retries = 3
 retry_delay_seconds = 1.0
 backoff_base = 0.5
 backoff_max = 10.0
 jitter_max = 0.3
-
-[rate_limiting.domain_overrides]
-export.arxiv.org = 20.0
-arxiv.org = 20.0
-www.reddit.com = 30.0
-reddit.com = 30.0
 
 [robots]
 respect_robots = true
@@ -130,11 +125,34 @@ default_topic = "general"
 [enrichment.models.pattern_v1.entities]
 
 [enrichment.models.pattern_v1.entities.entries]
-shared = ["{'label': 'ORG', 'pattern': 'NASA', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Google', 'alias': None, 'case_sensitive': False}", "{'label': 'LOC', 'pattern': 'Mars', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'ESA', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'IMF', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'ONU', 'alias': None, 'case_sensitive': False}"]
-en = ["{'label': 'EVENT', 'pattern': 'Artemis II', 'alias': None, 'case_sensitive': False}", "{'label': 'PRODUCT', 'pattern': 'Orion', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Wall Street', 'alias': None, 'case_sensitive': False}"]
-es = ["{'label': 'ORG', 'pattern': 'Ministerio de Salud de Chile', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Universidad Nacional Aut\u00f3noma de M\u00e9xico', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Telef\u00f3nica', 'alias': None, 'case_sensitive': False}", "{'label': 'TECH', 'pattern': 'IA', 'alias': 'IA', 'case_sensitive': True}"]
-pt = ["{'label': 'ORG', 'pattern': 'Universidade de S\u00e3o Paulo', 'alias': None, 'case_sensitive': False}", "{'label': 'LOC', 'pattern': 'Amaz\u00f4nia', 'alias': None, 'case_sensitive': False}"]
-fr = ["{'label': 'ORG', 'pattern': 'Agence spatiale europ\u00e9enne', 'alias': None, 'case_sensitive': False}", "{'label': 'PRODUCT', 'pattern': 'Ariane 6', 'alias': None, 'case_sensitive': False}"]
+shared = [
+  { label = "ORG", pattern = "NASA", case_sensitive = false },
+  { label = "ORG", pattern = "Google", case_sensitive = false },
+  { label = "LOC", pattern = "Mars", case_sensitive = false },
+  { label = "ORG", pattern = "ESA", case_sensitive = false },
+  { label = "ORG", pattern = "IMF", case_sensitive = false },
+  { label = "ORG", pattern = "ONU", case_sensitive = false },
+]
+en = [
+  { label = "EVENT", pattern = "Artemis II", case_sensitive = false },
+  { label = "PRODUCT", pattern = "Orion", case_sensitive = false },
+  { label = "ORG", pattern = "Wall Street", case_sensitive = false },
+]
+es = [
+  { label = "ORG", pattern = "Ministerio de Salud de Chile", case_sensitive = false },
+  { label = "ORG", pattern = "Universidad Nacional Autónoma de México", case_sensitive = false },
+  { label = "ORG", pattern = "Telefónica", case_sensitive = false },
+  { label = "TECH", pattern = "IA", alias = "IA", case_sensitive = true },
+]
+pt = [
+  { label = "ORG", pattern = "Universidade de São Paulo", case_sensitive = false },
+  { label = "LOC", pattern = "Amazônia", case_sensitive = false },
+]
+fr = [
+  { label = "ORG", pattern = "Agence spatiale européenne", case_sensitive = false },
+  { label = "PRODUCT", pattern = "Ariane 6", case_sensitive = false },
+]
+
 
 [enrichment.models.pattern_v1.topics]
 
