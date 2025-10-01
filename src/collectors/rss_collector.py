@@ -563,7 +563,7 @@ class RSSCollector(BaseCollector):
 
         Muchos feeds incluyen HTML en sus descripciones. Este método
         es como tener un filtro inteligente que mantiene la información
-        importante pero elimina todo el formato innecesario.
+        importante pero elimina por completo el formato innecesario.
         """
         if not html_content:
             return ""
@@ -881,7 +881,7 @@ class RSSCollector(BaseCollector):
         Limpia y normaliza texto de manera consistente.
 
         Este método es como tener un editor que aplica reglas de estilo
-        consistentes a todo el texto que procesamos.
+        consistentes a cada texto que procesamos.
         """
         if not text:
             return ""
@@ -914,27 +914,3 @@ class RSSCollector(BaseCollector):
         }
 
 
-# ¿Por qué esta arquitectura de colector?
-# =======================================
-#
-# 1. ROBUSTEZ ANTE ERRORES: Cada paso maneja graciosamente todos los tipos
-#    de errores que pueden ocurrir en el mundo real de RSS feeds.
-#
-# 2. RESPETO POR LOS SERVIDORES: Rate limiting, reintentos inteligentes,
-#    y headers apropiados para ser un buen ciudadano de internet.
-#
-# 3. FLEXIBILIDAD DE DATOS: Puede manejar la enorme variabilidad en
-#    formatos y calidad de diferentes feeds RSS.
-#
-# 4. OBSERVABILIDAD COMPLETA: Logging detallado y estadísticas para
-#    entender exactamente qué está pasando en cada momento.
-#
-# 5. OPTIMIZACIÓN DE PERFORMANCE: Sesiones HTTP persistentes, procesamiento
-#    eficiente, y filtrado temprano de contenido irrelevante.
-#
-# 6. EXTENSIBILIDAD: Diseñado para ser fácilmente extendido con nuevos
-#    tipos de fuentes y procesamiento más sofisticado.
-#
-# Este colector es como tener un explorador digital súper competente que
-# nunca se cansa, siempre es cortés, y tiene una memoria perfecta para
-# evitar trabajo duplicado.

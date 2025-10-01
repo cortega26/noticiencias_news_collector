@@ -136,7 +136,7 @@ def test_collection_cycle_logs_and_emits_metrics(
             "success_rate_percent": 50,
         },
         "session_info": {
-            "session_id": "dummy-session",
+            "session_id": "sample-session",
             "system_id": system.system_id,
             "start_time": system.start_time.isoformat(),
             "end_time": system.start_time.isoformat(),
