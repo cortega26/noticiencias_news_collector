@@ -16,6 +16,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy import create_engine, desc, func, inspect, text
+from sqlalchemy.engine import URL
+from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm import sessionmaker, Session, load_only
 from sqlalchemy.exc import IntegrityError
 
@@ -53,6 +55,23 @@ class DatabaseManager:
     cada rincón del edificio y puede ayudarte a encontrar cualquier
     información instantáneamente, o guardarte nuevos materiales en el
     lugar más apropiado.
+
+    Estrategia de migración
+    -----------------------
+    La inicialización ejecuta automáticamente una secuencia segura para
+    mantener el esquema alineado con el código:
+
+    1. Construye el engine con la configuración de pooling y timeouts
+       adecuada para el backend seleccionado (incluyendo PostgreSQL en
+       producción).
+    2. Ejecuta `Base.metadata.create_all` para crear tablas que no
+       existan todavía.
+    3. Corre ``_run_schema_migrations`` que aplica ajustes idempotentes
+       documentados en ``docs/database_deployment.md``.
+
+    Antes de un despliegue productivo se debe revisar la guía de
+    despliegue para completar los pasos manuales como verificación de
+    backups y replicación.
     """
 
     def __init__(self, database_config: Dict[str, Any] = None):
@@ -99,17 +118,40 @@ class DatabaseManager:
                 )
 
             elif self.config["type"] == "postgresql":
-                # Para PostgreSQL futuro
-                database_url = (
-                    f"postgresql://{self.config['user']}:{self.config['password']}"
-                    f"@{self.config['host']}:{self.config['port']}/{self.config['name']}"
+                query_params: Dict[str, Any] = {}
+                ssl_mode = self.config.get("sslmode")
+                if ssl_mode:
+                    query_params["sslmode"] = ssl_mode
+
+                database_url = URL.create(
+                    "postgresql",
+                    username=self.config.get("user"),
+                    password=self.config.get("password") or None,
+                    host=self.config.get("host"),
+                    port=int(self.config.get("port", 5432)),
+                    database=self.config.get("name"),
+                    query=query_params,
                 )
+
+                connect_args: Dict[str, Any] = {
+                    "connect_timeout": int(self.config.get("connect_timeout", 10))
+                }
+                statement_timeout = int(self.config.get("statement_timeout", 0))
+                if statement_timeout > 0:
+                    connect_args["options"] = (
+                        f"-c statement_timeout={statement_timeout}"
+                    )
+
                 self.engine = create_engine(
                     database_url,
                     echo=False,
-                    pool_size=5,  # Pool de conexiones para mejor performance
-                    max_overflow=10,
+                    poolclass=QueuePool,
+                    pool_size=int(self.config.get("pool_size", 10)),
+                    max_overflow=int(self.config.get("max_overflow", 5)),
+                    pool_timeout=int(self.config.get("pool_timeout", 30)),
+                    pool_recycle=int(self.config.get("pool_recycle", 1800)),
                     pool_pre_ping=True,
+                    connect_args=connect_args,
                 )
 
             else:
@@ -140,7 +182,13 @@ class DatabaseManager:
             raise
 
     def _run_schema_migrations(self) -> None:
-        """Aplica migraciones ligeras necesarias para el esquema actual."""
+        """Aplica migraciones ligeras necesarias para el esquema actual.
+
+        Detalles adicionales y pasos manuales complementarios se
+        documentan en ``docs/database_deployment.md`` para garantizar que
+        las migraciones automatizadas convivan con procesos operativos
+        como backups y replicación.
+        """
 
         try:
             inspector = inspect(self.engine)

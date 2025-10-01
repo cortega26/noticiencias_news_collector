@@ -4,6 +4,8 @@
 
 import os
 from pathlib import Path
+from typing import Dict, Any
+
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde archivo .env
@@ -22,18 +24,58 @@ DATA_DIR.mkdir(exist_ok=True)
 LOGS_DIR.mkdir(exist_ok=True)
 DLQ_DIR.mkdir(exist_ok=True)
 
+# Detección del entorno
+# =====================
+def _detect_environment() -> str:
+    """Return the normalized runtime environment name."""
+
+    candidates = [
+        os.getenv("ENV"),
+        os.getenv("APP_ENV"),
+        os.getenv("ENVIRONMENT"),
+    ]
+    for candidate in candidates:
+        if candidate:
+            normalized = candidate.strip().lower()
+            if normalized:
+                return normalized
+    return "development"
+
+
+ENVIRONMENT = _detect_environment()
+IS_PRODUCTION = ENVIRONMENT in {"production", "prod"}
+IS_STAGING = ENVIRONMENT in {"staging", "stage"}
+
+
+def _build_database_config() -> Dict[str, Any]:
+    """Compose the database configuration based on the environment."""
+
+    if IS_PRODUCTION or IS_STAGING:
+        return {
+            "type": "postgresql",
+            "host": os.getenv("DB_HOST", "localhost"),
+            "port": int(os.getenv("DB_PORT", 5432)),
+            "name": os.getenv("DB_NAME", "news_collector"),
+            "user": os.getenv("DB_USER", "collector"),
+            "password": os.getenv("DB_PASSWORD", ""),
+            "sslmode": os.getenv("DB_SSLMODE"),
+            "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", 10)),
+            "statement_timeout": int(os.getenv("DB_STATEMENT_TIMEOUT", 30000)),
+            "pool_size": int(os.getenv("DB_POOL_SIZE", 10)),
+            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", 5)),
+            "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", 30)),
+            "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", 1800)),
+        }
+
+    return {
+        "type": "sqlite",
+        "path": DATA_DIR / "news.db",
+    }
+
+
 # Configuración de Base de Datos
 # ==============================
-DATABASE_CONFIG = {
-    "type": "sqlite",
-    "path": DATA_DIR / "news.db",
-    # Para PostgreSQL futuro:
-    # 'host': os.getenv('DB_HOST', 'localhost'),
-    # 'port': os.getenv('DB_PORT', 5432),
-    # 'name': os.getenv('DB_NAME', 'news_collector'),
-    # 'user': os.getenv('DB_USER', 'collector'),
-    # 'password': os.getenv('DB_PASSWORD', ''),
-}
+DATABASE_CONFIG = _build_database_config()
 
 # Configuración de Colección
 # ==========================
@@ -230,12 +272,32 @@ def validate_config():
             f"Tipo de base de datos no soportado: {DATABASE_CONFIG['type']}"
         )
 
+    if DATABASE_CONFIG["type"] == "sqlite":
+        if "path" not in DATABASE_CONFIG:
+            raise ValueError("Config SQLite requiere clave 'path'")
+
+    if DATABASE_CONFIG["type"] == "postgresql":
+        required_keys = ["host", "port", "name", "user"]
+        missing = [key for key in required_keys if not DATABASE_CONFIG.get(key)]
+        if missing:
+            raise ValueError(
+                "Config Postgres incompleta, faltan claves: " + ", ".join(missing)
+            )
+        if int(DATABASE_CONFIG.get("pool_size", 0)) <= 0:
+            raise ValueError("Postgres pool_size debe ser mayor que cero")
+        if int(DATABASE_CONFIG.get("pool_timeout", 0)) <= 0:
+            raise ValueError("Postgres pool_timeout debe ser mayor que cero")
+
     print("✅ Configuración validada correctamente")
 
 
 # Configuración de desarrollo vs producción
 # =========================================
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+_debug_flag = os.getenv("DEBUG")
+if _debug_flag is None:
+    DEBUG = not (IS_PRODUCTION or IS_STAGING)
+else:
+    DEBUG = _debug_flag.lower() == "true"
 
 if DEBUG:
     # En modo desarrollo, más verbose y timeouts más largos
