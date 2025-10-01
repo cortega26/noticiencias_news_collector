@@ -11,6 +11,7 @@ import subprocess
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -616,17 +617,19 @@ def load_baseline(path: Path) -> List[Dict[str, str]]:
     return data if isinstance(data, list) else []
 
 
+def _fingerprint_key(tag: str, kind: str, file_path: str, snippet: str) -> str:
+    snippet_hash = sha256(snippet.encode("utf-8")).hexdigest()
+    return "|".join([tag, kind, file_path, snippet_hash])
+
+
 def findings_to_fingerprint(findings: Sequence[Finding]) -> Dict[str, Finding]:
     mapping: Dict[str, Finding] = {}
     for finding in findings:
-        fingerprint = "|".join(
-            [
-                finding.tag,
-                finding.kind,
-                finding.file,
-                str(finding.line_start),
-                finding.snippet,
-            ]
+        fingerprint = _fingerprint_key(
+            finding.tag,
+            finding.kind,
+            finding.file,
+            finding.snippet,
         )
         mapping[fingerprint] = finding
     return mapping
@@ -637,14 +640,11 @@ def baseline_fingerprint(
 ) -> Dict[str, Dict[str, str]]:
     mapping: Dict[str, Dict[str, str]] = {}
     for entry in entries:
-        fingerprint = "|".join(
-            [
-                entry.get("tag", ""),
-                entry.get("kind", ""),
-                entry.get("file", ""),
-                str(entry.get("line_start", "")),
-                entry.get("snippet", ""),
-            ]
+        fingerprint = _fingerprint_key(
+            entry.get("tag", ""),
+            entry.get("kind", ""),
+            entry.get("file", ""),
+            entry.get("snippet", ""),
         )
         mapping[fingerprint] = entry
     return mapping
