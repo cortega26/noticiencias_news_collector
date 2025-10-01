@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import List, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from src.utils.pydantic_compat import get_pydantic_module
+
+_pydantic = get_pydantic_module()
+BaseModel = _pydantic.BaseModel
+ConfigDict = _pydantic.ConfigDict
+Field = _pydantic.Field
+model_validator = _pydantic.model_validator
 
 SUPPORTED_LANGUAGES = {"en", "es"}
 
