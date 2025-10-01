@@ -2,7 +2,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import cast
 
 import pytest
 
@@ -14,6 +14,10 @@ from src.collectors import RSSCollector
 from src.scoring import create_scorer
 from src.storage import models as storage_models
 from src.storage.database import DatabaseManager
+from tests.collector_pipeline_types import (
+    ExpectedStorageFields,
+    PipelineEntry,
+)
 
 
 FIXTURE_PATH = (
@@ -22,9 +26,9 @@ FIXTURE_PATH = (
 
 
 @pytest.fixture(scope="module")
-def pipeline_dataset() -> List[Dict[str, object]]:
+def pipeline_dataset() -> list[PipelineEntry]:
     with FIXTURE_PATH.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        return cast(list[PipelineEntry], json.load(fh))
 
 
 @pytest.fixture()
@@ -45,10 +49,10 @@ def isolated_database(
     return manager
 
 
-def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
-    collector_raw = dict(entry["collector_raw"])  # shallow copy
-    offset_hours = collector_raw.pop("published_offset_hours")
-    published_dt = datetime.now(timezone.utc) + timedelta(hours=offset_hours)
+def _prepare_raw_article(entry: PipelineEntry) -> dict[str, object]:
+    collector_raw = cast(dict[str, object], {**entry["collector_raw"]})
+    raw_offset = cast(int, collector_raw.pop("published_offset_hours"))
+    published_dt = datetime.now(timezone.utc) + timedelta(hours=raw_offset)
     collector_raw["published_date"] = published_dt
     collector_raw.setdefault("published_tz_offset_minutes", 0)
     collector_raw.setdefault("published_tz_name", "UTC")
@@ -59,7 +63,7 @@ def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
 
 def test_collector_pipeline_end_to_end(
     isolated_database: DatabaseManager,
-    pipeline_dataset: List[Dict[str, object]],
+    pipeline_dataset: list[PipelineEntry],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -84,7 +88,7 @@ def test_collector_pipeline_end_to_end(
 
     monkeypatch.setattr(RSSCollector, "_extract_articles_from_feed", fake_extract)
 
-    recon_records: List[Dict[str, object]] = []
+    recon_records: list[dict[str, object]] = []
 
     scorer = create_scorer()
 
@@ -93,12 +97,12 @@ def test_collector_pipeline_end_to_end(
         raw_article = _prepare_raw_article(entry)
         collector._test_articles = [raw_article]
 
-        source_config = {
+        source_config: dict[str, object] = {
             "name": source["name"],
             "url": source["url"],
             "category": source["category"],
             "credibility_score": source["credibility_score"],
-            "language": source.get("language", "en"),
+            "language": source["language"],
         }
 
         stats = collector.collect_from_source(source["id"], source_config)
@@ -113,23 +117,27 @@ def test_collector_pipeline_end_to_end(
                 .first()
             )
             assert stored_article is not None, "article should be persisted"
-            enrichment = stored_article.article_metadata.get("enrichment", {})
+            enrichment = cast(
+                dict[str, object],
+                stored_article.article_metadata.get("enrichment", {}),
+            )
 
         expected_enrichment = entry["enrichment_expected"]
         assert enrichment.get("language") == expected_enrichment["language"]
         assert enrichment.get("sentiment") == expected_enrichment["sentiment"]
-        actual_topics = enrichment.get("topics", [])
+        actual_topics = cast(list[str], enrichment.get("topics", []))
         for topic in expected_enrichment["topics"]:
             assert topic in actual_topics
-        actual_entities = enrichment.get("entities", [])
+        actual_entities = cast(list[str], enrichment.get("entities", []))
         for entity in expected_enrichment["entities"]:
             assert entity in actual_entities
 
-        score_payload = scorer.score_article(stored_article)
-        assert (
-            score_payload["should_include"]
-            == entry["expected_storage"]["should_include"]
+        score_payload = cast(
+            dict[str, object],
+            scorer.score_article(stored_article),
         )
+        should_include = cast(bool, score_payload["should_include"])
+        assert should_include == entry["expected_storage"]["should_include"]
 
         updated = isolated_database.update_article_score(
             stored_article.id, score_payload
@@ -151,7 +159,7 @@ def test_collector_pipeline_end_to_end(
         assert post_article is not None
         assert len(logs) == 1
 
-        expected_fields = entry["expected_storage"]["fields"]
+        expected_fields: ExpectedStorageFields = entry["expected_storage"]["fields"]
         for field_name, expected_value in expected_fields.items():
             assert getattr(post_article, field_name) == expected_value
 
@@ -166,8 +174,9 @@ def test_collector_pipeline_end_to_end(
             "content_quality",
             "engagement",
         ):
-            component_value = post_article.score_components.get(component_name)
-            assert component_value is not None
+            component_value_obj = post_article.score_components.get(component_name)
+            assert isinstance(component_value_obj, (int, float))
+            component_value = float(component_value_obj)
             assert 0.0 <= component_value <= 1.0
 
         recon_records.append(
@@ -184,7 +193,7 @@ def test_collector_pipeline_end_to_end(
                     "final_score": post_article.final_score,
                     "processing_status": post_article.processing_status,
                     "score_components": post_article.score_components,
-                    "should_include": score_payload["should_include"],
+                    "should_include": should_include,
                     "enrichment": enrichment,
                 },
             }

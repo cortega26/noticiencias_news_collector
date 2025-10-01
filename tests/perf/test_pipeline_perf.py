@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, List
+from typing import cast
 
 import pytest
 
@@ -19,17 +19,19 @@ if str(PROJECT_ROOT.parent) not in sys.path:
 
 from config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
 from src.collectors import RSSCollector
+from src.contracts import ArticleForEnrichmentModel
 from src.enrichment import enrichment_pipeline
 from src.scoring import create_scorer
 from src.storage import models as storage_models
 from src.storage.database import DatabaseManager
+from tests.collector_pipeline_types import PipelineEntry
 
 FIXTURE_PATH = PROJECT_ROOT / "data" / "collector_pipeline_chain.json"
 
 pytestmark = pytest.mark.perf
 
 
-def _percentile(values: List[float], percentile: float) -> float:
+def _percentile(values: list[float], percentile: float) -> float:
     if not values:
         return 0.0
     ordered = sorted(values)
@@ -44,10 +46,10 @@ def _percentile(values: List[float], percentile: float) -> float:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * weight
 
 
-def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
-    collector_raw = dict(entry["collector_raw"])
-    offset_hours = float(collector_raw.pop("published_offset_hours"))
-    published_ts = datetime.now(timezone.utc) + timedelta(hours=offset_hours)
+def _prepare_raw_article(entry: PipelineEntry) -> dict[str, object]:
+    collector_raw = cast(dict[str, object], {**entry["collector_raw"]})
+    offset_raw = cast(float | int, collector_raw.pop("published_offset_hours"))
+    published_ts = datetime.now(timezone.utc) + timedelta(hours=float(offset_raw))
     collector_raw["published_date"] = published_ts
     collector_raw.setdefault("published_tz_offset_minutes", 0)
     collector_raw.setdefault("published_tz_name", "UTC")
@@ -57,9 +59,9 @@ def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
 
 
 @pytest.fixture(scope="module")
-def pipeline_dataset() -> List[Dict[str, object]]:
+def pipeline_dataset() -> list[PipelineEntry]:
     with FIXTURE_PATH.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        return cast(list[PipelineEntry], json.load(fh))
 
 
 @pytest.fixture()
@@ -108,11 +110,11 @@ def collector(
 
 def test_pipeline_stage_latencies(
     collector: RSSCollector,
-    pipeline_dataset: List[Dict[str, object]],
+    pipeline_dataset: list[PipelineEntry],
     isolated_database: DatabaseManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    stage_timings: Dict[str, List[float]] = {
+    stage_timings: dict[str, list[float]] = {
         "ingestion": [],
         "enrichment": [],
         "scoring": [],
@@ -120,7 +122,9 @@ def test_pipeline_stage_latencies(
 
     original_enrich = enrichment_pipeline.enrich_article
 
-    def timed_enrich(article: Dict[str, object] | object) -> Dict[str, object]:
+    def timed_enrich(
+        article: dict[str, object] | ArticleForEnrichmentModel,
+    ) -> dict[str, object]:
         start = perf_counter()
         result = original_enrich(article)
         stage_timings["enrichment"].append(perf_counter() - start)
@@ -135,12 +139,12 @@ def test_pipeline_stage_latencies(
         collector._test_articles = [raw_article]
 
         source = entry["source"]
-        source_config = {
+        source_config: dict[str, object] = {
             "name": source["name"],
             "url": source["url"],
             "category": source["category"],
             "credibility_score": source["credibility_score"],
-            "language": source.get("language", "en"),
+            "language": source["language"],
         }
 
         ingest_start = perf_counter()
@@ -160,7 +164,7 @@ def test_pipeline_stage_latencies(
         scorer.score_article(stored_article)
         stage_timings["scoring"].append(perf_counter() - score_start)
 
-    metrics: Dict[str, Dict[str, float]] = {}
+    metrics: dict[str, dict[str, float]] = {}
     for stage, durations in stage_timings.items():
         assert durations, f"No samples recorded for {stage} stage"
         metrics[stage] = {

@@ -2,7 +2,7 @@ import asyncio
 import sys
 from pathlib import Path
 from time import perf_counter, sleep
-from typing import Dict
+from typing import Any
 
 import pytest
 
@@ -26,7 +26,7 @@ class DummyDB:
     def __init__(self):
         self.saved = []
 
-    def get_source_feed_metadata(self, source_id: str) -> Dict[str, str]:
+    def get_source_feed_metadata(self, source_id: str) -> dict[str, str | None]:
         return {"etag": None, "last_modified": None}
 
     def update_source_feed_metadata(
@@ -38,7 +38,7 @@ class DummyDB:
     ) -> None:
         return None
 
-    def update_source_stats(self, source_id: str, stats: Dict[str, float]) -> None:
+    def update_source_stats(self, source_id: str, stats: dict[str, float]) -> None:
         return None
 
     def save_article(self, article):
@@ -138,7 +138,7 @@ def _stub_common_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: DummyAsyncClient())
 
 
-def _build_sources() -> Dict[str, Dict[str, str]]:
+def _build_sources() -> dict[str, dict[str, Any]]:
     return {
         f"source-{idx}": {
             "name": f"Source {idx}",
