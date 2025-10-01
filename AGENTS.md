@@ -97,18 +97,20 @@
 
 ## 2) Agent Directory
 
-| Agent | Module(s) | Purpose | Input | Output | Idempotency Key | Queue/Trigger |
+| Agent/Tool | Module(s) | Purpose | Input | Output | Idempotency Key | Queue/Trigger |
 |---|---|---|---|---|---|---|
-| Scheduler | `scripts/scheduler.py` | Cron-style job orchestration | cron | job events | N/A | `cron.*` |
-| Collectors | `src/collectors/*` | Fetch RSS/APIs, respect rate limits | source config | raw docs | `source_id+url+etag/lastmod` | `ingest.raw` |
-| Parser & Normalizer | `src/utils/text_cleaner.py`, `src/collectors/parsers.py` | Clean HTML, extract metadata | raw docs | normalized article | `source_id+canonical_url+hash(content)` | `ingest.norm` |
-| Canonicalize & Dedupe | `src/utils/dedupe.py`, `tests/test_dedupe_utils.py` | Resolve canonical URLs, detect near-dups | normalized | article + cluster | `canonical_url` + `simhash` | `dedupe.out` |
-| Enrichment | `src/enrichment/*` | Topics, NER, sentiment, geo | article | enriched article | `article_id+model_version` | `enrich.out` |
-| Scoring | `src/scoring/*` | Compute impact score & reasons | enriched article | scored article | `article_id+scorer_version` | `score.out` |
-| Reranker | `src/reranker/*` | Diversify and order top stories | scored list | reranked list | `window_id+scorer_version` | `rank.out` |
-| Storage | `src/storage/*` | Upsert into persistence layer | pipeline outputs | DB docs | primary keys | N/A |
-| Serving | `src/serving/*` | API/UI payloads | DB + caches | JSON responses | N/A | HTTP/gRPC |
-| Monitoring | `scripts/monitor_*` (future) | Metrics, alerts | telemetry | alerts | rule id | `alerts.*` |
+| Orchestrator | `main.NewsCollectorSystem`, `run_collector.py` | Coordinate full pipeline execution and session lifecycle | CLI args, config overrides | Collection session events & metrics | N/A | CLI / cron |
+| RSS Collectors | `src/collectors/rss_collector.py`, `src/collectors/async_rss_collector.py`, `src/collectors/base_collector.py`, `src/collectors/rate_limit_utils.py` | Fetch feeds, enforce rate limits, serialize payloads | Source config, feed entries | `CollectorArticleModel` payloads | `source_id+canonical_url` (+ ETag/Last-Modified) | `ingest.raw` |
+| Parser & Normalizer | `src/utils/text_cleaner.py`, `src/utils/datetime_utils.py`, `src/utils/url_canonicalizer.py`, `src/contracts/collector.py` | Clean text, normalize timestamps, validate schemas | Collector payload | Normalized article dict | `source_id+canonical_url+hash(summary)` | `ingest.norm` |
+| Canonicalize & Dedupe | `src/utils/url_canonicalizer.py`, `src/utils/dedupe.py`, `tests/test_dedupe_utils.py` | Collapse URL variants, compute SimHash clusters | Normalized article | Article + dedupe cluster metadata | `canonical_url` + `simhash64` | `dedupe.out` |
+| Enrichment | `src/enrichment/pipeline.py`, `src/enrichment/nlp_stack.py` | Add topics, NER, sentiment, geo tags | Deduplicated article | Enriched article | `article_id+model_version` | `enrich.out` |
+| Scoring | `src/scoring/basic_scorer.py`, `src/scoring/feature_scorer.py` | Compute impact scores & feature contributions | Enriched article | Scored article record | `article_id+scorer_version` | `score.out` |
+| Reranker | `src/reranker/reranker.py` | Diversify, re-rank scored articles | Scored batch | Ranked list | `window_id+scorer_version` | `rank.out` |
+| Storage | `src/storage/database.py`, `src/storage/models.py` | Upsert records into persistence layer | Pipeline outputs | Database rows + history | Primary keys | N/A |
+| Serving | `src/serving/api.py` | Deliver API/UI payloads | Stored articles, caches | JSON responses | N/A | HTTP/gRPC |
+| Monitoring & Ops | `src/monitoring/*`, `scripts/healthcheck.py`, `scripts/weekly_quality_report.py`, `scripts/run_secret_scan.py` | Health checks, anomaly detection, compliance tooling | Telemetry, DB snapshots | Alerts, reports, compliance logs | Rule/alert id | `ops.*` / CLI |
+
+> **Maintainer checkpoint:** Before merging doc or pipeline changes, run a quick review in `#maintainers-news` (or your local equivalent) confirming these module paths and triggers still match reality.
 
 ---
 
