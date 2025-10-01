@@ -100,9 +100,16 @@ Cada artículo incluye un payload de "why ranked" con contribuciones por feature
 - Git
 
 ### 1. Clonar el Repositorio
+> ℹ️ El repositorio es privado. Asegúrate de tener acceso autorizado (SSH o token personal) antes de clonar.
+
 ```bash
-git clone https://github.com/cortega26/news-collector.git
-cd news-collector
+# Usando SSH (recomendado)
+git clone git@github.com:noticiencias/noticiencias_news_collector.git
+cd noticiencias_news_collector
+
+# Usando HTTPS + token personal
+git clone https://github.com/noticiencias/noticiencias_news_collector.git
+cd noticiencias_news_collector
 ```
 
 ### 2. Crear y activar entorno virtual (recomendado)
@@ -662,8 +669,8 @@ Este proyecto está bajo la licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 ## 📞 Soporte
 
-- **Issues**: [GitHub Issues](https://github.com/cortega26/news-collector/issues)
-- **Discusiones**: [GitHub Discussions](https://github.com/cortega26/news-collector/discussions)
+- **Issues**: [GitHub Issues](https://github.com/noticiencias/noticiencias_news_collector/issues)
+- **Discusiones**: [GitHub Discussions](https://github.com/noticiencias/noticiencias_news_collector/discussions)
 - **Email**: n/a
 
 ---
