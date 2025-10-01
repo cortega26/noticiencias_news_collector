@@ -26,6 +26,8 @@ sqlalchemy==2.0.43         # ORM potente y flexible
 python-dotenv==1.1.1       # Manejo de variables de entorno
 schedule==1.2.2            # Scheduling de tareas simple
 click==8.3.0               # CLI interface elegante
+ruamel.yaml==0.18.6        # YAML round-trip preservation para el editor de configuración
+tomli-w==1.0.0             # Escritura de TOML manteniendo formato estable
 
 # API y Serving
 fastapi==0.118.0           # Framework para exponer APIs modernas
