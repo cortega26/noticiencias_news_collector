@@ -86,15 +86,11 @@ SCORING_CONFIG = {
         "max_penalty": float(os.getenv("DIVERSITY_MAX_PENALTY", 0.3)),
     },
     "content_quality_heuristics": {
-        "title_length_divisor": float(
-            os.getenv("SCORING_TITLE_LENGTH_DIVISOR", 120.0)
-        ),
+        "title_length_divisor": float(os.getenv("SCORING_TITLE_LENGTH_DIVISOR", 120.0)),
         "summary_length_divisor": float(
             os.getenv("SCORING_SUMMARY_LENGTH_DIVISOR", 400.0)
         ),
-        "entity_target_count": float(
-            os.getenv("SCORING_ENTITY_TARGET_COUNT", 5.0)
-        ),
+        "entity_target_count": float(os.getenv("SCORING_ENTITY_TARGET_COUNT", 5.0)),
         "weights": {
             "title": float(os.getenv("SCORING_CONTENT_WEIGHT_TITLE", 0.4)),
             "summary": float(os.getenv("SCORING_CONTENT_WEIGHT_SUMMARY", 0.4)),
@@ -109,12 +105,8 @@ SCORING_CONFIG = {
         },
         "fallback_sentiment": float(os.getenv("SCORING_SENTIMENT_FALLBACK", 0.5)),
         "word_count_divisor": float(os.getenv("SCORING_WORD_COUNT_DIVISOR", 800.0)),
-        "external_weight": float(
-            os.getenv("SCORING_ENGAGEMENT_EXTERNAL_WEIGHT", 0.6)
-        ),
-        "length_weight": float(
-            os.getenv("SCORING_ENGAGEMENT_LENGTH_WEIGHT", 0.4)
-        ),
+        "external_weight": float(os.getenv("SCORING_ENGAGEMENT_EXTERNAL_WEIGHT", 0.6)),
+        "length_weight": float(os.getenv("SCORING_ENGAGEMENT_LENGTH_WEIGHT", 0.4)),
     },
     "reranker_seed": int(os.getenv("RERANKER_SEED", 1337)),
     "source_cap_percentage": float(os.getenv("SOURCE_CAP_PERCENTAGE", 0.5)),

@@ -49,13 +49,18 @@ class _FrozenDateTime(datetime):
         return cls.frozen_value
 
 
-@pytest.mark.parametrize("component", [
-    "source_credibility",
-    "recency",
-    "content_quality",
-    "engagement",
-])
-def test_scoring_components_match_golden(monkeypatch: pytest.MonkeyPatch, component: str) -> None:
+@pytest.mark.parametrize(
+    "component",
+    [
+        "source_credibility",
+        "recency",
+        "content_quality",
+        "engagement",
+    ],
+)
+def test_scoring_components_match_golden(
+    monkeypatch: pytest.MonkeyPatch, component: str
+) -> None:
     golden_data = _load_dataset()
     frozen_at = datetime.fromisoformat(golden_data["frozen_at"].replace("Z", "+00:00"))
     _FrozenDateTime.frozen_value = frozen_at
@@ -70,7 +75,9 @@ def test_scoring_components_match_golden(monkeypatch: pytest.MonkeyPatch, compon
 
         expected = entry["expected"]
         assert score["should_include"] == expected["should_include"]
-        assert score["final_score"] == pytest.approx(expected["final_score"], abs=ABS_TOL)
+        assert score["final_score"] == pytest.approx(
+            expected["final_score"], abs=ABS_TOL
+        )
         assert score["components"][component] == pytest.approx(
             expected["components"][component], abs=ABS_TOL
         )

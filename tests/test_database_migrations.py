@@ -70,7 +70,9 @@ def _create_legacy_sources_table(db_path: Path) -> None:
         }
     ],
 )
-def test_database_manager_backfills_suppression_columns(tmp_path: Path, missing_columns: set[str]) -> None:
+def test_database_manager_backfills_suppression_columns(
+    tmp_path: Path, missing_columns: set[str]
+) -> None:
     """The manager should auto-upgrade legacy source tables missing suppression fields."""
 
     db_path = tmp_path / "legacy.db"
@@ -82,4 +84,6 @@ def test_database_manager_backfills_suppression_columns(tmp_path: Path, missing_
     columns = {col["name"] for col in inspector.get_columns("sources")}
 
     for column in missing_columns:
-        assert column in columns, f"Expected column '{column}' to be created via migration"
+        assert (
+            column in columns
+        ), f"Expected column '{column}' to be created via migration"

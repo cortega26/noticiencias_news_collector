@@ -312,7 +312,10 @@ class RSSCollector(BaseCollector):
         """
         try:
             max_retries = RATE_LIMITING_CONFIG["max_retries"]
-            cached_headers: Dict[str, Optional[str]] = {"etag": None, "last_modified": None}
+            cached_headers: Dict[str, Optional[str]] = {
+                "etag": None,
+                "last_modified": None,
+            }
             try:
                 cached_headers = self.db_manager.get_source_feed_metadata(source_id)
             except Exception as metadata_error:
@@ -789,7 +792,9 @@ class RSSCollector(BaseCollector):
             )
             return None
 
-    def _save_article(self, article_data: CollectorArticleModel | Dict[str, Any]) -> bool:
+    def _save_article(
+        self, article_data: CollectorArticleModel | Dict[str, Any]
+    ) -> bool:
         """
         Guarda un artículo procesado en la base de datos.
 

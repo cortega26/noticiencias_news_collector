@@ -18,7 +18,9 @@ class _StubFastAPI:
     def __init__(self, *args, **kwargs):  # pragma: no cover - simple stub
         self.routes = []
 
-    def get(self, *decorator_args, **decorator_kwargs):  # pragma: no cover - simple stub
+    def get(
+        self, *decorator_args, **decorator_kwargs
+    ):  # pragma: no cover - simple stub
         def decorator(func):
             self.routes.append(("GET", decorator_args, decorator_kwargs, func))
             return func
@@ -164,7 +166,6 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
     system_logger = dummy_logger.modules.get("system")
     assert system_logger is not None
     assert any(
-        isinstance(event, dict)
-        and event.get("event") == "system.initialize.warning"
+        isinstance(event, dict) and event.get("event") == "system.initialize.warning"
         for event in system_logger.warnings
     )

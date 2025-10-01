@@ -63,20 +63,26 @@ def pipeline_dataset() -> List[Dict[str, object]]:
 
 
 @pytest.fixture()
-def isolated_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> DatabaseManager:
+def isolated_database(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> DatabaseManager:
     db_path = tmp_path / "perf_pipeline.db"
     manager = DatabaseManager({"type": "sqlite", "path": db_path})
 
     import src.storage.database as database_module
 
     monkeypatch.setattr(database_module, "_db_manager", manager, raising=False)
-    monkeypatch.setattr("src.collectors.rss_collector.get_database_manager", lambda: manager)
+    monkeypatch.setattr(
+        "src.collectors.rss_collector.get_database_manager", lambda: manager
+    )
 
     return manager
 
 
 @pytest.fixture()
-def collector(monkeypatch: pytest.MonkeyPatch, isolated_database: DatabaseManager) -> RSSCollector:
+def collector(
+    monkeypatch: pytest.MonkeyPatch, isolated_database: DatabaseManager
+) -> RSSCollector:
     collector = RSSCollector()
 
     monkeypatch.setattr(RSSCollector, "_respect_robots", lambda self, url: (True, None))
@@ -106,7 +112,11 @@ def test_pipeline_stage_latencies(
     isolated_database: DatabaseManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    stage_timings: Dict[str, List[float]] = {"ingestion": [], "enrichment": [], "scoring": []}
+    stage_timings: Dict[str, List[float]] = {
+        "ingestion": [],
+        "enrichment": [],
+        "scoring": [],
+    }
 
     original_enrich = enrichment_pipeline.enrich_article
 
@@ -173,6 +183,8 @@ def test_pipeline_stage_latencies(
     perf_reports_dir.mkdir(parents=True, exist_ok=True)
     log_path = perf_reports_dir / "pipeline_perf_metrics.json"
     with log_path.open("w", encoding="utf-8") as fh:
-        json.dump({"metrics": metrics, "thresholds": PIPELINE_PERF_THRESHOLDS}, fh, indent=2)
+        json.dump(
+            {"metrics": metrics, "thresholds": PIPELINE_PERF_THRESHOLDS}, fh, indent=2
+        )
 
     print(f"pipeline_perf_log={log_path}")

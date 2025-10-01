@@ -66,13 +66,9 @@ class CanaryRunner:
                 last_seen_hours = (now - window.last_article_at).total_seconds() / 3600
             error: Optional[str] = None
             if last_seen_hours > check.max_idle_hours:
-                error = (
-                    f"last article seen {last_seen_hours:.1f}h ago (limit {check.max_idle_hours}h)"
-                )
+                error = f"last article seen {last_seen_hours:.1f}h ago (limit {check.max_idle_hours}h)"
             elif window.articles_found < check.min_articles:
-                error = (
-                    f"only {window.articles_found} article(s) fetched (<{check.min_articles})"
-                )
+                error = f"only {window.articles_found} article(s) fetched (<{check.min_articles})"
             results.append(
                 CanaryResult(
                     source_id=window.source_id,
@@ -112,10 +108,14 @@ class AutoSuppressionManager:
             by_source[source_id].append(anomaly)
         for window in stats:
             source_anomalies = by_source.get(window.source_id, [])
-            critical_events = [a for a in source_anomalies if a.severity == Severity.CRITICAL]
+            critical_events = [
+                a for a in source_anomalies if a.severity == Severity.CRITICAL
+            ]
             last_seen_hours = 0.0
             if window.last_article_at:
-                last_seen_hours = (datetime.now(tz=UTC) - window.last_article_at).total_seconds() / 3600
+                last_seen_hours = (
+                    datetime.now(tz=UTC) - window.last_article_at
+                ).total_seconds() / 3600
             if (
                 len(critical_events) >= self._failure_threshold
                 or last_seen_hours >= self._idle_hours_threshold

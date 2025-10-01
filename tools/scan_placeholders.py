@@ -382,11 +382,7 @@ def scan_repository(
     findings: List[Finding] = []
     include_ext_lower = {ext.lower() for ext in include_ext}
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [
-            d
-            for d in dirnames
-            if not is_excluded_dir(d, exclude_dirs)
-        ]
+        dirnames[:] = [d for d in dirnames if not is_excluded_dir(d, exclude_dirs)]
         for filename in filenames:
             path = Path(dirpath) / filename
             ext = path.suffix.lower()
@@ -449,7 +445,9 @@ def apply_git_blame(root: Path, findings: List[Finding]) -> None:
         if not lines:
             continue
         first_line = lines[0]
-        match = re.search(r"\((?P<author>.+?)\s+(?P<date>\d{4}-\d{2}-\d{2})", first_line)
+        match = re.search(
+            r"\((?P<author>.+?)\s+(?P<date>\d{4}-\d{2}-\d{2})", first_line
+        )
         if match:
             author = match.group("author").strip()
             author_time = match.group("date")
@@ -542,7 +540,9 @@ def findings_to_fingerprint(findings: Sequence[Finding]) -> Dict[str, Finding]:
     return mapping
 
 
-def baseline_fingerprint(entries: Sequence[Dict[str, str]]) -> Dict[str, Dict[str, str]]:
+def baseline_fingerprint(
+    entries: Sequence[Dict[str, str]]
+) -> Dict[str, Dict[str, str]]:
     mapping: Dict[str, Dict[str, str]] = {}
     for entry in entries:
         fingerprint = "|".join(
@@ -685,7 +685,13 @@ def run_scan(args: argparse.Namespace) -> int:
     if args.output_json:
         write_json(Path(args.output_json), findings)
     if args.output_md:
-        write_markdown(Path(args.output_md), findings, baseline_entries, new_findings, resolved_findings)
+        write_markdown(
+            Path(args.output_md),
+            findings,
+            baseline_entries,
+            new_findings,
+            resolved_findings,
+        )
 
     if args.save_baseline:
         save_baseline(baseline_path, findings)
@@ -711,20 +717,46 @@ def run_scan(args: argparse.Namespace) -> int:
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Scan repository for TODOs and placeholders.")
+    parser = argparse.ArgumentParser(
+        description="Scan repository for TODOs and placeholders."
+    )
     parser.add_argument("--root", default=".", help="Repository root directory")
-    parser.add_argument("--include-ext", nargs="*", help="File extensions to include (with dot)")
-    parser.add_argument("--exclude-dir", nargs="*", default=[], help="Additional directories to exclude")
-    parser.add_argument("--context", type=int, default=2, help="Context lines to include in snippets")
-    parser.add_argument("--patterns", required=True, help="Path to YAML pattern configuration")
+    parser.add_argument(
+        "--include-ext", nargs="*", help="File extensions to include (with dot)"
+    )
+    parser.add_argument(
+        "--exclude-dir", nargs="*", default=[], help="Additional directories to exclude"
+    )
+    parser.add_argument(
+        "--context", type=int, default=2, help="Context lines to include in snippets"
+    )
+    parser.add_argument(
+        "--patterns", required=True, help="Path to YAML pattern configuration"
+    )
     parser.add_argument("--output-csv", help="Path to write CSV report")
     parser.add_argument("--output-json", help="Path to write JSON report")
     parser.add_argument("--output-md", help="Path to write Markdown report")
-    parser.add_argument("--baseline", default="reports/placeholders.baseline.json", help="Baseline JSON path")
-    parser.add_argument("--save-baseline", action="store_true", help="Persist the current findings as the baseline")
-    parser.add_argument("--compare-baseline", action="store_true", help="Compare current findings with the baseline")
-    parser.add_argument("--blame", action="store_true", help="Include git blame metadata")
-    parser.add_argument("--max-new", type=int, help="Maximum allowed new findings before failing")
+    parser.add_argument(
+        "--baseline",
+        default="reports/placeholders.baseline.json",
+        help="Baseline JSON path",
+    )
+    parser.add_argument(
+        "--save-baseline",
+        action="store_true",
+        help="Persist the current findings as the baseline",
+    )
+    parser.add_argument(
+        "--compare-baseline",
+        action="store_true",
+        help="Compare current findings with the baseline",
+    )
+    parser.add_argument(
+        "--blame", action="store_true", help="Include git blame metadata"
+    )
+    parser.add_argument(
+        "--max-new", type=int, help="Maximum allowed new findings before failing"
+    )
     return parser
 
 

@@ -155,7 +155,9 @@ def test_articles_pagination_is_stable(api_client: TestClient):
     cursor = first_payload["pagination"]["next_cursor"]
     assert cursor
 
-    second_page = api_client.get("/v1/articles", params={"cursor": cursor, "page_size": 2})
+    second_page = api_client.get(
+        "/v1/articles", params={"cursor": cursor, "page_size": 2}
+    )
     assert second_page.status_code == 200
     second_payload = second_page.json()
     assert second_payload["pagination"]["returned"] == 1

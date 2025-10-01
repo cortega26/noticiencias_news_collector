@@ -298,9 +298,7 @@ class DatabaseManager:
         with self.get_session() as session:
             try:
                 # Verificar si ya existe por URL
-                existing = (
-                    session.query(Article).filter_by(url=payload["url"]).first()
-                )
+                existing = session.query(Article).filter_by(url=payload["url"]).first()
                 if existing:
                     logger.debug(f"Artículo ya existe: {payload['url']}")
                     return None
@@ -677,9 +675,7 @@ class DatabaseManager:
                         "source_credibility"
                     ),
                     recency_score=payload["components"].get("recency"),
-                    content_quality_score=payload["components"].get(
-                        "content_quality"
-                    ),
+                    content_quality_score=payload["components"].get("content_quality"),
                     engagement_score=components_model.get_engagement_value(),
                     final_score=payload["final_score"],
                     score_explanation=payload.get("explanation", {}),

@@ -109,7 +109,9 @@ class AsyncRSSCollector(RSSCollector):
                 if cached_headers.get("etag"):
                     conditional_headers["If-None-Match"] = cached_headers["etag"]
                 if cached_headers.get("last_modified"):
-                    conditional_headers["If-Modified-Since"] = cached_headers["last_modified"]
+                    conditional_headers["If-Modified-Since"] = cached_headers[
+                        "last_modified"
+                    ]
 
                 response = await client.get(
                     feed_url,
@@ -153,7 +155,9 @@ class AsyncRSSCollector(RSSCollector):
                 response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "").lower()
-                if not any(xml_type in content_type for xml_type in ["xml", "rss", "atom"]):
+                if not any(
+                    xml_type in content_type for xml_type in ["xml", "rss", "atom"]
+                ):
                     logger.warning(
                         f"⚠️  Content-Type sospechoso: {content_type} para {feed_url}"
                     )
@@ -162,7 +166,9 @@ class AsyncRSSCollector(RSSCollector):
                     logger.warning(f"⚠️  Feed muy grande (>10MB): {feed_url}")
                     return (None, response.status_code)
 
-                if response.headers.get("ETag") or response.headers.get("Last-Modified"):
+                if response.headers.get("ETag") or response.headers.get(
+                    "Last-Modified"
+                ):
                     try:
                         self.db_manager.update_source_feed_metadata(
                             source_id,
@@ -321,9 +327,7 @@ class AsyncRSSCollector(RSSCollector):
                 try:
                     self._pre_process_source(source_id, source_config)
                 except Exception as exc:  # pragma: no cover - defensive
-                    logger.warning(
-                        "Pre-proceso falló para %s: %s", source_id, exc
-                    )
+                    logger.warning("Pre-proceso falló para %s: %s", source_id, exc)
 
             tasks = [run_one(sid, cfg) for sid, cfg in sources_config.items()]
             await asyncio.gather(*tasks)

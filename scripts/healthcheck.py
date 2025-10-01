@@ -93,9 +93,9 @@ def perform_healthcheck(
                 .scalar()
                 or 0
             )
-            latest_ingest: Optional[datetime] = (
-                session.query(func.max(Article.collected_date)).scalar()
-            )
+            latest_ingest: Optional[datetime] = session.query(
+                func.max(Article.collected_date)
+            ).scalar()
     except SQLAlchemyError as exc:  # pragma: no cover - defensive guard
         checks.append(
             CheckResult(

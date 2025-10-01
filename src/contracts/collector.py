@@ -5,12 +5,21 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, TypedDict
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from config.settings import TEXT_PROCESSING_CONFIG
 from .common import ArticleMetadata, ArticleMetadataModel
 
-SUPPORTED_LANGUAGES = set(TEXT_PROCESSING_CONFIG.get("supported_languages", ["en", "es"]))
+SUPPORTED_LANGUAGES = set(
+    TEXT_PROCESSING_CONFIG.get("supported_languages", ["en", "es"])
+)
 
 
 class CollectorArticlePayload(TypedDict, total=False):
@@ -43,7 +52,9 @@ class CollectorArticleModel(BaseModel):
     url: AnyHttpUrl
     original_url: str | None = None
     title: str = Field(min_length=10)
-    summary: str = Field(min_length=TEXT_PROCESSING_CONFIG.get("min_content_length", 50))
+    summary: str = Field(
+        min_length=TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
+    )
     content: str | None = None
     source_id: str = Field(min_length=2)
     source_name: str = Field(min_length=2)

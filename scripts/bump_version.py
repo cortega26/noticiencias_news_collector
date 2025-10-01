@@ -91,7 +91,9 @@ def write_version(lines: list[str], new_version: str) -> None:
         stripped = line.strip()
         match = PROJECT_VERSION_PATTERN.match(stripped)
         if match:
-            updated_line = f"{match.group('prefix')}{new_version}{match.group('suffix')}"
+            updated_line = (
+                f"{match.group('prefix')}{new_version}{match.group('suffix')}"
+            )
             leading = line[: len(line) - len(stripped)]
             updated_lines.append(f"{leading}{updated_line}")
         else:

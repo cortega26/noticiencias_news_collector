@@ -114,7 +114,9 @@ class _DummyLogger:
         return _ModuleLogger()
 
 
-def test_pending_articles_detached_and_scored(database_manager: DatabaseManager) -> None:
+def test_pending_articles_detached_and_scored(
+    database_manager: DatabaseManager,
+) -> None:
     payload = _basic_article_payload()
     saved_article = database_manager.save_article(payload)
     assert saved_article is not None

@@ -24,9 +24,7 @@ class DummyDB:
         self.metadata: Dict[str, Dict[str, Any]] = {}
 
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Any]:
-        return self.metadata.get(
-            source_id, {"etag": None, "last_modified": None}
-        )
+        return self.metadata.get(source_id, {"etag": None, "last_modified": None})
 
     def update_source_feed_metadata(
         self,
@@ -43,7 +41,9 @@ class DummyDB:
         if last_modified is not None:
             entry["last_modified"] = last_modified
 
-    def update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:  # pragma: no cover - unused in tests
+    def update_source_stats(
+        self, source_id: str, stats: Dict[str, Any]
+    ) -> None:  # pragma: no cover - unused in tests
         self.metadata.setdefault(source_id, {})
 
     def save_article(self, article: Dict[str, Any]):  # pragma: no cover - compatibility
@@ -78,7 +78,9 @@ class DummyAsyncClient:
         self.response = response
         self.captured_headers: Dict[str, str] | None = None
 
-    async def get(self, url: str, timeout: float, headers: Dict[str, str] | None = None):
+    async def get(
+        self, url: str, timeout: float, headers: Dict[str, str] | None = None
+    ):
         self.captured_headers = headers or {}
         return self.response
 
@@ -121,7 +123,9 @@ async def test_async_fetch_feed_uses_conditional_headers(
     assert content == "<rss></rss>"
     assert client.captured_headers is not None
     assert client.captured_headers["If-None-Match"] == '"old"'
-    assert client.captured_headers["If-Modified-Since"] == "Wed, 21 Oct 2015 07:28:00 GMT"
+    assert (
+        client.captured_headers["If-Modified-Since"] == "Wed, 21 Oct 2015 07:28:00 GMT"
+    )
 
     updated = async_collector.db_manager.get_source_feed_metadata("source1")
     assert updated["etag"] == '"fresh"'

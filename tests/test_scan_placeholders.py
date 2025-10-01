@@ -16,7 +16,9 @@ from tools.scan_placeholders import (
     scan_repository,
 )
 
-PATTERN_PATH = Path(__file__).resolve().parents[1] / "tools" / "placeholder_patterns.yml"
+PATTERN_PATH = (
+    Path(__file__).resolve().parents[1] / "tools" / "placeholder_patterns.yml"
+)
 
 
 @pytest.fixture(scope="module")
@@ -51,7 +53,7 @@ def test_detects_todo_in_python(repo_root, patterns):
 
 
 def test_detects_secret_placeholder(repo_root, patterns):
-    write_file(repo_root / "config" / "settings.yaml", "api_key: \"\"\n")
+    write_file(repo_root / "config" / "settings.yaml", 'api_key: ""\n')
     findings = scan_repository(
         repo_root,
         patterns,

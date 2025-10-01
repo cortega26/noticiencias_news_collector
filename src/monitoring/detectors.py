@@ -97,11 +97,12 @@ class SourceOutageDetector:
             )
             severity: Optional[Severity] = None
             message: Optional[str] = None
-            if window.consecutive_failures >= self._config.consecutive_failure_threshold:
+            if (
+                window.consecutive_failures
+                >= self._config.consecutive_failure_threshold
+            ):
                 severity = Severity.CRITICAL
-                message = (
-                    f"Source {window.source_id} has {window.consecutive_failures} consecutive fetch failures"
-                )
+                message = f"Source {window.source_id} has {window.consecutive_failures} consecutive fetch failures"
             elif ratio <= self._config.alert_ratio:
                 severity = Severity.CRITICAL
                 message = (
@@ -110,12 +111,12 @@ class SourceOutageDetector:
                 )
             elif ratio <= self._config.warn_ratio:
                 severity = Severity.WARNING
-                message = (
-                    f"Source {window.source_id} volume dropped to {ratio:.2f} of baseline"
-                )
+                message = f"Source {window.source_id} volume dropped to {ratio:.2f} of baseline"
             last_seen_gap = None
             if window.last_article_at:
-                last_seen_gap = (self._now - window.last_article_at).total_seconds() / 3600
+                last_seen_gap = (
+                    self._now - window.last_article_at
+                ).total_seconds() / 3600
                 metrics.append(
                     Metric(
                         name="source.last_seen_gap_hours",
@@ -132,7 +133,9 @@ class SourceOutageDetector:
                         severity = Severity.CRITICAL
                         message = gap_message
                     else:
-                        message = f"{message}; {gap_message}" if message else gap_message
+                        message = (
+                            f"{message}; {gap_message}" if message else gap_message
+                        )
             if message and severity:
                 anomalies.append(
                     Anomaly(
@@ -170,13 +173,13 @@ class SchemaDriftDetector:
     def __init__(self, expectation: SchemaExpectation) -> None:
         self._expectation = expectation
 
-    def evaluate(
-        self, samples: Sequence[Mapping[str, object]]
-    ) -> Dict[str, List]:
+    def evaluate(self, samples: Sequence[Mapping[str, object]]) -> Dict[str, List]:
         if not samples:
             return {"metrics": [], "anomalies": []}
         total = len(samples)
-        missing_counts: MutableMapping[str, int] = {key: 0 for key in self._expectation.required_fields}
+        missing_counts: MutableMapping[str, int] = {
+            key: 0 for key in self._expectation.required_fields
+        }
         type_mismatch_counts: MutableMapping[str, int] = {
             key: 0 for key in self._expectation.required_fields
         }

@@ -44,11 +44,19 @@ class StubLoggerFactory:
             self.modules[module_name] = StructuredModuleLogger(module_name)
         return self.modules[module_name]
 
-    def log_performance_metrics(self, metrics: Dict[str, Any], context: str = "") -> None:
-        logging.getLogger("test.performance").info({"metrics": metrics, "context": context})
+    def log_performance_metrics(
+        self, metrics: Dict[str, Any], context: str = ""
+    ) -> None:
+        logging.getLogger("test.performance").info(
+            {"metrics": metrics, "context": context}
+        )
 
-    def log_error_with_context(self, error: Exception, context: Dict[str, Any] | None = None) -> None:
-        logging.getLogger("test.errors").error({"error": str(error), "context": context})
+    def log_error_with_context(
+        self, error: Exception, context: Dict[str, Any] | None = None
+    ) -> None:
+        logging.getLogger("test.errors").error(
+            {"error": str(error), "context": context}
+        )
 
     def log_system_startup(self, **_kwargs: Any) -> None:  # pragma: no cover - stub
         return None
@@ -71,7 +79,9 @@ class StubMetrics:
         self.error_events.append(payload)
 
 
-def test_collection_cycle_logs_and_emits_metrics(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_collection_cycle_logs_and_emits_metrics(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """run_collection_cycle should emit structured logs and metrics per source."""
 
     caplog.set_level(logging.INFO)
@@ -170,18 +180,24 @@ def test_collection_cycle_logs_and_emits_metrics(monkeypatch: pytest.MonkeyPatch
     assert len(metrics_stub.error_events) == 1
     assert metrics_stub.error_events[0]["source_id"] == "source_b"
 
-    structured_messages = [record.msg for record in caplog.records if isinstance(record.msg, dict)]
+    structured_messages = [
+        record.msg for record in caplog.records if isinstance(record.msg, dict)
+    ]
     assert any(
-        msg.get("event") == "collector.source.completed" and msg.get("source_id") == "source_a"
+        msg.get("event") == "collector.source.completed"
+        and msg.get("source_id") == "source_a"
         for msg in structured_messages
     )
     assert any(
-        msg.get("event") == "collector.source.failed" and msg.get("source_id") == "source_b"
+        msg.get("event") == "collector.source.failed"
+        and msg.get("source_id") == "source_b"
         for msg in structured_messages
     )
 
 
-def test_cli_logging(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_cli_logging(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """run_simple_collection should log lifecycle events via the module logger."""
 
     from run_collector import run_simple_collection
@@ -213,5 +229,9 @@ def test_cli_logging(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureF
 
     assert run_simple_collection(args) is True
 
-    structured_messages = [record.msg for record in caplog.records if isinstance(record.msg, dict)]
-    assert any(msg.get("event") == "cli.collection.completed" for msg in structured_messages)
+    structured_messages = [
+        record.msg for record in caplog.records if isinstance(record.msg, dict)
+    ]
+    assert any(
+        msg.get("event") == "cli.collection.completed" for msg in structured_messages
+    )

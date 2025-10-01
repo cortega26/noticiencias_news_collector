@@ -84,7 +84,9 @@ def load_dataset(path: Path) -> Dataset:
             frozen_at = datetime.fromisoformat(frozen.replace("Z", "+00:00"))
         entries = raw.get("articles") or raw.get("items") or raw.get("samples")
         if entries is None:
-            raise ValueError("Dataset JSON must contain an 'articles' array or be a list")
+            raise ValueError(
+                "Dataset JSON must contain an 'articles' array or be a list"
+            )
     else:
         entries = raw
     if not isinstance(entries, list):
@@ -92,7 +94,9 @@ def load_dataset(path: Path) -> Dataset:
     return Dataset(entries=list(entries), frozen_at=frozen_at)
 
 
-def load_baseline(entries: Sequence[Dict[str, object]], baseline_path: Path | None) -> Dict[str, Dict[str, object]]:
+def load_baseline(
+    entries: Sequence[Dict[str, object]], baseline_path: Path | None
+) -> Dict[str, Dict[str, object]]:
     if baseline_path is None:
         baseline: Dict[str, Dict[str, object]] = {}
         for entry in entries:
@@ -160,7 +164,9 @@ def freeze_datetime(target: datetime | None):
         feature_scorer.datetime = original
 
 
-def score_articles(entries: Sequence[Dict[str, object]], baseline_map: Mapping[str, Dict[str, object]]) -> List[ArticleResult]:
+def score_articles(
+    entries: Sequence[Dict[str, object]], baseline_map: Mapping[str, Dict[str, object]]
+) -> List[ArticleResult]:
     scorer = FeatureBasedScorer()
     results: List[ArticleResult] = []
 
@@ -180,10 +186,14 @@ def score_articles(entries: Sequence[Dict[str, object]], baseline_map: Mapping[s
 
         baseline = baseline_map.get(article_id)
         baseline_score = (
-            float(baseline["final_score"]) if baseline and baseline.get("final_score") is not None else None
+            float(baseline["final_score"])
+            if baseline and baseline.get("final_score") is not None
+            else None
         )
         baseline_include = (
-            bool(baseline["should_include"]) if baseline and baseline.get("should_include") is not None else None
+            bool(baseline["should_include"])
+            if baseline and baseline.get("should_include") is not None
+            else None
         )
 
         results.append(
@@ -199,7 +209,9 @@ def score_articles(entries: Sequence[Dict[str, object]], baseline_map: Mapping[s
     return results
 
 
-def precision_at_k(results: Sequence[ArticleResult], positives: Mapping[str, bool], k: int) -> float:
+def precision_at_k(
+    results: Sequence[ArticleResult], positives: Mapping[str, bool], k: int
+) -> float:
     if k <= 0:
         return 0.0
     ranked = sorted(results, key=lambda item: item.final_score, reverse=True)[:k]
@@ -209,12 +221,18 @@ def precision_at_k(results: Sequence[ArticleResult], positives: Mapping[str, boo
     return hits / min(k, len(ranked))
 
 
-def compute_coverage(results: Sequence[ArticleResult], positives: Mapping[str, bool]) -> float:
-    baseline_positive_ids = {article_id for article_id, flag in positives.items() if flag}
+def compute_coverage(
+    results: Sequence[ArticleResult], positives: Mapping[str, bool]
+) -> float:
+    baseline_positive_ids = {
+        article_id for article_id, flag in positives.items() if flag
+    }
     if not baseline_positive_ids:
         return 1.0
     current_positive_ids = {item.article_id for item in results if item.should_include}
-    return len(baseline_positive_ids & current_positive_ids) / len(baseline_positive_ids)
+    return len(baseline_positive_ids & current_positive_ids) / len(
+        baseline_positive_ids
+    )
 
 
 def main() -> None:
@@ -242,7 +260,9 @@ def main() -> None:
     )
 
     if ranked_by_delta:
-        print(f"Top {min(args.report_top, len(ranked_by_delta))} absolute score changes:")
+        print(
+            f"Top {min(args.report_top, len(ranked_by_delta))} absolute score changes:"
+        )
         for item in ranked_by_delta[: args.report_top]:
             baseline_flag = "Y" if item.baseline_should_include else "N"
             current_flag = "Y" if item.should_include else "N"
@@ -265,7 +285,9 @@ def main() -> None:
     coverage = compute_coverage(results, positive_lookup)
     print(f"\nBaseline coverage by current scorer: {coverage:.3f}")
 
-    missing_baseline = [item.article_id for item in results if item.article_id not in baseline_map]
+    missing_baseline = [
+        item.article_id for item in results if item.article_id not in baseline_map
+    ]
     if missing_baseline:
         print("\nWarning: baseline scores missing for the following articles:")
         for article_id in missing_baseline:

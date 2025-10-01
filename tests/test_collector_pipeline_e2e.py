@@ -16,7 +16,9 @@ from src.storage import models as storage_models
 from src.storage.database import DatabaseManager
 
 
-FIXTURE_PATH = Path(__file__).resolve().parent / "data" / "collector_pipeline_chain.json"
+FIXTURE_PATH = (
+    Path(__file__).resolve().parent / "data" / "collector_pipeline_chain.json"
+)
 
 
 @pytest.fixture(scope="module")
@@ -26,7 +28,9 @@ def pipeline_dataset() -> List[Dict[str, object]]:
 
 
 @pytest.fixture()
-def isolated_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> DatabaseManager:
+def isolated_database(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> DatabaseManager:
     db_path = tmp_path / "pipeline.db"
     manager = DatabaseManager({"type": "sqlite", "path": db_path})
 
@@ -54,7 +58,10 @@ def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
 
 
 def test_collector_pipeline_end_to_end(
-    isolated_database: DatabaseManager, pipeline_dataset: List[Dict[str, object]], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    isolated_database: DatabaseManager,
+    pipeline_dataset: List[Dict[str, object]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     collector = RSSCollector()
 
@@ -119,7 +126,10 @@ def test_collector_pipeline_end_to_end(
             assert entity in actual_entities
 
         score_payload = scorer.score_article(stored_article)
-        assert score_payload["should_include"] == entry["expected_storage"]["should_include"]
+        assert (
+            score_payload["should_include"]
+            == entry["expected_storage"]["should_include"]
+        )
 
         updated = isolated_database.update_article_score(
             stored_article.id, score_payload
@@ -150,7 +160,12 @@ def test_collector_pipeline_end_to_end(
         assert post_article.final_score >= entry["expected_storage"]["final_score_min"]
         assert isinstance(post_article.score_components, dict)
 
-        for component_name in ("source_credibility", "recency", "content_quality", "engagement"):
+        for component_name in (
+            "source_credibility",
+            "recency",
+            "content_quality",
+            "engagement",
+        ):
             component_value = post_article.score_components.get(component_name)
             assert component_value is not None
             assert 0.0 <= component_value <= 1.0

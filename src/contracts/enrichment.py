@@ -40,7 +40,9 @@ class ArticleForEnrichmentModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def ensure_text_present(cls, model: "ArticleForEnrichmentModel") -> "ArticleForEnrichmentModel":
+    def ensure_text_present(
+        cls, model: "ArticleForEnrichmentModel"
+    ) -> "ArticleForEnrichmentModel":
         if not (model.title or model.summary or model.content):
             raise ValueError(
                 "enrichment payload requires at least one of title, summary, or content"
@@ -61,7 +63,9 @@ class ArticleEnrichmentModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def normalize_fields(cls, model: "ArticleEnrichmentModel") -> "ArticleEnrichmentModel":
+    def normalize_fields(
+        cls, model: "ArticleEnrichmentModel"
+    ) -> "ArticleEnrichmentModel":
         language = model.language.lower()
         if language not in SUPPORTED_LANGUAGES:
             raise ValueError(
@@ -69,9 +73,7 @@ class ArticleEnrichmentModel(BaseModel):
             )
         sentiment = model.sentiment.lower()
         if sentiment not in {"positive", "negative", "neutral"}:
-            raise ValueError(
-                "sentiment must be 'positive', 'negative', or 'neutral'"
-            )
+            raise ValueError("sentiment must be 'positive', 'negative', or 'neutral'")
         model.language = language
         model.sentiment = sentiment
         model.entities = model.entities[:10]
