@@ -149,6 +149,27 @@ class DatabaseConfig(StrictModel):
         description="Seconds after which pooled connections are recycled.",
     )
 
+    @field_validator("host", "user", "password", "sslmode", mode="before")
+    @classmethod
+    def _blank_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("port", mode="before")
+    @classmethod
+    def _normalize_port(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            if not text.isdigit():
+                raise ValueError("port must be a positive integer")
+            return int(text)
+        return value
+
     @model_validator(mode="after")
     def _validate_backend(self) -> "DatabaseConfig":
         driver = self.driver.lower()

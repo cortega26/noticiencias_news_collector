@@ -54,6 +54,26 @@ def test_save_config_creates_backups(tmp_path: Path) -> None:
     assert backups, "second save should produce a timestamped backup"
 
 
+def test_save_config_drops_optional_none(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[database]\nport = 5432\n", encoding="utf-8")
+    config = load_config(config_file)
+    data = config.model_dump(mode="python")
+    data["database"]["port"] = None
+    updated = Config.model_validate(data)
+    updated._metadata = config._metadata
+    save_config(updated)
+    content = config_file.read_text(encoding="utf-8")
+    assert "port =" not in content
+
+
+def test_blank_database_port_normalized(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[database]\nport = \"\"\n", encoding="utf-8")
+    config = load_config(config_file)
+    assert config.database.port is None
+
+
 def test_validation_errors_report_source(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
     config_file.write_text("[collection]\nrequest_timeout_seconds = 'abc'\n", encoding="utf-8")

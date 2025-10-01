@@ -448,17 +448,29 @@ class ConfigEditor:
         if raw.lower() == "none" and default is None:
             return None
         if isinstance(default, int) and not isinstance(default, bool):
-            return int(raw)
+            try:
+                return int(raw)
+            except ValueError as exc:
+                raise ConfigError(f"{name} must be an integer") from exc
         if isinstance(default, float):
-            return float(raw)
+            try:
+                return float(raw)
+            except ValueError as exc:
+                raise ConfigError(f"{name} must be a number") from exc
         if isinstance(default, list):
             if raw.startswith("["):
-                return json.loads(raw)
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise ConfigError(f"{name} must be valid JSON") from exc
             return [part.strip() for part in raw.split(",") if part.strip()]
         if isinstance(default, dict):
             if not raw:
                 return {}
-            return json.loads(raw)
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise ConfigError(f"{name} must be valid JSON") from exc
         if isinstance(default, bool):
             return raw.lower() in {"true", "1", "yes"}
         return raw
