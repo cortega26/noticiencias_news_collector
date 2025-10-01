@@ -1,0 +1,230 @@
+
+[app]
+environment = "development"
+debug = false
+timezone = "UTC"
+
+[paths]
+data_dir = "/workspace/noticiencias_news_collector/data"
+logs_dir = "/workspace/noticiencias_news_collector/data/logs"
+dlq_dir = "/workspace/noticiencias_news_collector/data/dlq"
+
+[database]
+driver = "sqlite"
+path = "data/news.db"
+host = ""
+port = ""
+name = "noticiencias"
+user = ""
+password = ""
+sslmode = ""
+connect_timeout = 10
+statement_timeout = 30000
+pool_size = 10
+max_overflow = 5
+pool_timeout = 30
+pool_recycle = 1800
+
+[collection]
+collection_interval_hours = 6
+request_timeout_seconds = 30
+async_enabled = false
+max_concurrent_requests = 8
+max_articles_per_source = 50
+recent_days_threshold = 7
+user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
+
+[rate_limiting]
+delay_between_requests_seconds = 1.0
+domain_default_delay_seconds = 1.0
+max_retries = 3
+retry_delay_seconds = 1.0
+backoff_base = 0.5
+backoff_max = 10.0
+jitter_max = 0.3
+
+[rate_limiting.domain_overrides]
+export.arxiv.org = 20.0
+arxiv.org = 20.0
+www.reddit.com = 30.0
+reddit.com = 30.0
+
+[robots]
+respect_robots = true
+cache_ttl_seconds = 3600
+
+[dedup]
+simhash_threshold = 10
+simhash_candidate_window = 500
+
+[scoring]
+daily_top_count = 10
+minimum_score = 0.3
+mode = "advanced"
+workers = 4
+reranker_seed = 1337
+source_cap_percentage = 0.5
+topic_cap_percentage = 0.6
+
+[scoring.weights]
+source_credibility = 0.25
+recency = 0.2
+content_quality = 0.25
+engagement_potential = 0.3
+
+[scoring.feature_weights]
+source_credibility = 0.3
+freshness = 0.25
+content_quality = 0.25
+engagement = 0.2
+
+[scoring.freshness]
+half_life_hours = 18.0
+max_decay_hours = 168.0
+
+[scoring.diversity_penalty]
+weight = 0.15
+max_penalty = 0.3
+
+[scoring.content_quality_heuristics]
+title_length_divisor = 120.0
+summary_length_divisor = 400.0
+entity_target_count = 5.0
+
+[scoring.content_quality_heuristics.weights]
+title = 0.4
+summary = 0.4
+entity = 0.2
+
+[scoring.engagement_heuristics]
+fallback_sentiment = 0.5
+word_count_divisor = 800.0
+external_weight = 0.6
+length_weight = 0.4
+
+[scoring.engagement_heuristics.sentiment_scores]
+positive = 0.7
+negative = 0.6
+neutral = 0.5
+
+[text_processing]
+supported_languages = ["en", "es", "pt", "fr"]
+min_content_length = 100
+boost_keywords = ["breakthrough", "discovery", "research", "study", "clinical trial", "peer-reviewed", "published", "journal", "university", "scientists", "artificial intelligence", "machine learning", "climate change", "medical", "technology", "innovation", "Nobel", "FDA approved"]
+penalty_keywords = ["shocking", "you won't believe", "doctors hate", "miracle cure", "secret", "conspiracy", "hoax", "fake news"]
+
+[enrichment]
+default_model = "pattern_v1"
+analysis_cache_size = 512
+result_cache_size = 256
+
+[enrichment.models]
+
+[enrichment.models.pattern_v1]
+version = "2025.02-pattern-v1"
+provider = "pattern"
+languages = ["en", "es", "pt", "fr"]
+default_language = "en"
+default_topic = "general"
+
+[enrichment.models.pattern_v1.entities]
+
+[enrichment.models.pattern_v1.entities.entries]
+shared = ["{'label': 'ORG', 'pattern': 'NASA', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Google', 'alias': None, 'case_sensitive': False}", "{'label': 'LOC', 'pattern': 'Mars', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'ESA', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'IMF', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'ONU', 'alias': None, 'case_sensitive': False}"]
+en = ["{'label': 'EVENT', 'pattern': 'Artemis II', 'alias': None, 'case_sensitive': False}", "{'label': 'PRODUCT', 'pattern': 'Orion', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Wall Street', 'alias': None, 'case_sensitive': False}"]
+es = ["{'label': 'ORG', 'pattern': 'Ministerio de Salud de Chile', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Universidad Nacional Aut\u00f3noma de M\u00e9xico', 'alias': None, 'case_sensitive': False}", "{'label': 'ORG', 'pattern': 'Telef\u00f3nica', 'alias': None, 'case_sensitive': False}", "{'label': 'TECH', 'pattern': 'IA', 'alias': 'IA', 'case_sensitive': True}"]
+pt = ["{'label': 'ORG', 'pattern': 'Universidade de S\u00e3o Paulo', 'alias': None, 'case_sensitive': False}", "{'label': 'LOC', 'pattern': 'Amaz\u00f4nia', 'alias': None, 'case_sensitive': False}"]
+fr = ["{'label': 'ORG', 'pattern': 'Agence spatiale europ\u00e9enne', 'alias': None, 'case_sensitive': False}", "{'label': 'PRODUCT', 'pattern': 'Ariane 6', 'alias': None, 'case_sensitive': False}"]
+
+[enrichment.models.pattern_v1.topics]
+
+[enrichment.models.pattern_v1.topics.space]
+
+[enrichment.models.pattern_v1.topics.space.keywords]
+shared = ["space", "espacio", "espa\u00e7o", "espace", "lunar", "orbit", "orbital", "rocket", "cohete", "foguete", "fus\u00e9e"]
+en = ["nasa", "artemis", "orion"]
+es = ["nasa", "lunar"]
+pt = ["nasa", "orbital"]
+fr = ["esa", "ariane", "europ\u00e9enne"]
+
+[enrichment.models.pattern_v1.topics.science]
+
+[enrichment.models.pattern_v1.topics.science.keywords]
+shared = ["science", "ciencia", "ci\u00eancia", "scientifique", "recherche", "research", "investigaci\u00f3n", "pesquisa", "laboratorio", "laboratory", "laboratoire"]
+en = ["scientists", "researchers"]
+es = ["investigadores", "cient\u00edficos", "cientifico", "cient\u00edfica", "cientificos", "cientificas", "equipo cient\u00edfico"]
+pt = ["pesquisadores", "cientistas", "cientista"]
+fr = ["chercheurs", "scientifiques"]
+
+[enrichment.models.pattern_v1.topics.health]
+
+[enrichment.models.pattern_v1.topics.health.keywords]
+shared = ["health", "salud", "sant\u00e9", "sanitario"]
+en = ["ministry of health", "hospital"]
+es = ["ministerio de salud", "hospital"]
+pt = ["sa\u00fade", "hospital"]
+fr = ["minist\u00e8re de la sant\u00e9", "h\u00f4pital"]
+
+[enrichment.models.pattern_v1.topics.technology]
+
+[enrichment.models.pattern_v1.topics.technology.keywords]
+shared = ["technology", "tecnolog\u00eda", "tecnologia", "technologie", "ai", "ia", "inteligencia artificial", "intelig\u00eancia artificial"]
+en = ["platform", "software"]
+es = ["plataforma", "software"]
+pt = ["plataforma", "software"]
+fr = ["plateforme", "logiciel"]
+
+[enrichment.models.pattern_v1.topics.climate]
+
+[enrichment.models.pattern_v1.topics.climate.keywords]
+shared = ["climate", "clima", "clim\u00e1tico", "clim\u00e1tica", "climatique", "emissions", "emisiones", "emiss\u00f5es", "\u00e9missions", "carbon", "carbono", "carbone"]
+en = ["climate", "carbon"]
+es = ["emisiones", "clim\u00e1tica"]
+pt = ["clim\u00e1tica", "amaz\u00f4nia"]
+fr = ["climatique", "carbone"]
+
+[enrichment.models.pattern_v1.topics.economy]
+
+[enrichment.models.pattern_v1.topics.economy.keywords]
+shared = ["economy", "econom\u00eda", "economia", "\u00e9conomie", "market", "mercado", "march\u00e9", "inflation", "recession", "recesi\u00f3n", "recess\u00e3o"]
+en = ["inflation", "recession"]
+es = ["inflaci\u00f3n", "recesi\u00f3n"]
+pt = ["infla\u00e7\u00e3o", "recess\u00e3o"]
+fr = ["inflation", "r\u00e9cession"]
+
+[enrichment.models.pattern_v1.sentiment]
+default = "neutral"
+tie_breaker = "neutral"
+
+[enrichment.models.pattern_v1.sentiment.lexicon]
+shared_positive = ["confirmed", "progress", "celebrated", "avance", "avances", "innovador", "innovadora", "soluciones", "parceria", "sucesso"]
+shared_negative = ["warned", "risk", "crisis", "preocupante", "urgente", "urgentes", "inflation", "recession", "recesi\u00f3n", "recess\u00e3o"]
+
+[enrichment.models.pattern_v1.sentiment.lexicon.languages]
+
+[enrichment.models.pattern_v1.sentiment.lexicon.languages.en]
+positive = ["confirmed", "progress", "celebrated"]
+negative = ["warned", "recession", "risk", "negative"]
+
+[enrichment.models.pattern_v1.sentiment.lexicon.languages.es]
+positive = ["avance", "celebr\u00f3", "soluciones", "positivo", "positiva"]
+negative = ["alerta", "preocupante", "urgente", "urgentes"]
+
+[enrichment.models.pattern_v1.sentiment.lexicon.languages.pt]
+positive = ["celebraram", "parceria", "inovador"]
+negative = ["crise", "alerta"]
+
+[enrichment.models.pattern_v1.sentiment.lexicon.languages.fr]
+positive = ["succ\u00e8s", "avanc\u00e9e"]
+negative = ["alerte", "inqui\u00e9tude"]
+
+[news]
+max_items = 50
+default_language = "es"
+
+[logging]
+level = "INFO"
+file_path = "/workspace/noticiencias_news_collector/data/logs/collector.log"
+max_file_size_mb = 10
+retention_days = 30
+format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
