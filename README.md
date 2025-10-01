@@ -141,10 +141,17 @@ make test
 ```
 
 ### 5. Configurar Entorno
+El proyecto usa [`python-dotenv`](https://github.com/theskumar/python-dotenv) para cargar variables desde un archivo `.env`.
+El template [`.env.example`](.env.example) documenta todos los parámetros admitidos y agrupa las opciones por secciones
+(`runtime`, `database`, `collection`, `scoring`, etc.). Copia el archivo y ajusta los valores según tu escenario:
+
 ```bash
 cp .env.example .env
-# Edita .env con tus preferencias (opcional)
+# Edita .env para habilitar Postgres, ajustar rate limits o personalizar el scoring.
 ```
+
+> ℹ️ Si vas a usar PostgreSQL, descomenta el bloque `# Database configuration` y reemplaza las credenciales. Para entornos de
+> operación consulta también las secciones `# Operational scripts` y `# Logging`.
 
 ### 6. Ejecutar Primera Recolección
 ```bash
