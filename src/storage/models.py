@@ -108,7 +108,9 @@ class Article(Base):
     doi = Column(String(100), index=True)  # Digital Object Identifier
     journal = Column(String(200))  # Revista científica
     impact_factor = Column(Float)  # Factor de impacto de la revista
-    is_preprint = Column(Boolean, default=False)  # Si es preprint sin revisión por pares
+    is_preprint = Column(
+        Boolean, default=False
+    )  # Si es preprint sin revisión por pares
     peer_reviewed = Column(Boolean)  # Indicador de revisión por pares
 
     # Procesamiento de texto y análisis
@@ -453,5 +455,3 @@ def get_model_info():
         }
 
     return info
-
-

@@ -471,4 +471,3 @@ def validate_collector_result(result: Dict[str, Any]) -> bool:
     required_fields = ["source_id", "success", "articles_found", "articles_saved"]
 
     return all(field in result for field in required_fields)
-

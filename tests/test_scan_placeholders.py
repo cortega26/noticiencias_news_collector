@@ -58,7 +58,7 @@ def test_detects_todo_in_python(repo_root, patterns):
 
 def test_detects_secret_placeholder(repo_root, patterns):
     secret_key_field = "api_" + "key"
-    write_file(repo_root / "config" / "settings.yaml", f"{secret_key_field}: \"\"\n")
+    write_file(repo_root / "config" / "settings.yaml", f'{secret_key_field}: ""\n')
     findings = scan_repository(
         repo_root,
         patterns,
@@ -113,14 +113,7 @@ def test_python_stub_detection(repo_root, patterns):
 def test_raises_not_implemented_detected(repo_root, patterns):
     not_impl = "Not" + "ImplementedError"
     raise_kw = "ra" + "ise"
-    body = (
-        "def handle():\n    "
-        + raise_kw
-        + f" {not_impl}('"
-        + "to"
-        + "do"
-        + "')\n"
-    )
+    body = "def handle():\n    " + raise_kw + f" {not_impl}('" + "to" + "do" + "')\n"
     write_file(repo_root / "handler.py", body)
     findings = scan_repository(
         repo_root,

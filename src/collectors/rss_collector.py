@@ -912,5 +912,3 @@ class RSSCollector(BaseCollector):
             * 100,
             "end_time": current_time.isoformat(),
         }
-
-

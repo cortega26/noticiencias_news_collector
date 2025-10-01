@@ -171,5 +171,6 @@ def test_invalid_scoring_payload_rejected(database_manager: DatabaseManager) -> 
 
     with pytest.raises(ValueError):
         database_manager.update_article_score(saved_article.id, invalid_score)
-PENDING_TOKEN = "pen" + "ding"
 
+
+PENDING_TOKEN = "pen" + "ding"

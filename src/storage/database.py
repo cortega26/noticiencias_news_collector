@@ -1030,5 +1030,3 @@ def get_database_manager() -> DatabaseManager:
     if _db_manager is None:
         _db_manager = DatabaseManager()
     return _db_manager
-
-

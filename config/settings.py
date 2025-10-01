@@ -246,4 +246,3 @@ else:
     # En producción, más conservador
     COLLECTION_CONFIG["max_articles_per_source"] = 20
     RATE_LIMITING_CONFIG["delay_between_requests"] = 2.0
-

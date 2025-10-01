@@ -371,5 +371,3 @@ def validate_sources():
             raise ValueError(f"URL de {source_id} no es válida: {url}")
 
     print(f"✅ {len(ALL_SOURCES)} fuentes validadas correctamente")
-
-
