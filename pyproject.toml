@@ -67,8 +67,8 @@ ignore_errors = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
-pythonpath = ["src"]
-addopts = "-ra --ignore=tests/test_database_pending_articles.py --ignore=tests/test_main_initialization.py --ignore=tests/test_serving_api.py --ignore=tests/test_python_version_requirement.py"
+pythonpath = [".", "src"]
+addopts = "-ra"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",

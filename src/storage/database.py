@@ -19,7 +19,9 @@ from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.orm import sessionmaker, Session, load_only
 from sqlalchemy.exc import IntegrityError
 
-from pydantic import ValidationError
+from src.utils.pydantic_compat import get_pydantic_module
+
+ValidationError = get_pydantic_module().ValidationError
 
 from ..storage.models import Base, Article, Source, ScoreLog, PENDING_STATUS
 from config.settings import DATABASE_CONFIG, DEDUP_CONFIG

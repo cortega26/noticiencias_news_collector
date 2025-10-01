@@ -24,7 +24,10 @@ import httpx
 
 import requests
 import feedparser
-from pydantic import ValidationError
+
+from src.utils.pydantic_compat import get_pydantic_module
+
+ValidationError = get_pydantic_module().ValidationError
 
 from .base_collector import BaseCollector
 from .rate_limit_utils import calculate_effective_delay

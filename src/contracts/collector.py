@@ -5,14 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, TypedDict
 
-from pydantic import (
-    AnyHttpUrl,
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_validator,
-    model_validator,
-)
+from src.utils.pydantic_compat import get_pydantic_module
+
+_pydantic = get_pydantic_module()
+AnyHttpUrl = _pydantic.AnyHttpUrl
+BaseModel = _pydantic.BaseModel
+ConfigDict = _pydantic.ConfigDict
+Field = _pydantic.Field
+field_validator = _pydantic.field_validator
+model_validator = _pydantic.model_validator
 
 from config.settings import TEXT_PROCESSING_CONFIG
 from .common import ArticleMetadata, ArticleMetadataModel
