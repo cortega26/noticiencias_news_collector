@@ -10,8 +10,7 @@ import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass, asdict
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 

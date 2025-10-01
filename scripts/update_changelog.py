@@ -85,7 +85,8 @@ def update_changelog(version: str, release_notes_path: Path) -> None:
     prefix, unreleased_content, suffix = extract_unreleased_block(changelog_text)
     release_block = build_release_block(version, unreleased_content, release_notes)
     placeholder = "\n\n### Added\n- _Pending release notes_\n"
-    updated = f"{prefix}{placeholder}{release_block}{suffix.lstrip('\n')}"
+    cleaned_suffix = suffix.lstrip("\n")
+    updated = f"{prefix}{placeholder}{release_block}{cleaned_suffix}"
     if not updated.endswith("\n"):
         updated += "\n"
     CHANGELOG_PATH.write_text(updated, encoding="utf-8")

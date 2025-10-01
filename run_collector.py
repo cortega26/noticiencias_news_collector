@@ -256,24 +256,20 @@ def check_dependencies():
     missing_deps = []
 
     try:
-        import feedparser
-    except ImportError:
-        missing_deps.append("feedparser")
+        from importlib import util as importlib_util
+    except ImportError:  # pragma: no cover - importlib forma parte de la stdlib
+        importlib_util = None
 
-    try:
-        import requests
-    except ImportError:
-        missing_deps.append("requests")
+    modules = ["feedparser", "requests", "sqlalchemy", "loguru"]
 
-    try:
-        import sqlalchemy
-    except ImportError:
-        missing_deps.append("sqlalchemy")
-
-    try:
-        import loguru
-    except ImportError:
-        missing_deps.append("loguru")
+    for module_name in modules:
+        if importlib_util is None:
+            try:
+                __import__(module_name)
+            except ImportError:
+                missing_deps.append(module_name)
+        elif importlib_util.find_spec(module_name) is None:
+            missing_deps.append(module_name)
 
     if missing_deps:
         print(f"❌ Dependencias faltantes: {', '.join(missing_deps)}")
