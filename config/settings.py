@@ -224,6 +224,8 @@ ENRICHMENT_CONFIG = {
                 "patterns": {
                     "shared": [
                         {"label": "ORG", "pattern": "NASA"},
+                        {"label": "ORG", "pattern": "Google"},
+                        {"label": "LOC", "pattern": "Mars"},
                         {"label": "ORG", "pattern": "ESA", "alias": "ESA"},
                         {"label": "ORG", "pattern": "IMF"},
                         {"label": "ORG", "pattern": "ONU"},
@@ -231,6 +233,7 @@ ENRICHMENT_CONFIG = {
                     "en": [
                         {"label": "EVENT", "pattern": "Artemis II"},
                         {"label": "PRODUCT", "pattern": "Orion"},
+                        {"label": "ORG", "pattern": "Wall Street"},
                     ],
                     "es": [
                         {
@@ -240,6 +243,13 @@ ENRICHMENT_CONFIG = {
                         {
                             "label": "ORG",
                             "pattern": "Universidad Nacional Autónoma de México",
+                        },
+                        {"label": "ORG", "pattern": "Telefónica"},
+                        {
+                            "label": "TECH",
+                            "pattern": "IA",
+                            "alias": "IA",
+                            "case_sensitive": True,
                         },
                     ],
                     "pt": [
@@ -409,7 +419,13 @@ ENRICHMENT_CONFIG = {
                         "negative": ["warned", "recession", "risk", "negative"],
                     },
                     "es": {
-                        "positive": ["avance", "celebró", "soluciones"],
+                        "positive": [
+                            "avance",
+                            "celebró",
+                            "soluciones",
+                            "positivo",
+                            "positiva",
+                        ],
                         "negative": ["alerta", "preocupante", "urgente", "urgentes"],
                     },
                     "pt": {
