@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix typecheck test e2e perf security clean help
+.PHONY: bootstrap lint lint-fix typecheck test e2e perf security clean help bump-version
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -75,5 +75,15 @@ clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) .pytest_cache .mypy_cache
 
 help: ## Show this help message
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
+        @echo "Available targets:"
+        @grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
+
+bump-version: ## Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)
+        @if [ -n "$(VERSION)" ]; then \
+                $(PYTHON) scripts/bump_version.py --set "$(VERSION)"; \
+        elif [ -n "$(PART)" ]; then \
+                $(PYTHON) scripts/bump_version.py --part "$(PART)"; \
+        else \
+                echo "Usage: make bump-version PART=major|minor|patch | VERSION=X.Y.Z"; \
+                exit 1; \
+        fi
