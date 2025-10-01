@@ -236,7 +236,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p docs/assets
-          curl -H "Authorization: Bearer $GITHUB_TOKEN" -L "https://github.com/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml/badge.svg?branch=main" -o docs/assets/ci-status.svg
+          curl --fail --location \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: image/svg+xml" \
+            "https://api.github.com/repos/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml/badge" \
+            -o docs/assets/ci-status.svg
       - name: Commit updated badge
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
