@@ -169,7 +169,7 @@ LOGGING_CONFIG = {
 # =======================================
 TEXT_PROCESSING_CONFIG = {
     # Idiomas a detectar y procesar
-    "supported_languages": ["en", "es"],
+    "supported_languages": ["en", "es", "pt", "fr"],
     # Longitud mínima de contenido para ser considerado válido
     "min_content_length": int(os.getenv("MIN_CONTENT_LENGTH", 100)),
     # Palabras clave que aumentan la relevancia
@@ -204,6 +204,226 @@ TEXT_PROCESSING_CONFIG = {
         "hoax",
         "fake news",
     ],
+}
+
+_DEFAULT_ENRICHMENT_MODEL = os.getenv("ENRICHMENT_MODEL_KEY", "pattern_v1")
+_DEFAULT_ENRICHMENT_PROVIDER = os.getenv("ENRICHMENT_PROVIDER", "pattern")
+
+ENRICHMENT_CONFIG = {
+    "default_model": _DEFAULT_ENRICHMENT_MODEL,
+    "analysis_cache_size": int(os.getenv("ENRICHMENT_ANALYSIS_CACHE", 512)),
+    "result_cache_size": int(os.getenv("ENRICHMENT_RESULT_CACHE", 256)),
+    "models": {
+        "pattern_v1": {
+            "version": os.getenv("ENRICHMENT_MODEL_VERSION", "2025.02-pattern-v1"),
+            "provider": _DEFAULT_ENRICHMENT_PROVIDER,
+            "languages": ["en", "es", "pt", "fr"],
+            "default_language": "en",
+            "default_topic": "general",
+            "entities": {
+                "patterns": {
+                    "shared": [
+                        {"label": "ORG", "pattern": "NASA"},
+                        {"label": "ORG", "pattern": "ESA", "alias": "ESA"},
+                        {"label": "ORG", "pattern": "IMF"},
+                        {"label": "ORG", "pattern": "ONU"},
+                    ],
+                    "en": [
+                        {"label": "EVENT", "pattern": "Artemis II"},
+                        {"label": "PRODUCT", "pattern": "Orion"},
+                    ],
+                    "es": [
+                        {
+                            "label": "ORG",
+                            "pattern": "Ministerio de Salud de Chile",
+                        },
+                        {
+                            "label": "ORG",
+                            "pattern": "Universidad Nacional Autónoma de México",
+                        },
+                    ],
+                    "pt": [
+                        {"label": "ORG", "pattern": "Universidade de São Paulo"},
+                        {"label": "LOC", "pattern": "Amazônia"},
+                    ],
+                    "fr": [
+                        {
+                            "label": "ORG",
+                            "pattern": "Agence spatiale européenne",
+                        },
+                        {"label": "PRODUCT", "pattern": "Ariane 6"},
+                    ],
+                }
+            },
+            "topics": {
+                "space": {
+                    "keywords": {
+                        "shared": [
+                            "space",
+                            "espacio",
+                            "espaço",
+                            "espace",
+                            "lunar",
+                            "orbit",
+                            "orbital",
+                            "rocket",
+                            "cohete",
+                            "foguete",
+                            "fusée",
+                        ],
+                        "en": ["nasa", "artemis", "orion"],
+                        "es": ["nasa", "lunar"],
+                        "pt": ["nasa", "orbital"],
+                        "fr": ["esa", "ariane", "européenne"],
+                    }
+                },
+                "science": {
+                    "keywords": {
+                        "shared": [
+                            "science",
+                            "ciencia",
+                            "ciência",
+                            "scientifique",
+                            "recherche",
+                            "research",
+                            "investigación",
+                            "pesquisa",
+                            "laboratorio",
+                            "laboratory",
+                            "laboratoire",
+                        ],
+                        "en": ["scientists", "researchers"],
+                        "es": [
+                            "investigadores",
+                            "científicos",
+                            "cientifico",
+                            "científica",
+                            "cientificos",
+                            "cientificas",
+                            "equipo científico",
+                        ],
+                        "pt": ["pesquisadores", "cientistas", "cientista"],
+                        "fr": ["chercheurs", "scientifiques"],
+                    }
+                },
+                "health": {
+                    "keywords": {
+                        "shared": ["health", "salud", "santé", "sanitario"],
+                        "en": ["ministry of health", "hospital"],
+                        "es": ["ministerio de salud", "hospital"],
+                        "pt": ["saúde", "hospital"],
+                        "fr": ["ministère de la santé", "hôpital"],
+                    }
+                },
+                "technology": {
+                    "keywords": {
+                        "shared": [
+                            "technology",
+                            "tecnología",
+                            "tecnologia",
+                            "technologie",
+                            "ai",
+                            "ia",
+                            "inteligencia artificial",
+                            "inteligência artificial",
+                        ],
+                        "en": ["platform", "software"],
+                        "es": ["plataforma", "software"],
+                        "pt": ["plataforma", "software"],
+                        "fr": ["plateforme", "logiciel"],
+                    }
+                },
+                "climate": {
+                    "keywords": {
+                        "shared": [
+                            "climate",
+                            "clima",
+                            "climático",
+                            "climática",
+                            "climatique",
+                            "emissions",
+                            "emisiones",
+                            "emissões",
+                            "émissions",
+                            "carbon",
+                            "carbono",
+                            "carbone",
+                        ],
+                        "en": ["climate", "carbon"],
+                        "es": ["emisiones", "climática"],
+                        "pt": ["climática", "amazônia"],
+                        "fr": ["climatique", "carbone"],
+                    }
+                },
+                "economy": {
+                    "keywords": {
+                        "shared": [
+                            "economy",
+                            "economía",
+                            "economia",
+                            "économie",
+                            "market",
+                            "mercado",
+                            "marché",
+                            "inflation",
+                            "recession",
+                            "recesión",
+                            "recessão",
+                        ],
+                        "en": ["inflation", "recession"],
+                        "es": ["inflación", "recesión"],
+                        "pt": ["inflação", "recessão"],
+                        "fr": ["inflation", "récession"],
+                    }
+                },
+            },
+            "sentiment": {
+                "default": "neutral",
+                "tie_breaker": "neutral",
+                "lexicon": {
+                    "shared_positive": [
+                        "confirmed",
+                        "progress",
+                        "celebrated",
+                        "avance",
+                        "avances",
+                        "innovador",
+                        "soluciones",
+                        "parceria",
+                        "sucesso",
+                    ],
+                    "shared_negative": [
+                        "warned",
+                        "risk",
+                        "crisis",
+                        "preocupante",
+                        "urgente",
+                        "urgentes",
+                        "inflation",
+                        "recession",
+                        "recesión",
+                        "recessão",
+                    ],
+                    "en": {
+                        "positive": ["confirmed", "progress", "celebrated"],
+                        "negative": ["warned", "recession", "risk", "negative"],
+                    },
+                    "es": {
+                        "positive": ["avance", "celebró", "soluciones"],
+                        "negative": ["alerta", "preocupante", "urgente", "urgentes"],
+                    },
+                    "pt": {
+                        "positive": ["celebraram", "parceria", "inovador"],
+                        "negative": ["crise", "alerta"],
+                    },
+                    "fr": {
+                        "positive": ["succès", "avancée"],
+                        "negative": ["alerte", "inquiétude"],
+                    },
+                },
+            },
+        }
+    },
 }
 
 # Configuración de Rate Limiting

@@ -1,140 +1,62 @@
 [
   {
-    "id": "en-01",
-    "title": "NASA Confirms Water on Mars",
-    "summary": "NASA scientists announced that Mars shows positive water traces during research.",
+    "id": "en-space-positive",
+    "language": "en",
+    "title": "NASA unveils Artemis II mission timeline",
+    "summary": "NASA confirmed the Artemis II crew will test new Orion technology during a celebratory lunar flyby rehearsal.",
+    "content": "NASA engineers highlighted steady progress on the Orion capsule and partnerships with international scientists.",
     "expected": {
       "language": "en",
       "sentiment": "positive",
-      "topics": ["space", "science"],
-      "entities": ["NASA", "Mars"]
-    }
-  },
-  {
-    "id": "en-02",
-    "title": "Google Launches New AI Platform",
-    "summary": "Google engineers reported a successful AI platform improving technology productivity.",
-    "expected": {
-      "language": "en",
-      "sentiment": "positive",
-      "topics": ["technology"],
-      "entities": ["Google", "AI"]
-    }
-  },
-  {
-    "id": "en-03",
-    "title": "WHO Reports Vaccine Success",
-    "summary": "WHO doctors noted positive vaccine results in hospital trials.",
-    "expected": {
-      "language": "en",
-      "sentiment": "positive",
-      "topics": ["health"],
-      "entities": ["WHO"]
-    }
-  },
-  {
-    "id": "en-04",
-    "title": "Markets Face Global Decline",
-    "summary": "Wall Street analysts warned about market decline and economic crisis.",
-    "expected": {
-      "language": "en",
-      "sentiment": "negative",
-      "topics": ["economy"],
-      "entities": ["Wall Street"]
-    }
-  },
-  {
-    "id": "en-05",
-    "title": "Climate Experts Warn of Rising Emissions",
-    "summary": "UN researchers highlighted carbon emissions causing wildfire risk.",
-    "expected": {
-      "language": "en",
-      "sentiment": "negative",
-      "topics": ["climate"],
-      "entities": ["UN"]
-    }
-  },
-  {
-    "id": "en-06",
-    "title": "Microsoft and NASA Partner on Research",
-    "summary": "Microsoft and NASA collaborate on research for deep space computing technology.",
-    "expected": {
-      "language": "en",
-      "sentiment": "neutral",
       "topics": ["space", "science", "technology"],
-      "entities": ["Microsoft", "NASA"]
+      "entities": ["NASA", "Artemis II", "Orion"]
     }
   },
   {
-    "id": "en-07",
-    "title": "FDA Issues Warning on Drug",
-    "summary": "FDA officials reported negative side effects during medical study.",
+    "id": "es-salud-negative",
+    "language": "es",
+    "title": "Ministerio de Salud alerta sobre brote de influenza",
+    "summary": "El Ministerio de Salud de Chile reportó un aumento preocupante de casos de influenza y pidió medidas urgentes para los hospitales.",
+    "content": "Autoridades sanitarias señalaron que el sistema hospitalario se mantiene en vigilancia con equipos científicos monitoreando la situación.",
     "expected": {
-      "language": "en",
+      "language": "es",
       "sentiment": "negative",
       "topics": ["science", "health"],
-      "entities": ["FDA"]
+      "entities": ["Ministerio de Salud de Chile"]
     }
   },
   {
-    "id": "en-08",
-    "title": "Startup Wins Major Funding Round",
-    "summary": "Startup founders celebrated successful funding with positive technology market support.",
+    "id": "pt-tecnologia-positive",
+    "language": "pt",
+    "title": "Universidade de São Paulo lança laboratório de IA climática",
+    "summary": "Pesquisadores da Universidade de São Paulo celebraram uma parceria inovadora de tecnologia para monitorar a Amazônia com inteligência artificial.",
+    "content": "O laboratório reúne cientistas e engenheiros ambientais para desenvolver soluções climáticas com dados de satélite.",
     "expected": {
-      "language": "en",
+      "language": "pt",
       "sentiment": "positive",
-      "topics": ["technology", "economy"],
-      "entities": ["Startup"]
+      "topics": ["science", "technology", "climate"],
+      "entities": ["Universidade de São Paulo", "Amazônia"]
     }
   },
   {
-    "id": "en-09",
-    "title": "Oxford University Publishes Study",
-    "summary": "Oxford University released a research study on quantum computing.",
+    "id": "fr-espace-neutral",
+    "language": "fr",
+    "title": "L'Agence spatiale européenne présente la fusée Ariane 6",
+    "summary": "L'Agence spatiale européenne a détaillé un vol d'essai préparatoire d'Ariane 6 pour soutenir la recherche spatiale européenne.",
+    "content": "Le rapport technique de l'ESA souligne une phase de validation sans incident majeur et décrit les prochaines étapes du programme.",
     "expected": {
-      "language": "en",
+      "language": "fr",
       "sentiment": "neutral",
-      "topics": ["science", "technology"],
-      "entities": ["Oxford University"]
+      "topics": ["space", "science"],
+      "entities": ["Agence spatiale européenne", "Ariane 6", "ESA"]
     }
   },
   {
-    "id": "en-10",
-    "title": "Tesla Expands Production in Texas",
-    "summary": "Tesla announced positive growth and market expansion with new technology factory in Texas.",
-    "expected": {
-      "language": "en",
-      "sentiment": "positive",
-      "topics": ["technology", "economy"],
-      "entities": ["Tesla", "Texas"]
-    }
-  },
-  {
-    "id": "en-11",
-    "title": "Harvard Hospital Shares Health Update",
-    "summary": "Harvard Hospital reported neutral medical metrics for patient recovery.",
-    "expected": {
-      "language": "en",
-      "sentiment": "neutral",
-      "topics": ["health"],
-      "entities": ["Harvard Hospital"]
-    }
-  },
-  {
-    "id": "en-12",
-    "title": "European Space Agency Tests New Rocket",
-    "summary": "European Space Agency engineers completed successful space launch rehearsal.",
-    "expected": {
-      "language": "en",
-      "sentiment": "positive",
-      "topics": ["space"],
-      "entities": ["European Space Agency"]
-    }
-  },
-  {
-    "id": "en-13",
-    "title": "IMF Warns of Inflation Risk",
-    "summary": "IMF economists signaled risk of inflation and market decline.",
+    "id": "en-economy-negative",
+    "language": "en",
+    "title": "IMF warns of persistent inflation risk",
+    "summary": "IMF economists warned of negative market pressure and projected a prolonged global recession.",
+    "content": "The briefing noted that inflation remains above target and that financial markets face ongoing volatility.",
     "expected": {
       "language": "en",
       "sentiment": "negative",
@@ -143,190 +65,16 @@
     }
   },
   {
-    "id": "en-14",
-    "title": "Apple Releases Medical Research App",
-    "summary": "Apple and Stanford teams launched a medical research app improving health tracking.",
-    "expected": {
-      "language": "en",
-      "sentiment": "neutral",
-      "topics": ["science", "health"],
-      "entities": ["Apple", "Stanford"]
-    }
-  },
-  {
-    "id": "en-15",
-    "title": "Smithsonian Opens New Climate Exhibit",
-    "summary": "Smithsonian curators presented climate science exhibit highlighting positive carbon solutions.",
-    "expected": {
-      "language": "en",
-      "sentiment": "positive",
-      "topics": ["science", "climate"],
-      "entities": ["Smithsonian"]
-    }
-  },
-  {
-    "id": "es-01",
-    "title": "NASA anuncia descubrimiento en Marte",
-    "summary": "NASA informó que Marte muestra señales positivas de agua durante la investigación.",
+    "id": "es-clima-positive",
+    "language": "es",
+    "title": "Universidad Nacional Autónoma de México presenta soluciones climáticas",
+    "summary": "La Universidad Nacional Autónoma de México celebró nuevas soluciones de tecnología limpia para reducir emisiones de carbono en ciudades latinoamericanas.",
+    "content": "El equipo científico destacó alianzas con organizaciones comunitarias y compartió datos abiertos para impulsar la innovación.",
     "expected": {
       "language": "es",
       "sentiment": "positive",
-      "topics": ["space", "science"],
-      "entities": ["NASA", "Marte"]
-    }
-  },
-  {
-    "id": "es-02",
-    "title": "Gobierno lanza campaña de salud",
-    "summary": "El Ministerio de Salud confirmó un avance positivo en la vacuna nacional.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["health"],
-      "entities": ["El Ministerio de Salud"]
-    }
-  },
-  {
-    "id": "es-03",
-    "title": "Economía enfrenta crisis en Europa",
-    "summary": "El Banco Central advirtió sobre una crisis y caída del mercado europeo.",
-    "expected": {
-      "language": "es",
-      "sentiment": "negative",
-      "topics": ["economy"],
-      "entities": ["El Banco Central"]
-    }
-  },
-  {
-    "id": "es-04",
-    "title": "Clima extremo afecta a Chile",
-    "summary": "La Agencia Meteorológica de Chile alertó sobre incendios y riesgo climático.",
-    "expected": {
-      "language": "es",
-      "sentiment": "negative",
-      "topics": ["climate"],
-      "entities": ["La Agencia Meteorológica de Chile"]
-    }
-  },
-  {
-    "id": "es-05",
-    "title": "Universidad de Bogotá lidera investigación",
-    "summary": "La Universidad de Bogotá presentó un estudio científico con avance positivo sobre tecnología cuántica.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["science", "technology"],
-      "entities": ["La Universidad de Bogotá"]
-    }
-  },
-  {
-    "id": "es-06",
-    "title": "Startups chilenas reciben financiamiento",
-    "summary": "Startups de Santiago lograron financiamiento positivo para el mercado regional.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["economy"],
-      "entities": ["Startups de Santiago"]
-    }
-  },
-  {
-    "id": "es-07",
-    "title": "Hospital Madrid reporta situación estable",
-    "summary": "Hospital Madrid comunicó métricas neutrales para pacientes en recuperación.",
-    "expected": {
-      "language": "es",
-      "sentiment": "neutral",
-      "topics": ["health"],
-      "entities": ["Hospital Madrid"]
-    }
-  },
-  {
-    "id": "es-08",
-    "title": "Google y Telefónica colaboran en IA",
-    "summary": "Google y Telefónica anunciaron un proyecto de tecnología IA con impacto positivo en software.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["technology"],
-      "entities": ["Google", "Telefónica", "IA"]
-    }
-  },
-  {
-    "id": "es-09",
-    "title": "ONU advierte sobre emisiones",
-    "summary": "La ONU señaló riesgo de emisiones y crisis climática global.",
-    "expected": {
-      "language": "es",
-      "sentiment": "negative",
-      "topics": ["climate"],
-      "entities": ["La ONU"]
-    }
-  },
-  {
-    "id": "es-10",
-    "title": "Festival Científico de Buenos Aires",
-    "summary": "Buenos Aires celebró un evento de ciencia con participación positiva de estudiantes.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["science"],
-      "entities": ["Buenos Aires"]
-    }
-  },
-  {
-    "id": "es-11",
-    "title": "Banco de México observa crecimiento",
-    "summary": "Banco de México describió crecimiento positivo y mercado estable.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["economy"],
-      "entities": ["Banco de México"]
-    }
-  },
-  {
-    "id": "es-12",
-    "title": "Investigadores de Quito analizan vacuna",
-    "summary": "Investigadores de Quito registraron resultados neutrales en ensayo médico.",
-    "expected": {
-      "language": "es",
-      "sentiment": "neutral",
-      "topics": ["health"],
-      "entities": ["Investigadores de Quito"]
-    }
-  },
-  {
-    "id": "es-13",
-    "title": "Atletas de Lima ganan torneo",
-    "summary": "Atletas de Lima celebraron un éxito positivo en el campeonato regional.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["general"],
-      "entities": ["Atletas de Lima"]
-    }
-  },
-  {
-    "id": "es-14",
-    "title": "Corte Suprema de Bogotá emite fallo",
-    "summary": "La Corte Suprema de Bogotá publicó una decisión judicial neutral.",
-    "expected": {
-      "language": "es",
-      "sentiment": "neutral",
-      "topics": ["general"],
-      "entities": ["La Corte Suprema de Bogotá"]
-    }
-  },
-  {
-    "id": "es-15",
-    "title": "Universidad de México lanza programa climático",
-    "summary": "Universidad de México compartió investigación climática con soluciones positivas de carbono.",
-    "expected": {
-      "language": "es",
-      "sentiment": "positive",
-      "topics": ["science", "climate"],
-      "entities": ["Universidad de México"]
+      "topics": ["science", "technology", "climate"],
+      "entities": ["Universidad Nacional Autónoma de México"]
     }
   }
 ]

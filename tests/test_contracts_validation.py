@@ -48,11 +48,12 @@ def _valid_collector_payload() -> dict[str, object]:
             "enrichment": {
                 "language": "en",
                 "normalized_title": "articulo valido para contratos",
-                "normalized_summary": summary.lower(),
-                "entities": ["Example"],
-                "topics": ["science"],
-                "sentiment": "neutral",
-            },
+            "normalized_summary": summary.lower(),
+            "entities": ["Example"],
+            "topics": ["science"],
+            "sentiment": "neutral",
+            "model_version": "2025.02-pattern-v1",
+        },
         },
     }
 

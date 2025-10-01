@@ -8,12 +8,16 @@ PIPELINE_PERF_THRESHOLDS: dict[str, dict[str, float]] = {
         "max_seconds": 0.45,
     },
     "enrichment": {
-        "p95_seconds": 0.20,
-        "max_seconds": 0.30,
+        "p95_seconds": 0.30,
+        "max_seconds": 0.45,
     },
     "scoring": {
         "p95_seconds": 0.15,
         "max_seconds": 0.25,
+    },
+    "enrichment_nlp": {
+        "p95_seconds": 0.25,
+        "max_seconds": 0.40,
     },
 }
 
