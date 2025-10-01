@@ -155,6 +155,22 @@ cp .env.example .env
 > ℹ️ Si vas a usar PostgreSQL, descomenta el bloque `# Database configuration` y reemplaza las credenciales. Para entornos de
 > operación consulta también las secciones `# Operational scripts` y `# Logging`.
 
+### 🖥️ Editor de Configuración
+
+La herramienta `tools.config_editor` permite inspeccionar y modificar cualquier archivo de configuración soportado
+(`.env`, YAML, JSON, TOML o módulos `config.py`) desde una interfaz Tkinter o en modo headless con las mismas validaciones.
+
+- **GUI rápida**: `make config-gui CONFIG_PATH=$(PWD)` abre la ventana y recuerda tamaño/posición.
+- **Headless para CI**: `make config-set KEY="ingest.timeout=45" PROFILE=dev EXTRA="debug=false"` actualiza varios valores sin GUI.
+- **CLI directo**:
+
+  ```bash
+  python -m tools.config_editor --config config --profile dev
+  python -m tools.config_editor --config config --set ingest.timeout=30 --profile prod
+  ```
+
+> 🛡️ Cada guardado valida los tipos, escribe de forma atómica y crea un respaldo con timestamp en `./backups/` sin exponer secretos en logs (`logs/config_editor.log`).
+
 ### 6. Ejecutar Primera Recolección
 ```bash
 python run_collector.py --dry-run

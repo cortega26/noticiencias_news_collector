@@ -32,6 +32,11 @@ TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 
+CONFIG_PATH ?= $(CURDIR)
+PROFILE ?=
+KEY ?=
+EXTRA ?=
+
 .DEFAULT_GOAL := help
 
 $(BOOTSTRAP_STAMP): requirements.lock
@@ -67,10 +72,10 @@ perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml || { echo "Performance tests not defined; skipped."; touch $(PERF_DIR)/SKIPPED; true; }
 
 security: bootstrap ## Run security and dependency scans
-	@mkdir -p $(SECURITY_DIR)
-	@echo "[security] Running pip-audit"
-	@$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
-	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+        @mkdir -p $(SECURITY_DIR)
+        @echo "[security] Running pip-audit"
+        @$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
+        @$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running bandit"
 	@$(BANDIT) -q -r src scripts -c .bandit -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
@@ -102,18 +107,42 @@ audit-todos-baseline: bootstrap ## Refresh the placeholder baseline with current
 	        --save-baseline
 
 audit-todos-check: bootstrap ## Compare current findings against baseline and fail on regressions
-	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
-	        --root . \
-	        --patterns $(PLACEHOLDER_PATTERNS) \
-	        --context 2 \
-	        --baseline $(PLACEHOLDER_BASELINE) \
-	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
-	        --output-json $(PLACEHOLDER_REPORT_JSON) \
-	        --output-md $(PLACEHOLDER_REPORT_MD) \
-	        --compare-baseline
+        @$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
+                --root . \
+                --patterns $(PLACEHOLDER_PATTERNS) \
+                --context 2 \
+                --baseline $(PLACEHOLDER_BASELINE) \
+                --output-csv $(PLACEHOLDER_REPORT_CSV) \
+                --output-json $(PLACEHOLDER_REPORT_JSON) \
+                --output-md $(PLACEHOLDER_REPORT_MD) \
+                --compare-baseline
+
+config-gui: bootstrap ## Launch the desktop configuration editor
+	@CMD="$(PYTHON_BIN) -m tools.config_editor --config \"$(CONFIG_PATH)\""; \
+	if [ -n "$(PROFILE)" ]; then \
+		CMD="$$CMD --profile \"$(PROFILE)\""; \
+	fi; \
+	echo "[config-gui] $$CMD"; \
+	eval $$CMD
+
+config-set: bootstrap ## Update configuration without opening the GUI (KEY=NAME=VALUE)
+	@if [ -z "$(KEY)" ]; then \
+		echo "Usage: make config-set KEY=NAME=VALUE [PROFILE=env] [CONFIG_PATH=path] [EXTRA=\"OTHER=123\"]"; \
+		exit 1; \
+	fi
+	@CMD="$(PYTHON_BIN) -m tools.config_editor --config \"$(CONFIG_PATH)\""; \
+	if [ -n "$(PROFILE)" ]; then \
+		CMD="$$CMD --profile \"$(PROFILE)\""; \
+	fi; \
+	CMD="$$CMD --set \"$(KEY)\""; \
+	for kv in $(EXTRA); do \
+		CMD="$$CMD --set \"$$kv\""; \
+	done; \
+	echo "[config-set] $$CMD"; \
+	eval $$CMD
 
 clean: ## Remove virtual environment and caches
-	@rm -rf $(VENV) .pytest_cache .mypy_cache
+        @rm -rf $(VENV) .pytest_cache .mypy_cache
 
 help: ## Show this help message
 	@echo "Available targets:"

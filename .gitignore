@@ -128,3 +128,6 @@ reports/*
 !reports/perf/postgres_write_profile.json
 !reports/ops/
 !reports/ops/monitoring_outage_report.json
+# Config editor runtime artifacts
+backups/
+logs/config_editor.log
