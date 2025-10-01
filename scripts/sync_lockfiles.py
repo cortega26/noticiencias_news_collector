@@ -10,7 +10,7 @@ from typing import Sequence
 
 LOGGER = logging.getLogger("sync_lockfiles")
 ROOT_DIR = Path(__file__).resolve().parent.parent
-LOCK_TARGETS = (
+LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "requirements.lock",
         (
@@ -19,8 +19,8 @@ LOCK_TARGETS = (
             "compile",
             "--generate-hashes",
             "--output-file",
-            str(ROOT_DIR / "requirements.lock"),
-            str(ROOT_DIR / "requirements.txt"),
+            "requirements.lock",
+            "requirements.txt",
         ),
     ),
     (
@@ -34,8 +34,8 @@ LOCK_TARGETS = (
             "--extra",
             "security",
             "--output-file",
-            str(ROOT_DIR / "requirements-security.lock"),
-            str(ROOT_DIR / "pyproject.toml"),
+            "requirements-security.lock",
+            "pyproject.toml",
         ),
     ),
 )
