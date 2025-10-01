@@ -32,8 +32,7 @@ TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 
-CONFIG_PATH ?= $(CURDIR)
-PROFILE ?=
+CONFIG_FILE ?= $(CURDIR)/config.toml
 KEY ?=
 EXTRA ?=
 
@@ -118,28 +117,31 @@ audit-todos-check: bootstrap ## Compare current findings against baseline and fa
                 --compare-baseline
 
 config-gui: bootstrap ## Launch the desktop configuration editor
-	@CMD="$(PYTHON_BIN) -m tools.config_editor --config \"$(CONFIG_PATH)\""; \
-	if [ -n "$(PROFILE)" ]; then \
-		CMD="$$CMD --profile \"$(PROFILE)\""; \
-	fi; \
-	echo "[config-gui] $$CMD"; \
-	eval $$CMD
+        @CMD="$(PYTHON_BIN) -m noticiencias.gui_config \"$(CONFIG_FILE)\""; \
+        echo "[config-gui] $$CMD"; \
+        eval $$CMD
 
-config-set: bootstrap ## Update configuration without opening the GUI (KEY=NAME=VALUE)
-	@if [ -z "$(KEY)" ]; then \
-		echo "Usage: make config-set KEY=NAME=VALUE [PROFILE=env] [CONFIG_PATH=path] [EXTRA=\"OTHER=123\"]"; \
-		exit 1; \
-	fi
-	@CMD="$(PYTHON_BIN) -m tools.config_editor --config \"$(CONFIG_PATH)\""; \
-	if [ -n "$(PROFILE)" ]; then \
-		CMD="$$CMD --profile \"$(PROFILE)\""; \
-	fi; \
-	CMD="$$CMD --set \"$(KEY)\""; \
-	for kv in $(EXTRA); do \
-		CMD="$$CMD --set \"$$kv\""; \
-	done; \
-	echo "[config-set] $$CMD"; \
-	eval $$CMD
+config-set: bootstrap ## Update configuration without opening the GUI (KEY=section.name=value)
+        @if [ -z "$(KEY)" ]; then \
+                echo "Usage: make config-set KEY=section.key=value [CONFIG_FILE=path] [EXTRA=\"other.key=value\"]"; \
+                exit 1; \
+        fi
+        @CMD="$(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --set \"$(KEY)\""; \
+        for kv in $(EXTRA); do \
+                CMD="$$CMD --set \"$$kv\""; \
+        done; \
+        echo "[config-set] $$CMD"; \
+        eval $$CMD
+
+config-validate: bootstrap ## Validate active configuration sources
+        @echo "[config-validate] $(PYTHON_BIN) -m noticiencias.config_manager --config \"$(CONFIG_FILE)\" --validate"
+        @$(PYTHON_BIN) -m noticiencias.config_manager --config "$(CONFIG_FILE)" --validate
+
+config-dump: bootstrap ## Print the built-in default configuration
+        @$(PYTHON_BIN) -m noticiencias.config_manager --dump-defaults
+
+config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
+        @$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
 clean: ## Remove virtual environment and caches
         @rm -rf $(VENV) .pytest_cache .mypy_cache
