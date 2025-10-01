@@ -188,6 +188,19 @@ python run_collector.py --healthcheck
 - Verifica conectividad con la base de datos, backlog en la cola de artículos pendientes y la frescura de la última ingesta.
 - Consulta el runbook completo en [`docs/runbook.md`](docs/runbook.md) para flujos de diagnóstico y resolución cuando el healthcheck falle.
 
+### Ejecutar en contenedor (experimental)
+```bash
+# Construye la imagen con la etiqueta sugerida (fecha UTC + short SHA)
+export TAG="$(date -u +%Y%m%d).$(git rev-parse --short HEAD)"
+docker build -t noticiencias/collector:${TAG} .
+
+# Ejecuta la imagen con la configuración incluida y realiza un dry-run
+docker run --rm \
+    noticiencias/collector:${TAG} --dry-run
+```
+
+El workflow `Release` empaqueta automáticamente la imagen `noticiencias/collector:<fecha>.<sha>` como artefacto. Cada ejecución adjunta un archivo `image-run.md` con instrucciones para cargarla mediante `docker load` y repetir los pasos de bootstrap dentro del contenedor.
+
 ---
 
 ## 📚 Fuentes Configuradas

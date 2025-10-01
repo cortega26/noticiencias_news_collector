@@ -32,10 +32,11 @@ from .sources import (
 from .version import (
     MIN_PYTHON_VERSION,
     MIN_PYTHON_VERSION_STR,
+    PROJECT_VERSION,
     PYTHON_REQUIRES_SPECIFIER,
+    __version__,
 )
 
-__version__ = "1.0.0"
 __author__ = "News Collector Team"
 
 __all__ = [
@@ -60,5 +61,7 @@ __all__ = [
     "validate_sources",
     "MIN_PYTHON_VERSION",
     "MIN_PYTHON_VERSION_STR",
+    "PROJECT_VERSION",
     "PYTHON_REQUIRES_SPECIFIER",
+    "__version__",
 ]
