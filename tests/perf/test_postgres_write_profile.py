@@ -28,13 +28,13 @@ def _article_payload(article_id: int) -> Dict[str, Any]:
     summary = " ".join(["science"] * 120)
     now = datetime.now(timezone.utc)
     return {
-        "url": f"https://orbital-insights.local/articles/{article_id}",
-        "original_url": f"https://orbital-insights.local/articles/{article_id}?src=collector",
+        "url": f"https://science-news.local/articles/{article_id}",
+        "original_url": f"https://science-news.local/articles/{article_id}?src=collector",
         "title": f"Deep Space Discovery {article_id:03d}",
         "summary": summary,
         "content": summary + f" detailed content block {article_id}",
-        "source_id": "orbital_feed",
-        "source_name": "Orbital Science Desk",
+        "source_id": "science_news_source",
+        "source_name": "Science News Desk",
         "category": "space",
         "published_date": now,
         "published_tz_offset_minutes": 0,
