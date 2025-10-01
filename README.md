@@ -677,11 +677,20 @@ Este proyecto está bajo la licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 ## 🏆 Stats del Proyecto
 
-- **🔬 Fuentes Monitoreadas**: 15+ fuentes premium
-- **⚡ Velocidad**: ~10-50 artículos/segundo
-- **🎯 Precisión**: Score accuracy >85%
-- **🛡️ Disponibilidad**: 99.9% uptime
-- **📊 Procesamiento**: ~1000+ artículos/día
+Los siguientes indicadores provienen de la última ejecución verificada de la suite de performance y del replay operacional.
+
+- **⚙️ Throughput pipeline (SQLite dev)**: 11.5 artículos/s end-to-end con ingestión p95 en 128 ms y enriquecimiento p95 en 72 ms.
+- **🗄️ Throughput pipeline (perfil PostgreSQL simulado)**: 46.6 artículos/s end-to-end con ingestión p95 en 31.7 ms y pool `QueuePool(12/6)`.
+- **🎯 Accuracy del scorer**: error absoluto medio 0.0, 100% de aciertos en `should_include` y ranking idéntico al dataset dorado.
+- **📥 Escritura PostgreSQL**: 0.024 s de promedio por inserción (p95 57 ms, máx. 97 ms) durante una ráfaga de 60 artículos.
+- **🛡️ Disponibilidad observada**: 50% de ratio de ingesta normalizado; 2 fuentes auto-suspendidas en el último replay semanal.
+
+### 🛣️ Roadmap de Métricas
+
+- Expandir el monitoreo activo a 15+ fuentes premium con cobertura continua.
+- Escalar el throughput sostenido a 50 artículos/segundo en producción.
+- Mantener disponibilidad ≥99.9% en ventanas mensuales.
+- Automatizar el procesamiento de 1 000+ artículos/día.
 
 ---
 

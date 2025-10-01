@@ -1,0 +1,131 @@
+{
+  "runs": {
+    "sqlite": {
+      "latency": {
+        "ingestion": {
+          "samples": 3,
+          "mean_seconds": 0.058324092000172335,
+          "p95_seconds": 0.12763268059989058,
+          "max_seconds": 0.13980039499983832
+        },
+        "enrichment": {
+          "samples": 3,
+          "mean_seconds": 0.02815048433361274,
+          "p95_seconds": 0.07161025220038936,
+          "max_seconds": 0.0792581080004311
+        },
+        "scoring": {
+          "samples": 3,
+          "mean_seconds": 0.00022066100003333608,
+          "p95_seconds": 0.0002745590998529224,
+          "max_seconds": 0.0002826999998433166
+        }
+      },
+      "thresholds": {
+        "ingestion": {
+          "p95_seconds": 0.35,
+          "max_seconds": 0.45
+        },
+        "enrichment": {
+          "p95_seconds": 0.3,
+          "max_seconds": 0.45
+        },
+        "scoring": {
+          "p95_seconds": 0.15,
+          "max_seconds": 0.25
+        },
+        "enrichment_nlp": {
+          "p95_seconds": 0.25,
+          "max_seconds": 0.4
+        }
+      },
+      "throughput": {
+        "articles": 3,
+        "ingestion_rps": 17.145573393530846,
+        "enrichment_rps": 35.523367489843224,
+        "scoring_rps": 4531.83843021162,
+        "pipeline_rps": 11.534659004963773
+      },
+      "accuracy": {
+        "samples": 5,
+        "mean_absolute_error": 0.0,
+        "max_absolute_error": 0.0,
+        "should_include_accuracy": 1.0,
+        "rank_match_ratio": 1.0
+      },
+      "backend": {
+        "backend": "sqlite",
+        "dsn": "sqlite:///perf_pipeline.db",
+        "pool": {
+          "class": "StaticPool",
+          "size": 1
+        }
+      }
+    },
+    "postgresql": {
+      "latency": {
+        "ingestion": {
+          "samples": 3,
+          "mean_seconds": 0.020889657333403495,
+          "p95_seconds": 0.03172866039994915,
+          "max_seconds": 0.03360978799992154
+        },
+        "enrichment": {
+          "samples": 3,
+          "mean_seconds": 0.00043502033349795965,
+          "p95_seconds": 0.0005026188000556431,
+          "max_seconds": 0.0005112270000608987
+        },
+        "scoring": {
+          "samples": 3,
+          "mean_seconds": 0.00015208999987711044,
+          "p95_seconds": 0.00017237779984498048,
+          "max_seconds": 0.00017567699978826568
+        }
+      },
+      "thresholds": {
+        "ingestion": {
+          "p95_seconds": 0.35,
+          "max_seconds": 0.45
+        },
+        "enrichment": {
+          "p95_seconds": 0.3,
+          "max_seconds": 0.45
+        },
+        "scoring": {
+          "p95_seconds": 0.15,
+          "max_seconds": 0.25
+        },
+        "enrichment_nlp": {
+          "p95_seconds": 0.25,
+          "max_seconds": 0.4
+        }
+      },
+      "throughput": {
+        "articles": 3,
+        "ingestion_rps": 47.87057939916301,
+        "enrichment_rps": 2298.743123014709,
+        "scoring_rps": 6575.054249510195,
+        "pipeline_rps": 46.561941513519955
+      },
+      "accuracy": {
+        "samples": 5,
+        "mean_absolute_error": 0.0,
+        "max_absolute_error": 0.0,
+        "should_include_accuracy": 1.0,
+        "rank_match_ratio": 1.0
+      },
+      "backend": {
+        "backend": "postgresql",
+        "dsn": "postgresql://collector:***@db.internal:5432/news_collector",
+        "pool": {
+          "class": "QueuePool",
+          "size": 12,
+          "max_overflow": 6,
+          "timeout": 45,
+          "recycle": 1200
+        }
+      }
+    }
+  }
+}
