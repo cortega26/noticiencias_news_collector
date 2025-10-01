@@ -1,81 +1,96 @@
-"""Tests for the configuration manager adapters."""
 from __future__ import annotations
 
-import json
-from collections import OrderedDict
+import os
 from pathlib import Path
 
 import pytest
 
-from core.config_manager import ConfigError, ConfigManager
+from noticiencias.config_manager import Config, ConfigError, load_config, save_config
+from noticiencias.config_schema import DEFAULT_CONFIG, iter_field_docs
 
 
-def _read_backups(pattern: str) -> set[Path]:
-    backup_dir = Path("backups")
-    if not backup_dir.exists():
-        return set()
-    return set(backup_dir.glob(pattern))
+def _flatten(mapping: dict[str, object], prefix: str = "") -> set[str]:
+    keys: set[str] = set()
+    for name, value in mapping.items():
+        path = f"{prefix}.{name}" if prefix else name
+        if isinstance(value, dict):
+            keys.add(path)
+            keys.update(_flatten(value, path))
+        else:
+            keys.add(path)
+    return keys
 
 
-def test_roundtrip_env_preserves_comments_and_backup(tmp_path: Path) -> None:
-    env_path = tmp_path / ".env"
-    env_path.write_text("# comment\nAPI_KEY=abc\nDEBUG=true\n", encoding="utf-8")
-    before = _read_backups(".env.*.bak")
-    manager = ConfigManager(env_path)
-    state = manager.load(None)
-    assert state.data["API_KEY"] == "abc"
-    assert state.schema.get("API_KEY").is_secret
-    updated = OrderedDict(state.data)
-    updated["DEBUG"] = False
-    manager.save(updated)
-    after = _read_backups(".env.*.bak")
-    assert after - before, "Expected a backup file to be created"
-    content = env_path.read_text(encoding="utf-8")
-    assert "# comment" in content
-    assert "DEBUG=false" in content
-
-
-def test_roundtrip_yaml_profile(tmp_path: Path) -> None:
-    yaml_path = tmp_path / "config.yaml"
-    yaml_path.write_text("dev:\n  API_KEY: secret\n  PORT: 8080\n", encoding="utf-8")
-    manager = ConfigManager(yaml_path)
-    state = manager.load("dev")
-    assert state.schema.get("API_KEY").is_secret
-    mutable = OrderedDict(state.data)
-    mutable["PORT"] = 9090
-    manager.save(mutable)
-    reloaded = ConfigManager(yaml_path).load("dev")
-    assert reloaded.data["PORT"] == 9090
-
-
-def test_roundtrip_json_nested(tmp_path: Path) -> None:
-    json_path = tmp_path / "config.json"
-    json_path.write_text(
-        json.dumps({"debug": True, "nested": {"timeout": 30}}, indent=2),
-        encoding="utf-8",
+def test_precedence_env_overrides(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[collection]\nrequest_timeout_seconds = 15\n", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS=20\n", encoding="utf-8"
     )
-    manager = ConfigManager(json_path)
-    state = manager.load(None)
-    assert "nested.timeout" in state.data
-    mutable = OrderedDict(state.data)
-    mutable["nested.timeout"] = 45
-    manager.save(mutable)
-    reloaded = ConfigManager(json_path).load(None)
-    assert reloaded.data["nested.timeout"] == 45
+    environ = {"NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS": "25"}
+    config = load_config(config_file, environ=environ)
+    assert config.collection.request_timeout_seconds == 25
+    provenance = config._metadata.provenance["collection.request_timeout_seconds"]
+    assert provenance.layer == "env"
+    assert provenance.env_var == "NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS"
 
 
-def test_roundtrip_toml_headless(tmp_path: Path) -> None:
-    toml_path = tmp_path / "config.toml"
-    toml_path.write_text("timeout = 30\n[paths]\nlogs = \"/tmp\"\n", encoding="utf-8")
-    manager = ConfigManager(toml_path)
-    manager.set_values({"timeout": "60"}, profile=None)
-    state = manager.load(None)
-    assert state.data["timeout"] == 60
+def test_save_config_creates_backups(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[collection]\nrequest_timeout_seconds = 10\n", encoding="utf-8")
+    config = load_config(config_file)
+    data = config.model_dump(mode="python")
+    data["collection"]["request_timeout_seconds"] = 30
+    updated = Config.model_validate(data)
+    updated._metadata = config._metadata
+    save_config(updated)
+    data["collection"]["request_timeout_seconds"] = 40
+    updated = Config.model_validate(data)
+    updated._metadata = config._metadata
+    save_config(updated)
+    backups_dir = config_file.parent / "backups"
+    backups = list(backups_dir.glob("config.toml.*.bak"))
+    assert backups, "second save should produce a timestamped backup"
 
 
-def test_set_unknown_key_raises(tmp_path: Path) -> None:
-    json_path = tmp_path / "config.json"
-    json_path.write_text("{}", encoding="utf-8")
-    manager = ConfigManager(json_path)
-    with pytest.raises(ConfigError):
-        manager.set_values({"MISSING": "1"})
+def test_validation_errors_report_source(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[collection]\nrequest_timeout_seconds = 'abc'\n", encoding="utf-8")
+    with pytest.raises(ConfigError) as excinfo:
+        load_config(config_file)
+    assert "collection.request_timeout_seconds" in str(excinfo.value)
+    assert "file" in str(excinfo.value)
+
+
+def test_schema_keys_cover_defaults() -> None:
+    schema_keys = {
+        entry["name"]
+        for entry in iter_field_docs(DEFAULT_CONFIG)
+        if not entry.get("is_nested")
+    }
+    default_keys = _flatten(DEFAULT_CONFIG.model_dump(mode="python"))
+    assert schema_keys.issubset(default_keys)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "collection.collection_interval_hours",
+        "collection.max_concurrent_requests",
+        "rate_limiting.domain_overrides",
+        "scoring.minimum_score",
+        "text_processing.supported_languages",
+        "enrichment.default_model",
+        "database.driver",
+        "logging.level",
+        "news.max_items",
+    ],
+)
+def test_implicit_keys_are_defined(path: str) -> None:
+    schema_keys = {
+        entry["name"]
+        for entry in iter_field_docs(DEFAULT_CONFIG)
+        if not entry.get("is_nested")
+    }
+    assert path in schema_keys

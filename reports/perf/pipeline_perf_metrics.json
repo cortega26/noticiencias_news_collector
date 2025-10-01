@@ -4,21 +4,21 @@
       "latency": {
         "ingestion": {
           "samples": 3,
-          "mean_seconds": 0.058324092000172335,
-          "p95_seconds": 0.12763268059989058,
-          "max_seconds": 0.13980039499983832
+          "mean_seconds": 0.0258742909997333,
+          "p95_seconds": 0.03989264369929515,
+          "max_seconds": 0.04193556699920009
         },
         "enrichment": {
           "samples": 3,
-          "mean_seconds": 0.02815048433361274,
-          "p95_seconds": 0.07161025220038936,
-          "max_seconds": 0.0792581080004311
+          "mean_seconds": 0.001789546333081186,
+          "p95_seconds": 0.0019988367001133158,
+          "max_seconds": 0.0020332630001576035
         },
         "scoring": {
           "samples": 3,
-          "mean_seconds": 0.00022066100003333608,
-          "p95_seconds": 0.0002745590998529224,
-          "max_seconds": 0.0002826999998433166
+          "mean_seconds": 0.00015481099975052834,
+          "p95_seconds": 0.00018902409965448896,
+          "max_seconds": 0.00019435699960013153
         }
       },
       "thresholds": {
@@ -41,10 +41,10 @@
       },
       "throughput": {
         "articles": 3,
-        "ingestion_rps": 17.145573393530846,
-        "enrichment_rps": 35.523367489843224,
-        "scoring_rps": 4531.83843021162,
-        "pipeline_rps": 11.534659004963773
+        "ingestion_rps": 38.64840199912367,
+        "enrichment_rps": 558.8008432719541,
+        "scoring_rps": 6459.489323184138,
+        "pipeline_rps": 35.94710958078369
       },
       "accuracy": {
         "samples": 5,
@@ -66,21 +66,21 @@
       "latency": {
         "ingestion": {
           "samples": 3,
-          "mean_seconds": 0.020889657333403495,
-          "p95_seconds": 0.03172866039994915,
-          "max_seconds": 0.03360978799992154
+          "mean_seconds": 0.013885089999954895,
+          "p95_seconds": 0.017434279900408002,
+          "max_seconds": 0.018047383000521222
         },
         "enrichment": {
           "samples": 3,
-          "mean_seconds": 0.00043502033349795965,
-          "p95_seconds": 0.0005026188000556431,
-          "max_seconds": 0.0005112270000608987
+          "mean_seconds": 0.00029904000014842797,
+          "p95_seconds": 0.00038714930042260676,
+          "max_seconds": 0.00040175800040742615
         },
         "scoring": {
           "samples": 3,
-          "mean_seconds": 0.00015208999987711044,
-          "p95_seconds": 0.00017237779984498048,
-          "max_seconds": 0.00017567699978826568
+          "mean_seconds": 0.00013440266623850525,
+          "p95_seconds": 0.0001543943993965513,
+          "max_seconds": 0.0001576589993419475
         }
       },
       "thresholds": {
@@ -103,10 +103,10 @@
       },
       "throughput": {
         "articles": 3,
-        "ingestion_rps": 47.87057939916301,
-        "enrichment_rps": 2298.743123014709,
-        "scoring_rps": 6575.054249510195,
-        "pipeline_rps": 46.561941513519955
+        "ingestion_rps": 72.01969882825739,
+        "enrichment_rps": 3344.0342412508417,
+        "scoring_rps": 7440.3285886117965,
+        "pipeline_rps": 69.83955851500565
       },
       "accuracy": {
         "samples": 5,
