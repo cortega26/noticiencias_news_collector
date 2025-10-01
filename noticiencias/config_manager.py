@@ -199,6 +199,13 @@ def _serialize_for_toml(value: Any) -> Any:
     if isinstance(value, Config):
         data = value.model_dump(mode="python")
         return {key: _serialize_for_toml(val) for key, val in data.items()}
+    if value is None:
+        # ``tomli_w`` follows the TOML v1.0 specification which does not
+        # define a ``null`` value. The project previously stored optional
+        # fields as empty strings in ``config.toml`` to signal "unset" values,
+        # so we mirror that behaviour here to ensure round-tripping via the
+        # GUI keeps parity with the hand-maintained configuration file.
+        return ""
     if isinstance(value, Mapping):
         return {key: _serialize_for_toml(val) for key, val in value.items()}
     if isinstance(value, list):
