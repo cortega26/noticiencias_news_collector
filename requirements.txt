@@ -15,7 +15,7 @@ beautifulsoup4==4.14.2     # HTML parsing para contenido adicional
 lxml==6.0.2                # XML parser rápido para feeds
 
 # Procesamiento de texto y NLP
-nltk==3.9.1                # Natural Language Toolkit - análisis básico de texto
+nltk==3.9.2                # Natural Language Toolkit - análisis básico de texto
 textblob==0.19.0           # Análisis de sentimientos simple
 python-dateutil==2.9.0.post0  # Parsing inteligente de fechas
 
