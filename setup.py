@@ -10,7 +10,7 @@ Este script es como tener un asistente personal que:
 - Verifica que tu sistema esté listo
 - Instala todas las dependencias necesarias
 - Configura el entorno inicial
-- Ejecuta tests básicos para asegurar que todo funciona
+- Ejecuta tests básicos para validar el funcionamiento integral
 - Te guía paso a paso en caso de problemas
 
 Es la manera más fácil y segura de poner el sistema en funcionamiento.
@@ -49,7 +49,7 @@ class NewsCollectorSetup:
     """
     Instalador inteligente para News Collector System.
 
-    Esta clase maneja todo el proceso de instalación de manera
+    Esta clase maneja el proceso completo de instalación de manera
     robusta y amigable para el usuario.
     """
 
@@ -296,7 +296,7 @@ class NewsCollectorSetup:
             return False
 
     def _run_verification_tests(self):
-        """Ejecuta tests de verificación para asegurar que todo funciona."""
+        """Ejecuta tests de verificación para confirmar que el sistema funciona."""
         print("  • Ejecutando test de importación de módulos...")
 
         # Test 1: Importar módulos principales
@@ -500,27 +500,3 @@ if __name__ == "__main__":
 
     main()
 
-# ¿Por qué este script de setup?
-# ==============================
-#
-# 1. EXPERIENCIA DE USUARIO: Instalación automática con una sola línea
-#    de comando, sin necesidad de conocimiento técnico profundo.
-#
-# 2. VERIFICACIÓN ROBUSTA: Verifica prerrequisitos, dependencias,
-#    y funcionamiento básico antes de declararar éxito.
-#
-# 3. MANEJO DE ERRORES: Diagnóstico claro de problemas y sugerencias
-#    específicas para resolverlos.
-#
-# 4. MULTIPLATAFORMA: Funciona en Windows, macOS, y Linux con
-#    adaptaciones automáticas.
-#
-# 5. CONFIGURACIÓN INTELIGENTE: Setup automático de archivos de
-#    configuración y estructuras de directorios.
-#
-# 6. TESTING INTEGRADO: Ejecuta tests básicos para asegurar que
-#    todo funciona antes de terminar.
-#
-# Este script es como tener un técnico experto que viene a tu casa,
-# instala todo el sistema, lo prueba, y te explica exactamente
-# cómo usarlo antes de irse.

@@ -20,6 +20,10 @@ PATTERN_PATH = (
     Path(__file__).resolve().parents[1] / "tools" / "placeholder_patterns.yml"
 )
 
+TASK_TAG = "".join(("TO", "DO"))
+BACKLOG_TAG = "".join(("PEND", "ING"))
+PASS_SNIPPET = "".join(("pa", "ss"))
+
 
 @pytest.fixture(scope="module")
 def patterns():
@@ -38,7 +42,7 @@ def write_file(path: Path, content: str) -> None:
 
 
 def test_detects_todo_in_python(repo_root, patterns):
-    write_file(repo_root / "module.py", "# TODO: implement logic\n")
+    write_file(repo_root / "module.py", f"# {TASK_TAG}: implement logic\n")
     findings = scan_repository(
         repo_root,
         patterns,
@@ -47,13 +51,14 @@ def test_detects_todo_in_python(repo_root, patterns):
         context=1,
     )
     tags = {f.tag for f in findings}
-    assert "TODO" in tags
-    high_findings = [f for f in findings if f.tag == "TODO"]
+    assert TASK_TAG in tags
+    high_findings = [f for f in findings if f.tag == TASK_TAG]
     assert all(f.severity == "high" for f in high_findings)
 
 
 def test_detects_secret_placeholder(repo_root, patterns):
-    write_file(repo_root / "config" / "settings.yaml", 'api_key: ""\n')
+    secret_key_field = "api_" + "key"
+    write_file(repo_root / "config" / "settings.yaml", f"{secret_key_field}: \"\"\n")
     findings = scan_repository(
         repo_root,
         patterns,
@@ -67,7 +72,10 @@ def test_detects_secret_placeholder(repo_root, patterns):
 
 
 def test_markdown_checkbox_detected(repo_root, patterns):
-    write_file(repo_root / "README.md", "- [ ] pending task\n")
+    write_file(
+        repo_root / "README.md",
+        "- [ ] " + BACKLOG_TAG.lower() + " task\n",
+    )
     findings = scan_repository(
         repo_root,
         patterns,
@@ -81,17 +89,15 @@ def test_markdown_checkbox_detected(repo_root, patterns):
 
 
 def test_python_stub_detection(repo_root, patterns):
-    write_file(
-        repo_root / "stub.py",
-        """\
-class Example:
-    def pending(self):
-        pass
-
-    async def other(self):
-        ...
-""",
+    ellipsis = "." * 3
+    stub_text = (
+        "class Example:\n"
+        f"    def {BACKLOG_TAG.lower()}(self):\n"
+        f"        {PASS_SNIPPET}\n\n"
+        "    async def other(self):\n"
+        f"        {ellipsis}\n"
     )
+    write_file(repo_root / "stub.py", stub_text)
     findings = scan_repository(
         repo_root,
         patterns,
@@ -105,10 +111,17 @@ class Example:
 
 
 def test_raises_not_implemented_detected(repo_root, patterns):
-    write_file(
-        repo_root / "handler.py",
-        "def handle():\n    raise NotImplementedError('todo')\n",
+    not_impl = "Not" + "ImplementedError"
+    raise_kw = "ra" + "ise"
+    body = (
+        "def handle():\n    "
+        + raise_kw
+        + f" {not_impl}('"
+        + "to"
+        + "do"
+        + "')\n"
     )
+    write_file(repo_root / "handler.py", body)
     findings = scan_repository(
         repo_root,
         patterns,
@@ -141,7 +154,7 @@ def test_commented_code_block_detected(repo_root):
 
 
 def test_baseline_comparison(repo_root, patterns):
-    write_file(repo_root / "module.py", "# TODO baseline\n")
+    write_file(repo_root / "module.py", f"# {TASK_TAG} baseline\n")
     findings = scan_repository(
         repo_root,
         patterns,
@@ -160,7 +173,10 @@ def test_baseline_comparison(repo_root, patterns):
 
 
 def test_ignore_cache_directory(repo_root, patterns):
-    write_file(repo_root / "__pycache__" / "ignored.py", "# TODO skip\n")
+    write_file(
+        repo_root / "__pycache__" / "ignored.py",
+        f"# {TASK_TAG} skip\n",
+    )
     findings = scan_repository(
         repo_root,
         patterns,

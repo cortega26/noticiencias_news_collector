@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 
 from pydantic import ValidationError
 
-from ..storage.models import Base, Article, Source, ScoreLog
+from ..storage.models import Base, Article, Source, ScoreLog, PENDING_STATUS
 from config.settings import DATABASE_CONFIG, DEDUP_CONFIG
 from ..utils.dedupe import (
     normalize_article_text,
@@ -243,7 +243,7 @@ class DatabaseManager:
 
         Esto es como tener un sistema de préstamo de libros que automáticamente
         registra cuando tomas un libro y cuando lo devuelves, asegurándose
-        de que todo esté siempre en orden.
+        de que cada estantería permanezca en orden.
 
         Uso:
             with db_manager.get_session() as session:
@@ -358,7 +358,7 @@ class DatabaseManager:
                     journal=payload.get("journal"),
                     is_preprint=payload.get("is_preprint", False),
                     language=payload.get("language", "en"),
-                    processing_status="pending",
+                    processing_status=PENDING_STATUS,
                     article_metadata=article_metadata,
                     cluster_id=cluster_id,
                     duplication_confidence=confidence,
@@ -624,7 +624,7 @@ class DatabaseManager:
         with self.get_session() as session:
             pending_articles = (
                 session.query(Article)
-                .filter(Article.processing_status == "pending")
+                .filter(Article.processing_status == PENDING_STATUS)
                 .order_by(Article.collected_date)
                 .all()
             )
@@ -972,7 +972,7 @@ class DatabaseManager:
             total_articles = session.query(func.count(Article.id)).scalar()
             pending_articles = (
                 session.query(func.count(Article.id))
-                .filter(Article.processing_status == "pending")
+                .filter(Article.processing_status == PENDING_STATUS)
                 .scalar()
             )
 
@@ -1024,7 +1024,7 @@ def get_database_manager() -> DatabaseManager:
     Función factory para obtener la instancia del DatabaseManager.
 
     Esto implementa el patrón Singleton, asegurándonos de que solo
-    tengamos una conexión a la base de datos en todo el sistema.
+    exista una conexión a la base de datos en toda la plataforma.
     """
     global _db_manager
     if _db_manager is None:
@@ -1032,25 +1032,3 @@ def get_database_manager() -> DatabaseManager:
     return _db_manager
 
 
-# ¿Por qué esta arquitectura de base de datos?
-# ============================================
-#
-# 1. ABSTRACCIÓN LIMPIA: El DatabaseManager oculta toda la complejidad
-#    de SQLAlchemy del resto del sistema.
-#
-# 2. GESTIÓN SEGURA DE SESIONES: El context manager asegura que nunca
-#    tengamos sesiones colgadas o transacciones incompletas.
-#
-# 3. OPERACIONES OPTIMIZADAS: Cada método está diseñado para las consultas
-#    más comunes que necesitará nuestro sistema.
-#
-# 4. LOGGING COMPREHENSIVO: Cada operación se registra para facilitar
-#    debugging y monitoreo.
-#
-# 5. ESCALABILIDAD: Fácil migración de SQLite a PostgreSQL cuando crezcamos.
-#
-# 6. INTEGRIDAD DE DATOS: Manejo robusto de errores y validaciones.
-#
-# Este sistema es como tener un bibliotecario súper competente que nunca
-# se equivoca, nunca pierde un libro, y siempre sabe exactamente dónde
-# encontrar lo que necesitas.

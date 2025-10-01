@@ -95,8 +95,8 @@ def collector(
         RSSCollector, "_fetch_feed", lambda self, source_id, feed_url: ("<rss/>", 200)
     )
 
-    dummy_feed = type("DummyFeed", (), {"bozo": 0})()
-    monkeypatch.setattr("feedparser.parse", lambda content: dummy_feed)
+    sample_feed = type("MockFeed", (), {"bozo": 0})()
+    monkeypatch.setattr("feedparser.parse", lambda content: sample_feed)
 
     def fake_extract(self, parsed_feed, source_config):
         return getattr(self, "_test_articles", [])

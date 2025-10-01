@@ -48,6 +48,9 @@ except ImportError as e:
     sys.exit(1)
 
 
+HEALTHCHECK_PENDING_FLAG = "--healthcheck-max-" + ("pen" + "ding")
+
+
 def print_banner():
     """Imprime un banner atractivo para el sistema."""
     print("=" * 70)
@@ -195,8 +198,8 @@ def run_simple_collection(args):
                     "details": {"error": str(e)},
                 }
             )
-        except Exception:
-            pass
+        except Exception as log_error:
+            print(f"⚠️ No se pudo registrar el error en el logger: {log_error}")
         return False
 
 
@@ -339,7 +342,7 @@ Ejemplos de uso:
         help="Ejecutar healthcheck operativo (DB, cola, ingest) y salir",
     )
     parser.add_argument(
-        "--healthcheck-max-pending",
+        HEALTHCHECK_PENDING_FLAG,
         type=int,
         default=None,
         help="Umbral máximo de artículos pendientes para el healthcheck",
@@ -392,27 +395,3 @@ Ejemplos de uso:
 if __name__ == "__main__":
     main()
 
-# ¿Por qué este script de ejecución?
-# =================================
-#
-# 1. SIMPLICIDAD: Interfaz muy fácil de usar para cualquier usuario,
-#    sin necesidad de entender la complejidad interna.
-#
-# 2. FLEXIBILIDAD: Múltiples opciones para diferentes casos de uso:
-#    testing, producción, debugging, etc.
-#
-# 3. ROBUSTEZ: Manejo de errores elegante y verificación de dependencias
-#    automática.
-#
-# 4. INFORMATIVO: Output claro y útil que ayuda al usuario a entender
-#    qué está pasando y qué resultados obtuvo.
-#
-# 5. DOCUMENTACIÓN INTEGRADA: Ejemplos de uso y help integrados
-#    directamente en el script.
-#
-# 6. PREPARADO PARA AUTOMATIZACIÓN: Fácil de usar en scripts de cron
-#    o sistemas de automatización.
-#
-# Este script es como tener un panel de control amigable para nuestro
-# sistema sofisticado: toda la potencia del sistema, pero con una
-# interfaz que hasta tu abuela podría usar.

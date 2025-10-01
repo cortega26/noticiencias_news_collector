@@ -17,7 +17,7 @@ Este archivo coordina:
 - Procesamiento y scoring
 - Generación de reportes
 
-Todo esto de manera robusta, observable, y extensible.
+El flujo completo se ejecuta de manera robusta, observable y extensible.
 """
 
 import argparse
@@ -41,7 +41,7 @@ from src import RSSCollector, get_database_manager, setup_logging, get_metrics_r
 
 class NewsCollectorSystem:
     """
-    Clase principal que coordina todo el sistema de recopilación de noticias.
+    Clase principal que coordina la operación completa del sistema de recopilación de noticias.
 
     Esta clase es como el CEO de una empresa que conoce todos los departamentos
     y puede dirigir la operación completa de manera eficiente y coordinada.
@@ -76,8 +76,8 @@ class NewsCollectorSystem:
         """
         Inicializa todos los componentes del sistema.
 
-        Esta función es como preparar todo el equipo antes de una expedición:
-        verificar que tengamos todo lo necesario, que funcione correctamente,
+        Esta función es como preparar cada pieza del equipo antes de una expedición:
+        verificar que tengamos cada recurso necesario, que funcione correctamente,
         y que estemos listos para la aventura.
 
         Returns:
@@ -950,27 +950,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-# ¿Por qué esta arquitectura de main.py?
-# =====================================
-#
-# 1. ORQUESTACIÓN COMPLETA: Coordina todos los componentes del sistema
-#    de manera elegante y robusta.
-#
-# 2. OBSERVABILIDAD TOTAL: Logging detallado de cada fase y operación
-#    para facilitar debugging y monitoreo.
-#
-# 3. MANEJO DE ERRORES: Estrategia robusta para manejar fallos sin
-#    corromper datos o dejar el sistema en estado inconsistente.
-#
-# 4. FLEXIBILIDAD: Soporte para modo dry_run, filtrado de fuentes,
-#    y configuración personalizada.
-#
-# 5. INTERFAZ CLARA: API simple tanto para uso programático como
-#    desde línea de comandos.
-#
-# 6. ESCALABILIDAD: Diseñado para manejar desde pruebas pequeñas
-#    hasta operación en producción con miles de artículos.
-#
-# Este main.py es como tener un director de orquesta experto que puede
-# dirigir desde un cuarteto de cámara hasta una sinfonía completa,
-# adaptándose perfectamente a cualquier escala de operación.

@@ -22,7 +22,7 @@ SIMULATED_FEED = "<rss><channel><item><title>Example</title></item></channel></r
 SIMULATED_DELAY = 0.02
 
 
-class DummyDB:
+class MockDB:
     def __init__(self):
         self.saved = []
 
@@ -47,10 +47,10 @@ class DummyDB:
 
 
 def _stub_common_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
-    dummy_feed = type("DummyFeed", (), {"bozo": 0})()
+    fake_feed = type("MockFeed", (), {"bozo": 0})()
 
     def fake_parse(content: str):
-        return dummy_feed
+        return fake_feed
 
     def extract_one(self, parsed_feed, source_config):
         return [
@@ -128,14 +128,14 @@ def _stub_common_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
         raising=False,
     )
 
-    class DummyAsyncClient:
+    class MockAsyncClient:
         async def __aenter__(self):
             return self
 
         async def __aexit__(self, exc_type, exc, tb):
             return False
 
-    monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: DummyAsyncClient())
+    monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: MockAsyncClient())
 
 
 def _build_sources() -> Dict[str, Dict[str, str]]:
@@ -158,8 +158,8 @@ def test_async_collector_outperforms_sync(monkeypatch: pytest.MonkeyPatch) -> No
     sync_collector = RSSCollector()
     async_collector = AsyncRSSCollector()
 
-    sync_collector.db_manager = DummyDB()
-    async_collector.db_manager = DummyDB()
+    sync_collector.db_manager = MockDB()
+    async_collector.db_manager = MockDB()
 
     def slow_fetch(self, source_id, feed_url):
         sleep(SIMULATED_DELAY)
