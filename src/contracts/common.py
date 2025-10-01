@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from src.utils.pydantic_compat import get_pydantic_module
+
+_pydantic = get_pydantic_module()
+BaseModel = _pydantic.BaseModel
+ConfigDict = _pydantic.ConfigDict
+Field = _pydantic.Field
+model_validator = _pydantic.model_validator
 
 from .enrichment import ArticleEnrichment, ArticleEnrichmentModel
 
