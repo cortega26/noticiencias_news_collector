@@ -16,11 +16,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pip-tools
-        run: python -m pip install pip-tools
-      - name: Recompile dependency lock
-        run: python -m piptools compile --generate-hashes --output-file requirements.lock requirements.txt
-      - name: Recompile security lock
-        run: python -m piptools compile --allow-unsafe --generate-hashes --extra security --output-file requirements-security.lock pyproject.toml
-      - name: Ensure lockfile is up to date
-        run: git diff --exit-code requirements.lock requirements-security.lock
+      - name: Refresh lockfiles (check mode)
+        run: python scripts/sync_lockfiles.py --check --install-pip-tools
