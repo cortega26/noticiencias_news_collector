@@ -7,7 +7,7 @@ import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import messagebox, ttk
-from typing import Any, Dict
+from typing import Any, Dict, Iterable, List, Tuple
 
 from pydantic import BaseModel
 
@@ -24,6 +24,64 @@ class FieldDoc:
     is_secret: bool
 
 
+@dataclass(frozen=True)
+class FieldGroup:
+    """Logical grouping metadata for configuration fields."""
+
+    label: str
+    prefixes: Tuple[str, ...]
+    description: str = ""
+
+
+FIELD_GROUPS: Tuple[FieldGroup, ...] = (
+    FieldGroup(
+        label="General",
+        prefixes=(
+            "app.",
+            "paths.",
+            "collection.",
+            "rate_limiting.",
+            "robots.",
+            "news.",
+        ),
+        description=(
+            "Deployment, filesystem, and collection scheduling controls "
+            "used across the application."
+        ),
+    ),
+    FieldGroup(
+        label="Database",
+        prefixes=("database.",),
+        description="Connectivity parameters for SQL backends.",
+    ),
+    FieldGroup(
+        label="Scoring & Weights",
+        prefixes=("scoring.",),
+        description="Tuning knobs for the article scoring pipeline.",
+    ),
+    FieldGroup(
+        label="Text Processing",
+        prefixes=("text_processing.",),
+        description="Normalization and penalty configuration for textual content.",
+    ),
+    FieldGroup(
+        label="Enrichment",
+        prefixes=("enrichment.",),
+        description="Entity, topic, and NLP enrichment options.",
+    ),
+    FieldGroup(
+        label="Deduplication",
+        prefixes=("dedup.",),
+        description="Similarity thresholds and cluster sizing.",
+    ),
+    FieldGroup(
+        label="Formats & Logging",
+        prefixes=("logging.",),
+        description="Output formatting and retention for structured logs.",
+    ),
+)
+
+
 class ConfigEditor:
     """Small Tkinter wrapper for editing the TOML configuration."""
 
@@ -34,6 +92,8 @@ class ConfigEditor:
         self._field_docs: Dict[str, FieldDoc] = self._build_docs()
         self._widgets: Dict[str, tk.Widget] = {}
         self._variables: Dict[str, tk.Variable] = {}
+        self._field_groups: Dict[str, str] = {}
+        self._group_descriptions: Dict[str, str] = {}
         self._root = tk.Tk()
         self._root.title("Noticiencias Configuration")
         self._status = tk.StringVar()
@@ -78,21 +138,7 @@ class ConfigEditor:
         self._root.rowconfigure(0, weight=1)
         self._root.columnconfigure(0, weight=1)
 
-        notebook = ttk.Notebook(container)
-        notebook.grid(row=0, column=0, sticky="nsew")
-        container.rowconfigure(0, weight=1)
-        container.columnconfigure(0, weight=1)
-
-        editor_frame = ttk.Frame(notebook, padding=(8, 8, 8, 0))
-        help_frame = ttk.Frame(notebook, padding=(8, 8, 8, 0))
-        notebook.add(editor_frame, text="Editor")
-        notebook.add(help_frame, text="Help")
-
-        self._build_editor(editor_frame)
-        self._build_help(help_frame)
-
-    def _build_editor(self, frame: ttk.Frame) -> None:
-        toolbar = ttk.Frame(frame)
+        toolbar = ttk.Frame(container)
         toolbar.grid(row=0, column=0, sticky="ew")
         toolbar.columnconfigure(1, weight=1)
 
@@ -104,22 +150,79 @@ class ConfigEditor:
         ttk.Button(toolbar, text="Reload", command=self._reload).grid(row=0, column=2, padx=6)
         ttk.Button(toolbar, text="Save", command=self._save).grid(row=0, column=3, padx=6)
 
-        status_label = ttk.Label(frame, textvariable=self._status, foreground="red")
+        status_label = ttk.Label(container, textvariable=self._status, foreground="red")
         status_label.grid(row=1, column=0, sticky="ew", pady=(4, 4))
 
-        canvas = tk.Canvas(frame, borderwidth=0)
-        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scroll_y.set)
-        canvas.grid(row=2, column=0, sticky="nsew")
-        scroll_y.grid(row=2, column=1, sticky="ns")
-        frame.rowconfigure(2, weight=1)
+        notebook = ttk.Notebook(container)
+        notebook.grid(row=2, column=0, sticky="nsew")
+        container.rowconfigure(2, weight=1)
+        container.columnconfigure(0, weight=1)
 
-        self._form = ttk.Frame(canvas)
-        self._form.bind("<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self._form, anchor="nw")
+        self._group_containers: Dict[str, ttk.Frame] = {}
+        self._forms: Dict[str, ttk.Frame] = {}
 
-        for index, name in enumerate(sorted(self._field_docs)):
-            self._create_field_row(index, name)
+        for label, names, description in self._group_fields():
+            group_frame = ttk.Frame(notebook, padding=(8, 8, 8, 0))
+            notebook.add(group_frame, text=label)
+            self._group_containers[label] = group_frame
+            self._forms[label] = self._build_group_form(group_frame, names, description)
+
+        help_frame = ttk.Frame(notebook, padding=(8, 8, 8, 0))
+        notebook.add(help_frame, text="Help")
+        self._build_help(help_frame)
+
+    def _group_fields(self) -> List[Tuple[str, List[str], str]]:
+        groups: List[Tuple[str, List[str], str]] = []
+        assigned: set[str] = set()
+        for group in FIELD_GROUPS:
+            names = sorted(
+                name
+                for name in self._field_docs
+                if any(name.startswith(prefix) for prefix in group.prefixes)
+            )
+            if names:
+                groups.append((group.label, names, group.description))
+                assigned.update(names)
+        remaining = sorted(name for name in self._field_docs if name not in assigned)
+        if remaining:
+            groups.append(("Other", remaining, "Fields without a dedicated category."))
+        self._field_groups = {name: label for label, items, _ in groups for name in items}
+        self._group_descriptions = {label: description for label, _items, description in groups}
+        return groups
+
+    def _build_group_form(
+        self, frame: ttk.Frame, names: Iterable[str], description: str
+    ) -> ttk.Frame:
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(1, weight=1)
+
+        if description:
+            ttk.Label(frame, text=description, wraplength=680).grid(
+                row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
+            )
+
+        canvas = tk.Canvas(frame, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.grid(row=1, column=0, sticky="nsew")
+        scrollbar.grid(row=1, column=1, sticky="ns")
+
+        form = ttk.Frame(canvas)
+        form.columnconfigure(0, weight=1)
+        form.bind(
+            "<Configure>",
+            lambda event: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
+        window_id = canvas.create_window((0, 0), window=form, anchor="nw")
+        canvas.bind(
+            "<Configure>",
+            lambda event, item=window_id: canvas.itemconfigure(item, width=event.width),
+        )
+
+        for index, name in enumerate(names):
+            self._create_field_row(form, index, name)
+
+        return form
 
     def _build_help(self, frame: ttk.Frame) -> None:
         search = tk.StringVar()
@@ -128,11 +231,20 @@ class ConfigEditor:
         search_entry.grid(row=0, column=1, sticky="ew", pady=(0, 6))
         frame.columnconfigure(1, weight=1)
 
-        columns = ("type", "default", "description")
+        columns = ("field", "type", "default", "group", "description")
         tree = ttk.Treeview(frame, columns=columns, show="headings")
         for column in columns:
             tree.heading(column, text=column.capitalize())
-            tree.column(column, width=200 if column != "description" else 480, anchor="w")
+            if column == "description":
+                tree.column(column, width=560, anchor="w")
+            elif column == "default":
+                tree.column(column, width=220, anchor="w")
+            elif column == "group":
+                tree.column(column, width=160, anchor="w")
+            elif column == "field":
+                tree.column(column, width=260, anchor="w")
+            else:
+                tree.column(column, width=140, anchor="w")
         tree.grid(row=1, column=0, columnspan=2, sticky="nsew")
         frame.rowconfigure(1, weight=1)
 
@@ -143,15 +255,24 @@ class ConfigEditor:
         def refresh_tree(*_args: object) -> None:
             needle = search.get().strip().lower()
             tree.delete(*tree.get_children())
-            for doc in self._field_docs.values():
-                if needle and needle not in doc.name.lower() and needle not in doc.description.lower():
+            for name in sorted(self._field_docs):
+                doc = self._field_docs[name]
+                group_label = self._field_groups.get(name, "Other")
+                haystacks = (
+                    doc.name.lower(),
+                    doc.description.lower(),
+                    group_label.lower(),
+                )
+                if needle and not any(needle in haystack for haystack in haystacks):
                     continue
                 tree.insert(
                     "",
                     "end",
                     values=(
+                        doc.name,
                         doc.type_name,
                         self._format_display(doc.default),
+                        group_label,
                         doc.description,
                     ),
                     iid=doc.name,
@@ -161,11 +282,11 @@ class ConfigEditor:
         search_entry.bind("<KeyRelease>", refresh_tree)
         refresh_tree()
 
-    def _create_field_row(self, index: int, name: str) -> None:
+    def _create_field_row(self, parent: ttk.Frame, index: int, name: str) -> None:
         doc = self._field_docs[name]
         value = self._resolve_value(name)
 
-        frame = ttk.Frame(self._form)
+        frame = ttk.Frame(parent)
         frame.grid(row=index, column=0, sticky="ew", pady=4)
         frame.columnconfigure(1, weight=1)
 
