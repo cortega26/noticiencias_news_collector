@@ -17,11 +17,19 @@ if "src" not in sys.modules:
     stub.__path__ = [str(SRC_DIR)]
     sys.modules["src"] = stub
 
+from config import ENRICHMENT_CONFIG
 from src.contracts import CollectorArticleModel
 from src.storage.database import DatabaseManager
 from src.storage.models import Article
 
 SIMHASH_MASK = (1 << 64) - 1
+
+
+def _enrichment_model_version() -> str:
+    default_model = ENRICHMENT_CONFIG.get("default_model", "pattern_v1")
+    models = ENRICHMENT_CONFIG.get("models", {})
+    model_config = models.get(default_model, {})
+    return str(model_config.get("version", default_model))
 
 
 def _article_payload(url: str, **overrides: object) -> dict[str, object]:
@@ -59,6 +67,7 @@ def _article_payload(url: str, **overrides: object) -> dict[str, object]:
                 "entities": ["Test Source"],
                 "topics": ["science"],
                 "sentiment": "neutral",
+                "model_version": _enrichment_model_version(),
             },
         },
     }

@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import ALL_SOURCES
+from config import ALL_SOURCES, ENRICHMENT_CONFIG
 
 pytestmark = pytest.mark.e2e
 
@@ -20,6 +20,13 @@ from main import NewsCollectorSystem
 from src.contracts import CollectorArticleModel
 from src.storage.database import DatabaseManager
 from src.storage.models import Article
+
+
+def _enrichment_model_version() -> str:
+    default_model = ENRICHMENT_CONFIG.get("default_model", "pattern_v1")
+    models = ENRICHMENT_CONFIG.get("models", {})
+    model_config = models.get(default_model, {})
+    return str(model_config.get("version", default_model))
 
 
 def _long_summary() -> str:
@@ -62,6 +69,7 @@ def _basic_article_payload(**overrides: object) -> dict[str, object]:
                 "entities": ["Nature"],
                 "topics": ["science"],
                 "sentiment": "neutral",
+                "model_version": _enrichment_model_version(),
             },
         },
     }
