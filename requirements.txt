@@ -43,7 +43,7 @@ scikit-learn==1.7.2       # ML algorithms básicos
 numpy==2.3.3              # Operaciones numéricas
 
 # HTTP async client (para colector asíncrono opcional)
-httpx==0.27.2             # Compatibilidad con Starlette TestClient
+httpx==0.28.1             # Compatibilidad con Starlette TestClient
 
 # ¿Por qué estas dependencias específicas?
 # =======================================
