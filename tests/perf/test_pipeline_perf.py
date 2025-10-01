@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Dict, List, cast
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine as sqlalchemy_create_engine
@@ -118,9 +119,11 @@ def pipeline_storage(
         manager = DatabaseManager(postgres_config)
 
         pool_kwargs = captured.get("kwargs", {})
-        captured_url = captured.get("url")
-        if hasattr(captured_url, "render_as_string"):
-            safe_dsn = captured_url.render_as_string(hide_password=True)
+        captured_url: Any | None = captured.get("url")
+        if captured_url is None:
+            safe_dsn = "<unavailable>"
+        elif hasattr(captured_url, "render_as_string"):
+            safe_dsn = str(captured_url.render_as_string(hide_password=True))
         else:
             safe_dsn = str(captured_url)
         backend_info.update(
@@ -193,14 +196,11 @@ def _compute_scoring_accuracy() -> Dict[str, float]:
                 return cls.frozen_value.astimezone(tz)
             return cls.frozen_value
 
-    original_datetime = feature_scorer_module.datetime
-    feature_scorer_module.datetime = _FrozenDateTime  # type: ignore[assignment]
-
     errors: List[float] = []
     include_matches = 0
     ranks: List[Dict[str, Any]] = []
 
-    try:
+    with patch.object(feature_scorer_module, "datetime", _FrozenDateTime):
         scorer = create_scorer()
         for entry in dataset["articles"]:
             article_payload = dict(entry["article"])
@@ -218,8 +218,6 @@ def _compute_scoring_accuracy() -> Dict[str, float]:
                     "expected_rank": expected["rank"],
                 }
             )
-    finally:
-        feature_scorer_module.datetime = original_datetime
 
     total = len(ranks)
     predicted_order = sorted(ranks, key=lambda item: item["predicted_score"], reverse=True)
