@@ -119,4 +119,6 @@ scalene_profile.*
 tmp_config_init.txt
 *.log
 .vscode/
-reports/
+reports/*
+!reports/.gitkeep
+!reports/placeholders.baseline.json

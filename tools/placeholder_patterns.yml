@@ -1,0 +1,151 @@
+patterns:
+  - tag: TODO
+    kind: todo
+    regex: "\\bTODO\\b"
+    flags: ["IGNORECASE"]
+    description: "TODO marker found."
+    suggested_fix: "Resolve the task or remove the TODO marker."
+  - tag: FIXME
+    kind: todo
+    regex: "\\bFIXME\\b"
+    flags: ["IGNORECASE"]
+    description: "FIXME marker indicates a bug or pending fix."
+    suggested_fix: "Address the bug or remove the FIXME marker."
+  - tag: XXX
+    kind: todo
+    regex: "\\bXXX\\b"
+    flags: ["IGNORECASE"]
+    description: "XXX marker indicates unfinished work."
+    suggested_fix: "Replace the XXX marker with completed implementation details."
+  - tag: HACK
+    kind: todo
+    regex: "\\bHACK\\b"
+    flags: ["IGNORECASE"]
+    description: "HACK marker found."
+    suggested_fix: "Refactor the hack into maintainable code."
+  - tag: BUG
+    kind: todo
+    regex: "\\bBUG\\b"
+    flags: ["IGNORECASE"]
+    description: "BUG marker found."
+    suggested_fix: "Fix the bug referenced by this marker."
+  - tag: WIP
+    kind: todo
+    regex: "\\bWIP\\b"
+    flags: ["IGNORECASE"]
+    description: "Work in progress marker found."
+    suggested_fix: "Complete the work before merging."
+  - tag: REVIEW
+    kind: todo
+    regex: "\\bREVIEW\\b"
+    flags: ["IGNORECASE"]
+    description: "Review marker found."
+    suggested_fix: "Review this code or update the marker."
+  - tag: OPTIMIZE
+    kind: todo
+    regex: "\\bOPTIMIZE\\b"
+    flags: ["IGNORECASE"]
+    description: "Optimization marker found."
+    suggested_fix: "Apply the optimization or remove the marker."
+  - tag: NOTE
+    kind: todo
+    regex: "(?i)(?:^|[#\\-\\*\\s])NOTE[:\\s]"
+    description: "NOTE marker found."
+    suggested_fix: "Evaluate the note and convert it into actionable documentation or code."
+  - tag: PENDING
+    kind: todo
+    regex: "\\bPENDING\\b"
+    flags: ["IGNORECASE"]
+    description: "Pending marker found."
+    suggested_fix: "Complete the pending work."
+  - tag: TBD
+    kind: placeholder
+    regex: "\\bTBD\\b"
+    flags: ["IGNORECASE"]
+    description: "TBD placeholder found."
+    suggested_fix: "Provide the missing detail."
+  - tag: TKTK
+    kind: placeholder
+    regex: "\\bTKTK\\b"
+    flags: ["IGNORECASE"]
+    description: "TKTK placeholder found."
+    suggested_fix: "Fill in the placeholder text."
+  - tag: QUESTION_MARKS
+    kind: placeholder
+    regex: "\\?\\?\\?"
+    description: "Question mark placeholder found."
+    suggested_fix: "Replace with a concrete value or description."
+  - tag: LOREM_IPSUM
+    kind: placeholder
+    regex: "(?i)lorem ipsum"
+    description: "Lorem ipsum filler text found."
+    suggested_fix: "Replace with real copy."
+  - tag: CHANGE_ME
+    kind: placeholder
+    regex: "\\bCHANGE_ME\\b"
+    flags: ["IGNORECASE"]
+    description: "CHANGE_ME placeholder found."
+    suggested_fix: "Provide the actual value."
+  - tag: PLACEHOLDER
+    kind: placeholder
+    regex: "\\bPLACEHOLDER\\b"
+    description: "PLACEHOLDER token found."
+    suggested_fix: "Replace the placeholder token with a real value."
+  - tag: UNSET
+    kind: placeholder
+    regex: "\\bUNSET\\b"
+    flags: ["IGNORECASE"]
+    description: "Unset placeholder found."
+    suggested_fix: "Set the proper value."
+  - tag: HTML_TODO
+    kind: todo
+    regex: "<!--\\s*TODO[^>]*-->"
+    flags: ["IGNORECASE"]
+    description: "HTML TODO comment found."
+    suggested_fix: "Resolve the TODO referenced in the HTML comment."
+  - tag: MARKDOWN_CHECKBOX
+    kind: todo
+    regex: "^\\s*(?:-|\\*)\\s+\\[ \\]"
+    flags: ["IGNORECASE", "MULTILINE"]
+    description: "Unchecked Markdown task list item found."
+    suggested_fix: "Complete the task or track it elsewhere."
+  - tag: TBD_TEMPLATE
+    kind: placeholder
+    regex: "\\{\\{\\s*(?:your_|example_|dummy_|placeholder|token|key|value|name|url)[^}]*\\}\\}"
+    flags: ["IGNORECASE"]
+    description: "Template placeholder found."
+    suggested_fix: "Replace the template token with a real value."
+  - tag: YOUR_TOKEN
+    kind: placeholder
+    regex: "<your-[^>]+>"
+    flags: ["IGNORECASE"]
+    description: "Template placeholder tag found."
+    suggested_fix: "Replace the template tag with a real value."
+  - tag: YOUR_UNDERSCORE
+    kind: placeholder
+    regex: "\\byour_[A-Za-z0-9_]+"
+    flags: ["IGNORECASE"]
+    description: "Placeholder identifier prefixed with 'your_' found."
+    suggested_fix: "Replace with a real identifier."
+  - tag: EXAMPLE_IDENTIFIER
+    kind: placeholder
+    regex: "\\bexample_[A-Za-z0-9_]+"
+    flags: ["IGNORECASE"]
+    description: "Placeholder identifier prefixed with 'example_' found."
+    suggested_fix: "Replace with the production value."
+  - tag: DUMMY_IDENTIFIER
+    kind: placeholder
+    regex: "\\bdummy_[A-Za-z0-9_]+"
+    flags: ["IGNORECASE"]
+    description: "Placeholder identifier prefixed with 'dummy_' found."
+    suggested_fix: "Replace with the real identifier."
+  - tag: SECRET_PLACEHOLDER
+    kind: placeholder
+    regex: "(?i)(api[_-]?key|token|password)\\s*[:=]\\s*(\"\"|''|None|null)"
+    description: "Secret-like key assigned to a placeholder value."
+    suggested_fix: "Configure the secret through a secure channel."
+  - tag: RAISE_NOT_IMPLEMENTED
+    kind: placeholder
+    regex: "\\braise\\s+NotImplementedError"
+    description: "Code stub raising NotImplementedError."
+    suggested_fix: "Implement the missing behavior."
