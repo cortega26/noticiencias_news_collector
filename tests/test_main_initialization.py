@@ -44,29 +44,6 @@ sys.modules.setdefault("fastapi", fastapi_stub)
 
 pytestmark = pytest.mark.e2e
 
-pydantic_stub = types.ModuleType("pydantic")
-
-
-class _StubBaseModel:  # pragma: no cover - simple stub
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
-def _identity_decorator(*_args, **_kwargs):  # pragma: no cover - simple stub
-    def decorator(func):
-        return func
-
-    return decorator
-
-
-pydantic_stub.BaseModel = _StubBaseModel
-pydantic_stub.Field = lambda default=None, **_kwargs: default
-pydantic_stub.field_validator = _identity_decorator
-pydantic_stub.model_validator = _identity_decorator
-
-sys.modules.setdefault("pydantic", pydantic_stub)
-
 import main
 from main import NewsCollectorSystem
 

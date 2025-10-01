@@ -64,6 +64,28 @@ jobs:
       - name: Type check
         run: make typecheck
 
+  config:
+    name: Config validation
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.lock
+            requirements-security.lock
+      - name: Validate configuration
+        run: make config-validate
+      - name: Regenerate field documentation
+        run: make config-docs
+      - name: Ensure documentation up to date
+        run: git diff --exit-code docs/config_fields.md
+
   test:
     name: Test
     needs: setup

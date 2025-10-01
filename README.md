@@ -142,22 +142,70 @@ make bootstrap
 make test
 ```
 
-### 5. Configurar Entorno
-El proyecto usa [`python-dotenv`](https://github.com/theskumar/python-dotenv) para cargar variables desde un archivo `.env`.
-El template [`.env.example`](.env.example) documenta todos los parámetros admitidos y agrupa las opciones por secciones
-(`runtime`, `database`, `collection`, `scoring`, etc.). Copia el archivo y ajusta los valores según tu escenario:
+### 5. Configuración
+
+El archivo canónico es [`config.toml`](config.toml) en la raíz del repositorio. El gestor realiza una fusión determinística en
+este orden (último gana):
+
+1. **Defaults internos** definidos en `noticiencias.config_schema.DEFAULT_CONFIG`.
+2. **Archivo TOML** (`config.toml`).
+3. **Archivo `.env`** en el mismo directorio (`NOTICIENCIAS__…=valor`).
+4. **Variables de entorno** exportadas en el proceso.
+
+Cada clave se referencia mediante notación de puntos (`scoring.minimum_score`). Las variables de entorno utilizan el prefijo
+`NOTICIENCIAS__` y separan niveles con `__`, por ejemplo:
 
 ```bash
-cp .env.example .env
-# Edita .env para habilitar Postgres, ajustar rate limits o personalizar el scoring.
+export NOTICIENCIAS__DATABASE__DRIVER=postgresql
+export NOTICIENCIAS__SCORING__MINIMUM_SCORE=0.45
 ```
 
-> ℹ️ Si vas a usar PostgreSQL, descomenta el bloque `# Database configuration` y reemplaza las credenciales. Para entornos de
-> operación consulta también las secciones `# Operational scripts` y `# Logging`.
+### 🛠️ Utilidades de Configuración (CLI)
 
-### 🖥️ Editor de Configuración
+```bash
+# Validar precedencia y tipos
+python -m noticiencias.config_manager --config config.toml --validate
 
-La herramienta `tools.config_editor` permite inspeccionar y modificar cualquier archivo de configuración soportado
+# Mostrar fuentes activas
+python -m noticiencias.config_manager --config config.toml --show-sources
+
+# Explicar el origen de un valor
+python -m noticiencias.config_manager --config config.toml --explain news.max_items
+
+# Actualizar claves de forma atómica (crea backups timestamped)
+python -m noticiencias.config_manager --config config.toml --set collection.request_timeout_seconds=45
+
+# Volcar los defaults integrados
+python -m noticiencias.config_manager --dump-defaults
+
+# Imprimir la tabla de campos (Markdown)
+python -m noticiencias.config_manager --print-schema
+```
+
+Las mismas acciones están disponibles como atajos de `make`:
+
+- `make config-validate`
+- `make config-set KEY=collection.max_articles_per_source=25`
+- `make config-docs`
+- `make config-dump`
+
+### 🖥️ GUI de Configuración
+
+Un editor Tkinter (`python -m noticiencias.gui_config`) consume directamente el gestor. Incluye búsqueda incremental, validación
+en vivo y un panel de ayuda con todas las claves documentadas.
+
+```bash
+python -m noticiencias.gui_config            # Usa config.toml por defecto
+python -m noticiencias.gui_config ./tests/data/custom.toml
+
+# o vía Makefile
+make config-gui CONFIG_FILE=./tests/data/custom.toml
+```
+
+### 📚 Documentación de Campos
+
+La referencia completa (nombre, tipo, default, descripción, restricciones y ejemplo) se genera automáticamente en
+[`docs/config_fields.md`](docs/config_fields.md). Vuelve a generarla con `make config-docs` después de modificar el schema.
 (`.env`, YAML, JSON, TOML o módulos `config.py`) desde una interfaz Tkinter o en modo headless con las mismas validaciones.
 
 - **GUI rápida**: `make config-gui CONFIG_PATH=$(PWD)` abre la ventana y recuerda tamaño/posición.
