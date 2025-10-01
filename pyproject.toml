@@ -1,6 +1,6 @@
 [project]
 name = "noticiencias-news-collector"
-version = "0.0.0"
+dynamic = ["version"]
 description = "Scientific news aggregation pipeline for the Noticiencias project"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,9 @@ security = [
 [build-system]
 requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "config.version.__version__"}
 
 [tool.ruff]
 target-version = "py310"

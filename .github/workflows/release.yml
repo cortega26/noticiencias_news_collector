@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  changelog:
+    name: Update changelog and draft release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare git branch
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard "$GITHUB_SHA"
+      - name: Determine version metadata
+        id: vars
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Generate release notes
+        id: notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = "${{ steps.vars.outputs.tag }}";
+            const response = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+            });
+            const body = Buffer.from(response.data.body ?? "", "utf8").toString("base64");
+            core.setOutput("body_base64", body);
+      - name: Write release notes file
+        run: |
+          echo "${{ steps.notes.outputs.body_base64 }}" | base64 --decode > release-notes.md
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Update changelog
+        run: |
+          python scripts/update_changelog.py --version "${{ steps.vars.outputs.version }}" --notes-file release-notes.md
+      - name: Configure git user
+        run: |
+          git config user.name "noticiencias-release-bot"
+          git config user.email "infra+release@noticiencias.cl"
+      - name: Commit changelog updates
+        run: |
+          if git status --short | grep -q CHANGELOG.md; then
+            git add CHANGELOG.md
+            git commit -m "chore: finalize changelog for ${{ steps.vars.outputs.version }}"
+            git push origin HEAD:main
+          else
+            echo "Changelog already up to date"
+          fi
+      - name: Create draft release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          release_name: ${{ steps.vars.outputs.tag }}
+          draft: true
+          body_path: release-notes.md
+
+  container:
+    name: Build release container image
+    runs-on: ubuntu-latest
+    needs: changelog
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Prepare image metadata
+        id: meta
+        run: |
+          DATE_TAG=$(date -u +%Y%m%d)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          IMAGE_TAG="noticiencias/collector:${DATE_TAG}.${SHORT_SHA}"
+          {
+            echo "date=${DATE_TAG}";
+            echo "short_sha=${SHORT_SHA}";
+            echo "image_tag=${IMAGE_TAG}";
+          } >> "$GITHUB_OUTPUT"
+      - name: Build container image
+        run: |
+          docker build -t ${{ steps.meta.outputs.image_tag }} .
+      - name: Export image and run instructions
+        run: |
+          docker save ${{ steps.meta.outputs.image_tag }} | gzip > collector-image.tar.gz
+          cat <<'EOT' > image-run.md
+          ## Ejecutar el contenedor del News Collector
+
+          ```bash
+          docker load < collector-image.tar.gz
+          docker run --rm \
+              ${{ steps.meta.outputs.image_tag }} --dry-run
+          ```
+
+          - Etiqueta: ${{ steps.meta.outputs.image_tag }}
+          - Fecha de build (UTC): ${{ steps.meta.outputs.date }}
+          - Commit: ${{ steps.meta.outputs.short_sha }}
+          EOT
+      - name: Publicar artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-container
+          path: |
+            collector-image.tar.gz
+            image-run.md
