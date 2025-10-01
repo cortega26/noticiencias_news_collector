@@ -23,7 +23,7 @@ When PostgreSQL is enabled the following variables are read at process start:
 | `DB_NAME` | Database name | `news_collector` |
 | `DB_USER` | Connection user | `collector` |
 | `DB_PASSWORD` | Password for the user | empty string |
-| `DB_SSLMODE` | Optional SSL mode (e.g., `require`) | unset |
+| `DB_SSLMODE` | Optional SSL mode (e.g., `require`) | (leave blank for default) |
 | `DB_CONNECT_TIMEOUT` | Connect timeout in seconds | `10` |
 | `DB_STATEMENT_TIMEOUT` | Statement timeout in milliseconds | `30000` |
 | `DB_POOL_SIZE` | Base pool size | `10` |
@@ -47,7 +47,7 @@ For production changes follow this extended checklist:
 1. **Prepare:**
    - Capture the current schema via `pg_dump --schema-only` (or SQLite
      equivalent during the initial migration).
-   - Review pending code changes for schema updates.
+   - Assess upcoming schema changes and confirm corresponding code updates.
 2. **Dry Run:**
    - Start an instance against a staging database populated with sanitized
      production data.
