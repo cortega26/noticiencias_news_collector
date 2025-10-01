@@ -195,21 +195,38 @@ def _assign_path(target: MutableMapping[str, Any], path: str, value: Any) -> Non
     current[segments[-1]] = value
 
 
+_UNSET = object()
+
+
 def _serialize_for_toml(value: Any) -> Any:
     if isinstance(value, Config):
-        data = value.model_dump(mode="python")
-        return {key: _serialize_for_toml(val) for key, val in data.items()}
+        return _serialize_for_toml(value.model_dump(mode="python"))
     if value is None:
-        # ``tomli_w`` follows the TOML v1.0 specification which does not
-        # define a ``null`` value. The project previously stored optional
-        # fields as empty strings in ``config.toml`` to signal "unset" values,
-        # so we mirror that behaviour here to ensure round-tripping via the
-        # GUI keeps parity with the hand-maintained configuration file.
-        return ""
+        return _UNSET
     if isinstance(value, Mapping):
-        return {key: _serialize_for_toml(val) for key, val in value.items()}
+        serialized: Dict[str, Any] = {}
+        for key, item in value.items():
+            rendered = _serialize_for_toml(item)
+            if rendered is _UNSET:
+                continue
+            serialized[key] = rendered
+        return serialized
     if isinstance(value, list):
-        return [_serialize_for_toml(item) for item in value]
+        rendered_items: list[Any] = []
+        for item in value:
+            rendered = _serialize_for_toml(item)
+            if rendered is _UNSET:
+                continue
+            rendered_items.append(rendered)
+        return rendered_items
+    if isinstance(value, tuple):
+        rendered_items: list[Any] = []
+        for item in value:
+            rendered = _serialize_for_toml(item)
+            if rendered is _UNSET:
+                continue
+            rendered_items.append(rendered)
+        return rendered_items
     if isinstance(value, Path):
         return str(value)
     return value
