@@ -25,6 +25,25 @@ Eso es exactamente lo que hace este sistema.
 
 ---
 
+## 🏗️ Arquitectura de Referencia
+
+```mermaid
+graph TD
+    Scheduler[Scheduler] --> Collectors[Collectors]
+    Collectors --> Parsers[Parser & Normalizer]
+    Parsers --> Dedupe[Canonicalización & Dedupe]
+    Dedupe --> Enrichment[Enrichment]
+    Enrichment --> Scoring[Scoring]
+    Scoring --> Reranker[Reranker]
+    Reranker --> Storage[Storage]
+    Storage --> Serving[Serving]
+    Storage --> Monitoring[Monitoring]
+```
+
+- Contratos clave: [Event Envelope v1](AGENTS.md#11-event-envelope-v1), [Article Entity v2](AGENTS.md#12-article-entity-v2), [Cluster Record v1](AGENTS.md#13-cluster-record-v1), [Score Explanation v1](AGENTS.md#14-score-explanation-v1).
+- Cada componente publica logs estructurados (`trace_id`, `source_id`, `article_id`) descritos en el [Runbook Operacional](docs/runbook.md).
+- Para flujos de resolución de incidentes específicos del colector revisa el [Collector Runbook](docs/collector_runbook.md).
+
 ## ✨ Características Principales
 
 ### 🤖 Recolección Inteligente
@@ -69,7 +88,8 @@ Cada artículo incluye un payload de "why ranked" con contribuciones por feature
 - **Instalación Simple**: Una línea de comando
 - **Configuración Flexible**: Variables de entorno
 - **Múltiples Interfaces**: CLI, API programática
-- **Logging Comprehensivo**: Observabilidad completa
+- **Logging Comprehensivo**: Observabilidad completa (estructura y campos obligatorios en el [Runbook Operacional](docs/runbook.md))
+- **Runbooks Accionables**: Guías paso a paso en [docs/runbook.md](docs/runbook.md) y [docs/collector_runbook.md](docs/collector_runbook.md)
 
 ---
 
