@@ -9,7 +9,9 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Dict
 
-from .config_manager import Config, ConfigError, _is_secret, _diff_configs, load_config, save_config
+from pydantic import BaseModel
+
+from .config_manager import Config, ConfigError, _diff_configs, _is_secret, load_config, save_config
 from .config_schema import DEFAULT_CONFIG, iter_field_docs
 
 
@@ -38,6 +40,21 @@ class ConfigEditor:
         self._search_var = tk.StringVar()
         self._build_ui()
         self._apply_filter()
+
+    def _to_serializable(self, value: Any) -> Any:
+        """Return a JSON-serializable representation of *value*."""
+
+        if isinstance(value, BaseModel):
+            return self._to_serializable(value.model_dump(mode="python"))
+        if isinstance(value, Path):
+            return str(value)
+        if isinstance(value, dict):
+            return {key: self._to_serializable(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._to_serializable(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._to_serializable(item) for item in value]
+        return value
 
     def _build_docs(self) -> Dict[str, FieldDoc]:
         docs: Dict[str, FieldDoc] = {}
@@ -177,18 +194,24 @@ class ConfigEditor:
         return widget, var
 
     def _format_value(self, value: Any) -> str:
-        if isinstance(value, list):
-            return ", ".join(str(item) for item in value)
-        if isinstance(value, dict):
-            return json.dumps(value, ensure_ascii=False)
-        return str(value)
+        serializable = self._to_serializable(value)
+        if isinstance(serializable, (list, dict)):
+            try:
+                return json.dumps(serializable, ensure_ascii=False)
+            except TypeError:
+                return str(value)
+        return str(serializable)
 
     def _format_display(self, value: Any) -> str:
         if value is None:
             return ""
-        if isinstance(value, (list, dict)):
-            return json.dumps(value, ensure_ascii=False)
-        return str(value)
+        serializable = self._to_serializable(value)
+        if isinstance(serializable, (list, dict)):
+            try:
+                return json.dumps(serializable, ensure_ascii=False)
+            except TypeError:
+                return str(value)
+        return str(serializable)
 
     def _resolve_value(self, path: str) -> Any:
         data = self._data
