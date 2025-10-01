@@ -1,8 +1,15 @@
 # Contributing to Noticiencias News Collector
 
-Thanks for helping us keep the Noticiencias stack healthy! This document captures a few ground rules that are easy to miss when touching scoring logic or fixtures.
+Thanks for helping us keep the Noticiencias stack healthy! This document captures the conventions reviewers expect you to follow from the first commit to the final PR.
 
-## Local setup checklist
+## Coding standards
+
+- Target **Python 3.10+** and keep functions annotated. Use `TypedDict`, `Protocol`, or dataclasses when sharing structures across modules.
+- Follow **PEP 8** plus `ruff` defaults for style. Keep `structlog`-style dictionaries in logging statements with `trace_id`, `source_id`, and `article_id`.
+- Persist and compare timestamps in **UTC**; convert to `America/Santiago` only inside presentation layers.
+- Never swallow exceptions—wrap them with context and re-raise so the DLQ/runbooks have usable breadcrumbs.
+
+## Quality gate checklist
 
 1. Create a virtual environment and install dependencies with hash checking:
    ```bash
@@ -10,13 +17,20 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
    source .venv/bin/activate
    pip install --require-hashes -r requirements.lock
    ```
-2. Before sending a PR run:
+2. Before sending a PR run the full quality suite:
    ```bash
    pytest
    ruff check src tests
    mypy src
    ```
-3. Use descriptive commits and keep diffs focused. Every behavioural change should include a matching test.
+   Use `make test` or `make check` if you prefer a single wrapper.
+3. Keep CI green by updating fixtures or type stubs when a dependency bump changes behaviour.
+
+## Commit conventions
+
+- Prefer the imperative mood in commit subject lines (`Add reranker decay flag`, not `Added` or `Adds`).
+- Reference tickets or incidents in the body when relevant and explain *why* the change exists.
+- Squash noisy WIP commits before opening a PR; reviewers expect focused diffs with matching tests.
 
 ## Updating golden scoring data
 
@@ -65,6 +79,11 @@ When you intentionally change the scoring logic, refresh the regression fixtures
    PY
    ```
 3. Commit the regenerated fixture together with the code change so CI and reviewers see the expected impact.
+
+## Refreshing other fixtures
+
+- Collector and enrichment fixtures live in `tests/data/`. Run the helper scripts in `docs/fixtures.md` to regenerate them after intentional pipeline changes.
+- Document fixture updates in the PR description so on-call engineers can match runbook expectations.
 
 ## Pull request hygiene
 
