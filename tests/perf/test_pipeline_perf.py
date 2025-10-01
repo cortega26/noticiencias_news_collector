@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, List
+from typing import Any, Dict, List, cast
 
 import pytest
 
@@ -20,6 +20,7 @@ if str(PROJECT_ROOT.parent) not in sys.path:
 from config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
 from src.collectors import RSSCollector
 from src.enrichment import enrichment_pipeline
+from src.contracts import ArticleForEnrichmentModel
 from src.scoring import create_scorer
 from src.storage import models as storage_models
 from src.storage.database import DatabaseManager
@@ -44,8 +45,14 @@ def _percentile(values: List[float], percentile: float) -> float:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * weight
 
 
-def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
-    collector_raw = dict(entry["collector_raw"])
+JSONDict = Dict[str, Any]
+
+
+def _prepare_raw_article(entry: JSONDict) -> JSONDict:
+    collector_raw_obj = entry["collector_raw"]
+    if not isinstance(collector_raw_obj, dict):
+        raise TypeError("collector_raw must be a dictionary")
+    collector_raw = dict(cast(JSONDict, collector_raw_obj))
     offset_hours = float(collector_raw.pop("published_offset_hours"))
     published_ts = datetime.now(timezone.utc) + timedelta(hours=offset_hours)
     collector_raw["published_date"] = published_ts
@@ -57,7 +64,7 @@ def _prepare_raw_article(entry: Dict[str, object]) -> Dict[str, object]:
 
 
 @pytest.fixture(scope="module")
-def pipeline_dataset() -> List[Dict[str, object]]:
+def pipeline_dataset() -> List[JSONDict]:
     with FIXTURE_PATH.open(encoding="utf-8") as fh:
         return json.load(fh)
 
@@ -108,7 +115,7 @@ def collector(
 
 def test_pipeline_stage_latencies(
     collector: RSSCollector,
-    pipeline_dataset: List[Dict[str, object]],
+    pipeline_dataset: List[JSONDict],
     isolated_database: DatabaseManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -120,9 +127,11 @@ def test_pipeline_stage_latencies(
 
     original_enrich = enrichment_pipeline.enrich_article
 
-    def timed_enrich(article: Dict[str, object] | object) -> Dict[str, object]:
+    def timed_enrich(
+        article: JSONDict | ArticleForEnrichmentModel,
+    ) -> JSONDict:
         start = perf_counter()
-        result = original_enrich(article)
+        result = cast(JSONDict, original_enrich(article))
         stage_timings["enrichment"].append(perf_counter() - start)
         return result
 
@@ -134,7 +143,10 @@ def test_pipeline_stage_latencies(
         raw_article = _prepare_raw_article(entry)
         collector._test_articles = [raw_article]
 
-        source = entry["source"]
+        source_obj = entry["source"]
+        if not isinstance(source_obj, dict):
+            raise TypeError("source must be a dictionary")
+        source = cast(JSONDict, source_obj)
         source_config = {
             "name": source["name"],
             "url": source["url"],
