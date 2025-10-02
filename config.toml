@@ -16,7 +16,6 @@ host = ""
 port = ""
 name = "noticiencias"
 user = ""
-password = ""
 sslmode = ""
 connect_timeout = 10
 statement_timeout = 30000
