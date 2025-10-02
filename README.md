@@ -157,7 +157,7 @@ Ajustar volumenes para `data/` si se desea persistencia.
 | `scripts/enrichment_sanity.py` | Sanity check de enriquecimiento (idioma, entidades, sentimiento) | `python scripts/enrichment_sanity.py data/exports/batch.json` |
 | `scripts/weekly_quality_report.py` | Genera reporte semanal (monitoring.v1) | `python scripts/weekly_quality_report.py tests/data/monitoring/outage_replay.json` |
 | `scripts/replay_outage.py` | Reproduce incidentes históricos con canarios | `python scripts/replay_outage.py tests/data/monitoring/outage_replay.json` |
-| `scripts/healthcheck.py` | Healthcheck CLI standalone | `python scripts/healthcheck.py --max-ingest-minutes 30` |
+| `scripts/healthcheck.py` | Healthcheck CLI standalone | `python -m scripts.healthcheck --max-ingest-minutes 30` |
 | `scripts/run_secret_scan.py` | Ejecución directa de trufflehog3 | `python scripts/run_secret_scan.py --target .` |
 
 Más utilidades en `scripts/` (dedupe tuning, benchmarks, perfiles de pipeline) documentadas en [docs/operations.md](docs/operations.md).

@@ -12,19 +12,19 @@ Cuando la tubería falla, comienza con estos síntomas comunes antes de escalar 
   - Si necesitas concurrencia, cambia a Postgres siguiendo las instrucciones del [Runbook Operacional](runbook.md#operations-runbook).
 
 ## Error: `429 Too Many Requests`
-- **Contexto típico**: configuraciones agresivas en `config/sources.yaml` o `config/rate_limits.yaml`.
+- **Contexto típico**: configuraciones agresivas en `config/sources.py` o sobrescrituras en `[rate_limiting]` dentro de `config.toml`.
 - **Diagnóstico rápido**:
   - Consulta los logs estructurados (`event: rate_limit.backoff`) para identificar la fuente.
-  - Ejecuta `python scripts/rate_limit_probe.py --source <id>` para validar la nueva ventana.
+  - Ejecuta `python -m scripts.load_test --num-sources 1 --concurrency 1` para observar latencias y reintentos con la fuente problemática.
 - **Resolución**:
-  - Incrementa `min_delay_seconds` para la fuente afectada y, si aplica, ajusta `RATE_LIMITING_CONFIG["domain_overrides"]`.
+  - Ajusta `domain_overrides` en `[rate_limiting]` (`config.toml`) o los parámetros de la fuente en `config/sources.py`, y reinicia el collector para aplicar los cambios.
   - Repite la ejecución con `python run_collector.py --dry-run --sources <id>` y verifica que el Runbook no reporte nuevas alertas.
 
 ## Error: `ModuleNotFoundError` para modelos de enriquecimiento
 - **Contexto típico**: entorno virtual sin dependencias opcionales o modelos locales eliminados.
 - **Diagnóstico rápido**:
   - Comprueba dependencias con `pip install --require-hashes -r requirements.lock`.
-  - Verifica la caché de modelos (`.cache/noticiencias/models/`) y las rutas esperadas en `config/enrichment.yaml`.
+  - Verifica la caché de modelos (`.cache/noticiencias/models/`) y las rutas esperadas bajo `[enrichment.models]` en `config.toml`.
 - **Resolución**:
   - Ejecuta `make bootstrap` para reinstalar dependencias y descargar modelos declarados en el `Makefile`.
   - Si necesitas regenerar embeddings, sigue la sección "Enrichment drift" del [Runbook Operacional](runbook.md#2-dedupe-drift).
