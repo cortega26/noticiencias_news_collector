@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -23,7 +22,8 @@ def _flatten(mapping: dict[str, object], prefix: str = "") -> set[str]:
 
 def test_precedence_env_overrides(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[collection]\nrequest_timeout_seconds = 15\n", encoding="utf-8")
+    config_file.write_text(
+        "[collection]\nrequest_timeout_seconds = 15\n", encoding="utf-8")
     env_file = tmp_path / ".env"
     env_file.write_text(
         "NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS=20\n", encoding="utf-8"
@@ -38,7 +38,8 @@ def test_precedence_env_overrides(tmp_path: Path) -> None:
 
 def test_save_config_creates_backups(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[collection]\nrequest_timeout_seconds = 10\n", encoding="utf-8")
+    config_file.write_text(
+        "[collection]\nrequest_timeout_seconds = 10\n", encoding="utf-8")
     config = load_config(config_file)
     data = config.model_dump(mode="python")
     data["collection"]["request_timeout_seconds"] = 30
@@ -76,7 +77,8 @@ def test_blank_database_port_normalized(tmp_path: Path) -> None:
 
 def test_validation_errors_report_source(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[collection]\nrequest_timeout_seconds = 'abc'\n", encoding="utf-8")
+    config_file.write_text(
+        "[collection]\nrequest_timeout_seconds = 'abc'\n", encoding="utf-8")
     with pytest.raises(ConfigError) as excinfo:
         load_config(config_file)
     assert "collection.request_timeout_seconds" in str(excinfo.value)
