@@ -27,6 +27,16 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
    Use `make test` or `make check` if you prefer a single wrapper.
 3. Keep CI green by updating fixtures or type stubs when a dependency bump changes behaviour.
 
+### Structured placeholders
+
+- Use the structured placeholder format documented in [`docs/placeholder_policy.md`](docs/placeholder_policy.md). Every `TODO`/`FIXME` in production code **must** include `owner`, `due` (`YYYY-MM-DD`), and `issue` metadata.
+- Docs may only contain `TBD[issue=…]` entries inside fenced code blocks or when directly linking to an issue.
+- Before sending a PR run the diff-aware audit to catch missing metadata:
+  ```bash
+  make audit-placeholders
+  ```
+- The audit reads `.placeholder-audit.yaml`; update the config and docs together if you extend the policy.
+
 ## Commit conventions
 
 - Prefer the imperative mood in commit subject lines (`Add reranker decay flag`, not `Added` or `Adds`).
