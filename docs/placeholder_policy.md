@@ -85,6 +85,13 @@ For full repository sweeps (e.g., nightly jobs):
 python -m tools.placeholder_audit --sarif audit.sarif --format json
 ```
 
+Use the bundled make targets for local workflows:
+
+```bash
+make audit-todos-check  # delta mode with SARIF + PR comment artifacts
+make audit-todos        # full repository snapshot in reports/placeholders.*
+```
+
 ## Outputs
 
 * **SARIF** (`audit.sarif`) is uploaded for inline annotations.

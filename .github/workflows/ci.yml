@@ -202,10 +202,10 @@ jobs:
         with:
           name: placeholder-reports
           path: |
-            reports/placeholders.csv
             reports/placeholders.json
             reports/placeholders.md
-            reports/placeholders.baseline.json
+            reports/placeholder-audit.sarif
+            reports/placeholder-comment.md
           if-no-files-found: warn
       - name: Comment on failure
         if: failure() && github.event_name == 'pull_request'
@@ -213,18 +213,15 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const path = 'reports/placeholders.md';
+            const commentPath = 'reports/placeholder-comment.md';
+            const fallbackPath = 'reports/placeholders.md';
             let body = '🔍 Placeholder audit failed. See workflow logs for details.';
-            if (fs.existsSync(path)) {
-              const content = fs.readFileSync(path, 'utf8');
-              const segments = content.split('## New vs Baseline');
-              if (segments.length > 1) {
-                const excerpt = segments[1].trim().split('\n').slice(0, 20).join('\n');
-                body = `🔍 Placeholder audit failed.\n\n${excerpt}`;
-              } else {
-                const excerpt = content.trim().split('\n').slice(0, 20).join('\n');
-                body = `🔍 Placeholder audit failed.\n\n${excerpt}`;
-              }
+            if (fs.existsSync(commentPath)) {
+              body = fs.readFileSync(commentPath, 'utf8') || body;
+            } else if (fs.existsSync(fallbackPath)) {
+              const content = fs.readFileSync(fallbackPath, 'utf8');
+              const excerpt = content.trim().split('\n').slice(0, 40).join('\n');
+              body = `🔍 Placeholder audit failed.\n\n${excerpt}`;
             }
             github.rest.issues.createComment({
               issue_number: context.issue.number,
