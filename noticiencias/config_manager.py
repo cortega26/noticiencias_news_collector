@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import tempfile
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -165,14 +166,9 @@ def _coerce_text(value: str) -> Any:
     if lowered in {"null", "none"}:
         return None
     if text.isdigit() or (text.startswith("-") and text[1:].isdigit()):
-        try:
-            return int(text)
-        except ValueError:  # pragma: no cover - defensive
-            pass
-    try:
+        return int(text)
+    with suppress(ValueError):
         return float(text)
-    except ValueError:
-        pass
     if (text.startswith("[") and text.endswith("]")) or (
         text.startswith("{") and text.endswith("}")
     ):
@@ -467,15 +463,15 @@ def _format_schema_table() -> str:
             default = _safe_repr(entry["default"])
         description = entry.get("description", "")
         constraints = entry.get("constraints", "")
-        example_values = entry.get("examples", []) or []
-        example = ", ".join(str(item) for item in example_values)
+        sample_values = entry.get("examples", []) or []
+        sample_text = ", ".join(str(item) for item in sample_values)
         row = [
             entry["name"],
             str(entry["type"]),
             default,
             description,
             constraints,
-            example,
+            sample_text,
         ]
         lines.append("| " + " | ".join(row) + " |")
     return "\n".join(lines)
