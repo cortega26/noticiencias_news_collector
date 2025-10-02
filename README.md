@@ -127,7 +127,7 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 
 ### Herramientas de soporte
 - **CLI**: `python -m noticiencias.config_manager` (ver ejemplos anteriores). Se puede automatizar con `make config-set KEY=app.environment=production`.
-- **Editor GUI** (Tkinter): `python -m noticiencias.gui_config [ruta_config]`. En entornos sin pantalla usar `xvfb-run -a python -m noticiencias.gui_config`.
+- **Editor GUI** (Tkinter): `python -m noticiencias.gui_config [ruta_config]`. En entornos sin pantalla usar `xvfb-run -a python -m noticiencias.gui_config`. Tras guardar cambios desde la GUI, valida el resultado con `python -m noticiencias.config_manager --config ruta/config.toml --explain clave` para confirmar que el CLI lee los valores persistidos.
 
 ## Uso
 ### Recolección básica
