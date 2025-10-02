@@ -1,0 +1,43 @@
+name: Placeholder Audit (PR)
+
+on:
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run placeholder audit
+        id: audit
+        continue-on-error: true
+        run: |
+          python -m tools.placeholder_audit --pr-diff-only --base origin/main --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: audit.sarif
+      - name: Post placeholder summary
+        if: always()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: placeholder-report.md
+      - name: Fail on audit findings
+        if: steps.audit.outcome == 'failure'
+        run: exit 1

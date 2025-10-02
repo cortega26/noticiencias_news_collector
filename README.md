@@ -205,8 +205,14 @@ Workflows en `.github/workflows/`:
 - `security.yml`: escaneos dedicados (bandit, trufflehog, pip-audit).
 - `dependency-lock-check.yml`: valida sincronía de lockfiles.
 - `manual-lock-sync.yml`: job manual para refrescar `requirements.lock`; empuja una rama auxiliar y requiere crear el PR manualmente.
+- `placeholder-audit-pr.yml`: auditoría de placeholders estructurados (delta mode, SARIF + comentario de PR).
+- `placeholder-audit-nightly.yml`: escaneo completo diario (no bloqueante) con resumen en el job.
 - `release.yml`: empaquetado y publicación (ver [release checklist](docs/release-checklist.md)).
 - `sync-master.yml`: sincronización con ramas ascendentes.
+
+### Quality Gates
+
+- El workflow `placeholder-audit-pr.yml` asegura que cada `TODO`/`FIXME` nuevo traiga `owner/due/issue` y sólo falla por HIGH netos o vencidos.
 
 ## Performance y límites conocidos
 - Objetivos de latencia y throughput en [docs/performance_baselines.md](docs/performance_baselines.md).
