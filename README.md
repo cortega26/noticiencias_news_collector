@@ -74,6 +74,7 @@ pip install --require-hashes -r requirements-security.lock
 
 ### Otras utilidades de `make`
 - `make lint` / `make lint-fix` – Ruff.
+- `make fix-makefile-tabs` – Normaliza indentación en recetas de Makefile (tabs obligatorios).
 - `make typecheck` – mypy sobre `src/` y `tests/`.
 - `make security` – `pip-audit`, `bandit` y `trufflehog3` con `scripts/security_gate.py`.
 - `make config-validate` / `make config-dump` / `make config-docs` – gestión de configuración.
@@ -205,6 +206,7 @@ Workflows en `.github/workflows/`:
 - `security.yml`: escaneos dedicados (bandit, trufflehog, pip-audit).
 - `dependency-lock-check.yml`: valida sincronía de lockfiles.
 - `manual-lock-sync.yml`: job manual para refrescar `requirements.lock`; empuja una rama auxiliar y requiere crear el PR manualmente.
+- `fix-makefile-tabs.yml`: workflow manual que ejecuta el normalizador de Makefile y abre un PR con los cambios.
 - `placeholder-audit-pr.yml`: auditoría de placeholders estructurados (delta mode, SARIF + comentario de PR).
 - `placeholder-audit-nightly.yml`: escaneo completo diario (no bloqueante) con resumen en el job.
 - `release.yml`: empaquetado y publicación (ver [release checklist](docs/release-checklist.md)).
