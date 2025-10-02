@@ -121,7 +121,6 @@ tmp_config_init.txt
 .vscode/
 reports/*
 !reports/.gitkeep
-!reports/placeholders.baseline.json
 !reports/perf/
 !reports/perf/pipeline_perf_metrics.json
 !reports/perf/enrichment_latency.json
