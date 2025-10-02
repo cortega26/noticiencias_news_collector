@@ -208,6 +208,7 @@ Workflows en `.github/workflows/`:
 - `placeholder-audit-pr.yml`: auditoría de placeholders estructurados (delta mode, SARIF + comentario de PR).
 - `placeholder-audit-nightly.yml`: escaneo completo diario (no bloqueante) con resumen en el job.
 - `release.yml`: empaquetado y publicación (ver [release checklist](docs/release-checklist.md)).
+- `make audit-todos` ejecuta la misma CLI (`python -m tools.placeholder_audit`) para generar los reportes locales (`reports/placeholders.*`).
 - `sync-master.yml`: sincronización con ramas ascendentes.
 
 ### Quality Gates

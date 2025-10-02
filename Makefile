@@ -20,11 +20,18 @@ REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
 PERF_DIR := $(REPORTS_DIR)/perf
 SECURITY_DIR := $(REPORTS_DIR)/security
-PLACEHOLDER_REPORT_CSV := $(REPORTS_DIR)/placeholders.csv
 PLACEHOLDER_REPORT_JSON := $(REPORTS_DIR)/placeholders.json
 PLACEHOLDER_REPORT_MD := $(REPORTS_DIR)/placeholders.md
-PLACEHOLDER_BASELINE := $(REPORTS_DIR)/placeholders.baseline.json
-PLACEHOLDER_SCANNER := tools/scan_placeholders.py
+PLACEHOLDER_SARIF := $(REPORTS_DIR)/placeholder-audit.sarif
+PLACEHOLDER_COMMENT := $(REPORTS_DIR)/placeholder-comment.md
+PLACEHOLDER_BASE ?= $(shell \
+        if git rev-parse --verify origin/main >/dev/null 2>&1; then \
+                echo origin/main; \
+        elif git rev-parse --verify main >/dev/null 2>&1; then \
+                echo main; \
+        else \
+                echo HEAD; \
+        fi)
 PLACEHOLDER_PATTERNS := tools/placeholder_patterns.yml
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
@@ -83,40 +90,27 @@ security: bootstrap ## Run security and dependency scans
 	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
 	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 
-audit-todos: bootstrap ## Run placeholder scanner and generate CSV/JSON/MD reports
+audit-todos: bootstrap ## Run structured placeholder audit and store reports
 	@mkdir -p $(REPORTS_DIR)
-	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
-	        --root . \
-	        --patterns $(PLACEHOLDER_PATTERNS) \
-	        --context 2 \
-	        --baseline $(PLACEHOLDER_BASELINE) \
-	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
-	        --output-json $(PLACEHOLDER_REPORT_JSON) \
-	        --output-md $(PLACEHOLDER_REPORT_MD)
+	@$(PYTHON_BIN) -m tools.placeholder_audit --format json | awk '/^Summary:/ {exit} {print}' > $(PLACEHOLDER_REPORT_JSON)
+	@$(PYTHON_BIN) -m tools.placeholder_audit --format table | tee $(PLACEHOLDER_REPORT_MD)
 
-audit-todos-baseline: bootstrap ## Refresh the placeholder baseline with current findings
-	@$(MAKE) audit-todos
-	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
-	        --root . \
-	        --patterns $(PLACEHOLDER_PATTERNS) \
-	        --context 2 \
-	        --baseline $(PLACEHOLDER_BASELINE) \
-	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
-	        --output-json $(PLACEHOLDER_REPORT_JSON) \
-	        --output-md $(PLACEHOLDER_REPORT_MD) \
-	        --save-baseline
+audit-todos-baseline: audit-todos ## Legacy compatibility target (structured audit owns gating now)
 
-audit-todos-check: bootstrap ## Compare current findings against baseline and fail on regressions
-	@$(PYTHON_BIN) $(PLACEHOLDER_SCANNER) \
-	        --root . \
-	        --patterns $(PLACEHOLDER_PATTERNS) \
-	        --context 2 \
-	        --baseline $(PLACEHOLDER_BASELINE) \
-	        --output-csv $(PLACEHOLDER_REPORT_CSV) \
-	        --output-json $(PLACEHOLDER_REPORT_JSON) \
-	        --output-md $(PLACEHOLDER_REPORT_MD) \
-	        --compare-baseline
-
+audit-todos-check: bootstrap ## Run PR-scoped placeholder audit with SARIF + comment artifacts
+	@mkdir -p $(REPORTS_DIR)
+	@$(PYTHON_BIN) -m tools.placeholder_audit \
+		--pr-diff-only \
+		--base $(PLACEHOLDER_BASE) \
+		--halo 10 \
+		--format json | awk '/^Summary:/ {exit} {print}' > $(PLACEHOLDER_REPORT_JSON)
+	@$(PYTHON_BIN) -m tools.placeholder_audit \
+		--pr-diff-only \
+		--base $(PLACEHOLDER_BASE) \
+		--halo 10 \
+		--sarif $(PLACEHOLDER_SARIF) \
+		--comment $(PLACEHOLDER_COMMENT) \
+		--format table | tee $(PLACEHOLDER_REPORT_MD)
 config-gui: bootstrap ## Launch the desktop configuration editor
 	@CMD="$(PYTHON_BIN) -m noticiencias.gui_config \"$(CONFIG_FILE)\""; \
 	echo "[config-gui] $$CMD"; \
