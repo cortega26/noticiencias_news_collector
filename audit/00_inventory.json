@@ -1,0 +1,368 @@
+{
+  "generated_at": "2025-10-02T19:55:47.341383+00:00",
+  "python_version": "3.12.10",
+  "top_level_inventory": {
+    ".bandit": null,
+    ".dockerignore": null,
+    ".env.example": null,
+    ".github/": [
+      "dependabot.yml",
+      "workflows"
+    ],
+    ".gitignore": null,
+    ".gitleaks.toml": null,
+    ".placeholder-audit.yaml": null,
+    "AGENTS.md": null,
+    "CHANGELOG.md": null,
+    "CONTRIBUTING.md": null,
+    "Dockerfile": null,
+    "Makefile": null,
+    "README.md": null,
+    "audit/": [
+      "00_inventory.json",
+      "00_inventory.md"
+    ],
+    "config/": [
+      "__init__.py",
+      "__pycache__",
+      "perf_thresholds.py",
+      "settings.py",
+      "sources.py",
+      "version.py"
+    ],
+    "config.toml": null,
+    "core/": [
+      "config_manager.py",
+      "config_schema.py"
+    ],
+    "data/": [
+      "dlq",
+      "logs"
+    ],
+    "docs/": [
+      "api_examples.md",
+      "collector_runbook.md",
+      "common_output_format.md",
+      "config_fields.md",
+      "database_deployment.md",
+      "faq.md",
+      "fixtures.md",
+      "operations.md",
+      "performance_baselines.md",
+      "placeholder_policy.md",
+      "release-checklist.md",
+      "release_notes.md",
+      "runbook.md",
+      "security.md"
+    ],
+    "main.py": null,
+    "news_collector_structure.py": null,
+    "noticiencias/": [
+      "__init__.py",
+      "__pycache__",
+      "config_manager.py",
+      "config_schema.py",
+      "gui_config.py"
+    ],
+    "pyproject.toml": null,
+    "reports/": [
+      ".gitkeep",
+      "ops",
+      "perf"
+    ],
+    "requirements-security.lock": null,
+    "requirements.lock": null,
+    "requirements.txt": null,
+    "run_collector.py": null,
+    "scripts/": [
+      "benchmark_canonicalize.py",
+      "bump_version.py",
+      "canonicalization_dupe_demo.py",
+      "dedupe_tuning.py",
+      "enrichment_sanity.py",
+      "evaluate_ranking.py",
+      "healthcheck.py",
+      "load_test.py",
+      "migrations",
+      "profile_pipeline.py",
+      "recluster_articles.py",
+      "replay_outage.py",
+      "reranker_distribution.py",
+      "run_secret_scan.py",
+      "score_delta.py",
+      "security_gate.py",
+      "sync_lockfiles.py",
+      "update_changelog.py",
+      "weekly_quality_report.py"
+    ],
+    "setup.py": null,
+    "src/": [
+      "__init__.py",
+      "__pycache__",
+      "collectors",
+      "contracts",
+      "enrichment",
+      "monitoring",
+      "reranker",
+      "scoring",
+      "serving",
+      "storage",
+      "utils"
+    ],
+    "tests/": [
+      "data",
+      "perf",
+      "placeholder_audit",
+      "test_async_collector_parity.py",
+      "test_cli_config.py",
+      "test_collector_pipeline_e2e.py",
+      "test_config_manager.py",
+      "test_contracts_validation.py",
+      "test_database_migrations.py",
+      "test_database_pending_articles.py",
+      "test_database_simhash_behavior.py",
+      "test_datetime_utils.py",
+      "test_dedupe_utils.py",
+      "test_enrichment_pipeline.py",
+      "test_feature_scorer_config.py",
+      "test_fix_makefile_tabs.py",
+      "test_gui_config.py",
+      "test_healthcheck.py",
+      "test_main_initialization.py",
+      "test_monitoring_anomalies.py"
+    ],
+    "tools/": [
+      "check_makefile_tabs.py",
+      "config_editor.py",
+      "fix_makefile_tabs.py",
+      "placeholder_audit.py",
+      "placeholder_patterns.yml",
+      "scan_placeholders.py"
+    ]
+  },
+  "entrypoints": {
+    "main_module": "main.py",
+    "cli": {
+      "path": "run_collector.py",
+      "help": "python run_collector.py --help"
+    },
+    "make": "See make_targets section"
+  },
+  "make_targets": [
+    {
+      "target": "bootstrap",
+      "description": "Provision local environment with dependencies"
+    },
+    {
+      "target": "lint",
+      "description": "Run Ruff lint checks"
+    },
+    {
+      "target": "fix-makefile-tabs",
+      "description": "Normalize Makefile recipes to start with tabs"
+    },
+    {
+      "target": "lint-fix",
+      "description": "Run Ruff with autofix enabled"
+    },
+    {
+      "target": "typecheck",
+      "description": "Static type checking with mypy"
+    },
+    {
+      "target": "test",
+      "description": "Execute the unit test suite with coverage reporting"
+    },
+    {
+      "target": "e2e",
+      "description": "Run end-to-end pytest suite (marked tests)"
+    },
+    {
+      "target": "perf",
+      "description": "Run performance-focused pytest suite (marked tests)"
+    },
+    {
+      "target": "security",
+      "description": "Run security and dependency scans"
+    },
+    {
+      "target": "audit-todos",
+      "description": "Run structured placeholder audit and store reports"
+    },
+    {
+      "target": "audit-todos-baseline",
+      "description": "Legacy compatibility target (structured audit owns gating now)"
+    },
+    {
+      "target": "audit-todos-check",
+      "description": "Run PR-scoped placeholder audit with SARIF + comment artifacts"
+    },
+    {
+      "target": "config-gui",
+      "description": "Launch the desktop configuration editor"
+    },
+    {
+      "target": "config-set",
+      "description": "Update configuration without opening the GUI (KEY=section.name=value)"
+    },
+    {
+      "target": "config-validate",
+      "description": "Validate active configuration sources"
+    },
+    {
+      "target": "config-dump",
+      "description": "Print the built-in default configuration"
+    },
+    {
+      "target": "config-docs",
+      "description": "Regenerate docs/config_fields.md from the schema"
+    },
+    {
+      "target": "clean",
+      "description": "Remove virtual environment and caches"
+    },
+    {
+      "target": "help",
+      "description": "Show this help message"
+    },
+    {
+      "target": "bump-version",
+      "description": "Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)"
+    }
+  ],
+  "dependencies": {
+    "requirements_txt": [
+      "feedparser==6.0.12         # RSS/Atom feed parser - robusto y confiable",
+      "requests==2.32.5           # HTTP requests - est\u00e1ndar de la industria",
+      "beautifulsoup4==4.14.2     # HTML parsing para contenido adicional",
+      "lxml==6.0.2                # XML parser r\u00e1pido para feeds",
+      "nltk==3.9.2                # Natural Language Toolkit - an\u00e1lisis b\u00e1sico de texto",
+      "textblob==0.19.0           # An\u00e1lisis de sentimientos simple",
+      "python-dateutil==2.9.0.post0  # Parsing inteligente de fechas",
+      "sqlalchemy==2.0.43         # ORM potente y flexible",
+      "python-dotenv==1.1.1       # Manejo de variables de entorno",
+      "schedule==1.2.2            # Scheduling de tareas simple",
+      "click==8.3.0               # CLI interface elegante",
+      "ruamel.yaml==0.18.6        # YAML round-trip preservation para el editor de configuraci\u00f3n",
+      "tomli-w==1.0.0             # Escritura de TOML manteniendo formato estable",
+      "fastapi==0.118.0           # Framework para exponer APIs modernas",
+      "pydantic==2.11.9           # Validaci\u00f3n y serializaci\u00f3n robusta",
+      "loguru==0.7.3              # Logger moderno y bonito",
+      "pytest==8.4.2             # Framework de testing",
+      "pytest-cov==7.0.0         # Coverage de tests",
+      "scikit-learn==1.7.2       # ML algorithms b\u00e1sicos",
+      "numpy==2.3.3              # Operaciones num\u00e9ricas",
+      "httpx==0.28.1             # Compatibilidad con Starlette TestClient"
+    ],
+    "optional_security": [
+      "bandit>=1.7.9",
+      "pip-audit>=2.9.0",
+      "trufflehog3>=3.0.10"
+    ]
+  },
+  "function_index_sample": {
+    "src/collectors/__init__.py": {
+      "functions": [
+        "get_available_collector_types",
+        "create_collector_by_name"
+      ],
+      "classes": []
+    },
+    "src/collectors/async_rss_collector.py": {
+      "functions": [],
+      "classes": [
+        "AsyncRSSCollector"
+      ]
+    },
+    "src/collectors/base_collector.py": {
+      "functions": [
+        "create_collector",
+        "validate_collector_result"
+      ],
+      "classes": [
+        "BaseCollector"
+      ]
+    },
+    "src/collectors/rate_limit_utils.py": {
+      "functions": [
+        "_normalize_domain",
+        "_candidate_domains",
+        "resolve_domain_override",
+        "calculate_effective_delay"
+      ],
+      "classes": []
+    },
+    "src/collectors/rss_collector.py": {
+      "functions": [],
+      "classes": [
+        "RSSCollector"
+      ]
+    },
+    "src/contracts/collector.py": {
+      "functions": [],
+      "classes": [
+        "CollectorArticlePayload",
+        "CollectorArticleModel"
+      ]
+    },
+    "src/contracts/common.py": {
+      "functions": [],
+      "classes": [
+        "ArticleMetadata",
+        "ArticleMetadataModel"
+      ]
+    },
+    "src/contracts/enrichment.py": {
+      "functions": [],
+      "classes": [
+        "ArticleForEnrichment",
+        "ArticleEnrichment",
+        "ArticleForEnrichmentModel",
+        "ArticleEnrichmentModel"
+      ]
+    },
+    "src/contracts/scoring.py": {
+      "functions": [],
+      "classes": [
+        "ScoringComponents",
+        "ScoringComponentsModel",
+        "ScoringRequest",
+        "ScoringRequestModel"
+      ]
+    },
+    "src/enrichment/nlp_stack.py": {
+      "functions": [],
+      "classes": [
+        "NLPResult",
+        "LRUCache",
+        "ConfigurableNLPStack"
+      ]
+    }
+  },
+  "markdown_files": [
+    "CHANGELOG.md",
+    "docs/faq.md",
+    "docs/config_fields.md",
+    "docs/operations.md",
+    "docs/api_examples.md",
+    "docs/release-checklist.md",
+    "docs/placeholder_policy.md",
+    "docs/collector_runbook.md",
+    "docs/common_output_format.md",
+    "docs/performance_baselines.md",
+    "docs/release_notes.md",
+    "docs/runbook.md",
+    "docs/database_deployment.md",
+    "docs/security.md",
+    "docs/fixtures.md",
+    "tests/placeholder_audit/fixtures/doc_page.md",
+    "AGENTS.md",
+    "README.md",
+    "audit/00_inventory.md",
+    "CONTRIBUTING.md"
+  ],
+  "open_questions": [
+    "Missing: Confirm actual pytest coverage percentages (R3 requires \u226580% overall, \u226590% touched modules).",
+    "Missing: Validate whether CI enforces bandit/gitleaks/pip-audit baselines or requires manual gating."
+  ]
+}
