@@ -1,0 +1,24 @@
+include:
+  - "**/*.py"
+  - "**/*.md"
+exclude:
+  - "venv/**"
+  - ".venv/**"
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+  - "**/*.min.*"
+  - "**/generated/**"
+contexts:
+  prod_code: ["**/*.py"]
+  tests: ["tests/**", "examples/**"]
+  docs: ["**/*.md"]
+required_fields: ["owner", "due", "issue"]
+due_format: "YYYY-MM-DD"
+warn_window_days: 7
+age_threshold_days:
+  warn: 30
+  high: 90
+block_severities: ["HIGH"]
+delta_mode: true
+pr_halo_lines: 10
