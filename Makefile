@@ -51,6 +51,7 @@ bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@echo "Environment ready at $(VENV)"
 
 lint: bootstrap ## Run Ruff lint checks
+	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
 	@$(RUFF) check src tests scripts
 
 lint-fix: bootstrap ## Run Ruff with autofix enabled
@@ -151,14 +152,14 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
 
 bump-version: ## Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)
-        @if [ -n "$(VERSION)" ]; then \
-                $(PYTHON) scripts/bump_version.py --set "$(VERSION)"; \
-        elif [ -n "$(PART)" ]; then \
-                $(PYTHON) scripts/bump_version.py --part "$(PART)"; \
-        else \
-                echo "Usage: make bump-version PART=major|minor|patch | VERSION=X.Y.Z"; \
-                exit 1; \
-        fi
+	@if [ -n "$(VERSION)" ]; then \
+		$(PYTHON) scripts/bump_version.py --set "$(VERSION)"; \
+	elif [ -n "$(PART)" ]; then \
+		$(PYTHON) scripts/bump_version.py --part "$(PART)"; \
+	else \
+		echo "Usage: make bump-version PART=major|minor|patch | VERSION=X.Y.Z"; \
+		exit 1; \
+	fi
 
 .PHONY: audit-placeholders
 audit-placeholders:
