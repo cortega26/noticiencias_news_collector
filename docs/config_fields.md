@@ -5,9 +5,9 @@
 | app.debug | bool | false | When true, enables verbose logging and relaxed guards. |  |  |
 | app.timezone | str | "UTC" | Default timezone for user-facing timestamps. |  | America/Santiago |
 | paths | PathsConfig |  |  |  |  |
-| paths.data_dir | Path | /workspace/noticiencias_news_collector/data | Root directory for persistent runtime artefacts. |  | /var/lib/noticiencias |
-| paths.logs_dir | Path | /workspace/noticiencias_news_collector/data/logs | Directory where operational logs are written. |  | /var/log/noticiencias |
-| paths.dlq_dir | Path | /workspace/noticiencias_news_collector/data/dlq | Storage directory for dead-letter queue payloads. |  |  |
+| paths.data_dir | Path | data | Root directory for persistent runtime artefacts. |  | /var/lib/noticiencias |
+| paths.logs_dir | Path | logs | Directory where operational logs are written. |  | /var/log/noticiencias |
+| paths.dlq_dir | Path | dlq | Storage directory for dead-letter queue payloads. |  |  |
 | database | DatabaseConfig |  |  |  |  |
 | database.driver | str | "sqlite" | Database backend driver to use. |  | postgresql |
 | database.path | Optional | data/news.db | Filesystem path for SQLite database files. |  |  |
@@ -102,7 +102,7 @@
 | news.default_language | str | "es" | Default language when none is specified by the user. |  | en |
 | logging | LoggingConfig |  |  |  |  |
 | logging.level | str | "INFO" | Minimum log level captured by the collector logger. |  | DEBUG |
-| logging.file_path | Path | /workspace/noticiencias_news_collector/data/logs/collector.log | Absolute path of the rotating log file. |  |  |
+| logging.file_path | Path | data/logs/collector.log | Absolute path of the rotating log file. |  |  |
 | logging.max_file_size_mb | int | 10 | Maximum size per log file before rotation (MiB). |  |  |
 | logging.retention_days | int | 30 | Number of days to keep rotated log files. |  |  |
 | logging.format | str | "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}" | Log formatting template compatible with structlog/loguru. |  |  |
