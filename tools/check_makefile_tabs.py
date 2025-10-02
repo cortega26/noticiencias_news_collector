@@ -1,4 +1,5 @@
 """Validate that Makefile recipes use tab indentation."""
+
 from __future__ import annotations
 
 import argparse
@@ -36,15 +37,17 @@ def find_tab_violations(path: Path) -> list[TabViolation]:
         if line.startswith("\t"):
             continue
         if line.startswith(" "):
-            violations.append(TabViolation(path=path, line_number=line_number, line=line))
+            violations.append(
+                TabViolation(path=path, line_number=line_number, line=line)
+            )
     return violations
 
 
 def _format_violation(violation: TabViolation) -> str:
     return (
-        f"{{\"path\": \"{violation.path.as_posix()}\", "
-        f"\"line\": {violation.line_number}, "
-        f"\"content\": \"{violation.line.replace('\\', '\\\\').replace('\"', '\\\"')}\"}}"
+        f'{{"path": "{violation.path.as_posix()}", '
+        f'"line": {violation.line_number}, '
+        f'"content": "{violation.line.replace("\\", "\\\\").replace('"', '\\"')}"}}'
     )
 
 
@@ -55,8 +58,7 @@ def validate_makefiles(paths: Sequence[Path]) -> int:
     for path in paths:
         if not path.exists():
             message = (
-                f'{{"path": "{path.as_posix()}", '
-                f'"error": "file does not exist"}}\n'
+                f'{{"path": "{path.as_posix()}", "error": "file does not exist"}}\n'
             )
             sys.stderr.write(message)
             return 1

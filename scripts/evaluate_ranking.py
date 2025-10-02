@@ -84,9 +84,9 @@ def evaluate() -> None:
         mrr_scores.append(mrr(relevances))
 
     print(f"Queries evaluated: {len(dev_set)}")
-    print(f"NDCG@5      : {sum(ndcg_scores_5)/len(ndcg_scores_5):.3f}")
-    print(f"Precision@5 : {sum(precision_scores_5)/len(precision_scores_5):.3f}")
-    print(f"MRR         : {sum(mrr_scores)/len(mrr_scores):.3f}")
+    print(f"NDCG@5      : {sum(ndcg_scores_5) / len(ndcg_scores_5):.3f}")
+    print(f"Precision@5 : {sum(precision_scores_5) / len(precision_scores_5):.3f}")
+    print(f"MRR         : {sum(mrr_scores) / len(mrr_scores):.3f}")
 
 
 if __name__ == "__main__":

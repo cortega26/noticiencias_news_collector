@@ -130,7 +130,9 @@ def pipeline_storage(
             {
                 "dsn": safe_dsn,
                 "pool": {
-                    "class": getattr(pool_kwargs.get("poolclass"), "__name__", "QueuePool"),
+                    "class": getattr(
+                        pool_kwargs.get("poolclass"), "__name__", "QueuePool"
+                    ),
                     "size": pool_kwargs.get("pool_size"),
                     "max_overflow": pool_kwargs.get("max_overflow"),
                     "timeout": pool_kwargs.get("pool_timeout"),
@@ -220,7 +222,9 @@ def _compute_scoring_accuracy() -> Dict[str, float]:
             )
 
     total = len(ranks)
-    predicted_order = sorted(ranks, key=lambda item: item["predicted_score"], reverse=True)
+    predicted_order = sorted(
+        ranks, key=lambda item: item["predicted_score"], reverse=True
+    )
     predicted_ranks = {item["id"]: idx + 1 for idx, item in enumerate(predicted_order)}
     rank_matches = sum(
         1 for item in ranks if predicted_ranks.get(item["id"]) == item["expected_rank"]
@@ -315,12 +319,12 @@ def test_pipeline_stage_latencies(
         if stage not in metrics:
             continue
         stage_metrics = metrics[stage]
-        assert (
-            stage_metrics["p95_seconds"] <= thresholds["p95_seconds"]
-        ), f"{stage} p95 exceeded: {stage_metrics['p95_seconds']:.4f}s > {thresholds['p95_seconds']:.4f}s"
-        assert (
-            stage_metrics["max_seconds"] <= thresholds["max_seconds"]
-        ), f"{stage} max exceeded: {stage_metrics['max_seconds']:.4f}s > {thresholds['max_seconds']:.4f}s"
+        assert stage_metrics["p95_seconds"] <= thresholds["p95_seconds"], (
+            f"{stage} p95 exceeded: {stage_metrics['p95_seconds']:.4f}s > {thresholds['p95_seconds']:.4f}s"
+        )
+        assert stage_metrics["max_seconds"] <= thresholds["max_seconds"], (
+            f"{stage} max exceeded: {stage_metrics['max_seconds']:.4f}s > {thresholds['max_seconds']:.4f}s"
+        )
 
     total_articles = len(pipeline_dataset)
     throughput = {

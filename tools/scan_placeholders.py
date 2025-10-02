@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Repository-wide placeholder scanner."""
+
 from __future__ import annotations
 
 import argparse
@@ -636,7 +637,7 @@ def findings_to_fingerprint(findings: Sequence[Finding]) -> Dict[str, Finding]:
 
 
 def baseline_fingerprint(
-    entries: Sequence[Dict[str, str]]
+    entries: Sequence[Dict[str, str]],
 ) -> Dict[str, Dict[str, str]]:
     mapping: Dict[str, Dict[str, str]] = {}
     for entry in entries:

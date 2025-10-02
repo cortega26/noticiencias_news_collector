@@ -62,14 +62,18 @@ def _percentile(values: List[float], percentile: float) -> float:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * weight
 
 
-def test_postgres_engine_profile(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_postgres_engine_profile(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     captured: Dict[str, Any] = {}
 
     def fake_create_engine(url: Any, **kwargs: Any):
         captured["url"] = url
         captured["kwargs"] = kwargs
         sqlite_path = tmp_path / "postgres_profile.db"
-        return sqlalchemy_create_engine(f"sqlite:///{sqlite_path}", echo=kwargs.get("echo", False))
+        return sqlalchemy_create_engine(
+            f"sqlite:///{sqlite_path}", echo=kwargs.get("echo", False)
+        )
 
     monkeypatch.setattr("src.storage.database.create_engine", fake_create_engine)
 

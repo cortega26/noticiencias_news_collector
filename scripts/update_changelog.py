@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Automate changelog updates during tagged releases."""
+
 from __future__ import annotations
 
 import argparse

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Utility script to bump the project semantic version."""
+
 from __future__ import annotations
 
 import argparse

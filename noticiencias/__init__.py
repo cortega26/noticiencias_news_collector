@@ -1,4 +1,5 @@
 """Utilities and configuration tooling for the Noticiencias project."""
+
 from __future__ import annotations
 
 from .config_manager import load_config, save_config, Config, ConfigError

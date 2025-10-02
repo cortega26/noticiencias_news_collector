@@ -1,4 +1,5 @@
 """Tests for the placeholder audit tooling."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -106,7 +107,9 @@ def test_evaluate_placeholder_warns_due_soon(audit_config: AuditConfig) -> None:
     assert not expired
 
 
-def test_detect_placeholders_skips_markdown_fenced_code(audit_config: AuditConfig) -> None:
+def test_detect_placeholders_skips_markdown_fenced_code(
+    audit_config: AuditConfig,
+) -> None:
     path = Path("tests/placeholder_audit/fixtures/doc_page.md")
     content = path.read_text(encoding="utf-8")
     fence_lines = track_fences(content)
@@ -259,7 +262,9 @@ def test_parse_diff_extracts_new_and_old_lines(monkeypatch: pytest.MonkeyPatch) 
         "+TODO[owner=@x; issue=#1]: note\n"
         " print('done')\n"
     )
-    monkeypatch.setattr("tools.placeholder_audit.run_git", lambda *_args, **_kwargs: diff_text)
+    monkeypatch.setattr(
+        "tools.placeholder_audit.run_git", lambda *_args, **_kwargs: diff_text
+    )
     files = parse_diff("main", 3)
     assert files[0].new_line_numbers()[2] == "+"
     assert files[0].old_line_numbers()[1] == " "

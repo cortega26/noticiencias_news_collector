@@ -36,14 +36,16 @@ def main() -> None:
 
     print("Samples:", total)
     print(
-        f"Language accuracy : {correct_language}/{total} ({correct_language/total:.2%})"
+        f"Language accuracy : {correct_language}/{total} ({correct_language / total:.2%})"
     )
     print(
-        f"Sentiment accuracy: {correct_sentiment}/{total} ({correct_sentiment/total:.2%})"
+        f"Sentiment accuracy: {correct_sentiment}/{total} ({correct_sentiment / total:.2%})"
     )
-    print(f"Topics accuracy   : {correct_topics}/{total} ({correct_topics/total:.2%})")
     print(
-        f"Entities accuracy : {correct_entities}/{total} ({correct_entities/total:.2%})"
+        f"Topics accuracy   : {correct_topics}/{total} ({correct_topics / total:.2%})"
+    )
+    print(
+        f"Entities accuracy : {correct_entities}/{total} ({correct_entities / total:.2%})"
     )
 
 

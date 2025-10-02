@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Evaluate security scanner reports and fail on high severity findings."""
+
 from __future__ import annotations
 
 import argparse
