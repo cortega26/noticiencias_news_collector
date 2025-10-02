@@ -61,12 +61,12 @@ def test_enrichment_latency_budget() -> None:
     }
 
     thresholds = PIPELINE_PERF_THRESHOLDS["enrichment_nlp"]
-    assert metrics["p95_seconds"] <= thresholds["p95_seconds"], (
-        f"Enrichment p95 latency {metrics['p95_seconds']:.4f}s exceeds {thresholds['p95_seconds']:.4f}s"
-    )
-    assert metrics["max_seconds"] <= thresholds["max_seconds"], (
-        f"Enrichment max latency {metrics['max_seconds']:.4f}s exceeds {thresholds['max_seconds']:.4f}s"
-    )
+    assert (
+        metrics["p95_seconds"] <= thresholds["p95_seconds"]
+    ), f"Enrichment p95 latency {metrics['p95_seconds']:.4f}s exceeds {thresholds['p95_seconds']:.4f}s"
+    assert (
+        metrics["max_seconds"] <= thresholds["max_seconds"]
+    ), f"Enrichment max latency {metrics['max_seconds']:.4f}s exceeds {thresholds['max_seconds']:.4f}s"
 
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with REPORT_PATH.open("w", encoding="utf-8") as fh:

@@ -319,12 +319,12 @@ def test_pipeline_stage_latencies(
         if stage not in metrics:
             continue
         stage_metrics = metrics[stage]
-        assert stage_metrics["p95_seconds"] <= thresholds["p95_seconds"], (
-            f"{stage} p95 exceeded: {stage_metrics['p95_seconds']:.4f}s > {thresholds['p95_seconds']:.4f}s"
-        )
-        assert stage_metrics["max_seconds"] <= thresholds["max_seconds"], (
-            f"{stage} max exceeded: {stage_metrics['max_seconds']:.4f}s > {thresholds['max_seconds']:.4f}s"
-        )
+        assert (
+            stage_metrics["p95_seconds"] <= thresholds["p95_seconds"]
+        ), f"{stage} p95 exceeded: {stage_metrics['p95_seconds']:.4f}s > {thresholds['p95_seconds']:.4f}s"
+        assert (
+            stage_metrics["max_seconds"] <= thresholds["max_seconds"]
+        ), f"{stage} max exceeded: {stage_metrics['max_seconds']:.4f}s > {thresholds['max_seconds']:.4f}s"
 
     total_articles = len(pipeline_dataset)
     throughput = {
