@@ -1,6 +1,7 @@
 """Declarative configuration schema for Noticiencias."""
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -874,11 +875,14 @@ def iter_field_docs(
         value = getattr(instance, name, field.default)
         key = f"{prefix}{name}" if not prefix else f"{prefix}.{name}"
         is_nested = isinstance(value, BaseModel)
+        default_value = None
+        if include_defaults and not is_nested:
+            default_value = _format_default_value(field, value)
         entry: dict[str, object] = {
             "name": key,
             "type": getattr(field.annotation, "__name__", str(field.annotation)),
             "description": field.description or "",
-            "default": None if (is_nested or not include_defaults) else value,
+            "default": default_value,
             "examples": field.examples or [],
             "constraints": _describe_constraints(field),
             "is_nested": is_nested,
@@ -886,6 +890,35 @@ def iter_field_docs(
         yield entry
         if is_nested:
             yield from iter_field_docs(value, key)
+
+
+def _format_default_value(field: Any, value: Any) -> Any:
+    """Return a deterministic representation for documented defaults."""
+
+    if isinstance(value, Path):
+        return _normalize_path_default(value, field)
+    return value
+
+
+def _normalize_path_default(path_value: Path, field: Any) -> Path:
+    """Normalize path defaults so documentation remains environment agnostic."""
+
+    raw_default = getattr(field, "default", None)
+    if isinstance(raw_default, Path):
+        return raw_default
+    if isinstance(raw_default, str):
+        return Path(raw_default)
+    default_factory = getattr(field, "default_factory", None)
+    if callable(default_factory):
+        candidate = default_factory()
+        if isinstance(candidate, Path):
+            return candidate
+        if isinstance(candidate, str):
+            return Path(candidate)
+    if path_value.is_absolute():
+        with suppress(ValueError):
+            return path_value.relative_to(_PROJECT_ROOT)
+    return path_value
 
 
 def _describe_constraints(field: Any) -> str:

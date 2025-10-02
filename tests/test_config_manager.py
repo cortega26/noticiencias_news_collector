@@ -95,6 +95,19 @@ def test_schema_keys_cover_defaults() -> None:
     assert schema_keys.issubset(default_keys)
 
 
+def test_path_defaults_render_relative() -> None:
+    """Ensure documented path defaults stay relative and deterministic."""
+
+    defaults = {
+        entry["name"]: entry["default"]
+        for entry in iter_field_docs(DEFAULT_CONFIG)
+        if not entry.get("is_nested")
+    }
+    assert defaults["paths.data_dir"] == Path("data")
+    assert defaults["paths.logs_dir"] == Path("logs")
+    assert defaults["paths.dlq_dir"] == Path("dlq")
+
+
 @pytest.mark.parametrize(
     "path",
     [
