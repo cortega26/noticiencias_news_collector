@@ -1,4 +1,5 @@
 """Structured placeholder audit CLI."""
+
 from __future__ import annotations
 
 import argparse
@@ -240,12 +241,16 @@ def parse_diff(base: str, halo: int) -> List[DiffFile]:
             continue
         if raw_line.startswith("+"):
             symbol = "+"
-            current.lines.append(DiffLine(old_number=None, new_number=new_line, symbol=symbol))
+            current.lines.append(
+                DiffLine(old_number=None, new_number=new_line, symbol=symbol)
+            )
             new_line = (new_line or 0) + 1
             continue
         if raw_line.startswith("-"):
             symbol = "-"
-            current.lines.append(DiffLine(old_number=old_line, new_number=None, symbol=symbol))
+            current.lines.append(
+                DiffLine(old_number=old_line, new_number=None, symbol=symbol)
+            )
             old_line = (old_line or 0) + 1
             continue
         symbol = " "
@@ -382,7 +387,9 @@ def evaluate_placeholder(
         except ValueError:
             reasons.append("invalid due format")
     completeness_weight = 0.0
-    missing_fields = [field for field in config.required_fields if field not in attributes]
+    missing_fields = [
+        field for field in config.required_fields if field not in attributes
+    ]
     if marker == "TBD" and context in _ALLOWED_DOC_TBD_CONTEXTS:
         if not validate_issue(attributes.get("issue")):
             reasons.append("docs TBD requires linked issue")
@@ -429,7 +436,11 @@ def evaluate_placeholder(
                 severity = "MED"
             elif context == "docs":
                 severity = "MED"
-    if marker == "TBD" and context in _ALLOWED_DOC_TBD_CONTEXTS and validate_issue(attributes.get("issue")):
+    if (
+        marker == "TBD"
+        and context in _ALLOWED_DOC_TBD_CONTEXTS
+        and validate_issue(attributes.get("issue"))
+    ):
         severity = "LOW"
     suggested_fix = "Ensure owner/due/issue metadata is complete"
     if marker == "TBD" and context in _ALLOWED_DOC_TBD_CONTEXTS:
@@ -534,9 +545,7 @@ def build_sarif(findings: Sequence[PlaceholderRecord]) -> Dict[str, Any]:
                 "locations": [
                     {
                         "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": finding.file_path.as_posix()
-                            },
+                            "artifactLocation": {"uri": finding.file_path.as_posix()},
                             "region": {
                                 "startLine": finding.line_number,
                                 "startColumn": 1,
@@ -739,14 +748,17 @@ def run_audit(args: argparse.Namespace) -> int:
         print(
             "Legacy HIGH (no fail): "
             + ", ".join(
-                f"{item.file_path.as_posix()}:{item.line_number}" for item in summary["high_legacy"]
+                f"{item.file_path.as_posix()}:{item.line_number}"
+                for item in summary["high_legacy"]
             )
         )
     if args.sarif:
         sarif_doc = build_sarif(report.findings)
         Path(args.sarif).write_text(json.dumps(sarif_doc, indent=2), encoding="utf-8")
     if args.comment:
-        Path(args.comment).write_text(build_pr_comment(report.findings), encoding="utf-8")
+        Path(args.comment).write_text(
+            build_pr_comment(report.findings), encoding="utf-8"
+        )
     if should_fail(
         report,
         config,

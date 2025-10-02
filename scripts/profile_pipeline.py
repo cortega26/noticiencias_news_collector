@@ -122,7 +122,7 @@ def profile_variant(label: str, scorer_mode: str):
     print(f"  total_time   : {total:.4f}s")
     print(f"  avg_score    : {avg_score:.3f}")
     print(f"  throughput   : {throughput:.1f} articles/hour")
-    print(f"  score_p95    : {score_p95*1000:.2f} ms/article")
+    print(f"  score_p95    : {score_p95 * 1000:.2f} ms/article")
     print()
 
 

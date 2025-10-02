@@ -29,7 +29,9 @@ def get_pydantic_module() -> ModuleType:
     try:
         module = importlib.import_module("pydantic")
     except ModuleNotFoundError as exc:  # pragma: no cover - environment guard
-        raise RuntimeError("Pydantic must be installed to run the News Collector") from exc
+        raise RuntimeError(
+            "Pydantic must be installed to run the News Collector"
+        ) from exc
 
     if _module_is_usable(module):
         return module
@@ -37,7 +39,9 @@ def get_pydantic_module() -> ModuleType:
     # A lightweight stub or outdated version was imported. Try reloading the real one.
     sys.modules.pop("pydantic", None)
     module = importlib.import_module("pydantic")
-    if not _module_is_usable(module):  # pragma: no cover - indicates incompatible version
+    if not _module_is_usable(
+        module
+    ):  # pragma: no cover - indicates incompatible version
         raise RuntimeError(
             "A compatible Pydantic v2 installation is required for validation features"
         )
@@ -45,4 +49,3 @@ def get_pydantic_module() -> ModuleType:
 
 
 __all__ = ["get_pydantic_module"]
-

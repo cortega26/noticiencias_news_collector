@@ -1,4 +1,5 @@
 """Regression tests for the GUI configuration helpers."""
+
 from __future__ import annotations
 
 import tkinter as tk

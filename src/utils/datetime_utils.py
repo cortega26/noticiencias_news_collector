@@ -24,7 +24,7 @@ def _tz_name(dt: datetime) -> str:
     minutes = _tz_offset_minutes(dt)
     sign = "+" if minutes >= 0 else "-"
     m = abs(minutes)
-    return f"UTC{sign}{m//60:02d}:{m%60:02d}"
+    return f"UTC{sign}{m // 60:02d}:{m % 60:02d}"
 
 
 def parse_to_utc_with_tzinfo(

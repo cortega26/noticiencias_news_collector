@@ -6,6 +6,7 @@ Runs N sources x 1 fetch each (or more) and reports p50/p95/p99 latencies,
 error rate, and a retry histogram. Can use async httpx for concurrency when
 --async is passed (or env ASYNC_ENABLED=true).
 """
+
 import argparse
 import asyncio
 import math

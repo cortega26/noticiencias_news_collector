@@ -1,4 +1,5 @@
 """Project configuration facade backed by noticiencias.config_manager."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,10 +25,14 @@ IS_STAGING = ENVIRONMENT == "staging"
 DATABASE_CONFIG: Dict[str, Any] = CONFIG.database.model_dump(mode="python")
 DATABASE_CONFIG["type"] = DATABASE_CONFIG.pop("driver")
 if DATABASE_CONFIG["type"] == "sqlite":
-    DATABASE_CONFIG.setdefault("path", Path(DATABASE_CONFIG.get("path", "data/news.db")))
+    DATABASE_CONFIG.setdefault(
+        "path", Path(DATABASE_CONFIG.get("path", "data/news.db"))
+    )
 
 COLLECTION_CONFIG: Dict[str, Any] = CONFIG.collection.model_dump(mode="python")
-COLLECTION_CONFIG["collection_interval"] = COLLECTION_CONFIG["collection_interval_hours"]
+COLLECTION_CONFIG["collection_interval"] = COLLECTION_CONFIG[
+    "collection_interval_hours"
+]
 COLLECTION_CONFIG["request_timeout"] = COLLECTION_CONFIG["request_timeout_seconds"]
 
 RATE_LIMITING_CONFIG: Dict[str, Any] = CONFIG.rate_limiting.model_dump(mode="python")
@@ -42,7 +47,10 @@ RATE_LIMITING_CONFIG["retry_delay"] = RATE_LIMITING_CONFIG["retry_delay_seconds"
 ROBOTS_CONFIG: Dict[str, Any] = CONFIG.robots.model_dump(mode="python")
 DEDUP_CONFIG: Dict[str, Any] = CONFIG.dedup.model_dump(mode="python")
 SCORING_CONFIG: Dict[str, Any] = CONFIG.scoring.model_dump(mode="python")
-TEXT_PROCESSING_CONFIG: Dict[str, Any] = CONFIG.text_processing.model_dump(mode="python")
+TEXT_PROCESSING_CONFIG: Dict[str, Any] = CONFIG.text_processing.model_dump(
+    mode="python"
+)
+
 
 def _normalize_enrichment(config: Config) -> Dict[str, Any]:
     data = config.enrichment.model_dump(mode="python")
@@ -55,7 +63,13 @@ def _normalize_enrichment(config: Config) -> Dict[str, Any]:
         for language, patterns in entries.items():
             cleaned: list[Dict[str, Any]] = []
             for pattern in patterns:
-                cleaned.append({k: v for k, v in pattern.items() if not (k == "alias" and v is None)})
+                cleaned.append(
+                    {
+                        k: v
+                        for k, v in pattern.items()
+                        if not (k == "alias" and v is None)
+                    }
+                )
             cleaned_patterns[language] = cleaned
         normalized["entities"] = {"patterns": cleaned_patterns}
         sentiment = normalized.get("sentiment", {})
@@ -91,21 +105,27 @@ def validate_config(config: Config | None = None) -> None:
     cfg = config or CONFIG
     weights = cfg.scoring.weights
     feature_weights = cfg.scoring.feature_weights
-    if abs(
-        weights.source_credibility
-        + weights.recency
-        + weights.content_quality
-        + weights.engagement_potential
-        - 1.0
-    ) > 0.01:
+    if (
+        abs(
+            weights.source_credibility
+            + weights.recency
+            + weights.content_quality
+            + weights.engagement_potential
+            - 1.0
+        )
+        > 0.01
+    ):
         raise ConfigError("scoring.weights must sum to 1.0 ±0.01")
-    if abs(
-        feature_weights.source_credibility
-        + feature_weights.freshness
-        + feature_weights.content_quality
-        + feature_weights.engagement
-        - 1.0
-    ) > 0.01:
+    if (
+        abs(
+            feature_weights.source_credibility
+            + feature_weights.freshness
+            + feature_weights.content_quality
+            + feature_weights.engagement
+            - 1.0
+        )
+        > 0.01
+    ):
         raise ConfigError("scoring.feature_weights must sum to 1.0 ±0.01")
     if cfg.database.driver == "sqlite" and not cfg.database.path:
         raise ConfigError("sqlite driver requires database.path")
@@ -116,9 +136,7 @@ def validate_config(config: Config | None = None) -> None:
             if not getattr(cfg.database, field)
         ]
         if missing:
-            raise ConfigError(
-                "postgresql configuration missing: " + ", ".join(missing)
-            )
+            raise ConfigError("postgresql configuration missing: " + ", ".join(missing))
 
 
 __all__ = [

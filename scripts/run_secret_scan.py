@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run trufflehog3 secret scanning and persist the JSON report."""
+
 from __future__ import annotations
 
 import argparse

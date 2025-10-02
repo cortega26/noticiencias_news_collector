@@ -237,7 +237,7 @@ COMMUNITY_FEEDS = {
 
 
 def _with_feed_cache_fields(
-    sources: Dict[str, Dict[str, Any]]
+    sources: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
     """Ensure every source has optional feed cache metadata keys."""
 

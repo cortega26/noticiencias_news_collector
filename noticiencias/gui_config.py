@@ -1,4 +1,5 @@
 """Tkinter-based configuration editor backed by noticiencias.config_manager."""
+
 from __future__ import annotations
 
 import json
@@ -11,7 +12,14 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 from pydantic import BaseModel
 
-from .config_manager import Config, ConfigError, _diff_configs, _is_secret, load_config, save_config
+from .config_manager import (
+    Config,
+    ConfigError,
+    _diff_configs,
+    _is_secret,
+    load_config,
+    save_config,
+)
 from .config_schema import DEFAULT_CONFIG, iter_field_docs
 
 
@@ -154,8 +162,7 @@ class ConfigEditor:
                     codes.add(default_language)
         cleaned_codes = [code for code in codes if code]
         options = [
-            (LANGUAGE_LABELS.get(code, code.upper()), code)
-            for code in cleaned_codes
+            (LANGUAGE_LABELS.get(code, code.upper()), code) for code in cleaned_codes
         ]
         return sorted(options, key=lambda item: item[0])
 
@@ -189,8 +196,12 @@ class ConfigEditor:
         search_entry.grid(row=0, column=1, sticky="ew")
         search_entry.bind("<KeyRelease>", lambda _event: self._apply_filter())
 
-        ttk.Button(toolbar, text="Reload", command=self._reload).grid(row=0, column=2, padx=6)
-        ttk.Button(toolbar, text="Save", command=self._save).grid(row=0, column=3, padx=6)
+        ttk.Button(toolbar, text="Reload", command=self._reload).grid(
+            row=0, column=2, padx=6
+        )
+        ttk.Button(toolbar, text="Save", command=self._save).grid(
+            row=0, column=3, padx=6
+        )
 
         status_label = ttk.Label(container, textvariable=self._status, foreground="red")
         status_label.grid(row=1, column=0, sticky="ew", pady=(4, 4))
@@ -228,8 +239,12 @@ class ConfigEditor:
         remaining = sorted(name for name in self._field_docs if name not in assigned)
         if remaining:
             groups.append(("Other", remaining, "Fields without a dedicated category."))
-        self._field_groups = {name: label for label, items, _ in groups for name in items}
-        self._group_descriptions = {label: description for label, _items, description in groups}
+        self._field_groups = {
+            name: label for label, items, _ in groups for name in items
+        }
+        self._group_descriptions = {
+            label: description for label, _items, description in groups
+        }
         return groups
 
     def _build_group_form(
@@ -268,7 +283,9 @@ class ConfigEditor:
 
     def _build_help(self, frame: ttk.Frame) -> None:
         search = tk.StringVar()
-        ttk.Label(frame, text="Search:").grid(row=0, column=0, padx=(0, 6), pady=(0, 6), sticky="w")
+        ttk.Label(frame, text="Search:").grid(
+            row=0, column=0, padx=(0, 6), pady=(0, 6), sticky="w"
+        )
         search_entry = ttk.Entry(frame, textvariable=search)
         search_entry.grid(row=0, column=1, sticky="ew", pady=(0, 6))
         frame.columnconfigure(1, weight=1)
@@ -345,7 +362,9 @@ class ConfigEditor:
         self._widgets[name] = widget
         self._variables[name] = variable
 
-    def _build_widget(self, parent: ttk.Frame, doc: FieldDoc, value: Any) -> tuple[tk.Widget, tk.Variable]:
+    def _build_widget(
+        self, parent: ttk.Frame, doc: FieldDoc, value: Any
+    ) -> tuple[tk.Widget, tk.Variable]:
         if self._uses_language_dropdown(doc.name):
             options = self._language_options()
             mapping: Dict[str, str] = {label: code for label, code in options}
@@ -358,7 +377,9 @@ class ConfigEditor:
                 display_value = ""
             else:
                 raw_value = value if isinstance(value, str) else str(value)
-                display_value = reverse.get(raw_value, LANGUAGE_LABELS.get(raw_value, raw_value))
+                display_value = reverse.get(
+                    raw_value, LANGUAGE_LABELS.get(raw_value, raw_value)
+                )
                 if display_value not in mapping and raw_value:
                     mapping[display_value] = raw_value
                     reverse[raw_value] = display_value
@@ -367,7 +388,10 @@ class ConfigEditor:
             widget = ttk.Combobox(
                 parent, textvariable=var, values=values, state="readonly"
             )
-            widget.bind("<<ComboboxSelected>>", lambda _event, name=doc.name: self._on_change(name))
+            widget.bind(
+                "<<ComboboxSelected>>",
+                lambda _event, name=doc.name: self._on_change(name),
+            )
             self._choice_mappings[doc.name] = mapping
             self._choice_reverse[doc.name] = reverse
             return widget, var
@@ -413,7 +437,11 @@ class ConfigEditor:
         needle = self._search_var.get().strip().lower()
         for name, widget in self._widgets.items():
             frame = widget.master  # type: ignore[assignment]
-            visible = not needle or needle in name.lower() or needle in self._field_docs[name].description.lower()
+            visible = (
+                not needle
+                or needle in name.lower()
+                or needle in self._field_docs[name].description.lower()
+            )
             frame.grid_remove()
             if visible:
                 frame.grid()
@@ -484,7 +512,9 @@ class ConfigEditor:
 
     def _reload(self) -> None:
         try:
-            self._config = load_config(getattr(self._config._metadata, "config_path", None))
+            self._config = load_config(
+                getattr(self._config._metadata, "config_path", None)
+            )
             self._data = self._config.model_dump(mode="python")
             for name, var in self._variables.items():
                 value = self._resolve_value(name)

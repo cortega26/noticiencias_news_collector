@@ -1,4 +1,5 @@
 """Deterministic configuration loader and CLI for Noticiencias."""
+
 from __future__ import annotations
 
 import argparse
@@ -456,7 +457,10 @@ def _diff_configs(before: Mapping[str, Any], after: Mapping[str, Any]) -> list[s
 def _format_schema_table() -> str:
     entries = list(iter_field_docs(DEFAULT_CONFIG))
     headers = ["Field", "Type", "Default", "Description", "Constraints", "Example"]
-    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
     for entry in entries:
         default = ""
         if entry["default"] is not None:
@@ -542,18 +546,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Noticiencias configuration utilities",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--config", type=Path, help="Path to the TOML configuration file")
+    parser.add_argument(
+        "--config", type=Path, help="Path to the TOML configuration file"
+    )
     parser.add_argument(
         "--env-prefix",
         default=DEFAULT_ENV_PREFIX,
         help="Environment variable prefix (e.g. NOTICIENCIAS__COLLECTION__TIMEOUT)",
     )
     actions = parser.add_mutually_exclusive_group(required=True)
-    actions.add_argument("--validate", action="store_true", help="Validate the active configuration")
-    actions.add_argument("--dump-defaults", action="store_true", help="Print built-in defaults as TOML")
-    actions.add_argument("--print-schema", action="store_true", help="Print Markdown table documenting all fields")
-    actions.add_argument("--show-sources", action="store_true", help="Show configuration source precedence")
-    actions.add_argument("--explain", metavar="KEY", help="Explain where a field value originates")
+    actions.add_argument(
+        "--validate", action="store_true", help="Validate the active configuration"
+    )
+    actions.add_argument(
+        "--dump-defaults", action="store_true", help="Print built-in defaults as TOML"
+    )
+    actions.add_argument(
+        "--print-schema",
+        action="store_true",
+        help="Print Markdown table documenting all fields",
+    )
+    actions.add_argument(
+        "--show-sources",
+        action="store_true",
+        help="Show configuration source precedence",
+    )
+    actions.add_argument(
+        "--explain", metavar="KEY", help="Explain where a field value originates"
+    )
     actions.add_argument(
         "--set",
         nargs="+",

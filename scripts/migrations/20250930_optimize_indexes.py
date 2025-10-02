@@ -5,6 +5,7 @@ Migration: align article indexes with optimized dedupe and ranking pipeline (202
 - Drops redundant indexes.
 - Creates covering/partial indexes for dedupe, category windows, and source stats.
 """
+
 from __future__ import annotations
 
 import os

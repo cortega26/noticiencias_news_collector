@@ -74,29 +74,19 @@ class ConfigurableNLPStack:
             raise TypeError("Model configuration must be a mapping")
 
         self._model_config = model_config_obj
-        requested_provider = (
-            str(self._model_config.get("provider", "pattern")).lower()
-        )
+        requested_provider = str(self._model_config.get("provider", "pattern")).lower()
         self._provider = requested_provider
         if requested_provider == "spacy" and spacy is None:
             # Fall back transparently when spaCy is not available in the runtime.
             self._provider = "pattern"
 
-        self.model_version = str(
-            self._model_config.get("version", model_key)
-        )
-        self._default_topic = str(
-            self._model_config.get("default_topic", "general")
-        )
-        default_language = str(
-            self._model_config.get("default_language", "en")
-        )
+        self.model_version = str(self._model_config.get("version", model_key))
+        self._default_topic = str(self._model_config.get("default_topic", "general"))
+        default_language = str(self._model_config.get("default_language", "en"))
         languages = self._model_config.get("languages", [default_language])
         if not isinstance(languages, Iterable):
             raise TypeError("Model languages definition must be iterable")
-        self._supported_languages = {
-            str(language).lower() for language in languages
-        }
+        self._supported_languages = {str(language).lower() for language in languages}
         self._supported_languages.add(default_language.lower())
         self._default_language = default_language.lower()
         self._analysis_cache = LRUCache(
@@ -149,9 +139,7 @@ class ConfigurableNLPStack:
     # ------------------------------------------------------------------
     # Entity extraction
     # ------------------------------------------------------------------
-    def _extract_entities(
-        self, language: str, texts: Sequence[str]
-    ) -> tuple[str, ...]:
+    def _extract_entities(self, language: str, texts: Sequence[str]) -> tuple[str, ...]:
         if self.provider == "spacy" and spacy is not None:
             doc_entities = self._extract_entities_spacy(language, texts)
             if doc_entities:
@@ -234,7 +222,9 @@ class ConfigurableNLPStack:
         return resolved
 
     @staticmethod
-    def _normalize_entity_patterns(patterns: Iterable[object]) -> list[dict[str, object]]:
+    def _normalize_entity_patterns(
+        patterns: Iterable[object],
+    ) -> list[dict[str, object]]:
         normalized: list[dict[str, object]] = []
         for pattern in patterns:
             if isinstance(pattern, Mapping):
@@ -264,7 +254,9 @@ class ConfigurableNLPStack:
             lang_kw = keywords_cfg.get(language, [])
             if isinstance(lang_kw, Iterable):
                 candidates.extend(str(word).lower() for word in lang_kw)
-            if any(self._keyword_present(text_lower, keyword) for keyword in candidates):
+            if any(
+                self._keyword_present(text_lower, keyword) for keyword in candidates
+            ):
                 detected.setdefault(str(topic), None)
         if not detected:
             detected[self._default_topic] = None
@@ -296,8 +288,12 @@ class ConfigurableNLPStack:
             lang_neg = lang_lexicon.get("negative", [])
             if isinstance(lang_neg, Iterable):
                 negatives.update(str(word).lower() for word in lang_neg)
-        pos_hits = sum(1 for word in positives if self._keyword_present(text_lower, word))
-        neg_hits = sum(1 for word in negatives if self._keyword_present(text_lower, word))
+        pos_hits = sum(
+            1 for word in positives if self._keyword_present(text_lower, word)
+        )
+        neg_hits = sum(
+            1 for word in negatives if self._keyword_present(text_lower, word)
+        )
         if pos_hits > neg_hits:
             return "positive"
         if neg_hits > pos_hits:

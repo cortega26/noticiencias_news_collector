@@ -1,4 +1,5 @@
 """Compatibility wrapper exposing the new configuration manager API."""
+
 from __future__ import annotations
 
 from noticiencias.config_manager import (

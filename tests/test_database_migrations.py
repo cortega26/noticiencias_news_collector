@@ -84,6 +84,6 @@ def test_database_manager_backfills_suppression_columns(
     columns = {col["name"] for col in inspector.get_columns("sources")}
 
     for column in missing_columns:
-        assert (
-            column in columns
-        ), f"Expected column '{column}' to be created via migration"
+        assert column in columns, (
+            f"Expected column '{column}' to be created via migration"
+        )

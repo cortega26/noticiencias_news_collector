@@ -1,4 +1,5 @@
 """Declarative configuration schema for Noticiencias."""
+
 from __future__ import annotations
 
 from contextlib import suppress
@@ -127,7 +128,8 @@ class DatabaseConfig(StrictModel):
         examples=[5432],
     )
     name: str = Field(
-        default="noticiencias", description="Database name or schema."  # noqa: E501
+        default="noticiencias",
+        description="Database name or schema.",  # noqa: E501
     )
     user: Optional[str] = Field(
         default=None,
@@ -267,7 +269,8 @@ class RateLimitingConfig(StrictModel):
         description="Initial delay between retries, subject to backoff.",
     )
     backoff_base: PositiveFloat = Field(
-        default=0.5, description="Base factor for exponential backoff."  # noqa: E501
+        default=0.5,
+        description="Base factor for exponential backoff.",  # noqa: E501
     )
     backoff_max: PositiveFloat = Field(
         default=10.0,
@@ -353,7 +356,10 @@ class FeatureWeightsConfig(StrictModel):
     @model_validator(mode="after")
     def _check_sum(self) -> "FeatureWeightsConfig":
         total = (
-            self.source_credibility + self.freshness + self.content_quality + self.engagement
+            self.source_credibility
+            + self.freshness
+            + self.content_quality
+            + self.engagement
         )
         if abs(total - 1.0) > 0.01:
             raise ValueError("Feature weights must sum to approximately 1.0")
@@ -828,7 +834,12 @@ class Config(StrictModel):
                             languages={
                                 "en": SentimentLanguageLexicon(
                                     positive=["confirmed", "progress", "celebrated"],
-                                    negative=["warned", "recession", "risk", "negative"],
+                                    negative=[
+                                        "warned",
+                                        "recession",
+                                        "risk",
+                                        "negative",
+                                    ],
                                 ),
                                 "es": SentimentLanguageLexicon(
                                     positive=[
@@ -838,7 +849,12 @@ class Config(StrictModel):
                                         "positivo",
                                         "positiva",
                                     ],
-                                    negative=["alerta", "preocupante", "urgente", "urgentes"],
+                                    negative=[
+                                        "alerta",
+                                        "preocupante",
+                                        "urgente",
+                                        "urgentes",
+                                    ],
                                 ),
                                 "pt": SentimentLanguageLexicon(
                                     positive=["celebraram", "parceria", "inovador"],

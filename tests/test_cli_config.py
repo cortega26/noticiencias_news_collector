@@ -37,7 +37,9 @@ def test_explain_reports_source(tmp_path: Path) -> None:
 
 def test_set_updates_file_and_creates_backup(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[collection]\nrequest_timeout_seconds = 10\n", encoding="utf-8")
+    config_file.write_text(
+        "[collection]\nrequest_timeout_seconds = 10\n", encoding="utf-8"
+    )
     result = _run_cli(tmp_path, "--set", "collection.request_timeout_seconds=45")
     assert result.returncode == 0
     assert "collection.request_timeout_seconds" in result.stdout
@@ -49,7 +51,9 @@ def test_set_updates_file_and_creates_backup(tmp_path: Path) -> None:
 
 def test_validate_failure_reports_error(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[collection]\nrequest_timeout_seconds = 'oops'\n", encoding="utf-8")
+    config_file.write_text(
+        "[collection]\nrequest_timeout_seconds = 'oops'\n", encoding="utf-8"
+    )
     result = _run_cli(tmp_path, "--validate")
     assert result.returncode == 1
     assert "collection.request_timeout_seconds" in result.stderr

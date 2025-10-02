@@ -1,4 +1,5 @@
 """Utility script to regenerate dependency lockfiles with pip-tools."""
+
 from __future__ import annotations
 
 import argparse
@@ -73,6 +74,7 @@ def ensure_piptools_installed(force: bool) -> None:
     try:
         if not force:
             import piptools  # type: ignore  # noqa: F401
+
             LOGGER.debug("pip-tools already installed; skipping installation.")
             return
     except ImportError:
@@ -101,7 +103,14 @@ def sync_lockfiles() -> None:
 def ensure_lockfiles_clean() -> None:
     """Verify that lockfiles did not change after syncing."""
     run_command(
-        ("git", "diff", "--quiet", "--", "requirements.lock", "requirements-security.lock"),
+        (
+            "git",
+            "diff",
+            "--quiet",
+            "--",
+            "requirements.lock",
+            "requirements-security.lock",
+        ),
         description="Verifying lockfiles are up to date",
     )
 
