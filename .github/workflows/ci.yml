@@ -373,12 +373,10 @@ jobs:
           message = "no runs"
           color = "lightgrey"
           is_error = False
-          link = None
 
           if run:
               conclusion = (run.get("conclusion") or "").lower() or None
               status = (run.get("status") or "").lower() or None
-              link = run.get("html_url")
 
               conclusion_map = {
                   "success": ("passing", "brightgreen", False),
@@ -405,9 +403,7 @@ jobs:
                   )
               else:
                   message, color, is_error = status_map.get(status, ("unknown", "lightgrey", False))
-          else:
-              link = None
-
+          # Shields custom endpoint rejects unsupported keys (for example, "link").
           badge_payload = {
               "schemaVersion": 1,
               "label": "ci",
@@ -418,9 +414,6 @@ jobs:
 
           if is_error:
               badge_payload["isError"] = True
-
-          if link:
-              badge_payload["link"] = [link]
 
           patch_payload = {"files": {filename: {"content": json.dumps(badge_payload, ensure_ascii=False)}}}
 
