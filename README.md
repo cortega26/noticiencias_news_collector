@@ -59,9 +59,15 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 ### Quickstart con Makefile
 ```bash
 make bootstrap
-make test
+make lint typecheck test
+make security
 .venv/bin/python run_collector.py --dry-run
 ```
+
+- `make bootstrap`: crea el entorno virtual y sincroniza dependencias (incluye escáneres).
+- `make lint typecheck test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
+- `make security`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
+- `.venv/bin/python run_collector.py --dry-run`: valida el pipeline completo sin escribir en almacenamiento.
 
 ### Instalación manual con `venv`
 ```bash
