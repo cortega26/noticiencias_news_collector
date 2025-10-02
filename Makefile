@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix typecheck test e2e perf security clean help bump-version audit-todos audit-todos-baseline audit-todos-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs typecheck test e2e perf security clean help bump-version audit-todos audit-todos-baseline audit-todos-check
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -25,13 +25,13 @@ PLACEHOLDER_REPORT_MD := $(REPORTS_DIR)/placeholders.md
 PLACEHOLDER_SARIF := $(REPORTS_DIR)/placeholder-audit.sarif
 PLACEHOLDER_COMMENT := $(REPORTS_DIR)/placeholder-comment.md
 PLACEHOLDER_BASE ?= $(shell \
-        if git rev-parse --verify origin/main >/dev/null 2>&1; then \
-                echo origin/main; \
-        elif git rev-parse --verify main >/dev/null 2>&1; then \
-                echo main; \
-        else \
-                echo HEAD; \
-        fi)
+	if git rev-parse --verify origin/main >/dev/null 2>&1; then \
+		echo origin/main; \
+	elif git rev-parse --verify main >/dev/null 2>&1; then \
+		echo main; \
+	else \
+		echo HEAD; \
+	fi)
 PLACEHOLDER_PATTERNS := tools/placeholder_patterns.yml
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
@@ -60,6 +60,9 @@ bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 lint: bootstrap ## Run Ruff lint checks
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
 	@$(RUFF) check src tests scripts
+
+fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
+	@$(PYTHON) -m tools.fix_makefile_tabs
 
 lint-fix: bootstrap ## Run Ruff with autofix enabled
 	@$(RUFF) check src tests scripts --fix

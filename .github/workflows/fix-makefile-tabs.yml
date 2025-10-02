@@ -1,0 +1,58 @@
+name: Fix Makefile tabs
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: "Branch to open the pull request against"
+        required: false
+        default: main
+      branch_suffix:
+        description: "Optional suffix for the generated branch"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fix-tabs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Normalize Makefile indentation
+        run: python -m tools.fix_makefile_tabs
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: normalize Makefile tabs"
+          title: "chore: normalize Makefile tabs"
+          body: |
+            ## Summary
+            - Run `python -m tools.fix_makefile_tabs` to normalize Makefile recipes.
+
+            ## Notes
+            - Triggered by `${{ github.actor }}` via workflow dispatch.
+          branch: >-
+            chore/normalize-makefile-tabs${{ inputs.branch_suffix && format('-{0}', inputs.branch_suffix) || '' }}
+          base: ${{ inputs.base_branch }}
+          delete-branch: true
+      - name: No changes summary
+        if: steps.diff.outputs.changed != 'true'
+        run: echo "No indentation updates were necessary." >> "$GITHUB_STEP_SUMMARY"
