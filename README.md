@@ -2,7 +2,7 @@
 
 ## Sistema Automatizado de Recopilación y Scoring de Noticias Científicas
 
-[![CI Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/noticiencias/<CI_BADGE_GIST_ID>/raw/ci-badge.json)](https://github.com/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
+[![CI Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/cortega26/d271be8cbb4914fcb020d48f5d06b9f1/raw/ci-badge.json)](https://github.com/noticiencias/noticiencias_news_collector/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: MVP](https://img.shields.io/badge/Status-MVP-green.svg)]()
