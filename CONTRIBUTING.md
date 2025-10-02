@@ -1,3 +1,4 @@
+<!-- markdownlint-disable -->
 # Contributing to Noticiencias News Collector
 
 Thanks for helping us keep the Noticiencias stack healthy! This document captures the conventions reviewers expect you to follow from the first commit to the final PR.

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable -->
 # 🧬 News Collector System
 
 ## Sistema Automatizado de Recopilación y Scoring de Noticias Científicas
@@ -6,8 +7,6 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: MVP](https://img.shields.io/badge/Status-MVP-green.svg)]()
-
-> ℹ️ Sustituye `<CI_BADGE_GIST_ID>` por el identificador real del gist configurado en el secreto `CI_BADGE_GIST_ID` y crea el secreto `CI_BADGE_PAT` con un token que tenga permisos `repo` y `gist`.
 
 Un sistema inteligente que recopila automáticamente noticias científicas de las mejores fuentes del mundo, las evalúa mediante un algoritmo de scoring multidimensional, y selecciona las más importantes para tu audiencia.
 
