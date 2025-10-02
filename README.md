@@ -44,7 +44,7 @@ flowchart TD
     Dedupe --> Enrichment[Enriquecimiento NLP]
     Enrichment --> Scoring[Scoring & Explicabilidad]
     Scoring --> Reranker[Reranker & Diversidad]
-    Reranker --> Storage[Persistencia (SQL, logs)]
+    Reranker --> Storage["Persistencia (SQL, logs)"]
     Storage --> Serving[APIs / Reporting]
     Storage --> Monitoring[Monitoreo & Alertas]
 ```
