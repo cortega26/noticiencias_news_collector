@@ -60,6 +60,9 @@ class AppSettings(StrictModel):
         return normalized
 
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
 class PathsConfig(StrictModel):
     """Filesystem layout settings."""
 
@@ -80,12 +83,23 @@ class PathsConfig(StrictModel):
 
     @model_validator(mode="after")
     def _ensure_child_paths(self) -> "PathsConfig":
-        base = self.data_dir if self.data_dir.is_absolute() else self.data_dir.resolve()
+        """Resolve relative directories against the repository root."""
+
+        if self.data_dir.is_absolute():
+            base = self.data_dir
+        else:
+            base = (_PROJECT_ROOT / self.data_dir).resolve()
         object.__setattr__(self, "data_dir", base)
-        if not self.logs_dir.is_absolute():
-            object.__setattr__(self, "logs_dir", (base / self.logs_dir).resolve())
-        if not self.dlq_dir.is_absolute():
-            object.__setattr__(self, "dlq_dir", (base / self.dlq_dir).resolve())
+        if self.logs_dir.is_absolute():
+            logs = self.logs_dir
+        else:
+            logs = (base / self.logs_dir).resolve()
+        if self.dlq_dir.is_absolute():
+            dlq = self.dlq_dir
+        else:
+            dlq = (base / self.dlq_dir).resolve()
+        object.__setattr__(self, "logs_dir", logs)
+        object.__setattr__(self, "dlq_dir", dlq)
         return self
 
 
