@@ -52,7 +52,7 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 
 ## Instalación
 ### Prerrequisitos
-- Python 3.10+ (probado en 3.12).
+- Python 3.10 o superior (probado en 3.12).
 - Git.
 - (Opcional) Docker 24+ para empaquetar contenedores.
 
@@ -204,7 +204,7 @@ Workflows en `.github/workflows/`:
 - `ci.yml`: lint, tests y seguridad en pushes/PRs.
 - `security.yml`: escaneos dedicados (bandit, trufflehog, pip-audit).
 - `dependency-lock-check.yml`: valida sincronía de lockfiles.
-- `manual-lock-sync.yml`: job manual para refrescar `requirements.lock`.
+- `manual-lock-sync.yml`: job manual para refrescar `requirements.lock`; empuja una rama auxiliar y requiere crear el PR manualmente.
 - `release.yml`: empaquetado y publicación (ver [release checklist](docs/release-checklist.md)).
 - `sync-master.yml`: sincronización con ramas ascendentes.
 
