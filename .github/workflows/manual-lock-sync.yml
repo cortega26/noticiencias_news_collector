@@ -30,21 +30,37 @@ jobs:
           python-version: '3.12'
       - name: Refresh lockfiles
         run: python scripts/sync_lockfiles.py --install-pip-tools
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: automation/lock-sync
-          branch-suffix: timestamp
-          base: ${{ github.event.inputs['base-branch'] || 'main' }}
-          commit-message: "chore: refresh dependency lockfiles"
-          title: ${{ github.event.inputs['pr-title'] }}
-          body: |
-            ## Summary
-            - Regenerated requirements.lock and requirements-security.lock using `scripts/sync_lockfiles.py`.
+      - name: Commit and push lockfile updates
+        env:
+          BASE_BRANCH: ${{ github.event.inputs['base-branch'] || 'main' }}
+          PR_TITLE: ${{ github.event.inputs['pr-title'] }}
+        run: |
+          set -euo pipefail
 
-            ## Details
-            - Triggered manually via workflow_dispatch.
-          add-paths: |
-            requirements.lock
-            requirements-security.lock
-          delete-branch: true
+          if git diff --quiet -- requirements.lock requirements-security.lock; then
+            {
+              echo "## Manual follow-up"
+              echo "No lockfile changes detected. Nothing to push or review."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          branch_suffix="$(date +%s)"
+          branch_name="automation/lock-sync-${branch_suffix}"
+
+          git config --global user.email "action@github.com"
+          git config --global user.name "github-actions[bot]"
+
+          git checkout -b "${branch_name}"
+          git add requirements.lock requirements-security.lock
+          git commit -m "chore: refresh dependency lockfiles"
+          git push --set-upstream origin "${branch_name}"
+
+          {
+            echo "## Manual follow-up"
+            echo "Lockfile updates have been pushed to \`${branch_name}\`."
+            echo "Create a pull request merging **${BASE_BRANCH}** <- **${branch_name}** with the suggested title:"
+            echo "- ${PR_TITLE:-chore: refresh dependency lockfiles}"
+            echo ""
+            echo "GitHub Actions cannot open the PR automatically due to organization policy."
+          } >> "${GITHUB_STEP_SUMMARY}"
