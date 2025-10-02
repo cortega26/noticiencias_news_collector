@@ -1,0 +1,22 @@
+diff --git a/README.md b/README.md
+index d6301c7..ab8d713 100644
+--- a/README.md
++++ b/README.md
+@@ -59,10 +59,16 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
+ ### Quickstart con Makefile
+ ```bash
+ make bootstrap
+-make test
++make lint typecheck test
++make security
+ .venv/bin/python run_collector.py --dry-run
+ ```
+ 
++- `make bootstrap`: crea el entorno virtual y sincroniza dependencias (incluye escáneres).
++- `make lint typecheck test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
++- `make security`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
++- `.venv/bin/python run_collector.py --dry-run`: valida el pipeline completo sin escribir en almacenamiento.
++
+ ### Instalación manual con `venv`
+ ```bash
+ python3 -m venv .venv
