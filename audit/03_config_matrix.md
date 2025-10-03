@@ -14,6 +14,7 @@ collection.max_concurrent_requests
 collection.recent_days_threshold
 collection.request_timeout_seconds
 collection.user_agent
+collection.canonicalization_cache_size
 database.connect_timeout
 database.driver
 database.host
