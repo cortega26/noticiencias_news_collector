@@ -154,6 +154,29 @@ jobs:
           path: reports/perf
           if-no-files-found: warn
 
+  healthcheck:
+    name: Healthcheck
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.lock
+            requirements-security.lock
+      - name: Install dependencies
+        run: make bootstrap
+      - name: Run collector healthcheck
+        run: |
+          .venv/bin/python run_collector.py --healthcheck \
+            --healthcheck-max-pending 0 \
+            --healthcheck-max-ingest-minutes 60
+
   security:
     name: Security
     needs: setup
@@ -239,6 +262,7 @@ jobs:
       - test
       - e2e
       - perf
+      - healthcheck
       - security
       - audit-todos
     if: ${{ github.event_name == 'push' && always() }}

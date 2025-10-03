@@ -5,7 +5,7 @@ import asyncio
 import random
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 from urllib.parse import urlparse
 import urllib.robotparser as robotparser
 
@@ -13,13 +13,18 @@ import httpx
 import feedparser
 
 from .rate_limit_utils import calculate_effective_delay
-from .rss_collector import RSSCollector, logger
+from .rss_collector import RSSCollector
+
+if TYPE_CHECKING:  # pragma: no cover - typing aid
+    from src.utils.logger import NewsCollectorLogger
 from config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG, ROBOTS_CONFIG
 
 
 class AsyncRSSCollector(RSSCollector):
-    def __init__(self):
-        super().__init__()
+    def __init__(
+        self, logger_factory: Optional["NewsCollectorLogger"] = None
+    ) -> None:
+        super().__init__(logger_factory=logger_factory)
         # Estado asíncrono
         self._domain_locks: Dict[str, asyncio.Lock] = {}
         self._domain_next_time: Dict[str, float] = {}
@@ -97,10 +102,11 @@ class AsyncRSSCollector(RSSCollector):
         try:
             cached_headers = self.db_manager.get_source_feed_metadata(source_id)
         except Exception as metadata_error:
-            logger.warning(
-                "No se pudo obtener metadata HTTP previa para %s: %s",
-                source_id,
-                metadata_error,
+            self._emit_log(
+                "warning",
+                "collector.feed.metadata_lookup_failed",
+                source_id=source_id,
+                details={"error": str(metadata_error)},
             )
 
         for attempt in range(0, max_retries + 1):
@@ -129,8 +135,14 @@ class AsyncRSSCollector(RSSCollector):
                         delay = min(max_b, (base * (2**attempt)) + jitter)
                         await asyncio.sleep(delay)
                         continue
-                    logger.warning(
-                        f"HTTP {response.status_code} agotó reintentos para {feed_url}"
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.status_retry_exhausted",
+                        source_id=source_id,
+                        details={
+                            "status_code": response.status_code,
+                            "url": feed_url,
+                        },
                     )
                     return (None, response.status_code)
 
@@ -145,10 +157,14 @@ class AsyncRSSCollector(RSSCollector):
                                 last_modified=response.headers.get("Last-Modified"),
                             )
                         except Exception as update_error:
-                            logger.warning(
-                                "No se pudo actualizar metadata HTTP para %s tras 304: %s",
-                                source_id,
-                                update_error,
+                            self._emit_log(
+                                "warning",
+                                "collector.feed.metadata_update_failed",
+                                source_id=source_id,
+                                details={
+                                    "error": str(update_error),
+                                    "status_code": 304,
+                                },
                             )
                     return (None, 304)
 
@@ -158,12 +174,20 @@ class AsyncRSSCollector(RSSCollector):
                 if not any(
                     xml_type in content_type for xml_type in ["xml", "rss", "atom"]
                 ):
-                    logger.warning(
-                        f"⚠️  Content-Type sospechoso: {content_type} para {feed_url}"
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.suspicious_content_type",
+                        source_id=source_id,
+                        details={"content_type": content_type, "url": feed_url},
                     )
 
                 if len(response.content) > 10 * 1024 * 1024:
-                    logger.warning(f"⚠️  Feed muy grande (>10MB): {feed_url}")
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.too_large",
+                        source_id=source_id,
+                        details={"bytes": len(response.content), "url": feed_url},
+                    )
                     return (None, response.status_code)
 
                 if response.headers.get("ETag") or response.headers.get(
@@ -176,10 +200,14 @@ class AsyncRSSCollector(RSSCollector):
                             last_modified=response.headers.get("Last-Modified"),
                         )
                     except Exception as update_error:
-                        logger.warning(
-                            "No se pudo actualizar metadata HTTP para %s: %s",
-                            source_id,
-                            update_error,
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.metadata_update_failed",
+                            source_id=source_id,
+                            details={
+                                "error": str(update_error),
+                                "status_code": response.status_code,
+                            },
                         )
 
                 return (response.text, response.status_code)
@@ -194,15 +222,28 @@ class AsyncRSSCollector(RSSCollector):
                     delay = min(max_b, (base * (2**attempt)) + jitter)
                     await asyncio.sleep(delay)
                     continue
-                logger.warning(
-                    f"⏰ Timeout/ConnError tras reintentos: {feed_url} | {exc}"
+                self._emit_log(
+                    "warning",
+                    "collector.feed.retry_exhausted",
+                    source_id=source_id,
+                    details={"error": str(exc), "url": feed_url},
                 )
                 return (None, None)
             except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-                logger.error(f"Error HTTP crítico obteniendo feed {feed_url}: {exc}")
+                self._emit_log(
+                    "error",
+                    "collector.feed.fetch_exception",
+                    source_id=source_id,
+                    details={"error": str(exc), "url": feed_url},
+                )
                 return (None, None)
             except Exception as exc:  # pragma: no cover - defensive
-                logger.error(f"Error inesperado obteniendo feed {feed_url}: {exc}")
+                self._emit_log(
+                    "error",
+                    "collector.feed.fetch_exception",
+                    source_id=source_id,
+                    details={"error": str(exc), "url": feed_url},
+                )
                 return (None, None)
 
         return (None, None)
@@ -257,7 +298,14 @@ class AsyncRSSCollector(RSSCollector):
                 )
                 return stats
 
-            raw_articles = self._extract_articles_from_feed(parsed_feed, source_config)
+            try:
+                raw_articles = self._extract_articles_from_feed(
+                    parsed_feed, source_config, source_id
+                )
+            except TypeError:
+                raw_articles = self._extract_articles_from_feed(  # type: ignore[misc]
+                    parsed_feed, source_config
+                )
             stats["articles_found"] = len(raw_articles)
             if not raw_articles:
                 stats["success"] = True
@@ -271,14 +319,25 @@ class AsyncRSSCollector(RSSCollector):
                     )
                     if processed_article and self._save_article(processed_article):
                         saved += 1
-                except Exception as e:
-                    logger.error(f"Error procesando artículo individual: {e}")
+                except Exception as exc:
+                    self._emit_log(
+                        "error",
+                        "collector.article.process_error",
+                        source_id=source_id,
+                        details={"error": str(exc), "url": raw_article.get("url")},
+                    )
                     self.session_stats["errors_encountered"] += 1
             stats["articles_saved"] = saved
             stats["success"] = True
             return stats
-        except Exception as e:
-            stats["error_message"] = f"Error inesperado: {str(e)}"
+        except Exception as exc:
+            stats["error_message"] = f"Error inesperado: {exc}"
+            self._emit_log(
+                "error",
+                "collector.source.exception",
+                source_id=source_id,
+                details={"error": str(exc)},
+            )
             return stats
         finally:
             stats["processing_time"] = time.time() - start
@@ -288,10 +347,22 @@ class AsyncRSSCollector(RSSCollector):
             self.session_stats["articles_saved"] += stats["articles_saved"]
 
     async def collect_from_multiple_sources_async(
-        self, sources_config: Dict[str, Dict[str, Any]]
+        self,
+        sources_config: Dict[str, Dict[str, Any]],
+        *,
+        session_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        self._set_runtime_context(session_id=session_id, trace_id=trace_id)
         self.start_time = datetime.now(timezone.utc)
         self._reset_stats()
+
+        self._emit_log(
+            "info",
+            "collector.batch.start",
+            latency=0.0,
+            details={"sources": len(sources_config)},
+        )
 
         headers = {
             "User-Agent": COLLECTION_CONFIG["user_agent"],
@@ -312,7 +383,12 @@ class AsyncRSSCollector(RSSCollector):
                     async with sem:
                         result = await self._process_source_async(client, sid, cfg)
                 except Exception as exc:  # pragma: no cover - defensive
-                    logger.error(f"Error crítico procesando {sid}: {exc}")
+                    self._emit_log(
+                        "error",
+                        "collector.source.exception",
+                        source_id=sid,
+                        details={"error": str(exc)},
+                    )
                     result = {
                         "source_id": sid,
                         "success": False,
@@ -327,7 +403,12 @@ class AsyncRSSCollector(RSSCollector):
                 try:
                     self._pre_process_source(source_id, source_config)
                 except Exception as exc:  # pragma: no cover - defensive
-                    logger.warning("Pre-proceso falló para %s: %s", source_id, exc)
+                    self._emit_log(
+                        "warning",
+                        "collector.source.preprocess_failed",
+                        source_id=source_id,
+                        details={"error": str(exc)},
+                    )
 
             tasks = [run_one(sid, cfg) for sid, cfg in sources_config.items()]
             await asyncio.gather(*tasks)
@@ -348,7 +429,12 @@ class AsyncRSSCollector(RSSCollector):
             try:
                 self._post_process_source(source_id, source_config, result)
             except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("Post-proceso falló para %s: %s", source_id, exc)
+                self._emit_log(
+                    "warning",
+                    "collector.source.postprocess_failed",
+                    source_id=source_id,
+                    details={"error": str(exc)},
+                )
 
         end_time = datetime.now(timezone.utc)
         self.stats["processing_time_seconds"] = (
@@ -358,6 +444,25 @@ class AsyncRSSCollector(RSSCollector):
         try:
             self._post_process_collection(source_results)
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Post-proceso global falló: %s", exc)
+            self._emit_log(
+                "warning",
+                "collector.batch.postprocess_failed",
+                details={"error": str(exc)},
+            )
 
-        return self._generate_collection_report(source_results)
+        final_report = self._generate_collection_report(source_results)
+
+        self._emit_log(
+            "info",
+            "collector.batch.completed",
+            latency=self.stats["processing_time_seconds"],
+            details={
+                "articles_saved": self.stats["total_articles_saved"],
+                "articles_found": self.stats["total_articles_found"],
+                "sources_processed": self.stats["total_sources_processed"],
+                "errors": self.stats["total_errors"],
+            },
+        )
+
+        self._reset_runtime_context()
+        return final_report

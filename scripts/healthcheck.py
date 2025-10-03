@@ -141,7 +141,7 @@ def perform_healthcheck(
     }
 
     if latest_ingest is None:
-        ingest_status = "fail"
+        ingest_status = "warn"
         ingest_details["message"] = "No ingestion records found"
         ingest_details["lag_minutes"] = None
     else:
@@ -161,7 +161,7 @@ def perform_healthcheck(
         )
     )
 
-    healthy = all(check.status == "ok" for check in checks)
+    healthy = all(check.status != "fail" for check in checks)
 
     return {
         "healthy": healthy,

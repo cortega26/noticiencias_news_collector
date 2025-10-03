@@ -15,9 +15,8 @@ encontramos (o al menos no peor).
 
 import time
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from urllib.parse import urlparse
-import logging
 import random
 import urllib.robotparser as robotparser
 import httpx
@@ -42,7 +41,8 @@ from src.utils.url_canonicalizer import canonicalize_url, configure_canonicaliza
 from src.enrichment import enrichment_pipeline
 from src.contracts import CollectorArticleModel
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from src.utils.logger import NewsCollectorLogger
 
 
 configure_canonicalization_cache(
@@ -62,8 +62,10 @@ class RSSCollector(BaseCollector):
     colectores que podríamos agregar en el futuro (APIs, web scraping, etc.).
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(
+        self, logger_factory: Optional["NewsCollectorLogger"] = None
+    ) -> None:
+        super().__init__(logger_factory=logger_factory)
         self.db_manager = get_database_manager()
         self.session = self._create_session()
 
@@ -208,69 +210,102 @@ class RSSCollector(BaseCollector):
         }
 
         try:
-            # Idempotent job key per source feed
             job_key = self._make_job_key(source_id, source_config["url"])
             if self._is_duplicate_job(job_key):
-                logger.info(
-                    f"🟡 Trabajo duplicado detectado para {source_id}, omitiendo"
+                self._emit_log(
+                    "info",
+                    "collector.job.duplicate",
+                    source_id=source_id,
+                    details={"url": source_config.get("url")},
                 )
                 stats["success"] = True
                 return stats
+
             self._register_job(job_key)
-            logger.info(
-                f"🔍 Iniciando recolección de {source_config['name']} ({source_id})"
+            self._emit_log(
+                "info",
+                "collector.fetch.start",
+                source_id=source_id,
+                details={
+                    "source_name": source_config.get("name"),
+                    "url": source_config.get("url"),
+                },
             )
 
-            # Respetar robots.txt y rate limiting por dominio
             allowed, robots_delay = self._respect_robots(source_config["url"])
             if not allowed:
                 stats["error_message"] = "Bloqueado por robots.txt"
+                self._emit_log(
+                    "warning",
+                    "collector.fetch.blocked_robots",
+                    source_id=source_id,
+                    details={"url": source_config.get("url")},
+                )
                 self._send_to_dlq(source_id, source_config["url"], "robots_disallowed")
                 return stats
+
             domain = urlparse(source_config["url"]).netloc
             self._enforce_domain_rate_limit(
                 domain, robots_delay, source_config.get("min_delay_seconds")
             )
 
-            # Obtener el feed RSS
             feed_content, status_code = self._fetch_feed(
                 source_id, source_config["url"]
             )
             if status_code == 304:
-                logger.info(
-                    "📭 Feed sin cambios para %s (HTTP 304 If-Modified-Since/ETag)",
-                    source_id,
+                self._emit_log(
+                    "info",
+                    "collector.feed.not_modified",
+                    source_id=source_id,
+                    details={"status_code": status_code},
                 )
                 stats["success"] = True
                 return stats
 
             if not feed_content:
                 stats["error_message"] = "No se pudo obtener el feed"
+                self._emit_log(
+                    "warning",
+                    "collector.feed.unavailable",
+                    source_id=source_id,
+                    details={"status_code": status_code, "url": source_config.get("url")},
+                )
                 return stats
 
-            # Parsear el feed con feedparser
             parsed_feed = feedparser.parse(feed_content)
 
-            # Verificar que el feed sea válido
             if parsed_feed.bozo and not self._is_acceptable_bozo(parsed_feed):
                 stats["error_message"] = (
                     f"Feed malformado: {parsed_feed.bozo_exception}"
                 )
-                logger.warning(
-                    f"⚠️  Feed malformado en {source_id}: {parsed_feed.bozo_exception}"
+                self._emit_log(
+                    "warning",
+                    "collector.feed.malformed",
+                    source_id=source_id,
+                    details={"error": str(parsed_feed.bozo_exception)},
                 )
                 return stats
 
-            # Extraer artículos del feed
-            raw_articles = self._extract_articles_from_feed(parsed_feed, source_config)
+            try:
+                raw_articles = self._extract_articles_from_feed(
+                    parsed_feed, source_config, source_id
+                )
+            except TypeError:
+                raw_articles = self._extract_articles_from_feed(  # type: ignore[misc]
+                    parsed_feed, source_config  # backwards compatibility for overrides
+                )
             stats["articles_found"] = len(raw_articles)
 
             if not raw_articles:
-                logger.info(f"📭 No se encontraron artículos nuevos en {source_id}")
+                self._emit_log(
+                    "info",
+                    "collector.feed.empty",
+                    source_id=source_id,
+                    details={"url": source_config.get("url")},
+                )
                 stats["success"] = True
                 return stats
 
-            # Procesar y guardar cada artículo
             saved_count = 0
             for raw_article in raw_articles:
                 try:
@@ -279,25 +314,52 @@ class RSSCollector(BaseCollector):
                     )
                     if processed_article and self._save_article(processed_article):
                         saved_count += 1
-
-                except Exception as e:
-                    logger.error(f"Error procesando artículo individual: {e}")
+                except Exception as exc:
+                    self._emit_log(
+                        "error",
+                        "collector.article.process_error",
+                        source_id=source_id,
+                        details={
+                            "error": str(exc),
+                            "url": raw_article.get("link")
+                            or raw_article.get("id")
+                            or raw_article.get("url"),
+                        },
+                    )
                     self.session_stats["errors_encountered"] += 1
 
             stats["articles_saved"] = saved_count
             stats["success"] = True
 
-            logger.info(
-                f"✅ {source_id}: {saved_count}/{len(raw_articles)} artículos guardados"
+            elapsed = time.time() - start_time
+            self._emit_log(
+                "info",
+                "collector.fetch.completed",
+                source_id=source_id,
+                latency=elapsed,
+                details={
+                    "articles_found": len(raw_articles),
+                    "articles_saved": saved_count,
+                },
             )
 
-        except requests.RequestException as e:
-            stats["error_message"] = f"Error de red: {str(e)}"
-            logger.error(f"❌ Error de red en {source_id}: {e}")
+        except requests.RequestException as exc:
+            stats["error_message"] = f"Error de red: {exc}"
+            self._emit_log(
+                "error",
+                "collector.fetch.network_error",
+                source_id=source_id,
+                details={"error": str(exc), "url": source_config.get("url")},
+            )
 
-        except Exception as e:
-            stats["error_message"] = f"Error inesperado: {str(e)}"
-            logger.error(f"❌ Error inesperado en {source_id}: {e}")
+        except Exception as exc:
+            stats["error_message"] = f"Error inesperado: {exc}"
+            self._emit_log(
+                "error",
+                "collector.fetch.unexpected_error",
+                source_id=source_id,
+                details={"error": str(exc)},
+            )
 
         finally:
             stats["processing_time"] = time.time() - start_time
@@ -327,10 +389,11 @@ class RSSCollector(BaseCollector):
             try:
                 cached_headers = self.db_manager.get_source_feed_metadata(source_id)
             except Exception as metadata_error:
-                logger.warning(
-                    "No se pudo obtener metadata HTTP previa para %s: %s",
-                    source_id,
-                    metadata_error,
+                self._emit_log(
+                    "warning",
+                    "collector.feed.metadata_lookup_failed",
+                    source_id=source_id,
+                    details={"error": str(metadata_error)},
                 )
             for attempt in range(0, max_retries + 1):
                 try:
@@ -351,11 +414,16 @@ class RSSCollector(BaseCollector):
                         if attempt < max_retries:
                             self._backoff_sleep(attempt)
                             continue
-                        else:
-                            logger.warning(
-                                f"HTTP {response.status_code} agotó reintentos para {feed_url}"
-                            )
-                            return (None, response.status_code)
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.status_retry_exhausted",
+                            source_id=source_id,
+                            details={
+                                "status_code": response.status_code,
+                                "url": feed_url,
+                            },
+                        )
+                        return (None, response.status_code)
 
                     if response.status_code == 304:
                         if response.headers.get("ETag") or response.headers.get(
@@ -368,10 +436,14 @@ class RSSCollector(BaseCollector):
                                     last_modified=response.headers.get("Last-Modified"),
                                 )
                             except Exception as update_error:
-                                logger.warning(
-                                    "No se pudo actualizar metadata HTTP para %s tras 304: %s",
-                                    source_id,
-                                    update_error,
+                                self._emit_log(
+                                    "warning",
+                                    "collector.feed.metadata_update_failed",
+                                    source_id=source_id,
+                                    details={
+                                        "error": str(update_error),
+                                        "status_code": 304,
+                                    },
                                 )
                         return (None, 304)
                     response.raise_for_status()
@@ -380,14 +452,23 @@ class RSSCollector(BaseCollector):
                     if not any(
                         xml_type in content_type for xml_type in ["xml", "rss", "atom"]
                     ):
-                        logger.warning(
-                            f"⚠️  Content-Type sospechoso: {content_type} para {feed_url}"
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.suspicious_content_type",
+                            source_id=source_id,
+                            details={
+                                "content_type": content_type,
+                                "url": feed_url,
+                            },
                         )
                     # Verificar tamaño razonable (protección contra feeds gigantes)
                     content_length = len(response.content)
                     if content_length > 10 * 1024 * 1024:  # 10MB límite
-                        logger.warning(
-                            f"⚠️  Feed muy grande ({content_length} bytes): {feed_url}"
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.too_large",
+                            source_id=source_id,
+                            details={"bytes": content_length, "url": feed_url},
                         )
                         return (None, response.status_code)
 
@@ -401,10 +482,14 @@ class RSSCollector(BaseCollector):
                                 last_modified=response.headers.get("Last-Modified"),
                             )
                         except Exception as update_error:
-                            logger.warning(
-                                "No se pudo actualizar metadata HTTP para %s: %s",
-                                source_id,
-                                update_error,
+                            self._emit_log(
+                                "warning",
+                                "collector.feed.metadata_update_failed",
+                                source_id=source_id,
+                                details={
+                                    "error": str(update_error),
+                                    "status_code": response.status_code,
+                                },
                             )
 
                     return (response.text, response.status_code)
@@ -415,17 +500,29 @@ class RSSCollector(BaseCollector):
                     if attempt < max_retries:
                         self._backoff_sleep(attempt)
                         continue
-                    else:
-                        logger.warning(
-                            f"⏰ Timeout/ConnError tras reintentos: {feed_url} | {re}"
-                        )
-                        return (None, None)
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.retry_exhausted",
+                        source_id=source_id,
+                        details={"error": str(re), "url": feed_url},
+                    )
+                    return (None, None)
                 except requests.exceptions.TooManyRedirects:
-                    logger.warning(f"🔄 Demasiados redirects: {feed_url}")
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.redirect_loop",
+                        source_id=source_id,
+                        details={"url": feed_url},
+                    )
                     return (None, None)
             return (None, None)
         except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Error obteniendo feed {feed_url}: {e}")
+            self._emit_log(
+                "error",
+                "collector.feed.fetch_exception",
+                source_id=source_id,
+                details={"error": str(e), "url": feed_url},
+            )
             return (None, None)
 
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
@@ -449,7 +546,10 @@ class RSSCollector(BaseCollector):
         return exception_name in acceptable_exceptions
 
     def _extract_articles_from_feed(
-        self, parsed_feed, source_config: Dict[str, Any]
+        self,
+        parsed_feed,
+        source_config: Dict[str, Any],
+        source_id: str,
     ) -> List[Dict[str, Any]]:
         """
         Extrae artículos individuales de un feed parseado.
@@ -499,8 +599,16 @@ class RSSCollector(BaseCollector):
                 if self._validate_article_data(article_data):
                     articles.append(article_data)
 
-            except Exception as e:
-                logger.warning(f"Error extrayendo artículo individual: {e}")
+            except Exception as exc:
+                self._emit_log(
+                    "warning",
+                    "collector.article.extract_failed",
+                    source_id=source_id,
+                    details={
+                        "error": str(exc),
+                        "url": entry.get("link"),
+                    },
+                )
                 continue
 
         return articles
@@ -522,8 +630,16 @@ class RSSCollector(BaseCollector):
                 if date_value:
                     try:
                         return parse_to_utc_with_tzinfo(date_value)
-                    except Exception as e:
-                        logger.debug(f"Error parseando fecha {date_value}: {e}")
+                    except Exception as exc:
+                        self._emit_log(
+                            "debug",
+                            "collector.article.timestamp_parse_failed",
+                            details={
+                                "field": field,
+                                "value": str(date_value),
+                                "error": str(exc),
+                            },
+                        )
                         continue
         # Fallback: now in UTC
         dt, off, name = parse_to_utc_with_tzinfo(None)
@@ -580,8 +696,12 @@ class RSSCollector(BaseCollector):
             from src.utils.text_cleaner import clean_html as _clean
 
             return _clean(html_content)
-        except Exception as e:
-            logger.warning(f"Error limpiando HTML: {e}")
+        except Exception as exc:
+            self._emit_log(
+                "warning",
+                "collector.article.html_cleanup_failed",
+                details={"error": str(exc)},
+            )
             import re
 
             text = re.sub("<[^<]+?>", "", html_content)
@@ -777,15 +897,27 @@ class RSSCollector(BaseCollector):
                 processed_article["article_metadata"]["enrichment"] = enrichment
                 processed_article["language"] = enrichment["language"]
             except Exception as exc:  # pragma: no cover - enrichment should not fail
-                logger.warning(f"Enrichment failed: {exc}")
+                self._emit_log(
+                    "warning",
+                    "collector.article.enrichment_failed",
+                    source_id=source_id,
+                    details={
+                        "error": str(exc),
+                        "url": raw_article.get("url"),
+                    },
+                )
 
             try:
                 return CollectorArticleModel.model_validate(processed_article)
             except ValidationError as exc:
-                logger.warning(
-                    "Payload validation failed for %s: %s",
-                    raw_article.get("url", "unknown"),
-                    exc,
+                self._emit_log(
+                    "warning",
+                    "collector.article.validation_failed",
+                    source_id=source_id,
+                    details={
+                        "error": str(exc),
+                        "url": raw_article.get("url", "unknown"),
+                    },
                 )
                 self._send_to_dlq(
                     source_id,
@@ -794,9 +926,16 @@ class RSSCollector(BaseCollector):
                 )
                 return None
 
-        except Exception as e:
-            logger.error(
-                f"Error procesando artículo {raw_article.get('title', 'sin título')}: {e}"
+        except Exception as exc:
+            self._emit_log(
+                "error",
+                "collector.article.process_exception",
+                source_id=source_id,
+                details={
+                    "error": str(exc),
+                    "title": raw_article.get("title"),
+                    "url": raw_article.get("url"),
+                },
             )
             return None
 
@@ -810,35 +949,53 @@ class RSSCollector(BaseCollector):
         que no tengamos duplicados antes de agregar cada nuevo documento
         a nuestra colección.
         """
+        if isinstance(article_data, CollectorArticleModel):
+            title = article_data.title
+            source_id = article_data.source_id
+            url_value = str(article_data.url)
+        else:
+            title = article_data.get("title", "sin título")
+            source_id = article_data.get("source_id")
+            url_value = article_data.get("url")
+
         try:
             saved_article = self.db_manager.save_article(article_data)
             if saved_article:
-                title = (
-                    article_data.title
-                    if isinstance(article_data, CollectorArticleModel)
-                    else article_data["title"]
+                self._emit_log(
+                    "info",
+                    "collector.article.saved",
+                    source_id=source_id,
+                    article_id=getattr(saved_article, "id", None),
+                    details={
+                        "title": title[:120],
+                        "url": getattr(saved_article, "url", url_value),
+                    },
                 )
-                logger.debug(f"📚 Artículo guardado: {title[:50]}...")
                 return True
-            else:
-                title = (
-                    article_data.title
-                    if isinstance(article_data, CollectorArticleModel)
-                    else article_data["title"]
-                )
-                logger.debug(f"📋 Artículo duplicado omitido: {title[:50]}...")
-                return False
+
+            self._emit_log(
+                "debug",
+                "collector.article.duplicate",
+                source_id=source_id,
+                details={"title": title[:120], "url": url_value},
+            )
+            return False
 
         except ValueError as exc:
-            title = (
-                article_data.title
-                if isinstance(article_data, CollectorArticleModel)
-                else article_data.get("title", "sin título")
+            self._emit_log(
+                "error",
+                "collector.article.save_validation_error",
+                source_id=source_id,
+                details={"error": str(exc), "title": title[:120]},
             )
-            logger.error(f"Error de validación guardando artículo {title[:50]}: {exc}")
             return False
-        except Exception as e:
-            logger.error(f"Error guardando artículo: {e}")
+        except Exception as exc:
+            self._emit_log(
+                "error",
+                "collector.article.save_exception",
+                source_id=source_id,
+                details={"error": str(exc), "title": title[:120]},
+            )
             return False
 
     def _update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
@@ -850,8 +1007,13 @@ class RSSCollector(BaseCollector):
         """
         try:
             self.db_manager.update_source_stats(source_id, stats)
-        except Exception as e:
-            logger.error(f"Error actualizando estadísticas de fuente {source_id}: {e}")
+        except Exception as exc:
+            self._emit_log(
+                "error",
+                "collector.source.stats_update_failed",
+                source_id=source_id,
+                details={"error": str(exc)},
+            )
 
     def _validate_article_data(self, article_data: Dict[str, Any]) -> bool:
         """
@@ -877,8 +1039,11 @@ class RSSCollector(BaseCollector):
         penalty_keywords = TEXT_PROCESSING_CONFIG["penalty_keywords"]
 
         if any(keyword.lower() in title_lower for keyword in penalty_keywords):
-            logger.debug(
-                f"Artículo rechazado por keywords de penalización: {article_data['title']}"
+            self._emit_log(
+                "debug",
+                "collector.article.penalty_keyword_rejected",
+                source_id=article_data.get("source_id"),
+                details={"title": article_data["title"]},
             )
             return False
 
