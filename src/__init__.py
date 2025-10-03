@@ -7,11 +7,11 @@ almacenamiento y utilidades.
 
 from config.version import PROJECT_VERSION, PYTHON_REQUIRES_SPECIFIER
 
-from .collectors import RSSCollector, BaseCollector
+from .collectors import BaseCollector, RSSCollector
 from .scoring import BasicScorer, score_multiple_articles
-from .storage import get_database_manager, DatabaseManager
 from .serving import create_app
-from .utils import get_logger, setup_logging, get_metrics_reporter
+from .storage import DatabaseManager, get_database_manager
+from .utils import get_logger, get_metrics_reporter, setup_logging
 
 __version__ = PROJECT_VERSION
 __description__ = (

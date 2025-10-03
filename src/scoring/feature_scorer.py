@@ -5,13 +5,13 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from config import SCORING_CONFIG
-from src.utils.dedupe import normalize_article_text
 from pydantic import ValidationError
 
 from src.contracts import ScoringRequestModel
+from src.utils.dedupe import normalize_article_text
 
 
 def _get_attr(obj: Any, name: str, default=None):

@@ -4,8 +4,8 @@ import html as _html
 import re
 import unicodedata
 from typing import Iterable
-from bs4 import BeautifulSoup
 
+from bs4 import BeautifulSoup
 
 _BOILERPLATE_PATTERNS: Iterable[re.Pattern] = [
     re.compile(r"^\s*read more\s*$", re.I),

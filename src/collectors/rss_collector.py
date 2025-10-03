@@ -13,33 +13,38 @@ manejar errores graciosamente, y siempre dejar los servidores mejor de como los
 encontramos (o al menos no peor).
 """
 
-import time
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
-from urllib.parse import urlparse
 import random
+import time
 import urllib.robotparser as robotparser
-import httpx
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
-import requests
 import feedparser
+import httpx
+import requests
 
 from src.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-from .base_collector import BaseCollector
-from .rate_limit_utils import calculate_effective_delay
-from ..storage.database import get_database_manager
 from config.settings import (
     COLLECTION_CONFIG,
     RATE_LIMITING_CONFIG,
-    TEXT_PROCESSING_CONFIG,
     ROBOTS_CONFIG,
+    TEXT_PROCESSING_CONFIG,
 )
-from src.utils.url_canonicalizer import canonicalize_url, configure_canonicalization_cache
-from src.enrichment import enrichment_pipeline
+
 from src.contracts import CollectorArticleModel
+from src.enrichment import enrichment_pipeline
+from src.utils.url_canonicalizer import (
+    canonicalize_url,
+    configure_canonicalization_cache,
+)
+
+from ..storage.database import get_database_manager
+from .base_collector import BaseCollector
+from .rate_limit_utils import calculate_effective_delay
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from src.utils.logger import NewsCollectorLogger
@@ -62,9 +67,7 @@ class RSSCollector(BaseCollector):
     colectores que podríamos agregar en el futuro (APIs, web scraping, etc.).
     """
 
-    def __init__(
-        self, logger_factory: Optional["NewsCollectorLogger"] = None
-    ) -> None:
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
         super().__init__(logger_factory=logger_factory)
         self.db_manager = get_database_manager()
         self.session = self._create_session()
@@ -268,7 +271,10 @@ class RSSCollector(BaseCollector):
                     "warning",
                     "collector.feed.unavailable",
                     source_id=source_id,
-                    details={"status_code": status_code, "url": source_config.get("url")},
+                    details={
+                        "status_code": status_code,
+                        "url": source_config.get("url"),
+                    },
                 )
                 return stats
 

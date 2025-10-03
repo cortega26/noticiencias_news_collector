@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, str(ROOT))
 
 from config import SCORING_CONFIG
+
 from src.reranker import rerank_articles
 
 

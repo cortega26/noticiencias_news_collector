@@ -4,26 +4,25 @@
 import asyncio
 import random
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
-from urllib.parse import urlparse
 import urllib.robotparser as robotparser
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from urllib.parse import urlparse
 
-import httpx
 import feedparser
+import httpx
 
 from .rate_limit_utils import calculate_effective_delay
 from .rss_collector import RSSCollector
 
 if TYPE_CHECKING:  # pragma: no cover - typing aid
     from src.utils.logger import NewsCollectorLogger
+
 from config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG, ROBOTS_CONFIG
 
 
 class AsyncRSSCollector(RSSCollector):
-    def __init__(
-        self, logger_factory: Optional["NewsCollectorLogger"] = None
-    ) -> None:
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
         super().__init__(logger_factory=logger_factory)
         # Estado asíncrono
         self._domain_locks: Dict[str, asyncio.Lock] = {}

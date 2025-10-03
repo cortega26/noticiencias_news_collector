@@ -8,7 +8,6 @@ from typing import Tuple
 
 from src.utils.text_cleaner import clean_html, normalize_text
 
-
 SIMHASH_BITS = 64
 SIMHASH_THRESHOLD_DEFAULT = 10  # Hamming distance threshold
 

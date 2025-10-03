@@ -16,10 +16,10 @@ y filtrado inteligente.
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
-from loguru import logger
+from typing import Any, Dict, Optional
 
-from config.settings import LOGGING_CONFIG, DEBUG
+from config.settings import DEBUG, LOGGING_CONFIG
+from loguru import logger
 
 
 class NewsCollectorLogger:
@@ -33,9 +33,9 @@ class NewsCollectorLogger:
 
     def __init__(self):
         self.is_configured = False
-        self.log_file_path = None
+        self.log_file_path: Optional[Path] = None
 
-    def configure_logging(self, config: Optional[Dict[str, Any]] = None):
+    def configure_logging(self, config: Optional[Dict[str, Any]] = None) -> None:
         """
         Configura el sistema de logging según la configuración proporcionada.
 
@@ -71,11 +71,11 @@ class NewsCollectorLogger:
         logger.info("🎯 Sistema de logging configurado exitosamente")
         logger.debug(f"Configuración aplicada: {config}")
 
-    def log_system_health(self):
+    def log_system_health(self) -> None:
         """Expone el log de salud del sistema desde la instancia."""
         _log_system_health()
 
-    def _configure_console_handler(self, config: Dict[str, Any]):
+    def _configure_console_handler(self, config: Dict[str, Any]) -> None:
         """
         Configura el handler para output de consola.
 
@@ -105,7 +105,7 @@ class NewsCollectorLogger:
             diagnose=DEBUG,  # Variables locales solo en desarrollo
         )
 
-    def _configure_file_handler(self, config: Dict[str, Any]):
+    def _configure_file_handler(self, config: Dict[str, Any]) -> None:
         """
         Configura el handler para logging a archivo.
 
@@ -138,7 +138,7 @@ class NewsCollectorLogger:
             diagnose=True,  # Variables locales en archivo
         )
 
-    def _configure_filters(self, config: Dict[str, Any]):
+    def _configure_filters(self, config: Dict[str, Any]) -> None:
         """
         Configura filtros especiales para diferentes tipos de logs.
 
@@ -189,8 +189,10 @@ class NewsCollectorLogger:
         return logger.bind(module=module_name)
 
     def log_system_startup(
-        self, version: str = "1.0", config_summary: Dict[str, Any] = None
-    ):
+        self,
+        version: str = "1.0",
+        config_summary: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Registra información de inicio del sistema.
 
@@ -226,7 +228,9 @@ class NewsCollectorLogger:
             else:
                 logger.info(f"  {metric}: {value}")
 
-    def log_error_with_context(self, error: Exception, context: Dict[str, Any] = None):
+    def log_error_with_context(
+        self, error: Exception, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         """
         Registra errores con contexto adicional para facilitar debugging.
 
@@ -263,8 +267,11 @@ class CollectionSessionLogger:
         self.logger.info(f"🎯 SESIÓN INICIADA: {sources_count} fuentes programadas")
 
     def log_source_processing(
-        self, source_id: str, status: str, stats: Dict[str, Any] = None
-    ):
+        self,
+        source_id: str,
+        status: str,
+        stats: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Registra el procesamiento de una fuente específica."""
         if status == "success":
             articles_info = (
@@ -299,7 +306,7 @@ class CollectionSessionLogger:
 
 # Instancia global del configurador de logging
 # ============================================
-_logger_instance = None
+_logger_instance: Optional[NewsCollectorLogger] = None
 
 
 def get_logger() -> NewsCollectorLogger:
@@ -383,8 +390,9 @@ def log_memory_usage():
     Útil para monitoreo de performance y detección de memory leaks.
     """
     try:
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         memory_info = process.memory_info()

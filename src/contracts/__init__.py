@@ -1,7 +1,7 @@
 """Shared contracts for validated pipeline payloads."""
 
 from .collector import CollectorArticleModel, CollectorArticlePayload
-from .common import ArticleMetadataModel, ArticleMetadata
+from .common import ArticleMetadata, ArticleMetadataModel
 from .enrichment import (
     ArticleEnrichment,
     ArticleEnrichmentModel,

@@ -7,9 +7,21 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 
 - Target **Python 3.10+** and keep functions annotated. Use `TypedDict`, `Protocol`, or dataclasses when sharing structures across modules.
 - Follow **PEP 8** plus `ruff` defaults for style. Keep `structlog`-style dictionaries in logging statements with `trace_id`, `source_id`, and `article_id`.
-- Keep Makefile recipes tab-indented; `make lint` now fails fast if spaces sneak into command lines.
+- Keep Makefile recipes tab-indented; `make lint` fails fast if spaces sneak into command lines.
 - Persist and compare timestamps in **UTC**; convert to `America/Santiago` only inside presentation layers.
 - Never swallow exceptions—wrap them with context and re-raise so the DLQ/runbooks have usable breadcrumbs.
+
+## Pre-commit hooks
+
+- Install the hooks once per clone:
+  ```bash
+  pre-commit install
+  ```
+- Hooks run automatically on staged files. Para verificar todo antes de abrir un PR:
+  ```bash
+  make lint
+  ```
+- `make lint` ejecuta `pre-commit run --all-files`, cubriendo Ruff, Black, isort, mypy y checks básicos.
 
 ## Quality gate checklist
 
@@ -19,13 +31,15 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
    source .venv/bin/activate
    pip install --require-hashes -r requirements.lock
    ```
-2. Before sending a PR run the full quality suite:
+2. Before sending a PR run the full quality suite (auto-formatters will amend files as needed):
    ```bash
-   pytest
-   ruff check src tests
-   mypy src
+   make lint
+   make type
+   make test
+   make docs
    ```
-   Use `make test` or `make check` if you prefer a single wrapper.
+   Puedes usar `make lint type test` para ejecutar los tres pasos en secuencia.
+   > Nota: `make type` actualmente cubre los módulos que ya cuentan con tipado estricto (`scripts/generate_api_docs.py`, `src/utils/logger.py`, `src/utils/url_canonicalizer.py`) mientras avanzamos en la migración del resto del código.
 3. Keep CI green by updating fixtures or type stubs when a dependency bump changes behaviour.
 
 ### Structured placeholders

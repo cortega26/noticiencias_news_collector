@@ -13,31 +13,34 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 """
 
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
 from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.engine import URL
-from sqlalchemy.pool import QueuePool
-from sqlalchemy.orm import sessionmaker, Session, load_only
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, load_only, sessionmaker
+from sqlalchemy.pool import QueuePool
 
 from src.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-from ..storage.models import Base, Article, Source, ScoreLog, PENDING_STATUS
+import logging
+
 from config.settings import DATABASE_CONFIG, DEDUP_CONFIG
+
+from src.contracts import CollectorArticleModel, ScoringRequestModel
+
+from ..storage.models import PENDING_STATUS, Article, Base, ScoreLog, Source
 from ..utils.dedupe import (
+    duplication_confidence,
+    generate_cluster_id,
+    hamming_distance,
     normalize_article_text,
     sha256_hex,
     simhash64,
-    hamming_distance,
-    duplication_confidence,
-    generate_cluster_id,
 )
-from src.contracts import CollectorArticleModel, ScoringRequestModel
-
-import logging
 
 # Configurar logging para este módulo
 logger = logging.getLogger(__name__)
@@ -980,14 +983,6 @@ class DatabaseManager:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
 
         with self.get_session() as session:
-            # Eliminar artículos muy antiguos con score bajo
-            old_articles = (
-                session.query(Article)
-                .filter(Article.collected_date < cutoff_date)
-                .filter(Article.final_score < 0.3)
-                .count()
-            )
-
             deleted_articles = (
                 session.query(Article)
                 .filter(Article.collected_date < cutoff_date)
@@ -1037,7 +1032,7 @@ class DatabaseManager:
 
             active_sources = (
                 session.query(func.count(Source.id))
-                .filter(Source.is_active == True)
+                .filter(Source.is_active.is_(True))
                 .scalar()
             )
 

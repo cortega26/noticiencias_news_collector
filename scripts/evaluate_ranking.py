@@ -7,7 +7,7 @@ import json
 from math import log2
 from pathlib import Path
 from types import SimpleNamespace
-from typing import List, Dict
+from typing import Dict, List
 
 ROOT = Path(__file__).resolve().parents[1]
 import sys
