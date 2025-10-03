@@ -556,7 +556,7 @@ def main(path: str | None = None) -> None:
         config = load_config(Path(path) if path else None)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     editor = ConfigEditor(config)
     editor.run()
 
