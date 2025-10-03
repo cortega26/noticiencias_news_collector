@@ -337,7 +337,7 @@ def load_config(
 
     config_path = path if path else _default_paths()[0]
     env_path = _detect_env_path(config_path)
-    runtime_env = environ or os.environ
+    runtime_env = os.environ if environ is None else environ
 
     defaults = DEFAULT_CONFIG.model_dump(mode="python")
     merged = _deepcopy_mapping(defaults)
