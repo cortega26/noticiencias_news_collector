@@ -152,6 +152,7 @@ Flags destacados:
 - `--list-sources`: imprime catálogo y termina.
 - `--check-deps`: valida dependencias externas.
 - `--healthcheck`: ejecuta pruebas de estado (cola, DB, ingest) con umbrales configurables.
+  - Retorna `0` si todas las verificaciones están en `ok` o `warn`, y `1` cuando existe un `fail`. Consulta el [Healthcheck Runbook](docs/runbooks/healthcheck.md) para interpretación y remedios.
 
 ### Ejecución programada
 Usar `cron` o `systemd` apuntando a `.venv/bin/python run_collector.py`. Para entornos async habilitar `collection.async_enabled=true`.
@@ -180,6 +181,7 @@ Más utilidades en `scripts/` (dedupe tuning, benchmarks, perfiles de pipeline) 
 ## Runbooks
 - [Runbook operacional general](docs/runbook.md) – flujos de respuesta a incidentes y tableros recomendados.
 - [Collector Runbook](docs/collector_runbook.md) – resolución específica para ingestión.
+- [Healthcheck Runbook](docs/runbooks/healthcheck.md) – umbrales, mapeo de logs y acciones correctivas.
 - [Operations Playbook](docs/operations.md) – tareas recurrentes (backfills, rotación de llaves).
 - [Performance baselines](docs/performance_baselines.md) – objetivos por etapa.
 - [FAQ detallado](docs/faq.md) – preguntas frecuentes ampliadas.

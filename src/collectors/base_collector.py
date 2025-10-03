@@ -15,15 +15,16 @@ el mantenimiento y la extensión del sistema.
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import hashlib
 import json
-from pathlib import Path
 
 from config.settings import DLQ_DIR
+from src.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:  # pragma: no cover - import for typing only
+    from src.utils.logger import NewsCollectorLogger
 
 
 class BaseCollector(ABC):
@@ -39,12 +40,13 @@ class BaseCollector(ABC):
     mientras permitimos customización específica por tipo de colector.
     """
 
-    def __init__(self):
-        """
-        Inicialización común para todos los colectores.
-        """
+    def __init__(
+        self, logger_factory: Optional["NewsCollectorLogger"] = None
+    ) -> None:
+        """Inicialización común para todos los colectores."""
+
         self.collector_type = self.__class__.__name__
-        self.start_time = None
+        self.start_time: Optional[datetime] = None
         self.stats = {
             "total_sources_processed": 0,
             "total_articles_found": 0,
@@ -53,9 +55,21 @@ class BaseCollector(ABC):
             "processing_time_seconds": 0,
         }
 
-        logger.info(f"🚀 Inicializando colector: {self.collector_type}")
+        self.logger_factory: "NewsCollectorLogger" = logger_factory or get_logger()
+        self.module_logger = self.logger_factory.create_module_logger(
+            f"collectors.{self.collector_type.lower()}"
+        )
+        self._active_trace_id: Optional[str] = None
+        self._active_session_id: Optional[str] = None
+
+        self._emit_log(
+            "info",
+            "collector.instance.initialized",
+            details={"collector_type": self.collector_type},
+        )
+
         # Idempotency tracking for this run
-        self._job_keys_seen = set()
+        self._job_keys_seen: set[str] = set()
 
     @abstractmethod
     def collect_from_source(
@@ -86,86 +100,176 @@ class BaseCollector(ABC):
         pass
 
     def collect_from_multiple_sources(
-        self, sources_config: Dict[str, Dict[str, Any]]
+        self,
+        sources_config: Dict[str, Dict[str, Any]],
+        *,
+        session_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Template method que coordina la recolección de múltiples fuentes.
+        """Coordina la recolección de múltiples fuentes de manera estructurada."""
 
-        Este método implementa la lógica común para procesar múltiples fuentes
-        de manera ordenada y eficiente. Es como tener un director de orquesta
-        que coordina a todos los músicos (fuentes) para crear una sinfonía
-        armoniosa de información.
-        """
+        self._set_runtime_context(session_id=session_id, trace_id=trace_id)
         self.start_time = datetime.now(timezone.utc)
-        logger.info(
-            f"🎯 Iniciando recolección masiva con {len(sources_config)} fuentes"
+
+        self._emit_log(
+            "info",
+            "collector.batch.start",
+            latency=0.0,
+            details={"sources": len(sources_config)},
         )
 
-        # Resetear estadísticas para esta sesión
         self._reset_stats()
+        source_results: Dict[str, Dict[str, Any]] = {}
 
-        # Resultados detallados por fuente
-        source_results = {}
-
-        # Procesar cada fuente individualmente
         for source_id, source_config in sources_config.items():
             try:
-                # Hook pre-procesamiento (puede ser overrideado por subclases)
                 self._pre_process_source(source_id, source_config)
-
-                # Recolectar de la fuente específica
                 source_result = self.collect_from_source(source_id, source_config)
-
-                # Actualizar estadísticas globales
                 self._update_global_stats(source_result)
-
-                # Hook post-procesamiento (puede ser overrideado por subclases)
                 self._post_process_source(source_id, source_config, source_result)
-
                 source_results[source_id] = source_result
 
-                # Log del resultado de esta fuente
-                if source_result["success"]:
-                    logger.info(
-                        f"✅ {source_id}: {source_result['articles_saved']}/{source_result['articles_found']} artículos"
-                    )
-                else:
-                    logger.warning(
-                        f"❌ {source_id}: {source_result.get('error_message', 'Error desconocido')}"
-                    )
+                event_name = (
+                    "collector.source.completed"
+                    if source_result.get("success", False)
+                    else "collector.source.failed"
+                )
+                level = "info" if source_result.get("success", False) else "warning"
+                self._emit_log(
+                    level,
+                    event_name,
+                    source_id=source_id,
+                    latency=float(source_result.get("processing_time") or 0.0),
+                    details={
+                        "articles_found": source_result.get("articles_found", 0),
+                        "articles_saved": source_result.get("articles_saved", 0),
+                        "error_message": source_result.get("error_message"),
+                    },
+                )
 
-            except Exception as e:
-                # Manejar errores a nivel de fuente sin detener por completo el proceso
+            except Exception as exc:
                 error_result = {
                     "source_id": source_id,
                     "success": False,
                     "articles_found": 0,
                     "articles_saved": 0,
-                    "error_message": f"Error inesperado: {str(e)}",
-                    "processing_time": 0,
+                    "error_message": f"Error inesperado: {exc}",
+                    "processing_time": 0.0,
                 }
                 source_results[source_id] = error_result
                 self.stats["total_errors"] += 1
 
-                logger.error(f"💥 Error crítico procesando {source_id}: {e}")
+                self._emit_log(
+                    "error",
+                    "collector.source.exception",
+                    source_id=source_id,
+                    details={"error": str(exc)},
+                )
 
-        # Finalizar y generar reporte
         end_time = datetime.now(timezone.utc)
         self.stats["processing_time_seconds"] = (
-            end_time - self.start_time
+            end_time - (self.start_time or end_time)
         ).total_seconds()
 
-        # Hook post-procesamiento global
         self._post_process_collection(source_results)
-
-        # Generar reporte final
         final_report = self._generate_collection_report(source_results)
 
-        logger.info(
-            f"🎉 Recolección completada: {self.stats['total_articles_saved']} artículos guardados en {self.stats['processing_time_seconds']:.1f}s"
+        self._emit_log(
+            "info",
+            "collector.batch.completed",
+            latency=self.stats["processing_time_seconds"],
+            details={
+                "articles_saved": self.stats["total_articles_saved"],
+                "articles_found": self.stats["total_articles_found"],
+                "sources_processed": self.stats["total_sources_processed"],
+                "errors": self.stats["total_errors"],
+            },
         )
 
+        self._reset_runtime_context()
         return final_report
+
+    def set_logger_factory(self, logger_factory: "NewsCollectorLogger") -> None:
+        """Actualiza la fábrica de loggers reutilizando el mismo módulo."""
+
+        self.logger_factory = logger_factory
+        self.module_logger = self.logger_factory.create_module_logger(
+            f"collectors.{self.collector_type.lower()}"
+        )
+
+    def _set_runtime_context(
+        self, *, session_id: Optional[str], trace_id: Optional[str]
+    ) -> None:
+        """Asigna contexto transitorio para logs estructurados."""
+
+        self._active_session_id = session_id
+        self._active_trace_id = trace_id
+
+    def _reset_runtime_context(self) -> None:
+        """Limpia el contexto una vez finalizado el batch."""
+
+        self._active_session_id = None
+        self._active_trace_id = None
+
+    def _build_log_payload(
+        self,
+        event: str,
+        *,
+        source_id: Optional[str] = None,
+        article_id: Optional[str] = None,
+        latency: Optional[float] = None,
+        details: Optional[Dict[str, Any]] = None,
+        trace_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Crea un payload consistente para logs estructurados."""
+
+        payload: Dict[str, Any] = {
+            "event": event,
+            "trace_id": trace_id if trace_id is not None else self._active_trace_id,
+            "session_id": session_id
+            if session_id is not None
+            else self._active_session_id,
+            "source_id": source_id,
+            "article_id": article_id,
+            "collector_type": self.collector_type,
+            "latency": latency,
+        }
+
+        if details:
+            payload["details"] = details
+
+        return {key: value for key, value in payload.items() if value is not None}
+
+    def _emit_log(
+        self,
+        level: str,
+        event: str,
+        *,
+        source_id: Optional[str] = None,
+        article_id: Optional[str] = None,
+        latency: Optional[float] = None,
+        details: Optional[Dict[str, Any]] = None,
+        trace_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> None:
+        """Emite logs estructurados garantizando campos de correlación."""
+
+        payload = self._build_log_payload(
+            event,
+            source_id=source_id,
+            article_id=article_id,
+            latency=latency,
+            details=details,
+            trace_id=trace_id,
+            session_id=session_id,
+        )
+
+        log_method = getattr(self.module_logger, level, None)
+        if callable(log_method):
+            log_method(payload)
+        else:  # pragma: no cover - defensive
+            self.module_logger.info(payload)
 
     def _reset_stats(self):
         """
@@ -308,9 +412,14 @@ class BaseCollector(ABC):
             path.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-        except Exception:
+        except Exception as exc:
             # Best-effort DLQ
-            logger.exception("No se pudo escribir en DLQ")
+            self._emit_log(
+                "error",
+                "collector.dlq.write_failed",
+                source_id=source_id,
+                details={"error": str(exc), "path": str(path)},
+            )
         return path
 
     def _generate_recommendations(

@@ -152,7 +152,7 @@ def test_collection_cycle_logs_and_emits_metrics(
     monkeypatch.setattr(
         main.NewsCollectorSystem,
         "_execute_collection",
-        lambda self, _sources, _dry_run: collection_results,
+        lambda self, _sources, _dry_run, **_kwargs: collection_results,
     )
     monkeypatch.setattr(
         main.NewsCollectorSystem,
