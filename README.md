@@ -234,11 +234,41 @@ noticiencias_news_collector/
 ```
 
 ## Pruebas
-- `make test` ejecuta `pytest` con cobertura (`reports/coverage/`).
-- Marcadores: `-m "e2e"`, `-m "perf"` para suites específicas.
-- Para linting: `make lint`; tipos: `make typecheck`.
+- `make test` ejecuta `pytest` con `--cov-branch` y aplica el _coverage ratchet_.
+- Los umbrales obligatorios son **≥80 % global**, **≥90 % para archivos modificados** y **≥70 % branch** (cuando exista instrumentación).
+- Marcadores útiles: `-m "e2e"`, `-m "perf"`, `-m "security"`.
+- Linting: `make lint`; tipado: `make typecheck`.
 
-_Nota_: la cobertura actual ronda 69%. Nuevos módulos deben venir con pruebas que acerquen el objetivo interno (≥80%).
+### Cobertura y ratchet
+- Resultado XML en `reports/coverage/coverage.xml`; el baseline persiste en `.coverage-baseline`.
+- `scripts/coverage_ratcheter.sh` admite `record` y `check` para capturar/validar nuevos porcentajes (ver tabla).
+- El ratchet usa `git merge-base` contra la rama base y falla si la cobertura baja o un archivo tocado queda <90 %.
+- El scope actual cubre `src/contracts/`, `src/reranker/` y `src/utils/` (módulos determinísticos) excluyendo utilidades dependientes de IO (`logger`, `metrics`, `datetime_utils`). Cambiar otros paquetes sin cobertura provocará un fallo por datos faltantes.
+
+| Variable/config | Tipo | Default | Requerido | Descripción |
+| --- | --- | --- | --- | --- |
+| `COVERAGE_XML` | ruta | `reports/coverage/coverage.xml` | Opcional | Reporte de Cobertura (formato Cobertura XML) que se valida. |
+| `BASELINE_FILE` | ruta | `.coverage-baseline` | Opcional | Archivo JSON con el baseline previo (línea y branch). |
+| `BASE_REF` | ref git | `origin/main` | Opcional | Rama/commit contra el cual se detectan archivos modificados. |
+
+Para actualizar el baseline tras mejorar cobertura:
+
+```bash
+pytest --cov=src --cov-report=xml:reports/coverage/coverage.xml
+bash scripts/coverage_ratcheter.sh record
+```
+
+### Property & mutation testing
+- Estrategias Hypothesis para normalizadores viven en `tests/property/test_normalization_properties.py`.
+- Ejecutar mutaciones focalizadas (sin sobreescribir `addopts` de cobertura):
+
+```bash
+PYTEST_ADDOPTS="--override-ini addopts='-p no:cov'" mutmut run
+mutmut results --json
+```
+
+- `tests/mutation_smoke/` contiene fixtures mínimos que fallan explícitamente cuando `mutmut` ejecuta el _forced fail_.
+- Mutaciones actuales cubren `src/utils/text_cleaner.py` y `src/utils/url_canonicalizer.py`; añadir módulos “hot” implica sumarlos a `tool.mutmut.paths_to_mutate`.
 
 ## CI/CD
 Workflows en `.github/workflows/`:
