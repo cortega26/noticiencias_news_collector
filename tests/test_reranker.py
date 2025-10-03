@@ -1,3 +1,8 @@
+from typing import Dict, List
+
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 from src.reranker import rerank_articles
 
 
@@ -77,3 +82,86 @@ def test_reranker_tie_breaker_deterministic():
         ARTICLES, limit=4, source_cap_percentage=1.0, topic_cap_percentage=1.0, seed=7
     )
     assert [a["id"] for a in first] == [a["id"] for a in second]
+
+
+article_strategy = st.fixed_dictionaries(
+    {
+        "final_score": st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
+        "published_date": st.text(),
+        "source_id": st.text(min_size=1),
+        "source_name": st.text(min_size=1),
+        "article_metadata": st.dictionaries(
+            keys=st.sampled_from(["enrichment"]),
+            values=st.dictionaries(
+                keys=st.sampled_from(["topics"]),
+                values=st.lists(st.text(min_size=1), max_size=3),
+                max_size=1,
+            ),
+            max_size=1,
+        ),
+    }
+).map(lambda d: {**d, "id": hash((d["source_id"], d["published_date"])) & 0xFFFFFFFF})
+
+
+@given(
+    articles=st.lists(article_strategy, min_size=1, max_size=20),
+    limit=st.integers(min_value=1, max_value=10),
+    source_cap=st.floats(min_value=0.1, max_value=1.0),
+    topic_cap=st.floats(min_value=0.1, max_value=1.0),
+    seed=st.integers(min_value=0, max_value=2**32 - 1),
+)
+@settings(max_examples=50)
+def test_reranker_never_exceeds_caps(
+    articles: List[Dict[str, object]],
+    limit: int,
+    source_cap: float,
+    topic_cap: float,
+    seed: int,
+) -> None:
+    result = rerank_articles(
+        articles,
+        limit=limit,
+        source_cap_percentage=source_cap,
+        topic_cap_percentage=topic_cap,
+        seed=seed,
+    )
+
+    assert len(result) <= limit
+
+    if not result:
+        return
+
+    max_source = max(1, int(limit * source_cap))
+    max_topic = max(1, int(limit * topic_cap))
+
+    source_counts = {}
+    topic_counts = {}
+
+    for article in result:
+        source = article.get("source_id") or article.get("source_name") or "unknown"
+        topics = (
+            article.get("article_metadata", {})
+            .get("enrichment", {})
+            .get("topics", [])
+        )
+        source_counts[source] = source_counts.get(source, 0) + 1
+        for topic in topics:
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+        assert source_counts[source] <= max_source
+        for topic in topics:
+            assert topic_counts[topic] <= max_topic
+
+
+@given(articles=st.lists(article_strategy, max_size=20), seed=st.integers(0, 2**32 - 1))
+@settings(max_examples=50)
+def test_reranker_is_seed_deterministic(
+    articles: List[Dict[str, object]], seed: int
+) -> None:
+    first = rerank_articles(
+        articles, limit=10, source_cap_percentage=0.5, topic_cap_percentage=0.5, seed=seed
+    )
+    second = rerank_articles(
+        articles, limit=10, source_cap_percentage=0.5, topic_cap_percentage=0.5, seed=seed
+    )
+    assert first == second

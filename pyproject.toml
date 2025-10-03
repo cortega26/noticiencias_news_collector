@@ -74,3 +74,9 @@ markers = [
     "perf: performance-focused regression tests",
     "security: security and compliance checks",
 ]
+
+[tool.mutmut]
+paths_to_mutate = ["src"]
+tests_dir = "tests"
+runner = "python -m pytest tests/mutation_smoke"
+backup = false
