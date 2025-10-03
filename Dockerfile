@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim AS runtime
+FROM python:3.11.9-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -12,8 +12,16 @@ COPY requirements.lock ./requirements.lock
 RUN pip install --upgrade pip \
     && pip install --require-hashes -r requirements.lock
 
+# Create unprivileged runtime user after dependencies are baked in
+RUN groupadd --system app \
+    && useradd --system --create-home --home-dir /home/app --gid app app
+
 # Copiamos el código fuente
 COPY . .
+
+RUN chown -R app:app /app
+
+USER app
 
 ENV PYTHONPATH=/app/src
 

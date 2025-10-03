@@ -13,7 +13,10 @@ regexes = [
   '''dummy(_|-)secret''',
   '''test(_|-)api(_|-)key''',
 ]
-commits = []
+commits = [
+  "9c9bdf23e48ba2d0154d59404eac61b29ce24a40",
+  "bce631a5ec1c61accc83700ae5ed47e84f1ec832",
+]
 
 [[rules]]
 id = "generic-api-key"
