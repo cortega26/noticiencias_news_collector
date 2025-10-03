@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,11 +45,12 @@ def find_tab_violations(path: Path) -> list[TabViolation]:
 
 
 def _format_violation(violation: TabViolation) -> str:
-    return (
-        f'{{"path": "{violation.path.as_posix()}", '
-        f'"line": {violation.line_number}, '
-        f'"content": "{violation.line.replace("\\", "\\\\").replace('"', '\\"')}"}}'
-    )
+    payload = {
+        "path": violation.path.as_posix(),
+        "line": violation.line_number,
+        "content": violation.line,
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def validate_makefiles(paths: Sequence[Path]) -> int:

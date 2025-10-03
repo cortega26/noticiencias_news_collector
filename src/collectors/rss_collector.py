@@ -38,11 +38,16 @@ from config.settings import (
     TEXT_PROCESSING_CONFIG,
     ROBOTS_CONFIG,
 )
-from src.utils.url_canonicalizer import canonicalize_url
+from src.utils.url_canonicalizer import canonicalize_url, configure_canonicalization_cache
 from src.enrichment import enrichment_pipeline
 from src.contracts import CollectorArticleModel
 
 logger = logging.getLogger(__name__)
+
+
+configure_canonicalization_cache(
+    int(COLLECTION_CONFIG.get("canonicalization_cache_size", 0))
+)
 
 
 class RSSCollector(BaseCollector):

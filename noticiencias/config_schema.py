@@ -10,6 +10,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    NonNegativeInt,
     PositiveFloat,
     PositiveInt,
     PrivateAttr,
@@ -238,6 +239,10 @@ class CollectionConfig(StrictModel):
     user_agent: str = Field(
         default="NoticienciasBot/1.0 (+https://noticiencias.com)",
         description="HTTP User-Agent header sent to providers.",
+    )
+    canonicalization_cache_size: NonNegativeInt = Field(
+        default=2048,
+        description="LRU cache size for canonical URLs; set to 0 to disable caching.",
     )
 
 
