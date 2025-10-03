@@ -39,6 +39,7 @@ loguru==0.7.3              # Logger moderno y bonito
 # Testing (para desarrollo futuro)
 pytest==8.4.2             # Framework de testing
 pytest-cov==7.0.0         # Coverage de tests
+hypothesis==6.104.1       # Property-based testing
 
 # Opcional: Machine Learning básico (para scoring)
 scikit-learn==1.7.2       # ML algorithms básicos
