@@ -14,17 +14,18 @@ El sistema está diseñado para ser transparente: no es una caja negra, sino
 que explica exactamente por qué cada artículo recibió cierto puntaje.
 """
 
+import logging
 import math
 import re
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import logging
+from typing import Any, Dict, List, Optional
 
+from config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from pydantic import ValidationError
 
-from ..storage.models import Article
-from config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from src.contracts import ScoringRequestModel
+
+from ..storage.models import Article
 
 logger = logging.getLogger(__name__)
 

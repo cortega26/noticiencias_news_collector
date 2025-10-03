@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Mapping, MutableMapping
 
 from config.settings import ENRICHMENT_CONFIG
+
 from src.contracts import ArticleEnrichmentModel, ArticleForEnrichmentModel
 from src.enrichment.nlp_stack import ConfigurableNLPStack, LRUCache
 from src.utils.dedupe import normalize_article_text, sha256_hex

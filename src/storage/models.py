@@ -12,19 +12,20 @@ tener un traductor inteligente entre Python y la base de datos.
 """
 
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any, Dict
+
 from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
     Column,
-    String,
-    Text,
     DateTime,
     Float,
-    Integer,
-    Boolean,
     ForeignKey,
-    JSON,
     Index,
-    BigInteger,
+    Integer,
+    String,
+    Text,
     text,
 )
 from sqlalchemy.ext.declarative import declarative_base

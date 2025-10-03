@@ -4,17 +4,16 @@
 from __future__ import annotations
 
 import random
-import time
-from typing import List
 import sys
+import time
 from pathlib import Path
+from typing import List
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.utils.url_canonicalizer import canonicalize_url
-
 
 BASE_URLS = [
     "https://www.example.com/article/123",

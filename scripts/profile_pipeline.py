@@ -4,21 +4,19 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 from statistics import mean
 
-import sys
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.enrichment.pipeline import EnrichmentPipeline
-from src.scoring import create_scorer
 from types import SimpleNamespace
 
+from src.enrichment.pipeline import EnrichmentPipeline
+from src.scoring import create_scorer
 from src.utils.dedupe import normalize_article_text
-
 
 DATA_PATH = ROOT / "tests" / "data" / "dev_ranking.json"
 

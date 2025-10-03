@@ -2,7 +2,8 @@
 
 from config import SCORING_CONFIG
 
-from .basic_scorer import BasicScorer, score_multiple_articles as _basic_score_multiple
+from .basic_scorer import BasicScorer
+from .basic_scorer import score_multiple_articles as _basic_score_multiple
 from .feature_scorer import FeatureBasedScorer
 
 DEFAULT_SCORING_WEIGHTS = {
