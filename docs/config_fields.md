@@ -31,6 +31,7 @@
 | collection.max_articles_per_source | int | 50 | Cap on articles per source per run. |  |  |
 | collection.recent_days_threshold | int | 7 | Number of trailing days considered 'recent'. |  |  |
 | collection.user_agent | str | "NoticienciasBot/1.0 (+https://noticiencias.com)" | HTTP User-Agent header sent to providers. |  |  |
+| collection.canonicalization_cache_size | int | 2048 | LRU cache size for canonical URLs (0 disables caching). |  |  |
 | rate_limiting | RateLimitingConfig |  |  |  |  |
 | rate_limiting.delay_between_requests_seconds | float | 1.0 | Base delay enforced between requests to the same source. |  |  |
 | rate_limiting.domain_default_delay_seconds | float | 1.0 | Fallback delay applied when a domain has no override. |  |  |

@@ -32,6 +32,7 @@ max_concurrent_requests = 8
 max_articles_per_source = 50
 recent_days_threshold = 7
 user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
+canonicalization_cache_size = 2048
 
 [rate_limiting]
 delay_between_requests_seconds = 1.0

@@ -15,10 +15,11 @@ preserving meaningful distinctions (e.g., different article IDs).
 
 from __future__ import annotations
 
+from functools import lru_cache
 from urllib.parse import parse_qsl, quote, unquote, urlparse, urlunparse
 import posixpath
 import re
-from typing import Iterable, Tuple
+from typing import Callable, Iterable, Tuple
 
 
 TRACKING_PARAM_PREFIXES: Tuple[str, ...] = (
@@ -102,7 +103,7 @@ def _filter_query_params(pairs: Iterable[Tuple[str, str]]) -> Iterable[Tuple[str
         yield pair
 
 
-def canonicalize_url(url: str) -> str:
+def _canonicalize_url_impl(url: str) -> str:
     """Canonicalize a URL string as per the rule set."""
     if not url:
         return url
@@ -168,4 +169,37 @@ def canonicalize_url(url: str) -> str:
     return canonical
 
 
-__all__ = ["canonicalize_url"]
+_CACHE_SIZE = -1
+
+
+def configure_canonicalization_cache(size: int) -> None:
+    """Configure the LRU cache used by :func:`canonicalize_url`."""
+
+    global canonicalize_url, _CACHE_SIZE
+    if size == _CACHE_SIZE:
+        return
+    if size <= 0:
+        canonicalize_url = _canonicalize_url_impl
+    else:
+        canonicalize_url = lru_cache(maxsize=size)(_canonicalize_url_impl)  # type: ignore[assignment]
+    _CACHE_SIZE = size
+
+
+def clear_canonicalization_cache() -> None:
+    """Clear the active canonicalization cache if enabled."""
+
+    if hasattr(canonicalize_url, "cache_clear"):
+        canonicalize_url.cache_clear()  # type: ignore[attr-defined]
+
+
+canonicalize_url: Callable[[str], str] = _canonicalize_url_impl
+
+
+configure_canonicalization_cache(2048)
+
+
+__all__ = [
+    "canonicalize_url",
+    "configure_canonicalization_cache",
+    "clear_canonicalization_cache",
+]

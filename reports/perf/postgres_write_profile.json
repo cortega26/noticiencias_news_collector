@@ -11,8 +11,8 @@
   "total_articles": 60,
   "warmup_samples": 5,
   "metrics": {
-    "mean_seconds": 0.012301616236370385,
-    "p95_seconds": 0.018869627299955023,
-    "max_seconds": 0.1060540199996467
+    "mean_seconds": 0.019885401673276317,
+    "p95_seconds": 0.04678313659969717,
+    "max_seconds": 0.0715940000009141
   }
 }
