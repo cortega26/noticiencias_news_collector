@@ -8,6 +8,33 @@ import subprocess
 import sys
 from pathlib import Path
 
+ALLOWED_SEVERITIES: tuple[str, ...] = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
+
+
+def _severity_choice(value: str) -> str:
+    """Validate and normalize the requested severity level."""
+
+    normalized = value.strip().upper()
+    if normalized not in ALLOWED_SEVERITIES:
+        allowed = ", ".join(ALLOWED_SEVERITIES)
+        raise argparse.ArgumentTypeError(
+            f"Invalid severity '{value}'. Choose one of: {allowed}."
+        )
+    return normalized
+
+
+def _ensure_directory(path: Path) -> Path:
+    """Resolve and validate that the provided path is an existing directory."""
+
+    resolved = path.expanduser().resolve()
+    if not resolved.exists():
+        raise argparse.ArgumentTypeError(f"Target path '{path}' does not exist.")
+    if not resolved.is_dir():
+        raise argparse.ArgumentTypeError(
+            f"Target path '{path}' must reference a directory."
+        )
+    return resolved
+
 
 def build_command(
     *,
@@ -48,8 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--severity",
+        type=_severity_choice,
         default="HIGH",
-        help="Minimum severity to report (LOW, MEDIUM, HIGH).",
+        help="Minimum severity to report (LOW, MEDIUM, HIGH, CRITICAL).",
     )
     parser.add_argument(
         "--target",
@@ -68,13 +96,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
+    output_path = args.output.expanduser().resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    try:
+        target = _ensure_directory(args.target)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
     command = build_command(
         python_bin=Path(sys.executable),
-        output=args.output,
-        severity=args.severity.upper(),
-        target=args.target,
+        output=output_path,
+        severity=args.severity,
+        target=target,
     )
 
     return run_trufflehog3(command)

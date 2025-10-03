@@ -247,10 +247,18 @@ Workflows en `.github/workflows/`:
 
 ## Seguridad
 - Secrets siempre via variables de entorno (`NOTICIENCIAS__DATABASE__PASSWORD`, etc.).
-- Ejecutar `make security` antes de merges críticos.
-- Workflow [`Security gate`](.github/workflows/audit-security.yml) ejecuta Bandit, Gitleaks y `pip-audit` en cada push/PR; mantenerlo en verde es requisito para mergear.
-- `scripts/run_secret_scan.py` usa `trufflehog3` con patrones definidos en `tools/placeholder_patterns.yml`.
-- Revisar [docs/security.md](docs/security.md) para políticas de acceso, rotación y respuesta a findings.
+- Ejecuta los escáneres localmente antes de subir cambios:
+
+  ```bash
+  bandit -ll -r .
+  gitleaks detect --redact --report-format json --report-path reports/security/gitleaks.json
+  pip-audit -r requirements.lock --progress-spinner off
+  pip-audit -r requirements-security.lock --progress-spinner off
+  ```
+
+- Workflow [`Security gates`](.github/workflows/security.yml) bloquea merges ante hallazgos HIGH/MEDIUM y publica reportes como artefactos CI.
+- `scripts/run_secret_scan.py` usa `trufflehog3` con patrones definidos en `tools/placeholder_patterns.yml` (mantiene compatibilidad con auditorías históricas).
+- Revisar [SECURITY.md](SECURITY.md) y [docs/security.md](docs/security.md) para políticas, amenaza modelo y proceso de supresiones.
 
 ## Troubleshooting & FAQ
 - Sección rápida en [docs/faq.md](docs/faq.md).
