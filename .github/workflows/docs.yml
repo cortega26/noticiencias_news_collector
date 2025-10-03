@@ -1,0 +1,37 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  linkcheck:
+    name: Markdown link check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linkchecker
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install linkchecker
+
+      - name: Run link checker
+        run: |
+          linkchecker --config <(printf "[checking]\nno-follow-url=.*\\.svg$") README.md docs
