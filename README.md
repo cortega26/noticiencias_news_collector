@@ -93,6 +93,7 @@ pip install --require-hashes -r requirements-security.lock
 - `make docs` / `make docs-api` – Regenera la documentación de API con `pdoc`.
 - `make security` – `pip-audit`, `bandit` y `trufflehog3` con `scripts/security_gate.py`.
 - `make audit` – alias del objetivo anterior, usado en CI para auditorías de supply chain.
+- `make audit-issues` – crea issues en GitHub a partir de `audit/*.md` (ver [docs/tools_audit_issues.md](docs/tools_audit_issues.md)).
 - `make build` – genera un wheel reproducible en `dist/` usando pines.
 - `make config-validate` / `make config-dump` / `make config-docs` – gestión de configuración.
 - `make config-gui` – lanza el editor gráfico (requiere servidor X).
