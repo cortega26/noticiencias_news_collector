@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Set up Python
         id: python
         uses: actions/setup-python@v6
@@ -108,6 +110,13 @@ jobs:
             requirements-security.lock
       - name: Run tests
         run: make test
+      - name: Enforce coverage ratchet
+        env:
+          COVERAGE_XML: reports/coverage/coverage.xml
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          REF="${BASE_REF:-origin/main}"
+          bash scripts/coverage_ratcheter.sh check --base-ref "$REF"
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4

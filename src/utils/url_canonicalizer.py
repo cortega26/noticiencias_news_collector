@@ -129,12 +129,6 @@ def _canonicalize_url_impl(url: str) -> str:
 
     netloc = netloc.lower()
 
-    # Remove default ports
-    if ":" in netloc:
-        host, port = netloc.split(":", 1)
-        if (scheme == "http" and port == "80") or (scheme == "https" and port == "443"):
-            netloc = host
-
     host = _clean_host(netloc)
 
     # Normalize path, stripping AMP markers
@@ -158,6 +152,12 @@ def _canonicalize_url_impl(url: str) -> str:
         scheme = "https"
     elif scheme == "http":
         scheme = "https"
+
+    # Remove default ports after scheme normalization
+    if ":" in host:
+        bare_host, port = host.rsplit(":", 1)
+        if (scheme == "https" and port == "443") or (scheme == "http" and port == "80"):
+            host = bare_host
 
     if not host:
         return url
