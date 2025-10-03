@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs typecheck test e2e perf security clean help bump-version audit-todos audit-todos-baseline audit-todos-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -67,6 +67,8 @@ fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
 lint-fix: bootstrap ## Run Ruff with autofix enabled
 	@$(RUFF) check src tests scripts --fix
 
+type: typecheck ## Alias for static type checking (mypy)
+
 typecheck: bootstrap ## Static type checking with mypy
 	@$(MYPY) src tests
 
@@ -81,6 +83,8 @@ perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@mkdir -p $(PERF_DIR)
 	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml || { echo "Performance tests not defined; skipped."; touch $(PERF_DIR)/SKIPPED; true; }
 
+audit: security ## Run supply-chain and security audits (alias for `make security`)
+
 security: bootstrap ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
 	@echo "[security] Running pip-audit"
@@ -92,6 +96,11 @@ security: bootstrap ## Run security and dependency scans
 	@echo "[security] Running trufflehog3"
 	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
 	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+
+build: bootstrap ## Produce a wheel artifact in dist/ using pinned dependencies
+	@rm -rf dist
+	@mkdir -p dist
+	@$(PYTHON_BIN) -m pip wheel --no-deps --wheel-dir dist .
 
 audit-todos: bootstrap ## Run structured placeholder audit and store reports
 	@mkdir -p $(REPORTS_DIR)
