@@ -25,7 +25,7 @@ jobs:
             requirements-security.lock
       - name: Run security scans
         id: run-security
-        run: make security
+        run: make audit
         continue-on-error: true
       - name: Upload security reports
         if: steps.run-security.outcome == 'failure'
