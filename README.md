@@ -123,6 +123,7 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 | `collection.async_enabled` | bool | `false` | Opcional | Activa colector asíncrono (`httpx.AsyncClient`). |
 | `collection.max_concurrent_requests` | entero | 8 | Opcional | Máximo de requests paralelos cuando hay modo async. |
 | `collection.max_articles_per_source` | entero | 50 | Opcional | Recorte de artículos por fuente en cada ciclo. |
+| `collection.canonicalization_cache_size` | entero | 2048 | Opcional | Tamaño del LRU de URLs canonicalizadas (0 desactiva cache). |
 | `collection.user_agent` | texto | `NoticienciasBot/1.0 (+https://noticiencias.com)` | Recomendado | User-Agent usado en requests HTTP. |
 | `rate_limiting.domain_overrides` | tabla | ver `config.toml` | Opcional | Delays específicos por host (ej. `arxiv.org = 20s`). |
 | `scoring.daily_top_count` | entero | 10 | Opcional | Número de artículos destacados diarios. |
@@ -172,6 +173,7 @@ Ajustar volumenes para `data/` si se desea persistencia.
 | `scripts/replay_outage.py` | Reproduce incidentes históricos con canarios | `python scripts/replay_outage.py tests/data/monitoring/outage_replay.json` |
 | `scripts/healthcheck.py` | Healthcheck CLI standalone | `python -m scripts.healthcheck --max-ingest-minutes 30` |
 | `scripts/run_secret_scan.py` | Ejecución directa de trufflehog3 | `python scripts/run_secret_scan.py --target .` |
+| `tools/perf/profile_collectors.py` | Perf sweep sync vs async usando fixtures de replay | `python tools/perf/profile_collectors.py --fixture tests/data/perf/rss_load_sample.jsonl --concurrency 1,2,4,8` |
 
 Más utilidades en `scripts/` (dedupe tuning, benchmarks, perfiles de pipeline) documentadas en [docs/operations.md](docs/operations.md).
 

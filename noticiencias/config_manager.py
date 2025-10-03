@@ -78,7 +78,7 @@ class ConfigMetadata:
 
     def describe_sources(self) -> list[str]:
         sources: list[str] = [
-            f"defaults: built into noticiencias.config_schema",  # noqa: E501
+            "defaults: built into noticiencias.config_schema",  # noqa: E501
             f"config file: {self.config_path}",
         ]
         if self.env_path:
