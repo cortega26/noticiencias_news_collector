@@ -238,7 +238,12 @@ class NewsCollectorSystem:
                 }
             )
 
-            collection_results = self._execute_collection(sources_to_process, dry_run)
+            collection_results = self._execute_collection(
+                sources_to_process,
+                dry_run,
+                session_id=session_id,
+                trace_id=trace_id,
+            )
             self._record_collection_observability(
                 collection_results, session_id=session_id, trace_id=trace_id
             )
@@ -433,12 +438,18 @@ class NewsCollectorSystem:
             if COLLECTION_CONFIG.get("async_enabled"):
                 from src.collectors.async_rss_collector import AsyncRSSCollector
 
-                self.collector = AsyncRSSCollector()
+                self.collector = AsyncRSSCollector(logger_factory=self.logger)
             else:
-                self.collector = RSSCollector()
+                self.collector = RSSCollector(logger_factory=self.logger)
         except Exception:
             # Fallback seguro
-            self.collector = RSSCollector()
+            try:
+                self.collector = RSSCollector()
+            except Exception:
+                self.collector = RSSCollector(logger_factory=None)
+
+        if hasattr(self.collector, "set_logger_factory"):
+            self.collector.set_logger_factory(self.logger)
 
         self.logger.create_module_logger("collectors").info("Colectores configurados")
 
@@ -557,7 +568,11 @@ class NewsCollectorSystem:
             return ALL_SOURCES.copy()
 
     def _execute_collection(
-        self, sources: Dict[str, Dict[str, Any]], dry_run: bool
+        self,
+        sources: Dict[str, Dict[str, Any]],
+        dry_run: bool,
+        session_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Ejecuta la fase de recolección de artículos."""
         if dry_run:
@@ -568,9 +583,17 @@ class NewsCollectorSystem:
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
                 # Ejecutar versión async si está disponible
                 return asyncio.run(
-                    self.collector.collect_from_multiple_sources_async(sources)
+                    self.collector.collect_from_multiple_sources_async(
+                        sources,
+                        session_id=session_id,
+                        trace_id=trace_id,
+                    )
                 )
-            return self.collector.collect_from_multiple_sources(sources)
+            return self.collector.collect_from_multiple_sources(
+                sources,
+                session_id=session_id,
+                trace_id=trace_id,
+            )
 
     def _record_collection_observability(
         self, collection_results: Dict[str, Any], session_id: str, trace_id: str

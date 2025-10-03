@@ -79,6 +79,11 @@ The RSS collector fetches scientific feeds on a fixed cadence, applies polite ra
   }
   ```
 
+- Additional context-rich events introduced in this iteration:
+  - `collector.article.saved` and `collector.article.duplicate` include `article_id`, `source_id`, and a truncated title for persistence audits.
+  - `collector.article.process_error`/`collector.article.validation_failed` surface DLQ routing decisions with the offending URL.
+  - `collector.batch.start`/`collector.batch.completed` now expose aggregate counts directly from the collector stage, matching the values reported by the orchestrator.
+
 ## Troubleshooting Flow
 
 ### Collector Failure
