@@ -52,20 +52,26 @@ def cli_env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     check_dependencies = Mock(return_value=True)
 
-    monkeypatch.setattr(run_collector, "ALL_SOURCES", {
-        "valid_source": {
-            "category": "astronomy",
-            "name": "Valid Source",
-            "credibility_score": 0.8,
+    monkeypatch.setattr(
+        run_collector,
+        "ALL_SOURCES",
+        {
+            "valid_source": {
+                "category": "astronomy",
+                "name": "Valid Source",
+                "credibility_score": 0.8,
+            },
+            "secondary_source": {
+                "category": "astronomy",
+                "name": "Secondary Source",
+                "credibility_score": 0.6,
+            },
         },
-        "secondary_source": {
-            "category": "astronomy",
-            "name": "Secondary Source",
-            "credibility_score": 0.6,
-        },
-    })
+    )
     monkeypatch.setattr(run_collector, "create_system", Mock(return_value=stub_system))
-    monkeypatch.setattr(run_collector, "setup_logging", Mock(return_value=logger_factory))
+    monkeypatch.setattr(
+        run_collector, "setup_logging", Mock(return_value=logger_factory)
+    )
     monkeypatch.setattr(run_collector, "check_dependencies", check_dependencies)
 
     return SimpleNamespace(
@@ -85,7 +91,11 @@ def _invoke_cli(monkeypatch: pytest.MonkeyPatch, args: Sequence[str]) -> int:
     return int(exc_info.value.code)
 
 
-def test_cli_dry_run_success(cli_env: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_dry_run_success(
+    cli_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """The CLI should complete in dry-run mode and surface simulation messaging."""
 
     exit_code = _invoke_cli(monkeypatch, ["--dry-run", "--show-articles", "0"])
@@ -102,7 +112,11 @@ def test_cli_dry_run_success(cli_env: SimpleNamespace, monkeypatch: pytest.Monke
     assert call_kwargs["sources_filter"] is None
 
 
-def test_cli_sources_filter_and_validation(cli_env: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_sources_filter_and_validation(
+    cli_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """The CLI should filter requested sources and warn about invalid entries."""
 
     exit_code = _invoke_cli(
@@ -122,7 +136,11 @@ def test_cli_sources_filter_and_validation(cli_env: SimpleNamespace, monkeypatch
     assert call_kwargs["dry_run"] is False
 
 
-def test_cli_list_sources(cli_env: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_list_sources(
+    cli_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """Listing sources should print catalog information and exit cleanly."""
 
     exit_code = _invoke_cli(monkeypatch, ["--list-sources"])
@@ -138,7 +156,11 @@ def test_cli_list_sources(cli_env: SimpleNamespace, monkeypatch: pytest.MonkeyPa
     cli_env.stub_system.run_collection_cycle.assert_not_called()
 
 
-def test_cli_check_dependencies(cli_env: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_check_dependencies(
+    cli_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """Dependency checks should invoke the helper and exit successfully."""
 
     exit_code = _invoke_cli(monkeypatch, ["--check-deps"])
@@ -167,7 +189,9 @@ def test_cli_healthcheck_exit_codes(
 
     received_kwargs = {}
 
-    def _stub_run_cli(*, max_pending: int | None, max_ingest_lag_minutes: int | None) -> bool:
+    def _stub_run_cli(
+        *, max_pending: int | None, max_ingest_lag_minutes: int | None
+    ) -> bool:
         received_kwargs["max_pending"] = max_pending
         received_kwargs["max_ingest_lag_minutes"] = max_ingest_lag_minutes
         return healthcheck_result

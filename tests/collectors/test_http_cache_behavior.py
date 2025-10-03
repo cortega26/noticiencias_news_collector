@@ -21,14 +21,14 @@ class _BaseResponse:
 
 class _Response200(_BaseResponse):
     status_code = 200
-    headers = {"ETag": "W/\"new\"", "Last-Modified": "Wed, 12 Mar 2025 12:00:00 GMT"}
+    headers = {"ETag": 'W/"new"', "Last-Modified": "Wed, 12 Mar 2025 12:00:00 GMT"}
     text = "<rss></rss>"
     content = b"<rss></rss>"
 
 
 class _Response304(_BaseResponse):
     status_code = 304
-    headers = {"ETag": "W/\"fresh\"", "Last-Modified": "Wed, 12 Mar 2025 12:30:00 GMT"}
+    headers = {"ETag": 'W/"fresh"', "Last-Modified": "Wed, 12 Mar 2025 12:30:00 GMT"}
     text = ""
     content = b""
 
@@ -41,11 +41,13 @@ class _Response429(_BaseResponse):
 
 
 @pytest.mark.parametrize("response_cls", [_Response200, _Response304])
-def test_fetch_feed_applies_conditional_headers(response_cls: Type[_BaseResponse]) -> None:
+def test_fetch_feed_applies_conditional_headers(
+    response_cls: Type[_BaseResponse],
+) -> None:
     collector = RSSCollector()
     store = MemoryFeedStore()
     store.update_source_feed_metadata(
-        "source-1", etag="W/\"cached\"", last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
+        "source-1", etag='W/"cached"', last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
     )
     collector.db_manager = store
 
@@ -60,14 +62,14 @@ def test_fetch_feed_applies_conditional_headers(response_cls: Type[_BaseResponse
     content, status = collector._fetch_feed("source-1", "https://example.com/feed")
 
     headers = captured["headers"]
-    assert headers["If-None-Match"] == "W/\"cached\""
+    assert headers["If-None-Match"] == 'W/"cached"'
     assert headers["If-Modified-Since"] == "Wed, 12 Mar 2025 11:00:00 GMT"
     if status == 304:
         assert content is None
-        assert store.metadata["source-1"]["etag"] == "W/\"fresh\""
+        assert store.metadata["source-1"]["etag"] == 'W/"fresh"'
     else:
         assert status == 200
-        assert store.metadata["source-1"]["etag"] == "W/\"new\""
+        assert store.metadata["source-1"]["etag"] == 'W/"new"'
 
 
 def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -91,7 +93,7 @@ def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) ->
 
     assert status == 200
     assert attempts == [0]
-    assert store.metadata["source-1"]["etag"] == "W/\"new\""
+    assert store.metadata["source-1"]["etag"] == 'W/"new"'
 
 
 def test_async_fetch_uses_conditional_headers() -> None:
@@ -99,13 +101,15 @@ def test_async_fetch_uses_conditional_headers() -> None:
     store = MemoryFeedStore()
     collector.db_manager = store
     store.update_source_feed_metadata(
-        "source-1", etag="W/\"cached\"", last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
+        "source-1", etag='W/"cached"', last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
     )
 
     captured: dict[str, dict[str, str]] = {}
 
     class MockClient:
-        async def get(self, url: str, timeout: float, headers: dict[str, str] | None = None):
+        async def get(
+            self, url: str, timeout: float, headers: dict[str, str] | None = None
+        ):
             captured["headers"] = headers or {}
             return _Response200()
 
@@ -117,10 +121,10 @@ def test_async_fetch_uses_conditional_headers() -> None:
     content, status = asyncio.run(_run())
 
     headers = captured["headers"]
-    assert headers["If-None-Match"] == "W/\"cached\""
+    assert headers["If-None-Match"] == 'W/"cached"'
     assert headers["If-Modified-Since"] == "Wed, 12 Mar 2025 11:00:00 GMT"
     assert status == 200
-    assert store.metadata["source-1"]["etag"] == "W/\"new\""
+    assert store.metadata["source-1"]["etag"] == 'W/"new"'
 
 
 def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -135,7 +139,9 @@ def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
         attempts.append(delay)
 
     class MockClient:
-        async def get(self, url: str, timeout: float, headers: dict[str, str] | None = None):
+        async def get(
+            self, url: str, timeout: float, headers: dict[str, str] | None = None
+        ):
             return next(responses)
 
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
@@ -149,4 +155,4 @@ def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert status == 200
     assert len(attempts) == 1
-    assert store.metadata["source-1"]["etag"] == "W/\"new\""
+    assert store.metadata["source-1"]["etag"] == 'W/"new"'

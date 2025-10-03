@@ -77,7 +77,10 @@ def test_canonicalize_handles_empty_input() -> None:
 
 
 def test_canonicalize_normalizes_host_and_path() -> None:
-    assert url_canonicalizer.canonicalize_url("https://example.com") == "https://example.com/"
+    assert (
+        url_canonicalizer.canonicalize_url("https://example.com")
+        == "https://example.com/"
+    )
     assert url_canonicalizer.canonicalize_url("example.org") == "https://example.org/"
 
 

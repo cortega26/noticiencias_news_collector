@@ -96,7 +96,7 @@ def test_config_precedence_process_env_overrides_env_file(tmp_path: Path) -> Non
     """Process environment variables should override .env entries."""
 
     config_path = tmp_path / "config.toml"
-    config_path.write_text("[app]\nenvironment = \"staging\"\n")
+    config_path.write_text('[app]\nenvironment = "staging"\n')
     env_path = tmp_path / ".env"
     env_path.write_text("NOTICIENCIAS__APP__ENVIRONMENT=production\n")
 

@@ -9,7 +9,12 @@ from typing import Callable
 import pytest
 import tkinter as tk
 
-from noticiencias.config_manager import Config, load_config, save_config, main as config_cli_main
+from noticiencias.config_manager import (
+    Config,
+    load_config,
+    save_config,
+    main as config_cli_main,
+)
 from noticiencias.config_schema import DEFAULT_CONFIG
 from noticiencias.gui_config import ConfigEditor
 
@@ -57,7 +62,9 @@ def tk_runtime_shim(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture()
-def editor_factory(monkeypatch: pytest.MonkeyPatch, tk_runtime_shim: None) -> Callable[[Config], ConfigEditor]:
+def editor_factory(
+    monkeypatch: pytest.MonkeyPatch, tk_runtime_shim: None
+) -> Callable[[Config], ConfigEditor]:
     """Return a helper that instantiates :class:`ConfigEditor` with stubs."""
 
     def _factory(config: Config) -> ConfigEditor:
@@ -72,10 +79,12 @@ def editor_factory(monkeypatch: pytest.MonkeyPatch, tk_runtime_shim: None) -> Ca
         monkeypatch.setattr(ConfigEditor, "_build_ui", _fake_build_ui)
         monkeypatch.setattr(ConfigEditor, "_apply_filter", lambda self: None)
         monkeypatch.setattr(
-            "noticiencias.gui_config.messagebox.showinfo", lambda *_args, **_kwargs: None
+            "noticiencias.gui_config.messagebox.showinfo",
+            lambda *_args, **_kwargs: None,
         )
         monkeypatch.setattr(
-            "noticiencias.gui_config.messagebox.showerror", lambda *_args, **_kwargs: None
+            "noticiencias.gui_config.messagebox.showerror",
+            lambda *_args, **_kwargs: None,
         )
         return ConfigEditor(config)
 
