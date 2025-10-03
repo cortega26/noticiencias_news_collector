@@ -53,3 +53,18 @@ def test_healthcheck_failure_exit_code(monkeypatch, healthcheck_db):
         healthcheck.main(["--max-ingest-minutes", "0", PENDING_FLAG, "50"])
 
     assert excinfo.value.code == 1
+
+
+def test_healthcheck_warn_considered_healthy(tmp_path: Path) -> None:
+    """An empty database should return healthy with a warning."""
+
+    from scripts import healthcheck
+
+    db_path = tmp_path / "empty-health.db"
+    manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+
+    result = healthcheck.perform_healthcheck(db_manager=manager)
+
+    assert result["healthy"] is True
+    statuses = {check.name: check.status for check in result["checks"]}
+    assert statuses["latest_ingest"] == "warn"
