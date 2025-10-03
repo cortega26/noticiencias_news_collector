@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -90,6 +94,7 @@ jobs:
     name: Test
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -181,6 +186,7 @@ jobs:
     name: Security
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -253,6 +259,59 @@ jobs:
               body,
             });
 
+  build-artifacts:
+    name: Build & package
+    needs:
+      - lint
+      - type
+      - test
+      - security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.lock
+            requirements-security.lock
+      - name: Build wheel
+        run: make build
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+          if-no-files-found: error
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        id: docker-build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: local/noticiencias-news-collector:ci
+      - name: Smoke test Docker image
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          docker run --rm local/noticiencias-news-collector:ci > reports/docker-smoke.log
+      - name: Upload smoke test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-smoke-log
+          path: reports/docker-smoke.log
+          if-no-files-found: warn
+
   update-ci-badge:
     name: Update CI badge
     needs:
@@ -265,6 +324,7 @@ jobs:
       - healthcheck
       - security
       - audit-todos
+      - build-artifacts
     if: ${{ github.event_name == 'push' && always() }}
     runs-on: ubuntu-latest
     permissions:
