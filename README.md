@@ -104,6 +104,13 @@ pip install --require-hashes -r requirements-security.lock
 3. **Archivo `.env`** contiguo (`NOTICIENCIAS__…=valor`).
 4. **Variables de entorno** con prefijo `NOTICIENCIAS__` (último gana).
 
+| Capa | Entrada de ejemplo | `app.environment` | `collection.async_enabled` | `rate_limiting.max_retries` |
+| --- | --- | --- | --- | --- |
+| Defaults (`DEFAULT_CONFIG`) | _sin overrides_ | `development` | `false` | `3` |
+| `config.toml` | `[app]\nenvironment = "staging"<br>[collection]\nasync_enabled = true<br>[rate_limiting]\nmax_retries = 7` | `staging` | `true` | `7` |
+| `.env` | `NOTICIENCIAS__APP__ENVIRONMENT=production`<br>`NOTICIENCIAS__COLLECTION__ASYNC_ENABLED=false`<br>`NOTICIENCIAS__RATE_LIMITING__MAX_RETRIES=9` | `production` | `false` | `9` |
+| Entorno de proceso | `NOTICIENCIAS__APP__ENVIRONMENT=test` | `test` | `false` | `9` |
+
 Ejemplo de sobrescritura anidada:
 ```bash
 export NOTICIENCIAS__DATABASE__DRIVER=postgresql
