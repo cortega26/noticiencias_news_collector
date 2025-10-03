@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -46,6 +46,7 @@ BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 CONFIG_FILE ?= $(CURDIR)/config.toml
 KEY ?=
 EXTRA ?=
+AUDIT_ISSUES_FLAGS ?=
 
 .DEFAULT_GOAL := help
 
@@ -113,6 +114,9 @@ security: bootstrap ## Run security and dependency scans
 	@echo "[security] Running trufflehog3"
 	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
 	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+
+audit-issues: ## Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)
+	@tools/audit_to_issues.sh $(AUDIT_ISSUES_FLAGS)
 
 build: bootstrap ## Produce a wheel artifact in dist/ using pinned dependencies
 	@rm -rf dist
