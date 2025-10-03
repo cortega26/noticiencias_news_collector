@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🆘 Incident support
+    url: https://noticiencias.example.com/ops#incidentes
+    about: Usa este canal para incidentes en curso o caídas en producción.

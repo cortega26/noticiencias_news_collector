@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional
-
 from zoneinfo import ZoneInfo
 
 UTC = ZoneInfo("UTC")

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+import time
 from collections import defaultdict, deque
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from itertools import count
-import asyncio
-import json
-import time
 from pathlib import Path
 from types import MethodType
 from typing import Any, Deque, Dict, Iterator, List, MutableMapping, Optional, Sequence
@@ -101,9 +101,7 @@ class MemoryFeedStore:
 
     # DatabaseManager compatibility -------------------------------------------------
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Optional[str]]:
-        return self.metadata.get(
-            source_id, {"etag": None, "last_modified": None}
-        )
+        return self.metadata.get(source_id, {"etag": None, "last_modified": None})
 
     def update_source_feed_metadata(
         self,
@@ -242,10 +240,11 @@ class CollectorReplaySession:
         )
 
     def _patch_process(self, collector: Any, stack: ExitStack) -> None:
-        original_process = collector._process_article
-
         def fake_process(
-            self: Any, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]
+            self: Any,
+            raw_article: Dict[str, Any],
+            source_id: str,
+            source_config: Dict[str, Any],
         ) -> Dict[str, Any]:
             document = {
                 "url": raw_article["url"],
@@ -277,6 +276,7 @@ class CollectorReplaySession:
         self, collector: Any, stack: ExitStack, *, asynchronous: bool
     ) -> None:
         if asynchronous:
+
             async def fake_fetch_async(
                 self: Any, client: Any, source_id: str, feed_url: str
             ) -> tuple[Optional[str], Optional[int]]:
@@ -299,6 +299,7 @@ class CollectorReplaySession:
                 _patch_method(collector, "_fetch_feed_async", fake_fetch_async)
             )
         else:
+
             def fake_fetch(
                 self: Any, source_id: str, feed_url: str
             ) -> tuple[Optional[str], Optional[int]]:
@@ -329,7 +330,9 @@ class CollectorReplaySession:
         )
 
     @contextmanager
-    def patch_collector(self, collector: Any, *, asynchronous: bool = False) -> Iterator[None]:
+    def patch_collector(
+        self, collector: Any, *, asynchronous: bool = False
+    ) -> Iterator[None]:
         """Patch a collector instance so it replays events instead of hitting the network."""
 
         collector._replay_session = self  # type: ignore[attr-defined]
@@ -359,6 +362,7 @@ def load_replay_fixture(path: str | Path) -> List[ReplayEvent]:
 
 
 # --------------------------------------------------------------------------- helpers
+
 
 def _patch_method(obj: Any, name: str, func: Any) -> contextmanager[None]:
     @contextmanager

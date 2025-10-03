@@ -22,45 +22,73 @@ version = {file = "VERSION"}
 
 [tool.ruff]
 target-version = "py310"
-src = ["src", "tests", "scripts"]
+line-length = 88
+src = ["src"]
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "F",
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "W",  # pycodestyle warnings
+    "B",  # flake8-bugbear
 ]
 ignore = [
-    "E402",
-    "E501",
-    "E712",
-    "F841",
+    "E203",  # whitespace before ':' (black compatibility)
+    "E402",  # allow runtime path adjustments before imports
+    "E501",  # long URLs and SQL statements managed manually
+    "B027",  # allow optional no-op hooks in abstract classes
 ]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+line-ending = "lf"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["src", "tests", "scripts"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["src", "tests"]
+packages = ["src", "tests"]
 ignore_missing_imports = true
 warn_unused_configs = true
+warn_return_any = true
+warn_unused_ignores = true
 show_error_codes = true
-follow_imports = "skip"
+strict_optional = true
+no_implicit_optional = true
+follow_imports = "normal"
 plugins = []
-disable_error_code = [
-    "attr-defined",
-    "assignment",
-    "index",
-    "import-untyped",
-    "var-annotated",
-]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
-    "main",
-    "src.*",
-    "tests.*",
+    "config.*",
+    "noticiencias.*",
+    "src.collectors.*",
+    "src.contracts.*",
+    "src.enrichment.*",
+    "src.monitoring.*",
+    "src.perf.*",
+    "src.reranker.*",
+    "src.scoring.*",
+    "src.serving.*",
+    "src.storage.*",
+    "src.utils.datetime_utils",
+    "src.utils.dedupe",
+    "src.utils.metrics",
+    "src.utils.pydantic_compat",
+    "src.utils.text_cleaner",
+    "tools.*",
 ]
 ignore_errors = true
 
@@ -80,3 +108,6 @@ paths_to_mutate = ["src"]
 tests_dir = "tests"
 runner = "python -m pytest tests/mutation_smoke"
 backup = false
+
+[tool.ruff.lint.per-file-ignores]
+"src/serving/api.py" = ["B008"]

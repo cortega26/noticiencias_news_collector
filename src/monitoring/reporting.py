@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Mapping, Optional, Sequence
-
 from zoneinfo import ZoneInfo
 
 from .canary import AutoSuppressionManager, CanaryRunner, build_canary_alerts

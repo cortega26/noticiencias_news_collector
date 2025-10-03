@@ -6,11 +6,10 @@ import base64
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from dateutil import parser as date_parser
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, aliased
-
-from dateutil import parser as date_parser
 
 from src.storage.database import DatabaseManager, get_database_manager
 from src.storage.models import Article, ScoreLog

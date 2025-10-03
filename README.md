@@ -61,12 +61,14 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 make bootstrap
 make lint type test
 make audit
+make docs
 .venv/bin/python run_collector.py --dry-run
 ```
 
 - `make bootstrap`: crea el entorno virtual y sincroniza dependencias (incluye escáneres).
-- `make lint type test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
+- `make lint type test`: ejecuta los hooks de `pre-commit` (Ruff + Black + isort + mypy), luego mypy y pytest con cobertura en un solo paso.
 - `make audit`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
+- `make docs`: genera la referencia de API basada en docstrings dentro de `docs/api/` usando `pdoc`.
 - `.venv/bin/python run_collector.py --dry-run`: valida el pipeline completo sin escribir en almacenamiento.
 
 ### Estrategia de dependencias reproducibles
@@ -84,9 +86,11 @@ pip install --require-hashes -r requirements-security.lock
 ```
 
 ### Otras utilidades de `make`
-- `make lint` / `make lint-fix` – Ruff.
+- `make lint` – Ejecuta `pre-commit run --all-files` (Ruff, Black, isort, mypy y checks básicos).
+- `make lint-fix` / `make format` – Formato automático (Black + isort + Ruff `--fix`).
 - `make fix-makefile-tabs` – Normaliza indentación en recetas de Makefile (tabs obligatorios).
-- `make type` / `make typecheck` – mypy sobre `src/` y `tests/`.
+- `make type` / `make typecheck` – mypy sobre los módulos tipados incrementalmente (`scripts/generate_api_docs.py`, `src/utils/logger.py`, `src/utils/url_canonicalizer.py`).
+- `make docs` / `make docs-api` – Regenera la documentación de API con `pdoc`.
 - `make security` – `pip-audit`, `bandit` y `trufflehog3` con `scripts/security_gate.py`.
 - `make audit` – alias del objetivo anterior, usado en CI para auditorías de supply chain.
 - `make build` – genera un wheel reproducible en `dist/` usando pines.

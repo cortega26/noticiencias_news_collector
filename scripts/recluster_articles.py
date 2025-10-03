@@ -8,12 +8,12 @@ from typing import List, Tuple
 from src.storage.database import DatabaseManager
 from src.storage.models import Article
 from src.utils.dedupe import (
+    duplication_confidence,
+    generate_cluster_id,
+    hamming_distance,
     normalize_article_text,
     sha256_hex,
     simhash64,
-    hamming_distance,
-    duplication_confidence,
-    generate_cluster_id,
 )
 
 

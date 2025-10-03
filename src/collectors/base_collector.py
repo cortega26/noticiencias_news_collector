@@ -13,14 +13,15 @@ colectores se comporten de manera predecible y consistente, facilitando
 el mantenimiento y la extensión del sistema.
 """
 
+import hashlib
+import json
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
-import hashlib
-import json
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from config.settings import DLQ_DIR
+
 from src.utils.logger import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
@@ -40,9 +41,7 @@ class BaseCollector(ABC):
     mientras permitimos customización específica por tipo de colector.
     """
 
-    def __init__(
-        self, logger_factory: Optional["NewsCollectorLogger"] = None
-    ) -> None:
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
         """Inicialización común para todos los colectores."""
 
         self.collector_type = self.__class__.__name__
@@ -227,9 +226,9 @@ class BaseCollector(ABC):
         payload: Dict[str, Any] = {
             "event": event,
             "trace_id": trace_id if trace_id is not None else self._active_trace_id,
-            "session_id": session_id
-            if session_id is not None
-            else self._active_session_id,
+            "session_id": (
+                session_id if session_id is not None else self._active_session_id
+            ),
             "source_id": source_id,
             "article_id": article_id,
             "collector_type": self.collector_type,
