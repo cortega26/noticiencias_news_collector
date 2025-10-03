@@ -103,6 +103,16 @@ def run_simple_collection(args):
 
         if not system.initialize():
             print("❌ Error durante inicialización del sistema")
+            run_logger.error(
+                {
+                    "event": "cli.initialize.failed",
+                    "trace_id": trace_id,
+                    "session_id": None,
+                    "source_id": "cli",
+                    "latency": 0.0,
+                    "details": {"reason": "system.initialize returned False"},
+                }
+            )
             return False
 
         print("✅ Sistema inicializado correctamente")
@@ -119,20 +129,43 @@ def run_simple_collection(args):
         )
 
         # Mostrar información sobre lo que se va a hacer
+        selected_sources = None
+
         if args.sources:
             valid_sources = [s for s in args.sources if s in ALL_SOURCES]
             invalid_sources = [s for s in args.sources if s not in ALL_SOURCES]
 
             if invalid_sources:
                 print(f"⚠️  Fuentes no encontradas: {', '.join(invalid_sources)}")
+                run_logger.info(
+                    {
+                        "event": "cli.sources.invalid",
+                        "trace_id": trace_id,
+                        "session_id": None,
+                        "source_id": "cli",
+                        "latency": 0.0,
+                        "details": {"invalid_sources": invalid_sources},
+                    }
+                )
 
             if not valid_sources:
                 print("❌ No se encontraron fuentes válidas")
+                run_logger.error(
+                    {
+                        "event": "cli.sources.none_valid",
+                        "trace_id": trace_id,
+                        "session_id": None,
+                        "source_id": "cli",
+                        "latency": 0.0,
+                        "details": {"requested_sources": args.sources},
+                    }
+                )
                 return False
 
             print(
                 f"🎯 Procesando {len(valid_sources)} fuentes específicas: {', '.join(valid_sources)}"
             )
+            selected_sources = valid_sources
         else:
             print(f"🌐 Procesando todas las {len(ALL_SOURCES)} fuentes configuradas")
 
@@ -143,7 +176,7 @@ def run_simple_collection(args):
         print("\n🚀 Iniciando recolección...")
         run_start = time.perf_counter()
         results = system.run_collection_cycle(
-            sources_filter=args.sources if args.sources else None,
+            sources_filter=selected_sources,
             dry_run=args.dry_run,
             trace_id=trace_id,
         )
