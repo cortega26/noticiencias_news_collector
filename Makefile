@@ -90,9 +90,10 @@ src/utils/url_canonicalizer.py
 typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 	@$(MYPY) --config-file=pyproject.toml $(MYPY_TARGETS)
 
-test: bootstrap ## Execute the unit test suite with coverage reporting
+test: bootstrap ## Execute the unit test suite with coverage reporting and ratchet enforcement
 	@mkdir -p $(COVERAGE_DIR)
-	@$(PYTEST) --cov=src --cov-report=term --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
+	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
+	@COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
 
 e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 	@$(PYTEST) -m "e2e" || { echo "E2E tests require additional setup and were skipped."; true; }

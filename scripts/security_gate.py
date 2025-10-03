@@ -213,12 +213,7 @@ def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]
     path_patterns, secret_patterns = _build_secret_allowlist()
     findings: List[Dict[str, Any]] = []
     for record in records:
-        path = str(
-            record.get("file")
-            or record.get("path")
-            or record.get("File")
-            or ""
-        )
+        path = str(record.get("file") or record.get("path") or record.get("File") or "")
         secret = str(
             record.get("secret")
             or record.get("line")
@@ -233,7 +228,9 @@ def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]
             or ""
         )
         severity_raw = str(record.get("severity") or SECRET_SEVERITY_DEFAULT).upper()
-        severity = severity_raw if severity_raw in SEVERITY_RANK else SECRET_SEVERITY_DEFAULT
+        severity = (
+            severity_raw if severity_raw in SEVERITY_RANK else SECRET_SEVERITY_DEFAULT
+        )
         if _secret_is_allowlisted(
             path=path,
             secret=secret,
