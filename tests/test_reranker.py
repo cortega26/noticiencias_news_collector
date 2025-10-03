@@ -140,9 +140,7 @@ def test_reranker_never_exceeds_caps(
     for article in result:
         source = article.get("source_id") or article.get("source_name") or "unknown"
         topics = (
-            article.get("article_metadata", {})
-            .get("enrichment", {})
-            .get("topics", [])
+            article.get("article_metadata", {}).get("enrichment", {}).get("topics", [])
         )
         unique_topics = set(topics)
         source_counts[source] = source_counts.get(source, 0) + 1
@@ -160,9 +158,17 @@ def test_reranker_is_seed_deterministic(
     articles: List[Dict[str, object]], seed: int
 ) -> None:
     first = rerank_articles(
-        articles, limit=10, source_cap_percentage=0.5, topic_cap_percentage=0.5, seed=seed
+        articles,
+        limit=10,
+        source_cap_percentage=0.5,
+        topic_cap_percentage=0.5,
+        seed=seed,
     )
     second = rerank_articles(
-        articles, limit=10, source_cap_percentage=0.5, topic_cap_percentage=0.5, seed=seed
+        articles,
+        limit=10,
+        source_cap_percentage=0.5,
+        topic_cap_percentage=0.5,
+        seed=seed,
     )
     assert first == second

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 ### Added
+- No hay cambios nuevos desde la versión 1.1.0.
+
+### Changed
+- No hay cambios nuevos desde la versión 1.1.0.
+
+## [1.1.0] - 2025-10-03
+### Added
 - Arquitectura Mermaid en el README con enlaces a contratos compartidos para reforzar decisiones del pipeline.
 - Preguntas frecuentes de troubleshooting cubriendo bloqueos de BD, límites de tasa y modelos faltantes.
 - Referencias cruzadas a los runbooks y lineamientos de logging en la documentación operativa.

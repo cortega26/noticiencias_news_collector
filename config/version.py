@@ -16,14 +16,20 @@ class VersionMetadata:
     __slots__ = ("major", "minor", "patch")
 
     def __init__(self, major: int, minor: int, patch: int) -> None:
-        for attribute_name, value in (("major", major), ("minor", minor), ("patch", patch)):
+        for attribute_name, value in (
+            ("major", major),
+            ("minor", minor),
+            ("patch", patch),
+        ):
             if value < 0:
                 raise ValueError(f"{attribute_name} must be non-negative, got {value}")
         object.__setattr__(self, "major", major)
         object.__setattr__(self, "minor", minor)
         object.__setattr__(self, "patch", patch)
 
-    def __setattr__(self, name: str, value: object) -> None:  # pragma: no cover - enforce immutability
+    def __setattr__(
+        self, name: str, value: object
+    ) -> None:  # pragma: no cover - enforce immutability
         raise AttributeError("VersionMetadata instances are read-only")
 
     def __str__(self) -> str:  # pragma: no cover - simple formatting helper
@@ -38,7 +44,9 @@ class VersionMetadata:
 
 _VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
 PROJECT_VERSION: Final[str] = _VERSION_FILE.read_text(encoding="utf-8").strip()
-_VERSION_PARTS: Tuple[int, int, int] = tuple(int(part) for part in PROJECT_VERSION.split("."))
+_VERSION_PARTS: Tuple[int, int, int] = tuple(
+    int(part) for part in PROJECT_VERSION.split(".")
+)
 VERSION_INFO: Final[VersionMetadata] = VersionMetadata(*_VERSION_PARTS)
 __version__: Final[str] = PROJECT_VERSION
 
