@@ -33,7 +33,9 @@ def simhash64(text: str, num_bits: int = SIMHASH_BITS) -> int:
         return 0
     vector = [0] * num_bits
     for token in tokens:
-        h = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16)
+        h = int(
+            hashlib.md5(token.encode("utf-8"), usedforsecurity=False).hexdigest(), 16
+        )
         for i in range(num_bits):
             bit = (h >> i) & 1
             vector[i] += 1 if bit else -1
