@@ -232,8 +232,9 @@ Workflows en `.github/workflows/`:
 ## Seguridad
 - Secrets siempre via variables de entorno (`NOTICIENCIAS__DATABASE__PASSWORD`, etc.).
 - Ejecutar `make security` antes de merges críticos.
+- Workflow [`Security gate`](.github/workflows/audit-security.yml) ejecuta Bandit, Gitleaks y `pip-audit` en cada push/PR; mantenerlo en verde es requisito para mergear.
 - `scripts/run_secret_scan.py` usa `trufflehog3` con patrones definidos en `tools/placeholder_patterns.yml`.
-- Revisar [docs/security.md](docs/security.md) para políticas de acceso y rotación.
+- Revisar [docs/security.md](docs/security.md) para políticas de acceso, rotación y respuesta a findings.
 
 ## Troubleshooting & FAQ
 - Sección rápida en [docs/faq.md](docs/faq.md).
