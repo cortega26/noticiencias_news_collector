@@ -76,7 +76,9 @@ _MODULE_ATTRS: Dict[str, Iterable[str]] = {
 }
 
 _ATTR_TO_MODULE: Dict[str, str] = {
-    attribute: module for module, attributes in _MODULE_ATTRS.items() for attribute in attributes
+    attribute: module
+    for module, attributes in _MODULE_ATTRS.items()
+    for attribute in attributes
 }
 
 

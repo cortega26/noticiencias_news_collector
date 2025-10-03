@@ -19,7 +19,9 @@ from src.perf import (
 pytestmark = pytest.mark.perf
 
 
-FIXTURE_PATH = Path(__file__).resolve().parents[1] / "data" / "perf" / "rss_load_sample.jsonl"
+FIXTURE_PATH = (
+    Path(__file__).resolve().parents[1] / "data" / "perf" / "rss_load_sample.jsonl"
+)
 
 
 @pytest.fixture(scope="module")
