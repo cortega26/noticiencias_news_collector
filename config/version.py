@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pathlib import Path
 from typing import Final, Tuple
 
 MIN_PYTHON_VERSION: Final[Tuple[int, int]] = (3, 10)
@@ -10,22 +10,21 @@ MIN_PYTHON_VERSION_STR: Final[str] = ".".join(str(part) for part in MIN_PYTHON_V
 PYTHON_REQUIRES_SPECIFIER: Final[str] = f">={MIN_PYTHON_VERSION_STR}"
 
 
-@dataclass(frozen=True)
 class VersionMetadata:
     """Immutable container for semantic version information."""
 
-    major: int
-    minor: int
-    patch: int
+    __slots__ = ("major", "minor", "patch")
 
-    def __post_init__(self) -> None:
-        for attribute_name, value in (
-            ("major", self.major),
-            ("minor", self.minor),
-            ("patch", self.patch),
-        ):
+    def __init__(self, major: int, minor: int, patch: int) -> None:
+        for attribute_name, value in (("major", major), ("minor", minor), ("patch", patch)):
             if value < 0:
                 raise ValueError(f"{attribute_name} must be non-negative, got {value}")
+        object.__setattr__(self, "major", major)
+        object.__setattr__(self, "minor", minor)
+        object.__setattr__(self, "patch", patch)
+
+    def __setattr__(self, name: str, value: object) -> None:  # pragma: no cover - enforce immutability
+        raise AttributeError("VersionMetadata instances are read-only")
 
     def __str__(self) -> str:  # pragma: no cover - simple formatting helper
         return f"{self.major}.{self.minor}.{self.patch}"
@@ -37,10 +36,10 @@ class VersionMetadata:
         return (self.major, self.minor, self.patch)
 
 
-PROJECT_VERSION: Final[str] = "1.0.0"
-VERSION_INFO: Final[VersionMetadata] = VersionMetadata(
-    *tuple(int(part) for part in PROJECT_VERSION.split("."))
-)
+_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
+PROJECT_VERSION: Final[str] = _VERSION_FILE.read_text(encoding="utf-8").strip()
+_VERSION_PARTS: Tuple[int, int, int] = tuple(int(part) for part in PROJECT_VERSION.split("."))
+VERSION_INFO: Final[VersionMetadata] = VersionMetadata(*_VERSION_PARTS)
 __version__: Final[str] = PROJECT_VERSION
 
 __all__ = [

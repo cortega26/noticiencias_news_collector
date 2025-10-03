@@ -59,15 +59,20 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 ### Quickstart con Makefile
 ```bash
 make bootstrap
-make lint typecheck test
-make security
+make lint type test
+make audit
 .venv/bin/python run_collector.py --dry-run
 ```
 
 - `make bootstrap`: crea el entorno virtual y sincroniza dependencias (incluye escáneres).
-- `make lint typecheck test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
-- `make security`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
+- `make lint type test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
+- `make audit`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
 - `.venv/bin/python run_collector.py --dry-run`: valida el pipeline completo sin escribir en almacenamiento.
+
+### Estrategia de dependencias reproducibles
+- **Fuente única:** `requirements.lock` (runtime) y `requirements-security.lock` (escáneres) concentran todas las versiones con hashes. `requirements.txt` solo documenta dependencias legibles; cualquier cambio requiere regenerar los lockfiles.
+- **Actualización de locks:** ejecutar `pip-compile --generate-hashes --output-file=requirements.lock requirements.txt` y `pip-compile --allow-unsafe --extra=security --generate-hashes --output-file=requirements-security.lock pyproject.toml` desde un entorno limpio.
+- **Verificación:** `make bootstrap` instala con `--require-hashes`, garantizando instalaciones deterministas. Dependabot está configurado en modo _lockfile-only_ para proponer parches sin romper los pines.
 
 ### Instalación manual con `venv`
 ```bash
@@ -81,8 +86,10 @@ pip install --require-hashes -r requirements-security.lock
 ### Otras utilidades de `make`
 - `make lint` / `make lint-fix` – Ruff.
 - `make fix-makefile-tabs` – Normaliza indentación en recetas de Makefile (tabs obligatorios).
-- `make typecheck` – mypy sobre `src/` y `tests/`.
+- `make type` / `make typecheck` – mypy sobre `src/` y `tests/`.
 - `make security` – `pip-audit`, `bandit` y `trufflehog3` con `scripts/security_gate.py`.
+- `make audit` – alias del objetivo anterior, usado en CI para auditorías de supply chain.
+- `make build` – genera un wheel reproducible en `dist/` usando pines.
 - `make config-validate` / `make config-dump` / `make config-docs` – gestión de configuración.
 - `make config-gui` – lanza el editor gráfico (requiere servidor X).
 - `make clean` – elimina `.venv` y caches.
@@ -244,8 +251,34 @@ Workflows en `.github/workflows/`:
 
 ## Roadmap y limitaciones
 - `CHANGELOG.md` y [docs/release_notes.md](docs/release_notes.md) documentan hitos.
-- Limitaciones actuales: cobertura <80%, solo SQLite/PostgreSQL soportados, GUI requiere entorno gráfico.
-- Próximos pasos sugeridos: habilitar colas externas (Redis/Kafka), mejorar cobertura en módulos de collectors/scoring.
+
+### Estado actual por fase
+
+| Fase | Foco | Estado | Evidencia |
+| --- | --- | --- | --- |
+| 0 | Inventario inicial del repositorio | ✅ | [`audit/00_inventory.md`](audit/00_inventory.md), [`audit/00_inventory.json`](audit/00_inventory.json) |
+| 1 | Paridad docs ↔ código y remediación rápida | ✅ | [`audit/01_docs_code_diff.md`](audit/01_docs_code_diff.md), [`audit/01_docs_fixes.patch`](audit/01_docs_fixes.patch) |
+| 2 | Checklist README / onboarding | ✅ | [`audit/02_readme_checklist.md`](audit/02_readme_checklist.md), [`audit/02_readme_fix.patch`](audit/02_readme_fix.patch) |
+| 3 | Matriz de configuración y precedencia | ✅ | [`audit/03_config_matrix.md`](audit/03_config_matrix.md) |
+| 4 | Validación CLI y banderas | ✅ | [`audit/04_cli_behaviors.md`](audit/04_cli_behaviors.md) |
+| 5 | Hallazgos GUI Config Editor | ✅ | [`audit/05_gui_findings.md`](audit/05_gui_findings.md) |
+| 6 | Calidad de pruebas y mutaciones planificadas | ✅ | [`audit/06_test_quality.md`](audit/06_test_quality.md) |
+| 7 | Seguridad (ASVS + reportes) | ✅ | [`audit/07_security_report.md`](audit/07_security_report.md), [`audit/07_asvs_checklist.md`](audit/07_asvs_checklist.md) |
+| 8 | Supply chain reproducible y locks | ✅ | [`audit/08_supply_chain.md`](audit/08_supply_chain.md) |
+
+### Limitaciones actuales
+
+- Cobertura de pruebas global <80% y gaps en collectors/scoring identificados en `audit/06_test_quality.md`.
+- `pip-audit -r requirements-security.lock` falla mientras `trufflehog3` exija `Jinja2==3.1.4`; el workaround manual (instalar 3.1.6) está documentado pero no automatizado.
+- Ausencia de smoke tests de empaquetado: no se valida el wheel en un entorno limpio para detectar problemas de importación diferida.
+- Solo SQLite/PostgreSQL están soportados oficialmente y la GUI aún requiere entorno gráfico local.
+
+### Próximos pasos inmediatos
+
+1. Resolver el conflicto de `Jinja2` en `requirements-security.lock` con upstream (`trufflehog3`) o reemplazar la herramienta para desbloquear `pip-audit` en modo no interactivo.
+2. Actualizar `make audit`/CI para ejecutar ambos escaneos (`requirements.lock` y `requirements-security.lock`) con reporting claro y fallar cuando existan vulnerabilidades reales, eliminando pasos manuales.
+3. Añadir smoke tests de empaquetado: construir el wheel, instalarlo en un entorno aislado y ejecutar los entrypoints críticos (`run_collector.py`, `main.NewsCollectorSystem`).
+4. Incrementar cobertura en módulos de collectors y scoring hasta ≥90% (tests unitarios y de propiedades) para cumplir los umbrales definidos en `audit/06_test_quality.md`.
 
 ## Contribución
 - Revisar [CONTRIBUTING.md](CONTRIBUTING.md) y guías de estilo (PEP-8, tipado estricto, pruebas obligatorias).

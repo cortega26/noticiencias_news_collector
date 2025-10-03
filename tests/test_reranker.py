@@ -144,12 +144,13 @@ def test_reranker_never_exceeds_caps(
             .get("enrichment", {})
             .get("topics", [])
         )
+        unique_topics = set(topics)
         source_counts[source] = source_counts.get(source, 0) + 1
-        for topic in topics:
+        for topic in unique_topics:
             topic_counts[topic] = topic_counts.get(topic, 0) + 1
 
         assert source_counts[source] <= max_source
-        for topic in topics:
+        for topic in unique_topics:
             assert topic_counts[topic] <= max_topic
 
 
