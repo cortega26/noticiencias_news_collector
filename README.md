@@ -59,16 +59,14 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 ### Quickstart con Makefile
 ```bash
 make bootstrap
-make lint type test
-make audit
-make docs
+make lint typecheck test
+make security
 .venv/bin/python run_collector.py --dry-run
 ```
 
 - `make bootstrap`: crea el entorno virtual y sincroniza dependencias (incluye escáneres).
-- `make lint type test`: ejecuta los hooks de `pre-commit` (Ruff + Black + isort + mypy), luego mypy y pytest con cobertura en un solo paso.
-- `make audit`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
-- `make docs`: genera la referencia de API basada en docstrings dentro de `docs/api/` usando `pdoc`.
+- `make lint typecheck test`: ejecuta Ruff, mypy y pytest con cobertura en un solo paso.
+- `make security`: corre `pip-audit`, `bandit` y `trufflehog3`, dejando reportes en `reports/security/`.
 - `.venv/bin/python run_collector.py --dry-run`: valida el pipeline completo sin escribir en almacenamiento.
 
 ### Estrategia de dependencias reproducibles
@@ -125,18 +123,38 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 | Nombre | Tipo | Default | Requerido | Descripción |
 | --- | --- | --- | --- | --- |
 | `collection.collection_interval_hours` | entero | 6 | Opcional | Horas entre recolecciones completas. |
+| `collection.request_timeout_seconds` | entero | 30 | Opcional | Timeout de requests HTTP del colector. |
 | `collection.async_enabled` | bool | `false` | Opcional | Activa colector asíncrono (`httpx.AsyncClient`). |
 | `collection.max_concurrent_requests` | entero | 8 | Opcional | Máximo de requests paralelos cuando hay modo async. |
 | `collection.max_articles_per_source` | entero | 50 | Opcional | Recorte de artículos por fuente en cada ciclo. |
+| `collection.recent_days_threshold` | entero | 7 | Opcional | Días considerados "recientes" en enriquecimiento. |
 | `collection.canonicalization_cache_size` | entero | 2048 | Opcional | Tamaño del LRU de URLs canonicalizadas (0 desactiva cache). |
 | `collection.user_agent` | texto | `NoticienciasBot/1.0 (+https://noticiencias.com)` | Recomendado | User-Agent usado en requests HTTP. |
+| `rate_limiting.delay_between_requests_seconds` | float | 1.0 | Opcional | Delay base entre requests a una fuente. |
+| `rate_limiting.domain_default_delay_seconds` | float | 1.0 | Opcional | Delay fallback para dominios sin override. |
 | `rate_limiting.domain_overrides` | tabla | ver `config.toml` | Opcional | Delays específicos por host (ej. `arxiv.org = 20s`). |
+| `rate_limiting.max_retries` | entero | 3 | Opcional | Reintentos máximos antes de fallar. |
+| `rate_limiting.retry_delay_seconds` | float | 1.0 | Opcional | Delay inicial entre reintentos (se combina con backoff). |
+| `rate_limiting.backoff_base` | float | 0.5 | Opcional | Factor base del backoff exponencial. |
+| `rate_limiting.backoff_max` | float | 10.0 | Opcional | Máximo delay permitido tras backoff. |
+| `rate_limiting.jitter_max` | float | 0.3 | Opcional | Jitter aleatorio adicional en segundos. |
+| `robots.respect_robots` | bool | `true` | Opcional | Respeta `robots.txt` durante la ingesta. |
+| `robots.cache_ttl_seconds` | entero | 3600 | Opcional | TTL del cache de `robots.txt` (segundos). |
+| `paths.data_dir` | ruta | `data/` | Opcional | Raíz de artefactos (logs, DLQ, DB). |
+| `paths.logs_dir` | ruta | `logs/` | Opcional | Carpeta relativa para logs estructurados. |
+| `paths.dlq_dir` | ruta | `dlq/` | Opcional | Carpeta relativa para DLQ. |
+| `database.driver` | texto | `sqlite` | Sí (implícito) | Backend soportado (`sqlite` o `postgresql`). |
+| `database.path` | ruta | `data/news.db` | Opcional | Ubicación del archivo SQLite. |
+| `database.host` | texto | `None` | Opcional | Hostname para PostgreSQL. |
+| `database.port` | entero | `None` | Opcional | Puerto TCP para PostgreSQL. |
+| `database.pool_size` | entero | 10 | Opcional | Conexiones persistentes por worker. |
+| `database.max_overflow` | entero | 5 | Opcional | Conexiones temporales extra permitidas. |
+| `database.statement_timeout` | entero | 30000 | Opcional | Timeout de sentencias SQL en milisegundos. |
 | `scoring.daily_top_count` | entero | 10 | Opcional | Número de artículos destacados diarios. |
 | `scoring.minimum_score` | float | 0.3 | Opcional | Umbral mínimo para publicar. |
 | `scoring.source_cap_percentage` | float | 0.5 | Opcional | Máximo porcentaje de un top por fuente. |
 | `scoring.topic_cap_percentage` | float | 0.6 | Opcional | Máximo porcentaje de un top por tema. |
-| `paths.data_dir` | ruta | `data/` | Opcional | Raíz de artefactos (logs, DLQ, DB). |
-| `database.driver` | texto | `sqlite` | Sí (implícito) | Backend soportado (`sqlite` o `postgresql`). |
+| `scoring.feature_weights` | tabla | ver `config.toml` | Opcional | Ponderaciones detalladas por feature. |
 
 ### Herramientas de soporte
 - **CLI**: `python -m noticiencias.config_manager` (ver ejemplos anteriores). Se puede automatizar con `make config-set KEY=app.environment=production`.
