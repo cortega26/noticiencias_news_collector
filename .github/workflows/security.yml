@@ -1,39 +1,80 @@
-name: Scheduled security scan
+name: Security gates
 
 on:
-  schedule:
-    - cron: '0 6 * * 1'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  security:
-    name: Weekly security sweep
+  security-scans:
+    name: Security scanners
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v5
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
-      - name: Run security scans
-        id: run-security
-        run: make audit
-        continue-on-error: true
+
+      - name: Install Python tooling
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION="8.18.1"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+
+      - name: Prepare report directory
+        run: |
+          set -euo pipefail
+          mkdir -p reports/security
+
+      - name: Run Bandit
+        run: |
+          set -euo pipefail
+          bandit -ll -r src scripts -f json -o reports/security/bandit.json
+          python scripts/security_gate.py bandit reports/security/bandit.json --severity HIGH
+
+      - name: Run Gitleaks
+        run: |
+          set -euo pipefail
+          gitleaks detect --redact --report-format json --report-path reports/security/gitleaks.json --config .gitleaks.toml
+          python scripts/security_gate.py gitleaks reports/security/gitleaks.json --severity HIGH
+
+      - name: Run pip-audit (runtime)
+        run: |
+          set -euo pipefail
+          pip-audit -r requirements.lock -f json -o reports/security/pip-audit-runtime.json --progress-spinner off
+          python scripts/security_gate.py pip-audit reports/security/pip-audit-runtime.json --severity HIGH
+
+      - name: Run pip-audit (security extras)
+        run: |
+          set -euo pipefail
+          pip-audit -r requirements-security.lock -f json -o reports/security/pip-audit-security.json --progress-spinner off
+          python scripts/security_gate.py pip-audit reports/security/pip-audit-security.json --severity HIGH
+
       - name: Upload security reports
-        if: steps.run-security.outcome == 'failure'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: reports/security
           if-no-files-found: warn
-      - name: Fail workflow on security regression
-        if: steps.run-security.outcome == 'failure'
-        run: exit 1
