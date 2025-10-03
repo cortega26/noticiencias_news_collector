@@ -105,4 +105,3 @@ def test_config_precedence_process_env_overrides_env_file(tmp_path: Path) -> Non
     config = load_config(path=config_path, environ=process_env)
 
     assert config.app.environment == "test"
-

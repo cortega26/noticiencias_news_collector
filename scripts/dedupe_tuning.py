@@ -3,20 +3,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Tuple
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.utils.dedupe import (
+    hamming_distance,
     normalize_article_text,
     sha256_hex,
     simhash64,
-    hamming_distance,
 )
 
 

@@ -15,12 +15,11 @@ preserving meaningful distinctions (e.g., different article IDs).
 
 from __future__ import annotations
 
-from functools import lru_cache
-from urllib.parse import parse_qsl, quote, unquote, urlparse, urlunparse
 import posixpath
 import re
+from functools import lru_cache
 from typing import Callable, Iterable, Tuple
-
+from urllib.parse import parse_qsl, quote, unquote, urlparse, urlunparse
 
 TRACKING_PARAM_PREFIXES: Tuple[str, ...] = (
     "utm_",
@@ -181,7 +180,7 @@ def configure_canonicalization_cache(size: int) -> None:
     if size <= 0:
         canonicalize_url = _canonicalize_url_impl
     else:
-        canonicalize_url = lru_cache(maxsize=size)(_canonicalize_url_impl)  # type: ignore[assignment]
+        canonicalize_url = lru_cache(maxsize=size)(_canonicalize_url_impl)
     _CACHE_SIZE = size
 
 
@@ -189,7 +188,7 @@ def clear_canonicalization_cache() -> None:
     """Clear the active canonicalization cache if enabled."""
 
     if hasattr(canonicalize_url, "cache_clear"):
-        canonicalize_url.cache_clear()  # type: ignore[attr-defined]
+        canonicalize_url.cache_clear()
 
 
 canonicalize_url: Callable[[str], str] = _canonicalize_url_impl

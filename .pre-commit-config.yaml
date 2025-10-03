@@ -1,0 +1,45 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        exclude: ^(reports/|audit/|tests/)
+      - id: trailing-whitespace
+        exclude: ^(reports/|audit/|tests/)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.6
+    hooks:
+      - id: ruff
+        args: [--config=pyproject.toml]
+        files: ^(src/|scripts/)
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        args: [--config=pyproject.toml]
+        files: ^(src/|scripts/|tools/perf/profile_collectors.py)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--settings-path=pyproject.toml]
+        files: ^(src/|scripts/|tools/perf/profile_collectors.py)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: [--config-file=pyproject.toml]
+        files: ^(scripts/generate_api_docs\.py|src/utils/(logger|url_canonicalizer)\.py)$
+  - repo: local
+    hooks:
+      - id: generate-api-docs
+        name: Generate API docs with pdoc
+        entry: python scripts/generate_api_docs.py
+        language: python
+        additional_dependencies:
+          - pdoc==15.0.4
+          - python-dotenv
+        pass_filenames: false
+        stages: [pre-commit, manual]

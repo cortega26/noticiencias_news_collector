@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from math import log2
 from typing import Dict, List, Mapping, MutableMapping, Optional, Sequence
-
 from zoneinfo import ZoneInfo
 
 from .common import Anomaly, Metric, Severity

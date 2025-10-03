@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, Mapping
-
 from zoneinfo import ZoneInfo
 
 from .detectors import SourceBaseline, SourceWindowStats

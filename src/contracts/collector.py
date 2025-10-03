@@ -16,6 +16,7 @@ field_validator = _pydantic.field_validator
 model_validator = _pydantic.model_validator
 
 from config.settings import TEXT_PROCESSING_CONFIG
+
 from .common import ArticleMetadata, ArticleMetadataModel
 
 SUPPORTED_LANGUAGES = set(

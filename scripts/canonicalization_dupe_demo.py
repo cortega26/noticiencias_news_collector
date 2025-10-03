@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from collections import Counter
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +12,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.utils.url_canonicalizer import canonicalize_url
-
 
 SAMPLE_URLS = [
     "https://www.example.com/article/123?utm_source=twitter",

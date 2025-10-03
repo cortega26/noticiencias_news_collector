@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
 from collections import Counter
 from pathlib import Path
-import sys
 from statistics import mean
 from time import perf_counter
 from typing import Iterable, List
@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.settings import COLLECTION_CONFIG
+
 from src.collectors.async_rss_collector import AsyncRSSCollector
 from src.collectors.rss_collector import RSSCollector
 from src.perf import (
@@ -27,7 +28,9 @@ from src.perf import (
 )
 
 
-def _summarize_requests(requests: Iterable[dict[str, float | int]]) -> dict[str, object]:
+def _summarize_requests(
+    requests: Iterable[dict[str, float | int]],
+) -> dict[str, object]:
     records = list(requests)
     if not records:
         return {"avg_latency_ms": 0.0, "status_counts": {}}

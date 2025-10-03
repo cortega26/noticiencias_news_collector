@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format
 
 VENV ?= .venv
 ifeq ($(OS),Windows_NT)
@@ -13,6 +13,10 @@ PIP := $(VENV)/$(BIN_DIR)/pip
 PYTEST := $(VENV)/$(BIN_DIR)/pytest
 RUFF := $(VENV)/$(BIN_DIR)/ruff
 MYPY := $(VENV)/$(BIN_DIR)/mypy
+BLACK := $(VENV)/$(BIN_DIR)/black
+ISORT := $(VENV)/$(BIN_DIR)/isort
+PRE_COMMIT := $(VENV)/$(BIN_DIR)/pre-commit
+PDOC := $(VENV)/$(BIN_DIR)/pdoc
 PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
 PYTHON_BIN := $(VENV)/$(BIN_DIR)/python
@@ -51,26 +55,39 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --require-hashes -r requirements.lock
 	@$(PIP) install --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy
+	@$(PIP) install ruff mypy black isort pre-commit pdoc
 	@touch $(BOOTSTRAP_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@echo "Environment ready at $(VENV)"
 
-lint: bootstrap ## Run Ruff lint checks
+lint: bootstrap ## Run code quality hooks via pre-commit
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
-	@$(RUFF) check src tests scripts
+	@$(PRE_COMMIT) run --all-files --show-diff-on-failure
 
 fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
 	@$(PYTHON) -m tools.fix_makefile_tabs
 
-lint-fix: bootstrap ## Run Ruff with autofix enabled
+lint-fix: bootstrap ## Auto-format using Black/isort and fix Ruff findings
+	@$(BLACK) src tests scripts
+	@$(ISORT) src tests scripts
 	@$(RUFF) check src tests scripts --fix
+
+docs-api: bootstrap ## Generate API reference documentation with pdoc
+	@$(PYTHON_BIN) scripts/generate_api_docs.py
+
+docs: docs-api ## Alias for generating API documentation
+
+format: lint-fix ## Alias for auto-formatting helpers
 
 type: typecheck ## Alias for static type checking (mypy)
 
-typecheck: bootstrap ## Static type checking with mypy
-	@$(MYPY) src tests
+MYPY_TARGETS := scripts/generate_api_docs.py \
+src/utils/logger.py \
+src/utils/url_canonicalizer.py
+
+typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
+	@$(MYPY) --config-file=pyproject.toml $(MYPY_TARGETS)
 
 test: bootstrap ## Execute the unit test suite with coverage reporting
 	@mkdir -p $(COVERAGE_DIR)
