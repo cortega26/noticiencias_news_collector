@@ -20,6 +20,15 @@ Cuando la tubería falla, comienza con estos síntomas comunes antes de escalar 
   - Ajusta `domain_overrides` en `[rate_limiting]` (`config.toml`) o los parámetros de la fuente en `config/sources.py`, y reinicia el collector para aplicar los cambios.
   - Repite la ejecución con `python run_collector.py --dry-run --sources <id>` y verifica que el Runbook no reporte nuevas alertas.
 
+## Error: "Configuration validation failed" al guardar desde la GUI
+- **Contexto típico**: valores numéricos o estructuras inválidas capturados por el validador de `noticiencias.config_schema` al presionar **Save**.
+- **Diagnóstico rápido**:
+  - El cuadro de diálogo indica la clave específica (`database.connect_timeout`, etc.).
+  - Ejecuta `python -m noticiencias.config_manager --config ./config.toml --validate` para obtener el detalle completo en consola, incluyendo la capa que originó el valor.
+- **Resolución**:
+  - Corrige el valor en la GUI (asegurando tipos positivos para enteros y JSON válido para listas/tablas) y vuelve a guardar.
+  - Confirma el cambio con `python -m noticiencias.config_manager --config ./config.toml --explain <clave>`; la salida debe mostrar `source: file (.../config.toml)` con el nuevo valor.
+
 ## Error: `ModuleNotFoundError` para modelos de enriquecimiento
 - **Contexto típico**: entorno virtual sin dependencias opcionales o modelos locales eliminados.
 - **Diagnóstico rápido**:
