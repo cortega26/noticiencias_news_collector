@@ -4,6 +4,7 @@ title = "Noticiencias Secret Scan"
 description = "Ignore known non-sensitive fixtures and generated assets."
 paths = [
   '''^tests/data/''',
+  '''^tests/test_security_gate.py$''',
   '''^docs/fixtures/''',
   '''^docs/examples/''',
   '''^reports/''',
