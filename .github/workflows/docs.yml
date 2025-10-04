@@ -14,18 +14,29 @@ on:
       - 'docs/**'
       - '.github/workflows/docs.yml'
 
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linkcheck:
-    name: Markdown link check
+    name: docs/linkcheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        id: setup-python
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: docs-pip-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}
 
       - name: Install linkchecker
         run: |
