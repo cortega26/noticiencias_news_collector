@@ -167,6 +167,12 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 - **CLI**: `python -m noticiencias.config_manager` (ver ejemplos anteriores). Se puede automatizar con `make config-set KEY=app.environment=production`.
 - **Editor GUI** (Tkinter): `python -m noticiencias.gui_config [ruta_config]`. En entornos sin pantalla usar `xvfb-run -a python -m noticiencias.gui_config`. Tras guardar cambios desde la GUI, valida el resultado con `python -m noticiencias.config_manager --config ruta/config.toml --explain clave` para confirmar que el CLI lee los valores persistidos.
 
+#### Validación cruzada GUI ↔ CLI
+1. Abre el editor con `python -m noticiencias.gui_config ./config.toml` y realiza los cambios necesarios.
+2. Al presionar **Save**, la GUI valida los tipos usando el mismo esquema Pydantic que el CLI. Cualquier valor inválido mostrará un mensaje explícito (`Configuration validation failed …`) sin escribir en disco.
+3. Para confirmar la persistencia, ejecuta `python -m noticiencias.config_manager --config ./config.toml --explain <clave>` y revisa tanto el valor como la fuente (`source: file (…/config.toml)`).
+4. Documenta el cambio en tu runbook/PR adjuntando la salida del comando anterior para mantener trazabilidad.
+
 ## Uso
 ### Recolección básica
 ```bash
