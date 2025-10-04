@@ -55,6 +55,7 @@ class ReplayEvent:
     status_code: int
     etag: str | None = None
     last_modified: str | None = None
+    content_hash: str | None = None
     articles: tuple[ReplayArticle, ...] = field(default_factory=tuple)
 
     @classmethod
@@ -73,6 +74,7 @@ class ReplayEvent:
             status_code=int(payload.get("status_code", 200)),
             etag=payload.get("etag"),
             last_modified=payload.get("last_modified"),
+            content_hash=payload.get("content_hash"),
             articles=articles,
         )
 
@@ -101,7 +103,10 @@ class MemoryFeedStore:
 
     # DatabaseManager compatibility -------------------------------------------------
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Optional[str]]:
-        return self.metadata.get(source_id, {"etag": None, "last_modified": None})
+        return self.metadata.get(
+            source_id,
+            {"etag": None, "last_modified": None, "content_hash": None},
+        )
 
     def update_source_feed_metadata(
         self,
@@ -109,8 +114,19 @@ class MemoryFeedStore:
         *,
         etag: str | None = None,
         last_modified: str | None = None,
+        content_hash: str | None = None,
     ) -> None:
-        self.metadata[source_id] = {"etag": etag, "last_modified": last_modified}
+        current = self.metadata.get(
+            source_id,
+            {"etag": None, "last_modified": None, "content_hash": None},
+        )
+        if etag is not None:
+            current["etag"] = etag
+        if last_modified is not None:
+            current["last_modified"] = last_modified
+        if content_hash is not None:
+            current["content_hash"] = content_hash
+        self.metadata[source_id] = current
 
     def update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
         self.stats_updates[source_id] = dict(stats)
@@ -284,14 +300,20 @@ class CollectorReplaySession:
                 self._replay_session._log_request(source_id, event)
                 if event.status_code == 304:
                     self.db_manager.update_source_feed_metadata(
-                        source_id, etag=event.etag, last_modified=event.last_modified
+                        source_id,
+                        etag=event.etag,
+                        last_modified=event.last_modified,
+                        content_hash=event.content_hash,
                     )
                     await asyncio.sleep(event.latency_ms / 1000.0)
                     return (None, 304)
                 token = self._replay_session._register_token(event)
                 await asyncio.sleep(event.latency_ms / 1000.0)
                 self.db_manager.update_source_feed_metadata(
-                    source_id, etag=event.etag, last_modified=event.last_modified
+                    source_id,
+                    etag=event.etag,
+                    last_modified=event.last_modified,
+                    content_hash=event.content_hash,
                 )
                 return (token, event.status_code)
 
@@ -309,12 +331,18 @@ class CollectorReplaySession:
                     time.sleep(event.latency_ms / 1000.0)
                 if event.status_code == 304:
                     self.db_manager.update_source_feed_metadata(
-                        source_id, etag=event.etag, last_modified=event.last_modified
+                        source_id,
+                        etag=event.etag,
+                        last_modified=event.last_modified,
+                        content_hash=event.content_hash,
                     )
                     return (None, 304)
                 token = self._replay_session._register_token(event)
                 self.db_manager.update_source_feed_metadata(
-                    source_id, etag=event.etag, last_modified=event.last_modified
+                    source_id,
+                    etag=event.etag,
+                    last_modified=event.last_modified,
+                    content_hash=event.content_hash,
                 )
                 return (token, event.status_code)
 
