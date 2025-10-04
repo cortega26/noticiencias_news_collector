@@ -10,13 +10,14 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Dict, Iterable, List, Tuple
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .config_manager import (
     Config,
     ConfigError,
     _diff_configs,
     _is_secret,
+    _format_validation_error,
     load_config,
     save_config,
 )
@@ -544,8 +545,15 @@ class ConfigEditor:
                 message += "\n" + "\n".join(diff)
             messagebox.showinfo("Configuration saved", message)
             self._status.set("")
+        except ValidationError as exc:
+            metadata = getattr(self._config, "_metadata", None)
+            provenance = getattr(metadata, "provenance", {}) if metadata else {}
+            error = _format_validation_error(exc, provenance)
+            messagebox.showerror("Save failed", str(error))
+            self._status.set(str(error))
         except (ConfigError, ValueError) as exc:
             messagebox.showerror("Save failed", str(exc))
+            self._status.set(str(exc))
 
     def run(self) -> None:
         self._root.mainloop()

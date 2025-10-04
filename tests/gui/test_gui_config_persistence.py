@@ -151,3 +151,33 @@ def test_editor_reload_applies_disk_changes(
 
     assert editor._variables["database.connect_timeout"].get() == "99"
     assert editor._variables["collection.async_enabled"].get() is True
+
+
+def test_editor_save_rejects_invalid_numeric_input(
+    tmp_path: Path,
+    editor_factory: Callable[[Config], ConfigEditor],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid integers trigger validation errors and leave disk state unchanged."""
+
+    config_path = tmp_path / "config.toml"
+    initial_config = _write_config(config_path, connect_timeout=25, async_enabled=False)
+    editor = editor_factory(initial_config)
+
+    errors: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "noticiencias.gui_config.messagebox.showerror",
+        lambda title, message: errors.append((title, message)),
+    )
+
+    editor._variables["database.connect_timeout"].set("-5")
+    editor._save()
+
+    reloaded = load_config(config_path)
+    assert reloaded.database.connect_timeout == 25
+    assert errors, "Expected validation error dialog"
+    title, message = errors[-1]
+    assert title == "Save failed"
+    assert "Configuration validation failed" in message
+    assert "database.connect_timeout" in message
+    assert editor._status.get().startswith("Configuration validation failed")
