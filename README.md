@@ -104,6 +104,13 @@ pip install --require-hashes -r requirements-security.lock
 3. **Archivo `.env`** contiguo (`NOTICIENCIAS__…=valor`).
 4. **Variables de entorno** con prefijo `NOTICIENCIAS__` (último gana).
 
+| Capa | Entrada de ejemplo | `app.environment` | `collection.async_enabled` | `rate_limiting.max_retries` |
+| --- | --- | --- | --- | --- |
+| Defaults (`DEFAULT_CONFIG`) | _sin overrides_ | `development` | `false` | `3` |
+| `config.toml` | `[app]\nenvironment = "staging"<br>[collection]\nasync_enabled = true<br>[rate_limiting]\nmax_retries = 7` | `staging` | `true` | `7` |
+| `.env` | `NOTICIENCIAS__APP__ENVIRONMENT=production`<br>`NOTICIENCIAS__COLLECTION__ASYNC_ENABLED=false`<br>`NOTICIENCIAS__RATE_LIMITING__MAX_RETRIES=9` | `production` | `false` | `9` |
+| Entorno de proceso | `NOTICIENCIAS__APP__ENVIRONMENT=test` | `test` | `false` | `9` |
+
 Ejemplo de sobrescritura anidada:
 ```bash
 export NOTICIENCIAS__DATABASE__DRIVER=postgresql
@@ -159,6 +166,12 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 ### Herramientas de soporte
 - **CLI**: `python -m noticiencias.config_manager` (ver ejemplos anteriores). Se puede automatizar con `make config-set KEY=app.environment=production`.
 - **Editor GUI** (Tkinter): `python -m noticiencias.gui_config [ruta_config]`. En entornos sin pantalla usar `xvfb-run -a python -m noticiencias.gui_config`. Tras guardar cambios desde la GUI, valida el resultado con `python -m noticiencias.config_manager --config ruta/config.toml --explain clave` para confirmar que el CLI lee los valores persistidos.
+
+#### Validación cruzada GUI ↔ CLI
+1. Abre el editor con `python -m noticiencias.gui_config ./config.toml` y realiza los cambios necesarios.
+2. Al presionar **Save**, la GUI valida los tipos usando el mismo esquema Pydantic que el CLI. Cualquier valor inválido mostrará un mensaje explícito (`Configuration validation failed …`) sin escribir en disco.
+3. Para confirmar la persistencia, ejecuta `python -m noticiencias.config_manager --config ./config.toml --explain <clave>` y revisa tanto el valor como la fuente (`source: file (…/config.toml)`).
+4. Documenta el cambio en tu runbook/PR adjuntando la salida del comando anterior para mantener trazabilidad.
 
 ## Uso
 ### Recolección básica
@@ -234,11 +247,41 @@ noticiencias_news_collector/
 ```
 
 ## Pruebas
-- `make test` ejecuta `pytest` con cobertura (`reports/coverage/`).
-- Marcadores: `-m "e2e"`, `-m "perf"` para suites específicas.
-- Para linting: `make lint`; tipos: `make typecheck`.
+- `make test` ejecuta `pytest` con `--cov-branch` y aplica el _coverage ratchet_.
+- Los umbrales obligatorios son **≥80 % global**, **≥90 % para archivos modificados** y **≥70 % branch** (cuando exista instrumentación).
+- Marcadores útiles: `-m "e2e"`, `-m "perf"`, `-m "security"`.
+- Linting: `make lint`; tipado: `make typecheck`.
 
-_Nota_: la cobertura actual ronda 69%. Nuevos módulos deben venir con pruebas que acerquen el objetivo interno (≥80%).
+### Cobertura y ratchet
+- Resultado XML en `reports/coverage/coverage.xml`; el baseline persiste en `.coverage-baseline`.
+- `scripts/coverage_ratcheter.sh` admite `record` y `check` para capturar/validar nuevos porcentajes (ver tabla).
+- El ratchet usa `git merge-base` contra la rama base y falla si la cobertura baja o un archivo tocado queda <90 %.
+- El scope actual cubre `src/contracts/`, `src/reranker/` y `src/utils/` (módulos determinísticos) excluyendo utilidades dependientes de IO (`logger`, `metrics`, `datetime_utils`). Cambiar otros paquetes sin cobertura provocará un fallo por datos faltantes.
+
+| Variable/config | Tipo | Default | Requerido | Descripción |
+| --- | --- | --- | --- | --- |
+| `COVERAGE_XML` | ruta | `reports/coverage/coverage.xml` | Opcional | Reporte de Cobertura (formato Cobertura XML) que se valida. |
+| `BASELINE_FILE` | ruta | `.coverage-baseline` | Opcional | Archivo JSON con el baseline previo (línea y branch). |
+| `BASE_REF` | ref git | `origin/main` | Opcional | Rama/commit contra el cual se detectan archivos modificados. |
+
+Para actualizar el baseline tras mejorar cobertura:
+
+```bash
+pytest --cov=src --cov-report=xml:reports/coverage/coverage.xml
+bash scripts/coverage_ratcheter.sh record
+```
+
+### Property & mutation testing
+- Estrategias Hypothesis para normalizadores viven en `tests/property/test_normalization_properties.py`.
+- Ejecutar mutaciones focalizadas (sin sobreescribir `addopts` de cobertura):
+
+```bash
+PYTEST_ADDOPTS="--override-ini addopts='-p no:cov'" mutmut run
+mutmut results --json
+```
+
+- `tests/mutation_smoke/` contiene fixtures mínimos que fallan explícitamente cuando `mutmut` ejecuta el _forced fail_.
+- Mutaciones actuales cubren `src/utils/text_cleaner.py` y `src/utils/url_canonicalizer.py`; añadir módulos “hot” implica sumarlos a `tool.mutmut.paths_to_mutate`.
 
 ## CI/CD
 Workflows en `.github/workflows/`:

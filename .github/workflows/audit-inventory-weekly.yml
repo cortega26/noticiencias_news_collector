@@ -1,0 +1,126 @@
+name: audit inventory weekly
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: audit-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    name: inventory drift audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Generate inventory snapshot
+        run: |
+          python scripts/generate_inventory.py \
+            --output reports/audit/00_inventory.generated.json \
+            --sample-size 10 \
+            --compare-to audit/00_inventory.json \
+            --diff-output reports/audit/00_inventory.diff \
+            --summary-output reports/audit/00_inventory.summary.json
+
+      - name: Capture drift metrics
+        id: summary
+        run: |
+          python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+summary_path = Path('reports/audit/00_inventory.summary.json')
+summary = {"drift_count": 0, "changed_paths": []}
+if summary_path.exists():
+    summary = json.loads(summary_path.read_text(encoding='utf-8'))
+output_path = Path(os.environ['GITHUB_OUTPUT'])
+output_path.write_text(
+    f"drift_count={summary['drift_count']}\nchanged_paths={'|'.join(summary['changed_paths'])}\n",
+    encoding='utf-8',
+)
+PY
+
+      - name: Upload inventory artifacts
+        if: steps.summary.outputs.drift_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-inventory-drift
+          path: |
+            reports/audit/00_inventory.generated.json
+            reports/audit/00_inventory.diff
+            reports/audit/00_inventory.summary.json
+
+      - name: Open drift issue
+        if: steps.summary.outputs.drift_count != '0'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync('reports/audit/00_inventory.summary.json', 'utf8'));
+            let diff = '';
+            try {
+              diff = fs.readFileSync('reports/audit/00_inventory.diff', 'utf8');
+            } catch (error) {
+              diff = '';
+            }
+            const title = 'Inventory drift detected';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "${title}"`;
+            const search = await github.rest.search.issuesAndPullRequests({ q: query });
+            const bodyLines = [];
+            bodyLines.push('### Drift summary');
+            bodyLines.push(`- Drift count: ${summary.drift_count}`);
+            if (summary.changed_paths && summary.changed_paths.length > 0) {
+              bodyLines.push('- Changed paths:');
+              for (const path of summary.changed_paths) {
+                bodyLines.push(`  - \`${path}\``);
+              }
+            } else {
+              bodyLines.push('- Changed paths: _(not detected)_');
+            }
+            if (diff.trim()) {
+              const diffLines = diff.split('\n');
+              const previewLines = diffLines.slice(0, 200);
+              bodyLines.push('\n<details><summary>Diff preview</summary>');
+              bodyLines.push('');
+              bodyLines.push('```diff');
+              bodyLines.push(previewLines.join('\n'));
+              bodyLines.push('```');
+              if (diffLines.length > 200) {
+                bodyLines.push('\n_Diff truncated; download the attached artifact for the complete snapshot._');
+              }
+              bodyLines.push('</details>');
+            }
+            bodyLines.push('\nArtifacts: see the `audit-inventory-drift` attachment on this run.');
+            const body = bodyLines.join('\n');
+            if (search.data.total_count > 0) {
+              const issue = search.data.items[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }

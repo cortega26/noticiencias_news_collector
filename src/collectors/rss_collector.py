@@ -13,6 +13,7 @@ manejar errores graciosamente, y siempre dejar los servidores mejor de como los
 encontramos (o al menos no peor).
 """
 
+import hashlib
 import random
 import time
 import urllib.robotparser as robotparser
@@ -391,6 +392,7 @@ class RSSCollector(BaseCollector):
             cached_headers: Dict[str, Optional[str]] = {
                 "etag": None,
                 "last_modified": None,
+                "content_hash": None,
             }
             try:
                 cached_headers = self.db_manager.get_source_feed_metadata(source_id)
@@ -440,6 +442,7 @@ class RSSCollector(BaseCollector):
                                     source_id,
                                     etag=response.headers.get("ETag"),
                                     last_modified=response.headers.get("Last-Modified"),
+                                    content_hash=cached_headers.get("content_hash"),
                                 )
                             except Exception as update_error:
                                 self._emit_log(
@@ -478,6 +481,43 @@ class RSSCollector(BaseCollector):
                         )
                         return (None, response.status_code)
 
+                    response_text = response.text
+                    content_hash = hashlib.sha256(response.content).hexdigest()
+
+                    if cached_headers.get("content_hash") == content_hash:
+                        try:
+                            self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                etag=response.headers.get("ETag"),
+                                last_modified=response.headers.get("Last-Modified"),
+                                content_hash=content_hash,
+                            )
+                        except Exception as update_error:
+                            self._emit_log(
+                                "warning",
+                                "collector.feed.metadata_update_failed",
+                                source_id=source_id,
+                                details={
+                                    "error": str(update_error),
+                                    "status_code": response.status_code,
+                                },
+                            )
+                        self._emit_log(
+                            "debug",
+                            "collector.feed.content_unchanged",
+                            source_id=source_id,
+                            latency=(
+                                response.elapsed.total_seconds()
+                                if hasattr(response, "elapsed") and response.elapsed
+                                else 0.0
+                            ),
+                            details={
+                                "reason": "hash-match",
+                                "etag": response.headers.get("ETag"),
+                            },
+                        )
+                        return (None, 304)
+
                     if response.headers.get("ETag") or response.headers.get(
                         "Last-Modified"
                     ):
@@ -486,6 +526,23 @@ class RSSCollector(BaseCollector):
                                 source_id,
                                 etag=response.headers.get("ETag"),
                                 last_modified=response.headers.get("Last-Modified"),
+                                content_hash=content_hash,
+                            )
+                        except Exception as update_error:
+                            self._emit_log(
+                                "warning",
+                                "collector.feed.metadata_update_failed",
+                                source_id=source_id,
+                                details={
+                                    "error": str(update_error),
+                                    "status_code": response.status_code,
+                                },
+                            )
+                    else:
+                        try:
+                            self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                content_hash=content_hash,
                             )
                         except Exception as update_error:
                             self._emit_log(
@@ -498,7 +555,7 @@ class RSSCollector(BaseCollector):
                                 },
                             )
 
-                    return (response.text, response.status_code)
+                    return (response_text, response.status_code)
                 except (
                     requests.exceptions.Timeout,
                     requests.exceptions.ConnectionError,

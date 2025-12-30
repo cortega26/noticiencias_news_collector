@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.settings import RATE_LIMITING_CONFIG
+
 from src.collectors.async_rss_collector import AsyncRSSCollector
 
 
@@ -24,7 +25,10 @@ class MockDB:
         self.metadata: Dict[str, Dict[str, Any]] = {}
 
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Any]:
-        return self.metadata.get(source_id, {"etag": None, "last_modified": None})
+        return self.metadata.get(
+            source_id,
+            {"etag": None, "last_modified": None, "content_hash": None},
+        )
 
     def update_source_feed_metadata(
         self,
@@ -32,14 +36,17 @@ class MockDB:
         *,
         etag: str | None = None,
         last_modified: str | None = None,
+        content_hash: str | None = None,
     ) -> None:
         entry = self.metadata.setdefault(
-            source_id, {"etag": None, "last_modified": None}
+            source_id, {"etag": None, "last_modified": None, "content_hash": None}
         )
         if etag is not None:
             entry["etag"] = etag
         if last_modified is not None:
             entry["last_modified"] = last_modified
+        if content_hash is not None:
+            entry["content_hash"] = content_hash
 
     def update_source_stats(
         self, source_id: str, stats: Dict[str, Any]
