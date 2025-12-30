@@ -96,17 +96,48 @@ ignore_errors = true
 minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = [".", "src"]
-addopts = "-ra"
+addopts = "-ra --cov=src/contracts --cov=src/reranker --cov=src/utils --cov-branch --cov-report=term-missing --cov-fail-under=80"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
     "security: security and compliance checks",
 ]
 
+[tool.coverage.run]
+branch = true
+source = ["src/contracts", "src/reranker", "src/utils"]
+omit = [
+    "src/utils/logger.py",
+    "src/utils/metrics.py",
+    "src/utils/datetime_utils.py",
+]
+
+[tool.coverage.report]
+precision = 2
+skip_covered = false
+show_missing = true
+
 [tool.mutmut]
-paths_to_mutate = ["src"]
-tests_dir = "tests"
-runner = "python -m pytest tests/mutation_smoke"
+paths_to_mutate = [
+    "src/utils/text_cleaner.py",
+    "src/utils/url_canonicalizer.py",
+]
+tests_dir = [
+    "tests/mutation_smoke",
+    "tests/property",
+    "tests/test_text_cleaner.py",
+    "tests/test_url_canonicalizer.py",
+]
+also_copy = [
+    "config",
+    "noticiencias",
+    "src",
+    "tests",
+    "run_collector.py",
+    "VERSION",
+]
+python_paths = ["src"]
+runner = "python -m pytest"
 backup = false
 
 [tool.ruff.lint.per-file-ignores]

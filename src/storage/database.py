@@ -801,10 +801,14 @@ class DatabaseManager:
         with self.get_session() as session:
             source = session.query(Source).filter_by(id=source_id).first()
             if not source:
-                return {"etag": None, "last_modified": None}
+                return {"etag": None, "last_modified": None, "content_hash": None}
+            content_hash: Optional[str] = None
+            if source.custom_config:
+                content_hash = source.custom_config.get("content_hash")
             return {
                 "etag": source.feed_etag,
                 "last_modified": source.feed_last_modified,
+                "content_hash": content_hash,
             }
 
     def update_source_feed_metadata(
@@ -813,10 +817,11 @@ class DatabaseManager:
         *,
         etag: Optional[str] = None,
         last_modified: Optional[str] = None,
+        content_hash: Optional[str] = None,
     ) -> None:
         """Actualiza los encabezados HTTP cacheados después de un fetch."""
 
-        if etag is None and last_modified is None:
+        if etag is None and last_modified is None and content_hash is None:
             return
 
         with self.get_session() as session:
@@ -827,6 +832,10 @@ class DatabaseManager:
                 source.feed_etag = etag
             if last_modified is not None:
                 source.feed_last_modified = last_modified
+            if content_hash is not None:
+                custom_config = dict(source.custom_config or {})
+                custom_config["content_hash"] = content_hash
+                source.custom_config = custom_config
 
     def update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
         """

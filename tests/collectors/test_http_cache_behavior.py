@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 from types import MethodType
 from typing import Type
 
@@ -22,6 +23,13 @@ class _BaseResponse:
 class _Response200(_BaseResponse):
     status_code = 200
     headers = {"ETag": 'W/"new"', "Last-Modified": "Wed, 12 Mar 2025 12:00:00 GMT"}
+    text = "<rss></rss>"
+    content = b"<rss></rss>"
+
+
+class _Response200Same(_BaseResponse):
+    status_code = 200
+    headers = {"ETag": 'W/"same"', "Last-Modified": "Wed, 12 Mar 2025 12:05:00 GMT"}
     text = "<rss></rss>"
     content = b"<rss></rss>"
 
@@ -96,6 +104,30 @@ def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) ->
     assert store.metadata["source-1"]["etag"] == 'W/"new"'
 
 
+def test_fetch_feed_skips_when_content_hash_matches() -> None:
+    collector = RSSCollector()
+    store = MemoryFeedStore()
+    collector.db_manager = store
+    content_hash = hashlib.sha256(_Response200Same.content).hexdigest()
+    store.update_source_feed_metadata(
+        "source-1",
+        etag='W/"cached"',
+        last_modified="Wed, 12 Mar 2025 11:55:00 GMT",
+        content_hash=content_hash,
+    )
+
+    def fake_get(url: str, timeout: float, headers: dict[str, str] | None = None):
+        return _Response200Same()
+
+    collector.session.get = fake_get  # type: ignore[assignment]
+
+    content, status = collector._fetch_feed("source-1", "https://example.com/feed")
+
+    assert content is None
+    assert status == 304
+    assert store.metadata["source-1"]["content_hash"] == content_hash
+
+
 def test_async_fetch_uses_conditional_headers() -> None:
     collector = AsyncRSSCollector()
     store = MemoryFeedStore()
@@ -125,6 +157,36 @@ def test_async_fetch_uses_conditional_headers() -> None:
     assert headers["If-Modified-Since"] == "Wed, 12 Mar 2025 11:00:00 GMT"
     assert status == 200
     assert store.metadata["source-1"]["etag"] == 'W/"new"'
+
+
+def test_async_fetch_skips_when_content_hash_matches() -> None:
+    collector = AsyncRSSCollector()
+    store = MemoryFeedStore()
+    collector.db_manager = store
+    content_hash = hashlib.sha256(_Response200Same.content).hexdigest()
+    store.update_source_feed_metadata(
+        "source-1",
+        etag='W/"cached"',
+        last_modified="Wed, 12 Mar 2025 11:55:00 GMT",
+        content_hash=content_hash,
+    )
+
+    class MockClient:
+        async def get(
+            self, url: str, timeout: float, headers: dict[str, str] | None = None
+        ):
+            return _Response200Same()
+
+    async def _run():
+        return await collector._fetch_feed_async(
+            MockClient(), "source-1", "https://example.com/feed"
+        )
+
+    content, status = asyncio.run(_run())
+
+    assert content is None
+    assert status == 304
+    assert store.metadata["source-1"]["content_hash"] == content_hash
 
 
 def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
