@@ -8,4 +8,3 @@
 | B1 | `behavior`, `config`, `breaking-change:minor` |
 | P1 | `performance`, `metrics`, `area:collectors` |
 | DX1 | `dx`, `typing`, `quality` |
-
