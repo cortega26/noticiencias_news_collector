@@ -656,6 +656,7 @@ class RSSCollector(BaseCollector):
                         entry, parsed_feed
                     ),
                     "original_url": original_url,
+                    "image_url": self._extract_image_url(entry),
                 }
 
                 # Validar que tengamos información mínima necesaria
@@ -802,6 +803,40 @@ class RSSCollector(BaseCollector):
 
         return list(set(authors))  # Remover duplicados
 
+    def _extract_image_url(self, entry) -> Optional[str]:
+        """
+        Extrae la URL de la imagen principal del artículo.
+        Busca en media_content, enclosures, links y thumbnails.
+        """
+        # 1. Media Content (common in RSS)
+        if hasattr(entry, "media_content"):
+            for media in entry.media_content:
+                if media.get("medium") == "image" and media.get("url"):
+                    return media["url"]
+
+        # 2. Enclosures
+        if hasattr(entry, "enclosures"):
+            for enclosure in entry.enclosures:
+                if enclosure.get("type", "").startswith("image/") and enclosure.get("href"):
+                    return enclosure["href"]
+
+        # 3. Media Thumbnail
+        if hasattr(entry, "media_thumbnail"):
+            # media_thumbnail might be a list
+            thumbnails = entry.media_thumbnail
+            if isinstance(thumbnails, list) and thumbnails:
+                return thumbnails[0].get("url")
+            elif isinstance(thumbnails, dict):
+                 return thumbnails.get("url")
+
+        # 4. Links with image type
+        if hasattr(entry, "links"):
+            for link in entry.links:
+                 if link.get("type", "").startswith("image/") and link.get("href"):
+                     return link["href"]
+        
+        return None
+
     def _extract_source_metadata(self, entry, parsed_feed) -> Dict[str, Any]:
         """
         Extrae metadatos específicos de la fuente.
@@ -914,6 +949,7 @@ class RSSCollector(BaseCollector):
                     "credibility_score": source_config["credibility_score"],
                     "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                     "original_url": raw_article.get("original_url", raw_article["url"]),
+                    "image_url": raw_article.get("image_url"),
                 },
             }
 

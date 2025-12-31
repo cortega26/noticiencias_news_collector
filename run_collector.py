@@ -387,6 +387,13 @@ Ejemplos de uso:
         help="Umbral máximo de minutos de lag en la última ingesta",
     )
 
+    parser.add_argument(
+        "--export-json",
+        nargs="?",
+        const="data/exports/latest_articles.json",
+        help="Export top articles to JSON file (default: data/exports/latest_articles.json)",
+    )
+
     args = parser.parse_args()
 
     if args.healthcheck:
@@ -421,6 +428,50 @@ Ejemplos de uso:
 
     # Ejecutar recolección
     success = run_simple_collection(args)
+
+    # Exportar a JSON si se solicitó y la recolección fue exitosa (o si es dry_run)
+    if success and args.export_json:
+        try:
+            print(f"\n📦 Exportando artículos a: {args.export_json}")
+            system = create_system()
+            if system.initialize():
+                # Asegurar que el directorio existe
+                export_path = Path(args.export_json)
+                export_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Obtener artículos
+                articles = system.db_manager.get_articles_by_score(limit=50)
+                
+                # Serializar
+                import json
+                
+                serialized_articles = []
+                for art in articles:
+                    art_dict = {
+                        "id": art.id,
+                        "title": art.title,
+                        "url": art.url,
+                        "summary": art.summary,
+                        "content": art.content,
+                        "source_name": art.source_name,
+                        "published_date": art.published_date.isoformat() if art.published_date else None,
+                        "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                        "score": art.final_score,
+                        "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                        "metadata": art.article_metadata,
+                        "authors": art.authors,
+                        "category": art.category
+                    }
+                    serialized_articles.append(art_dict)
+                
+                with open(export_path, 'w', encoding='utf-8') as f:
+                    json.dump(serialized_articles, f, indent=2, ensure_ascii=False)
+                    
+                print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
+            else:
+                 print("❌ Error inicializando sistema para exportación")
+        except Exception as e:
+            print(f"❌ Error durante exportación: {e}")
 
     sys.exit(0 if success else 1)
 

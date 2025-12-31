@@ -39,7 +39,7 @@ jobs:
       run: |
         # Run the collector script
         # Assuming run_collector.py handles the logic
-        python run_collector.py --headless
+        python run_collector.py --headless --export-json data/exports/latest_articles.json
       env:
         # Pass secrets if your scraper needs keys (add these to Repo Secrets later)
         LOG_LEVEL: INFO
@@ -50,7 +50,7 @@ jobs:
         git config --global user.email "bot@noticiencias.com"
         
         # Check for changes in data/ folder
-        git add data/
+        git add data/ data/exports/latest_articles.json
         
         # Only commit if there are changes
         if git diff --staged --quiet; then
