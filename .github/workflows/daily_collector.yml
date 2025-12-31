@@ -1,0 +1,60 @@
+name: Daily News Collection
+
+on:
+  schedule:
+    # Run at 06:00 UTC every day
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual triggering from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  collect-and-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install requirements. Linux usually handles binary wheels better than Windows
+        pip install -r requirements.txt
+        # Explicitly install textblob corpora if needed, though often implicit
+        python -m textblob.download_corpora
+
+    - name: Run News Collector
+      run: |
+        # Run the collector script
+        # Assuming run_collector.py handles the logic
+        python run_collector.py --headless
+      env:
+        # Pass secrets if your scraper needs keys (add these to Repo Secrets later)
+        LOG_LEVEL: INFO
+
+    - name: Commit and Push Data
+      run: |
+        git config --global user.name "Noticiencias Bot"
+        git config --global user.email "bot@noticiencias.com"
+        
+        # Check for changes in data/ folder
+        git add data/
+        
+        # Only commit if there are changes
+        if git diff --staged --quiet; then
+          echo "No changes to commit."
+        else
+          git commit -m "🤖 Data update: $(date -u +'%Y-%m-%d')"
+          git push
+        fi
