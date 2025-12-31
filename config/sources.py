@@ -122,6 +122,28 @@ SCIENCE_MEDIA = {
         "description": "Agregador de noticias científicas de universidades",
         "typical_delay": 0,
     },
+    "eurekalert": {
+        "name": "EurekAlert!",
+        "url": "https://www.eurekalert.org/rss.xml", 
+        "credibility_score": 0.90,
+        "update_frequency": "daily",
+        "category": "multidisciplinary",
+        "language": "en",
+        "impact_factor": None,
+        "description": "Global source for science news (AAAS)",
+        "typical_delay": 0,
+    },
+    "sciencedaily_top": {
+        "name": "ScienceDaily",
+        "url": "https://www.sciencedaily.com/rss/top/science.xml",
+        "credibility_score": 0.85,
+        "update_frequency": "daily",
+        "category": "popular_science",
+        "language": "en",
+        "impact_factor": None,
+        "description": "Latest research news",
+        "typical_delay": 0,
+    },
 }
 
 # Fuentes Institucionales

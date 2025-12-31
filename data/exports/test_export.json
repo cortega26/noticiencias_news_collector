@@ -1,0 +1,2602 @@
+[
+  {
+    "id": 172,
+    "title": "Discovery Alert: ‘Baby’ Planet Photographed in a Ring around a Star for the First Time!",
+    "url": "https://science.nasa.gov/universe/exoplanets/discovery-alert-baby-planet-photographed-in-a-ring-around-a-star-for-the-first-time/",
+    "summary": "The (Proto) Planet: WISPIT 2b The Discovery: Researchers have discovered a young protoplanet called WISPIT 2b embedded in a ring-shaped gap in a disk encircling a young star. While theorists have thought that planets likely exist in these gaps (and possibly even create them), this is the first time that it has actually been observed. [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T21:51:03",
+    "collected_date": "2025-09-30T19:20:47.207231",
+    "score": 0.85675,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Exoplanet Discoveries",
+          "Exoplanets",
+          "Gas Giant Exoplanets"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://science.nasa.gov/universe/exoplanets/discovery-alert-baby-planet-photographed-in-a-ring-around-a-star-for-the-first-time/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://science.nasa.gov/universe/exoplanets/discovery-alert-baby-planet-photographed-in-a-ring-around-a-star-for-the-first-time/"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T19:20:47.201232+00:00",
+      "original_url": "https://science.nasa.gov/universe/exoplanets/discovery-alert-baby-planet-photographed-in-a-ring-around-a-star-for-the-first-time/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Discovery Alert: ‘Baby’ Planet Photographed in a Ring around a Star for the First Time!",
+        "normalized_summary": "The (Proto) Planet: WISPIT 2b The Discovery: Researchers have discovered a young protoplanet called WISPIT 2b embedded in a ring-shaped gap in a disk encircling a young star. While theorists have thought that planets likely exist in these gaps (and possibly even create them), this is the first time that it has actually been observed. [...]",
+        "entities": [
+          "The Proto Planet WISPIT",
+          "The Discovery Researchers",
+          "WISPIT",
+          "While"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Discovery Alert: ‘Baby’ Planet Photographed in a Ring around a Star for the First Time!",
+      "normalized_summary": "The (Proto) Planet: WISPIT 2b The Discovery: Researchers have discovered a young protoplanet called WISPIT 2b embedded in a ring-shaped gap in a disk encircling a young star. While theorists have thought that planets likely exist in these gaps (and possibly even create them), this is the first time that it has actually been observed. [...]"
+    },
+    "authors": [],
+    "category": "space"
+  },
+  {
+    "id": 169,
+    "title": "NASA signs US-Australia Agreement on Aeronautics, Space Cooperation",
+    "url": "https://nasa.gov/missions/artemis/nasa-signs-us-australia-agreement-on-aeronautics-space-cooperation/",
+    "summary": "At the International Astronautical Congress (IAC) taking place in Sydney this week, representatives from the United States and Australia gathered to sign a framework agreement that strengthens collaboration in aeronautics and space exploration between the two nations. Acting NASA Administrator Sean Duffy and Australian Space Agency Head Enrico Palermo signed the agreement Tuesday on behalf [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T22:53:32",
+    "collected_date": "2025-09-30T19:20:47.170227",
+    "score": 0.8403333333333334,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Artemis",
+          "Artemis Accords",
+          "Commercial Lunar Payload Services (CLPS)",
+          "Office of International and Interagency Relations (OIIR)"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://www.nasa.gov/missions/artemis/nasa-signs-us-australia-agreement-on-aeronautics-space-cooperation/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://www.nasa.gov/?p=921174"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T19:20:47.163235+00:00",
+      "original_url": "https://www.nasa.gov/missions/artemis/nasa-signs-us-australia-agreement-on-aeronautics-space-cooperation/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "NASA signs US-Australia Agreement on Aeronautics, Space Cooperation",
+        "normalized_summary": "At the International Astronautical Congress (IAC) taking place in Sydney this week, representatives from the United States and Australia gathered to sign a framework agreement that strengthens collaboration in aeronautics and space exploration between the two nations. Acting NASA Administrator Sean Duffy and Australian Space Agency Head Enrico Palermo signed the agreement Tuesday on behalf [...]",
+        "entities": [
+          "At the International Astronautical Congress IAC",
+          "Sydney",
+          "United States",
+          "Australia",
+          "Acting NASA Administrator Sean Duffy",
+          "Australian Space Agency Head Enrico Palermo",
+          "Tuesday"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "NASA signs US-Australia Agreement on Aeronautics, Space Cooperation",
+      "normalized_summary": "At the International Astronautical Congress (IAC) taking place in Sydney this week, representatives from the United States and Australia gathered to sign a framework agreement that strengthens collaboration in aeronautics and space exploration between the two nations. Acting NASA Administrator Sean Duffy and Australian Space Agency Head Enrico Palermo signed the agreement Tuesday on behalf [...]"
+    },
+    "authors": [
+      "Lauren E. Low"
+    ],
+    "category": "space"
+  },
+  {
+    "id": 127,
+    "title": "International Space Station: Launching NASA and Humanity into Deep Space",
+    "url": "https://nasa.gov/missions/station/iss-research/international-space-station-launching-nasa-and-humanity-into-deep-space/",
+    "summary": "Curiosity and the desire to explore are traits deeply rooted in human nature. Space exploration is no exception; it reflects humanity’s timeless drive to seek new horizons, challenge our limits, and understand our universe. The advancements of modern civilization—from the electricity that powers our homes to basic hygienic breakthroughs that ensure our health— happened thanks [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T19:00:00",
+    "collected_date": "2025-09-30T17:18:20.401747",
+    "score": 0.8398583823496126,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "ISS Research",
+          "Artemis",
+          "International Space Station (ISS)"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://www.nasa.gov/missions/station/iss-research/international-space-station-launching-nasa-and-humanity-into-deep-space/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://www.nasa.gov/?p=919829"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T17:18:20.395743+00:00",
+      "original_url": "https://www.nasa.gov/missions/station/iss-research/international-space-station-launching-nasa-and-humanity-into-deep-space/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "International Space Station: Launching NASA and Humanity into Deep Space",
+        "normalized_summary": "Curiosity and the desire to explore are traits deeply rooted in human nature. Space exploration is no exception; it reflects humanity’s timeless drive to seek new horizons, challenge our limits, and understand our universe. The advancements of modern civilization—from the electricity that powers our homes to basic hygienic breakthroughs that ensure our health— happened thanks [...]",
+        "entities": [
+          "Curiosity",
+          "Space",
+          "The"
+        ],
+        "topics": [
+          "space",
+          "health"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "International Space Station: Launching NASA and Humanity into Deep Space",
+      "normalized_summary": "Curiosity and the desire to explore are traits deeply rooted in human nature. Space exploration is no exception; it reflects humanity’s timeless drive to seek new horizons, challenge our limits, and understand our universe. The advancements of modern civilization—from the electricity that powers our homes to basic hygienic breakthroughs that ensure our health— happened thanks [...]"
+    },
+    "authors": [
+      "Christine Giraldo"
+    ],
+    "category": "space"
+  },
+  {
+    "id": 126,
+    "title": "OSDR and PSI Unveil New Consolidated Website",
+    "url": "https://science.nasa.gov/science-research/biological-physical-sciences/osdr-and-psi-unveil-new-consolidated-website/",
+    "summary": "The Open Science Data Repository (OSDR) and Physical Sciences Informatics (PSI) has a new home. As part of NASA’s website consolidation initiative, the OSDR and PSI site have officially transitioned to the Biological and Physical Sciences (BPS) Data page, accessible through the “Data” menu on the Science Mission Directorate’s (SMD) website at science.nasa.gov. This strategic [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T19:01:56",
+    "collected_date": "2025-09-30T17:18:20.390894",
+    "score": 0.8365790625298719,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Biological & Physical Sciences",
+          "Uncategorized"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://science.nasa.gov/science-research/biological-physical-sciences/osdr-and-psi-unveil-new-consolidated-website/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://science.nasa.gov/uncategorized/osdr-and-psi-unveil-new-consolidated-website/"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T17:18:20.383896+00:00",
+      "original_url": "https://science.nasa.gov/science-research/biological-physical-sciences/osdr-and-psi-unveil-new-consolidated-website/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "OSDR and PSI Unveil New Consolidated Website",
+        "normalized_summary": "The Open Science Data Repository (OSDR) and Physical Sciences Informatics (PSI) has a new home. As part of NASA’s website consolidation initiative, the OSDR and PSI site have officially transitioned to the Biological and Physical Sciences (BPS) Data page, accessible through the “Data” menu on the Science Mission Directorate’s (SMD) website at science.nasa.gov. This strategic [...]",
+        "entities": [
+          "The Open Science Data Repository OSDR",
+          "Physical Sciences Informatics PSI",
+          "NASA",
+          "OSDR",
+          "PSI",
+          "Biological",
+          "Physical Sciences BPS Data",
+          "Data",
+          "Science Mission Directorate",
+          "SMD"
+        ],
+        "topics": [
+          "space",
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "OSDR and PSI Unveil New Consolidated Website",
+      "normalized_summary": "The Open Science Data Repository (OSDR) and Physical Sciences Informatics (PSI) has a new home. As part of NASA’s website consolidation initiative, the OSDR and PSI site have officially transitioned to the Biological and Physical Sciences (BPS) Data page, accessible through the “Data” menu on the Science Mission Directorate’s (SMD) website at science.nasa.gov. This strategic [...]"
+    },
+    "authors": [],
+    "category": "space"
+  },
+  {
+    "id": 181,
+    "title": "Identifying factors affecting word processing during second-language English reading at different stages",
+    "url": "https://phys.org/news/2025-09-factors-affecting-word-language-english.html",
+    "summary": "When reading a passage, readers may pause at a particular word or return to reread it. Studies using eye-tracking, which record eye movements during reading, have suggested that word length, frequency, and predictability from context are the three primary factors influencing word processing during English reading. While these factors are known to affect non-native English readers as well, it has remained unclear which is the most decisive.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T23:25:02",
+    "collected_date": "2025-09-30T19:32:15.165573",
+    "score": 0.8256666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Education"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-factors-affecting-word-language-english.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678464701"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:32:15.154574+00:00",
+      "original_url": "https://phys.org/news/2025-09-factors-affecting-word-language-english.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Identifying factors affecting word processing during second-language English reading at different stages",
+        "normalized_summary": "When reading a passage, readers may pause at a particular word or return to reread it. Studies using eye-tracking, which record eye movements during reading, have suggested that word length, frequency, and predictability from context are the three primary factors influencing word processing during English reading. While these factors are known to affect non-native English readers as well, it has remained unclear which is the most decisive.",
+        "entities": [
+          "When",
+          "Studies",
+          "English",
+          "While"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Identifying factors affecting word processing during second-language English reading at different stages",
+      "normalized_summary": "When reading a passage, readers may pause at a particular word or return to reread it. Studies using eye-tracking, which record eye movements during reading, have suggested that word length, frequency, and predictability from context are the three primary factors influencing word processing during English reading. While these factors are known to affect non-native English readers as well, it has remained unclear which is the most decisive."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 171,
+    "title": "Widely Attended Gatherings (WAGs) Determinations",
+    "url": "https://nasa.gov/organizations/nasa-ethics-advice-for-widely-attended-gatherings-wags/",
+    "summary": "2025 Space Policy Institute 10.21.2025 MSBR Space Business Roundtable 10.15.2025 76th International Astronautical Congress_IAC 9-29-25 2025 Von Braun Memorial Dinner 10.29.25 Space Foundation Reception 9.16.25 Evening with the Stars 9.10.25 MSBR Rooftop Reception 9.8.25 AIAA Dinner 8.18.25 STScI Event 7.29.25 MSBR Lunch 7.16.25 Rocket Lab Event 7.16.25 MSBR Lunch Reception 6.18.25 2025 Paris Airshow 6.13-19.25 [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T21:57:19",
+    "collected_date": "2025-09-30T19:20:47.196319",
+    "score": 0.825,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Organizations",
+          "Office of the General Counsel (OGC)"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://www.nasa.gov/organizations/nasa-ethics-advice-for-widely-attended-gatherings-wags/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://www.nasa.gov/?migration=converted-node-367636"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T19:20:47.189320+00:00",
+      "original_url": "https://www.nasa.gov/organizations/nasa-ethics-advice-for-widely-attended-gatherings-wags/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Widely Attended Gatherings (WAGs) Determinations",
+        "normalized_summary": "2025 Space Policy Institute 10.21.2025 MSBR Space Business Roundtable 10.15.2025 76th International Astronautical Congress_IAC 9-29-25 2025 Von Braun Memorial Dinner 10.29.25 Space Foundation Reception 9.16.25 Evening with the Stars 9.10.25 MSBR Rooftop Reception 9.8.25 AIAA Dinner 8.18.25 STScI Event 7.29.25 MSBR Lunch 7.16.25 Rocket Lab Event 7.16.25 MSBR Lunch Reception 6.18.25 2025 Paris Airshow 6.13-19.25 [...]",
+        "entities": [
+          "Space Policy Institute",
+          "MSBR Space Business Roundtable",
+          "International Astronautical Congress_IAC",
+          "Von Braun Memorial Dinner",
+          "Space Foundation Reception",
+          "Evening",
+          "Stars",
+          "MSBR Rooftop Reception",
+          "AIAA Dinner",
+          "STScI Event"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Widely Attended Gatherings (WAGs) Determinations",
+      "normalized_summary": "2025 Space Policy Institute 10.21.2025 MSBR Space Business Roundtable 10.15.2025 76th International Astronautical Congress_IAC 9-29-25 2025 Von Braun Memorial Dinner 10.29.25 Space Foundation Reception 9.16.25 Evening with the Stars 9.10.25 MSBR Rooftop Reception 9.8.25 AIAA Dinner 8.18.25 STScI Event 7.29.25 MSBR Lunch 7.16.25 Rocket Lab Event 7.16.25 MSBR Lunch Reception 6.18.25 2025 Paris Airshow 6.13-19.25 [...]"
+    },
+    "authors": [
+      "NASA"
+    ],
+    "category": "space"
+  },
+  {
+    "id": 286,
+    "title": "Fungi may have set the stage for life on land hundreds of millions of years earlier than thought",
+    "url": "https://phys.org/news/2025-09-fungi-stage-life-hundreds-millions.html",
+    "summary": "New research published in Nature Ecology & Evolution sheds light on the timelines and pathways of evolution of fungi, finding evidence of their influence on ancient terrestrial ecosystems. The study, led by researchers from the Okinawa Institute of Science and Technology (OIST) and collaborators, indicates the diversification of fungi hundreds of millions of years before the emergence of land plants.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T13:00:12",
+    "collected_date": "2025-10-01T13:26:11.644955",
+    "score": 0.8248419805921073,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Evolution Ecology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-fungi-stage-life-hundreds-millions.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678384661"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.637189+00:00",
+      "original_url": "https://phys.org/news/2025-09-fungi-stage-life-hundreds-millions.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Fungi may have set the stage for life on land hundreds of millions of years earlier than thought",
+        "normalized_summary": "New research published in Nature Ecology & Evolution sheds light on the timelines and pathways of evolution of fungi, finding evidence of their influence on ancient terrestrial ecosystems. The study, led by researchers from the Okinawa Institute of Science and Technology (OIST) and collaborators, indicates the diversification of fungi hundreds of millions of years before the emergence of land plants.",
+        "entities": [
+          "New",
+          "Nature Ecology Evolution",
+          "The",
+          "Okinawa Institute of Science",
+          "Technology OIST"
+        ],
+        "topics": [
+          "science",
+          "technology"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Fungi may have set the stage for life on land hundreds of millions of years earlier than thought",
+      "normalized_summary": "New research published in Nature Ecology & Evolution sheds light on the timelines and pathways of evolution of fungi, finding evidence of their influence on ancient terrestrial ecosystems. The study, led by researchers from the Okinawa Institute of Science and Technology (OIST) and collaborators, indicates the diversification of fungi hundreds of millions of years before the emergence of land plants."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 158,
+    "title": "Learning nature's language: Video analysis of tree sway offers non-invasive method to monitor forest health",
+    "url": "https://phys.org/news/2025-09-nature-language-video-analysis-tree.html",
+    "summary": "Many people look at trees to relax, taking in the soothing fractal patterns to adjust their eyes from too many hours spent at a computer. Dominick \"Dom\" Ciruzzi, assistant professor of geology at William & Mary, takes tree watching to a whole new level. An ecohydrologist, Ciruzzi is fascinated by how ecosystems and water interact, and he's taken a special interest in arboreal life.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T22:22:04",
+    "collected_date": "2025-09-30T19:20:43.019615",
+    "score": 0.8241666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Ecology Molecular & Computational biology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-nature-language-video-analysis-tree.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678460921"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:43.013615+00:00",
+      "original_url": "https://phys.org/news/2025-09-nature-language-video-analysis-tree.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Learning nature's language: Video analysis of tree sway offers non-invasive method to monitor forest health",
+        "normalized_summary": "Many people look at trees to relax, taking in the soothing fractal patterns to adjust their eyes from too many hours spent at a computer. Dominick \"Dom\" Ciruzzi, assistant professor of geology at William & Mary, takes tree watching to a whole new level. An ecohydrologist, Ciruzzi is fascinated by how ecosystems and water interact, and he's taken a special interest in arboreal life.",
+        "entities": [
+          "Many",
+          "Dominick Dom Ciruzzi",
+          "William Mary",
+          "Ciruzzi"
+        ],
+        "topics": [
+          "health"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Learning nature's language: Video analysis of tree sway offers non-invasive method to monitor forest health",
+      "normalized_summary": "Many people look at trees to relax, taking in the soothing fractal patterns to adjust their eyes from too many hours spent at a computer. Dominick \"Dom\" Ciruzzi, assistant professor of geology at William & Mary, takes tree watching to a whole new level. An ecohydrologist, Ciruzzi is fascinated by how ecosystems and water interact, and he's taken a special interest in arboreal life."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 170,
+    "title": "Headquarters and Center Chief Counsel Contacts",
+    "url": "https://nasa.gov/organizations/headquarters-and-center-chief-counsel-contacts/",
+    "summary": "Headquarters General Counsel Iris Lan Deputy General Counsel Bryan R. Diederich (Acting) Chief of Legal Operations Christine Pham (Acting) Associate General Counsel for Contracts and Procurement, Headquarters Karen Reilley (Acting) Associate General Counsel for Contracts and Acquisition Integrity Law Practice Group, Headquarters Karen Reilley (Acting) Associate General Counsel for General Law Practice Group, Headquarters Katie Spear Associate General Counsel for International and Space Law Practice Group, Headquarters Rebecca Bresnik Agency Counsel for Ethics, Headquarters Adam Greenstone Agency Counsel for the Acquisition Integrity Program, Headquarters Adam Supple (Acting) Agency Counsel for Intellectual Property, Headquarters Trenton Roche Centers Chief Counsel, Ames Research Center Christine Pham Chief Counsel, Armstrong Flight Research Center Brett Swanson Chief Counsel, Glenn Research Center James Jackson (Acting) Chief Counsel, Goddard Space Flight Center Dave Barrett Chief Counsel, Johnson Space Center Randall Suratt Chief Counsel, Kennedy Space Center Alex Vinson Chief Counsel, Langley Research Center Andrea Warmbier Chief Counsel, Marshall Space Flight Center Pam Bourque Chief Counsel, NASA Management Office at JPL James Mahoney Chief Counsel, NASA Shared Service Center Ron Bald Chief Counsel, NASA Stennis Space Center Ron Bald Return to OGC Homepage",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T22:07:41",
+    "collected_date": "2025-09-30T19:20:47.184319",
+    "score": 0.8233333333333334,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Organizations",
+          "Office of the General Counsel (OGC)"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://www.nasa.gov/organizations/headquarters-and-center-chief-counsel-contacts/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://www.nasa.gov/?migration=converted-node-364247"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T19:20:47.176321+00:00",
+      "original_url": "https://www.nasa.gov/organizations/headquarters-and-center-chief-counsel-contacts/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Headquarters and Center Chief Counsel Contacts",
+        "normalized_summary": "Headquarters General Counsel Iris Lan Deputy General Counsel Bryan R. Diederich (Acting) Chief of Legal Operations Christine Pham (Acting) Associate General Counsel for Contracts and Procurement, Headquarters Karen Reilley (Acting) Associate General Counsel for Contracts and Acquisition Integrity Law Practice Group, Headquarters Karen Reilley (Acting) Associate General Counsel for General Law Practice Group, Headquarters Katie Spear Associate General Counsel for International and Space Law Practice Group, Headquarters Rebecca Bresnik Agency Counsel for Ethics, Headquarters Adam Greenstone Agency Counsel for the Acquisition Integrity Program, Headquarters Adam Supple (Acting) Agency Counsel for Intellectual Property, Headquarters Trenton Roche Centers Chief Counsel, Ames Research Center Christine Pham Chief Counsel, Armstrong Flight Research Center Brett Swanson Chief Counsel, Glenn Research Center James Jackson (Acting) Chief Counsel, Goddard Space Flight Center Dave Barrett Chief Counsel, Johnson Space Center Randall Suratt Chief Counsel, Kennedy Space Center Alex Vinson Chief Counsel, Langley Research Center Andrea Warmbier Chief Counsel, Marshall Space Flight Center Pam Bourque Chief Counsel, NASA Management Office at JPL James Mahoney Chief Counsel, NASA Shared Service Center Ron Bald Chief Counsel, NASA Stennis Space Center Ron Bald Return to OGC Homepage",
+        "entities": [
+          "Headquarters General Counsel Iris Lan Deputy General Counsel Bryan R Diederich Acting Chief of Legal Operations Christine Pham Acting Associate General Counsel",
+          "Contracts",
+          "Procurement Headquarters Karen Reilley Acting Associate General Counsel",
+          "Acquisition Integrity Law Practice Group Headquarters Karen Reilley Acting Associate General Counsel",
+          "General Law Practice Group Headquarters Katie Spear Associate General Counsel",
+          "International",
+          "Space Law Practice Group Headquarters Rebecca Bresnik Agency Counsel",
+          "Ethics Headquarters Adam Greenstone Agency Counsel",
+          "Acquisition Integrity Program Headquarters Adam Supple Acting Agency Counsel",
+          "Intellectual Property Headquarters Trenton Roche Centers Chief Counsel Ames Research Center Christine Pham Chief Counsel Armstrong Flight Research Center Brett Swanson Chief Counsel Glenn Research Center James Jackson Acting Chief Counsel Goddard Space Flight Center Dave Barrett Chief Counsel Johnson Space Center Randall Suratt Chief Counsel Kennedy Space Center Alex Vinson Chief Counsel Langley Research Center Andrea Warmbier Chief Counsel Marshall Space Flight Center Pam Bourque Chief Counsel NASA Management Office"
+        ],
+        "topics": [
+          "space",
+          "science"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Headquarters and Center Chief Counsel Contacts",
+      "normalized_summary": "Headquarters General Counsel Iris Lan Deputy General Counsel Bryan R. Diederich (Acting) Chief of Legal Operations Christine Pham (Acting) Associate General Counsel for Contracts and Procurement, Headquarters Karen Reilley (Acting) Associate General Counsel for Contracts and Acquisition Integrity Law Practice Group, Headquarters Karen Reilley (Acting) Associate General Counsel for General Law Practice Group, Headquarters Katie Spear Associate General Counsel for International and Space Law Practice Group, Headquarters Rebecca Bresnik Agency Counsel for Ethics, Headquarters Adam Greenstone Agency Counsel for the Acquisition Integrity Program, Headquarters Adam Supple (Acting) Agency Counsel for Intellectual Property, Headquarters Trenton Roche Centers Chief Counsel, Ames Research Center Christine Pham Chief Counsel, Armstrong Flight Research Center Brett Swanson Chief Counsel, Glenn Research Center James Jackson (Acting) Chief Counsel, Goddard Space Flight Center Dave Barrett Chief Counsel, Johnson Space Center Randall Suratt Chief Counsel, Kennedy Space Center Alex Vinson Chief Counsel, Langley Research Center Andrea Warmbier Chief Counsel, Marshall Space Flight Center Pam Bourque Chief Counsel, NASA Management Office at JPL James Mahoney Chief Counsel, NASA Shared Service Center Ron Bald Chief Counsel, NASA Stennis Space Center Ron Bald Return to OGC Homepage"
+    },
+    "authors": [
+      "NASA"
+    ],
+    "category": "space"
+  },
+  {
+    "id": 113,
+    "title": "Flexibility is function: How unstructured protein segments regulate biological functions",
+    "url": "https://phys.org/news/2025-09-flexibility-function-unstructured-protein-segments.html",
+    "summary": "Researchers have discovered how unstructured segments of surface proteins regulate the biological function of a cell. Their study, published in Nature Communications, sheds new light on the interplay between G protein-coupled receptors (GPCRs)—located in the membranes of nearly all body cells—the messengers that activate them, and the signaling processes within a target cell. This interplay has a major role in drug discovery.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:03:04",
+    "collected_date": "2025-09-30T17:18:14.906771",
+    "score": 0.8223333333333334,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Molecular & Computational biology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-flexibility-function-unstructured-protein-segments.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678456181"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.899771+00:00",
+      "original_url": "https://phys.org/news/2025-09-flexibility-function-unstructured-protein-segments.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Flexibility is function: How unstructured protein segments regulate biological functions",
+        "normalized_summary": "Researchers have discovered how unstructured segments of surface proteins regulate the biological function of a cell. Their study, published in Nature Communications, sheds new light on the interplay between G protein-coupled receptors (GPCRs)—located in the membranes of nearly all body cells—the messengers that activate them, and the signaling processes within a target cell. This interplay has a major role in drug discovery.",
+        "entities": [
+          "Researchers",
+          "Their",
+          "Nature Communications",
+          "G",
+          "GPCRs",
+          "This"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Flexibility is function: How unstructured protein segments regulate biological functions",
+      "normalized_summary": "Researchers have discovered how unstructured segments of surface proteins regulate the biological function of a cell. Their study, published in Nature Communications, sheds new light on the interplay between G protein-coupled receptors (GPCRs)—located in the membranes of nearly all body cells—the messengers that activate them, and the signaling processes within a target cell. This interplay has a major role in drug discovery."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 144,
+    "title": "Gaia solves mystery of tumbling asteroids and finds new way to probe their interiors",
+    "url": "https://phys.org/news/2025-09-gaia-mystery-asteroids-probe-interiors.html",
+    "summary": "Whether an asteroid is spinning neatly on its axis or tumbling chaotically, and how fast it is doing so, has been shown to be dependent on how frequently it has experienced collisions. The findings, presented at the recent EPSC-DPS2025 Joint Meeting in Helsinki, are based on data from the European Space Agency's Gaia mission and provide a means of determining an asteroid's physical properties—information that is vital for successfully deflecting asteroids on a collision course with Earth.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:30:07",
+    "collected_date": "2025-09-30T18:55:00.147674",
+    "score": 0.819,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Planetary Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-gaia-mystery-asteroids-probe-interiors.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678457179"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.135674+00:00",
+      "original_url": "https://phys.org/news/2025-09-gaia-mystery-asteroids-probe-interiors.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Gaia solves mystery of tumbling asteroids and finds new way to probe their interiors",
+        "normalized_summary": "Whether an asteroid is spinning neatly on its axis or tumbling chaotically, and how fast it is doing so, has been shown to be dependent on how frequently it has experienced collisions. The findings, presented at the recent EPSC-DPS2025 Joint Meeting in Helsinki, are based on data from the European Space Agency's Gaia mission and provide a means of determining an asteroid's physical properties—information that is vital for successfully deflecting asteroids on a collision course with Earth.",
+        "entities": [
+          "Whether",
+          "The",
+          "EPSC DPS2025 Joint Meeting",
+          "Helsinki",
+          "European Space Agency",
+          "Gaia",
+          "Earth"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Gaia solves mystery of tumbling asteroids and finds new way to probe their interiors",
+      "normalized_summary": "Whether an asteroid is spinning neatly on its axis or tumbling chaotically, and how fast it is doing so, has been shown to be dependent on how frequently it has experienced collisions. The findings, presented at the recent EPSC-DPS2025 Joint Meeting in Helsinki, are based on data from the European Space Agency's Gaia mission and provide a means of determining an asteroid's physical properties—information that is vital for successfully deflecting asteroids on a collision course with Earth."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 110,
+    "title": "Is the “million-year-old” skull from China a Denisovan or something else?",
+    "url": "https://arstechnica.com/science/2025/09/is-the-million-year-old-skull-from-china-a-denisovan-or-something-else/",
+    "summary": "A fossil skull from China that made headlines last week may or may not be a million years old, but it's probably closely related to Denisovans. The fossil skull, dubbed Yunxian 2, is one of three unearthed from a terrace alongside the Han River, in central China, in a layer of river sediment somewhere between 600,000 and 1 million years old. Archaeologists originally identified them as Homo erectus , but Hanjiang Normal University paleoanthropologist Xiaobo Feng and his colleagues’ recent digital reconstruction of Yunxian 2 suggests the skulls may actually have belonged to someone a lot more similar to us: a hominin group defined as a species called Homo longi or a Denisovan, depending on who’s doing the naming. The recent paper adds fuel—and a new twist—to that debate. And the whole thing may hinge on a third skull from the same site, still waiting to be published. Read full article Comments",
+    "content": null,
+    "source_name": "Ars Technica Science",
+    "published_date": "2025-09-30T18:14:52",
+    "collected_date": "2025-09-30T17:18:13.544237",
+    "score": 0.8187007167759305,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Science",
+          "anthropology",
+          "Archaeology",
+          "Denisovans",
+          "hominins",
+          "homo longi",
+          "paleoanthropology",
+          "science",
+          "skulls"
+        ],
+        "feed_title": "Science – Ars Technica",
+        "additional_links": [
+          {
+            "href": "https://arstechnica.com/science/2025/09/is-the-million-year-old-skull-from-china-a-denisovan-or-something-else/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://arstechnica.com/science/2025/09/is-the-million-year-old-skull-from-china-a-denisovan-or-something-else/"
+      },
+      "credibility_score": 0.82,
+      "processing_timestamp": "2025-09-30T17:18:13.538234+00:00",
+      "original_url": "https://arstechnica.com/science/2025/09/is-the-million-year-old-skull-from-china-a-denisovan-or-something-else/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Is the “million-year-old” skull from China a Denisovan or something else?",
+        "normalized_summary": "A fossil skull from China that made headlines last week may or may not be a million years old, but it's probably closely related to Denisovans. The fossil skull, dubbed Yunxian 2, is one of three unearthed from a terrace alongside the Han River, in central China, in a layer of river sediment somewhere between 600,000 and 1 million years old. Archaeologists originally identified them as Homo erectus , but Hanjiang Normal University paleoanthropologist Xiaobo Feng and his colleagues’ recent digital reconstruction of Yunxian 2 suggests the skulls may actually have belonged to someone a lot more similar to us: a hominin group defined as a species called Homo longi or a Denisovan, depending on who’s doing the naming. The recent paper adds fuel—and a new twist—to that debate. And the whole thing may hinge on a third skull from the same site, still waiting to be published. Read full article Comments",
+        "entities": [
+          "A",
+          "China",
+          "Denisovans The",
+          "Yunxian",
+          "Han River",
+          "Archaeologists",
+          "Homo",
+          "Hanjiang Normal University",
+          "Xiaobo Feng",
+          "Denisovan"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Is the “million-year-old” skull from China a Denisovan or something else?",
+      "normalized_summary": "A fossil skull from China that made headlines last week may or may not be a million years old, but it's probably closely related to Denisovans. The fossil skull, dubbed Yunxian 2, is one of three unearthed from a terrace alongside the Han River, in central China, in a layer of river sediment somewhere between 600,000 and 1 million years old. Archaeologists originally identified them as Homo erectus , but Hanjiang Normal University paleoanthropologist Xiaobo Feng and his colleagues’ recent digital reconstruction of Yunxian 2 suggests the skulls may actually have belonged to someone a lot more similar to us: a hominin group defined as a species called Homo longi or a Denisovan, depending on who’s doing the naming. The recent paper adds fuel—and a new twist—to that debate. And the whole thing may hinge on a third skull from the same site, still waiting to be published. Read full article Comments"
+    },
+    "authors": [
+      "Kiona N. Smith"
+    ],
+    "category": "technology"
+  },
+  {
+    "id": 125,
+    "title": "Jupiter’s Volcanic Moon Io",
+    "url": "https://nasa.gov/image-article/jupiters-volcanic-moon-io/",
+    "summary": "During its close flyby of Jupiter’s moon Io on December 30, 2023, NASA’s Juno spacecraft captured some of the most detailed imagery ever of Io’s volcanic surface. In this image, taken by the JunoCam instrument from about 930 miles (1,500 kilometers) above the moon, Io’s night side [left lobe] is illuminated by “Jupitershine,” which is [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T20:26:14",
+    "collected_date": "2025-09-30T17:18:20.378663",
+    "score": 0.8161666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Io",
+          "Juno"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://www.nasa.gov/image-article/jupiters-volcanic-moon-io/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://www.nasa.gov/?post_type=image-article&p=920249"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T17:18:20.370663+00:00",
+      "original_url": "https://www.nasa.gov/image-article/jupiters-volcanic-moon-io/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Jupiter’s Volcanic Moon Io",
+        "normalized_summary": "During its close flyby of Jupiter’s moon Io on December 30, 2023, NASA’s Juno spacecraft captured some of the most detailed imagery ever of Io’s volcanic surface. In this image, taken by the JunoCam instrument from about 930 miles (1,500 kilometers) above the moon, Io’s night side [left lobe] is illuminated by “Jupitershine,” which is [...]",
+        "entities": [
+          "During",
+          "Jupiter",
+          "December",
+          "NASA",
+          "Juno",
+          "JunoCam",
+          "Jupitershine"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Jupiter’s Volcanic Moon Io",
+      "normalized_summary": "During its close flyby of Jupiter’s moon Io on December 30, 2023, NASA’s Juno spacecraft captured some of the most detailed imagery ever of Io’s volcanic surface. In this image, taken by the JunoCam instrument from about 930 miles (1,500 kilometers) above the moon, Io’s night side [left lobe] is illuminated by “Jupitershine,” which is [...]"
+    },
+    "authors": [
+      "Monika Luabeya"
+    ],
+    "category": "space"
+  },
+  {
+    "id": 128,
+    "title": "Making High Fidelity Fluxgate Cores for Space Science and Space Weather Missions",
+    "url": "https://science.nasa.gov/science-research/heliophysics/making-high-fidelity-fluxgate-cores-for-space-science-and-space-weather-missions/",
+    "summary": "A NASA-sponsored team at the University of Iowa (UI) is restoring and advancing the nation’s capability to make high-fidelity magnetic field measurements needed to investigate space weather that can impact our communication and power grids on Earth and our assets in space.",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-09-30T18:35:08",
+    "collected_date": "2025-09-30T17:18:20.413747",
+    "score": 0.8148982498625108,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Heliophysics",
+          "Science-enabling Technology",
+          "Technology Highlights"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://science.nasa.gov/science-research/heliophysics/making-high-fidelity-fluxgate-cores-for-space-science-and-space-weather-missions/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://science.nasa.gov/science-research/heliophysics/making-high-fidelity-fluxgate-cores-for-space-science-and-space-weather-missions/"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-09-30T17:18:20.407746+00:00",
+      "original_url": "https://science.nasa.gov/science-research/heliophysics/making-high-fidelity-fluxgate-cores-for-space-science-and-space-weather-missions/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Making High Fidelity Fluxgate Cores for Space Science and Space Weather Missions",
+        "normalized_summary": "A NASA-sponsored team at the University of Iowa (UI) is restoring and advancing the nation’s capability to make high-fidelity magnetic field measurements needed to investigate space weather that can impact our communication and power grids on Earth and our assets in space.",
+        "entities": [
+          "A NASA",
+          "University of Iowa UI",
+          "Earth"
+        ],
+        "topics": [
+          "space",
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Making High Fidelity Fluxgate Cores for Space Science and Space Weather Missions",
+      "normalized_summary": "A NASA-sponsored team at the University of Iowa (UI) is restoring and advancing the nation’s capability to make high-fidelity magnetic field measurements needed to investigate space weather that can impact our communication and power grids on Earth and our assets in space."
+    },
+    "authors": [],
+    "category": "space"
+  },
+  {
+    "id": 237,
+    "title": "Antarctic icefish rewired their skulls to win an evolutionary arms race, 3D scans reveal",
+    "url": "https://phys.org/news/2025-09-antarctic-icefish-rewired-skulls-evolutionary.html",
+    "summary": "Antarctica's Southern Ocean is one of the most demanding places on Earth when it comes to survival. Its waters plunge below freezing, long periods of darkness restrict growth and feeding, and food webs shift with relentless climate swings. Yet one group of fish—the notothenioids, or Antarctic icefish—not only survived here, but flourished.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T00:04:03",
+    "collected_date": "2025-09-30T20:05:57.268614",
+    "score": 0.8075833333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Plants & Animals Evolution"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-antarctic-icefish-rewired-skulls-evolutionary.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678467041"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T20:05:57.261555+00:00",
+      "original_url": "https://phys.org/news/2025-09-antarctic-icefish-rewired-skulls-evolutionary.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Antarctic icefish rewired their skulls to win an evolutionary arms race, 3D scans reveal",
+        "normalized_summary": "Antarctica's Southern Ocean is one of the most demanding places on Earth when it comes to survival. Its waters plunge below freezing, long periods of darkness restrict growth and feeding, and food webs shift with relentless climate swings. Yet one group of fish—the notothenioids, or Antarctic icefish—not only survived here, but flourished.",
+        "entities": [
+          "Antarctica",
+          "Southern Ocean",
+          "Earth",
+          "Its",
+          "Yet",
+          "Antarctic"
+        ],
+        "topics": [
+          "climate"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Antarctic icefish rewired their skulls to win an evolutionary arms race, 3D scans reveal",
+      "normalized_summary": "Antarctica's Southern Ocean is one of the most demanding places on Earth when it comes to survival. Its waters plunge below freezing, long periods of darkness restrict growth and feeding, and food webs shift with relentless climate swings. Yet one group of fish—the notothenioids, or Antarctic icefish—not only survived here, but flourished."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 119,
+    "title": "Thermal runaway mechanism can ramp up magnitude of certain earthquakes",
+    "url": "https://phys.org/news/2025-09-thermal-runaway-mechanism-ramp-magnitude.html",
+    "summary": "In July 2024, a 7.4-magnitude earthquake struck Calama, Chile, damaging buildings and causing power outages. The country has endured violent earthquakes, including the most powerful recorded in history: a 9.5-magnitude \"megathrust\" event that struck central Chile in 1960, causing a tsunami and killing between 1,000 to 6,000 people. However, the Calama quake was different from the megathrust quakes that are usually associated with the most destructive events in Chile and around the world.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:12:04",
+    "collected_date": "2025-09-30T17:18:14.991983",
+    "score": 0.8073333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Earth Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-thermal-runaway-mechanism-ramp-magnitude.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678453121"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.985985+00:00",
+      "original_url": "https://phys.org/news/2025-09-thermal-runaway-mechanism-ramp-magnitude.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Thermal runaway mechanism can ramp up magnitude of certain earthquakes",
+        "normalized_summary": "In July 2024, a 7.4-magnitude earthquake struck Calama, Chile, damaging buildings and causing power outages. The country has endured violent earthquakes, including the most powerful recorded in history: a 9.5-magnitude \"megathrust\" event that struck central Chile in 1960, causing a tsunami and killing between 1,000 to 6,000 people. However, the Calama quake was different from the megathrust quakes that are usually associated with the most destructive events in Chile and around the world.",
+        "entities": [
+          "In July",
+          "Calama Chile",
+          "The",
+          "Chile",
+          "However the Calama"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Thermal runaway mechanism can ramp up magnitude of certain earthquakes",
+      "normalized_summary": "In July 2024, a 7.4-magnitude earthquake struck Calama, Chile, damaging buildings and causing power outages. The country has endured violent earthquakes, including the most powerful recorded in history: a 9.5-magnitude \"megathrust\" event that struck central Chile in 1960, causing a tsunami and killing between 1,000 to 6,000 people. However, the Calama quake was different from the megathrust quakes that are usually associated with the most destructive events in Chile and around the world."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 115,
+    "title": "Researchers document 116 gastropod species in Vietnam national park",
+    "url": "https://phys.org/news/2025-09-document-gastropod-species-vietnam-national.html",
+    "summary": "Scientists from the Museum für Naturkunde Berlin, as part of an international research team, have studied the land snail and slug fauna in northern Vietnam's Cuc Phuong National Park. The now-published findings document an enormous diversity of different gastropod species, many of them still undescribed. The collected material, along with the corresponding, digitally accessible data, forms an important basis for further research on the region's biodiversity.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:48:04",
+    "collected_date": "2025-09-30T17:18:14.943696",
+    "score": 0.8048333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Plants & Animals Ecology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-document-gastropod-species-vietnam-national.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678455281"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.937687+00:00",
+      "original_url": "https://phys.org/news/2025-09-document-gastropod-species-vietnam-national.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Researchers document 116 gastropod species in Vietnam national park",
+        "normalized_summary": "Scientists from the Museum für Naturkunde Berlin, as part of an international research team, have studied the land snail and slug fauna in northern Vietnam's Cuc Phuong National Park. The now-published findings document an enormous diversity of different gastropod species, many of them still undescribed. The collected material, along with the corresponding, digitally accessible data, forms an important basis for further research on the region's biodiversity.",
+        "entities": [
+          "Scientists",
+          "Museum",
+          "Naturkunde Berlin",
+          "Vietnam",
+          "Cuc Phuong National Park The",
+          "The"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Researchers document 116 gastropod species in Vietnam national park",
+      "normalized_summary": "Scientists from the Museum für Naturkunde Berlin, as part of an international research team, have studied the land snail and slug fauna in northern Vietnam's Cuc Phuong National Park. The now-published findings document an enormous diversity of different gastropod species, many of them still undescribed. The collected material, along with the corresponding, digitally accessible data, forms an important basis for further research on the region's biodiversity."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 143,
+    "title": "Global biodiversity decline demands urgent, society-wide changes, experts warn",
+    "url": "https://phys.org/news/2025-09-global-biodiversity-decline-demands-urgent.html",
+    "summary": "Human-caused biodiversity loss has accelerated over the past 50 years. An opinion article published in the open-access journal PLOS Biology by a team of international authors, including Anne Larigauderie, former Executive Secretary of the Intergovernmental Platform on Biodiversity and Ecosystem Services (IPBES), concludes that stopping biodiversity loss is contingent on transformative social and cultural changes across multiple scales.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T22:00:01",
+    "collected_date": "2025-09-30T18:55:00.126674",
+    "score": 0.802,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Plants & Animals Ecology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-global-biodiversity-decline-demands-urgent.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678441422"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.115674+00:00",
+      "original_url": "https://phys.org/news/2025-09-global-biodiversity-decline-demands-urgent.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Global biodiversity decline demands urgent, society-wide changes, experts warn",
+        "normalized_summary": "Human-caused biodiversity loss has accelerated over the past 50 years. An opinion article published in the open-access journal PLOS Biology by a team of international authors, including Anne Larigauderie, former Executive Secretary of the Intergovernmental Platform on Biodiversity and Ecosystem Services (IPBES), concludes that stopping biodiversity loss is contingent on transformative social and cultural changes across multiple scales.",
+        "entities": [
+          "Human",
+          "PLOS Biology",
+          "Anne Larigauderie",
+          "Executive Secretary of the Intergovernmental Platform",
+          "Biodiversity",
+          "Ecosystem Services IPBES"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "negative"
+      },
+      "normalized_title": "Global biodiversity decline demands urgent, society-wide changes, experts warn",
+      "normalized_summary": "Human-caused biodiversity loss has accelerated over the past 50 years. An opinion article published in the open-access journal PLOS Biology by a team of international authors, including Anne Larigauderie, former Executive Secretary of the Intergovernmental Platform on Biodiversity and Ecosystem Services (IPBES), concludes that stopping biodiversity loss is contingent on transformative social and cultural changes across multiple scales."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 282,
+    "title": "Study finds ancient Parthian man shot by an arrow which was never removed",
+    "url": "https://phys.org/news/2025-09-ancient-parthian-shot-arrow.html",
+    "summary": "A study published in the International Journal of Osteoarchaeology, led by Dr. Mohammad Reza Eghdami and his colleagues, examined the remains of a Parthian-era individual. The Parthians were descendants of the Parnian tribe and part of the Dahae Union. They were renowned for their military prowess, particularly in their mounted warfare tactics and skilled archery.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T15:20:01",
+    "collected_date": "2025-10-01T13:26:11.594165",
+    "score": 0.8013333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Archaeology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-ancient-parthian-shot-arrow.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678444951"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.586059+00:00",
+      "original_url": "https://phys.org/news/2025-09-ancient-parthian-shot-arrow.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Study finds ancient Parthian man shot by an arrow which was never removed",
+        "normalized_summary": "A study published in the International Journal of Osteoarchaeology, led by Dr. Mohammad Reza Eghdami and his colleagues, examined the remains of a Parthian-era individual. The Parthians were descendants of the Parnian tribe and part of the Dahae Union. They were renowned for their military prowess, particularly in their mounted warfare tactics and skilled archery.",
+        "entities": [
+          "A",
+          "International Journal of Osteoarchaeology",
+          "Dr Mohammad Reza Eghdami",
+          "Parthian",
+          "The Parthians",
+          "Parnian",
+          "Dahae Union They"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Study finds ancient Parthian man shot by an arrow which was never removed",
+      "normalized_summary": "A study published in the International Journal of Osteoarchaeology, led by Dr. Mohammad Reza Eghdami and his colleagues, examined the remains of a Parthian-era individual. The Parthians were descendants of the Parnian tribe and part of the Dahae Union. They were renowned for their military prowess, particularly in their mounted warfare tactics and skilled archery."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 275,
+    "title": "Earth's crust is tearing apart off the Pacific Northwest—and that's not necessarily bad news",
+    "url": "https://phys.org/news/2025-10-earth-crust-pacific-northwest-necessarily.html",
+    "summary": "With unprecedented clarity, scientists have directly observed a subduction zone—the collision point where one tectonic plate dives beneath another—actively breaking apart. The discovery, reported in Science Advances, sheds new light on how Earth's surface evolves and raises fresh questions about future earthquake risks in the Pacific Northwest.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T16:55:05",
+    "collected_date": "2025-10-01T13:26:11.497773",
+    "score": 0.8001666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Earth Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-10-earth-crust-pacific-northwest-necessarily.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678527701"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.489234+00:00",
+      "original_url": "https://phys.org/news/2025-10-earth-crust-pacific-northwest-necessarily.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Earth's crust is tearing apart off the Pacific Northwest—and that's not necessarily bad news",
+        "normalized_summary": "With unprecedented clarity, scientists have directly observed a subduction zone—the collision point where one tectonic plate dives beneath another—actively breaking apart. The discovery, reported in Science Advances, sheds new light on how Earth's surface evolves and raises fresh questions about future earthquake risks in the Pacific Northwest.",
+        "entities": [
+          "With",
+          "The",
+          "Science Advances",
+          "Earth",
+          "Pacific Northwest"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "negative"
+      },
+      "normalized_title": "Earth's crust is tearing apart off the Pacific Northwest—and that's not necessarily bad news",
+      "normalized_summary": "With unprecedented clarity, scientists have directly observed a subduction zone—the collision point where one tectonic plate dives beneath another—actively breaking apart. The discovery, reported in Science Advances, sheds new light on how Earth's surface evolves and raises fresh questions about future earthquake risks in the Pacific Northwest."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 146,
+    "title": "Metal bends the rules by combining electrical conductivity with optical frequency-doubling properties",
+    "url": "https://phys.org/news/2025-09-metal-combining-electrical-optical-frequency.html",
+    "summary": "An international research team led by the University of Bayreuth has discovered a metal that combines electrical conductivity with internal polarity. This enables it to exhibit second harmonic generation—an optical effect typically observed only in non-metals. The finding is of particular interest for sensors and electrical engineering. The research is published in the Journal of the American Chemical Society.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:19:38",
+    "collected_date": "2025-09-30T18:55:00.227674",
+    "score": 0.7991666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Analytical Chemistry Materials Science"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-metal-combining-electrical-optical-frequency.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678457171"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.214673+00:00",
+      "original_url": "https://phys.org/news/2025-09-metal-combining-electrical-optical-frequency.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Metal bends the rules by combining electrical conductivity with optical frequency-doubling properties",
+        "normalized_summary": "An international research team led by the University of Bayreuth has discovered a metal that combines electrical conductivity with internal polarity. This enables it to exhibit second harmonic generation—an optical effect typically observed only in non-metals. The finding is of particular interest for sensors and electrical engineering. The research is published in the Journal of the American Chemical Society.",
+        "entities": [
+          "University of Bayreuth",
+          "This",
+          "The",
+          "Journal of the American Chemical Society"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Metal bends the rules by combining electrical conductivity with optical frequency-doubling properties",
+      "normalized_summary": "An international research team led by the University of Bayreuth has discovered a metal that combines electrical conductivity with internal polarity. This enables it to exhibit second harmonic generation—an optical effect typically observed only in non-metals. The finding is of particular interest for sensors and electrical engineering. The research is published in the Journal of the American Chemical Society."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 120,
+    "title": "Egg yolk proves key to establishing authentic embryonic stem cells from birds",
+    "url": "https://phys.org/news/2025-09-egg-yolk-key-authentic-embryonic.html",
+    "summary": "Egg whites may be perfect for a health-conscious breakfast, but egg yolks turned out to be the key ingredient for cultivating bird embryonic stem cells (ESCs) in the lab. Using a growing medium of egg yolk along with a few other key factors, a USC Stem Cell-led team of scientists has succeeded in deriving and maintaining authentic ESCs from chickens and seven other bird species.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:07:04",
+    "collected_date": "2025-09-30T17:18:15.004387",
+    "score": 0.7984166666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Cell & Microbiology Biotechnology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-egg-yolk-key-authentic-embryonic.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678452821"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.998389+00:00",
+      "original_url": "https://phys.org/news/2025-09-egg-yolk-key-authentic-embryonic.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Egg yolk proves key to establishing authentic embryonic stem cells from birds",
+        "normalized_summary": "Egg whites may be perfect for a health-conscious breakfast, but egg yolks turned out to be the key ingredient for cultivating bird embryonic stem cells (ESCs) in the lab. Using a growing medium of egg yolk along with a few other key factors, a USC Stem Cell-led team of scientists has succeeded in deriving and maintaining authentic ESCs from chickens and seven other bird species.",
+        "entities": [
+          "Egg",
+          "ESCs",
+          "Using",
+          "USC Stem Cell"
+        ],
+        "topics": [
+          "health"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Egg yolk proves key to establishing authentic embryonic stem cells from birds",
+      "normalized_summary": "Egg whites may be perfect for a health-conscious breakfast, but egg yolks turned out to be the key ingredient for cultivating bird embryonic stem cells (ESCs) in the lab. Using a growing medium of egg yolk along with a few other key factors, a USC Stem Cell-led team of scientists has succeeded in deriving and maintaining authentic ESCs from chickens and seven other bird species."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 153,
+    "title": "Photodiode design using germanium solves key challenge in on-chip light monitoring",
+    "url": "https://phys.org/news/2025-09-photodiode-germanium-key-chip.html",
+    "summary": "Programmable photonics devices, which use light to perform complex computations, are emerging as a key area in integrated photonics research. Unlike conventional electronics that transmit signals with electrons, these systems use photons, offering faster processing speeds, higher bandwidths, and greater energy efficiency. These advantages make programmable photonics well-suited for demanding tasks like real-time deep learning and data-intensive computing.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T23:17:04",
+    "collected_date": "2025-09-30T19:20:42.965612",
+    "score": 0.7973333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Optics & Photonics"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-photodiode-germanium-key-chip.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678464222"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:42.961613+00:00",
+      "original_url": "https://phys.org/news/2025-09-photodiode-germanium-key-chip.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Photodiode design using germanium solves key challenge in on-chip light monitoring",
+        "normalized_summary": "Programmable photonics devices, which use light to perform complex computations, are emerging as a key area in integrated photonics research. Unlike conventional electronics that transmit signals with electrons, these systems use photons, offering faster processing speeds, higher bandwidths, and greater energy efficiency. These advantages make programmable photonics well-suited for demanding tasks like real-time deep learning and data-intensive computing.",
+        "entities": [
+          "Programmable",
+          "Unlike",
+          "These"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Photodiode design using germanium solves key challenge in on-chip light monitoring",
+      "normalized_summary": "Programmable photonics devices, which use light to perform complex computations, are emerging as a key area in integrated photonics research. Unlike conventional electronics that transmit signals with electrons, these systems use photons, offering faster processing speeds, higher bandwidths, and greater energy efficiency. These advantages make programmable photonics well-suited for demanding tasks like real-time deep learning and data-intensive computing."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 117,
+    "title": "Human intuition fuels AI-driven quantum materials discovery",
+    "url": "https://phys.org/news/2025-09-human-intuition-fuels-ai-driven.html",
+    "summary": "Many properties of the world's most advanced materials are beyond the reach of quantitative modeling. Understanding them also requires a human expert's reasoning and intuition, which can't be replicated by even the most powerful artificial intelligence, mixed with fortuitous accident, according to Eun-Ah Kim, the Hans A. Bethe Professor of physics in the College of Arts and Sciences.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:41:04",
+    "collected_date": "2025-09-30T17:18:14.969726",
+    "score": 0.7946666666666666,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Condensed Matter Quantum Physics"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-human-intuition-fuels-ai-driven.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678454862"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.962722+00:00",
+      "original_url": "https://phys.org/news/2025-09-human-intuition-fuels-ai-driven.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Human intuition fuels AI-driven quantum materials discovery",
+        "normalized_summary": "Many properties of the world's most advanced materials are beyond the reach of quantitative modeling. Understanding them also requires a human expert's reasoning and intuition, which can't be replicated by even the most powerful artificial intelligence, mixed with fortuitous accident, according to Eun-Ah Kim, the Hans A. Bethe Professor of physics in the College of Arts and Sciences.",
+        "entities": [
+          "Many",
+          "Understanding",
+          "Eun Ah Kim the Hans A Bethe Professor of",
+          "College of Arts",
+          "Sciences"
+        ],
+        "topics": [
+          "technology"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Human intuition fuels AI-driven quantum materials discovery",
+      "normalized_summary": "Many properties of the world's most advanced materials are beyond the reach of quantitative modeling. Understanding them also requires a human expert's reasoning and intuition, which can't be replicated by even the most powerful artificial intelligence, mixed with fortuitous accident, according to Eun-Ah Kim, the Hans A. Bethe Professor of physics in the College of Arts and Sciences."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 57,
+    "title": "Saab 340 becomes permanent flight-test asset at Lincoln Laboratory",
+    "url": "https://news.mit.edu/2025/saab-340-becomes-permanent-flight-test-asset-lincoln-laboratory-0930",
+    "summary": "A Saab 340 aircraft recently became a permanent fixture of the fleet at the MIT Lincoln Laboratory Flight Test Facility , which supports R&D programs across the lab. Over the past five years, the facility leased and operated the twin-engine turboprop, once commercially used for the regional transport of passengers and cargo. During this time, staff modified the aircraft with a suite of radar, sensing, and communications capabilities. Transitioning the aircraft from a leased to a government-owned asset retains the aircraft's capabilities for present and future R&D in support of national security and reduces costs for Lincoln Laboratory sponsors. With the acquisition of the Saab, the Flight Test Facility currently maintains five government-owned aircraft — including three Gulfstream IVs and a Cessna 206 — as well as a leased Twin Otter, all housed on Hanscom Air Force Base, just over a mile from the laboratory's main campus. \"Of all our aircraft, the Saab is the most multi-mission-capable,\" says David Culbertson, manager of the Flight Test Facility. \"It's highly versatile and adaptable, like a Swiss Army knife. Researchers from across the laboratory have conducted flight tests on the Saab to develop all kinds of technologies for national security.\" For example, the Saab was modified to host the Airborne Radar Testbed (ARTB), a high-performance radar system based on a computer-controlled array of antennas that can be electronically steered (instead of physically moved) in different directions. With the ARTB, researchers have matured innovative radio-frequency technology; prototyped advanced system concepts; and demonstrated concepts of operation for intelligence, surveillance, and reconnaissance (ISR) missions. With its open-architecture design and compliance with open standards, the ARTB can easily be reconfigured to suit specific R&D needs. \"The Saab has enabled us to rapidly prototype and mature the complex system-of-systems solutions needed to realize critical warf",
+    "content": null,
+    "source_name": "MIT News",
+    "published_date": "2025-09-30T16:00:00",
+    "collected_date": "2025-09-30T13:57:46.200191",
+    "score": 0.793144018961187,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Aircraft",
+          "Research",
+          "Infrastructure",
+          "Security studies and military",
+          "Lincoln Laboratory",
+          "Department of Defense (DoD)"
+        ],
+        "feed_title": "MIT News",
+        "additional_links": [
+          {
+            "href": "https://news.mit.edu/2025/saab-340-becomes-permanent-flight-test-asset-lincoln-laboratory-0930",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://news.mit.edu/2025/saab-340-becomes-permanent-flight-test-asset-lincoln-laboratory-0930"
+      },
+      "credibility_score": 0.9,
+      "processing_timestamp": "2025-09-30T13:57:46.192477+00:00",
+      "original_url": "https://news.mit.edu/2025/saab-340-becomes-permanent-flight-test-asset-lincoln-laboratory-0930",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Saab 340 becomes permanent flight-test asset at Lincoln Laboratory",
+        "normalized_summary": "A Saab 340 aircraft recently became a permanent fixture of the fleet at the MIT Lincoln Laboratory Flight Test Facility , which supports R&D programs across the lab. Over the past five years, the facility leased and operated the twin-engine turboprop, once commercially used for the regional transport of passengers and cargo. During this time, staff modified the aircraft with a suite of radar, sensing, and communications capabilities. Transitioning the aircraft from a leased to a government-owned asset retains the aircraft's capabilities for present and future R&D in support of national security and reduces costs for Lincoln Laboratory sponsors. With the acquisition of the Saab, the Flight Test Facility currently maintains five government-owned aircraft — including three Gulfstream IVs and a Cessna 206 — as well as a leased Twin Otter, all housed on Hanscom Air Force Base, just over a mile from the laboratory's main campus. \"Of all our aircraft, the Saab is the most multi-mission-capable,\" says David Culbertson, manager of the Flight Test Facility. \"It's highly versatile and adaptable, like a Swiss Army knife. Researchers from across the laboratory have conducted flight tests on the Saab to develop all kinds of technologies for national security.\" For example, the Saab was modified to host the Airborne Radar Testbed (ARTB), a high-performance radar system based on a computer-controlled array of antennas that can be electronically steered (instead of physically moved) in different directions. With the ARTB, researchers have matured innovative radio-frequency technology; prototyped advanced system concepts; and demonstrated concepts of operation for intelligence, surveillance, and reconnaissance (ISR) missions. With its open-architecture design and compliance with open standards, the ARTB can easily be reconfigured to suit specific R&D needs. \"The Saab has enabled us to rapidly prototype and mature the complex system-of-systems solutions needed to realize critical warf",
+        "entities": [
+          "A Saab",
+          "MIT Lincoln Laboratory Flight Test Facility",
+          "R D",
+          "Over the",
+          "During",
+          "Transitioning the",
+          "Lincoln Laboratory",
+          "With the",
+          "Saab the Flight Test Facility",
+          "Gulfstream IVs"
+        ],
+        "topics": [
+          "science",
+          "technology"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Saab 340 becomes permanent flight-test asset at Lincoln Laboratory",
+      "normalized_summary": "A Saab 340 aircraft recently became a permanent fixture of the fleet at the MIT Lincoln Laboratory Flight Test Facility , which supports R&D programs across the lab. Over the past five years, the facility leased and operated the twin-engine turboprop, once commercially used for the regional transport of passengers and cargo. During this time, staff modified the aircraft with a suite of radar, sensing, and communications capabilities. Transitioning the aircraft from a leased to a government-owned asset retains the aircraft's capabilities for present and future R&D in support of national security and reduces costs for Lincoln Laboratory sponsors. With the acquisition of the Saab, the Flight Test Facility currently maintains five government-owned aircraft — including three Gulfstream IVs and a Cessna 206 — as well as a leased Twin Otter, all housed on Hanscom Air Force Base, just over a mile from the laboratory's main campus. \"Of all our aircraft, the Saab is the most multi-mission-capable,\" says David Culbertson, manager of the Flight Test Facility. \"It's highly versatile and adaptable, like a Swiss Army knife. Researchers from across the laboratory have conducted flight tests on the Saab to develop all kinds of technologies for national security.\" For example, the Saab was modified to host the Airborne Radar Testbed (ARTB), a high-performance radar system based on a computer-controlled array of antennas that can be electronically steered (instead of physically moved) in different directions. With the ARTB, researchers have matured innovative radio-frequency technology; prototyped advanced system concepts; and demonstrated concepts of operation for intelligence, surveillance, and reconnaissance (ISR) missions. With its open-architecture design and compliance with open standards, the ARTB can easily be reconfigured to suit specific R&D needs. \"The Saab has enabled us to rapidly prototype and mature the complex system-of-systems solutions needed to realize critical warf"
+    },
+    "authors": [
+      "Ariana Tantillo | MIT Lincoln Laboratory"
+    ],
+    "category": "technology"
+  },
+  {
+    "id": 152,
+    "title": "How the Red Sea went completely dry before being flooded by the Indian Ocean over 6 million years ago",
+    "url": "https://phys.org/news/2025-09-red-sea-dry-indian-ocean.html",
+    "summary": "Scientists at King Abdullah University of Science and Technology (KAUST) have provided conclusive evidence that the Red Sea completely dried out about 6.2 million years ago, before being suddenly refilled by a catastrophic flood from the Indian Ocean. The findings put a definitive time on a dramatic event that changed the Red Sea.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T23:19:03",
+    "collected_date": "2025-09-30T19:20:42.956195",
+    "score": 0.7921666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Earth Sciences Environment"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-red-sea-dry-indian-ocean.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678464341"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:42.950203+00:00",
+      "original_url": "https://phys.org/news/2025-09-red-sea-dry-indian-ocean.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "How the Red Sea went completely dry before being flooded by the Indian Ocean over 6 million years ago",
+        "normalized_summary": "Scientists at King Abdullah University of Science and Technology (KAUST) have provided conclusive evidence that the Red Sea completely dried out about 6.2 million years ago, before being suddenly refilled by a catastrophic flood from the Indian Ocean. The findings put a definitive time on a dramatic event that changed the Red Sea.",
+        "entities": [
+          "Scientists",
+          "King Abdullah University of Science",
+          "Technology KAUST",
+          "Red Sea",
+          "Indian Ocean The"
+        ],
+        "topics": [
+          "science",
+          "technology"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "How the Red Sea went completely dry before being flooded by the Indian Ocean over 6 million years ago",
+      "normalized_summary": "Scientists at King Abdullah University of Science and Technology (KAUST) have provided conclusive evidence that the Red Sea completely dried out about 6.2 million years ago, before being suddenly refilled by a catastrophic flood from the Indian Ocean. The findings put a definitive time on a dramatic event that changed the Red Sea."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 156,
+    "title": "Microbial DNA sequencing reveals nutrient pollution and climate change reinforce lake eutrophication",
+    "url": "https://phys.org/news/2025-09-microbial-dna-sequencing-reveals-nutrient.html",
+    "summary": "The algal blooms increasingly seen in Canadian lakes have been linked to both nutrient pollution from agricultural runoff and climate change. However, a new Concordia-led study using DNA sequencing of lakebed microbes reveals that these two drivers amplify each other in ways that profoundly affect the health of lake ecosystems.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T22:55:34",
+    "collected_date": "2025-09-30T19:20:42.996609",
+    "score": 0.7905833333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Environment"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-microbial-dna-sequencing-reveals-nutrient.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678462929"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:42.991609+00:00",
+      "original_url": "https://phys.org/news/2025-09-microbial-dna-sequencing-reveals-nutrient.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Microbial DNA sequencing reveals nutrient pollution and climate change reinforce lake eutrophication",
+        "normalized_summary": "The algal blooms increasingly seen in Canadian lakes have been linked to both nutrient pollution from agricultural runoff and climate change. However, a new Concordia-led study using DNA sequencing of lakebed microbes reveals that these two drivers amplify each other in ways that profoundly affect the health of lake ecosystems.",
+        "entities": [
+          "The",
+          "Canadian",
+          "However",
+          "Concordia",
+          "DNA"
+        ],
+        "topics": [
+          "science",
+          "health",
+          "climate"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Microbial DNA sequencing reveals nutrient pollution and climate change reinforce lake eutrophication",
+      "normalized_summary": "The algal blooms increasingly seen in Canadian lakes have been linked to both nutrient pollution from agricultural runoff and climate change. However, a new Concordia-led study using DNA sequencing of lakebed microbes reveals that these two drivers amplify each other in ways that profoundly affect the health of lake ecosystems."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 162,
+    "title": "Inexpensive multifunctional composite could pave way to circular economy",
+    "url": "https://phys.org/news/2025-09-inexpensive-multifunctional-composite-pave-circular.html",
+    "summary": "Meeting global energy demands while mitigating environmental harm remains a major challenge, as many current solutions rely on expensive and toxic noble metals. In a recent study, researchers from Japan successfully developed a novel copper–cobalt oxide composite anchored on nitrogen-doped carbon nanostructures. Synthesized via a simple method, this material excels in energy storage, environmental remediation, and water splitting—offering a low-cost and sustainable alternative to conventional catalysts across multiple applications.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:19:26",
+    "collected_date": "2025-09-30T19:20:43.070024",
+    "score": 0.7889999999999999,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Materials Science"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-inexpensive-multifunctional-composite-pave-circular.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678457163"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:43.064027+00:00",
+      "original_url": "https://phys.org/news/2025-09-inexpensive-multifunctional-composite-pave-circular.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Inexpensive multifunctional composite could pave way to circular economy",
+        "normalized_summary": "Meeting global energy demands while mitigating environmental harm remains a major challenge, as many current solutions rely on expensive and toxic noble metals. In a recent study, researchers from Japan successfully developed a novel copper–cobalt oxide composite anchored on nitrogen-doped carbon nanostructures. Synthesized via a simple method, this material excels in energy storage, environmental remediation, and water splitting—offering a low-cost and sustainable alternative to conventional catalysts across multiple applications.",
+        "entities": [
+          "Meeting",
+          "Japan",
+          "Synthesized"
+        ],
+        "topics": [
+          "science",
+          "climate",
+          "economy"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Inexpensive multifunctional composite could pave way to circular economy",
+      "normalized_summary": "Meeting global energy demands while mitigating environmental harm remains a major challenge, as many current solutions rely on expensive and toxic noble metals. In a recent study, researchers from Japan successfully developed a novel copper–cobalt oxide composite anchored on nitrogen-doped carbon nanostructures. Synthesized via a simple method, this material excels in energy storage, environmental remediation, and water splitting—offering a low-cost and sustainable alternative to conventional catalysts across multiple applications."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 124,
+    "title": "University ranking systems are being rejected. African institutions should take note",
+    "url": "https://phys.org/news/2025-09-university-african.html",
+    "summary": "The Sorbonne University, founded in Paris in 1253 and known globally as a symbol of education, science and culture, has just announced that, starting in 2026, it will stop submitting data to Times Higher Education (THE) rankings. It is joining a growing movement of universities questioning the value and methodology of these controversial league tables.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T19:58:05",
+    "collected_date": "2025-09-30T17:18:15.074061",
+    "score": 0.7875,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Education"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-university-african.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678452282"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:15.068062+00:00",
+      "original_url": "https://phys.org/news/2025-09-university-african.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "University ranking systems are being rejected. African institutions should take note",
+        "normalized_summary": "The Sorbonne University, founded in Paris in 1253 and known globally as a symbol of education, science and culture, has just announced that, starting in 2026, it will stop submitting data to Times Higher Education (THE) rankings. It is joining a growing movement of universities questioning the value and methodology of these controversial league tables.",
+        "entities": [
+          "The Sorbonne University",
+          "Paris",
+          "Times Higher Education THE"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "University ranking systems are being rejected. African institutions should take note",
+      "normalized_summary": "The Sorbonne University, founded in Paris in 1253 and known globally as a symbol of education, science and culture, has just announced that, starting in 2026, it will stop submitting data to Times Higher Education (THE) rankings. It is joining a growing movement of universities questioning the value and methodology of these controversial league tables."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 318,
+    "title": "MSCoD: An Enhanced Bayesian Updating Framework with Multi-Scale Information Bottleneck and Cooperative Attention for Structure-Based Drug Design",
+    "url": "https://arxiv.org/abs/2509.25225",
+    "summary": "arXiv:2509.25225v1 Announce Type: new Abstract: Structure-Based Drug Design (SBDD) is a powerful strategy in computational drug discovery, utilizing three-dimensional protein structures to guide the design of molecules with improved binding affinity. However, capturing complex protein-ligand interactions across multiple scales remains challenging, as current methods often overlook the hierarchical organization and intrinsic asymmetry of these interactions. To address these limitations, we propose MSCoD, a novel Bayesian updating-based generative framework for structure-based drug design. In our MSCoD, Multi-Scale Information Bottleneck (MSIB) was developed, which enables semantic compression at multiple abstraction levels for efficient hierarchical feature extraction. Furthermore, a multi-head cooperative attention (MHCA) mechanism was developed, which employs asymmetric protein-to-ligand attention to capture diverse interaction types while addressing the dimensionality disparity between proteins and ligands. Empirical studies showed that MSCoD outperforms state-of-the-art methods on the benchmark dataset. Case studies on challenging targets such as KRAS G12D further demonstrate its applicability in real-world scenarios. The code and data underlying this article are freely available at https://github.com/xulong0826/MSCoD.",
+    "content": null,
+    "source_name": "arXiv AI/ML",
+    "published_date": "2025-10-01T08:00:00",
+    "collected_date": "2025-10-01T13:26:17.695979",
+    "score": 0.7867593331006009,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "cs.LG"
+        ],
+        "feed_title": "cs.AI, cs.LG, cs.CL, cs.CV updates on arXiv.org",
+        "additional_links": [
+          {
+            "href": "https://arxiv.org/abs/2509.25225",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "oai:arXiv.org:2509.25225v1"
+      },
+      "credibility_score": 0.7,
+      "processing_timestamp": "2025-10-01T13:26:17.689535+00:00",
+      "original_url": "https://arxiv.org/abs/2509.25225",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "MSCoD: An Enhanced Bayesian Updating Framework with Multi-Scale Information Bottleneck and Cooperative Attention for Structure-Based Drug Design",
+        "normalized_summary": "arXiv:2509.25225v1 Announce Type: new Abstract: Structure-Based Drug Design (SBDD) is a powerful strategy in computational drug discovery, utilizing three-dimensional protein structures to guide the design of molecules with improved binding affinity. However, capturing complex protein-ligand interactions across multiple scales remains challenging, as current methods often overlook the hierarchical organization and intrinsic asymmetry of these interactions. To address these limitations, we propose MSCoD, a novel Bayesian updating-based generative framework for structure-based drug design. In our MSCoD, Multi-Scale Information Bottleneck (MSIB) was developed, which enables semantic compression at multiple abstraction levels for efficient hierarchical feature extraction. Furthermore, a multi-head cooperative attention (MHCA) mechanism was developed, which employs asymmetric protein-to-ligand attention to capture diverse interaction types while addressing the dimensionality disparity between proteins and ligands. Empirical studies showed that MSCoD outperforms state-of-the-art methods on the benchmark dataset. Case studies on challenging targets such as KRAS G12D further demonstrate its applicability in real-world scenarios. The code and data underlying this article are freely available at https://github.com/xulong0826/MSCoD.",
+        "entities": [
+          "Announce Type",
+          "Abstract Structure Based Drug Design SBDD",
+          "However",
+          "MSCoD",
+          "Bayesian",
+          "MSCoD Multi Scale Information Bottleneck MSIB",
+          "Furthermore",
+          "MHCA",
+          "Empirical",
+          "Case"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "MSCoD: An Enhanced Bayesian Updating Framework with Multi-Scale Information Bottleneck and Cooperative Attention for Structure-Based Drug Design",
+      "normalized_summary": "arXiv:2509.25225v1 Announce Type: new Abstract: Structure-Based Drug Design (SBDD) is a powerful strategy in computational drug discovery, utilizing three-dimensional protein structures to guide the design of molecules with improved binding affinity. However, capturing complex protein-ligand interactions across multiple scales remains challenging, as current methods often overlook the hierarchical organization and intrinsic asymmetry of these interactions. To address these limitations, we propose MSCoD, a novel Bayesian updating-based generative framework for structure-based drug design. In our MSCoD, Multi-Scale Information Bottleneck (MSIB) was developed, which enables semantic compression at multiple abstraction levels for efficient hierarchical feature extraction. Furthermore, a multi-head cooperative attention (MHCA) mechanism was developed, which employs asymmetric protein-to-ligand attention to capture diverse interaction types while addressing the dimensionality disparity between proteins and ligands. Empirical studies showed that MSCoD outperforms state-of-the-art methods on the benchmark dataset. Case studies on challenging targets such as KRAS G12D further demonstrate its applicability in real-world scenarios. The code and data underlying this article are freely available at https://github.com/xulong0826/MSCoD."
+    },
+    "authors": [
+      "Long Xu, Yongcai Chen, Fengshuo Liu, Yuzhong Peng"
+    ],
+    "category": "artificial_intelligence"
+  },
+  {
+    "id": 272,
+    "title": "Scientists see shape memory activation in 'smart' plastic",
+    "url": "https://phys.org/news/2025-10-scientists-memory-smart-plastic.html",
+    "summary": "Researchers from the Skoltech Engineering Center's Hierarchically Structured Materials Laboratory, in collaboration with colleagues from MISIS University and the Joint Institute for Nuclear Research, have for the first time observed nanoscale transformations in ultra-high molecular weight polyethylene—a material possessing a shape memory effect—in real time.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T17:18:03",
+    "collected_date": "2025-10-01T13:26:11.461089",
+    "score": 0.7865,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Nanophysics Nanomaterials"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-10-scientists-memory-smart-plastic.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678529081"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.455886+00:00",
+      "original_url": "https://phys.org/news/2025-10-scientists-memory-smart-plastic.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Scientists see shape memory activation in 'smart' plastic",
+        "normalized_summary": "Researchers from the Skoltech Engineering Center's Hierarchically Structured Materials Laboratory, in collaboration with colleagues from MISIS University and the Joint Institute for Nuclear Research, have for the first time observed nanoscale transformations in ultra-high molecular weight polyethylene—a material possessing a shape memory effect—in real time.",
+        "entities": [
+          "Researchers",
+          "Skoltech Engineering Center",
+          "Hierarchically Structured Materials Laboratory",
+          "MISIS University",
+          "Joint Institute",
+          "Nuclear Research"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Scientists see shape memory activation in 'smart' plastic",
+      "normalized_summary": "Researchers from the Skoltech Engineering Center's Hierarchically Structured Materials Laboratory, in collaboration with colleagues from MISIS University and the Joint Institute for Nuclear Research, have for the first time observed nanoscale transformations in ultra-high molecular weight polyethylene—a material possessing a shape memory effect—in real time."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 145,
+    "title": "Deep learning tool developed to unravel molecular mechanisms of convergent evolution",
+    "url": "https://phys.org/news/2025-09-deep-tool-unravel-molecular-mechanisms.html",
+    "summary": "Convergent evolution—where distinct species independently evolve similar traits or functions, such as the wings of birds and bats—has long fascinated biologists. Now, a research team led by Prof. Zou Zhengting from the Institute of Zoology of the Chinese Academy of Sciences (CAS), has introduced a deep learning–based method to unravel the complex molecular mechanisms driving this phenomenon.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:30:01",
+    "collected_date": "2025-09-30T18:55:00.193674",
+    "score": 0.7835,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Evolution Molecular & Computational biology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-deep-tool-unravel-molecular-mechanisms.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678455539"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.180673+00:00",
+      "original_url": "https://phys.org/news/2025-09-deep-tool-unravel-molecular-mechanisms.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Deep learning tool developed to unravel molecular mechanisms of convergent evolution",
+        "normalized_summary": "Convergent evolution—where distinct species independently evolve similar traits or functions, such as the wings of birds and bats—has long fascinated biologists. Now, a research team led by Prof. Zou Zhengting from the Institute of Zoology of the Chinese Academy of Sciences (CAS), has introduced a deep learning–based method to unravel the complex molecular mechanisms driving this phenomenon.",
+        "entities": [
+          "Convergent",
+          "Now",
+          "Prof Zou Zhengting",
+          "Institute of Zoology of the Chinese Academy of Sciences CAS"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Deep learning tool developed to unravel molecular mechanisms of convergent evolution",
+      "normalized_summary": "Convergent evolution—where distinct species independently evolve similar traits or functions, such as the wings of birds and bats—has long fascinated biologists. Now, a research team led by Prof. Zou Zhengting from the Institute of Zoology of the Chinese Academy of Sciences (CAS), has introduced a deep learning–based method to unravel the complex molecular mechanisms driving this phenomenon."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 159,
+    "title": "Study is first to show whether nesting heat affects sea turtle hatchling 'IQ'",
+    "url": "https://phys.org/news/2025-09-affects-sea-turtle-hatchling-iq.html",
+    "summary": "As sand temperatures continue to rise, concerns about the future of sea turtles are growing. Hotter nests not only skew sex ratios—producing more females—but also reduce hatchling survival, slow growth, and increase the likelihood of physical deformities. Yet one important and often overlooked question remains: does this heat also affect cognitive ability—how well hatchlings can learn, adapt and respond to the rapidly changing world they face from the moment they emerge?",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:30:05",
+    "collected_date": "2025-09-30T19:20:43.032893",
+    "score": 0.7831666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Plants & Animals Ecology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-affects-sea-turtle-hatchling-iq.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678457340"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T19:20:43.027893+00:00",
+      "original_url": "https://phys.org/news/2025-09-affects-sea-turtle-hatchling-iq.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Study is first to show whether nesting heat affects sea turtle hatchling 'IQ'",
+        "normalized_summary": "As sand temperatures continue to rise, concerns about the future of sea turtles are growing. Hotter nests not only skew sex ratios—producing more females—but also reduce hatchling survival, slow growth, and increase the likelihood of physical deformities. Yet one important and often overlooked question remains: does this heat also affect cognitive ability—how well hatchlings can learn, adapt and respond to the rapidly changing world they face from the moment they emerge?",
+        "entities": [
+          "Hotter",
+          "Yet"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Study is first to show whether nesting heat affects sea turtle hatchling 'IQ'",
+      "normalized_summary": "As sand temperatures continue to rise, concerns about the future of sea turtles are growing. Hotter nests not only skew sex ratios—producing more females—but also reduce hatchling survival, slow growth, and increase the likelihood of physical deformities. Yet one important and often overlooked question remains: does this heat also affect cognitive ability—how well hatchlings can learn, adapt and respond to the rapidly changing world they face from the moment they emerge?"
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 311,
+    "title": "Evaluating Double Descent in Machine Learning: Insights from Tree-Based Models Applied to a Genomic Prediction Task",
+    "url": "https://arxiv.org/abs/2509.25216",
+    "summary": "arXiv:2509.25216v1 Announce Type: new Abstract: Classical learning theory describes a well-characterised U-shaped relationship between model complexity and prediction error, reflecting a transition from underfitting in underparameterised regimes to overfitting as complexity grows. Recent work, however, has introduced the notion of a second descent in test error beyond the interpolation threshold-giving rise to the so-called double descent phenomenon. While double descent has been studied extensively in the context of deep learning, it has also been reported in simpler models, including decision trees and gradient boosting. In this work, we revisit these claims through the lens of classical machine learning applied to a biological classification task: predicting isoniazid resistance in Mycobacterium tuberculosis using whole-genome sequencing data. We systematically vary model complexity along two orthogonal axes-learner capacity (e.g., Pleaf, Pboost) and ensemble size (i.e., Pens)-and show that double descent consistently emerges only when complexity is scaled jointly across these axes. When either axis is held fixed, generalisation behaviour reverts to classical U- or L-shaped patterns. These results are replicated on a synthetic benchmark and support the unfolding hypothesis, which attributes double descent to the projection of distinct generalisation regimes onto a single complexity axis. Our findings underscore the importance of treating model complexity as a multidimensional construct when analysing generalisation behaviour. All code and reproducibility materials are available at: https://github.com/guillermocomesanacimadevila/Demystifying-Double-Descent-in-ML.",
+    "content": null,
+    "source_name": "arXiv AI/ML",
+    "published_date": "2025-10-01T08:00:00",
+    "collected_date": "2025-10-01T13:26:17.596572",
+    "score": 0.782592666683353,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "cs.LG",
+          "stat.ML"
+        ],
+        "feed_title": "cs.AI, cs.LG, cs.CL, cs.CV updates on arXiv.org",
+        "additional_links": [
+          {
+            "href": "https://arxiv.org/abs/2509.25216",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "oai:arXiv.org:2509.25216v1"
+      },
+      "credibility_score": 0.7,
+      "processing_timestamp": "2025-10-01T13:26:17.586374+00:00",
+      "original_url": "https://arxiv.org/abs/2509.25216",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Evaluating Double Descent in Machine Learning: Insights from Tree-Based Models Applied to a Genomic Prediction Task",
+        "normalized_summary": "arXiv:2509.25216v1 Announce Type: new Abstract: Classical learning theory describes a well-characterised U-shaped relationship between model complexity and prediction error, reflecting a transition from underfitting in underparameterised regimes to overfitting as complexity grows. Recent work, however, has introduced the notion of a second descent in test error beyond the interpolation threshold-giving rise to the so-called double descent phenomenon. While double descent has been studied extensively in the context of deep learning, it has also been reported in simpler models, including decision trees and gradient boosting. In this work, we revisit these claims through the lens of classical machine learning applied to a biological classification task: predicting isoniazid resistance in Mycobacterium tuberculosis using whole-genome sequencing data. We systematically vary model complexity along two orthogonal axes-learner capacity (e.g., Pleaf, Pboost) and ensemble size (i.e., Pens)-and show that double descent consistently emerges only when complexity is scaled jointly across these axes. When either axis is held fixed, generalisation behaviour reverts to classical U- or L-shaped patterns. These results are replicated on a synthetic benchmark and support the unfolding hypothesis, which attributes double descent to the projection of distinct generalisation regimes onto a single complexity axis. Our findings underscore the importance of treating model complexity as a multidimensional construct when analysing generalisation behaviour. All code and reproducibility materials are available at: https://github.com/guillermocomesanacimadevila/Demystifying-Double-Descent-in-ML.",
+        "entities": [
+          "Announce Type",
+          "Abstract Classical",
+          "U",
+          "Recent",
+          "While",
+          "Mycobacterium",
+          "Pleaf Pboost",
+          "Pens",
+          "When",
+          "L"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Evaluating Double Descent in Machine Learning: Insights from Tree-Based Models Applied to a Genomic Prediction Task",
+      "normalized_summary": "arXiv:2509.25216v1 Announce Type: new Abstract: Classical learning theory describes a well-characterised U-shaped relationship between model complexity and prediction error, reflecting a transition from underfitting in underparameterised regimes to overfitting as complexity grows. Recent work, however, has introduced the notion of a second descent in test error beyond the interpolation threshold-giving rise to the so-called double descent phenomenon. While double descent has been studied extensively in the context of deep learning, it has also been reported in simpler models, including decision trees and gradient boosting. In this work, we revisit these claims through the lens of classical machine learning applied to a biological classification task: predicting isoniazid resistance in Mycobacterium tuberculosis using whole-genome sequencing data. We systematically vary model complexity along two orthogonal axes-learner capacity (e.g., Pleaf, Pboost) and ensemble size (i.e., Pens)-and show that double descent consistently emerges only when complexity is scaled jointly across these axes. When either axis is held fixed, generalisation behaviour reverts to classical U- or L-shaped patterns. These results are replicated on a synthetic benchmark and support the unfolding hypothesis, which attributes double descent to the projection of distinct generalisation regimes onto a single complexity axis. Our findings underscore the importance of treating model complexity as a multidimensional construct when analysing generalisation behaviour. All code and reproducibility materials are available at: https://github.com/guillermocomesanacimadevila/Demystifying-Double-Descent-in-ML."
+    },
+    "authors": [
+      "Guillermo Comesa\\~na Cimadevila"
+    ],
+    "category": "artificial_intelligence"
+  },
+  {
+    "id": 114,
+    "title": "Four ways virtual reality can help communities heal after disasters",
+    "url": "https://phys.org/news/2025-09-ways-virtual-reality-communities-disasters.html",
+    "summary": "When natural disasters strike, they shatter lives, disrupt routines and loosen the emotional ties people have with the places they call home. For the Italian towns of Amatrice and Accumoli, devastated by a 6.2 earthquake in 2016, the damage extended far beyond bricks and mortar. Streets vanished. Landmarks were reduced to rubble. The past seemed to disappear while the future became very uncertain.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T21:00:07",
+    "collected_date": "2025-09-30T17:18:14.917686",
+    "score": 0.7808333333333334,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Social Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-ways-virtual-reality-communities-disasters.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678455438"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.911687+00:00",
+      "original_url": "https://phys.org/news/2025-09-ways-virtual-reality-communities-disasters.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Four ways virtual reality can help communities heal after disasters",
+        "normalized_summary": "When natural disasters strike, they shatter lives, disrupt routines and loosen the emotional ties people have with the places they call home. For the Italian towns of Amatrice and Accumoli, devastated by a 6.2 earthquake in 2016, the damage extended far beyond bricks and mortar. Streets vanished. Landmarks were reduced to rubble. The past seemed to disappear while the future became very uncertain.",
+        "entities": [
+          "When",
+          "For the Italian",
+          "Amatrice",
+          "Accumoli",
+          "Streets",
+          "Landmarks",
+          "The"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Four ways virtual reality can help communities heal after disasters",
+      "normalized_summary": "When natural disasters strike, they shatter lives, disrupt routines and loosen the emotional ties people have with the places they call home. For the Italian towns of Amatrice and Accumoli, devastated by a 6.2 earthquake in 2016, the damage extended far beyond bricks and mortar. Streets vanished. Landmarks were reduced to rubble. The past seemed to disappear while the future became very uncertain."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 239,
+    "title": "A sense that they will be supported helps fuel children's ambitions to become political leaders",
+    "url": "https://phys.org/news/2025-09-fuel-children-ambitions-political-leaders.html",
+    "summary": "Across the globe, many more men than women hold political office. One reason for this disparity is a seeming gender difference in political ambition: Girls start to show less interest in political activities and pursuits as early as middle school, previous studies have shown. A team of psychology researchers set out to understand why.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T23:54:04",
+    "collected_date": "2025-09-30T20:05:57.293060",
+    "score": 0.7781666666666667,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Social Sciences Political science"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-fuel-children-ambitions-political-leaders.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678466441"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T20:05:57.286481+00:00",
+      "original_url": "https://phys.org/news/2025-09-fuel-children-ambitions-political-leaders.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "A sense that they will be supported helps fuel children's ambitions to become political leaders",
+        "normalized_summary": "Across the globe, many more men than women hold political office. One reason for this disparity is a seeming gender difference in political ambition: Girls start to show less interest in political activities and pursuits as early as middle school, previous studies have shown. A team of psychology researchers set out to understand why.",
+        "entities": [
+          "Across the",
+          "One",
+          "Girls",
+          "A"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "A sense that they will be supported helps fuel children's ambitions to become political leaders",
+      "normalized_summary": "Across the globe, many more men than women hold political office. One reason for this disparity is a seeming gender difference in political ambition: Girls start to show less interest in political activities and pursuits as early as middle school, previous studies have shown. A team of psychology researchers set out to understand why."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 142,
+    "title": "Geological evidence points to ancient ocean in Mars' northern hemisphere",
+    "url": "https://phys.org/news/2025-09-geological-evidence-ancient-ocean-mars.html",
+    "summary": "Billions of years ago, water flowed across Mars. Most scientists agree the red planet had rivers. But did those rivers flow into an ocean? New research from the University of Arkansas found strong evidence in Mars' geology of an ocean in the planet's northern hemisphere.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T22:17:04",
+    "collected_date": "2025-09-30T18:55:00.106674",
+    "score": 0.77675,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Astrobiology Planetary Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-geological-evidence-ancient-ocean-mars.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678460621"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.094674+00:00",
+      "original_url": "https://phys.org/news/2025-09-geological-evidence-ancient-ocean-mars.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Geological evidence points to ancient ocean in Mars' northern hemisphere",
+        "normalized_summary": "Billions of years ago, water flowed across Mars. Most scientists agree the red planet had rivers. But did those rivers flow into an ocean? New research from the University of Arkansas found strong evidence in Mars' geology of an ocean in the planet's northern hemisphere.",
+        "entities": [
+          "Billions of",
+          "Mars Most",
+          "But",
+          "New",
+          "University of Arkansas",
+          "Mars"
+        ],
+        "topics": [
+          "space",
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Geological evidence points to ancient ocean in Mars' northern hemisphere",
+      "normalized_summary": "Billions of years ago, water flowed across Mars. Most scientists agree the red planet had rivers. But did those rivers flow into an ocean? New research from the University of Arkansas found strong evidence in Mars' geology of an ocean in the planet's northern hemisphere."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 116,
+    "title": "Frequent wildfires and heat intensify air quality issues in American megacities",
+    "url": "https://phys.org/news/2025-09-frequent-wildfires-air-quality-issues.html",
+    "summary": "Air quality in America's largest cities has steadily improved thanks to tighter regulations on key sources of particulate pollution. However, increased heat, wildfire smoke and other emerging global drivers of urban aerosol pollution are now combining to create a new set of challenges for public health officials tasked with protecting millions of people on the East Coast.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:45:05",
+    "collected_date": "2025-09-30T17:18:14.956318",
+    "score": 0.7743333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Earth Sciences Environment"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-frequent-wildfires-air-quality-issues.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678455101"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.949314+00:00",
+      "original_url": "https://phys.org/news/2025-09-frequent-wildfires-air-quality-issues.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Frequent wildfires and heat intensify air quality issues in American megacities",
+        "normalized_summary": "Air quality in America's largest cities has steadily improved thanks to tighter regulations on key sources of particulate pollution. However, increased heat, wildfire smoke and other emerging global drivers of urban aerosol pollution are now combining to create a new set of challenges for public health officials tasked with protecting millions of people on the East Coast.",
+        "entities": [
+          "Air",
+          "America",
+          "However",
+          "East Coast"
+        ],
+        "topics": [
+          "health",
+          "climate"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Frequent wildfires and heat intensify air quality issues in American megacities",
+      "normalized_summary": "Air quality in America's largest cities has steadily improved thanks to tighter regulations on key sources of particulate pollution. However, increased heat, wildfire smoke and other emerging global drivers of urban aerosol pollution are now combining to create a new set of challenges for public health officials tasked with protecting millions of people on the East Coast."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 141,
+    "title": "3D-printed helix shelters increase baby coral survival rates",
+    "url": "https://phys.org/news/2025-09-3d-helix-baby-coral-survival.html",
+    "summary": "To dramatically increase coral survival rates, scientists at the University of Hawaiʻi at Mānoa Hawaiʻi Institute of Marine Biology (HIMB) have developed innovative 3D-printed ceramic structures that provide crucial protection for baby corals. These new designs offer a low-cost and scalable solution to enhance reef recovery worldwide.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T22:42:34",
+    "collected_date": "2025-09-30T18:55:00.073673",
+    "score": 0.773,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Ecology Biotechnology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-3d-helix-baby-coral-survival.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678462148"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T18:55:00.058675+00:00",
+      "original_url": "https://phys.org/news/2025-09-3d-helix-baby-coral-survival.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "3D-printed helix shelters increase baby coral survival rates",
+        "normalized_summary": "To dramatically increase coral survival rates, scientists at the University of Hawaiʻi at Mānoa Hawaiʻi Institute of Marine Biology (HIMB) have developed innovative 3D-printed ceramic structures that provide crucial protection for baby corals. These new designs offer a low-cost and scalable solution to enhance reef recovery worldwide.",
+        "entities": [
+          "University of Hawaiʻi",
+          "Mānoa Hawaiʻi Institute of Marine Biology HIMB",
+          "3D",
+          "These"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "3D-printed helix shelters increase baby coral survival rates",
+      "normalized_summary": "To dramatically increase coral survival rates, scientists at the University of Hawaiʻi at Mānoa Hawaiʻi Institute of Marine Biology (HIMB) have developed innovative 3D-printed ceramic structures that provide crucial protection for baby corals. These new designs offer a low-cost and scalable solution to enhance reef recovery worldwide."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 293,
+    "title": "October’s Night Sky Notes: Let’s Go, LIGO!",
+    "url": "https://science.nasa.gov/solar-system/skywatching/night-sky-network/octobers-night-sky-notes-lets-go-ligo/",
+    "summary": "by Kat Troche of the Astronomical Society of the Pacific September 2025 marks ten years since the first direct detection of gravitational waves as predicted by Albert Einstein’s 1916 theory of General Relativity. These invisible ripples in space were first directly detected by the Laser Interferometer Gravitational-Wave Observatory (LIGO). Traveling at the speed of light [...]",
+    "content": null,
+    "source_name": "NASA News",
+    "published_date": "2025-10-01T06:22:25",
+    "collected_date": "2025-10-01T13:26:15.292607",
+    "score": 0.7692001457399822,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Night Sky Network"
+        ],
+        "feed_title": "NASA",
+        "additional_links": [
+          {
+            "href": "https://science.nasa.gov/solar-system/skywatching/night-sky-network/octobers-night-sky-notes-lets-go-ligo/",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "https://science.nasa.gov/solar-system/skywatching/night-sky-network/octobers-night-sky-notes-lets-go-ligo/"
+      },
+      "credibility_score": 0.95,
+      "processing_timestamp": "2025-10-01T13:26:15.284606+00:00",
+      "original_url": "https://science.nasa.gov/solar-system/skywatching/night-sky-network/octobers-night-sky-notes-lets-go-ligo/",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "October’s Night Sky Notes: Let’s Go, LIGO!",
+        "normalized_summary": "by Kat Troche of the Astronomical Society of the Pacific September 2025 marks ten years since the first direct detection of gravitational waves as predicted by Albert Einstein’s 1916 theory of General Relativity. These invisible ripples in space were first directly detected by the Laser Interferometer Gravitational-Wave Observatory (LIGO). Traveling at the speed of light [...]",
+        "entities": [
+          "Kat Troche of the Astronomical Society of the Pacific September",
+          "Albert Einstein",
+          "General Relativity These",
+          "Laser Interferometer Gravitational Wave Observatory LIGO Traveling"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "October’s Night Sky Notes: Let’s Go, LIGO!",
+      "normalized_summary": "by Kat Troche of the Astronomical Society of the Pacific September 2025 marks ten years since the first direct detection of gravitational waves as predicted by Albert Einstein’s 1916 theory of General Relativity. These invisible ripples in space were first directly detected by the Laser Interferometer Gravitational-Wave Observatory (LIGO). Traveling at the speed of light [...]"
+    },
+    "authors": [],
+    "category": "space"
+  },
+  {
+    "id": 240,
+    "title": "Simulations show Saturn's moon Enceladus shoots less ice into space than previous estimates",
+    "url": "https://phys.org/news/2025-09-simulations-saturn-moon-enceladus-ice.html",
+    "summary": "In the 17th century, astronomers Christiaan Huygens and Giovanni Cassini trained their telescopes on Saturn and uncovered a startling truth: the planet's luminous bands were not solid appendages, but vast, separate rings composed of countless nested arcs.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T23:52:04",
+    "collected_date": "2025-09-30T20:05:57.304145",
+    "score": 0.7665833333333334,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Planetary Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-simulations-saturn-moon-enceladus-ice.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678466322"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T20:05:57.297941+00:00",
+      "original_url": "https://phys.org/news/2025-09-simulations-saturn-moon-enceladus-ice.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Simulations show Saturn's moon Enceladus shoots less ice into space than previous estimates",
+        "normalized_summary": "In the 17th century, astronomers Christiaan Huygens and Giovanni Cassini trained their telescopes on Saturn and uncovered a startling truth: the planet's luminous bands were not solid appendages, but vast, separate rings composed of countless nested arcs.",
+        "entities": [
+          "In the",
+          "Christiaan Huygens",
+          "Giovanni Cassini",
+          "Saturn"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "negative"
+      },
+      "normalized_title": "Simulations show Saturn's moon Enceladus shoots less ice into space than previous estimates",
+      "normalized_summary": "In the 17th century, astronomers Christiaan Huygens and Giovanni Cassini trained their telescopes on Saturn and uncovered a startling truth: the planet's luminous bands were not solid appendages, but vast, separate rings composed of countless nested arcs."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 283,
+    "title": "Galaxies with high radio emissions could be home to many advanced civilizations",
+    "url": "https://phys.org/news/2025-10-galaxies-high-radio-emissions-home.html",
+    "summary": "For decades, scientists engaged in the Search for Extraterrestrial Intelligence (SETI) have probed the galaxy for signs of artificial radio transmissions. Beginning with Project Ozma in 1960, astronomers have used radio antennas to listen for possible transmissions from other star systems or galaxies.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T15:16:06",
+    "collected_date": "2025-10-01T13:26:11.607925",
+    "score": 0.7663333333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Astronomy Astrobiology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-10-galaxies-high-radio-emissions-home.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678521761"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.599987+00:00",
+      "original_url": "https://phys.org/news/2025-10-galaxies-high-radio-emissions-home.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Galaxies with high radio emissions could be home to many advanced civilizations",
+        "normalized_summary": "For decades, scientists engaged in the Search for Extraterrestrial Intelligence (SETI) have probed the galaxy for signs of artificial radio transmissions. Beginning with Project Ozma in 1960, astronomers have used radio antennas to listen for possible transmissions from other star systems or galaxies.",
+        "entities": [
+          "For",
+          "Search",
+          "Extraterrestrial Intelligence SETI",
+          "Beginning",
+          "Project Ozma"
+        ],
+        "topics": [
+          "climate"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Galaxies with high radio emissions could be home to many advanced civilizations",
+      "normalized_summary": "For decades, scientists engaged in the Search for Extraterrestrial Intelligence (SETI) have probed the galaxy for signs of artificial radio transmissions. Beginning with Project Ozma in 1960, astronomers have used radio antennas to listen for possible transmissions from other star systems or galaxies."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 301,
+    "title": "Spectral Logit Sculpting: Adaptive Low-Rank Logit Transformation for Controlled Text Generation",
+    "url": "https://arxiv.org/abs/2509.25204",
+    "summary": "arXiv:2509.25204v1 Announce Type: new Abstract: Entropy-based inference methods have gained traction for improving the reliability of Large Language Models (LLMs). However, many existing approaches, such as entropy minimization techniques, suffer from high computational overhead and fail to leverage historical token context effectively. To address these limitations, we propose Spectral Logit Sculpting (SLS), a lightweight inference-time optimization method that dynamically modulates token distributions using spectral and entropic properties of recent logits. SLS maintains a sliding buffer of top-K logits, performs on-the-fly Singular Value Decomposition (SVD) to identify dominant spectral directions, and adaptively rescales logits based on both entropy and logit gap statistics--only activating when uncertainty is high. Without updating any model parameters, SLS effectively sharpens the output distribution while preserving contextual consistency. Experimental results on multiple public benchmarks demonstrate that SLS consistently outperforms existing baseline methods, achieving superior accuracy in mathematical, coding, and scientific reasoning tasks.",
+    "content": null,
+    "source_name": "arXiv AI/ML",
+    "published_date": "2025-10-01T08:00:00",
+    "collected_date": "2025-10-01T13:26:17.453192",
+    "score": 0.7659260003723792,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "cs.LG",
+          "cs.AI",
+          "cs.CL"
+        ],
+        "feed_title": "cs.AI, cs.LG, cs.CL, cs.CV updates on arXiv.org",
+        "additional_links": [
+          {
+            "href": "https://arxiv.org/abs/2509.25204",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "oai:arXiv.org:2509.25204v1"
+      },
+      "credibility_score": 0.7,
+      "processing_timestamp": "2025-10-01T13:26:17.443578+00:00",
+      "original_url": "https://arxiv.org/abs/2509.25204",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Spectral Logit Sculpting: Adaptive Low-Rank Logit Transformation for Controlled Text Generation",
+        "normalized_summary": "arXiv:2509.25204v1 Announce Type: new Abstract: Entropy-based inference methods have gained traction for improving the reliability of Large Language Models (LLMs). However, many existing approaches, such as entropy minimization techniques, suffer from high computational overhead and fail to leverage historical token context effectively. To address these limitations, we propose Spectral Logit Sculpting (SLS), a lightweight inference-time optimization method that dynamically modulates token distributions using spectral and entropic properties of recent logits. SLS maintains a sliding buffer of top-K logits, performs on-the-fly Singular Value Decomposition (SVD) to identify dominant spectral directions, and adaptively rescales logits based on both entropy and logit gap statistics--only activating when uncertainty is high. Without updating any model parameters, SLS effectively sharpens the output distribution while preserving contextual consistency. Experimental results on multiple public benchmarks demonstrate that SLS consistently outperforms existing baseline methods, achieving superior accuracy in mathematical, coding, and scientific reasoning tasks.",
+        "entities": [
+          "Announce Type",
+          "Abstract Entropy",
+          "Large Language Models LLMs However",
+          "Spectral Logit Sculpting SLS",
+          "SLS",
+          "K",
+          "Singular Value Decomposition SVD",
+          "Without",
+          "Experimental"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Spectral Logit Sculpting: Adaptive Low-Rank Logit Transformation for Controlled Text Generation",
+      "normalized_summary": "arXiv:2509.25204v1 Announce Type: new Abstract: Entropy-based inference methods have gained traction for improving the reliability of Large Language Models (LLMs). However, many existing approaches, such as entropy minimization techniques, suffer from high computational overhead and fail to leverage historical token context effectively. To address these limitations, we propose Spectral Logit Sculpting (SLS), a lightweight inference-time optimization method that dynamically modulates token distributions using spectral and entropic properties of recent logits. SLS maintains a sliding buffer of top-K logits, performs on-the-fly Singular Value Decomposition (SVD) to identify dominant spectral directions, and adaptively rescales logits based on both entropy and logit gap statistics--only activating when uncertainty is high. Without updating any model parameters, SLS effectively sharpens the output distribution while preserving contextual consistency. Experimental results on multiple public benchmarks demonstrate that SLS consistently outperforms existing baseline methods, achieving superior accuracy in mathematical, coding, and scientific reasoning tasks."
+    },
+    "authors": [
+      "Jin Li, Zhebo Wang, Tianliang Lu, Mohan Li, Wenpeng Xing, Meng Han"
+    ],
+    "category": "artificial_intelligence"
+  },
+  {
+    "id": 280,
+    "title": "Multi-band observations explore nearby dwarf irregular galaxy UGCA 320",
+    "url": "https://phys.org/news/2025-10-multi-band-explore-nearby-dwarf.html",
+    "summary": "Astronomers from South Africa have conducted multi-band observations of a nearby dwarf irregular galaxy known as UGCA 320. Results of the observational campaign, recently published on the arXiv preprint server, yield important insights into the nature of this galaxy.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T16:00:06",
+    "collected_date": "2025-10-01T13:26:11.567845",
+    "score": 0.7640833333333333,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Astronomy"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-10-multi-band-explore-nearby-dwarf.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678511332"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.559702+00:00",
+      "original_url": "https://phys.org/news/2025-10-multi-band-explore-nearby-dwarf.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Multi-band observations explore nearby dwarf irregular galaxy UGCA 320",
+        "normalized_summary": "Astronomers from South Africa have conducted multi-band observations of a nearby dwarf irregular galaxy known as UGCA 320. Results of the observational campaign, recently published on the arXiv preprint server, yield important insights into the nature of this galaxy.",
+        "entities": [
+          "Astronomers",
+          "South Africa",
+          "UGCA",
+          "Results of the"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Multi-band observations explore nearby dwarf irregular galaxy UGCA 320",
+      "normalized_summary": "Astronomers from South Africa have conducted multi-band observations of a nearby dwarf irregular galaxy known as UGCA 320. Results of the observational campaign, recently published on the arXiv preprint server, yield important insights into the nature of this galaxy."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 309,
+    "title": "On-the-Fly Adaptation to Quantization: Configuration-Aware LoRA for Efficient Fine-Tuning of Quantized LLMs",
+    "url": "https://arxiv.org/abs/2509.25214",
+    "summary": "arXiv:2509.25214v1 Announce Type: new Abstract: As increasingly large pre-trained models are released, deploying them on edge devices for privacy-preserving applications requires effective compression. Recent works combine quantization with the fine-tuning of high-precision LoRA adapters, which can substantially reduce model size while mitigating the accuracy loss from quantization. However, edge devices have inherently heterogeneous capabilities, while performing configuration-wise fine-tuning for every quantization setting is computationally prohibitive. In this paper, we propose CoA-LoRA, a method that dynamically adjusts the LoRA adapter to arbitrary quantization configurations (i.e., the per-layer bit-width choices of a pre-trained model) without requiring repeated fine-tuning. This is accomplished via a configuration-aware model that maps each configuration to its low-rank adjustments. The effectiveness of this model critically depends on the training configuration set, a collection of configurations chosen to cover different total bit-width budgets. However, constructing a high-quality configuration set is non-trivial. We therefore design a Pareto-based configuration search that iteratively optimizes the training configuration set, yielding more precise low-rank adjustments. Our experiments demonstrate that, unlike the state-of-the-art methods that require fine-tuning a separate LoRA adapter for each configuration, CoA-LoRA incurs no additional time cost while achieving comparable or even superior performance to those methods.",
+    "content": null,
+    "source_name": "arXiv AI/ML",
+    "published_date": "2025-10-01T08:00:00",
+    "collected_date": "2025-10-01T13:26:17.567812",
+    "score": 0.7639260000882587,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "cs.LG",
+          "cs.AI"
+        ],
+        "feed_title": "cs.AI, cs.LG, cs.CL, cs.CV updates on arXiv.org",
+        "additional_links": [
+          {
+            "href": "https://arxiv.org/abs/2509.25214",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "oai:arXiv.org:2509.25214v1"
+      },
+      "credibility_score": 0.7,
+      "processing_timestamp": "2025-10-01T13:26:17.561370+00:00",
+      "original_url": "https://arxiv.org/abs/2509.25214",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "On-the-Fly Adaptation to Quantization: Configuration-Aware LoRA for Efficient Fine-Tuning of Quantized LLMs",
+        "normalized_summary": "arXiv:2509.25214v1 Announce Type: new Abstract: As increasingly large pre-trained models are released, deploying them on edge devices for privacy-preserving applications requires effective compression. Recent works combine quantization with the fine-tuning of high-precision LoRA adapters, which can substantially reduce model size while mitigating the accuracy loss from quantization. However, edge devices have inherently heterogeneous capabilities, while performing configuration-wise fine-tuning for every quantization setting is computationally prohibitive. In this paper, we propose CoA-LoRA, a method that dynamically adjusts the LoRA adapter to arbitrary quantization configurations (i.e., the per-layer bit-width choices of a pre-trained model) without requiring repeated fine-tuning. This is accomplished via a configuration-aware model that maps each configuration to its low-rank adjustments. The effectiveness of this model critically depends on the training configuration set, a collection of configurations chosen to cover different total bit-width budgets. However, constructing a high-quality configuration set is non-trivial. We therefore design a Pareto-based configuration search that iteratively optimizes the training configuration set, yielding more precise low-rank adjustments. Our experiments demonstrate that, unlike the state-of-the-art methods that require fine-tuning a separate LoRA adapter for each configuration, CoA-LoRA incurs no additional time cost while achieving comparable or even superior performance to those methods.",
+        "entities": [
+          "Announce Type",
+          "Abstract As",
+          "Recent",
+          "LoRA",
+          "However",
+          "CoA LoRA",
+          "This",
+          "The",
+          "Pareto",
+          "Our"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "negative"
+      },
+      "normalized_title": "On-the-Fly Adaptation to Quantization: Configuration-Aware LoRA for Efficient Fine-Tuning of Quantized LLMs",
+      "normalized_summary": "arXiv:2509.25214v1 Announce Type: new Abstract: As increasingly large pre-trained models are released, deploying them on edge devices for privacy-preserving applications requires effective compression. Recent works combine quantization with the fine-tuning of high-precision LoRA adapters, which can substantially reduce model size while mitigating the accuracy loss from quantization. However, edge devices have inherently heterogeneous capabilities, while performing configuration-wise fine-tuning for every quantization setting is computationally prohibitive. In this paper, we propose CoA-LoRA, a method that dynamically adjusts the LoRA adapter to arbitrary quantization configurations (i.e., the per-layer bit-width choices of a pre-trained model) without requiring repeated fine-tuning. This is accomplished via a configuration-aware model that maps each configuration to its low-rank adjustments. The effectiveness of this model critically depends on the training configuration set, a collection of configurations chosen to cover different total bit-width budgets. However, constructing a high-quality configuration set is non-trivial. We therefore design a Pareto-based configuration search that iteratively optimizes the training configuration set, yielding more precise low-rank adjustments. Our experiments demonstrate that, unlike the state-of-the-art methods that require fine-tuning a separate LoRA adapter for each configuration, CoA-LoRA incurs no additional time cost while achieving comparable or even superior performance to those methods."
+    },
+    "authors": [
+      "Rongguang Ye, Ming Tang, Edith C. H. Ngai"
+    ],
+    "category": "artificial_intelligence"
+  },
+  {
+    "id": 118,
+    "title": "Neural network method can automatically identify rare heartbeat stars",
+    "url": "https://phys.org/news/2025-09-neural-network-method-automatically-rare.html",
+    "summary": "Researchers from the Yunnan Observatories of the Chinese Academy of Sciences (CAS) have unveiled a neural network-based automated method for identifying heartbeat stars—a rare type of binary star system. Their findings are published in The Astronomical Journal.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:38:03",
+    "collected_date": "2025-09-30T17:18:14.979983",
+    "score": 0.7617499999999999,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Astronomy"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-neural-network-method-automatically-rare.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678454681"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:14.974984+00:00",
+      "original_url": "https://phys.org/news/2025-09-neural-network-method-automatically-rare.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Neural network method can automatically identify rare heartbeat stars",
+        "normalized_summary": "Researchers from the Yunnan Observatories of the Chinese Academy of Sciences (CAS) have unveiled a neural network-based automated method for identifying heartbeat stars—a rare type of binary star system. Their findings are published in The Astronomical Journal.",
+        "entities": [
+          "Researchers",
+          "Yunnan Observatories of the Chinese Academy of Sciences CAS",
+          "Their",
+          "The Astronomical Journal"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Neural network method can automatically identify rare heartbeat stars",
+      "normalized_summary": "Researchers from the Yunnan Observatories of the Chinese Academy of Sciences (CAS) have unveiled a neural network-based automated method for identifying heartbeat stars—a rare type of binary star system. Their findings are published in The Astronomical Journal."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 315,
+    "title": "Sensor optimization for urban wind estimation with cluster-based probabilistic framework",
+    "url": "https://arxiv.org/abs/2509.25222",
+    "summary": "arXiv:2509.25222v1 Announce Type: new Abstract: We propose a physics-informed machine-learned framework for sensor-based flow estimation for drone trajectories in complex urban terrain. The input is a rich set of flow simulations at many wind conditions. The outputs are velocity and uncertainty estimates for a target domain and subsequent sensor optimization for minimal uncertainty. The framework has three innovations compared to traditional flow estimators. First, the algorithm scales proportionally to the domain complexity, making it suitable for flows that are too complex for any monolithic reduced-order representation. Second, the framework extrapolates beyond the training data, e.g., smaller and larger wind velocities. Last, and perhaps most importantly, the sensor location is a free input, significantly extending the vast majority of the literature. The key enablers are (1) a Reynolds number-based scaling of the flow variables, (2) a physics-based domain decomposition, (3) a cluster-based flow representation for each subdomain, (4) an information entropy correlating the subdomains, and (5) a multi-variate probability function relating sensor input and targeted velocity estimates. This framework is demonstrated using drone flight paths through a three-building cluster as a simple example. We anticipate adaptations and applications for estimating complete cities and incorporating weather input.",
+    "content": null,
+    "source_name": "arXiv AI/ML",
+    "published_date": "2025-10-01T08:00:00",
+    "collected_date": "2025-10-01T13:26:17.654632",
+    "score": 0.760092666544546,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "cs.LG",
+          "cs.RO",
+          "physics.flu-dyn"
+        ],
+        "feed_title": "cs.AI, cs.LG, cs.CL, cs.CV updates on arXiv.org",
+        "additional_links": [
+          {
+            "href": "https://arxiv.org/abs/2509.25222",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "oai:arXiv.org:2509.25222v1"
+      },
+      "credibility_score": 0.7,
+      "processing_timestamp": "2025-10-01T13:26:17.644060+00:00",
+      "original_url": "https://arxiv.org/abs/2509.25222",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Sensor optimization for urban wind estimation with cluster-based probabilistic framework",
+        "normalized_summary": "arXiv:2509.25222v1 Announce Type: new Abstract: We propose a physics-informed machine-learned framework for sensor-based flow estimation for drone trajectories in complex urban terrain. The input is a rich set of flow simulations at many wind conditions. The outputs are velocity and uncertainty estimates for a target domain and subsequent sensor optimization for minimal uncertainty. The framework has three innovations compared to traditional flow estimators. First, the algorithm scales proportionally to the domain complexity, making it suitable for flows that are too complex for any monolithic reduced-order representation. Second, the framework extrapolates beyond the training data, e.g., smaller and larger wind velocities. Last, and perhaps most importantly, the sensor location is a free input, significantly extending the vast majority of the literature. The key enablers are (1) a Reynolds number-based scaling of the flow variables, (2) a physics-based domain decomposition, (3) a cluster-based flow representation for each subdomain, (4) an information entropy correlating the subdomains, and (5) a multi-variate probability function relating sensor input and targeted velocity estimates. This framework is demonstrated using drone flight paths through a three-building cluster as a simple example. We anticipate adaptations and applications for estimating complete cities and incorporating weather input.",
+        "entities": [
+          "Announce Type",
+          "Abstract We",
+          "The",
+          "First the",
+          "Second the",
+          "Last",
+          "Reynolds",
+          "This"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "Sensor optimization for urban wind estimation with cluster-based probabilistic framework",
+      "normalized_summary": "arXiv:2509.25222v1 Announce Type: new Abstract: We propose a physics-informed machine-learned framework for sensor-based flow estimation for drone trajectories in complex urban terrain. The input is a rich set of flow simulations at many wind conditions. The outputs are velocity and uncertainty estimates for a target domain and subsequent sensor optimization for minimal uncertainty. The framework has three innovations compared to traditional flow estimators. First, the algorithm scales proportionally to the domain complexity, making it suitable for flows that are too complex for any monolithic reduced-order representation. Second, the framework extrapolates beyond the training data, e.g., smaller and larger wind velocities. Last, and perhaps most importantly, the sensor location is a free input, significantly extending the vast majority of the literature. The key enablers are (1) a Reynolds number-based scaling of the flow variables, (2) a physics-based domain decomposition, (3) a cluster-based flow representation for each subdomain, (4) an information entropy correlating the subdomains, and (5) a multi-variate probability function relating sensor input and targeted velocity estimates. This framework is demonstrated using drone flight paths through a three-building cluster as a simple example. We anticipate adaptations and applications for estimating complete cities and incorporating weather input."
+    },
+    "authors": [
+      "Yutong Liang, Chang Hou, Guy Y. Cornejo Maceda, Andrea Ianiro, Stefano Discetti, Andrea Meil\\'an-Vila, Didier Sornette, Sandro Claudio Lera, Jialong Chen, Xiaozhou He, Bernd R. Noack"
+    ],
+    "category": "artificial_intelligence"
+  },
+  {
+    "id": 266,
+    "title": "The best new science fiction books of October 2025",
+    "url": "https://newscientist.com/article/2497314-the-best-new-science-fiction-books-of-october-2025/",
+    "summary": "Science fiction legend Ursula K. Le Guin is honoured with a new collection out this month, and sci-fi fans can also look forward to fiction from astronaut Chris Hadfield and award-winning authors Ken Liu and Mary Robinette Kowal",
+    "content": null,
+    "source_name": "New Scientist",
+    "published_date": "2025-10-01T13:00:55",
+    "collected_date": "2025-10-01T13:26:10.213969",
+    "score": 0.7586217513815694,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "feed_title": "New Scientist - Home",
+        "additional_links": [
+          {
+            "href": "https://www.newscientist.com/article/2497314-the-best-new-science-fiction-books-of-october-2025/?utm_campaign=RSS%7CNSNS&utm_source=NSNS&utm_medium=RSS&utm_content=home",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "2497314-the-best-new-science-fiction-books-of-october-2025|2497314"
+      },
+      "credibility_score": 0.8,
+      "processing_timestamp": "2025-10-01T13:26:10.204654+00:00",
+      "original_url": "https://www.newscientist.com/article/2497314-the-best-new-science-fiction-books-of-october-2025/?utm_campaign=RSS%7CNSNS&utm_source=NSNS&utm_medium=RSS&utm_content=home",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "The best new science fiction books of October 2025",
+        "normalized_summary": "Science fiction legend Ursula K. Le Guin is honoured with a new collection out this month, and sci-fi fans can also look forward to fiction from astronaut Chris Hadfield and award-winning authors Ken Liu and Mary Robinette Kowal",
+        "entities": [
+          "Science",
+          "Ursula K Le Guin",
+          "Chris Hadfield",
+          "Ken Liu",
+          "Mary Robinette Kowal"
+        ],
+        "topics": [
+          "science"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "The best new science fiction books of October 2025",
+      "normalized_summary": "Science fiction legend Ursula K. Le Guin is honoured with a new collection out this month, and sci-fi fans can also look forward to fiction from astronaut Chris Hadfield and award-winning authors Ken Liu and Mary Robinette Kowal"
+    },
+    "authors": [],
+    "category": "popular_science"
+  },
+  {
+    "id": 287,
+    "title": "Cassini proves complex chemistry in Enceladus ocean",
+    "url": "https://phys.org/news/2025-09-cassini-complex-chemistry-enceladus-ocean.html",
+    "summary": "Scientists digging through data collected by the Cassini spacecraft have found new complex organic molecules spewing from Saturn's moon Enceladus. This is a clear sign that complex chemical reactions are taking place within its underground ocean. Some of these reactions could be part of chains that lead to even more complex, potentially biologically relevant molecules.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-10-01T13:00:02",
+    "collected_date": "2025-10-01T13:26:11.653904",
+    "score": 0.756065684935959,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Astrobiology Planetary Sciences"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-cassini-complex-chemistry-enceladus-ocean.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678441061"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-10-01T13:26:11.649705+00:00",
+      "original_url": "https://phys.org/news/2025-09-cassini-complex-chemistry-enceladus-ocean.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "Cassini proves complex chemistry in Enceladus ocean",
+        "normalized_summary": "Scientists digging through data collected by the Cassini spacecraft have found new complex organic molecules spewing from Saturn's moon Enceladus. This is a clear sign that complex chemical reactions are taking place within its underground ocean. Some of these reactions could be part of chains that lead to even more complex, potentially biologically relevant molecules.",
+        "entities": [
+          "Scientists",
+          "Cassini",
+          "Saturn",
+          "Enceladus This",
+          "Some of"
+        ],
+        "topics": [
+          "space"
+        ],
+        "sentiment": "neutral"
+      },
+      "normalized_title": "Cassini proves complex chemistry in Enceladus ocean",
+      "normalized_summary": "Scientists digging through data collected by the Cassini spacecraft have found new complex organic molecules spewing from Saturn's moon Enceladus. This is a clear sign that complex chemical reactions are taking place within its underground ocean. Some of these reactions could be part of chains that lead to even more complex, potentially biologically relevant molecules."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  },
+  {
+    "id": 122,
+    "title": "'Golden Broccoli' aptamer enables glycine imaging inside living cells",
+    "url": "https://phys.org/news/2025-09-golden-broccoli-aptamer-enables-glycine.html",
+    "summary": "The amino acid glycine is an important neurotransmitter that regulates memory, reflex, and brain development, and it may also be a biomarker for bacterial virulence. Of the 20 standard amino acids, the building blocks of proteins, glycine is the simplest, the only one lacking a side chain extending from its backbone.",
+    "content": null,
+    "source_name": "Phys.org",
+    "published_date": "2025-09-30T20:04:04",
+    "collected_date": "2025-09-30T17:18:15.027392",
+    "score": 0.756,
+    "image_url": null,
+    "metadata": {
+      "source_metadata": {
+        "tags": [
+          "Cell & Microbiology Biotechnology"
+        ],
+        "feed_title": "Phys.org - latest science and technology news stories",
+        "additional_links": [
+          {
+            "href": "https://phys.org/news/2025-09-golden-broccoli-aptamer-enables-glycine.html",
+            "type": "text/html"
+          }
+        ],
+        "entry_id": "news678452641"
+      },
+      "credibility_score": 0.75,
+      "processing_timestamp": "2025-09-30T17:18:15.021388+00:00",
+      "original_url": "https://phys.org/news/2025-09-golden-broccoli-aptamer-enables-glycine.html",
+      "enrichment": {
+        "language": "en",
+        "normalized_title": "'Golden Broccoli' aptamer enables glycine imaging inside living cells",
+        "normalized_summary": "The amino acid glycine is an important neurotransmitter that regulates memory, reflex, and brain development, and it may also be a biomarker for bacterial virulence. Of the 20 standard amino acids, the building blocks of proteins, glycine is the simplest, the only one lacking a side chain extending from its backbone.",
+        "entities": [
+          "The",
+          "Of the"
+        ],
+        "topics": [
+          "general"
+        ],
+        "sentiment": "positive"
+      },
+      "normalized_title": "'Golden Broccoli' aptamer enables glycine imaging inside living cells",
+      "normalized_summary": "The amino acid glycine is an important neurotransmitter that regulates memory, reflex, and brain development, and it may also be a biomarker for bacterial virulence. Of the 20 standard amino acids, the building blocks of proteins, glycine is the simplest, the only one lacking a side chain extending from its backbone."
+    },
+    "authors": [],
+    "category": "multidisciplinary"
+  }
+]
