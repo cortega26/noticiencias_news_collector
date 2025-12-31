@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   collect-and-commit:
@@ -58,3 +59,12 @@ jobs:
           git commit -m "🤖 Data update: $(date -u +'%Y-%m-%d')"
           git push
         fi
+    - name: Alert on Failure
+      if: failure()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh issue create \
+          --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
+          --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          --assignee ${{ github.actor }}
