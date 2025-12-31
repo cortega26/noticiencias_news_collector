@@ -17,10 +17,10 @@ if "src" not in sys.modules:
     stub.__path__ = [str(SRC_DIR)]
     sys.modules["src"] = stub
 
-from config import ENRICHMENT_CONFIG
-from src.contracts import CollectorArticleModel
-from src.storage.database import DatabaseManager
-from src.storage.models import Article
+from news_collector.config import ENRICHMENT_CONFIG
+from news_collector.contracts import CollectorArticleModel
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article
 
 SIMHASH_MASK = (1 << 64) - 1
 
@@ -83,7 +83,7 @@ def test_save_article_persists_signed_simhash(
     manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
 
     high_value = (1 << 63) | 0x12345
-    monkeypatch.setattr("src.storage.database.simhash64", lambda _: high_value)
+    monkeypatch.setattr("news_collector.storage.database.simhash64", lambda _: high_value)
 
     payload = _article_payload(
         "https://example.com/high-simhash", published_date=datetime(2024, 1, 2, 12, 30)

@@ -10,8 +10,8 @@ from typing import Dict, List
 
 import pytest
 
-from config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
-from src.enrichment.pipeline import EnrichmentPipeline
+from news_collector.config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
+from news_collector.enrichment.pipeline import EnrichmentPipeline
 
 pytestmark = pytest.mark.perf
 

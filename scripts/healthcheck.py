@@ -12,8 +12,8 @@ from typing import Any, Dict, Iterable, Optional
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 
-from src import get_database_manager, setup_logging
-from src.storage.models import Article
+from news_collector import get_database_manager, setup_logging
+from news_collector.storage.models import Article
 
 DEFAULT_MAX_PENDING = int(os.getenv("HEALTHCHECK_MAX_PENDING", "250"))
 DEFAULT_MAX_INGEST_LAG_MINUTES = int(os.getenv("HEALTHCHECK_MAX_INGEST_MINUTES", "180"))

@@ -16,8 +16,8 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config.settings import SCORING_CONFIG
-from src.scoring.feature_scorer import FeatureBasedScorer
+from news_collector.config.settings import SCORING_CONFIG
+from news_collector.scoring.feature_scorer import FeatureBasedScorer
 
 
 def _article_factory(**overrides):

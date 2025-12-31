@@ -48,7 +48,7 @@ flowchart TD
     Storage --> Serving[APIs / Reporting]
     Storage --> Monitoring[Monitoreo & Alertas]
 ```
-Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contratos formales viven en `src/contracts/`.
+Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contratos formales viven en `news_collector/contracts/`.
 
 ## Instalación
 ### Prerrequisitos
@@ -87,7 +87,7 @@ pip install --require-hashes -r requirements-security.lock
 - `make lint` – Ejecuta `pre-commit run --all-files` (Ruff, Black, isort, mypy y checks básicos).
 - `make lint-fix` / `make format` – Formato automático (Black + isort + Ruff `--fix`).
 - `make fix-makefile-tabs` – Normaliza indentación en recetas de Makefile (tabs obligatorios).
-- `make type` / `make typecheck` – mypy sobre los módulos tipados incrementalmente (`scripts/generate_api_docs.py`, `src/utils/logger.py`, `src/utils/url_canonicalizer.py`).
+- `make type` / `make typecheck` – mypy sobre los módulos tipados incrementalmente (`scripts/generate_api_docs.py`, `news_collector/utils/logger.py`, `news_collector/utils/url_canonicalizer.py`).
 - `make docs` / `make docs-api` – Regenera la documentación de API con `pdoc`.
 - `make security` – `pip-audit`, `bandit` y `trufflehog3` con `scripts/security_gate.py`.
 - `make audit` – alias del objetivo anterior, usado en CI para auditorías de supply chain.
@@ -238,7 +238,7 @@ noticiencias_news_collector/
 ├── config/                   # Versionado, fuentes, settings auxiliares
 ├── config.toml               # Configuración por defecto
 ├── noticiencias/             # Paquete con gestores de configuración/GUI
-├── src/                      # Código de la aplicación (collectors, enrichment, scoring, etc.)
+├── news_collector/           # Código de la aplicación (collectors, enrichment, scoring, etc.)
 ├── scripts/                  # Herramientas operativas y evaluaciones offline
 ├── tests/                    # Suite de pruebas (unitarias, perf, e2e)
 ├── docs/                     # Manuales, runbooks, especificaciones
@@ -256,7 +256,7 @@ noticiencias_news_collector/
 - Resultado XML en `reports/coverage/coverage.xml`; el baseline persiste en `.coverage-baseline`.
 - `scripts/coverage_ratcheter.sh` admite `record` y `check` para capturar/validar nuevos porcentajes (ver tabla).
 - El ratchet usa `git merge-base` contra la rama base y falla si la cobertura baja o un archivo tocado queda <90 %.
-- El scope actual cubre `src/contracts/`, `src/reranker/` y `src/utils/` (módulos determinísticos) excluyendo utilidades dependientes de IO (`logger`, `metrics`, `datetime_utils`). Cambiar otros paquetes sin cobertura provocará un fallo por datos faltantes.
+- El scope actual cubre `news_collector/contracts/`, `news_collector/reranker/` y `news_collector/utils/` (módulos determinísticos) excluyendo utilidades dependientes de IO (`logger`, `metrics`, `datetime_utils`). Cambiar otros paquetes sin cobertura provocará un fallo por datos faltantes.
 
 | Variable/config | Tipo | Default | Requerido | Descripción |
 | --- | --- | --- | --- | --- |
@@ -267,7 +267,7 @@ noticiencias_news_collector/
 Para actualizar el baseline tras mejorar cobertura:
 
 ```bash
-pytest --cov=src --cov-report=xml:reports/coverage/coverage.xml
+pytest --cov=news_collector --cov-report=xml:reports/coverage/coverage.xml
 bash scripts/coverage_ratcheter.sh record
 ```
 
@@ -281,7 +281,7 @@ mutmut results --json
 ```
 
 - `tests/mutation_smoke/` contiene fixtures mínimos que fallan explícitamente cuando `mutmut` ejecuta el _forced fail_.
-- Mutaciones actuales cubren `src/utils/text_cleaner.py` y `src/utils/url_canonicalizer.py`; añadir módulos “hot” implica sumarlos a `tool.mutmut.paths_to_mutate`.
+- Mutaciones actuales cubren `news_collector/utils/text_cleaner.py` y `news_collector/utils/url_canonicalizer.py`; añadir módulos “hot” implica sumarlos a `tool.mutmut.paths_to_mutate`.
 
 ## CI/CD
 Workflows en `.github/workflows/`:

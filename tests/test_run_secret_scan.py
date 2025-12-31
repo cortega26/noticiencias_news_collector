@@ -39,7 +39,7 @@ def test_build_command_serializes_arguments(tmp_path: Path) -> None:
         target=tmp_path,
     )
 
-    assert command[0] == "/usr/bin/python3"
+    assert command[0] == str(Path("/usr/bin/python3"))
     assert command[1:4] == ["-m", "trufflehog3", "--format"]
     assert "--no-history" in command
     assert str(tmp_path) in command

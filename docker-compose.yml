@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  refinery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noticiencias-refinery
+    command: sh -c "pip install -e . && python -m streamlit run apps/refinery/admin_panel.py --server.port 8501 --server.address 0.0.0.0"
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - db
+
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noticiencias-collector
+    command: sh -c "pip install -e . && python run_collector.py --help" # defaulting to help to avoid accidental runs
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+
+  db:
+      image: postgres:15-alpine
+      container_name: noticiencias-db
+      environment:
+        POSTGRES_USER: user
+        POSTGRES_PASSWORD: password
+        POSTGRES_DB: news_db
+      ports:
+        - "5432:5432"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

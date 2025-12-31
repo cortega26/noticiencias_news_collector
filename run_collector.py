@@ -34,9 +34,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from config import ALL_SOURCES
+    from news_collector.config import ALL_SOURCES
     from main import create_system
-    from src import setup_logging
+    from news_collector import setup_logging
 except ImportError as e:
     print(f"❌ Error importando módulos: {e}")
     print(

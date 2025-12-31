@@ -29,14 +29,14 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 # Importar nuestros componentes
-from config import (
+from news_collector.config import (
     ALL_SOURCES,
     validate_config,
     validate_sources,
     COLLECTION_CONFIG,
     SCORING_CONFIG,
 )
-from src import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
 
 
 class NewsCollectorSystem:
@@ -327,7 +327,7 @@ class NewsCollectorSystem:
 
             articles_dicts = [article.to_dict() for article in articles]
 
-            from src.reranker import rerank_articles
+            from news_collector.reranker import rerank_articles
 
             reranked = rerank_articles(
                 articles_dicts,
@@ -436,7 +436,7 @@ class NewsCollectorSystem:
         """Configura los colectores del sistema."""
         try:
             if COLLECTION_CONFIG.get("async_enabled"):
-                from src.collectors.async_rss_collector import AsyncRSSCollector
+                from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 
                 self.collector = AsyncRSSCollector(logger_factory=self.logger)
             else:
@@ -455,7 +455,7 @@ class NewsCollectorSystem:
 
     def _setup_scoring(self):
         """Configura el sistema de scoring."""
-        from src.scoring import create_scorer
+        from news_collector.scoring import create_scorer
 
         weights_override = self.config_override.get("scoring_weights")
         mode_override = self.config_override.get("scoring_mode")

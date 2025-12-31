@@ -18,12 +18,12 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = {file = "VERSION"}
+version = {file = "news_collector/config/VERSION"}
 
 [tool.ruff]
 target-version = "py310"
 line-length = 88
-src = ["src"]
+src = ["news_collector"]
 
 [tool.ruff.lint]
 select = [
@@ -51,11 +51,11 @@ target-version = ["py310"]
 [tool.isort]
 profile = "black"
 line_length = 88
-src_paths = ["src", "tests", "scripts"]
+src_paths = ["news_collector", "tests", "scripts"]
 
 [tool.mypy]
 python_version = "3.10"
-packages = ["src", "tests"]
+packages = ["news_collector", "tests"]
 ignore_missing_imports = true
 warn_unused_configs = true
 warn_return_any = true
@@ -72,22 +72,22 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
-    "config.*",
+    "news_collector.config.*",
     "noticiencias.*",
-    "src.collectors.*",
-    "src.contracts.*",
-    "src.enrichment.*",
-    "src.monitoring.*",
-    "src.perf.*",
-    "src.reranker.*",
-    "src.scoring.*",
-    "src.serving.*",
-    "src.storage.*",
-    "src.utils.datetime_utils",
-    "src.utils.dedupe",
-    "src.utils.metrics",
-    "src.utils.pydantic_compat",
-    "src.utils.text_cleaner",
+    "news_collector.collectors.*",
+    "news_collector.contracts.*",
+    "news_collector.enrichment.*",
+    "news_collector.monitoring.*",
+    "news_collector.perf.*",
+    "news_collector.reranker.*",
+    "news_collector.scoring.*",
+    "news_collector.serving.*",
+    "news_collector.storage.*",
+    "news_collector.utils.datetime_utils",
+    "news_collector.utils.dedupe",
+    "news_collector.utils.metrics",
+    "news_collector.utils.pydantic_compat",
+    "news_collector.utils.text_cleaner",
     "tools.*",
 ]
 ignore_errors = true
@@ -95,8 +95,8 @@ ignore_errors = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
-pythonpath = [".", "src"]
-addopts = "-ra --cov=src/contracts --cov=src/reranker --cov=src/utils --cov-branch --cov-report=term-missing --cov-fail-under=80"
+pythonpath = [".", "news_collector"]
+addopts = "-ra --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing --cov-fail-under=80"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
@@ -105,11 +105,11 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["src/contracts", "src/reranker", "src/utils"]
+source = ["news_collector/contracts", "news_collector/reranker", "news_collector/utils"]
 omit = [
-    "src/utils/logger.py",
-    "src/utils/metrics.py",
-    "src/utils/datetime_utils.py",
+    "news_collector/utils/logger.py",
+    "news_collector/utils/metrics.py",
+    "news_collector/utils/datetime_utils.py",
 ]
 
 [tool.coverage.report]
@@ -119,8 +119,8 @@ show_missing = true
 
 [tool.mutmut]
 paths_to_mutate = [
-    "src/utils/text_cleaner.py",
-    "src/utils/url_canonicalizer.py",
+    "news_collector/utils/text_cleaner.py",
+    "news_collector/utils/url_canonicalizer.py",
 ]
 tests_dir = [
     "tests/mutation_smoke",
@@ -129,16 +129,16 @@ tests_dir = [
     "tests/test_url_canonicalizer.py",
 ]
 also_copy = [
-    "config",
+    "news_collector/config",
     "noticiencias",
-    "src",
+    "news_collector",
     "tests",
     "run_collector.py",
-    "VERSION",
+    "news_collector/config/VERSION",
 ]
-python_paths = ["src"]
+python_paths = ["news_collector"]
 runner = "python -m pytest"
 backup = false
 
 [tool.ruff.lint.per-file-ignores]
-"src/serving/api.py" = ["B008"]
+"news_collector/serving/api.py" = ["B008"]

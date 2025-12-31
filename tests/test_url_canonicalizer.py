@@ -1,6 +1,6 @@
 import pytest
 
-import src.utils.url_canonicalizer as url_canonicalizer
+import news_collector.utils.url_canonicalizer as url_canonicalizer
 
 
 POSITIVE_CASES = [

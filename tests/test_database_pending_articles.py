@@ -12,14 +12,14 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import ALL_SOURCES, ENRICHMENT_CONFIG
+from news_collector.config import ALL_SOURCES, ENRICHMENT_CONFIG
 
 pytestmark = pytest.mark.e2e
 
 from main import NewsCollectorSystem
-from src.contracts import CollectorArticleModel
-from src.storage.database import DatabaseManager
-from src.storage.models import Article
+from news_collector.contracts import CollectorArticleModel
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article
 
 
 def _enrichment_model_version() -> str:
@@ -105,7 +105,7 @@ class _DummyScorer:
             },
             "explanation": {"reason": "test"},
         }
-        from src.contracts import ScoringRequestModel
+        from news_collector.contracts import ScoringRequestModel
 
         return ScoringRequestModel.model_validate(result).model_dump()
 

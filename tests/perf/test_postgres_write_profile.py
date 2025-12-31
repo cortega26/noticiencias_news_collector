@@ -18,8 +18,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT.parent) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT.parent))
 
-from src.storage import models as storage_models  # noqa: E402
-from src.storage.database import DatabaseManager  # noqa: E402
+from news_collector.storage import models as storage_models  # noqa: E402
+from news_collector.storage.database import DatabaseManager  # noqa: E402
 
 pytestmark = pytest.mark.perf
 
@@ -75,7 +75,7 @@ def test_postgres_engine_profile(
             f"sqlite:///{sqlite_path}", echo=kwargs.get("echo", False)
         )
 
-    monkeypatch.setattr("src.storage.database.create_engine", fake_create_engine)
+    monkeypatch.setattr("news_collector.storage.database.create_engine", fake_create_engine)
 
     postgres_config = {
         "type": "postgresql",

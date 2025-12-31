@@ -1,7 +1,7 @@
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from src.utils.text_cleaner import clean_html, normalize_text, detect_language_simple
+from news_collector.utils.text_cleaner import clean_html, normalize_text, detect_language_simple
 
 
 def test_clean_html_removes_boilerplate_and_scripts():

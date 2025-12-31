@@ -9,8 +9,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import src
-from config.version import (
+import news_collector as src
+from news_collector.config.version import (
     MIN_PYTHON_VERSION_STR,
     PYTHON_REQUIRES_SPECIFIER,
 )

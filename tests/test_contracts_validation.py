@@ -13,8 +13,8 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import ALL_SOURCES
-from src.contracts import (
+from news_collector.config import ALL_SOURCES
+from news_collector.contracts import (
     CollectorArticleModel,
     ScoringRequestModel,
 )
