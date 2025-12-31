@@ -3,7 +3,7 @@ from typing import Dict, List
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from src.reranker import rerank_articles
+from news_collector.reranker import rerank_articles
 
 
 ARTICLES = [

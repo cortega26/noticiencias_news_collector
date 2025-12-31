@@ -10,9 +10,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from config.settings import RATE_LIMITING_CONFIG
+from news_collector.config.settings import RATE_LIMITING_CONFIG
 
-from src.collectors.async_rss_collector import AsyncRSSCollector
+from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 
 
 @pytest.fixture()

@@ -6,8 +6,8 @@ from urllib.parse import parse_qsl, urlparse
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from src.utils.text_cleaner import clean_html, normalize_text
-from src.utils.url_canonicalizer import canonicalize_url
+from news_collector.utils.text_cleaner import clean_html, normalize_text
+from news_collector.utils.url_canonicalizer import canonicalize_url
 
 
 TEXT_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",)))

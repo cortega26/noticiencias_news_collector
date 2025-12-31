@@ -10,10 +10,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.collectors import RSSCollector
-from src.scoring import create_scorer
-from src.storage import models as storage_models
-from src.storage.database import DatabaseManager
+from news_collector.collectors import RSSCollector
+from news_collector.scoring import create_scorer
+from news_collector.storage import models as storage_models
+from news_collector.storage.database import DatabaseManager
 
 
 FIXTURE_PATH = (
@@ -37,12 +37,12 @@ def isolated_database(
     db_path = tmp_path / "pipeline.db"
     manager = DatabaseManager({"type": "sqlite", "path": db_path})
 
-    import src.storage.database as database_module
+    import news_collector.storage.database as database_module
 
     # Reset singleton for test isolation
     monkeypatch.setattr(database_module, "_db_manager", manager, raising=False)
     monkeypatch.setattr(
-        "src.collectors.rss_collector.get_database_manager", lambda: manager
+        "news_collector.collectors.rss_collector.get_database_manager", lambda: manager
     )
 
     return manager

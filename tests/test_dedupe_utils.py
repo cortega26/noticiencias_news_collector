@@ -1,4 +1,4 @@
-from src.utils.dedupe import (
+from news_collector.utils.dedupe import (
     normalize_article_text,
     sha256_hex,
     simhash64,

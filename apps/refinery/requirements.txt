@@ -1,0 +1,7 @@
+gitpython
+requests
+pydantic
+python-dotenv
+streamlit
+toml
+watchdog

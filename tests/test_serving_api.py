@@ -4,9 +4,9 @@ from typing import Dict, List
 import pytest
 from fastapi.testclient import TestClient
 
-from src.serving import create_app
-from src.storage.database import DatabaseManager
-from src.storage.models import Article, ScoreLog
+from news_collector.serving import create_app
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article, ScoreLog
 
 pytestmark = pytest.mark.e2e
 

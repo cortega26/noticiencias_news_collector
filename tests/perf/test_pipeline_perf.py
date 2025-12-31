@@ -19,14 +19,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT.parent) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT.parent))
 
-from config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
-from src.collectors import RSSCollector
-from src.enrichment import enrichment_pipeline
-from src.contracts import ArticleForEnrichmentModel
-from src.scoring import create_scorer
-from src.storage import models as storage_models
-from src.storage.database import DatabaseManager
-import src.scoring.feature_scorer as feature_scorer_module
+from news_collector.config.perf_thresholds import PIPELINE_PERF_THRESHOLDS
+from news_collector.collectors import RSSCollector
+from news_collector.enrichment import enrichment_pipeline
+from news_collector.contracts import ArticleForEnrichmentModel
+from news_collector.scoring import create_scorer
+from news_collector.storage import models as storage_models
+from news_collector.storage.database import DatabaseManager
+import news_collector.scoring.feature_scorer as feature_scorer_module
 
 FIXTURE_PATH = PROJECT_ROOT / "data" / "collector_pipeline_chain.json"
 SCORING_GOLDEN_PATH = PROJECT_ROOT / "data" / "scoring_golden.json"
@@ -79,7 +79,7 @@ def pipeline_storage(
     tmp_path: Path,
     storage_backend: str,
 ) -> Dict[str, Any]:
-    import src.storage.database as database_module
+    import news_collector.storage.database as database_module
 
     backend_info: Dict[str, Any] = {"backend": storage_backend}
 
@@ -99,7 +99,7 @@ def pipeline_storage(
                 f"sqlite:///{sqlite_path}", echo=kwargs.get("echo", False)
             )
 
-        monkeypatch.setattr("src.storage.database.create_engine", fake_create_engine)
+        monkeypatch.setattr("news_collector.storage.database.create_engine", fake_create_engine)
 
         postgres_config = {
             "type": "postgresql",
@@ -143,7 +143,7 @@ def pipeline_storage(
 
     monkeypatch.setattr(database_module, "_db_manager", manager, raising=False)
     monkeypatch.setattr(
-        "src.collectors.rss_collector.get_database_manager", lambda: manager
+        "news_collector.collectors.rss_collector.get_database_manager", lambda: manager
     )
 
     backend_info["manager"] = manager

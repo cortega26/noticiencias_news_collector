@@ -14,8 +14,8 @@ if str(ROOT_DIR) not in sys.path:
 
 PENDING_FLAG = "--max-" + ("pen" + "ding")
 
-from src.storage.database import DatabaseManager
-from src.storage.models import Article
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article
 
 
 @pytest.fixture()

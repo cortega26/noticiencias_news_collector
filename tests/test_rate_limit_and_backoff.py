@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
-from config.settings import RATE_LIMITING_CONFIG
-from src.collectors.rss_collector import RSSCollector
-from src.storage.database import DatabaseManager
+from news_collector.config.settings import RATE_LIMITING_CONFIG
+from news_collector.collectors.rss_collector import RSSCollector
+from news_collector.storage.database import DatabaseManager
 
 
 class DummyResponse:
@@ -36,7 +36,7 @@ def _setup_collector(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     db_manager = DatabaseManager({"type": "sqlite", "path": db_path})
     monkeypatch.setattr(
-        "src.collectors.rss_collector.get_database_manager", lambda: db_manager
+        "news_collector.collectors.rss_collector.get_database_manager", lambda: db_manager
     )
     collector = RSSCollector()
     source_config = {

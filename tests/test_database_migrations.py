@@ -22,7 +22,7 @@ if "src" not in sys.modules:
     stub.__path__ = [str(SRC_DIR)]
     sys.modules["src"] = stub
 
-from src.storage.database import DatabaseManager
+from news_collector.storage.database import DatabaseManager
 
 
 def _create_legacy_sources_table(db_path: Path) -> None:

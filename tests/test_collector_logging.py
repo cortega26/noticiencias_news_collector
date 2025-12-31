@@ -13,8 +13,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from src.collectors.base_collector import BaseCollector
-from src.collectors.rss_collector import RSSCollector
+from news_collector.collectors.base_collector import BaseCollector
+from news_collector.collectors.rss_collector import RSSCollector
 
 
 class StubModuleLogger:
@@ -83,7 +83,7 @@ def test_save_article_logs_article_id(monkeypatch: pytest.MonkeyPatch) -> None:
     stub_db = SimpleNamespace(save_article=lambda _payload: saved_article)
 
     monkeypatch.setattr(
-        "src.collectors.rss_collector.get_database_manager",
+        "news_collector.collectors.rss_collector.get_database_manager",
         lambda: stub_db,
     )
 

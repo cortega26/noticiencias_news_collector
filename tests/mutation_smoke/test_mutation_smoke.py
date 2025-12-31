@@ -6,8 +6,8 @@ import os
 
 import pytest
 
-from src.reranker import rerank_articles
-from src.utils.text_cleaner import normalize_text
+from news_collector.reranker import rerank_articles
+from news_collector.utils.text_cleaner import normalize_text
 
 
 if os.environ.get("MUTANT_UNDER_TEST") == "fail":  # pragma: no cover - mutmut instrumentation

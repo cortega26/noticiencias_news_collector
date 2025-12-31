@@ -1,0 +1,430 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-8.0.2, pluggy-1.4.0
+rootdir: C:\Users\corte\VS Code Projects\noticiencias_news_collector
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.3.0
+collected 70 items / 27 errors
+
+=================================== ERRORS ====================================
+________ ERROR collecting tests/collectors/test_http_cache_behavior.py ________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\collectors\test_http_cache_behavior.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\collectors\test_http_cache_behavior.py:8: in <module>
+    from news_collector.collectors.async_rss_collector import AsyncRSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+________________ ERROR collecting tests/e2e/test_runner_cli.py ________________
+run_collector.py:38: in <module>
+    from main import create_system
+main.py:39: in <module>
+    from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+
+During handling of the above exception, another exception occurred:
+tests\e2e\test_runner_cli.py:12: in <module>
+    import run_collector
+run_collector.py:48: in <module>
+    sys.exit(1)
+E   SystemExit: 1
+------------------------------- Captured stdout -------------------------------
+❌ Error importando módulos: No module named 'feedparser'
+Asegúrate de estar en el directorio correcto y tener todas las dependencias instaladas.
+Ejecuta: python -m pip install --require-hashes -r requirements.lock (asegurando que pip corresponda a tu Python)
+________ ERROR collecting tests/mutation_smoke/test_mutation_smoke.py _________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\mutation_smoke\test_mutation_smoke.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\mutation_smoke\test_mutation_smoke.py:9: in <module>
+    from news_collector.reranker import rerank_articles
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+__________ ERROR collecting tests/perf/test_async_collector_perf.py ___________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\perf\test_async_collector_perf.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\perf\test_async_collector_perf.py:9: in <module>
+    from news_collector.collectors.async_rss_collector import AsyncRSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+___________ ERROR collecting tests/perf/test_enrichment_latency.py ____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\perf\test_enrichment_latency.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\perf\test_enrichment_latency.py:14: in <module>
+    from news_collector.enrichment.pipeline import EnrichmentPipeline
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+______________ ERROR collecting tests/perf/test_pipeline_perf.py ______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\perf\test_pipeline_perf.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\perf\test_pipeline_perf.py:16: in <module>
+    from sqlalchemy import create_engine as sqlalchemy_create_engine
+E   ModuleNotFoundError: No module named 'sqlalchemy'
+_________ ERROR collecting tests/perf/test_postgres_write_profile.py __________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\perf\test_postgres_write_profile.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\perf\test_postgres_write_profile.py:14: in <module>
+    from sqlalchemy import create_engine as sqlalchemy_create_engine
+E   ModuleNotFoundError: No module named 'sqlalchemy'
+______ ERROR collecting tests/property/test_normalization_properties.py _______
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\property\test_normalization_properties.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\property\test_normalization_properties.py:6: in <module>
+    from hypothesis import given, settings
+E   ModuleNotFoundError: No module named 'hypothesis'
+____________ ERROR collecting tests/test_async_collector_parity.py ____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_async_collector_parity.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_async_collector_parity.py:15: in <module>
+    from news_collector.collectors.async_rss_collector import AsyncRSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+______________ ERROR collecting tests/test_collector_logging.py _______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_collector_logging.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_collector_logging.py:17: in <module>
+    from news_collector.collectors.rss_collector import RSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+____________ ERROR collecting tests/test_collector_pipeline_e2e.py ____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_collector_pipeline_e2e.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_collector_pipeline_e2e.py:13: in <module>
+    from news_collector.collectors import RSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_____________ ERROR collecting tests/test_contracts_validation.py _____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_contracts_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_contracts_validation.py:17: in <module>
+    from news_collector.contracts import (
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_____________ ERROR collecting tests/test_database_migrations.py ______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_database_migrations.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_database_migrations.py:11: in <module>
+    from sqlalchemy import inspect as sqla_inspect
+E   ModuleNotFoundError: No module named 'sqlalchemy'
+__________ ERROR collecting tests/test_database_pending_articles.py ___________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_database_pending_articles.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_database_pending_articles.py:19: in <module>
+    from main import NewsCollectorSystem
+main.py:39: in <module>
+    from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+__________ ERROR collecting tests/test_database_simhash_behavior.py ___________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_database_simhash_behavior.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_database_simhash_behavior.py:21: in <module>
+    from news_collector.contracts import CollectorArticleModel
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_____________ ERROR collecting tests/test_enrichment_pipeline.py ______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_enrichment_pipeline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_enrichment_pipeline.py:6: in <module>
+    from news_collector.enrichment.pipeline import EnrichmentPipeline
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+____________ ERROR collecting tests/test_feature_scorer_config.py _____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_feature_scorer_config.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_feature_scorer_config.py:20: in <module>
+    from news_collector.scoring.feature_scorer import FeatureBasedScorer
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_________________ ERROR collecting tests/test_healthcheck.py __________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_healthcheck.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_healthcheck.py:17: in <module>
+    from news_collector.storage.database import DatabaseManager
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_____________ ERROR collecting tests/test_main_initialization.py ______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_main_initialization.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_main_initialization.py:47: in <module>
+    import main
+main.py:39: in <module>
+    from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+________________ ERROR collecting tests/test_observability.py _________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_observability.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_observability.py:17: in <module>
+    import main
+main.py:39: in <module>
+    from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+__________ ERROR collecting tests/test_python_version_requirement.py __________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_python_version_requirement.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_python_version_requirement.py:12: in <module>
+    import news_collector as src
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+____________ ERROR collecting tests/test_rate_limit_and_backoff.py ____________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_rate_limit_and_backoff.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_rate_limit_and_backoff.py:12: in <module>
+    from news_collector.collectors.rss_collector import RSSCollector
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+___________________ ERROR collecting tests/test_reranker.py ___________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_reranker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_reranker.py:3: in <module>
+    from hypothesis import given, settings
+E   ModuleNotFoundError: No module named 'hypothesis'
+________________ ERROR collecting tests/test_scoring_golden.py ________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_scoring_golden.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_scoring_golden.py:22: in <module>
+    from news_collector.scoring import feature_scorer
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+_________________ ERROR collecting tests/test_serving_api.py __________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_serving_api.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_serving_api.py:5: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi.testclient'; 'fastapi' is not a package
+_________________ ERROR collecting tests/test_text_cleaner.py _________________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_text_cleaner.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_text_cleaner.py:1: in <module>
+    from hypothesis import given, settings
+E   ModuleNotFoundError: No module named 'hypothesis'
+______________ ERROR collecting tests/test_url_canonicalizer.py _______________
+ImportError while importing test module 'C:\Users\corte\VS Code Projects\noticiencias_news_collector\tests\test_url_canonicalizer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_url_canonicalizer.py:3: in <module>
+    import news_collector.utils.url_canonicalizer as url_canonicalizer
+news_collector\__init__.py:10: in <module>
+    from .collectors import BaseCollector, RSSCollector
+news_collector\collectors\__init__.py:8: in <module>
+    from .rss_collector import RSSCollector
+news_collector\collectors\rss_collector.py:24: in <module>
+    import feedparser
+E   ModuleNotFoundError: No module named 'feedparser'
+============================== warnings summary ===============================
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\dateutil\tz\tz.py:37
+  C:\Users\corte\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\dateutil\tz\tz.py:37: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+    EPOCH = datetime.datetime.utcfromtimestamp(0)
+
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\jupyter_client\connect.py:22
+  C:\Users\corte\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\jupyter_client\connect.py:22: DeprecationWarning: Jupyter is migrating its paths to use standard platformdirs
+  given by the platformdirs library.  To remove this warning and
+  see the appropriate new directories, set the environment variable
+  `JUPYTER_PLATFORM_DIRS=1` and then run `jupyter --paths`.
+  The use of platformdirs will be the default in `jupyter_core` v6
+    from jupyter_core.paths import jupyter_data_dir, jupyter_runtime_dir, secure_write
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests/collectors/test_http_cache_behavior.py
+ERROR tests/e2e/test_runner_cli.py - SystemExit: 1
+ERROR tests/mutation_smoke/test_mutation_smoke.py
+ERROR tests/perf/test_async_collector_perf.py
+ERROR tests/perf/test_enrichment_latency.py
+ERROR tests/perf/test_pipeline_perf.py
+ERROR tests/perf/test_postgres_write_profile.py
+ERROR tests/property/test_normalization_properties.py
+ERROR tests/test_async_collector_parity.py
+ERROR tests/test_collector_logging.py
+ERROR tests/test_collector_pipeline_e2e.py
+ERROR tests/test_contracts_validation.py
+ERROR tests/test_database_migrations.py
+ERROR tests/test_database_pending_articles.py
+ERROR tests/test_database_simhash_behavior.py
+ERROR tests/test_enrichment_pipeline.py
+ERROR tests/test_feature_scorer_config.py
+ERROR tests/test_healthcheck.py
+ERROR tests/test_main_initialization.py
+ERROR tests/test_observability.py
+ERROR tests/test_python_version_requirement.py
+ERROR tests/test_rate_limit_and_backoff.py
+ERROR tests/test_reranker.py
+ERROR tests/test_scoring_golden.py
+ERROR tests/test_serving_api.py
+ERROR tests/test_text_cleaner.py
+ERROR tests/test_url_canonicalizer.py
+!!!!!!!!!!!!!!!!!! Interrupted: 27 errors during collection !!!!!!!!!!!!!!!!!!!
+======================= 2 warnings, 27 errors in 1.55s ========================

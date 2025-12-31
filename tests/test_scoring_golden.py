@@ -19,8 +19,8 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from src.scoring import feature_scorer
-from src.scoring.feature_scorer import FeatureBasedScorer
+from news_collector.scoring import feature_scorer
+from news_collector.scoring.feature_scorer import FeatureBasedScorer
 
 DATA_PATH = Path(__file__).resolve().parent / "data" / "scoring_golden.json"
 ABS_TOL = 1e-6

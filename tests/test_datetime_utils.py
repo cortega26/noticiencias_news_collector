@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from src.utils.datetime_utils import (
+from news_collector.utils.datetime_utils import (
     parse_to_utc_with_tzinfo,
     to_display_tz,
     format_display,
