@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -11,7 +12,9 @@ from news_collector.config import SCORING_CONFIG
 from pydantic import ValidationError
 
 from news_collector.contracts import ScoringRequestModel
+from news_collector.contracts import ScoringRequestModel
 from news_collector.utils.dedupe import normalize_article_text
+from .interfaces import AsyncScorer
 
 
 def _get_attr(obj: Any, name: str, default=None):
@@ -34,7 +37,7 @@ class FeatureWeights:
         }.items()
 
 
-class FeatureBasedScorer:
+class FeatureBasedScorer(AsyncScorer):
     """Advanced scorer with freshness decay, diversity penalty, and explanations."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -170,6 +173,30 @@ class FeatureBasedScorer:
             ) from exc
 
         return validated.model_dump()
+
+    async def score_article_async(
+        self, article_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Score an article asynchronously using a thread executor.
+        
+        Args:
+            article_data: Dictionary containing 'article' data and optional 'source_config'.
+            
+        Returns:
+            Dictionary with scoring results.
+        """
+        # FeatureBasedScorer already supports dicts via _get_attr helper
+        article = article_data.get("article", article_data)
+        source_config = article_data.get("source_config")
+        
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, 
+            self.score_article, 
+            article, 
+            source_config
+        )
 
     # Feature calculators -------------------------------------------------
 

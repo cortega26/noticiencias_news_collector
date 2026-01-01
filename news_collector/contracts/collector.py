@@ -5,15 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, TypedDict
 
-from news_collector.utils.pydantic_compat import get_pydantic_module
-
-_pydantic = get_pydantic_module()
-AnyHttpUrl = _pydantic.AnyHttpUrl
-BaseModel = _pydantic.BaseModel
-ConfigDict = _pydantic.ConfigDict
-Field = _pydantic.Field
-field_validator = _pydantic.field_validator
-model_validator = _pydantic.model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 
@@ -106,14 +98,14 @@ class CollectorArticleModel(BaseModel):
         return normalized
 
     @model_validator(mode="after")
-    def ensure_metadata(cls, model: "CollectorArticleModel") -> "CollectorArticleModel":
-        model.article_metadata.ensure_original_url(model.original_url or str(model.url))
-        model.original_url = model.article_metadata.original_url
-        if model.word_count < len(model.summary.split()):
+    def ensure_metadata(self) -> "CollectorArticleModel":
+        self.article_metadata.ensure_original_url(self.original_url or str(self.url))
+        self.original_url = self.article_metadata.original_url
+        if self.word_count < len(self.summary.split()):
             raise ValueError(
                 "word_count must be greater or equal to the number of words in summary"
             )
-        return model
+        return self
 
     def model_dump_for_storage(self) -> Dict[str, Any]:
         """Return a dict ready for persistence."""

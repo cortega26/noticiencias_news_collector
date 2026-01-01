@@ -17,7 +17,9 @@ que explica exactamente por qué cada artículo recibió cierto puntaje.
 import logging
 import math
 import re
+import asyncio
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
 from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
@@ -26,11 +28,12 @@ from pydantic import ValidationError
 from news_collector.contracts import ScoringRequestModel
 
 from ..storage.models import Article
+from .interfaces import AsyncScorer
 
 logger = logging.getLogger(__name__)
 
 
-class BasicScorer:
+class BasicScorer(AsyncScorer):
     """
     Sistema de scoring multidimensional para artículos científicos.
 
@@ -150,6 +153,9 @@ class BasicScorer:
 
         except Exception as e:
             logger.error(f"Error calculando score para artículo {article.id}: {e}")
+            print(f"CRITICAL SCORING ERROR for {getattr(article, 'id', 'unknown')}: {e}")
+            import traceback
+            traceback.print_exc()
             fallback = {
                 "final_score": 0.0,
                 "should_include": False,
@@ -168,6 +174,60 @@ class BasicScorer:
                 return ScoringRequestModel.model_validate(fallback).model_dump()
             except ValidationError:
                 return fallback
+
+    async def score_article_async(
+        self, article_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Score an article asynchronously using a thread executor.
+        
+        Args:
+            article_data: Dictionary containing 'article' data and optional 'source_config'.
+            
+        Returns:
+            Dictionary with scoring results.
+        """
+        # Extract article data and config
+        article_dict = article_data.get("article", article_data)
+        source_config = article_data.get("source_config")
+        
+        class SafeNamespace:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+            def __getattr__(self, name):
+                return None
+
+        # Parse date strings to datetime objects if necessary
+        for date_field in ["published_date", "collected_date"]:
+            val = article_dict.get(date_field)
+            if isinstance(val, str):
+                try:
+                    article_dict[date_field] = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                except (ValueError, TypeError):
+                    pass
+                    
+        # Create a lightweight object to mimic Article interface for existing methods
+        # This allows reusing all the private calculation methods without modification
+        article_obj = SafeNamespace(**article_dict)
+        
+        # Explicitly ensure 'collected_date' exists as datetime
+        if not article_obj.collected_date:
+             article_obj.collected_date = datetime.now(timezone.utc)
+             
+        # Ensure 'article_metadata' exists if it's missing (SafeNamespace returns None, causing problems)
+        if article_obj.article_metadata is None:
+            article_obj.article_metadata = {}
+            
+        # Run the synchronous scoring logic in a separate thread to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,  # Use default executor
+            self.score_article,
+            article_obj,
+            source_config
+        )
+        
+        return result
 
     def _calculate_source_credibility_score(
         self, article: Article, source_config: Dict[str, Any] = None
@@ -231,10 +291,23 @@ class BasicScorer:
         else:
             reference_date = article.published_date
             penalty = 1.0
+        
+        # Ensure reference_date is timezone-aware and normalized to UTC
+        if reference_date.tzinfo is None:
+            reference_date = reference_date.replace(tzinfo=timezone.utc)
+        else:
+            reference_date = reference_date.astimezone(timezone.utc)
 
-        # Calcular edad en horas
-        now = datetime.now(timezone.utc)
-        age_hours = (now - reference_date).total_seconds() / 3600
+        try:
+            # Calcular edad en horas
+            now = datetime.now(timezone.utc)
+            # Both dates are now UTC-aware, subtraction is safe
+            age_hours = (now - reference_date).total_seconds() / 3600
+        except Exception as e:
+            # Should hopefully not happen now, but log just in case
+            logger.error(f"Error calculating recency: {e}. Ref: {reference_date}, Now: {now}")
+            # Fallback safe value
+            age_hours = 24 * 7 # Assume 1 week old on error
 
         # Función de decay logarítmica
         # Score alto para las primeras 24 horas, decay gradual después
@@ -749,7 +822,14 @@ class BasicScorer:
         factors = []
 
         if article.published_date:
-            age = datetime.now(timezone.utc) - article.published_date
+            # Normalize date for safety
+            pub_date = article.published_date
+            if pub_date.tzinfo is None:
+                pub_date = pub_date.replace(tzinfo=timezone.utc)
+            else:
+                 pub_date = pub_date.astimezone(timezone.utc)
+            
+            age = datetime.now(timezone.utc) - pub_date
             if age.days == 0:
                 factors.append("Publicado hoy (+)")
             elif age.days <= 3:

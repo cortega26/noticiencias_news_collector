@@ -4,13 +4,7 @@ from __future__ import annotations
 
 from typing import List, TypedDict
 
-from news_collector.utils.pydantic_compat import get_pydantic_module
-
-_pydantic = get_pydantic_module()
-BaseModel = _pydantic.BaseModel
-ConfigDict = _pydantic.ConfigDict
-Field = _pydantic.Field
-model_validator = _pydantic.model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SUPPORTED_LANGUAGES = {"en", "es", "pt", "fr"}
 
@@ -47,14 +41,12 @@ class ArticleForEnrichmentModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def ensure_text_present(
-        cls, model: "ArticleForEnrichmentModel"
-    ) -> "ArticleForEnrichmentModel":
-        if not (model.title or model.summary or model.content):
+    def ensure_text_present(self) -> "ArticleForEnrichmentModel":
+        if not (self.title or self.summary or self.content):
             raise ValueError(
                 "enrichment payload requires at least one of title, summary, or content"
             )
-        return model
+        return self
 
 
 class ArticleEnrichmentModel(BaseModel):
@@ -71,19 +63,17 @@ class ArticleEnrichmentModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def normalize_fields(
-        cls, model: "ArticleEnrichmentModel"
-    ) -> "ArticleEnrichmentModel":
-        language = model.language.lower()
+    def normalize_fields(self) -> "ArticleEnrichmentModel":
+        language = self.language.lower()
         if language not in SUPPORTED_LANGUAGES:
             raise ValueError(
-                f"language must be one of {sorted(SUPPORTED_LANGUAGES)}, got '{model.language}'"
+                f"language must be one of {sorted(SUPPORTED_LANGUAGES)}, got '{self.language}'"
             )
-        sentiment = model.sentiment.lower()
+        sentiment = self.sentiment.lower()
         if sentiment not in {"positive", "negative", "neutral"}:
             raise ValueError("sentiment must be 'positive', 'negative', or 'neutral'")
-        model.language = language
-        model.sentiment = sentiment
-        model.entities = model.entities[:10]
-        model.topics = model.topics[:5] if model.topics else ["general"]
-        return model
+        self.language = language
+        self.sentiment = sentiment
+        self.entities = self.entities[:10]
+        self.topics = self.topics[:5] if self.topics else ["general"]
+        return self

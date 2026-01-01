@@ -200,6 +200,7 @@ class Article(Base):
             "is_preprint": self.is_preprint,
             "doi": self.doi,
             "journal": self.journal,
+            "components": self.score_components,
         }
 
 

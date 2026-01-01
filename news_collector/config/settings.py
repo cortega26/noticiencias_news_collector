@@ -90,8 +90,10 @@ def _normalize_enrichment(config: Config) -> Dict[str, Any]:
 ENRICHMENT_CONFIG: Dict[str, Any] = _normalize_enrichment(CONFIG)
 NEWS_CONFIG: Dict[str, Any] = CONFIG.news.model_dump(mode="python")
 
+import os
+
 LOGGING_CONFIG: Dict[str, Any] = {
-    "level": CONFIG.logging.level,
+    "level": os.environ.get("LOG_LEVEL", CONFIG.logging.level),
     "file_path": str(CONFIG.logging.file_path),
     "max_file_size": f"{CONFIG.logging.max_file_size_mb} MB",
     "retention": f"{CONFIG.logging.retention_days} days",

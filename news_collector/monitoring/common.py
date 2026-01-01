@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-UTC = ZoneInfo("UTC")
+try:
+    UTC = ZoneInfo("UTC")
+except ZoneInfoNotFoundError:
+    UTC = timezone.utc
 
 
 class Severity(str, Enum):

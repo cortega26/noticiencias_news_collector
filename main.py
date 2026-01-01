@@ -177,7 +177,7 @@ class NewsCollectorSystem:
                 )
             return False
 
-    def run_collection_cycle(
+    async def run_collection_cycle(
         self,
         sources_filter: Optional[List[str]] = None,
         dry_run: bool = False,
@@ -238,7 +238,7 @@ class NewsCollectorSystem:
                 }
             )
 
-            collection_results = self._execute_collection(
+            collection_results = await self._execute_collection(
                 sources_to_process,
                 dry_run,
                 session_id=session_id,
@@ -248,7 +248,7 @@ class NewsCollectorSystem:
                 collection_results, session_id=session_id, trace_id=trace_id
             )
 
-            scoring_results = self._execute_scoring(collection_results, dry_run)
+            scoring_results = await self._execute_scoring(collection_results, dry_run)
             session_logger.info(
                 {
                     "event": "collection_cycle.scoring.completed",
@@ -567,7 +567,7 @@ class NewsCollectorSystem:
             # Procesar todas las fuentes
             return ALL_SOURCES.copy()
 
-    def _execute_collection(
+    async def _execute_collection(
         self,
         sources: Dict[str, Dict[str, Any]],
         dry_run: bool,
@@ -582,12 +582,10 @@ class NewsCollectorSystem:
             # Recolección real
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
                 # Ejecutar versión async si está disponible
-                return asyncio.run(
-                    self.collector.collect_from_multiple_sources_async(
-                        sources,
-                        session_id=session_id,
-                        trace_id=trace_id,
-                    )
+                return await self.collector.collect_from_multiple_sources_async(
+                    sources,
+                    session_id=session_id,
+                    trace_id=trace_id,
                 )
             return self.collector.collect_from_multiple_sources(
                 sources,
@@ -645,7 +643,7 @@ class NewsCollectorSystem:
                         session_id=session_id,
                     )
 
-    def _execute_scoring(
+    async def _execute_scoring(
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
         """Ejecuta la fase de scoring de artículos."""
@@ -665,27 +663,58 @@ class NewsCollectorSystem:
             }
 
             total_score = 0.0
-
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-
-            max_workers = self.config_override.get(
+            
+            # Prepare tasks for async execution
+            tasks = []
+            max_concurrency = self.config_override.get(
                 "scoring_workers"
             ) or SCORING_CONFIG.get("workers", 4)
-
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {
-                    executor.submit(
-                        self.scorer.score_article,
-                        article,
-                        ALL_SOURCES.get(article.source_id),
-                    ): article
-                    for article in pending_articles
+            
+            # Use a semaphore to limit concurrency if needed, though run_in_executor 
+            # handles thread pool limits. But if we had thousands, batching implies 
+            # we shouldn't create thousands of tasks at once if not needed. 
+            # For now, simplistic gather is fine for reasonable batch sizes.
+            
+            for article in pending_articles:
+                # Convert ORM object to dict for safe thread usage
+                article_data = {
+                    "id": article.id,
+                    "title": article.title,
+                    "summary": article.summary,
+                    "url": article.url,
+                    "published_date": article.published_date,
+                    "collected_date": article.collected_date,
+                    "source_id": article.source_id,
+                    "article_metadata": article.article_metadata or {},
+                    "peer_reviewed": article.peer_reviewed,
+                    "is_preprint": article.is_preprint,
+                    "doi": article.doi,
+                    "journal": article.journal,
+                    # Content fields
+                    "content": article.content,
+                    # Fields for feature scorer
+                    "duplication_confidence": getattr(article, "duplication_confidence", 0.0),
+                    "word_count": getattr(article, "word_count", 0),
                 }
+                
+                payload = {
+                    "article": article_data,
+                    "source_config": ALL_SOURCES.get(article.source_id)
+                }
+                
+                tasks.append(self.scorer.score_article_async(payload))
 
-                for future in as_completed(futures):
-                    article = futures[future]
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                for article, score_result in zip(pending_articles, results):
+                    if isinstance(score_result, Exception):
+                        self.logger.create_module_logger("scoring").error(
+                            f"Error scoring artículo {article.id}: {str(score_result)}"
+                        )
+                        continue
+
                     try:
-                        score_result = future.result()
                         self.db_manager.update_article_score(article.id, score_result)
 
                         scoring_stats["articles_scored"] += 1
@@ -698,7 +727,7 @@ class NewsCollectorSystem:
 
                     except Exception as e:
                         self.logger.create_module_logger("scoring").error(
-                            f"Error scoring artículo {article.id}: {str(e)}"
+                            f"Error saving score for article {article.id}: {str(e)}"
                         )
 
             if scoring_stats["articles_scored"] > 0:
@@ -894,7 +923,7 @@ def run_quick_collection(
     if not system.initialize():
         raise RuntimeError("No se pudo inicializar el sistema")
 
-    return system.run_collection_cycle(sources_filter, dry_run)
+    return asyncio.run(system.run_collection_cycle(sources_filter, dry_run))
 
 
 def main():
@@ -939,7 +968,7 @@ def main():
 
         else:
             print("\n🚀 Ejecutando ciclo de recolección...")
-            results = system.run_collection_cycle(args.sources, args.dry_run)
+            results = asyncio.run(system.run_collection_cycle(args.sources, args.dry_run))
 
             print("\n📈 RESUMEN DE RESULTADOS:")
             summary = results["summary"]

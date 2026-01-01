@@ -62,6 +62,12 @@ $(BOOTSTRAP_STAMP): requirements.lock
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@echo "Environment ready at $(VENV)"
 
+run-local: bootstrap ## Run the collector locally
+	@$(PYTHON) run_collector.py
+
+debug: bootstrap ## Run the collector in debug mode (verbose)
+	@$(PYTHON) run_collector.py --verbose
+
 lint: bootstrap ## Run code quality hooks via pre-commit
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
 	@$(PRE_COMMIT) run --all-files --show-diff-on-failure
@@ -107,10 +113,10 @@ audit: security ## Run supply-chain and security audits (alias for `make securit
 security: bootstrap ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
 	@echo "[security] Running pip-audit"
-	@$(PIP_AUDIT) -r requirements.txt --format json --output $(PIP_AUDIT_REPORT) || true
+	@$(PIP_AUDIT) -r requirements.lock --format json --output $(PIP_AUDIT_REPORT) || true
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running bandit"
-	@$(BANDIT) -q -r src scripts -c .bandit -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
+	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running trufflehog3"
 	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml

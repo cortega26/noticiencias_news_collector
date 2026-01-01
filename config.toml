@@ -10,7 +10,7 @@ dlq_dir = "/workspace/noticiencias_news_collector/data/dlq"
 
 [database]
 driver = "sqlite"
-path = "data/news.db"
+path = "data/news_v3.db"
 host = ""
 port = ""
 name = "noticiencias"
@@ -27,9 +27,10 @@ pool_recycle = 1800
 collection_interval_hours = 6
 request_timeout_seconds = 30
 async_enabled = false
-max_concurrent_requests = 8
-max_articles_per_source = 50
-recent_days_threshold = 7
+
+max_concurrent_requests = 1
+max_articles_per_source = 5
+recent_days_threshold = 365
 user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
 canonicalization_cache_size = 2048
 
@@ -53,8 +54,9 @@ simhash_candidate_window = 500
 [scoring]
 daily_top_count = 10
 minimum_score = 0.3
-mode = "advanced"
-workers = 4
+mode = "cognitive"
+
+workers = 1
 reranker_seed = 1337
 source_cap_percentage = 0.5
 topic_cap_percentage = 0.6
@@ -88,10 +90,10 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 "reddit.com" = 30.0
 
 [scoring.weights]
-source_credibility = 0.2
-recency = 0.2
-content_quality = 0.2
-engagement_potential = 0.4
+source_credibility = 0.1
+recency = 0.1
+content_quality = 0.1
+engagement_potential = 0.7
 
 [scoring.feature_weights]
 source_credibility = 0.3
@@ -138,6 +140,10 @@ default_topic = "general"
 [enrichment.models.pattern_v1.sentiment]
 default = "neutral"
 tie_breaker = "neutral"
+
+[enrichment.models.pattern_v1.sentiment.lexicon]
+shared_positive = [ "confirmed", "progress", "celebrated", "avance", "avances", "innovador", "innovadora", "soluciones", "parceria", "sucesso",]
+shared_negative = [ "warned", "risk", "crisis", "preocupante", "urgente", "urgentes", "inflation", "recession", "recesión", "recessão",]
 
 [enrichment.models.pattern_v1.entities.entries]
 [[enrichment.models.pattern_v1.entities.entries.shared]]
@@ -225,10 +231,6 @@ case_sensitive = false
 label = "PRODUCT"
 pattern = "Ariane 6"
 case_sensitive = false
-
-[enrichment.models.pattern_v1.sentiment.lexicon]
-shared_positive = [ "confirmed", "progress", "celebrated", "avance", "avances", "innovador", "innovadora", "soluciones", "parceria", "sucesso",]
-shared_negative = [ "warned", "risk", "crisis", "preocupante", "urgente", "urgentes", "inflation", "recession", "recesión", "recessão",]
 
 [enrichment.models.pattern_v1.topics.space.keywords]
 shared = [ "space", "espacio", "espaço", "espace", "lunar", "orbit", "orbital", "rocket", "cohete", "foguete", "fusée",]

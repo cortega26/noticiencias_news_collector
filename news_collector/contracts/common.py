@@ -5,13 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, TypedDict
 
-from news_collector.utils.pydantic_compat import get_pydantic_module
-
-_pydantic = get_pydantic_module()
-BaseModel = _pydantic.BaseModel
-ConfigDict = _pydantic.ConfigDict
-Field = _pydantic.Field
-model_validator = _pydantic.model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enrichment import ArticleEnrichment, ArticleEnrichmentModel
 
@@ -38,13 +32,13 @@ class ArticleMetadataModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def validate_ranges(cls, model: "ArticleMetadataModel") -> "ArticleMetadataModel":
-        credibility = model.credibility_score
+    def validate_ranges(self) -> "ArticleMetadataModel":
+        credibility = self.credibility_score
         if credibility is not None and not (0.0 <= credibility <= 1.0):
             raise ValueError("credibility_score must be between 0 and 1 inclusive")
-        if model.original_url is not None and not model.original_url.startswith("http"):
+        if self.original_url is not None and not self.original_url.startswith("http"):
             raise ValueError("original_url must start with http or https")
-        return model
+        return self
 
     def ensure_original_url(self, fallback: str) -> "ArticleMetadataModel":
         """Ensure original_url is populated with a sensible fallback."""

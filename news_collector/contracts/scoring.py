@@ -5,13 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, Mapping, TypedDict
 
-from news_collector.utils.pydantic_compat import get_pydantic_module
-
-_pydantic = get_pydantic_module()
-BaseModel = _pydantic.BaseModel
-ConfigDict = _pydantic.ConfigDict
-Field = _pydantic.Field
-model_validator = _pydantic.model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ScoringComponents(TypedDict, total=False):
@@ -36,9 +30,7 @@ class ScoringComponentsModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def validate_component_ranges(
-        cls, model: "ScoringComponentsModel"
-    ) -> "ScoringComponentsModel":
+    def validate_component_ranges(self) -> "ScoringComponentsModel":
         for field_name in (
             "source_credibility",
             "recency",
@@ -46,18 +38,18 @@ class ScoringComponentsModel(BaseModel):
             "engagement",
             "engagement_potential",
         ):
-            value = getattr(model, field_name)
+            value = getattr(self, field_name)
             if value is None:
                 continue
             if not (0.0 <= value <= 1.0):
                 raise ValueError(
                     f"{field_name.replace('_', ' ')} must be between 0 and 1 inclusive"
                 )
-        if model.engagement is None and model.engagement_potential is None:
+        if self.engagement is None and self.engagement_potential is None:
             raise ValueError(
                 "components must define either 'engagement' or 'engagement_potential'"
             )
-        return model
+        return self
 
     def get_engagement_value(self) -> float:
         """Return whichever engagement field is populated."""
@@ -97,12 +89,12 @@ class ScoringRequestModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
-    def validate_ranges(cls, model: "ScoringRequestModel") -> "ScoringRequestModel":
-        if not (0.0 <= model.final_score <= 1.0):
+    def validate_ranges(self) -> "ScoringRequestModel":
+        if not (0.0 <= self.final_score <= 1.0):
             raise ValueError("final_score must be between 0 and 1 inclusive")
-        if model.weights:
+        if self.weights:
             total = 0.0
-            for key, value in model.weights.items():
+            for key, value in self.weights.items():
                 if not (0.0 <= value <= 1.0):
                     raise ValueError(
                         f"weight '{key}' must be between 0 and 1 inclusive"
@@ -110,7 +102,7 @@ class ScoringRequestModel(BaseModel):
                 total += value
             if not (0.99 <= total <= 1.01):
                 raise ValueError("weights must sum to approximately 1.0")
-        return model
+        return self
 
     def model_dump_for_storage(self) -> Dict[str, Any]:
         """Return a serializable scoring payload."""

@@ -797,19 +797,123 @@ class DatabaseManager:
 
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Optional[str]]:
         """Devuelve los encabezados HTTP cacheados para una fuente."""
-
         with self.get_session() as session:
-            source = session.query(Source).filter_by(id=source_id).first()
+            source = (
+                session.query(Source)
+                .options(load_only(Source.feed_etag, Source.feed_last_modified))
+                .filter_by(id=source_id)
+                .first()
+            )
             if not source:
-                return {"etag": None, "last_modified": None, "content_hash": None}
-            content_hash: Optional[str] = None
-            if source.custom_config:
-                content_hash = source.custom_config.get("content_hash")
+                return {}
             return {
                 "etag": source.feed_etag,
                 "last_modified": source.feed_last_modified,
-                "content_hash": content_hash,
             }
+
+    # =====================================
+    # OPERACIONES DE ANALÍTICA (DASHBOARD)
+    # =====================================
+
+    def get_collection_stats(self, days: int = 30) -> List[Dict[str, Any]]:
+        """Devuelve estadísticas de recolección diarias de los últimos N días."""
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        # Dialect-agnostic date truncation is tricky with pure SQLAlchemy Core 
+        # without bringing in dialect-specific functions. 
+        # For simplicity in this hybrid setup, we'll fetch aggregated data 
+        # grouping by date in python if volume is low, or use simple strftime for sqlite.
+        
+        # Efficient approach: Fetch date and count
+        with self.get_session() as session:
+            # This query works well for SQLite and Postgres basic date handling
+            # Assuming collected_date is indexed, which it should be.
+            if self.config["type"] == "sqlite":
+                 # SQLite specific date extraction
+                date_func = func.date(Article.collected_date)
+            else:
+                # Postgres
+                date_func = func.date(Article.collected_date)
+                
+            stats = (
+                session.query(
+                    date_func.label('collection_date'),
+                    func.count(Article.id).label('count')
+                )
+                .filter(Article.collected_date >= start_date)
+                .group_by('collection_date')
+                .order_by('collection_date')
+                .all()
+            )
+            
+            return [
+                {"date": str(stat.collection_date), "count": stat.count} 
+                for stat in stats
+            ]
+
+    def get_source_performance(self) -> List[Dict[str, Any]]:
+        """Devuelve rendimiento promedio por fuente."""
+        with self.get_session() as session:
+             # Join Article and Source to get names
+            results = (
+                session.query(
+                    Article.source_id,
+                    Source.name.label('source_name'),
+                    func.count(Article.id).label('article_count'),
+                    func.avg(Article.final_score).label('avg_score')
+                )
+                .join(Source, Article.source_id == Source.id)
+                .group_by(Article.source_id, Source.name)
+                .order_by(desc('avg_score'))
+                .all()
+            )
+            
+            return [
+                {
+                    "source_id": r.source_id,
+                    "source_name": r.source_name,
+                    "article_count": r.article_count,
+                    "avg_score": float(r.avg_score or 0.0)
+                }
+                for r in results
+            ]
+
+    def get_category_breakdown(self) -> List[Dict[str, Any]]:
+        """Devuelve distribución de artículos por categoría."""
+        with self.get_session() as session:
+            results = (
+                session.query(
+                    Article.category,
+                    func.count(Article.id).label('count')
+                )
+                .group_by(Article.category)
+                .order_by(desc('count'))
+                .all()
+            )
+            return [{"category": r.category, "count": r.count} for r in results]
+
+    def get_score_distribution(self, buckets: int = 10) -> Dict[str, int]:
+        """Devuelve distribución de scores para histograma."""
+        with self.get_session() as session:
+            # Pure python bucketing for DB agnosticism simplicity in this context
+            scores = session.query(Article.final_score).filter(Article.final_score > 0).all()
+            
+            # Extract values
+            values = [s[0] for s in scores if s[0] is not None]
+            
+            # Simple histogram
+            if not values:
+                return {}
+                
+            # Define buckets 0.0-0.1, 0.1-0.2, etc.
+            distribution = {f"{i/10:.1f}": 0 for i in range(10)}
+            
+            for v in values:
+                bucket = min(int(v * 10), 9) / 10.0
+                key = f"{bucket:.1f}"
+                distribution[key] = distribution.get(key, 0) + 1
+                
+            return distribution
 
     def update_source_feed_metadata(
         self,
