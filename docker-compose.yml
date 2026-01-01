@@ -1,43 +1,79 @@
 version: '3.8'
 
 services:
+  # ----------------------------------------------------------------------------
+  # Application Services
+  # ----------------------------------------------------------------------------
   refinery:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: noticiencias-refinery
-    command: sh -c "pip install -e . && python -m streamlit run apps/refinery/admin_panel.py --server.port 8501 --server.address 0.0.0.0"
+    # Installing in editable mode inside container entrypoint for dev experience,
+    # or rely on what's installed in the image. 
+    # Since we copy source in Dockerfile, we don't strictly *need* -e . unless developing.
+    # For production-like consistency, we use the installed package.
+    command: sh -c "python -m streamlit run apps/refinery/admin_panel.py --server.port 8501 --server.address 0.0.0.0"
     volumes:
       - .:/app
     ports:
       - "8501:8501"
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://user:password@db:5432/news_db
+      - DATABASE_DRIVER=postgresql
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=news_db
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    profiles: ["app"]
 
   collector:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: noticiencias-collector
-    command: sh -c "pip install -e . && python run_collector.py --help" # defaulting to help to avoid accidental runs
+    # Just run the help by default to prevent accidental massive scraping
+    command: python run_collector.py --help
     volumes:
       - .:/app
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://user:password@db:5432/news_db
+      - DATABASE_DRIVER=postgresql
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=news_db
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["app"]
 
+  # ----------------------------------------------------------------------------
+  # Infrastructure Services
+  # ----------------------------------------------------------------------------
   db:
-      image: postgres:15-alpine
-      container_name: noticiencias-db
-      environment:
-        POSTGRES_USER: user
-        POSTGRES_PASSWORD: password
-        POSTGRES_DB: news_db
-      ports:
-        - "5432:5432"
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
+    image: postgres:15-alpine
+    container_name: noticiencias-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: news_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d news_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

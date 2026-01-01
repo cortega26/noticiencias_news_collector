@@ -6,6 +6,33 @@ readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Noticiencias Team" }]
 
+dependencies = [
+    "feedparser>=6.0.12",
+    "requests>=2.32.5",
+    "beautifulsoup4>=4.14.2",
+    "lxml>=6.0.2",
+    "nltk>=3.9.2",
+    "textblob>=0.19.0",
+    "python-dateutil>=2.9.0",
+    "sqlalchemy>=2.0.43",
+    "python-dotenv>=1.1.1",
+    "schedule>=1.2.2",
+    "click>=8.3.0",
+    "ruamel.yaml>=0.18.6",
+    "tomli-w>=1.0.0",
+    "fastapi>=0.118.0",
+    "pydantic>=2.11.9",
+    "loguru>=0.7.3",
+    "httpx>=0.28.1",
+    "scikit-learn>=1.7.2",
+    "numpy>=2.3.3",
+    "streamlit>=1.30.0",
+    "gitpython>=3.1.41",
+    "watchdog>=4.0.0",
+    "toml>=0.10.2",
+    "alembic>=1.13.1",
+]
+
 [project.optional-dependencies]
 security = [
     "bandit>=1.7.9",
@@ -75,7 +102,6 @@ module = [
     "news_collector.config.*",
     "noticiencias.*",
     "news_collector.collectors.*",
-    "news_collector.contracts.*",
     "news_collector.enrichment.*",
     "news_collector.monitoring.*",
     "news_collector.perf.*",
@@ -83,11 +109,6 @@ module = [
     "news_collector.scoring.*",
     "news_collector.serving.*",
     "news_collector.storage.*",
-    "news_collector.utils.datetime_utils",
-    "news_collector.utils.dedupe",
-    "news_collector.utils.metrics",
-    "news_collector.utils.pydantic_compat",
-    "news_collector.utils.text_cleaner",
     "tools.*",
 ]
 ignore_errors = true
@@ -142,3 +163,22 @@ backup = false
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "tests/data",
+    "docs",
+    "build",
+    "reports",
+    ".venv",
+    ".git"
+]
+skips = [
+    "B101", # assert used in tests
+    "B110", # insecure temp usage in controlled contexts
+    "B324", # hashlib.md5 used for non-cryptographic hashing in dedupe utilities
+    "B411",
+    "B603"
+]
+targets = ["news_collector", "scripts"]

@@ -3,8 +3,11 @@ from __future__ import annotations
 import string
 from urllib.parse import parse_qsl, urlparse
 
-from hypothesis import given, settings
-from hypothesis import strategies as st
+import pytest
+
+hypothesis = pytest.importorskip("hypothesis")
+from hypothesis import given, settings  # type: ignore[import-not-found]
+from hypothesis import strategies as st  # type: ignore[import-not-found]
 
 from news_collector.utils.text_cleaner import clean_html, normalize_text
 from news_collector.utils.url_canonicalizer import canonicalize_url

@@ -52,6 +52,14 @@ class NewsCollectorLogger:
 
         config = config or LOGGING_CONFIG
 
+        # Override level from environment variable to support runtime changes (e.g. CLI args)
+        import os
+        env_level = os.environ.get("LOG_LEVEL")
+        if env_level:
+            # Create a copy to avoid mutating the global configuration
+            config = config.copy()
+            config["level"] = env_level
+
         # Remover configuración por defecto de loguru
         logger.remove()
 

@@ -94,7 +94,7 @@ class ConfigError(RuntimeError):
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    return Path(__file__).resolve().parents[1]
 
 
 def _default_paths() -> tuple[Path, Path]:

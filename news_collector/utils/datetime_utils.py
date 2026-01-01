@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Tuple, Union
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from dateutil import parser as date_parser
+from dateutil import parser as date_parser  # type: ignore[import-untyped]
 
 
 def _tz_offset_minutes(dt: datetime) -> int:

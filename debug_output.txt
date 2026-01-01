@@ -1,0 +1,148 @@
+DEBUG: sys.path: ['C:\\Users\\corte\\VS Code Projects\\noticiencias_news_collector', 'C:\\Users\\corte\\VS Code Projects\\noticiencias_news_collector', 'C:\\Python312\\python312.zip', 'C:\\Python312\\DLLs', 'C:\\Python312\\Lib', 'C:\\Python312', 'C:\\Users\\corte\\AppData\\Roaming\\Python\\Python312\\site-packages', 'C:\\Python312\\Lib\\site-packages', 'C:\\Python312\\Lib\\site-packages\\win32', 'C:\\Python312\\Lib\\site-packages\\win32\\lib', 'C:\\Python312\\Lib\\site-packages\\Pythonwin']
+DEBUG: CognitiveScorer file: C:\Users\corte\VS Code Projects\noticiencias_news_collector\news_collector\scoring\cognitive_scorer.py
+======================================================================
+🧬 NEWS COLLECTOR SYSTEM - Recopilador Inteligente de Noticias Científicas
+======================================================================
+📅 Fecha: 2025-12-31 21:19:49
+🎯 Fuentes configuradas: 17
+======================================================================
+🔧 Inicializando sistema...
+🎯 Inicializando News Collector System (ID: cba71969)
+2025-12-31 21:19:49 | INFO     | 🎯 Sistema de logging configurado exitosamente
+2025-12-31 21:19:49 | INFO     | 🏥 ESTADO DEL SISTEMA:
+2025-12-31 21:19:49 | INFO     |   • Python: 3.12.6
+2025-12-31 21:19:49 | INFO     |   • Plataforma: Windows-11-10.0.26220-SP0
+2025-12-31 21:19:49 | INFO     |   • CPU cores: Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+2025-12-31 21:19:49 | INFO     | 💾 Uso de memoria:
+2025-12-31 21:19:49 | INFO     |   • RSS: 88.4 MB
+2025-12-31 21:19:49 | INFO     |   • VMS: 72.7 MB
+2025-12-31 21:19:49 | INFO     | {'event': 'system.initialize.start', 'trace_id': 'afae420c-6c02-4f33-88da-1e6f611cc383', 'session_id': 'init-cba71969', 'source_id': 'system', 'latency': 0.0, 'details': {'system_id': 'cba71969'}}
+✅ 17 fuentes validadas correctamente
+2025-12-31 21:19:49 | INFO     | {'event': 'system.configuration.validated', 'trace_id': 'afae420c-6c02-4f33-88da-1e6f611cc383', 'session_id': 'init-cba71969', 'source_id': 'system', 'latency': 0.0, 'details': {'override_count': 0}}
+2025-12-31 21:19:49 | INFO     | Base de datos configurada
+2025-12-31 21:19:49 | INFO     | {'event': 'collector.instance.initialized', 'collector_type': 'RSSCollector', 'details': {'collector_type': 'RSSCollector'}}
+2025-12-31 21:19:49 | INFO     | Colectores configurados
+DEBUG: CognitiveScorer INITIALIZED
+2025-12-31 21:19:49 | INFO     | Sistema de scoring configurado
+2025-12-31 21:19:49 | WARNING  | {'event': 'database.health.warning', 'trace_id': None, 'session_id': None, 'source_id': 'database', 'latency': 0.0, 'details': {'failed_sources': 6}}
+2025-12-31 21:19:49 | WARNING  | {'event': 'system.initialize.warning', 'trace_id': 'afae420c-6c02-4f33-88da-1e6f611cc383', 'session_id': 'init-cba71969', 'source_id': 'system', 'latency': 0.0, 'details': {'warnings': ['6 fuentes fallando']}}
+2025-12-31 21:19:49 | INFO     | ============================================================
+2025-12-31 21:19:49 | INFO     | 🚀 NEWS COLLECTOR SYSTEM INICIADO
+2025-12-31 21:19:49 | INFO     | ============================================================
+2025-12-31 21:19:49 | INFO     | Versión: 1.0.0
+2025-12-31 21:19:49 | INFO     | Modo debug: False
+2025-12-31 21:19:49 | INFO     | Configuración principal:
+2025-12-31 21:19:49 | INFO     |   sources_configured: 17
+2025-12-31 21:19:49 | INFO     |   database_type: sqlite
+2025-12-31 21:19:49 | INFO     |   collection_interval: 6
+2025-12-31 21:19:49 | INFO     |   min_score_threshold: 0.3
+2025-12-31 21:19:49 | INFO     | Logs guardándose en: C:\workspace\noticiencias_news_collector\data\logs\collector.log
+2025-12-31 21:19:49 | INFO     | ============================================================
+2025-12-31 21:19:49 | INFO     | {'event': 'system.initialize.completed', 'trace_id': 'afae420c-6c02-4f33-88da-1e6f611cc383', 'session_id': 'init-cba71969', 'source_id': 'system', 'latency': 0.11090070009231567, 'details': {'system_id': 'cba71969'}}
+✅ Sistema inicializado correctamente
+2025-12-31 21:19:49 | INFO     | {'event': 'cli.initialize.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': None, 'source_id': 'cli', 'latency': 0.0, 'details': {'sources': 17}}
+🌐 Procesando todas las 17 fuentes configuradas
+
+🚀 Iniciando recolección...
+2025-12-31 21:19:49 | INFO     | {'event': 'collection_cycle.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'system', 'latency': 0.0, 'details': {'dry_run': False, 'source_filter': 'all'}}
+2025-12-31 21:19:49 | INFO     | {'event': 'collection_cycle.sources.selected', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'system', 'latency': 0.0, 'details': {'count': 17}}
+2025-12-31 21:19:49 | INFO     | {'event': 'collector.batch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'collector_type': 'RSSCollector', 'latency': 0.0, 'details': {'sources': 17}}
+2025-12-31 21:19:49 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Nature', 'url': 'https://www.nature.com/nature.rss'}}
+2025-12-31 21:19:50 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:19:50 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'latency': 0.8990988731384277, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:19:50 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'science', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Science', 'url': 'https://science.sciencemag.org/rss/current.xml'}}
+2025-12-31 21:19:51 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'science', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:19:51 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'science', 'collector_type': 'RSSCollector', 'latency': 1.4470276832580566, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:19:51 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Cell', 'url': 'https://www.cell.com/cell/current.rss'}}
+2025-12-31 21:19:53 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'latency': 2.1443002223968506, 'details': {'articles_found': 19, 'articles_saved': 0}}
+2025-12-31 21:19:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'latency': 2.1452958583831787, 'details': {'articles_found': 19, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:19:53 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'details': {'source_name': 'New England Journal of Medicine', 'url': 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss'}}
+2025-12-31 21:19:54 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss'}}
+2025-12-31 21:19:54 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'latency': 1.1013469696044922, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:19:54 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Scientific American', 'url': 'https://www.scientificamerican.com/platform/syndication/rss/'}}
+2025-12-31 21:19:55 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:19:55 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'latency': 0.8400826454162598, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:19:55 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'details': {'source_name': 'New Scientist', 'url': 'https://www.newscientist.com/feed/home/'}}
+2025-12-31 21:19:56 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.newscientist.com/feed/home/'}}
+2025-12-31 21:19:56 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'latency': 0.48983287811279297, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:19:56 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Ars Technica Science', 'url': 'https://feeds.arstechnica.com/arstechnica/science'}}
+2025-12-31 21:19:58 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:19:58 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'latency': 1.9107415676116943, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:19:58 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Phys.org', 'url': 'https://phys.org/rss-feed/'}}
+2025-12-31 21:20:00 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'latency': 2.325610876083374, 'details': {'articles_found': 30, 'articles_saved': 0}}
+2025-12-31 21:20:00 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'latency': 2.325610876083374, 'details': {'articles_found': 30, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:00 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'source_name': 'EurekAlert!', 'url': 'https://www.eurekalert.org/rss.xml'}}
+2025-12-31 21:20:02 | ERROR    | {'event': 'collector.feed.fetch_exception', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'error': '404 Client Error: Not Found for url: https://www.eurekalert.org/rss.xml', 'url': 'https://www.eurekalert.org/rss.xml'}}
+2025-12-31 21:20:02 | WARNING  | {'event': 'collector.feed.unavailable', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'status_code': None, 'url': 'https://www.eurekalert.org/rss.xml'}}
+2025-12-31 21:20:02 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'latency': 1.7659494876861572, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2025-12-31 21:20:02 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'details': {'source_name': 'ScienceDaily', 'url': 'https://www.sciencedaily.com/rss/top/science.xml'}}
+2025-12-31 21:20:03 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:20:03 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'latency': 1.6419780254364014, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:03 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'MIT News', 'url': 'https://news.mit.edu/rss/feed'}}
+2025-12-31 21:20:05 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'latency': 1.5602681636810303, 'details': {'articles_found': 49, 'articles_saved': 0}}
+2025-12-31 21:20:05 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'latency': 1.5602681636810303, 'details': {'articles_found': 49, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:05 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Stanford News', 'url': 'https://news.stanford.edu/feed/'}}
+2025-12-31 21:20:06 | ERROR    | {'event': 'collector.feed.fetch_exception', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'error': '403 Client Error: Forbidden for url: https://news.stanford.edu/feed/', 'url': 'https://news.stanford.edu/feed/'}}
+2025-12-31 21:20:06 | WARNING  | {'event': 'collector.feed.unavailable', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'status_code': None, 'url': 'https://news.stanford.edu/feed/'}}
+2025-12-31 21:20:06 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'latency': 0.8335292339324951, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2025-12-31 21:20:06 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'NASA News', 'url': 'https://www.nasa.gov/rss/dyn/breaking_news.rss'}}
+2025-12-31 21:20:09 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'latency': 2.81929087638855, 'details': {'articles_found': 10, 'articles_saved': 0}}
+2025-12-31 21:20:09 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'latency': 2.81929087638855, 'details': {'articles_found': 10, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:09 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'NIH News', 'url': 'https://www.nih.gov/news-releases/feed.xml'}}
+2025-12-31 21:20:10 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2025-12-31 21:20:10 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'latency': 1.1783788204193115, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:10 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'details': {'source_name': 'arXiv AI/ML', 'url': 'http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV'}}
+2025-12-31 21:20:10 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'details': {'url': 'http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV'}}
+2025-12-31 21:20:10 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'latency': 0.38094019889831543, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:10 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'details': {'source_name': 'bioRxiv', 'url': 'https://connect.biorxiv.org/biorxiv_xml.php?subject=all'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'latency': 2.2908475399017334, 'details': {'articles_found': 30, 'articles_saved': 0}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'latency': 2.2908475399017334, 'details': {'articles_found': 30, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.fetch.start', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'details': {'source_name': 'r/science', 'url': 'https://www.reddit.com/r/science/.rss'}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.reddit.com/r/science/.rss'}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'latency': 0.5651891231536865, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.batch.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'collector_type': 'RSSCollector', 'latency': 24.320818, 'details': {'articles_saved': 0, 'articles_found': 138, 'sources_processed': 17, 'errors': 6}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nature', 'latency': 0.8990988731384277, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'science', 'latency': 1.4470276832580566, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'cell', 'latency': 2.1452958583831787, 'details': {'articles_found': 19, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nejm', 'latency': 1.1013469696044922, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'scientific_american', 'latency': 0.8400826454162598, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'new_scientist', 'latency': 0.48983287811279297, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'ars_technica', 'latency': 1.9107415676116943, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'phys_org', 'latency': 2.325610876083374, 'details': {'articles_found': 30, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'eurekalert', 'latency': 1.7659494876861572, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'sciencedaily_top', 'latency': 1.6419780254364014, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'mit_news', 'latency': 1.5602681636810303, 'details': {'articles_found': 49, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'stanford_news', 'latency': 0.8335292339324951, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nasa_news', 'latency': 2.81929087638855, 'details': {'articles_found': 10, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'nih_news', 'latency': 1.1783788204193115, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'arxiv_ai', 'latency': 0.38094019889831543, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collector.source.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'biorxiv', 'latency': 2.2908475399017334, 'details': {'articles_found': 30, 'articles_saved': 0, 'error_message': None}}
+2025-12-31 21:20:13 | WARNING  | {'event': 'collector.source.failed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'reddit_science', 'latency': 0.5651891231536865, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2025-12-31 21:20:13 | INFO     | {'event': 'collection_cycle.scoring.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'system', 'latency': 0.0, 'details': {'articles_scored': 0, 'articles_included': 0, 'articles_excluded': 0, 'average_score': 0.0}}
+2025-12-31 21:20:13 | INFO     | 📊 MÉTRICAS DE PERFORMANCE CICLO COMPLETO
+2025-12-31 21:20:13 | INFO     |   total_duration_seconds: 24.461
+2025-12-31 21:20:13 | INFO     |   articles_per_second: 5.642
+2025-12-31 21:20:13 | INFO     |   sources_per_minute: 17.000
+2025-12-31 21:20:13 | INFO     |   success_rate_percent: 64.710
+2025-12-31 21:20:13 | INFO     | {'event': 'collection_cycle.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'system', 'latency': 24.337443799944595, 'details': {'sources_processed': 17, 'articles_found': 138, 'articles_saved': 0, 'articles_scored': 0, 'final_selection_count': 0}}
+
+📊 RESUMEN DE RESULTADOS:
+----------------------------------------
+⏱️  Duración: 24.5 segundos
+🌐 Fuentes procesadas: 17
+📰 Artículos encontrados: 138
+💾 Artículos guardados: 0
+🎯 Artículos puntuados: 0
+⭐ Selección final: 0
+📈 Tasa de éxito: 64.7%
+⚡ Velocidad: 5.6 artículos/segundo
+
+⭐ TOP 2 ARTÍCULOS:
+================================================================================
+ 1. Phylogenetic tree-aware positive-unlabeled deep metric le...
+    📊 Score: 0.000 | 🔗 Fuente: bioRxiv
+
+ 2. Mitochondrial depolarization stabilizes the vitamin B12 c...
+    📊 Score: 0.000 | 🔗 Fuente: bioRxiv
+2025-12-31 21:20:13 | INFO     | {'event': 'cli.collection.completed', 'trace_id': 'c0b748c8-c80a-4a20-84d1-49fa9db05f64', 'session_id': 'cba71969-20260101-001949', 'source_id': 'cli', 'latency': 24.345403000013903, 'details': {'sources_processed': 17, 'articles_found': 138, 'articles_saved': 0, 'articles_scored': 0, 'final_selection_count': 0}}
+🎉 ¡Recolección completada exitosamente!

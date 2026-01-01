@@ -10,6 +10,7 @@ from pathlib import Path
 import git
 import re
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from src.utils.config import load_config
 from src.utils.logger import setup_logger
 from src.services.git_service import GitHandler
@@ -24,8 +25,100 @@ SOURCE_DIR = TEMP_DIR / "source"
 TARGET_DIR = TEMP_DIR / "target"
 DB_PATH = Path("refinery.db")
 
+def _is_file_lock_error(exc: Exception) -> bool:
+    winerror = getattr(exc, "winerror", None)
+    if winerror == 32:
+        return True
+    message = str(exc).lower()
+    return "being used by another process" in message or "utilizado por otro proceso" in message
 
-def main(fetch_only=False, process_id=None, dev=False):
+
+def _safe_clone_source_repo(
+    git_handler: GitHandler,
+    repo_url: str,
+    source_dir: Path,
+) -> Path:
+    try:
+        git_handler.clone_repo(repo_url, source_dir)
+        return source_dir
+    except Exception as exc:
+        if _is_file_lock_error(exc) and (source_dir / ".git").exists():
+            logger.warning(
+                "Source repo locked during cleanup; using existing clone at "
+                f"{source_dir}. Error: {exc}"
+            )
+            return source_dir
+        raise
+
+def _load_export_articles(
+    export_path: Path,
+    db_manager: DatabaseManager,
+    process_id: Optional[str],
+) -> List[Dict[str, Any]]:
+    try:
+        with open(export_path, "r", encoding="utf-8") as f:
+            header_articles = json.load(f)
+    except Exception as exc:
+        logger.error(f"Failed to load collector export at {export_path}: {exc}")
+        return []
+
+    articles = []
+    for art in header_articles:
+        art_id = str(art.get("id", art.get("title")))
+        if process_id and str(art_id) != str(process_id):
+            continue
+        if db_manager.is_processed(art_id) and not process_id:
+            continue
+        articles.append(art)
+    return articles
+
+
+def _select_export_articles(
+    cloned_path: Path,
+    sibling_path: Path,
+    db_manager: DatabaseManager,
+    process_id: Optional[str],
+    preferred_path: Optional[Path] = None,
+) -> tuple[List[Dict[str, Any]], Optional[Path]]:
+    selected_path = None
+    articles: List[Dict[str, Any]] = []
+
+    if preferred_path:
+        if preferred_path.exists():
+            logger.info(f"Found Preferred export at {preferred_path}")
+            preferred_articles = _load_export_articles(
+                preferred_path, db_manager, process_id
+            )
+            if preferred_articles:
+                return preferred_articles, preferred_path
+            logger.info(
+                "No candidate articles found in preferred export; checking other exports."
+            )
+        else:
+            logger.warning(f"Preferred export path does not exist: {preferred_path}")
+
+    if cloned_path.exists():
+        logger.info(f"Found Cloud export at {cloned_path}")
+        articles = _load_export_articles(cloned_path, db_manager, process_id)
+        selected_path = cloned_path
+        if not articles:
+            logger.info(
+                "No candidate articles found in cloud export; checking local fallback."
+            )
+
+    if (not articles) and sibling_path.exists() and sibling_path != cloned_path:
+        logger.info(f"Found Local Sibling export at {sibling_path}")
+        fallback_articles = _load_export_articles(
+            sibling_path, db_manager, process_id
+        )
+        if fallback_articles:
+            articles = fallback_articles
+            selected_path = sibling_path
+
+    return articles, selected_path
+
+
+def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None):
     """
     Main entry point for the Noticiencias Refinery.
     
@@ -33,6 +126,7 @@ def main(fetch_only=False, process_id=None, dev=False):
         fetch_only (bool): If True, only clones/pulls the source repo.
         process_id (str): Optional ID or Title to filter processing.
         dev (bool): If True, enables development features like mock data injection.
+        export_path (str): Optional path to a specific JSON export to use.
         
     Returns:
         dict: Execution capabilities summary or status.
@@ -50,19 +144,32 @@ def main(fetch_only=False, process_id=None, dev=False):
 
     git_handler = GitHandler(config.GITHUB_TOKEN)
     editor_agent = EditorAgent(config.OLLAMA_API_URL, config.OLLAMA_MODEL)
+
+    source_dir = SOURCE_DIR
+    preferred_export_path = None
+    if export_path:
+        preferred_export_path = Path(export_path).expanduser()
+    skip_clone = (
+        preferred_export_path is not None
+        and preferred_export_path.exists()
+        and not fetch_only
+    )
     
     # 1. Clone Source Repo
-    try:
-        # Cleanup source dir manually to ensure clean state
-        if SOURCE_DIR.exists():
-            shutil.rmtree(SOURCE_DIR, ignore_errors=True)
-            
-        git_handler.clone_repo(config.SOURCE_REPO_URL, SOURCE_DIR)
-    except Exception as e:
-        logger.critical(f"Failed to clone source repo: {e}")
-        return {"status": "error", "message": f"Failed to clone source repo: {e}"}
+    if skip_clone:
+        logger.info(
+            f"Skipping source clone; using provided export path: {preferred_export_path}"
+        )
+    else:
+        try:
+            source_dir = _safe_clone_source_repo(
+                git_handler, config.SOURCE_REPO_URL, source_dir
+            )
+        except Exception as e:
+            logger.critical(f"Failed to clone source repo: {e}")
+            return {"status": "error", "message": f"Failed to clone source repo: {e}"}
 
-    logger.info("Source data synced successfully.")
+        logger.info("Source data synced successfully.")
     
     if fetch_only:
         logger.info("Fetch-only mode enabled. Exiting.")
@@ -73,7 +180,7 @@ def main(fetch_only=False, process_id=None, dev=False):
     # run_collector_script(SOURCE_DIR)
 
     # Manual Injection for Testing
-    data_dir = SOURCE_DIR / "data"
+    data_dir = source_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     
     # Check if we need to inject a mock file
@@ -92,7 +199,7 @@ def main(fetch_only=False, process_id=None, dev=False):
     
     # Check for Collector Export (Primary Source)
     # 1. Look in Cloned Repo (Cloud Source)
-    CLONED_EXPORT_PATH = SOURCE_DIR / "data/exports/latest_articles.json"
+    CLONED_EXPORT_PATH = source_dir / "data/exports/latest_articles.json"
     
     # 2. Look in Sibling Repo (Local Source) - Fallback
     # Load env vars to check for custom path
@@ -108,40 +215,21 @@ def main(fetch_only=False, process_id=None, dev=False):
     
     SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
     
-    COLLECTOR_EXPORT_PATH = None
+    selected_export_path = None
     
-    if CLONED_EXPORT_PATH.exists():
-         COLLECTOR_EXPORT_PATH = CLONED_EXPORT_PATH
-         logger.info(f"Found Cloud export at {COLLECTOR_EXPORT_PATH}")
-    elif SIBLING_EXPORT_PATH.exists():
-         COLLECTOR_EXPORT_PATH = SIBLING_EXPORT_PATH
-         logger.info(f"Found Local Sibling export at {COLLECTOR_EXPORT_PATH}")
-    
-    if COLLECTOR_EXPORT_PATH and COLLECTOR_EXPORT_PATH.exists():
-        try:
-            with open(COLLECTOR_EXPORT_PATH, "r", encoding="utf-8") as f:
-                header_articles = json.load(f)
-                
-            # Convert to internal format if needed, but they should match what EditorAgent expects
-            # We filter for top scoring or recent ones if needed, but the file is already "latest"
-            for art in header_articles:
-                # Use ID or Title as key for processed check
-                art_id = str(art.get("id", art.get("title")))
-                
-                # If specific ID requested, verify match
-                if process_id and str(art_id) != str(process_id):
-                    continue
-                    
-                if db_manager.is_processed(art_id) and not process_id:
-                    # Skip processed ONLY if we are running in auto mode. 
-                    # If specific ID is requested, we assume USER wants to force re-process.
-                    continue
-                    
-                articles_to_process.append(art)
-                
-            logger.info(f"Loaded {len(articles_to_process)} new articles from JSON export.")
-        except Exception as e:
-            logger.error(f"Failed to load collector export: {e}")
+    if CLONED_EXPORT_PATH.exists() or SIBLING_EXPORT_PATH.exists():
+        articles_to_process, selected_export_path = _select_export_articles(
+            CLONED_EXPORT_PATH,
+            SIBLING_EXPORT_PATH,
+            db_manager,
+            process_id,
+            preferred_path=preferred_export_path,
+        )
+        if selected_export_path:
+            logger.info(f"Using export at {selected_export_path}")
+        logger.info(
+            f"Loaded {len(articles_to_process)} new articles from JSON export."
+        )
 
     # Fallback / Supplemental: Source Repo Files
     # Priority: Search ONLY in 'data' directory (standard output location)
@@ -189,6 +277,21 @@ def main(fetch_only=False, process_id=None, dev=False):
     
     logger.info(f"Total candidate content items: {len(articles_to_process)}")
 
+    if not articles_to_process:
+        if process_id:
+            message = f"No se encontraron artículos para el ID solicitado ({process_id})."
+        else:
+            message = "No se encontraron artículos para procesar."
+        if selected_export_path:
+            message = f"{message} Export revisado: {selected_export_path}"
+        logger.warning(
+            f"{message} (process_id={process_id}, "
+            f"preferred_export={preferred_export_path}, "
+            f"cloud_export_exists={CLONED_EXPORT_PATH.exists()}, "
+            f"sibling_export_exists={SIBLING_EXPORT_PATH.exists()})"
+        )
+        return {"status": "noop", "message": message, "processed_count": 0}
+
     # Update: If process_id is set, we expect EXACTLY 1 item usually, but list is fine.
     # If NO process_id is set (Bulk Mode), we might want to LIMIT for safety or testing.
     if not process_id and articles_to_process:
@@ -211,6 +314,32 @@ def main(fetch_only=False, process_id=None, dev=False):
                 # 2. Process with LLM
                 # Pass the WHOLE article dict (or constructed dict for files)
                 refined_content = editor_agent.process_article(article)
+
+                # 2.5 Visual Analysis (Optional)
+                if not skip_visuals:
+                    logger.info("🎨 Running Visual Analysis...")
+                    visual_data = editor_agent.analyze_visuals(refined_content)
+                    
+                    # Inject into Frontmatter
+                    # We look for the ending "---" of the frontmatter
+                    # Assuming standard frontmatter format
+                    frontmatter_end_idx = refined_content.find("---", 3)
+                    if frontmatter_end_idx != -1:
+                        # Construct YAML block
+                        visual_yaml = (
+                            f"visual_category: {visual_data.get('visual_category', 'OTHER')}\n"
+                            f"visual_keywords: {json.dumps(visual_data.get('visual_keywords', []))}\n"
+                            f"visual_prompt: \"{visual_data.get('visual_prompt', '')}\"\n"
+                        )
+                        # Insert before the closing ---
+                        refined_content = (
+                            refined_content[:frontmatter_end_idx] 
+                            + visual_yaml 
+                            + refined_content[frontmatter_end_idx:]
+                        )
+                        logger.info(f"Visual metadata injected: {visual_data.get('visual_category')}")
+                else:
+                    logger.info("Skipping Visual Analysis as requested.")
                 
                 # 3. Prepare Target Repo (Clone fresh to ensure clean state for branching)
                 # target_repo = None # Unused
@@ -338,6 +467,14 @@ if __name__ == "__main__":
     parser.add_argument("--fetch-only", action="store_true", help="Only clone/pull source repo, do not process articles.")
     parser.add_argument("--process-id", type=str, help="Process a specific article ID (or title) only.")
     parser.add_argument("--dev", action="store_true", help="Enable development features (like mock generation).")
+    parser.add_argument("--skip-visuals", action="store_true", help="Skip the visual analysis step (faster).")
+    parser.add_argument("--export-path", type=str, help="Optional JSON export path to use.")
     args = parser.parse_args()
 
-    main(fetch_only=args.fetch_only, process_id=args.process_id, dev=args.dev)
+    main(
+        fetch_only=args.fetch_only,
+        process_id=args.process_id,
+        dev=args.dev,
+        skip_visuals=args.skip_visuals,
+        export_path=args.export_path,
+    )

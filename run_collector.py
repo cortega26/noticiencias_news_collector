@@ -22,6 +22,7 @@ Uso:
 """
 
 import argparse
+import asyncio
 import os
 import sys
 import time
@@ -114,6 +115,8 @@ def run_simple_collection(args):
                 }
             )
             return False
+            
+
 
         print("✅ Sistema inicializado correctamente")
 
@@ -175,11 +178,11 @@ def run_simple_collection(args):
         # Ejecutar recolección
         print("\n🚀 Iniciando recolección...")
         run_start = time.perf_counter()
-        results = system.run_collection_cycle(
+        results = asyncio.run(system.run_collection_cycle(
             sources_filter=selected_sources,
             dry_run=args.dry_run,
             trace_id=trace_id,
-        )
+        ))
 
         session_id = (
             results.get("session_info", {}).get("session_id")
@@ -460,7 +463,8 @@ Ejemplos de uso:
                         "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
                         "metadata": art.article_metadata,
                         "authors": art.authors,
-                        "category": art.category
+                        "category": art.category,
+                        "components": art.score_components or {}
                     }
                     serialized_articles.append(art_dict)
                 
