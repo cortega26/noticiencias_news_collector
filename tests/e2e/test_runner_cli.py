@@ -66,7 +66,7 @@ class FakeSystem:
     def initialize(self) -> bool:
         return self.initialize_result
 
-    def run_collection_cycle(
+    async def run_collection_cycle(
         self,
         *,
         sources_filter: Optional[List[str]],

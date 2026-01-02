@@ -48,7 +48,7 @@
 El sistema sigue una arquitectura modular desacoplada:
 
 *   **News Collector (Backend)**:
-    *   Escrito en Python 3.12+.
+    *   Escrito en Python 3.13+.
     *   Usa `SQLAlchemy` para persistencia (SQLite en local, PostgreSQL en prod).
     *   Motor de Scoring en `news_collector/scoring/`.
 *   **Refinery (Frontend/Ops)**:
@@ -67,7 +67,7 @@ El sistema sigue una arquitectura modular desacoplada:
 *   **OS**: Windows, Linux o macOS.
 *   **Software Base**:
     *   Git
-    *   Python 3.10+ (Recomandado 3.12)
+    *   Python 3.13+
     *   Docker & Docker Compose (Opcional, para producción)
     *   [Ollama](https://ollama.com/) instalado y corriendo (`ollama serve`).
 

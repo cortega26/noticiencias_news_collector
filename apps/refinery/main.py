@@ -33,6 +33,38 @@ def _is_file_lock_error(exc: Exception) -> bool:
     return "being used by another process" in message or "utilizado por otro proceso" in message
 
 
+def _unique_post_slug(
+    *,
+    posts_dir: Path,
+    date_str: str,
+    base_slug: str,
+    article_id: str,
+) -> tuple[str, Path]:
+    candidate_slug = base_slug
+    output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
+    if not output_path.exists():
+        return candidate_slug, output_path
+
+    safe_suffix = re.sub(r"[^a-z0-9]+", "", article_id.lower())[:6]
+    if not safe_suffix:
+        safe_suffix = uuid.uuid4().hex[:6]
+
+    candidate_slug = f"{base_slug}-{safe_suffix}"
+    output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
+    if not output_path.exists():
+        return candidate_slug, output_path
+
+    for attempt in range(2, 100):
+        candidate_slug = f"{base_slug}-{safe_suffix}-{attempt}"
+        output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
+        if not output_path.exists():
+            return candidate_slug, output_path
+
+    raise RuntimeError(
+        f"Unable to generate unique slug for article {article_id} in {posts_dir}"
+    )
+
+
 def _safe_clone_source_repo(
     git_handler: GitHandler,
     repo_url: str,
@@ -62,12 +94,26 @@ def _load_export_articles(
         logger.error(f"Failed to load collector export at {export_path}: {exc}")
         return []
 
+    if isinstance(header_articles, dict):
+        header_articles = header_articles.get("articles", [])
+    if not isinstance(header_articles, list):
+        logger.error(
+            f"Export payload has unexpected format at {export_path}: {type(header_articles)}"
+        )
+        return []
+
     articles = []
     for art in header_articles:
         art_id = str(art.get("id", art.get("title")))
         if process_id and str(art_id) != str(process_id):
             continue
-        if db_manager.is_processed(art_id) and not process_id:
+        if (
+            not process_id
+            and (
+                db_manager.is_processed(art_id)
+                or db_manager.is_processed(f"{art_id}.md")
+            )
+        ):
             continue
         articles.append(art)
     return articles
@@ -397,8 +443,13 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                 if not title_slug or len(title_slug) < 2:
                      title_slug = f"articulo-{uuid.uuid4().hex[:6]}"
 
-                output_filename = f"{date_str}-{title_slug}.md"
-                output_path = posts_dir / output_filename
+                output_slug, output_path = _unique_post_slug(
+                    posts_dir=posts_dir,
+                    date_str=date_str,
+                    base_slug=title_slug,
+                    article_id=article_id,
+                )
+                output_filename = output_path.name
                 
                 with open(output_path, 'w', encoding='utf-8') as f:
                     f.write(refined_content)
@@ -406,7 +457,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                 logger.info(f"Saved refined article to {output_path}")
                 
                 # LOGGING FOR DEBUGGING
-                expected_url = f"https://noticiencias.com/{title_slug}/"
+                expected_url = f"https://noticiencias.com/{output_slug}/"
                 logger.info(f"🔍 DEBUG TRACE: Expected Public URL -> {expected_url}")
 
                 # --- NEW: Generate Social Media Drafts ---
@@ -436,7 +487,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                 pr_url = git_handler.create_pull_request(
                     repo_url=config.TARGET_REPO_URL,
                     branch_name=branch_name,
-                    title=f"News: {date_str} - {title_slug}",
+                    title=f"News: {date_str} - {output_slug}",
                     body=f"Automated submission for {file_name}.\n\nProcessed by Noticiencias Refinery."
                 )
                 

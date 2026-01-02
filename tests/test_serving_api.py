@@ -122,7 +122,10 @@ def db_manager(tmp_path) -> DatabaseManager:
                     },
                 )
             )
-    return manager
+    try:
+        yield manager
+    finally:
+        manager.close()
 
 
 @pytest.fixture()

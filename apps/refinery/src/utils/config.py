@@ -1,5 +1,6 @@
 import os
-from pydantic import BaseModel
+
+from pydantic import BaseModel, ConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,8 +12,7 @@ class Config(BaseModel):
     OLLAMA_API_URL: str = "http://localhost:11434/api/generate"
     OLLAMA_MODEL: str = "llama3.3"
     
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 def load_config() -> Config:
     # Ensure critical env vars are present

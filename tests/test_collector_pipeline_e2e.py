@@ -45,7 +45,10 @@ def isolated_database(
         "news_collector.collectors.rss_collector.get_database_manager", lambda: manager
     )
 
-    return manager
+    try:
+        yield manager
+    finally:
+        manager.close()
 
 
 def _prepare_raw_article(entry: JSONDict) -> JSONDict:
@@ -92,7 +95,7 @@ def test_collector_pipeline_end_to_end(
 
     recon_records: List[Dict[str, object]] = []
 
-    scorer = create_scorer()
+    scorer = create_scorer(mode="advanced")
 
     for entry in pipeline_dataset:
         source_obj = entry["source"]

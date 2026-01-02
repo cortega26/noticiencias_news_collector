@@ -18,7 +18,7 @@ Artifacts are uploaded on failure so reviewers can inspect the JSON evidence. Fi
 
 The [`Scheduled security scan`](../.github/workflows/security.yml) GitHub Actions workflow executes every Monday at 06:00 UTC and can also be triggered manually via the *Run workflow* button. The job performs the same steps used in the main CI pipeline:
 
-1. Checks out the repository and provisions Python 3.12 with cached dependencies.
+1. Checks out the repository and provisions Python 3.13 with cached dependencies.
 2. Executes `make security`, which chains the following scanners:
    - [`pip-audit`](https://github.com/pypa/pip-audit) against `requirements.txt`.
    - [`bandit`](https://github.com/PyCQA/bandit) over `src/` and `scripts/` with the project ruleset.

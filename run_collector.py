@@ -27,7 +27,7 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Agregar el directorio raíz al path para imports
@@ -443,7 +443,9 @@ Ejemplos de uso:
                 export_path.parent.mkdir(parents=True, exist_ok=True)
                 
                 # Obtener artículos
-                articles = system.db_manager.get_articles_by_score(limit=50)
+                articles = system.db_manager.get_articles_by_score(
+                    limit=50, exclude_published=True
+                )
                 
                 # Serializar
                 import json
@@ -458,6 +460,8 @@ Ejemplos de uso:
                         "content": art.content,
                         "source_name": art.source_name,
                         "published_date": art.published_date.isoformat() if art.published_date else None,
+                        "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                        "published_url": getattr(art, "published_url", None),
                         "collected_date": art.collected_date.isoformat() if art.collected_date else None,
                         "score": art.final_score,
                         "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
@@ -468,8 +472,16 @@ Ejemplos de uso:
                     }
                     serialized_articles.append(art_dict)
                 
+                export_payload = {
+                    "schema_version": 1,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "contract": "news_collector.export.v1",
+                    "article_count": len(serialized_articles),
+                    "articles": serialized_articles,
+                }
+
                 with open(export_path, 'w', encoding='utf-8') as f:
-                    json.dump(serialized_articles, f, indent=2, ensure_ascii=False)
+                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
                     
                 print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
             else:

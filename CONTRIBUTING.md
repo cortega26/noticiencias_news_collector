@@ -5,7 +5,7 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 
 ## Coding standards
 
-- Target **Python 3.10+** and keep functions annotated. Use `TypedDict`, `Protocol`, or dataclasses when sharing structures across modules.
+- Target **Python 3.13+** and keep functions annotated. Use `TypedDict`, `Protocol`, or dataclasses when sharing structures across modules.
 - Follow **PEP 8** plus `ruff` defaults for style. Keep `structlog`-style dictionaries in logging statements with `trace_id`, `source_id`, and `article_id`.
 - Keep Makefile recipes tab-indented; `make lint` fails fast if spaces sneak into command lines.
 - Persist and compare timestamps in **UTC**; convert to `America/Santiago` only inside presentation layers.

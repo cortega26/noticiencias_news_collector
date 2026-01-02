@@ -40,7 +40,12 @@ def patch():
 
     print("Loading JSON...")
     with open(JSON_PATH, "r", encoding="utf-8") as f:
-        articles = json.load(f)
+        payload = json.load(f)
+
+    if isinstance(payload, dict):
+        articles = payload.get("articles", [])
+    else:
+        articles = payload
 
     if not articles:
         print("No articles to patch.")
@@ -85,7 +90,13 @@ def patch():
 
     print("Saving patched JSON...")
     with open(JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump(articles, f, indent=2, ensure_ascii=False)
+        if isinstance(payload, dict):
+            payload["articles"] = articles
+            payload["article_count"] = len(articles)
+            payload["generated_at"] = datetime.now(timezone.utc).isoformat()
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        else:
+            json.dump(articles, f, indent=2, ensure_ascii=False)
     print("Done! Refresh Admin Panel.")
 
 if __name__ == "__main__":

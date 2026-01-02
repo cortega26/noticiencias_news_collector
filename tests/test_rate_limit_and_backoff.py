@@ -62,75 +62,84 @@ def test_backoff_monotonic_small():
 
 def test_fetch_feed_uses_conditional_headers(tmp_path, monkeypatch):
     collector, db_manager, source_config = _setup_collector(tmp_path, monkeypatch)
-    db_manager.update_source_feed_metadata(
-        "test_source",
-        etag='"old-etag"',
-        last_modified="Wed, 21 Oct 2015 07:28:00 GMT",
-    )
-
-    captured = {}
-
-    def fake_get(self, url, timeout, headers=None):
-        captured["headers"] = headers
-        return DummyResponse(
-            200,
-            headers={
-                "ETag": '"new-etag"',
-                "Last-Modified": "Mon, 01 Jan 2024 00:00:00 GMT",
-                "content-type": "application/rss+xml",
-            },
-            text="<rss></rss>",
+    try:
+        db_manager.update_source_feed_metadata(
+            "test_source",
+            etag='"old-etag"',
+            last_modified="Wed, 21 Oct 2015 07:28:00 GMT",
         )
 
-    collector.session.get = MethodType(fake_get, collector.session)
-    content, status = collector._fetch_feed("test_source", source_config["url"])
+        captured = {}
 
-    assert status == 200
-    assert content == "<rss></rss>"
-    assert captured["headers"]["If-None-Match"] == '"old-etag"'
-    assert captured["headers"]["If-Modified-Since"] == "Wed, 21 Oct 2015 07:28:00 GMT"
+        def fake_get(self, url, timeout, headers=None):
+            captured["headers"] = headers
+            return DummyResponse(
+                200,
+                headers={
+                    "ETag": '"new-etag"',
+                    "Last-Modified": "Mon, 01 Jan 2024 00:00:00 GMT",
+                    "content-type": "application/rss+xml",
+                },
+                text="<rss></rss>",
+            )
 
-    updated = db_manager.get_source_feed_metadata("test_source")
-    assert updated["etag"] == '"new-etag"'
-    assert updated["last_modified"] == "Mon, 01 Jan 2024 00:00:00 GMT"
+        collector.session.get = MethodType(fake_get, collector.session)
+        content, status = collector._fetch_feed("test_source", source_config["url"])
+
+        assert status == 200
+        assert content == "<rss></rss>"
+        assert captured["headers"]["If-None-Match"] == '"old-etag"'
+        assert (
+            captured["headers"]["If-Modified-Since"]
+            == "Wed, 21 Oct 2015 07:28:00 GMT"
+        )
+
+        updated = db_manager.get_source_feed_metadata("test_source")
+        assert updated["etag"] == '"new-etag"'
+        assert updated["last_modified"] == "Mon, 01 Jan 2024 00:00:00 GMT"
+    finally:
+        db_manager.close()
 
 
 def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
     collector, db_manager, source_config = _setup_collector(tmp_path, monkeypatch)
-    db_manager.update_source_feed_metadata(
-        "test_source",
-        etag='"cached"',
-        last_modified="Tue, 02 Jan 2024 00:00:00 GMT",
-    )
-
-    captured = {}
-
-    def fake_get(self, url, timeout, headers=None):
-        captured["headers"] = headers
-        return DummyResponse(
-            304,
-            headers={
-                "ETag": '"cached"',
-                "Last-Modified": "Tue, 02 Jan 2024 00:00:00 GMT",
-            },
+    try:
+        db_manager.update_source_feed_metadata(
+            "test_source",
+            etag='"cached"',
+            last_modified="Tue, 02 Jan 2024 00:00:00 GMT",
         )
 
-    collector.session.get = MethodType(fake_get, collector.session)
-    collector._respect_robots = lambda url: (True, None)
-    collector._enforce_domain_rate_limit = (
-        lambda domain, robots_delay, source_min_delay=None: None
-    )
+        captured = {}
 
-    stats = collector.collect_from_source("test_source", source_config)
+        def fake_get(self, url, timeout, headers=None):
+            captured["headers"] = headers
+            return DummyResponse(
+                304,
+                headers={
+                    "ETag": '"cached"',
+                    "Last-Modified": "Tue, 02 Jan 2024 00:00:00 GMT",
+                },
+            )
 
-    assert stats["success"] is True
-    assert stats["articles_found"] == 0
-    assert stats["articles_saved"] == 0
-    assert captured["headers"]["If-None-Match"] == '"cached"'
+        collector.session.get = MethodType(fake_get, collector.session)
+        collector._respect_robots = lambda url: (True, None)
+        collector._enforce_domain_rate_limit = (
+            lambda domain, robots_delay, source_min_delay=None: None
+        )
 
-    metadata = db_manager.get_source_feed_metadata("test_source")
-    assert metadata["etag"] == '"cached"'
-    assert metadata["last_modified"] == "Tue, 02 Jan 2024 00:00:00 GMT"
+        stats = collector.collect_from_source("test_source", source_config)
+
+        assert stats["success"] is True
+        assert stats["articles_found"] == 0
+        assert stats["articles_saved"] == 0
+        assert captured["headers"]["If-None-Match"] == '"cached"'
+
+        metadata = db_manager.get_source_feed_metadata("test_source")
+        assert metadata["etag"] == '"cached"'
+        assert metadata["last_modified"] == "Tue, 02 Jan 2024 00:00:00 GMT"
+    finally:
+        db_manager.close()
 
 
 def test_rate_limit_chooses_strictest_override(monkeypatch):

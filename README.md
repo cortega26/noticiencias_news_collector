@@ -2,7 +2,7 @@
 _Plataforma modular para recolectar, enriquecer y priorizar noticias científicas con trazabilidad operativa completa._
 
 [![CI Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/cortega26/d271be8cbb4914fcb020d48f5d06b9f1/raw/ci-badge.json)](.github/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Status: MVP](https://img.shields.io/badge/Status-MVP-green.svg)](CHANGELOG.md)
 
 ## Tabla de contenidos
@@ -52,7 +52,7 @@ Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contr
 
 ## Instalación
 ### Prerrequisitos
-- Python 3.10 o superior (probado en 3.12).
+- Python 3.13 o superior (probado en 3.13).
 - Git.
 - (Opcional) Docker 24+ para empaquetar contenedores.
 
@@ -73,6 +73,8 @@ make security
 - **Fuente única:** `requirements.lock` (runtime) y `requirements-security.lock` (escáneres) concentran todas las versiones con hashes. `requirements.txt` solo documenta dependencias legibles; cualquier cambio requiere regenerar los lockfiles.
 - **Actualización de locks:** ejecutar `pip-compile --generate-hashes --output-file=requirements.lock requirements.txt` y `pip-compile --allow-unsafe --extra=security --generate-hashes --output-file=requirements-security.lock pyproject.toml` desde un entorno limpio.
 - **Verificación:** `make bootstrap` instala con `--require-hashes`, garantizando instalaciones deterministas. Dependabot está configurado en modo _lockfile-only_ para proponer parches sin romper los pines.
+- **Tests:** los pines de test viven en `pyproject.toml` (extra `test`) para claridad; en CI seguimos usando `requirements.lock`.
+- **Refinery env:** las credenciales de la refinería (GitHub/Ollama) viven en `apps/refinery/.env` y no en el `.env` raíz.
 
 ### Instalación manual con `venv`
 ```bash
@@ -96,6 +98,10 @@ pip install --require-hashes -r requirements-security.lock
 - `make config-validate` / `make config-dump` / `make config-docs` – gestión de configuración.
 - `make config-gui` – lanza el editor gráfico (requiere servidor X).
 - `make clean` – elimina `.venv` y caches.
+
+### Refinery (env separado)
+- Configura secretos y endpoints de la refinería en `apps/refinery/.env` (ver plantilla `apps/refinery/.env.example`).
+- `REFINERY_UI_TOKEN` es obligatorio para habilitar acciones de sincronización y publicación en la UI (usa `REFINERY_UI_UNSAFE_ALLOW=1` solo en local).
 
 ## Configuración
 ### Precedencia de capas
@@ -199,6 +205,7 @@ docker build -t noticiencias/news-collector .
 docker run --rm -v $(pwd)/config.toml:/app/config.toml:ro noticiencias/news-collector --dry-run
 ```
 Ajustar volumenes para `data/` si se desea persistencia.
+Para `docker-compose`, define `POSTGRES_PASSWORD` (y opcionalmente `POSTGRES_USER`/`POSTGRES_DB`) en `.env`.
 
 ## Scripts y evaluación offline
 | Script | Uso | Ejemplo |
@@ -230,6 +237,19 @@ Más utilidades en `scripts/` (dedupe tuning, benchmarks, perfiles de pipeline) 
   - DLQ y artefactos intermedios en `data/dlq/`.
   - Reportes y cobertura en `reports/` (`reports/coverage/`, `reports/security/`).
 - **Formato de monitoreo**: ver [docs/common_output_format.md](docs/common_output_format.md) (schema `monitoring.v1`).
+- **Export JSON** (`data/exports/latest_articles.json`): ahora incluye metadatos de contrato para proteger cambios de schema.
+
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-01-02T00:00:00Z",
+  "contract": "news_collector.export.v1",
+  "article_count": 50,
+  "articles": [
+    {"id": 1, "title": "…"}
+  ]
+}
+```
 
 ## Estructura del proyecto
 ```

@@ -3,7 +3,7 @@ name = "noticiencias-news-collector"
 dynamic = ["version"]
 description = "Scientific news aggregation pipeline for the Noticiencias project"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [{ name = "Noticiencias Team" }]
 
 dependencies = [
@@ -39,6 +39,12 @@ security = [
     "pip-audit>=2.9.0",
     "trufflehog3>=3.0.10",
 ]
+test = [
+    "coverage[toml]==7.10.7",
+    "hypothesis==6.104.1",
+    "pytest==8.4.2",
+    "pytest-cov==7.0.0",
+]
 
 [build-system]
 requires = ["setuptools>=64", "wheel"]
@@ -48,7 +54,7 @@ build-backend = "setuptools.build_meta"
 version = {file = "news_collector/config/VERSION"}
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py313"
 line-length = 88
 src = ["news_collector"]
 
@@ -73,7 +79,7 @@ line-ending = "lf"
 
 [tool.black]
 line-length = 88
-target-version = ["py310"]
+target-version = ["py313"]
 
 [tool.isort]
 profile = "black"
@@ -81,7 +87,7 @@ line_length = 88
 src_paths = ["news_collector", "tests", "scripts"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 packages = ["news_collector", "tests"]
 ignore_missing_imports = true
 warn_unused_configs = true

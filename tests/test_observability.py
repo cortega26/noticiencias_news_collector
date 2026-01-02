@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -149,15 +150,21 @@ def test_collection_cycle_logs_and_emits_metrics(
         "_get_sources_to_process",
         lambda self, _sources_filter: {"source_a": {}, "source_b": {}},
     )
+    async def _execute_collection(self, _sources, _dry_run, **_kwargs):
+        return collection_results
+
+    async def _execute_scoring(self, _collection_results, _dry_run):
+        return scoring_results
+
     monkeypatch.setattr(
         main.NewsCollectorSystem,
         "_execute_collection",
-        lambda self, _sources, _dry_run, **_kwargs: collection_results,
+        _execute_collection,
     )
     monkeypatch.setattr(
         main.NewsCollectorSystem,
         "_execute_scoring",
-        lambda self, _collection_results, _dry_run: scoring_results,
+        _execute_scoring,
     )
     monkeypatch.setattr(
         main.NewsCollectorSystem,
@@ -170,7 +177,7 @@ def test_collection_cycle_logs_and_emits_metrics(
         lambda self, *_args, **_kwargs: final_summary,
     )
 
-    result = system.run_collection_cycle(trace_id="test-trace")
+    result = asyncio.run(system.run_collection_cycle(trace_id="test-trace"))
 
     assert result["summary"]["articles_saved"] == 2
     assert len(metrics_stub.ingest_events) == 1
@@ -211,7 +218,7 @@ def test_cli_logging(
         def initialize(self) -> bool:
             return True
 
-        def run_collection_cycle(self, **_kwargs: Any) -> Dict[str, Any]:
+        async def run_collection_cycle(self, **_kwargs: Any) -> Dict[str, Any]:
             return {
                 "session_info": {"session_id": "cli-session"},
                 "summary": {"sources_processed": 1},

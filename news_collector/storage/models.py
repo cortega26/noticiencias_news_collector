@@ -28,8 +28,7 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
 
 # Base para todos los modelos
 Base = declarative_base()
@@ -84,6 +83,8 @@ class Article(Base):
     # Metadatos temporales
     # ===================
     published_date = Column(DateTime(timezone=True))  # Cuándo se publicó originalmente
+    published_at = Column(DateTime(timezone=True))  # Cuándo publicamos en Noticiencias
+    published_url = Column(String(500))  # URL pública en Noticiencias si aplica
     collected_date = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -172,6 +173,13 @@ class Article(Base):
             sqlite_where=text("simhash_prefix IS NOT NULL"),
         ),
         Index(
+            "uq_articles_content_hash",
+            "content_hash",
+            unique=True,
+            sqlite_where=text("content_hash IS NOT NULL"),
+            postgresql_where=text("content_hash IS NOT NULL"),
+        ),
+        Index(
             "idx_articles_cleanup_low_score",
             "collected_date",
             sqlite_where=text("final_score < 0.3"),
@@ -196,6 +204,10 @@ class Article(Base):
             "published_date": (
                 self.published_date.isoformat() if self.published_date else None
             ),
+            "published_at": (
+                self.published_at.isoformat() if self.published_at else None
+            ),
+            "published_url": self.published_url,
             "final_score": self.final_score,
             "is_preprint": self.is_preprint,
             "doi": self.doi,

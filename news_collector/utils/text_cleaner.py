@@ -34,7 +34,7 @@ def clean_html(html: str) -> str:
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
     # Remove common boilerplate nodes by text
-    for el in list(soup.find_all(text=True)):
+    for el in list(soup.find_all(string=True)):
         txt = normalize_text(str(el))
         if any(p.search(txt) for p in _BOILERPLATE_PATTERNS):
             try:

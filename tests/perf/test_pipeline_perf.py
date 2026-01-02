@@ -147,7 +147,10 @@ def pipeline_storage(
     )
 
     backend_info["manager"] = manager
-    return backend_info
+    try:
+        yield backend_info
+    finally:
+        manager.close()
 
 
 @pytest.fixture(params=["sqlite", "postgresql"])
@@ -203,7 +206,7 @@ def _compute_scoring_accuracy() -> Dict[str, float]:
     ranks: List[Dict[str, Any]] = []
 
     with patch.object(feature_scorer_module, "datetime", _FrozenDateTime):
-        scorer = create_scorer()
+        scorer = create_scorer(mode="advanced")
         for entry in dataset["articles"]:
             article_payload = dict(entry["article"])
             article_payload.setdefault("article_metadata", {})
@@ -270,7 +273,7 @@ def test_pipeline_stage_latencies(
 
     monkeypatch.setattr(enrichment_pipeline, "enrich_article", timed_enrich)
 
-    scorer = create_scorer()
+    scorer = create_scorer(mode="advanced")
 
     for entry in pipeline_dataset:
         raw_article = _prepare_raw_article(entry)

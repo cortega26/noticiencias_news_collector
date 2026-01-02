@@ -3,7 +3,7 @@
 Database Migration Helper Script
 ================================
 
-Wrapper around alembic to simplify common database migration tasks.
+Wrapper around alembic to simplify manual database migration tasks.
 Usage:
     python scripts/migrate.py make "Message"  # Create a new migration
     python scripts/migrate.py up              # Upgrade to latest version
@@ -63,8 +63,9 @@ def run_alembic(args: List[str]):
     """Run alembic command with proper environment."""
     cmd = ["python", "-m", "alembic"] + args
     
-    # We don't need to pass DB url here because env.py reads it from app config
-    # but we ensure we run from project root
+    # Note: runtime schema bootstrapping uses DatabaseManager.create_all +
+    # _run_schema_migrations. Alembic is only for manual/production workflows.
+    # We don't need to pass DB url here because env.py reads it from app config.
     try:
         subprocess.run(cmd, cwd=BASE_DIR, check=True)
     except subprocess.CalledProcessError as e:

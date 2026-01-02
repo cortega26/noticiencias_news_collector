@@ -3,7 +3,7 @@
 ## Summary
 - Executed the mandated Bandit, Gitleaks, and pip-audit sweeps with high verbosity and stored JSON artifacts under `reports/security/`.
 - Verified the codebase avoids `shell=True`, `eval`, or `exec` patterns and that external inputs are validated via existing schema tooling.
-- Hardened the container image to run as a non-root user on a pinned Python 3.11.9 base and ensured dependency installs remain hash-locked.
+- Hardened the container image to run as a non-root user on a pinned Python 3.13-slim base and ensured dependency installs remain hash-locked.
 - Added an always-on GitHub Actions security gate so pull requests cannot merge while static analysis or secret scans fail.
 - Documented the residual false-positive secret detections and mapped mitigations against OWASP ASVS controls for the CLI/data pipeline.
 
@@ -25,7 +25,7 @@
 | R-07-004 | `trufflehog3==3.0.10` pins `jinja2==3.1.4`, which carries GHSA-q2x7-8rv6-6q7h / GHSA-gmj6-6f8f-6699 / GHSA-cpwx-vrp4-4pq7 advisories. | Medium | **Accepted (compensating controls)** | No patched trufflehog3 release exists yet; CI pip-audit run ignores the three GHSA identifiers and risk is tracked here until upstream relaxes the pin or we replace the scanner. |
 
 ## Hardening Notes
-- Reviewed Dockerfile for secret leakage, cache busting, and reproducibility. The new image pins `python:3.11.9-slim`, uses non-root execution, and preserves `PYTHONPATH=/app/src` for runtime. No build-time secrets are cached.
+- Reviewed Dockerfile for secret leakage, cache busting, and reproducibility. The new image pins `python:3.13-slim`, uses non-root execution, and preserves `PYTHONPATH=/app/src` for runtime. No build-time secrets are cached.
 - Repository search confirmed absence of `shell=True`, dynamic `eval`, or `exec` usage in production code paths.
 - Configuration updates continue to flow through `noticiencias.config_manager.Config` models, which enforce type validation and drop unset fields before serialization, preventing injection of unvalidated values into TOML outputs.
 

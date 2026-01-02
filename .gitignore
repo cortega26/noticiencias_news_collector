@@ -115,6 +115,11 @@ dmypy.json
 *.db
 data/logs/
 data/dlq/
+data/exports/
+temp/
+debug_output.txt
+test_output*.txt
+e2e_test_output.txt
 scalene_profile.*
 tmp_config_init.txt
 *.log

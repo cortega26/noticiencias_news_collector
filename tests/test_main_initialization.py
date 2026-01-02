@@ -2,6 +2,7 @@
 
 import sys
 import types
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -10,37 +11,35 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# Provide a lightweight FastAPI stub to satisfy imports during testing
-fastapi_stub = types.ModuleType("fastapi")
+# Provide a lightweight FastAPI stub only when the dependency is missing.
+if importlib.util.find_spec("fastapi") is None:
+    fastapi_stub = types.ModuleType("fastapi")
 
+    class _StubFastAPI:
+        def __init__(self, *args, **kwargs):  # pragma: no cover - simple stub
+            self.routes = []
 
-class _StubFastAPI:
-    def __init__(self, *args, **kwargs):  # pragma: no cover - simple stub
-        self.routes = []
+        def get(
+            self, *decorator_args, **decorator_kwargs
+        ):  # pragma: no cover - simple stub
+            def decorator(func):
+                self.routes.append(("GET", decorator_args, decorator_kwargs, func))
+                return func
 
-    def get(
-        self, *decorator_args, **decorator_kwargs
-    ):  # pragma: no cover - simple stub
-        def decorator(func):
-            self.routes.append(("GET", decorator_args, decorator_kwargs, func))
-            return func
+            return decorator
 
-        return decorator
+    class _StubHTTPException(Exception):
+        def __init__(self, status_code: int = 500, detail: str | None = None):
+            super().__init__(detail)
+            self.status_code = status_code
+            self.detail = detail
 
+    fastapi_stub.FastAPI = _StubFastAPI
+    fastapi_stub.HTTPException = _StubHTTPException
+    fastapi_stub.Depends = lambda dependency=None: dependency
+    fastapi_stub.Query = lambda default=None, alias=None: default
 
-class _StubHTTPException(Exception):
-    def __init__(self, status_code: int = 500, detail: str | None = None):
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
-
-
-fastapi_stub.FastAPI = _StubFastAPI
-fastapi_stub.HTTPException = _StubHTTPException
-fastapi_stub.Depends = lambda dependency=None: dependency
-fastapi_stub.Query = lambda default=None, alias=None: default
-
-sys.modules.setdefault("fastapi", fastapi_stub)
+    sys.modules.setdefault("fastapi", fastapi_stub)
 
 pytestmark = pytest.mark.e2e
 

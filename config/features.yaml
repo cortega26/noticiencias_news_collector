@@ -1,0 +1,14 @@
+# Feature flag registry for Noticiencias.
+# Keep defaults conservative and document rollout owners.
+
+features:
+  refinery_ui_auth:
+    description: Require an access token for Refinery publish actions.
+    default: true
+    owners:
+      - ops
+  export_schema_v1:
+    description: Wrap export JSON with schema metadata.
+    default: true
+    owners:
+      - data

@@ -116,7 +116,7 @@
 
 ## 3) Coding Standards
 
-- **Python Version:** 3.10+. Use `typing` (e.g., `TypedDict`, `Protocol`) for all public interfaces.
+- **Python Version:** 3.13+. Use `typing` (e.g., `TypedDict`, `Protocol`) for all public interfaces.
 - **Style:** PEP 8 + `ruff` defaults. Prefer dataclasses for structured data and `pydantic` models in serving layer.
 - **Logging:** `structlog`-style dictionaries with `trace_id`, `article_id`, `source_id`, latency, and key decisions.
 - **Error handling:** never swallow exceptions; wrap with contextual message and re-raise or push to DLQ.

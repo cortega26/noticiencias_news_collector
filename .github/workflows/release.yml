@@ -49,7 +49,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Update changelog
         run: |
           python scripts/update_changelog.py --version "${{ steps.vars.outputs.version }}" --notes-file release-notes.md
@@ -121,3 +121,4 @@ jobs:
           path: |
             collector-image.tar.gz
             image-run.md
+
