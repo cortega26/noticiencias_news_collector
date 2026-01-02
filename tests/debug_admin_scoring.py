@@ -15,7 +15,12 @@ def debug_scoring():
         return
         
     with open(JSON_PATH, "r", encoding="utf-8") as f:
-        articles = json.load(f)
+        payload = json.load(f)
+
+    if isinstance(payload, dict):
+        articles = payload.get("articles", [])
+    else:
+        articles = payload
         
     with open(CONFIG_PATH, "r") as f:
         config_data = toml.load(f)

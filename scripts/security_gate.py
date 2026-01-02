@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List
 
 try:
     import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
+except ModuleNotFoundError:  # pragma: no cover - fallback for Python < 3.11
     import tomli as tomllib  # type: ignore[import]
 
 GITLEAKS_CONFIG = Path(".gitleaks.toml")

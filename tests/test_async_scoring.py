@@ -1,13 +1,22 @@
 import asyncio
-import sys
 import logging
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from news_collector.scoring.basic_scorer import BasicScorer
+
+pytestmark = pytest.mark.anyio
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

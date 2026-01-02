@@ -41,6 +41,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
 
     assert "TL;DR Visual" not in result
     assert "⚡" not in result
+    assert 'source_url: "https://example.com/source"' in result
     assert "Fuente original: [https://example.com/source]" in result
 
 
@@ -70,4 +71,5 @@ def test_process_article_keeps_sections_with_image() -> None:
     )
 
     assert "TL;DR Visual" in result
+    assert 'source_url: "https://example.com/source"' in result
     assert "Fuente original: [https://example.com/source]" in result

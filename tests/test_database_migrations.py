@@ -3,58 +3,52 @@
 from __future__ import annotations
 
 import sqlite3
-import sys
-import types
 from pathlib import Path
 
 import pytest
 from sqlalchemy import inspect as sqla_inspect
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT / "src"
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-if "src" not in sys.modules:
-    stub = types.ModuleType("src")
-    stub.__path__ = [str(SRC_DIR)]
-    sys.modules["src"] = stub
 
 from news_collector.storage.database import DatabaseManager
 
 
 def _create_legacy_sources_table(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE sources (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                url TEXT NOT NULL,
-                credibility_score REAL NOT NULL,
-                category TEXT NOT NULL,
-                update_frequency TEXT,
-                last_checked TIMESTAMP,
-                last_successful_check TIMESTAMP,
-                last_article_found TIMESTAMP,
-                total_articles_collected INTEGER DEFAULT 0,
-                articles_this_month INTEGER DEFAULT 0,
-                average_articles_per_check REAL DEFAULT 0.0,
-                success_rate REAL DEFAULT 1.0,
-                duplicate_rate REAL DEFAULT 0.0,
-                average_article_score REAL,
-                is_active INTEGER DEFAULT 1,
-                consecutive_failures INTEGER DEFAULT 0,
-                error_message TEXT,
-                custom_config TEXT
-            );
-            """
-        )
-        conn.commit()
+        try:
+            cursor.execute(
+                """
+                CREATE TABLE sources (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    credibility_score REAL NOT NULL,
+                    category TEXT NOT NULL,
+                    update_frequency TEXT,
+                    last_checked TIMESTAMP,
+                    last_successful_check TIMESTAMP,
+                    last_article_found TIMESTAMP,
+                    total_articles_collected INTEGER DEFAULT 0,
+                    articles_this_month INTEGER DEFAULT 0,
+                    average_articles_per_check REAL DEFAULT 0.0,
+                    success_rate REAL DEFAULT 1.0,
+                    duplicate_rate REAL DEFAULT 0.0,
+                    average_article_score REAL,
+                    is_active INTEGER DEFAULT 1,
+                    consecutive_failures INTEGER DEFAULT 0,
+                    error_message TEXT,
+                    custom_config TEXT
+                );
+                """
+            )
+            conn.commit()
+        finally:
+            cursor.close()
+    finally:
+        conn.close()
 
 
 @pytest.mark.parametrize(
@@ -79,11 +73,43 @@ def test_database_manager_backfills_suppression_columns(
     _create_legacy_sources_table(db_path)
 
     manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with manager.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            columns = {col["name"] for col in inspector.get_columns("sources")}
 
-    inspector = sqla_inspect(manager.engine)
-    columns = {col["name"] for col in inspector.get_columns("sources")}
+        for column in missing_columns:
+            assert (
+                column in columns
+            ), f"Expected column '{column}' to be created via migration"
+    finally:
+        manager.close()
 
-    for column in missing_columns:
-        assert (
-            column in columns
-        ), f"Expected column '{column}' to be created via migration"
+
+def test_database_manager_has_article_publication_columns(tmp_path: Path) -> None:
+    db_path = tmp_path / "articles.db"
+
+    manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with manager.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            columns = {col["name"] for col in inspector.get_columns("articles")}
+
+        assert "published_at" in columns
+        assert "published_url" in columns
+    finally:
+        manager.close()
+
+
+def test_database_manager_creates_content_hash_unique_index(tmp_path: Path) -> None:
+    db_path = tmp_path / "articles_index.db"
+
+    manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with manager.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            indexes = {idx["name"] for idx in inspector.get_indexes("articles")}
+
+        assert "uq_articles_content_hash" in indexes
+    finally:
+        manager.close()

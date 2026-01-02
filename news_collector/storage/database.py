@@ -13,13 +13,14 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 """
 
 from contextlib import contextmanager
+import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, load_only, sessionmaker
+from sqlalchemy.orm import Session, close_all_sessions, load_only, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from news_collector.utils.pydantic_compat import get_pydantic_module
@@ -33,6 +34,15 @@ from news_collector.config.settings import DATABASE_CONFIG, DEDUP_CONFIG
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 
 from ..storage.models import PENDING_STATUS, Article, Base, ScoreLog, Source
+from ..storage.analytics import (
+    category_breakdown,
+    collection_stats,
+    daily_stats,
+    score_distribution,
+    source_performance,
+    top_sources_performance,
+)
+from ..storage.maintenance import cleanup_old_data, health_status
 from ..utils.dedupe import (
     duplication_confidence,
     generate_cluster_id,
@@ -194,99 +204,151 @@ class DatabaseManager:
         """
 
         try:
-            inspector = inspect(self.engine)
-            tables = inspector.get_table_names()
+            with self.engine.connect() as connection:
+                inspector = inspect(connection)
+                tables = inspector.get_table_names()
+                self._apply_schema_migrations(inspector, tables)
         except Exception as exc:  # pragma: no cover - solo en errores del driver
             logger.error("No se pudo inspeccionar la base de datos: %s", exc)
             return
 
-        if "sources" not in tables:
-            return
+        return
 
-        existing_columns = {col["name"] for col in inspector.get_columns("sources")}
-
+    def _apply_schema_migrations(
+        self, inspector: Any, tables: List[str]
+    ) -> None:
         db_type = self.config.get("type", "sqlite")
         timestamp_type = (
             "TIMESTAMP WITH TIME ZONE" if db_type == "postgresql" else "TIMESTAMP"
         )
         boolean_type = "BOOLEAN" if db_type != "sqlite" else "INTEGER"
 
-        migrations: List[Tuple[str, str]] = []
+        migrations: List[Tuple[str, str, str]] = []
 
-        if "suppressed_until" not in existing_columns:
-            migrations.append(
-                (
-                    f"ALTER TABLE sources ADD COLUMN suppressed_until {timestamp_type}",
-                    "suppressed_until",
-                )
-            )
+        if "sources" in tables:
+            existing_columns = {
+                col["name"] for col in inspector.get_columns("sources")
+            }
 
-        if "suppression_reason" not in existing_columns:
-            migrations.append(
-                (
-                    "ALTER TABLE sources ADD COLUMN suppression_reason TEXT",
-                    "suppression_reason",
+            if "suppressed_until" not in existing_columns:
+                migrations.append(
+                    (
+                        f"ALTER TABLE sources ADD COLUMN suppressed_until {timestamp_type}",
+                        "sources",
+                        "suppressed_until",
+                    )
                 )
-            )
 
-        if "auto_suppressed" not in existing_columns:
-            default_clause = "DEFAULT 0" if db_type == "sqlite" else "DEFAULT FALSE"
-            migrations.append(
-                (
-                    f"ALTER TABLE sources ADD COLUMN auto_suppressed {boolean_type} {default_clause}",
-                    "auto_suppressed",
+            if "suppression_reason" not in existing_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE sources ADD COLUMN suppression_reason TEXT",
+                        "sources",
+                        "suppression_reason",
+                    )
                 )
-            )
 
-        if "dq_consecutive_anomalies" not in existing_columns:
-            migrations.append(
-                (
-                    "ALTER TABLE sources ADD COLUMN dq_consecutive_anomalies INTEGER DEFAULT 0",
-                    "dq_consecutive_anomalies",
+            if "auto_suppressed" not in existing_columns:
+                default_clause = "DEFAULT 0" if db_type == "sqlite" else "DEFAULT FALSE"
+                migrations.append(
+                    (
+                        f"ALTER TABLE sources ADD COLUMN auto_suppressed {boolean_type} {default_clause}",
+                        "sources",
+                        "auto_suppressed",
+                    )
                 )
-            )
 
-        if "last_canary_check" not in existing_columns:
-            migrations.append(
-                (
-                    f"ALTER TABLE sources ADD COLUMN last_canary_check {timestamp_type}",
-                    "last_canary_check",
+            if "dq_consecutive_anomalies" not in existing_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE sources ADD COLUMN dq_consecutive_anomalies INTEGER DEFAULT 0",
+                        "sources",
+                        "dq_consecutive_anomalies",
+                    )
                 )
-            )
 
-        if "last_canary_status" not in existing_columns:
-            migrations.append(
-                (
-                    "ALTER TABLE sources ADD COLUMN last_canary_status TEXT",
-                    "last_canary_status",
+            if "last_canary_check" not in existing_columns:
+                migrations.append(
+                    (
+                        f"ALTER TABLE sources ADD COLUMN last_canary_check {timestamp_type}",
+                        "sources",
+                        "last_canary_check",
+                    )
                 )
-            )
 
-        if "feed_etag" not in existing_columns:
-            migrations.append(
-                (
-                    "ALTER TABLE sources ADD COLUMN feed_etag TEXT",
-                    "feed_etag",
+            if "last_canary_status" not in existing_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE sources ADD COLUMN last_canary_status TEXT",
+                        "sources",
+                        "last_canary_status",
+                    )
                 )
-            )
 
-        if "feed_last_modified" not in existing_columns:
-            migrations.append(
-                (
-                    "ALTER TABLE sources ADD COLUMN feed_last_modified TEXT",
-                    "feed_last_modified",
+            if "feed_etag" not in existing_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE sources ADD COLUMN feed_etag TEXT",
+                        "sources",
+                        "feed_etag",
+                    )
                 )
-            )
+
+            if "feed_last_modified" not in existing_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE sources ADD COLUMN feed_last_modified TEXT",
+                        "sources",
+                        "feed_last_modified",
+                    )
+                )
+
+        if "articles" in tables:
+            existing_article_columns = {
+                col["name"] for col in inspector.get_columns("articles")
+            }
+            existing_article_indexes = {
+                idx.get("name") for idx in inspector.get_indexes("articles")
+            }
+            if "published_at" not in existing_article_columns:
+                migrations.append(
+                    (
+                        f"ALTER TABLE articles ADD COLUMN published_at {timestamp_type}",
+                        "articles",
+                        "published_at",
+                    )
+                )
+            if "published_url" not in existing_article_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE articles ADD COLUMN published_url TEXT",
+                        "articles",
+                        "published_url",
+                    )
+                )
+            if "uq_articles_content_hash" not in existing_article_indexes:
+                where_clause = "WHERE content_hash IS NOT NULL"
+                migrations.append(
+                    (
+                        (
+                            "CREATE UNIQUE INDEX IF NOT EXISTS uq_articles_content_hash "
+                            f"ON articles (content_hash) {where_clause}"
+                        ),
+                        "articles",
+                        "uq_articles_content_hash",
+                    )
+                )
 
         if not migrations:
             return
 
         with self.engine.begin() as connection:
-            for statement, column_name in migrations:
+            for statement, table_name, column_name in migrations:
                 connection.execute(text(statement))
                 logger.info(
-                    "🛠️  Columna '%s' agregada a la tabla sources mediante migración automática",
+                    "🛠️  Columna '%s' agregada a la tabla %s mediante migración automática",
                     column_name,
+                    table_name,
                 )
 
     @contextmanager
@@ -313,6 +375,38 @@ class DatabaseManager:
             raise
         finally:
             session.close()
+
+    def close(self) -> None:
+        """Dispose pooled connections for clean shutdowns/tests."""
+        try:
+            close_all_sessions()
+        except Exception as exc:
+            logger.warning("Error cerrando sesiones activas: %s", exc)
+        if self.engine is None:
+            return
+        try:
+            try:
+                self.engine.dispose(close=True)
+            except TypeError:
+                self.engine.dispose()
+            self.engine = None
+            self.SessionLocal = None
+        except Exception as exc:  # pragma: no cover - defensive cleanup
+            logger.warning("Error cerrando el engine de base de datos: %s", exc)
+
+    def __del__(self) -> None:
+        if getattr(self, "engine", None) is None:
+            return
+        try:
+            self.close()
+        except Exception as exc:
+            try:
+                logger.warning("Error finalizando DatabaseManager: %s", exc)
+            except Exception:
+                try:
+                    sys.stderr.write(f"Error finalizando DatabaseManager: {exc}\n")
+                except Exception:
+                    raise
 
     # =====================================
     # OPERACIONES CON ARTÍCULOS
@@ -428,6 +522,7 @@ class DatabaseManager:
                 return article
 
             except IntegrityError as e:
+                session.rollback()
                 logger.warning(f"Intento de guardar artículo duplicado: {e}")
                 return None
             except Exception as e:
@@ -629,7 +724,10 @@ class DatabaseManager:
                 article.duplication_confidence = 0.0
 
     def get_articles_by_score(
-        self, limit: int = 10, min_score: float = 0.0
+        self,
+        limit: int = 10,
+        min_score: float = 0.0,
+        exclude_published: bool = False,
     ) -> List[Article]:
         """
         Obtiene los artículos mejor rankeados.
@@ -638,11 +736,16 @@ class DatabaseManager:
         de la colección según las reseñas y popularidad.
         """
         with self.get_session() as session:
-            return (
+            query = (
                 session.query(Article)
                 .filter(Article.final_score >= min_score)
                 .filter(Article.processing_status == "completed")
-                .order_by(desc(Article.final_score), Article.collected_date.desc())
+            )
+            if exclude_published:
+                query = query.filter(Article.published_at.is_(None))
+
+            return (
+                query.order_by(desc(Article.final_score), Article.collected_date.desc())
                 .limit(limit)
                 .all()
             )
@@ -666,6 +769,49 @@ class DatabaseManager:
                 .order_by(desc(Article.final_score), Article.collected_date.desc())
                 .all()
             )
+
+    def mark_article_published(
+        self,
+        source_url: str,
+        *,
+        published_url: Optional[str] = None,
+        published_at: Optional[datetime] = None,
+    ) -> bool:
+        """Marca un artículo como publicado en Noticiencias."""
+        if not source_url:
+            return False
+        published_at = self._ensure_timezone(
+            published_at or datetime.now(timezone.utc)
+        )
+
+        with self.get_session() as session:
+            article = (
+                session.query(Article)
+                .filter(Article.url == source_url)
+                .first()
+            )
+            if not article:
+                # Fallback: buscar por original_url en metadata (filtrado en Python)
+                candidates = (
+                    session.query(Article)
+                    .filter(Article.article_metadata.isnot(None))
+                    .all()
+                )
+                for candidate in candidates:
+                    metadata = candidate.article_metadata or {}
+                    if metadata.get("original_url") == source_url:
+                        article = candidate
+                        break
+
+            if not article:
+                logger.warning("Artículo no encontrado para publicar: %s", source_url)
+                return False
+
+            article.published_at = published_at
+            if published_url:
+                article.published_url = published_url
+            logger.info("✅ Artículo marcado como publicado: %s", article.id)
+            return True
 
     def get_pending_articles(self) -> List[Article]:
         """
@@ -817,103 +963,23 @@ class DatabaseManager:
 
     def get_collection_stats(self, days: int = 30) -> List[Dict[str, Any]]:
         """Devuelve estadísticas de recolección diarias de los últimos N días."""
-        start_date = datetime.now(timezone.utc) - timedelta(days=days)
-        
-        # Dialect-agnostic date truncation is tricky with pure SQLAlchemy Core 
-        # without bringing in dialect-specific functions. 
-        # For simplicity in this hybrid setup, we'll fetch aggregated data 
-        # grouping by date in python if volume is low, or use simple strftime for sqlite.
-        
-        # Efficient approach: Fetch date and count
         with self.get_session() as session:
-            # This query works well for SQLite and Postgres basic date handling
-            # Assuming collected_date is indexed, which it should be.
-            if self.config["type"] == "sqlite":
-                 # SQLite specific date extraction
-                date_func = func.date(Article.collected_date)
-            else:
-                # Postgres
-                date_func = func.date(Article.collected_date)
-                
-            stats = (
-                session.query(
-                    date_func.label('collection_date'),
-                    func.count(Article.id).label('count')
-                )
-                .filter(Article.collected_date >= start_date)
-                .group_by('collection_date')
-                .order_by('collection_date')
-                .all()
-            )
-            
-            return [
-                {"date": str(stat.collection_date), "count": stat.count} 
-                for stat in stats
-            ]
+            return collection_stats(session, self.config["type"], days)
 
     def get_source_performance(self) -> List[Dict[str, Any]]:
         """Devuelve rendimiento promedio por fuente."""
         with self.get_session() as session:
-             # Join Article and Source to get names
-            results = (
-                session.query(
-                    Article.source_id,
-                    Source.name.label('source_name'),
-                    func.count(Article.id).label('article_count'),
-                    func.avg(Article.final_score).label('avg_score')
-                )
-                .join(Source, Article.source_id == Source.id)
-                .group_by(Article.source_id, Source.name)
-                .order_by(desc('avg_score'))
-                .all()
-            )
-            
-            return [
-                {
-                    "source_id": r.source_id,
-                    "source_name": r.source_name,
-                    "article_count": r.article_count,
-                    "avg_score": float(r.avg_score or 0.0)
-                }
-                for r in results
-            ]
+            return source_performance(session)
 
     def get_category_breakdown(self) -> List[Dict[str, Any]]:
         """Devuelve distribución de artículos por categoría."""
         with self.get_session() as session:
-            results = (
-                session.query(
-                    Article.category,
-                    func.count(Article.id).label('count')
-                )
-                .group_by(Article.category)
-                .order_by(desc('count'))
-                .all()
-            )
-            return [{"category": r.category, "count": r.count} for r in results]
+            return category_breakdown(session)
 
     def get_score_distribution(self, buckets: int = 10) -> Dict[str, int]:
         """Devuelve distribución de scores para histograma."""
         with self.get_session() as session:
-            # Pure python bucketing for DB agnosticism simplicity in this context
-            scores = session.query(Article.final_score).filter(Article.final_score > 0).all()
-            
-            # Extract values
-            values = [s[0] for s in scores if s[0] is not None]
-            
-            # Simple histogram
-            if not values:
-                return {}
-                
-            # Define buckets 0.0-0.1, 0.1-0.2, etc.
-            distribution = {f"{i/10:.1f}": 0 for i in range(10)}
-            
-            for v in values:
-                bucket = min(int(v * 10), 9) / 10.0
-                key = f"{bucket:.1f}"
-                distribution[key] = distribution.get(key, 0) + 1
-                
-            return distribution
+            return score_distribution(session, buckets=buckets)
 
     def update_source_feed_metadata(
         self,
@@ -981,59 +1047,8 @@ class DatabaseManager:
         Como obtener un reporte diario de actividad de la biblioteca:
         cuántos libros llegaron, cuáles fueron los más populares, etc.
         """
-        if not date:
-            date = datetime.now(timezone.utc).date()
-
-        start_date = datetime.combine(date, datetime.min.time()).replace(
-            tzinfo=timezone.utc
-        )
-        end_date = start_date + timedelta(days=1)
-
         with self.get_session() as session:
-            # Artículos recolectados hoy
-            articles_collected = (
-                session.query(func.count(Article.id))
-                .filter(Article.collected_date >= start_date)
-                .filter(Article.collected_date < end_date)
-                .scalar()
-            )
-
-            # Artículos procesados hoy
-            articles_processed = (
-                session.query(func.count(Article.id))
-                .filter(Article.collected_date >= start_date)
-                .filter(Article.collected_date < end_date)
-                .filter(Article.processing_status == "completed")
-                .scalar()
-            )
-
-            # Score promedio de artículos de hoy
-            avg_score = (
-                session.query(func.avg(Article.final_score))
-                .filter(Article.collected_date >= start_date)
-                .filter(Article.collected_date < end_date)
-                .filter(Article.final_score.isnot(None))
-                .scalar()
-            )
-
-            # Distribución por categorías
-            category_distribution = dict(
-                session.query(Article.category, func.count(Article.id))
-                .filter(Article.collected_date >= start_date)
-                .filter(Article.collected_date < end_date)
-                .group_by(Article.category)
-                .all()
-            )
-
-            return {
-                "date": date.isoformat(),
-                "articles_collected": articles_collected or 0,
-                "articles_processed": articles_processed or 0,
-                "processing_rate": (articles_processed / max(articles_collected, 1))
-                * 100,
-                "average_score": round(avg_score or 0.0, 3),
-                "category_distribution": category_distribution,
-            }
+            return daily_stats(session, date)
 
     def get_top_sources_performance(self, days_back: int = 30) -> List[Dict[str, Any]]:
         """
@@ -1042,45 +1057,8 @@ class DatabaseManager:
         Como obtener un ranking de cuáles proveedores han traído
         los mejores libros recientemente.
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
-
         with self.get_session() as session:
-            article_agg = (
-                session.query(
-                    Article.source_id.label("source_id"),
-                    func.count(Article.id).label("article_count"),
-                    func.avg(Article.final_score).label("avg_score"),
-                    func.max(Article.final_score).label("max_score"),
-                )
-                .filter(Article.processing_status == "completed")
-                .filter(Article.collected_date >= cutoff_date)
-                .group_by(Article.source_id)
-                .subquery()
-            )
-
-            results = (
-                session.query(
-                    Source.id,
-                    Source.name,
-                    article_agg.c.article_count,
-                    article_agg.c.avg_score,
-                    article_agg.c.max_score,
-                )
-                .join(article_agg, article_agg.c.source_id == Source.id)
-                .order_by(desc(article_agg.c.avg_score))
-                .all()
-            )
-
-            return [
-                {
-                    "source_id": r.id,
-                    "source_name": r.name,
-                    "article_count": r.article_count,
-                    "average_score": round(r.avg_score or 0.0, 3),
-                    "max_score": round(r.max_score or 0.0, 3),
-                }
-                for r in results
-            ]
+            return top_sources_performance(session, days_back=days_back)
 
     # =====================================
     # UTILIDADES Y MANTENIMIENTO
@@ -1093,32 +1071,14 @@ class DatabaseManager:
         Como hacer una limpieza periódica de la biblioteca, archivando
         materiales muy antiguos que ya no son relevantes.
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
-
         with self.get_session() as session:
-            deleted_articles = (
-                session.query(Article)
-                .filter(Article.collected_date < cutoff_date)
-                .filter(Article.final_score < 0.3)
-                .delete()
-            )
-
-            # Eliminar logs de score muy antiguos
-            deleted_logs = (
-                session.query(ScoreLog)
-                .filter(ScoreLog.calculated_at < cutoff_date)
-                .delete()
-            )
-
+            result = cleanup_old_data(session, days_to_keep)
             logger.info(
-                f"🧹 Limpieza completada: {deleted_articles} artículos, {deleted_logs} logs eliminados"
+                "🧹 Limpieza completada: %s artículos, %s logs eliminados",
+                result["deleted_articles"],
+                result["deleted_score_logs"],
             )
-
-            return {
-                "deleted_articles": deleted_articles,
-                "deleted_score_logs": deleted_logs,
-                "cutoff_date": cutoff_date.isoformat(),
-            }
+            return result
 
     def get_health_status(self) -> Dict[str, Any]:
         """
@@ -1127,47 +1087,7 @@ class DatabaseManager:
         Como hacer un chequeo médico completo de nuestra biblioteca digital.
         """
         with self.get_session() as session:
-            total_articles = session.query(func.count(Article.id)).scalar()
-            pending_articles = (
-                session.query(func.count(Article.id))
-                .filter(Article.processing_status == PENDING_STATUS)
-                .scalar()
-            )
-
-            recent_articles = (
-                session.query(func.count(Article.id))
-                .filter(
-                    Article.collected_date
-                    >= datetime.now(timezone.utc) - timedelta(days=1)
-                )
-                .scalar()
-            )
-
-            active_sources = (
-                session.query(func.count(Source.id))
-                .filter(Source.is_active.is_(True))
-                .scalar()
-            )
-
-            failed_sources = (
-                session.query(func.count(Source.id))
-                .filter(Source.consecutive_failures > 3)
-                .scalar()
-            )
-
-            return {
-                "total_articles": total_articles,
-                "pending_processing": pending_articles,
-                "articles_last_24h": recent_articles,
-                "active_sources": active_sources,
-                "failed_sources": failed_sources,
-                "database_type": self.config["type"],
-                "status": (
-                    "healthy"
-                    if failed_sources == 0 and pending_articles < 100
-                    else "warning"
-                ),
-            }
+            return health_status(session, self.config["type"])
 
 
 # Instancia global del manejador de base de datos

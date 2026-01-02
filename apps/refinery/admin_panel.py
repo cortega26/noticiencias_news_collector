@@ -16,6 +16,7 @@ refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
 from news_collector.storage.database import DatabaseManager
+from src.database import DatabaseManager as RefineryDatabaseManager
 from news_collector.config.settings import DATABASE_CONFIG
 
 # Page Config
@@ -26,6 +27,9 @@ st.title("🎛️ Panel de Control Unificado Noticiencias")
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
+REFINERY_DB_PATH = BASE_DIR.parent.parent / "refinery.db"
+REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"
+REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 
 # --- Helper Functions ---
 def load_env_file():
@@ -43,6 +47,41 @@ def save_env_file(env_vars):
                 f.write(f'{key}="{value}"\n')
             else:
                 f.write(f"{key}={value}\n")
+
+def require_refinery_auth(env_vars: dict[str, str]) -> bool:
+    """Require a UI access token unless an explicit unsafe bypass is enabled."""
+    bypass = (
+        str(env_vars.get(REFINERY_UI_BYPASS_KEY, "")).strip() == "1"
+        or os.getenv(REFINERY_UI_BYPASS_KEY) == "1"
+    )
+    if bypass:
+        st.warning("⚠️ Autenticación desactivada vía REFINERY_UI_UNSAFE_ALLOW=1.")
+        return True
+
+    token = env_vars.get(REFINERY_UI_TOKEN_KEY) or os.getenv(REFINERY_UI_TOKEN_KEY)
+    if not token:
+        st.error(
+            "❌ Falta REFINERY_UI_TOKEN. "
+            "Configúralo en apps/refinery/.env para habilitar acciones de publicación."
+        )
+        return False
+
+    if st.session_state.get("refinery_ui_authenticated"):
+        return True
+
+    with st.expander("🔐 Acceso restringido", expanded=True):
+        entered = st.text_input(
+            "Token de acceso",
+            type="password",
+            help="Ingresa REFINERY_UI_TOKEN para habilitar acciones de escritura.",
+        )
+        if entered:
+            if entered == token:
+                st.session_state["refinery_ui_authenticated"] = True
+                st.success("Autenticación exitosa.")
+                return True
+            st.error("Token inválido.")
+    return False
 
 # Load Env to get Path
 env_config = load_env_file()
@@ -80,6 +119,11 @@ with tab1:
     env_vars = dict(env_vars)
     
     if env_vars or not ENV_FILE.exists(): # Allow editing even if empty
+        if not ENV_FILE.exists():
+            st.info(
+                f"Archivo de entorno de refinería: `{ENV_FILE}`. "
+                "Crea este archivo para guardar GITHUB_TOKEN y OLLAMA_*."
+            )
         col1, col2 = st.columns(2)
         
         with col1:
@@ -108,6 +152,20 @@ with tab1:
             # ------------------------------
             
             env_vars["GITHUB_TOKEN"] = st.text_input("Token de GitHub", env_vars.get("GITHUB_TOKEN", ""), type="password")
+            env_vars[REFINERY_UI_TOKEN_KEY] = st.text_input(
+                "Token UI Refinery",
+                env_vars.get(REFINERY_UI_TOKEN_KEY, ""),
+                type="password",
+                help="Requerido para ejecutar sincronizacion y publicar.",
+            )
+            env_vars[REFINERY_UI_BYPASS_KEY] = (
+                "1"
+                if st.checkbox(
+                    "Permitir acciones sin token (solo local)",
+                    value=str(env_vars.get(REFINERY_UI_BYPASS_KEY, "")).strip() == "1",
+                )
+                else "0"
+            )
             
         st.subheader("📝 Prompt del Sistema (Personalidad)")
         default_prompt = (
@@ -186,22 +244,27 @@ with tab3:
     st.header("Operaciones del Pipeline")
     
     st.info("ℹ️ Selecciona un artículo para refinar y publicar.")
+    env_vars = dict(load_env_file())
+    auth_ok = require_refinery_auth(env_vars)
     
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
     with col_sync:
         if st.button("🔄 Sincronizar Datos", help="Traer últimos artículos del Colector Cloud"):
             with st.spinner("Sincronizando datos..."):
-                try:
-                    # Direct call to main module instead of subprocess
-                    result = run_refinery(fetch_only=True)
-                    if result.get("status") == "success":
-                        st.success("¡Sincronización Completa!")
-                    else:
-                        st.error("Fallo en Sincronización")
-                        st.expander("Detalles del Error").write(result.get("message"))
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                if not auth_ok:
+                    st.warning("Autenticación requerida para sincronizar.")
+                else:
+                    try:
+                        # Direct call to main module instead of subprocess
+                        result = run_refinery(fetch_only=True)
+                        if result.get("status") == "success":
+                            st.success("¡Sincronización Completa!")
+                        else:
+                            st.error("Fallo en Sincronización")
+                            st.expander("Detalles del Error").write(result.get("message"))
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
     # Section 2: List Candidates
     # Look for the JSON file
@@ -210,7 +273,12 @@ with tab3:
     SIBLING_PATH = NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
     
     JSON_PATH = None
-    if CLONED_PATH.exists():
+    if CLONED_PATH.exists() and SIBLING_PATH.exists():
+        if CLONED_PATH.stat().st_mtime >= SIBLING_PATH.stat().st_mtime:
+            JSON_PATH = CLONED_PATH
+        else:
+            JSON_PATH = SIBLING_PATH
+    elif CLONED_PATH.exists():
         JSON_PATH = CLONED_PATH
     elif SIBLING_PATH.exists():
         JSON_PATH = SIBLING_PATH
@@ -220,7 +288,14 @@ with tab3:
         
         try:
             with open(JSON_PATH, "r", encoding="utf-8") as f:
-                articles = json.load(f)
+                payload = json.load(f)
+            if isinstance(payload, dict):
+                articles = payload.get("articles", [])
+            else:
+                articles = payload
+            if not isinstance(articles, list):
+                st.error("Formato de exportación inválido: no es una lista de artículos.")
+                articles = []
             
             # --- RE-SCORING LOGIC ---
             # Apply current weights from config_data to loaded articles
@@ -258,71 +333,129 @@ with tab3:
             # ------------------------
             
             if articles:
-                st.subheader(f"Artículos Disponibles ({len(articles)})")
-                
-                # Convert to DataFrame for easier display
-                df = pd.DataFrame(articles)
-                # Keep relevant columns
-                display_cols = ["id", "title", "score", "published_date"]
-                # Filter strictly for existing columns
-                display_cols = [c for c in display_cols if c in df.columns]
-                
-                # Display interactive table
-                # We use a selection box for simplicity as st.dataframe selection is newer
-                
-                # Create a formatted list for the selectbox
-                options = {f"{row['id']} - {row['title']} (Score: {row.get('score', 0):.2f})": row['id'] for i, row in df.iterrows()}
-                
-                selected_label = st.selectbox("Seleccionar Artículo a Procesar:", options=list(options.keys()))
-                
-                if selected_label:
-                    selected_id = options[selected_label]
-                    
-                    # Show details of selected
-                    selected_art = next((a for a in articles if str(a["id"]) == str(selected_id)), None)
-                    if selected_art:
-                        with st.expander("📄 Revisar Resumen del Artículo", expanded=False):
-                            st.write(f"**Título:** {selected_art.get('title')}")
-                            st.write(f"**Resumen:** {selected_art.get('summary')}")
-                    if selected_art.get("image_url"):
-                                st.image(selected_art.get("image_url"), caption="Imagen Extraída", width=300)
-                    
-                    # Visual Settings
-                    with st.expander("🎨 Configuración Visual", expanded=True):
-                        visual_analysis_enabled = st.checkbox("Activar Análisis Visual", value=True, help="Generar categorías y prompts para imágenes.")
+                refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH)
+                available_articles = []
+                filtered_count = 0
 
-                    # Process Button
-                    if st.button(f"✨ Refinar y Publicar (ID: {selected_id})", type="primary"):
-                        with st.spinner(f"Procesando ID {selected_id}... Esto toma ~15 mins en CPU."):
-                             # Direct call to main module
-                            try:
-                                # Reverse logic: enable means skip=False
-                                skip_flag = not visual_analysis_enabled
-                                result = run_refinery(
-                                    process_id=str(selected_id),
-                                    skip_visuals=skip_flag,
-                                    export_path=str(JSON_PATH),
+                for art in articles:
+                    art_id = str(art.get("id", art.get("title")))
+                    if (
+                        refinery_db.is_processed(art_id)
+                        or refinery_db.is_processed(f"{art_id}.md")
+                    ):
+                        filtered_count += 1
+                        continue
+                    available_articles.append(art)
+
+                if filtered_count > 0:
+                    st.caption(
+                        f"Se ocultaron {filtered_count} artículos ya publicados."
+                    )
+
+                if not available_articles:
+                    st.info("No hay artículos disponibles para procesar.")
+                else:
+                    st.subheader(
+                        f"Artículos Disponibles ({len(available_articles)})"
+                    )
+                    
+                    # Convert to DataFrame for easier display
+                    df = pd.DataFrame(available_articles)
+                    # Keep relevant columns
+                    display_cols = ["id", "title", "score", "published_date"]
+                    # Filter strictly for existing columns
+                    display_cols = [c for c in display_cols if c in df.columns]
+                    
+                    # Display interactive table
+                    # We use a selection box for simplicity as st.dataframe selection is newer
+                    
+                    # Create a formatted list for the selectbox
+                    options = {
+                        f"{row['id']} - {row['title']} "
+                        f"(Score: {row.get('score', 0):.2f})": row['id']
+                        for i, row in df.iterrows()
+                    }
+                    
+                    selected_label = st.selectbox(
+                        "Seleccionar Artículo a Procesar:",
+                        options=list(options.keys()),
+                    )
+                    
+                    if selected_label:
+                        selected_id = options[selected_label]
+                        
+                        # Show details of selected
+                        selected_art = next(
+                            (
+                                a
+                                for a in available_articles
+                                if str(a["id"]) == str(selected_id)
+                            ),
+                            None,
+                        )
+                        if selected_art:
+                            with st.expander(
+                                "📄 Revisar Resumen del Artículo", expanded=False
+                            ):
+                                st.write(f"**Título:** {selected_art.get('title')}")
+                                st.write(
+                                    f"**Resumen:** {selected_art.get('summary')}"
                                 )
-                                
-                                status = result.get("status")
-                                processed_count = result.get("processed_count", 0)
-                                if status == "success" and processed_count > 0:
-                                    st.success("¡Procesamiento Completo! Revisa el repo de tu web.")
-                                    st.balloons()
-                                elif status == "error":
-                                    st.error("Procesamiento Fallido.")
-                                    st.expander("Detalles del Error").write(result.get("message"))
-                                elif status == "noop" or processed_count == 0:
-                                    message = result.get(
-                                        "message",
-                                        "No se encontraron artículos para procesar.",
-                                    )
-                                    st.warning(f"Sin resultados: {message}")
+                        if selected_art.get("image_url"):
+                            st.image(
+                                selected_art.get("image_url"),
+                                caption="Imagen Extraída",
+                                width=300,
+                            )
+                        
+                        # Visual Settings
+                        with st.expander("🎨 Configuración Visual", expanded=True):
+                            visual_analysis_enabled = st.checkbox(
+                                "Activar Análisis Visual",
+                                value=True,
+                                help="Generar categorías y prompts para imágenes.",
+                            )
+
+                        # Process Button
+                        if st.button(
+                            f"✨ Refinar y Publicar (ID: {selected_id})",
+                            type="primary",
+                        ):
+                            with st.spinner(
+                                f"Procesando ID {selected_id}... Esto toma ~15 mins en CPU."
+                            ):
+                                # Direct call to main module
+                                if not auth_ok:
+                                    st.warning("Autenticación requerida para publicar.")
                                 else:
-                                    st.error("Procesamiento Fallido.")
-                                    st.expander("Detalles del Error").write(result.get("message"))
-                            except Exception as e:
-                                st.error(f"Error crítico de ejecución: {e}")
+                                    try:
+                                        # Reverse logic: enable means skip=False
+                                        skip_flag = not visual_analysis_enabled
+                                        result = run_refinery(
+                                            process_id=str(selected_id),
+                                            skip_visuals=skip_flag,
+                                            export_path=str(JSON_PATH),
+                                        )
+                                        
+                                        status = result.get("status")
+                                        processed_count = result.get("processed_count", 0)
+                                        if status == "success" and processed_count > 0:
+                                            st.success("¡Procesamiento Completo! Revisa el repo de tu web.")
+                                            st.balloons()
+                                        elif status == "error":
+                                            st.error("Procesamiento Fallido.")
+                                            st.expander("Detalles del Error").write(result.get("message"))
+                                        elif status == "noop" or processed_count == 0:
+                                            message = result.get(
+                                                "message",
+                                                "No se encontraron artículos para procesar.",
+                                            )
+                                            st.warning(f"Sin resultados: {message}")
+                                        else:
+                                            st.error("Procesamiento Fallido.")
+                                            st.expander("Detalles del Error").write(result.get("message"))
+                                    except Exception as e:
+                                        st.error(f"Error crítico de ejecución: {e}")
 
             else:
                 st.info("No se encontraron artículos en el archivo exportado.")

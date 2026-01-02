@@ -39,7 +39,10 @@ def healthcheck_db(tmp_path):
         )
         session.add(article)
 
-    return manager
+    try:
+        yield manager
+    finally:
+        manager.close()
 
 
 def test_healthcheck_failure_exit_code(monkeypatch, healthcheck_db):
@@ -63,8 +66,11 @@ def test_healthcheck_warn_considered_healthy(tmp_path: Path) -> None:
     db_path = tmp_path / "empty-health.db"
     manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
 
-    result = healthcheck.perform_healthcheck(db_manager=manager)
+    try:
+        result = healthcheck.perform_healthcheck(db_manager=manager)
 
-    assert result["healthy"] is True
-    statuses = {check.name: check.status for check in result["checks"]}
-    assert statuses["latest_ingest"] == "warn"
+        assert result["healthy"] is True
+        statuses = {check.name: check.status for check in result["checks"]}
+        assert statuses["latest_ingest"] == "warn"
+    finally:
+        manager.close()

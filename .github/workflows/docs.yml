@@ -30,7 +30,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -46,3 +46,4 @@ jobs:
       - name: Run link checker
         run: |
           linkchecker --config <(printf "[checking]\nno-follow-url=.*\\.svg$") README.md docs
+

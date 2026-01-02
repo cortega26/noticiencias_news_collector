@@ -25,7 +25,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Normalize Makefile indentation
         run: python -m tools.fix_makefile_tabs
       - name: Detect changes
@@ -56,3 +56,4 @@ jobs:
       - name: No changes summary
         if: steps.diff.outputs.changed != 'true'
         run: echo "No indentation updates were necessary." >> "$GITHUB_STEP_SUMMARY"
+

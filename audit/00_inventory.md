@@ -1,7 +1,7 @@
 # Noticiencias News Collector — Phase 0 Inventory
 
 ## Overview
-- **Python version:** 3.12.10 (local interpreter)
+- **Python version:** 3.13.9 (local interpreter)
 - **Top-level layout:** `.bandit`, `.github/`, `config/`, `core/`, `docs/`, `noticiencias/`, `scripts/`, `src/`, `tests/`, plus tooling such as `Makefile`, `pyproject.toml`, `requirements*.txt`, and orchestration entrypoints (`main.py`, `run_collector.py`).
 - **Key configuration:** `config.toml`, environment-specific modules under `config/`, and YAML/TOML docs in `docs/`.
 - **Data/log folders:** `data/dlq`, `data/logs` (present but empty in snapshot).

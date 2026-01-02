@@ -49,7 +49,7 @@ elif DATABASE_CONFIG.get("type") == "postgresql":
     pw = DATABASE_CONFIG.get("password")
     host = DATABASE_CONFIG.get("host")
     port = DATABASE_CONFIG.get("port")
-    db = DATABASE_CONFIG.get("database")
+    db = DATABASE_CONFIG.get("name") or DATABASE_CONFIG.get("database")
     db_url = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
 
 # Override the url in alembic config object so migrations run against correct DB

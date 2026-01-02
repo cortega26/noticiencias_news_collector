@@ -14,33 +14,40 @@ The runtime environment is detected via `config/settings.py` and the selected
 profile is exposed through `config.DATABASE_CONFIG`.
 
 ## Environment Variables
-When PostgreSQL is enabled the following variables are read at process start:
+When PostgreSQL is enabled the following variables are read at process start
+(using the `NOTICIENCIAS__` prefix):
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `DB_HOST` | PostgreSQL host | `localhost` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_NAME` | Database name | `news_collector` |
-| `DB_USER` | Connection user | `collector` |
-| `DB_PASSWORD` | Password for the user | empty string |
-| `DB_SSLMODE` | Optional SSL mode (e.g., `require`) | (leave blank for default) |
-| `DB_CONNECT_TIMEOUT` | Connect timeout in seconds | `10` |
-| `DB_STATEMENT_TIMEOUT` | Statement timeout in milliseconds | `30000` |
-| `DB_POOL_SIZE` | Base pool size | `10` |
-| `DB_MAX_OVERFLOW` | Additional connections beyond the pool | `5` |
-| `DB_POOL_TIMEOUT` | Seconds to wait for a pooled connection | `30` |
-| `DB_POOL_RECYCLE` | Seconds before recycling idle connections | `1800` |
+| `NOTICIENCIAS__DATABASE__HOST` | PostgreSQL host | `localhost` |
+| `NOTICIENCIAS__DATABASE__PORT` | PostgreSQL port | `5432` |
+| `NOTICIENCIAS__DATABASE__NAME` | Database name | `noticiencias` |
+| `NOTICIENCIAS__DATABASE__USER` | Connection user | `collector` |
+| `NOTICIENCIAS__DATABASE__PASSWORD` | Password for the user | empty string |
+| `NOTICIENCIAS__DATABASE__SSLMODE` | Optional SSL mode (e.g., `require`) | (leave blank for default) |
+| `NOTICIENCIAS__DATABASE__CONNECT_TIMEOUT` | Connect timeout in seconds | `10` |
+| `NOTICIENCIAS__DATABASE__STATEMENT_TIMEOUT` | Statement timeout in milliseconds | `30000` |
+| `NOTICIENCIAS__DATABASE__POOL_SIZE` | Base pool size | `10` |
+| `NOTICIENCIAS__DATABASE__MAX_OVERFLOW` | Additional connections beyond the pool | `5` |
+| `NOTICIENCIAS__DATABASE__POOL_TIMEOUT` | Seconds to wait for a pooled connection | `30` |
+| `NOTICIENCIAS__DATABASE__POOL_RECYCLE` | Seconds before recycling idle connections | `1800` |
 
 Ensure these variables are provided by the orchestrator (Docker, systemd,
 Kubernetes secrets, etc.) before switching to the production profile.
 
 ## Migration Procedure
-The `DatabaseManager` performs the following actions on startup:
+The `DatabaseManager` performs the following actions on startup (this is the
+runtime source of truth for schema safety):
 
 1. Builds an SQLAlchemy engine with PostgreSQL-friendly pooling, timeouts,
    and statement timeout wiring.
 2. Executes `Base.metadata.create_all` to provision missing tables.
 3. Runs `_run_schema_migrations` which performs idempotent DDL fixes.
+
+Alembic is available for **manual** or **production** migration workflows
+(`scripts/migrate.py`), but it is not invoked at runtime. When you add
+structural changes, keep Alembic revisions and `_run_schema_migrations`
+aligned so dev (SQLite) and prod (Postgres) stay consistent.
 
 For production changes follow this extended checklist:
 

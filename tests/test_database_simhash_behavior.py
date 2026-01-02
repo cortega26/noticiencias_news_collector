@@ -89,22 +89,25 @@ def test_save_article_persists_signed_simhash(
         "https://example.com/high-simhash", published_date=datetime(2024, 1, 2, 12, 30)
     )
 
-    saved = manager.save_article(payload)
-    assert saved is not None
+    try:
+        saved = manager.save_article(payload)
+        assert saved is not None
 
-    with manager.get_session() as session:
-        stored = session.query(Article).filter_by(url=payload["url"]).one()
-        assert stored.simhash == high_value - (1 << 64)
-        assert (
-            DatabaseManager._simhash_from_storage(stored.simhash)
-            == high_value & SIMHASH_MASK
-        )
-        assert stored.simhash_prefix == ((high_value & SIMHASH_MASK) >> 48) & 0xFFFF
-        assert stored.published_date is not None
-        normalized = DatabaseManager._ensure_timezone(stored.published_date)
-        assert normalized is not None
-        assert normalized.tzinfo is not None
-        assert normalized.utcoffset() == timedelta(0)
+        with manager.get_session() as session:
+            stored = session.query(Article).filter_by(url=payload["url"]).one()
+            assert stored.simhash == high_value - (1 << 64)
+            assert (
+                DatabaseManager._simhash_from_storage(stored.simhash)
+                == high_value & SIMHASH_MASK
+            )
+            assert stored.simhash_prefix == ((high_value & SIMHASH_MASK) >> 48) & 0xFFFF
+            assert stored.published_date is not None
+            normalized = DatabaseManager._ensure_timezone(stored.published_date)
+            assert normalized is not None
+            assert normalized.tzinfo is not None
+            assert normalized.utcoffset() == timedelta(0)
+    finally:
+        manager.close()
 
 
 def test_time_distance_seconds_accepts_mixed_timezone_inputs() -> None:

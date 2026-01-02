@@ -1,46 +1,120 @@
 {
-  "generated_at": "2025-10-02T19:55:47.341383+00:00",
-  "python_version": "3.12.10",
+  "generated_at": "2026-01-02T19:53:09.071319+00:00",
+  "python_version": "3.13.9",
   "top_level_inventory": {
-    ".bandit": null,
+    "%SystemDrive%/": [
+      "ProgramData"
+    ],
+    ".coverage": null,
+    ".coverage-baseline": null,
     ".dockerignore": null,
+    ".env": null,
     ".env.example": null,
     ".github/": [
+      "ISSUE_TEMPLATE",
       "dependabot.yml",
+      "pull_request_template.md",
       "workflows"
     ],
     ".gitignore": null,
     ".gitleaks.toml": null,
+    ".hypothesis/": [
+      "constants",
+      "tmp",
+      "unicode_data"
+    ],
+    ".mypy_cache/": [
+      ".gitignore",
+      "3.10",
+      "3.12",
+      "CACHEDIR.TAG",
+      "missing_stubs"
+    ],
     ".placeholder-audit.yaml": null,
+    ".pre-commit-config.yaml": null,
+    ".pytest_cache/": [
+      ".gitignore",
+      "CACHEDIR.TAG",
+      "README.md",
+      "v"
+    ],
+    ".qodo/": [],
+    ".ruff_cache/": [
+      ".gitignore",
+      "0.13.2",
+      "CACHEDIR.TAG"
+    ],
     "AGENTS.md": null,
+    "ARCHITECTURE.md": null,
     "CHANGELOG.md": null,
     "CONTRIBUTING.md": null,
     "Dockerfile": null,
     "Makefile": null,
     "README.md": null,
+    "RUNBOOK.md": null,
+    "SECURITY.md": null,
+    "alembic/": [
+      "README",
+      "env.py",
+      "script.py.mako",
+      "versions"
+    ],
+    "alembic.ini": null,
+    "apps/": [
+      "refinery"
+    ],
     "audit/": [
       "00_inventory.json",
-      "00_inventory.md"
+      "00_inventory.md",
+      "01_docs_code_diff.md",
+      "01_docs_fixes.patch",
+      "02_readme_checklist.md",
+      "02_readme_fix.patch",
+      "03_config_matrix.md",
+      "04_cli_behaviors.md",
+      "05_gui_findings.md",
+      "06_test_quality.md",
+      "07_asvs_checklist.md",
+      "07_security_report.md",
+      "08_supply_chain.md",
+      "09_perf_findings.md",
+      "10_ops.md",
+      "11_ci_cdpipeline.md",
+      "12_dx_checklist.md",
+      "13_release_notes.md"
     ],
     "config/": [
-      "__init__.py",
-      "__pycache__",
-      "perf_thresholds.py",
-      "settings.py",
-      "sources.py",
-      "version.py"
+      "features.yaml"
     ],
     "config.toml": null,
     "core/": [
+      "backups",
       "config_manager.py",
-      "config_schema.py"
+      "config_schema.py",
+      "logs"
     ],
     "data/": [
       "dlq",
-      "logs"
+      "exports",
+      "logs",
+      "mock_article.md",
+      "news.db",
+      "news_benchmark.db",
+      "news_fresh.db",
+      "news_opt.db",
+      "news_v3.db"
     ],
+    "dist/": [
+      "noticiencias_news_collector-1.2.0-py3-none-any.whl",
+      "noticiencias_news_collector-1.2.0.tar.gz"
+    ],
+    "docker-compose.yml": null,
     "docs/": [
+      "CHANGELOG.md",
+      "api",
       "api_examples.md",
+      "audits",
+      "ci.md",
       "collector_runbook.md",
       "common_output_format.md",
       "config_fields.md",
@@ -53,9 +127,28 @@
       "release-checklist.md",
       "release_notes.md",
       "runbook.md",
-      "security.md"
+      "runbooks",
+      "security.md",
+      "tools_audit_issues.md"
     ],
+    "labels.md": null,
     "main.py": null,
+    "missing.md": null,
+    "news_collector/": [
+      "__init__.py",
+      "__pycache__",
+      "collectors",
+      "config",
+      "contracts",
+      "enrichment",
+      "monitoring",
+      "perf",
+      "reranker",
+      "scoring",
+      "serving",
+      "storage",
+      "utils"
+    ],
     "news_collector_structure.py": null,
     "noticiencias/": [
       "__init__.py",
@@ -64,9 +157,24 @@
       "config_schema.py",
       "gui_config.py"
     ],
+    "noticiencias_news_collector.egg-info/": [
+      "PKG-INFO",
+      "SOURCES.txt",
+      "dependency_links.txt",
+      "requires.txt",
+      "top_level.txt"
+    ],
+    "perf/": [
+      "bench.md",
+      "fixtures"
+    ],
+    "pr_plan.md": null,
     "pyproject.toml": null,
+    "refinery.db": null,
+    "refinery.log": null,
     "reports/": [
       ".gitkeep",
+      "coverage",
       "ops",
       "perf"
     ],
@@ -74,67 +182,104 @@
     "requirements.lock": null,
     "requirements.txt": null,
     "run_collector.py": null,
+    "scalene_profile.json": null,
+    "scalene_profile.txt": null,
     "scripts/": [
+      "__pycache__",
       "benchmark_canonicalize.py",
+      "benchmark_llm.py",
       "bump_version.py",
       "canonicalization_dupe_demo.py",
+      "check_config.py",
+      "check_parents.py",
+      "coverage_ratcheter.sh",
       "dedupe_tuning.py",
       "enrichment_sanity.py",
       "evaluate_ranking.py",
+      "find_config_source.py",
+      "generate_api_docs.py",
+      "generate_inventory.py",
       "healthcheck.py",
       "load_test.py",
+      "mark_published.py",
+      "migrate.py",
       "migrations",
+      "patch_json_scores.py",
       "profile_pipeline.py",
       "recluster_articles.py",
       "replay_outage.py",
+      "reproduce_scoring_bug.py",
       "reranker_distribution.py",
       "run_secret_scan.py",
       "score_delta.py",
       "security_gate.py",
       "sync_lockfiles.py",
+      "test_cognitive_scoring.py",
       "update_changelog.py",
+      "verify_prompt.py",
       "weekly_quality_report.py"
     ],
     "setup.py": null,
-    "src/": [
-      "__init__.py",
-      "__pycache__",
-      "collectors",
-      "contracts",
-      "enrichment",
-      "monitoring",
-      "reranker",
-      "scoring",
-      "serving",
-      "storage",
-      "utils"
+    "temp/": [
+      "target",
+      "test_warning.db"
     ],
     "tests/": [
+      "__pycache__",
+      "collectors",
+      "conftest.py",
       "data",
+      "debug_admin_scoring.py",
+      "debug_cognitive.py",
+      "e2e",
+      "gui",
+      "mutation_smoke",
       "perf",
       "placeholder_audit",
+      "property",
       "test_async_collector_parity.py",
+      "test_async_scoring.py",
       "test_cli_config.py",
+      "test_collector_logging.py",
       "test_collector_pipeline_e2e.py",
       "test_config_manager.py",
       "test_contracts_validation.py",
       "test_database_migrations.py",
       "test_database_pending_articles.py",
+      "test_database_publication.py",
       "test_database_simhash_behavior.py",
       "test_datetime_utils.py",
       "test_dedupe_utils.py",
+      "test_editor_agent.py",
       "test_enrichment_pipeline.py",
       "test_feature_scorer_config.py",
       "test_fix_makefile_tabs.py",
       "test_gui_config.py",
       "test_healthcheck.py",
+      "test_llm_client.py",
       "test_main_initialization.py",
-      "test_monitoring_anomalies.py"
+      "test_monitoring_anomalies.py",
+      "test_observability.py",
+      "test_python_version_requirement.py",
+      "test_rate_limit_and_backoff.py",
+      "test_reranker.py",
+      "test_run_secret_scan.py",
+      "test_scan_placeholders.py",
+      "test_scoring_golden.py",
+      "test_security_gate.py",
+      "test_serving_api.py",
+      "test_text_cleaner.py",
+      "test_url_canonicalizer.py",
+      "tools"
     ],
+    "tmp_config_init.txt": null,
     "tools/": [
+      "__pycache__",
+      "audit_to_issues.sh",
       "check_makefile_tabs.py",
       "config_editor.py",
       "fix_makefile_tabs.py",
+      "perf",
       "placeholder_audit.py",
       "placeholder_patterns.yml",
       "scan_placeholders.py"
@@ -154,8 +299,16 @@
       "description": "Provision local environment with dependencies"
     },
     {
+      "target": "run-local",
+      "description": "Run the collector locally"
+    },
+    {
+      "target": "debug",
+      "description": "Run the collector in debug mode (verbose)"
+    },
+    {
       "target": "lint",
-      "description": "Run Ruff lint checks"
+      "description": "Run code quality hooks via pre-commit"
     },
     {
       "target": "fix-makefile-tabs",
@@ -163,15 +316,31 @@
     },
     {
       "target": "lint-fix",
-      "description": "Run Ruff with autofix enabled"
+      "description": "Auto-format using Black/isort and fix Ruff findings"
+    },
+    {
+      "target": "docs-api",
+      "description": "Generate API reference documentation with pdoc"
+    },
+    {
+      "target": "docs",
+      "description": "Alias for generating API documentation"
+    },
+    {
+      "target": "format",
+      "description": "Alias for auto-formatting helpers"
+    },
+    {
+      "target": "type",
+      "description": "Alias for static type checking (mypy)"
     },
     {
       "target": "typecheck",
-      "description": "Static type checking with mypy"
+      "description": "Static type checking with mypy (incremental coverage)"
     },
     {
       "target": "test",
-      "description": "Execute the unit test suite with coverage reporting"
+      "description": "Execute the unit test suite with coverage reporting and ratchet enforcement"
     },
     {
       "target": "e2e",
@@ -182,8 +351,20 @@
       "description": "Run performance-focused pytest suite (marked tests)"
     },
     {
+      "target": "audit",
+      "description": "Run supply-chain and security audits (alias for `make security`)"
+    },
+    {
       "target": "security",
       "description": "Run security and dependency scans"
+    },
+    {
+      "target": "audit-issues",
+      "description": "Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)"
+    },
+    {
+      "target": "build",
+      "description": "Produce a wheel artifact in dist/ using pinned dependencies"
     },
     {
       "target": "audit-todos",
@@ -226,33 +407,33 @@
       "description": "Show this help message"
     },
     {
+      "target": "@grep -E '^[a-zA-Z_-]+",
+      "description": "' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = \":.*## \"}; {printf \"  %-12s %s\\n\", $$1, $$2}'"
+    },
+    {
       "target": "bump-version",
       "description": "Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)"
     }
   ],
   "dependencies": {
     "requirements_txt": [
-      "feedparser==6.0.12         # RSS/Atom feed parser - robusto y confiable",
-      "requests==2.32.5           # HTTP requests - est\u00e1ndar de la industria",
-      "beautifulsoup4==4.14.2     # HTML parsing para contenido adicional",
-      "lxml==6.0.2                # XML parser r\u00e1pido para feeds",
-      "nltk==3.9.2                # Natural Language Toolkit - an\u00e1lisis b\u00e1sico de texto",
-      "textblob==0.19.0           # An\u00e1lisis de sentimientos simple",
-      "python-dateutil==2.9.0.post0  # Parsing inteligente de fechas",
-      "sqlalchemy==2.0.43         # ORM potente y flexible",
-      "python-dotenv==1.1.1       # Manejo de variables de entorno",
-      "schedule==1.2.2            # Scheduling de tareas simple",
-      "click==8.3.0               # CLI interface elegante",
-      "ruamel.yaml==0.18.6        # YAML round-trip preservation para el editor de configuraci\u00f3n",
-      "tomli-w==1.0.0             # Escritura de TOML manteniendo formato estable",
-      "fastapi==0.118.0           # Framework para exponer APIs modernas",
-      "pydantic==2.11.9           # Validaci\u00f3n y serializaci\u00f3n robusta",
-      "loguru==0.7.3              # Logger moderno y bonito",
-      "pytest==8.4.2             # Framework de testing",
-      "pytest-cov==7.0.0         # Coverage de tests",
-      "scikit-learn==1.7.2       # ML algorithms b\u00e1sicos",
-      "numpy==2.3.3              # Operaciones num\u00e9ricas",
-      "httpx==0.28.1             # Compatibilidad con Starlette TestClient"
+      "beautifulsoup4==4.14.2",
+      "fastapi==0.118.0",
+      "feedparser==6.0.12",
+      "httpx==0.28.1",
+      "hypothesis==6.104.1",
+      "loguru==0.7.3",
+      "lxml==6.0.2",
+      "pytest-cov==7.0.0",
+      "python-dateutil==2.9.0.post0",
+      "python-dotenv==1.1.1",
+      "requests==2.32.5",
+      "ruamel-yaml==0.18.6",
+      "schedule==1.2.2",
+      "scikit-learn==1.7.2",
+      "sqlalchemy==2.0.43",
+      "textblob==0.19.0",
+      "tomli-w==1.0.0"
     ],
     "optional_security": [
       "bandit>=1.7.9",
@@ -261,108 +442,180 @@
     ]
   },
   "function_index_sample": {
-    "src/collectors/__init__.py": {
+    "scripts/benchmark_canonicalize.py": {
       "functions": [
-        "get_available_collector_types",
-        "create_collector_by_name"
+        "generate_samples",
+        "main"
       ],
       "classes": []
     },
-    "src/collectors/async_rss_collector.py": {
+    "scripts/benchmark_llm.py": {
       "functions": [],
-      "classes": [
-        "AsyncRSSCollector"
-      ]
+      "classes": []
     },
-    "src/collectors/base_collector.py": {
+    "scripts/bump_version.py": {
       "functions": [
-        "create_collector",
-        "validate_collector_result"
+        "parse_args",
+        "read_current_version",
+        "validate_semver",
+        "compute_next_version",
+        "write_version",
+        "main"
       ],
       "classes": [
-        "BaseCollector"
+        "VersionBumpError"
       ]
     },
-    "src/collectors/rate_limit_utils.py": {
+    "scripts/canonicalization_dupe_demo.py": {
       "functions": [
-        "_normalize_domain",
-        "_candidate_domains",
-        "resolve_domain_override",
-        "calculate_effective_delay"
+        "main"
       ],
       "classes": []
     },
-    "src/collectors/rss_collector.py": {
+    "scripts/check_config.py": {
       "functions": [],
+      "classes": []
+    },
+    "scripts/check_parents.py": {
+      "functions": [],
+      "classes": []
+    },
+    "scripts/dedupe_tuning.py": {
+      "functions": [
+        "prepare",
+        "evaluate",
+        "main"
+      ],
       "classes": [
-        "RSSCollector"
+        "LabeledPair"
       ]
     },
-    "src/contracts/collector.py": {
-      "functions": [],
-      "classes": [
-        "CollectorArticlePayload",
-        "CollectorArticleModel"
-      ]
+    "scripts/enrichment_sanity.py": {
+      "functions": [
+        "main"
+      ],
+      "classes": []
     },
-    "src/contracts/common.py": {
-      "functions": [],
-      "classes": [
-        "ArticleMetadata",
-        "ArticleMetadataModel"
-      ]
+    "scripts/evaluate_ranking.py": {
+      "functions": [
+        "dcg",
+        "ndcg",
+        "precision_at_k",
+        "mrr",
+        "load_dev_set",
+        "to_article_obj",
+        "evaluate"
+      ],
+      "classes": []
     },
-    "src/contracts/enrichment.py": {
+    "scripts/find_config_source.py": {
       "functions": [],
-      "classes": [
-        "ArticleForEnrichment",
-        "ArticleEnrichment",
-        "ArticleForEnrichmentModel",
-        "ArticleEnrichmentModel"
-      ]
-    },
-    "src/contracts/scoring.py": {
-      "functions": [],
-      "classes": [
-        "ScoringComponents",
-        "ScoringComponentsModel",
-        "ScoringRequest",
-        "ScoringRequestModel"
-      ]
-    },
-    "src/enrichment/nlp_stack.py": {
-      "functions": [],
-      "classes": [
-        "NLPResult",
-        "LRUCache",
-        "ConfigurableNLPStack"
-      ]
+      "classes": []
     }
   },
   "markdown_files": [
+    ".github/ISSUE_TEMPLATE/bug_report.md",
+    ".github/ISSUE_TEMPLATE/feature_request.md",
+    ".github/pull_request_template.md",
+    ".pytest_cache/README.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
     "CHANGELOG.md",
-    "docs/faq.md",
-    "docs/config_fields.md",
-    "docs/operations.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "RUNBOOK.md",
+    "SECURITY.md",
+    "apps/refinery/config/editor_formatting.md",
+    "audit/00_inventory.md",
+    "audit/01_docs_code_diff.md",
+    "audit/02_readme_checklist.md",
+    "audit/03_config_matrix.md",
+    "audit/04_cli_behaviors.md",
+    "audit/05_gui_findings.md",
+    "audit/06_test_quality.md",
+    "audit/07_asvs_checklist.md",
+    "audit/07_security_report.md",
+    "audit/08_supply_chain.md",
+    "audit/09_perf_findings.md",
+    "audit/10_ops.md",
+    "audit/11_ci_cdpipeline.md",
+    "audit/12_dx_checklist.md",
+    "audit/13_release_notes.md",
+    "data/mock_article.md",
+    "docs/CHANGELOG.md",
     "docs/api_examples.md",
-    "docs/release-checklist.md",
-    "docs/placeholder_policy.md",
+    "docs/audits/A-1_Context_Pack.md",
+    "docs/audits/A0_Site_Structure.md",
+    "docs/audits/A0_Structure_Modularity.md",
+    "docs/audits/A1_Correctness_Report.md",
+    "docs/audits/A1_Site_Correctness.md",
+    "docs/audits/A2_Quick_Scan.md",
+    "docs/audits/A3_Data_AI.md",
+    "docs/audits/A4a_Engineering_Quality.md",
+    "docs/audits/A4a_Site_Quality.md",
+    "docs/audits/A4b_Site_UX_Accessibility.md",
+    "docs/audits/A5_Ops_DevEx.md",
+    "docs/audits/A6_Release_Change_Safety.md",
+    "docs/audits/Audit_Backlog.md",
+    "docs/audits/Audit_Master_Plan.md",
+    "docs/audits/Findings_Ledger.md",
+    "docs/ci.md",
     "docs/collector_runbook.md",
     "docs/common_output_format.md",
+    "docs/config_fields.md",
+    "docs/database_deployment.md",
+    "docs/faq.md",
+    "docs/fixtures.md",
+    "docs/operations.md",
     "docs/performance_baselines.md",
+    "docs/placeholder_policy.md",
+    "docs/release-checklist.md",
     "docs/release_notes.md",
     "docs/runbook.md",
-    "docs/database_deployment.md",
+    "docs/runbooks/healthcheck.md",
     "docs/security.md",
-    "docs/fixtures.md",
-    "tests/placeholder_audit/fixtures/doc_page.md",
-    "AGENTS.md",
-    "README.md",
-    "audit/00_inventory.md",
-    "CONTRIBUTING.md"
+    "docs/tools_audit_issues.md",
+    "labels.md",
+    "missing.md",
+    "perf/bench.md",
+    "pr_plan.md",
+    "temp/target/.github/ISSUE_TEMPLATE/BUG_REPORT.md",
+    "temp/target/.github/ISSUE_TEMPLATE/FEATURE_REQUEST.md",
+    "temp/target/AGENTS.md",
+    "temp/target/CHANGELOG.md",
+    "temp/target/CODE_OF_CONDUCT.md",
+    "temp/target/CONTRIBUTING.md",
+    "temp/target/PULL_REQUEST.md",
+    "temp/target/README.md",
+    "temp/target/SECURITY.md",
+    "temp/target/_posts/2024-03-12-desaf-o-en-la-energ-a-de-fusi-n.md",
+    "temp/target/_posts/2025-08-30-bienvenida.md",
+    "temp/target/_posts/2025-08-31-salud-prueba.md",
+    "temp/target/_posts/2025-08-31-tecnologia-prueba.md",
+    "temp/target/_posts/2025-12-30-comunicacion-de-ciencia.md",
+    "temp/target/_posts/2025-12-30-descubrimiento-en-la-energia-de-fusion.md",
+    "temp/target/_posts/2026-01-01-la-revolucion-de-las-medicinas-del-futuro-podemos-erradicar-el-crimen-de-las-drogas-adictivas.md",
+    "temp/target/_posts/2026-01-01-sin-titulo.md",
+    "temp/target/buscar.md",
+    "temp/target/category-archive.md",
+    "temp/target/index.md",
+    "temp/target/noticiencias-plan-master.md",
+    "temp/target/planes_iniciales/Plan de negocios para noticiencias.com ChatGPT.md",
+    "temp/target/planes_iniciales/Plan de negocios para noticiencias.com Claude.md",
+    "temp/target/planes_iniciales/noticiencias_business_plan.md",
+    "temp/target/planes_iniciales/planes_detallados/Plan de negocios para noticiencias.com ChatGPT.md",
+    "temp/target/planes_iniciales/planes_detallados/Plan de negocios para noticiencias.com Claude.md",
+    "temp/target/resumen-ejecutivo.md",
+    "temp/target/tag-archive.md",
+    "temp/target/temp-site/content/index.md",
+    "temp/target/temp-site/posts/index.md",
+    "tests/placeholder_audit/fixtures/doc_page.md"
   ],
   "open_questions": [
-    "Missing: Confirm actual pytest coverage percentages (R3 requires \u226580% overall, \u226590% touched modules).",
-    "Missing: Validate whether CI enforces bandit/gitleaks/pip-audit baselines or requires manual gating."
+    "Missing: Confirm post-remediation pytest coverage meets ≥80% overall / ≥90% touched modules once scoring tests land (current snapshot 69%).【F:audit/00_inventory.md†L37-L39】【F:audit/06_test_quality.md†L10-L33】",
+    "Missing: Verify Kubernetes or job-runner manifests enforce non-root execution to extend least privilege beyond the container image.【F:audit/07_asvs_checklist.md†L11-L20】",
+    "Missing: Decide on artifact signing approach (e.g., Cosign) for release pipeline hardening.【F:audit/07_asvs_checklist.md†L14-L20】",
+    "Missing: Determine whether CI/doc build should mock heavy dependencies so pre-commit doc generation stays fast.【F:audit/12_dx_checklist.md†L15-L27】",
+    "Missing: Validate GitHub-rendered issue/PR templates match intended formatting (requires portal check).【F:audit/12_dx_checklist.md†L29-L31】"
   ]
 }

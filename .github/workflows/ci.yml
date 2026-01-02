@@ -25,7 +25,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -47,7 +47,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -69,7 +69,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -96,7 +96,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -151,7 +151,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -173,7 +173,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -202,7 +202,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -227,7 +227,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -260,7 +260,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -299,7 +299,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -336,7 +336,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -403,7 +403,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Restore virtualenv cache
         id: cache-venv
         uses: actions/cache@v4
@@ -656,3 +656,4 @@ jobs:
           fi
 
           echo "Updated gist badge (status: ${http_status})."
+

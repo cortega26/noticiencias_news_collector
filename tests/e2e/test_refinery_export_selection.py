@@ -45,6 +45,19 @@ def _write_export(path: Path, entries: Iterable[Dict[str, Any]]) -> None:
     path.write_text(json.dumps(list(entries)), encoding="utf-8")
 
 
+def _write_export_payload(path: Path, entries: Iterable[Dict[str, Any]]) -> None:
+    items = list(entries)
+    payload = {
+        "schema_version": 1,
+        "generated_at": "2026-01-02T00:00:00Z",
+        "contract": "news_collector.export.v1",
+        "article_count": len(items),
+        "articles": items,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_export_falls_back_when_cloud_empty(tmp_path: Path) -> None:
     cloned = tmp_path / "cloud" / "latest_articles.json"
     sibling = tmp_path / "local" / "latest_articles.json"
@@ -128,3 +141,38 @@ def test_export_returns_empty_when_no_candidates(tmp_path: Path) -> None:
 
     assert selected == cloned
     assert articles == []
+
+
+def test_load_export_articles_filters_processed_ids(tmp_path: Path) -> None:
+    export_path = tmp_path / "latest_articles.json"
+    _write_export(export_path, [{"id": "42", "title": "Processed Article"}])
+
+    articles = refinery_main._load_export_articles(
+        export_path, _StubDB(processed={"42.md"}), process_id=None
+    )
+
+    assert articles == []
+
+
+def test_load_export_articles_allows_process_id_override(tmp_path: Path) -> None:
+    export_path = tmp_path / "latest_articles.json"
+    _write_export(export_path, [{"id": "42", "title": "Processed Article"}])
+
+    articles = refinery_main._load_export_articles(
+        export_path, _StubDB(processed={"42.md"}), process_id="42"
+    )
+
+    assert len(articles) == 1
+    assert articles[0]["id"] == "42"
+
+
+def test_load_export_articles_accepts_wrapped_payload(tmp_path: Path) -> None:
+    export_path = tmp_path / "latest_articles.json"
+    _write_export_payload(export_path, [{"id": "99", "title": "Wrapped Article"}])
+
+    articles = refinery_main._load_export_articles(
+        export_path, _StubDB(), process_id=None
+    )
+
+    assert len(articles) == 1
+    assert articles[0]["id"] == "99"

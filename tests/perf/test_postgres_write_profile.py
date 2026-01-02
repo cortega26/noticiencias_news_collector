@@ -93,65 +93,67 @@ def test_postgres_engine_profile(
     }
 
     manager = DatabaseManager(postgres_config)
+    try:
+        assert captured["url"].get_backend_name() == "postgresql"
+        assert captured["url"].username == "collector"
+        assert captured["url"].host == "db.internal"
+        kwargs = captured["kwargs"]
+        assert kwargs["poolclass"] is QueuePool
+        assert kwargs["pool_size"] == 12
+        assert kwargs["max_overflow"] == 6
+        assert kwargs["pool_timeout"] == 45
+        assert kwargs["pool_recycle"] == 1200
+        assert kwargs["pool_pre_ping"] is True
+        assert kwargs["connect_args"]["connect_timeout"] == 5
+        assert kwargs["connect_args"]["options"] == "-c statement_timeout=45000"
 
-    assert captured["url"].get_backend_name() == "postgresql"
-    assert captured["url"].username == "collector"
-    assert captured["url"].host == "db.internal"
-    kwargs = captured["kwargs"]
-    assert kwargs["poolclass"] is QueuePool
-    assert kwargs["pool_size"] == 12
-    assert kwargs["max_overflow"] == 6
-    assert kwargs["pool_timeout"] == 45
-    assert kwargs["pool_recycle"] == 1200
-    assert kwargs["pool_pre_ping"] is True
-    assert kwargs["connect_args"]["connect_timeout"] == 5
-    assert kwargs["connect_args"]["options"] == "-c statement_timeout=45000"
+        durations: List[float] = []
+        total_articles = 60
+        for idx in range(total_articles):
+            start = perf_counter()
+            stored = manager.save_article(_article_payload(idx))
+            durations.append(perf_counter() - start)
+            assert stored is not None
 
-    durations: List[float] = []
-    total_articles = 60
-    for idx in range(total_articles):
-        start = perf_counter()
-        stored = manager.save_article(_article_payload(idx))
-        durations.append(perf_counter() - start)
-        assert stored is not None
+        warmup = 5
+        steady_samples = durations[warmup:]
+        steady_avg = sum(steady_samples) / len(steady_samples)
+        assert steady_avg <= 0.05, f"Sustained insert average too slow: {steady_avg:.4f}s"
+        assert max(steady_samples) <= 0.16, "Spike detected in sustained write throughput"
 
-    warmup = 5
-    steady_samples = durations[warmup:]
-    steady_avg = sum(steady_samples) / len(steady_samples)
-    assert steady_avg <= 0.05, f"Sustained insert average too slow: {steady_avg:.4f}s"
-    assert max(steady_samples) <= 0.16, "Spike detected in sustained write throughput"
+        with manager.get_session() as session:
+            count = session.query(storage_models.Article).count()
+        assert count == total_articles
 
-    with manager.get_session() as session:
-        count = session.query(storage_models.Article).count()
-    assert count == total_articles
+        perf_reports_dir = PROJECT_ROOT.parent / "reports" / "perf"
+        perf_reports_dir.mkdir(parents=True, exist_ok=True)
+        report_path = perf_reports_dir / "postgres_write_profile.json"
+        captured_url = captured["url"]
+        if hasattr(captured_url, "render_as_string"):
+            safe_dsn = captured_url.render_as_string(hide_password=True)
+        else:
+            safe_dsn = str(captured_url)
+        captured_kwargs = captured["kwargs"]
 
-    perf_reports_dir = PROJECT_ROOT.parent / "reports" / "perf"
-    perf_reports_dir.mkdir(parents=True, exist_ok=True)
-    report_path = perf_reports_dir / "postgres_write_profile.json"
-    captured_url = captured["url"]
-    if hasattr(captured_url, "render_as_string"):
-        safe_dsn = captured_url.render_as_string(hide_password=True)
-    else:
-        safe_dsn = str(captured_url)
-    captured_kwargs = captured["kwargs"]
-
-    log_payload = {
-        "backend": {
-            "dsn": safe_dsn,
-            "pool": {
-                "size": captured_kwargs.get("pool_size"),
-                "max_overflow": captured_kwargs.get("max_overflow"),
-                "timeout": captured_kwargs.get("pool_timeout"),
-                "recycle": captured_kwargs.get("pool_recycle"),
+        log_payload = {
+            "backend": {
+                "dsn": safe_dsn,
+                "pool": {
+                    "size": captured_kwargs.get("pool_size"),
+                    "max_overflow": captured_kwargs.get("max_overflow"),
+                    "timeout": captured_kwargs.get("pool_timeout"),
+                    "recycle": captured_kwargs.get("pool_recycle"),
+                },
             },
-        },
-        "total_articles": total_articles,
-        "warmup_samples": warmup,
-        "metrics": {
-            "mean_seconds": statistics.fmean(steady_samples),
-            "p95_seconds": _percentile(steady_samples, 0.95),
-            "max_seconds": max(steady_samples),
-        },
-    }
-    report_path.write_text(json.dumps(log_payload, indent=2), encoding="utf-8")
-    print(f"postgres_write_profile_log={report_path}")
+            "total_articles": total_articles,
+            "warmup_samples": warmup,
+            "metrics": {
+                "mean_seconds": statistics.fmean(steady_samples),
+                "p95_seconds": _percentile(steady_samples, 0.95),
+                "max_seconds": max(steady_samples),
+            },
+        }
+        report_path.write_text(json.dumps(log_payload, indent=2), encoding="utf-8")
+        print(f"postgres_write_profile_log={report_path}")
+    finally:
+        manager.close()

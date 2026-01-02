@@ -24,7 +24,7 @@ jobs:
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
         cache: 'pip'
 
     - name: Install Dependencies
@@ -68,3 +68,4 @@ jobs:
           --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
           --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
           --assignee ${{ github.actor }}
+

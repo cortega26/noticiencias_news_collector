@@ -1,6 +1,7 @@
 import git
 import os
 import shutil
+import tempfile
 import uuid
 import requests
 from pathlib import Path
@@ -11,10 +12,64 @@ logger = setup_logger("GitService")
 class GitHandler:
     def __init__(self, github_token: str):
         self.github_token = github_token
+        self._askpass_path: Path | None = None
         self.headers = {
             "Authorization": f"token {self.github_token}",
             "Accept": "application/vnd.github.v3+json"
         }
+
+    def _strip_credentials(self, repo_url: str) -> str:
+        """Remove embedded credentials from URLs for safe logging."""
+        if "://" in repo_url and "@" in repo_url.split("://", 1)[1]:
+            scheme, rest = repo_url.split("://", 1)
+            rest = rest.split("@", 1)[1]
+            return f"{scheme}://{rest}"
+        return repo_url
+
+    def _safe_repo_url(self, repo_url: str) -> str:
+        """Ensure the remote URL never embeds a token."""
+        if not self.github_token:
+            return repo_url
+        if repo_url.startswith("git@github.com:"):
+            repo_part = repo_url.split("git@github.com:", 1)[1]
+            return f"https://x-access-token@github.com/{repo_part}"
+        if "github.com" in repo_url:
+            repo_part = repo_url.split("github.com/", 1)[1]
+            return f"https://x-access-token@github.com/{repo_part}"
+        return repo_url
+
+    def _ensure_askpass_script(self) -> Path:
+        """Create a temporary askpass script for Git operations."""
+        if self._askpass_path and self._askpass_path.exists():
+            return self._askpass_path
+        if not self.github_token:
+            raise RuntimeError("GitHub token required for authenticated git operations.")
+
+        suffix = ".cmd" if os.name == "nt" else ".sh"
+        script_path = Path(tempfile.gettempdir()) / f"noticiencias_askpass_{uuid.uuid4().hex}{suffix}"
+        if os.name == "nt":
+            content = "@echo off\n"
+            content += "echo %NOTICIENCIAS_GIT_TOKEN%\n"
+        else:
+            content = "#!/bin/sh\n"
+            content += "printf '%s' \"$NOTICIENCIAS_GIT_TOKEN\"\n"
+        script_path.write_text(content, encoding="utf-8")
+        if os.name != "nt":
+            script_path.chmod(0o700)
+        self._askpass_path = script_path
+        return script_path
+
+    def _auth_env(self) -> dict[str, str]:
+        """Build a safe auth environment for Git without persisting tokens."""
+        if not self.github_token:
+            return {}
+        askpass_path = self._ensure_askpass_script()
+        env = os.environ.copy()
+        env["NOTICIENCIAS_GIT_TOKEN"] = self.github_token
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        env["GIT_ASKPASS"] = str(askpass_path)
+        env["GIT_ASKPASS_REQUIRE"] = "force"
+        return env
 
     def _cleanup_dir(self, path: Path):
         """Removes a directory if it exists."""
@@ -35,15 +90,11 @@ class GitHandler:
         self._cleanup_dir(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
         
-        # Inject token into URL for authenticated operations on target repo
-        # Be careful not to log this URL
-        auth_url = repo_url
-        if "github.com" in repo_url and self.github_token:
-            repo_part = repo_url.split("github.com/")[-1]
-            auth_url = f"https://{self.github_token}@github.com/{repo_part}"
+        auth_url = self._safe_repo_url(repo_url)
+        env = self._auth_env()
 
-        logger.info(f"Cloning {repo_url} to {target_dir}...")
-        return git.Repo.clone_from(auth_url, target_dir)
+        logger.info(f"Cloning {self._strip_credentials(repo_url)} to {target_dir}...")
+        return git.Repo.clone_from(auth_url, target_dir, env=env or None)
 
     def create_branch(self, repo: git.Repo, branch_prefix: str = "news/article") -> str:
         """Creates a new branch with a unique name."""
@@ -62,9 +113,9 @@ class GitHandler:
         repo.git.add(A=True)
         repo.index.commit(message)
         logger.info(f"Committed changes: {message}")
-        
-        origin = repo.remote(name='origin')
-        origin.push(branch_name)
+
+        env = self._auth_env()
+        repo.git.push("origin", branch_name, env=env or None)
         logger.info(f"Pushed branch {branch_name} to origin.")
 
     def create_pull_request(self, repo_url: str, branch_name: str, title: str, body: str, base_branch: str = "main") -> str:
