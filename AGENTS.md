@@ -124,6 +124,8 @@
 - **Concurrency:** collectors must honor `config/rate_limits.yaml`. Use `asyncio` for network-bound collectors when possible.
 - **Testing:** every new module needs matching tests in `tests/`. For bug fixes, add regression tests.
 - **Docs:** update `docs/` or module docstrings when behavior changes.
+- **Baby Steps:** Prioritize safe, small changes over big refactors. Avoid regressions at all costs.
+
 
 ---
 
