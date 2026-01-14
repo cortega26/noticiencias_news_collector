@@ -399,8 +399,8 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                 branch_name = git_handler.create_branch(target_repo_obj)
                 
                 # 5. Save content
-                # Changed to _posts for Jekyll compatibility
-                posts_dir = TARGET_DIR / "_posts"
+                # Changed to src/content/posts for Astro compatibility
+                posts_dir = TARGET_DIR / "src/content/posts"
                 posts_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Parse metadata for filename convention: YYYY-MM-DD-title.md
