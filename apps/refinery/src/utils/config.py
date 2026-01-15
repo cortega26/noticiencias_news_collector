@@ -10,7 +10,7 @@ class Config(BaseModel):
     SOURCE_REPO_URL: str
     TARGET_REPO_URL: str
     OLLAMA_API_URL: str = "http://localhost:11434/api/generate"
-    OLLAMA_MODEL: str = "llama3.3"
+    OLLAMA_MODEL: str = "llama3.2"
     
     model_config = ConfigDict(frozen=True)
 

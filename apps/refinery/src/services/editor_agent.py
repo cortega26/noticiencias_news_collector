@@ -228,7 +228,13 @@ class EditorAgent:
             metadata_block.append(f"image: \"{image_url}\"")
         if source_url:
             metadata_block.append(f"source_url: \"{source_url}\"")
-            
+        
+        # Inject Internal ID for traceability/reset
+        # ID is not passed explicitly to process_article, we might need to change signature 
+        # or inject it into raw_text dict before calling.
+        if isinstance(raw_text, dict) and "id" in raw_text:
+             metadata_block.append(f"refinery_id: \"{raw_text['id']}\"")
+
         # Add generated headlines as hidden metadata for A/B testing potential
         metadata_block.append(f"headlines_variants:")
         metadata_block.append(f"  question: \"{headlines.get('question', '')}\"")

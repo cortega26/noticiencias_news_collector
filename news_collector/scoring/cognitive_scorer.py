@@ -119,6 +119,14 @@ class CognitiveScorer(BasicScorer):
         """
         Consulta al LLM para evaluar las 5 dimensiones del Engagement Cognitivo.
         """
+        # FAST MODE OPTIMIZATION: Skip LLM if weight is 0
+        if self.weights.get("cognitive_engagement", 0) <= 0:
+            return {
+                "score": 0.0,
+                "details": {"fast_mode": True},
+                "reasoning": "Skipped due to Fast Mode (weight=0)"
+            }
+
         text_content = f"Title: {article.title}\n\nSummary: {article.summary}\n\nContent Fragment: {(article.content or '')[:1000]}"
         print(f"DEBUG: sending to LLM (len={len(text_content)}): {text_content[:50]}...")
         

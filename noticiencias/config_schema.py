@@ -453,6 +453,11 @@ class ScoringConfig(StrictModel):
     reranker_seed: PositiveInt = Field(default=1_337)
     source_cap_percentage: float = Field(default=0.5, ge=0.0, le=1.0)
     topic_cap_percentage: float = Field(default=0.6, ge=0.0, le=1.0)
+    llm_model: str = Field(
+        default="llama3.3",
+        description="Ollama model to use for cognitive scoring.",
+        examples=["llama3.2", "llama3.3"],
+    )
 
 
 class TextProcessingConfig(StrictModel):
