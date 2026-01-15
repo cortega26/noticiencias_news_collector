@@ -33,6 +33,7 @@ News Collector System automatiza la ingesta de fuentes científicas (journals, a
 - Pipelines determinísticos de deduplicación, enriquecimiento y scoring con explicación de cada feature.
 - CLI central (`run_collector.py`) con modos de simulación, healthchecks y filtrado de fuentes.
 - Herramientas de configuración (CLI y GUI) sobre un esquema validado por Pydantic.
+- **Refinery App**: Interfaz gráfica (Streamlit) para revisión humana, traducción asistida por IA y edición editorial con prompts modulares.
 - Instrumentación lista para monitoreo (logs estructurados, métricas y reportes).
 
 ## Arquitectura / Flujo
@@ -44,10 +45,16 @@ flowchart TD
     Dedupe --> Enrichment[Enriquecimiento NLP]
     Enrichment --> Scoring[Scoring & Explicabilidad]
     Scoring --> Reranker[Reranker & Diversidad]
-    Reranker --> Storage["Persistencia (SQL, logs)"]
+    Scoring --> Reranker[Reranker & Diversidad]
+    Reranker --> Refinery[Refinery (Editorial Agent)]
+    Refinery --> Storage["Persistencia (SQL, logs)"]
     Storage --> Serving[APIs / Reporting]
     Storage --> Monitoring[Monitoreo & Alertas]
 ```
+51: **Nueva Etapa Editorial (Refinery)**: Sistema de 3 fases para traducción y adaptación:
+52: 1. **Scientific Translator**: Traducción neutral de alta fidelidad.
+53: 2. **LatAm Editor**: Adaptación de tono y vocabulario regional.
+54: 3. **Headline Engineer**: Generación de titulares "No-Hype".
 Las interfaces entre etapas se documentan en [AGENTS.md](AGENTS.md), y los contratos formales viven en `news_collector/contracts/`.
 
 ## Instalación
@@ -206,6 +213,24 @@ docker run --rm -v $(pwd)/config.toml:/app/config.toml:ro noticiencias/news-coll
 ```
 Ajustar volumenes para `data/` si se desea persistencia.
 Para `docker-compose`, define `POSTGRES_PASSWORD` (y opcionalmente `POSTGRES_USER`/`POSTGRES_DB`) en `.env`.
+
+### Refinery (GUI de Edición)
+Para editar y traducir artículos manualmente con el nuevo pipeline modular **(requiere entorno virtual separado)**:
+
+```bash
+cd apps/refinery
+# 1. Instalar soporte para venv (si falla el paso 2)
+# sudo apt install python3.12-venv 
+
+# 2. Crear y activar entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Instalar dependencias y correr
+pip install -r requirements.txt
+streamlit run main.py
+```
+Esto lanzará la interfaz en `http://localhost:8501`.
 
 ## Scripts y evaluación offline
 | Script | Uso | Ejemplo |
