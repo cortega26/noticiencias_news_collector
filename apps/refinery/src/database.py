@@ -58,3 +58,19 @@ class DatabaseManager:
                 logger.info(f"Marked {filename} as {status} in database.")
         except sqlite3.Error as e:
             logger.error(f"Error marking {filename} as processed: {e}")
+
+    def delete_record(self, filename_or_id: str):
+        """Remove a record to allow re-processing."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Try deleting by filename OR by ID-like partial match if needed
+                # For now, strict filename match is safer if we track filenames
+                cursor.execute(
+                    "DELETE FROM processed_articles WHERE filename = ?", 
+                    (filename_or_id,)
+                )
+                conn.commit()
+                logger.info(f"Deleted record for {filename_or_id} from database.")
+        except sqlite3.Error as e:
+            logger.error(f"Error deleting record {filename_or_id}: {e}")

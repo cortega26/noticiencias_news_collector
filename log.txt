@@ -1,0 +1,459 @@
+(.venv) cortega26@i5-12600:~/noticiencias_news_collector/apps/refinery$ streamlit run admin_panel.py
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://172.22.152.70:8501
+
+2026-01-15 17:39:32 - Orchestrator - INFO - Starting Noticiencias Refinery...
+2026-01-15 17:39:32 - GitService - INFO - Cloning https://github.com/cortega26/noticiencias_news_collector.git to temp/source...
+2026-01-15 17:39:34 - Orchestrator - INFO - Source data synced successfully.
+2026-01-15 17:39:34 - Orchestrator - INFO - Starting News Collector...
+======================================================================
+🧬 NEWS COLLECTOR SYSTEM - Recopilador Inteligente de Noticias Científicas
+======================================================================
+📅 Fecha: 2026-01-15 17:39:34
+🎯 Fuentes configuradas: 24
+======================================================================
+⚡ FAST MODE: Desactivando análisis cognitivo profundo.
+🔧 Inicializando sistema...
+🎯 Inicializando News Collector System (ID: 5d20dbf7)
+2026-01-15 17:39:35 | INFO     | 🎯 Sistema de logging configurado exitosamente
+2026-01-15 17:39:35 | INFO     | 🏥 ESTADO DEL SISTEMA:
+2026-01-15 17:39:35 | INFO     |   • Python: 3.12.3
+2026-01-15 17:39:35 | INFO     |   • Plataforma: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+2026-01-15 17:39:35 | INFO     |   • CPU cores: x86_64
+2026-01-15 17:39:35 | INFO     | {'event': 'system.initialize.start', 'trace_id': 'cc12b6fb-dc65-4f4b-9d01-117b71aebeed', 'session_id': 'init-5d20dbf7', 'source_id': 'system', 'latency': 0.0, 'details': {'system_id': '5d20dbf7'}}
+✅ 24 fuentes validadas correctamente
+2026-01-15 17:39:35 | INFO     | Aplicando 1 overrides de configuración
+2026-01-15 17:39:35 | INFO     | {'event': 'system.configuration.validated', 'trace_id': 'cc12b6fb-dc65-4f4b-9d01-117b71aebeed', 'session_id': 'init-5d20dbf7', 'source_id': 'system', 'latency': 0.0, 'details': {'override_count': 1}}
+2026-01-15 17:39:35 | INFO     | Base de datos configurada
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.instance.initialized', 'collector_type': 'RSSCollector', 'details': {'collector_type': 'RSSCollector'}}
+2026-01-15 17:39:35 | INFO     | Colectores configurados
+DEBUG: create_scorer selected_mode=cognitive (from config: cognitive)
+DEBUG: Initializing LLM Client with model: llama3.2
+DEBUG: CognitiveScorer INITIALIZED
+2026-01-15 17:39:35 | INFO     | Sistema de scoring configurado
+2026-01-15 17:39:35 | INFO     | ============================================================
+2026-01-15 17:39:35 | INFO     | 🚀 NEWS COLLECTOR SYSTEM INICIADO
+2026-01-15 17:39:35 | INFO     | ============================================================
+2026-01-15 17:39:35 | INFO     | Versión: 1.0.0
+2026-01-15 17:39:35 | INFO     | Modo debug: False
+2026-01-15 17:39:35 | INFO     | Configuración principal:
+2026-01-15 17:39:35 | INFO     |   sources_configured: 24
+2026-01-15 17:39:35 | INFO     |   database_type: sqlite
+2026-01-15 17:39:35 | INFO     |   collection_interval: 6
+2026-01-15 17:39:35 | INFO     |   min_score_threshold: 0.3
+2026-01-15 17:39:35 | INFO     | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log
+2026-01-15 17:39:35 | INFO     | ============================================================
+2026-01-15 17:39:35 | INFO     | {'event': 'system.initialize.completed', 'trace_id': 'cc12b6fb-dc65-4f4b-9d01-117b71aebeed', 'session_id': 'init-5d20dbf7', 'source_id': 'system', 'latency': 0.03602387600403745, 'details': {'system_id': '5d20dbf7'}}
+✅ Sistema inicializado correctamente
+2026-01-15 17:39:35 | INFO     | {'event': 'cli.initialize.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': None, 'source_id': 'cli', 'latency': 0.0, 'details': {'sources': 24}}
+🌐 Procesando todas las 24 fuentes configuradas
+
+🚀 Iniciando recolección...
+2026-01-15 17:39:35 | INFO     | {'event': 'collection_cycle.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'system', 'latency': 0.0, 'details': {'dry_run': False, 'source_filter': 'all'}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collection_cycle.sources.selected', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'system', 'latency': 0.0, 'details': {'count': 24}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.batch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'collector_type': 'RSSCollector', 'latency': 0.0, 'details': {'sources': 24}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Nature', 'url': 'https://www.nature.com/nature.rss'}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nature', 'collector_type': 'RSSCollector', 'latency': 0.5503385066986084, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:35 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'science', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Science', 'url': 'https://science.sciencemag.org/rss/current.xml'}}
+2026-01-15 17:39:37 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'science', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:37 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'science', 'collector_type': 'RSSCollector', 'latency': 1.7707154750823975, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:37 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Cell', 'url': 'https://www.cell.com/cell/current.rss'}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'latency': 0.6449604034423828, 'details': {'articles_found': 5, 'articles_saved': 0}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'cell', 'collector_type': 'RSSCollector', 'latency': 0.6451473236083984, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'details': {'source_name': 'New England Journal of Medicine', 'url': 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss'}}
+2026-01-15 17:39:38 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss'}}
+2026-01-15 17:39:38 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nejm', 'collector_type': 'RSSCollector', 'latency': 0.26802921295166016, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Scientific American', 'url': 'https://www.scientificamerican.com/platform/syndication/rss/'}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'scientific_american', 'collector_type': 'RSSCollector', 'latency': 0.24845075607299805, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'details': {'source_name': 'New Scientist', 'url': 'https://www.newscientist.com/feed/home/'}}
+2026-01-15 17:39:38 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.newscientist.com/feed/home/'}}
+2026-01-15 17:39:38 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'new_scientist', 'collector_type': 'RSSCollector', 'latency': 0.06742644309997559, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:38 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Ars Technica Science', 'url': 'https://feeds.arstechnica.com/arstechnica/science'}}
+2026-01-15 17:39:40 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:40 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'ars_technica', 'collector_type': 'RSSCollector', 'latency': 2.109724760055542, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:40 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Phys.org', 'url': 'https://phys.org/rss-feed/'}}
+2026-01-15 17:39:41 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'article_id': 85, 'collector_type': 'RSSCollector', 'details': {'title': 'Historic ocean treaty to safeguard and sustainably use the high seas to take effect on Jan. 17', 'url': 'https://phys.org/news/2026-01-historic-ocean-treaty-safeguard-sustainably.html'}}
+2026-01-15 17:39:41 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'article_id': 86, 'collector_type': 'RSSCollector', 'details': {'title': 'Do-it-yourself ammonia production: Renewable-powered system uses calcium to reduce emissions and scale for farmers', 'url': 'https://phys.org/news/2026-01-ammonia-production-renewable-powered-calcium.html'}}
+2026-01-15 17:39:41 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'latency': 1.0391855239868164, 'details': {'articles_found': 5, 'articles_saved': 2}}
+2026-01-15 17:39:41 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'latency': 1.0393381118774414, 'details': {'articles_found': 5, 'articles_saved': 2, 'error_message': None}}
+2026-01-15 17:39:41 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'source_name': 'EurekAlert!', 'url': 'https://www.eurekalert.org/rss.xml'}}
+2026-01-15 17:39:43 | ERROR    | {'event': 'collector.feed.fetch_exception', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'error': '404 Client Error: Not Found for url: https://www.eurekalert.org/rss.xml', 'url': 'https://www.eurekalert.org/rss.xml'}}
+2026-01-15 17:39:43 | WARNING  | {'event': 'collector.feed.unavailable', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'details': {'status_code': None, 'url': 'https://www.eurekalert.org/rss.xml'}}
+2026-01-15 17:39:43 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'eurekalert', 'collector_type': 'RSSCollector', 'latency': 1.4098670482635498, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2026-01-15 17:39:43 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'details': {'source_name': 'ScienceDaily', 'url': 'https://www.sciencedaily.com/rss/top/science.xml'}}
+2026-01-15 17:39:43 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:43 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'sciencedaily_top', 'collector_type': 'RSSCollector', 'latency': 0.7408127784729004, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:43 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'wired', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Wired', 'url': 'https://www.wired.com/feed/rss'}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'wired', 'collector_type': 'RSSCollector', 'latency': 0.3853645324707031, 'details': {'articles_found': 5, 'articles_saved': 0}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'wired', 'collector_type': 'RSSCollector', 'latency': 0.38555002212524414, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'techcrunch', 'collector_type': 'RSSCollector', 'details': {'source_name': 'TechCrunch', 'url': 'https://techcrunch.com/feed/'}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'techcrunch', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'techcrunch', 'collector_type': 'RSSCollector', 'latency': 0.44321727752685547, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:44 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'the_verge', 'collector_type': 'RSSCollector', 'details': {'source_name': 'The Verge', 'url': 'https://www.theverge.com/rss/index.xml'}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'the_verge', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'the_verge', 'collector_type': 'RSSCollector', 'latency': 0.34516429901123047, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_tech_review', 'collector_type': 'RSSCollector', 'details': {'source_name': 'MIT Technology Review', 'url': 'https://www.technologyreview.com/feed'}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_tech_review', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_tech_review', 'collector_type': 'RSSCollector', 'latency': 0.5997073650360107, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:45 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stat_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'STAT News', 'url': 'https://www.statnews.com/feed/'}}
+2026-01-15 17:39:46 | INFO     | {'event': 'collector.feed.not_modified', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stat_news', 'collector_type': 'RSSCollector', 'details': {'status_code': 304}}
+2026-01-15 17:39:46 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stat_news', 'collector_type': 'RSSCollector', 'latency': 0.3835577964782715, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:46 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'space_com', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Space.com', 'url': 'https://www.space.com/feeds.xml'}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'space_com', 'collector_type': 'RSSCollector', 'latency': 1.15692138671875, 'details': {'articles_found': 2, 'articles_saved': 0}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'space_com', 'collector_type': 'RSSCollector', 'latency': 1.1571307182312012, 'details': {'articles_found': 2, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'livescience', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Live Science', 'url': 'https://www.livescience.com/feeds.xml'}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'livescience', 'collector_type': 'RSSCollector', 'latency': 0.5325508117675781, 'details': {'articles_found': 4, 'articles_saved': 0}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'livescience', 'collector_type': 'RSSCollector', 'latency': 0.5328075885772705, 'details': {'articles_found': 4, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:47 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'MIT News', 'url': 'https://news.mit.edu/rss/feed'}}
+2026-01-15 17:39:48 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'latency': 0.581000804901123, 'details': {'articles_found': 5, 'articles_saved': 0}}
+2026-01-15 17:39:48 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_news', 'collector_type': 'RSSCollector', 'latency': 0.5811972618103027, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:48 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'Stanford News', 'url': 'https://news.stanford.edu/feed/'}}
+2026-01-15 17:39:49 | ERROR    | {'event': 'collector.feed.fetch_exception', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'error': '403 Client Error: Forbidden for url: https://news.stanford.edu/feed/', 'url': 'https://news.stanford.edu/feed/'}}
+2026-01-15 17:39:49 | WARNING  | {'event': 'collector.feed.unavailable', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'details': {'status_code': None, 'url': 'https://news.stanford.edu/feed/'}}
+2026-01-15 17:39:49 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stanford_news', 'collector_type': 'RSSCollector', 'latency': 0.5892448425292969, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2026-01-15 17:39:49 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'NASA News', 'url': 'https://www.nasa.gov/rss/dyn/breaking_news.rss'}}
+2026-01-15 17:39:51 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nasa_news', 'article_id': 87, 'collector_type': 'RSSCollector', 'details': {'title': 'NASA’s SpaceX Crew-11 Wraps Up Space Station Science', 'url': 'https://nasa.gov/missions/station/iss-research/nasas-spacex-crew-11-wraps-up-space-station-science/'}}
+2026-01-15 17:39:51 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'latency': 2.4090194702148438, 'details': {'articles_found': 5, 'articles_saved': 1}}
+2026-01-15 17:39:51 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nasa_news', 'collector_type': 'RSSCollector', 'latency': 2.4091944694519043, 'details': {'articles_found': 5, 'articles_saved': 1, 'error_message': None}}
+2026-01-15 17:39:51 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'details': {'source_name': 'NIH News', 'url': 'https://www.nih.gov/news-releases/feed.xml'}}
+2026-01-15 17:39:52 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'latency': 0.9243621826171875, 'details': {'articles_found': 1, 'articles_saved': 0}}
+2026-01-15 17:39:52 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nih_news', 'collector_type': 'RSSCollector', 'latency': 0.9245994091033936, 'details': {'articles_found': 1, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:52 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'details': {'source_name': 'arXiv AI/ML', 'url': 'http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV'}}
+2026-01-15 17:39:52 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'details': {'url': 'http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV'}}
+2026-01-15 17:39:52 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'arxiv_ai', 'collector_type': 'RSSCollector', 'latency': 0.06490302085876465, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:52 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'details': {'source_name': 'bioRxiv', 'url': 'https://connect.biorxiv.org/biorxiv_xml.php?subject=all'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'article_id': 88, 'collector_type': 'RSSCollector', 'details': {'title': 'NPEPPS segmental duplication drives position effect expression of TBC1D3 in the human brain', 'url': 'https://biorxiv.org/content/10.64898/2026.01.14.699559v1?rss=1'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'article_id': 89, 'collector_type': 'RSSCollector', 'details': {'title': 'A multi-plant transcriptomic atlas reveals conserved and lineage specific defense architectures in response to Botrytis ', 'url': 'https://biorxiv.org/content/10.64898/2026.01.14.699558v1?rss=1'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'article_id': 90, 'collector_type': 'RSSCollector', 'details': {'title': 'The 3D Genome of Gigaspora margarita Unveils Stable Chromatin and Nucleolar Organization and Symbiont-Dependent Genome D', 'url': 'https://biorxiv.org/content/10.64898/2026.01.14.699541v1?rss=1'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.article.saved', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'article_id': 91, 'collector_type': 'RSSCollector', 'details': {'title': 'Joint Segmental Duplication Co-option Drives Human-specific Transcriptional Readthrough and Expression Fine-tuning of NP', 'url': 'https://biorxiv.org/content/10.64898/2026.01.14.699191v1?rss=1'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.fetch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'latency': 1.3456075191497803, 'details': {'articles_found': 5, 'articles_saved': 4}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'collector_type': 'RSSCollector', 'latency': 1.3458044528961182, 'details': {'articles_found': 5, 'articles_saved': 4, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.fetch.start', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'details': {'source_name': 'r/science', 'url': 'https://www.reddit.com/r/science/.rss'}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.fetch.blocked_robots', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'details': {'url': 'https://www.reddit.com/r/science/.rss'}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'reddit_science', 'collector_type': 'RSSCollector', 'latency': 0.06687211990356445, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.batch.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'collector_type': 'RSSCollector', 'latency': 18.853013, 'details': {'articles_saved': 7, 'articles_found': 37, 'sources_processed': 24, 'errors': 6}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nature', 'latency': 0.5503385066986084, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'science', 'latency': 1.7707154750823975, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'cell', 'latency': 0.6451473236083984, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nejm', 'latency': 0.26802921295166016, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'scientific_american', 'latency': 0.24845075607299805, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'new_scientist', 'latency': 0.06742644309997559, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'ars_technica', 'latency': 2.109724760055542, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'phys_org', 'latency': 1.0393381118774414, 'details': {'articles_found': 5, 'articles_saved': 2, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'eurekalert', 'latency': 1.4098670482635498, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'sciencedaily_top', 'latency': 0.7408127784729004, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'wired', 'latency': 0.38555002212524414, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'techcrunch', 'latency': 0.44321727752685547, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'the_verge', 'latency': 0.34516429901123047, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_tech_review', 'latency': 0.5997073650360107, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stat_news', 'latency': 0.3835577964782715, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'space_com', 'latency': 1.1571307182312012, 'details': {'articles_found': 2, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'livescience', 'latency': 0.5328075885772705, 'details': {'articles_found': 4, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'mit_news', 'latency': 0.5811972618103027, 'details': {'articles_found': 5, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'stanford_news', 'latency': 0.5892448425292969, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'No se pudo obtener el feed'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nasa_news', 'latency': 2.4091944694519043, 'details': {'articles_found': 5, 'articles_saved': 1, 'error_message': None}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'nih_news', 'latency': 0.9245994091033936, 'details': {'articles_found': 1, 'articles_saved': 0, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'arxiv_ai', 'latency': 0.06490302085876465, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+2026-01-15 17:39:53 | INFO     | {'event': 'collector.source.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'biorxiv', 'latency': 1.3458044528961182, 'details': {'articles_found': 5, 'articles_saved': 4, 'error_message': None}}
+2026-01-15 17:39:53 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'reddit_science', 'latency': 0.06687211990356445, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Bloqueado por robots.txt'}}
+DEBUG: CognitiveScorer.score_article called for Nationwide genetic screening proves effective at catching disease risk early
+DEBUG: sending to LLM (len=361): Title: Nationwide genetic screening proves effecti...
+DEBUG: CognitiveScorer.score_article called for During the course of my PhD, I’ve been relearning how to rest
+DEBUG: CognitiveScorer.score_article called for Making progress on global health will need high-quality evidence
+DEBUG: sending to LLM (len=242): Title: During the course of my PhD, I’ve been rele...
+DEBUG: sending to LLM (len=312): Title: Making progress on global health will need ...
+DEBUG: CognitiveScorer.score_article called for Deep-learning analysis of 3D microarchitectural remodeling in hypertrophic cardiomyopathy | Science
+DEBUG: CognitiveScorer.score_article called for Campus protests and civil disobedience: does academia have a problem with activism?
+DEBUG: CognitiveScorer.score_article called for A trunkload of ancient RNA
+DEBUG: sending to LLM (len=395): Title: Deep-learning analysis of 3D microarchitect...
+DEBUG: CognitiveScorer.score_article called for A hierarchical shell locks and stabilizes perovskite nanocrystals with near-unity quantum yield | Science
+DEBUG: CognitiveScorer.score_article called for RNA innate immunity constitutes a barrier for interspecies chimerism
+DEBUG: CognitiveScorer.score_article called for Genome sequences of extant and extinct gibbons reveal their phylogeny, demographic history, and conservation status
+DEBUG: CognitiveScorer.score_article called for At 25, Wikipedia Now Faces Its Most Existential Threat—Generative A.I.
+DEBUG: CognitiveScorer.score_article called for Mosquitoes Show a Clear Preference for Human Blood after Deforestation
+DEBUG: sending to LLM (len=391): Title: A hierarchical shell locks and stabilizes p...
+DEBUG: sending to LLM (len=252): Title: Mosquitoes Show a Clear Preference for Huma...
+DEBUG: sending to LLM (len=436): Title: A trunkload of ancient RNA
+
+Summary: Ancien...
+DEBUG: CognitiveScorer.score_article called for Astronauts Return to Earth in First ISS Medical Evacuation
+DEBUG: sending to LLM (len=342): Title: Campus protests and civil disobedience: doe...
+DEBUG: CognitiveScorer.score_article called for When heme is low, copper kills cancer
+DEBUG: sending to LLM (len=329): Title: RNA innate immunity constitutes a barrier f...
+DEBUG: CognitiveScorer.score_article called for Americans Overwhelmingly Support Science, but Some Think the U.S. Is Lagging Behind: Pew
+DEBUG: CognitiveScorer.score_article called for Next steps in regulatory T cells: Biology and clinical application
+DEBUG: CognitiveScorer.score_article called for EPA moves to stop considering economic benefits of cleaner air
+DEBUG: sending to LLM (len=252): Title: Astronauts Return to Earth in First ISS Med...
+DEBUG: CognitiveScorer.score_article called for Astronauts Evacuate the ISS after Medical Incident
+DEBUG: sending to LLM (len=356): Title: When heme is low, copper kills cancer
+
+Summ...
+DEBUG: sending to LLM (len=401): Title: Genome sequences of extant and extinct gibb...
+DEBUG: sending to LLM (len=223): Title: At 25, Wikipedia Now Faces Its Most Existen...
+DEBUG: CognitiveScorer.score_article called for A British redcoat’s lost memoir resurfaces
+DEBUG: sending to LLM (len=204): Title: Astronauts Evacuate the ISS after Medical I...
+DEBUG: CognitiveScorer.score_article called for EPA makes it harder for states, tribes to block pipelines
+DEBUG: sending to LLM (len=808): Title: EPA makes it harder for states, tribes to b...
+DEBUG: sending to LLM (len=1180): Title: EPA moves to stop considering economic bene...
+DEBUG: sending to LLM (len=292): Title: Americans Overwhelmingly Support Science, b...
+DEBUG: CognitiveScorer.score_article called for Scientists sequence a woolly rhino genome from a 14,400-year-old wolf’s stomach
+DEBUG: sending to LLM (len=183): Title: A British redcoat’s lost memoir resurfaces
+...DEBUG: sending to LLM (len=1347): Title: Scientists sequence a woolly rhino genome f...
+
+DEBUG: sending to LLM (len=277): Title: Next steps in regulatory T cells: Biology a...
+DEBUG: CognitiveScorer.score_article called for Switching water sources improved hygiene of Pompeii’s public baths
+DEBUG: sending to LLM (len=213): Title: Switching water sources improved hygiene of...
+DEBUG: CognitiveScorer.score_article called for How dark asteroids die
+DEBUG: sending to LLM (len=383): Title: How dark asteroids die
+
+Summary: Back in th...
+DEBUG: CognitiveScorer.score_article called for Methyl bromide pesticide still widely used in California, raising health concerns
+DEBUG: sending to LLM (len=442): Title: Methyl bromide pesticide still widely used ...
+DEBUG: CognitiveScorer.score_article called for Study: Cross-border merger and acquisition activity predicts changes in economic growth, foreign exchange returns
+DEBUG: sending to LLM (len=336): Title: Study: Cross-border merger and acquisition ...
+DEBUG: CognitiveScorer.score_article called for DNA's hidden 'traffic controller' protein may hold clues to cancer prevention
+DEBUG: sending to LLM (len=343): Title: DNA's hidden 'traffic controller' protein m...
+DEBUG: CognitiveScorer.score_article called for Scientists watch cell receptors respond in real time as drugs bind
+DEBUG: sending to LLM (len=466): Title: Scientists watch cell receptors respond in ...
+DEBUG: CognitiveScorer.score_article called for Statins may help almost everyone with type 2 diabetes live longer
+DEBUG: sending to LLM (len=501): Title: Statins may help almost everyone with type ...
+DEBUG: CognitiveScorer.score_article called for Electrons stop acting like particles—and physics still works
+DEBUG: sending to LLM (len=516): Title: Electrons stop acting like particles—and ph...
+DEBUG: CognitiveScorer.score_article called for This after-meal blood sugar spike may raise Alzheimer’s risk
+DEBUG: sending to LLM (len=528): Title: This after-meal blood sugar spike may raise...
+DEBUG: CognitiveScorer.score_article called for Forest loss is driving mosquitoes’ thirst for human blood
+DEBUG: sending to LLM (len=477): Title: Forest loss is driving mosquitoes’ thirst f...
+DEBUG: CognitiveScorer.score_article called for Scientists question the safety of BPA-free packaging
+DEBUG: sending to LLM (len=502): Title: Scientists question the safety of BPA-free ...
+DEBUG: CognitiveScorer.score_article called for Efficient cooling method could enable chip-based trapped-ion quantum computers
+DEBUG: sending to LLM (len=250): Title: Efficient cooling method could enable chip-...
+DEBUG: CognitiveScorer.score_article called for At MIT, a continued commitment to understanding intelligence
+DEBUG: sending to LLM (len=296): Title: At MIT, a continued commitment to understan...
+DEBUG: CognitiveScorer.score_article called for Generative AI tool helps 3D print personal items that sustain daily use
+DEBUG: sending to LLM (len=277): Title: Generative AI tool helps 3D print personal ...
+DEBUG: CognitiveScorer.score_article called for Feeding innovation to solve complex urban problems
+DEBUG: sending to LLM (len=199): Title: Feeding innovation to solve complex urban p...
+DEBUG: CognitiveScorer.score_article called for Michael Moody: Impacting MIT through leadership in auditing
+DEBUG: sending to LLM (len=227): Title: Michael Moody: Impacting MIT through leader...
+DEBUG: CognitiveScorer.score_article called for NASA Data Helps Maine Oyster Farmers Choose Where to Grow
+DEBUG: sending to LLM (len=209): Title: NASA Data Helps Maine Oyster Farmers Choose...
+DEBUG: CognitiveScorer.score_article called for Hubble Spies Stellar Blast Setting Clouds Ablaze
+DEBUG: sending to LLM (len=411): Title: Hubble Spies Stellar Blast Setting Clouds A...
+DEBUG: CognitiveScorer.score_article called for Hubble’s Album of Planet-Forming Disks
+DEBUG: sending to LLM (len=471): Title: Hubble’s Album of Planet-Forming Disks
+
+Sum...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for NASA’s SpaceX Crew-11 Mission Returns, Splashes Down off California
+DEBUG: sending to LLM (len=484): Title: NASA’s SpaceX Crew-11 Mission Returns, Spla...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Clouds Swimming over Lago Argentino
+DEBUG: sending to LLM (len=2073): Title: Clouds Swimming over Lago Argentino
+
+Summar...
+DEBUG: CognitiveScorer.score_article called for A fresh energy supply may shield nerves from diabetic or chemo-induced neuropathy
+DEBUG: sending to LLM (len=263): Title: A fresh energy supply may shield nerves fro...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Proteomic Profiling of Human Omental and Subcutaneous Adipose Tissue in Individuals with a Broad Range of BMI.
+DEBUG: sending to LLM (len=1424): Title: Proteomic Profiling of Human Omental and Su...
+DEBUG: CognitiveScorer.score_article called for The genetic architecture of leaf vein density traits and its importance for photosynthesis in maize
+DEBUG: sending to LLM (len=1589): Title: The genetic architecture of leaf vein densi...
+DEBUG: CognitiveScorer.score_article called for Client distribution between Chlamydomonas FDX1 and FDX2 in carbon, nitrogen and sulfur assimilation
+DEBUG: sending to LLM (len=1601): Title: Client distribution between Chlamydomonas F...
+DEBUG: CognitiveScorer.score_article called for Metabolites Shift Equilibria of Biomolecular Condensates
+DEBUG: sending to LLM (len=1579): Title: Metabolites Shift Equilibria of Biomolecula...
+DEBUG: CognitiveScorer.score_article called for Protein engineering of a genetically encoded biosensor for wastewater detection of profen NSAIDs
+DEBUG: sending to LLM (len=1593): Title: Protein engineering of a genetically encode...
+DEBUG: CognitiveScorer.score_article called for Crowd sensing for the environment: Citizen science and plant apps map how urbanization alters city soils and climate
+DEBUG: sending to LLM (len=461): Title: Crowd sensing for the environment: Citizen ...
+DEBUG: CognitiveScorer.score_article called for NASA data helps Maine oyster farmers choose where to grow
+DEBUG: sending to LLM (len=401): Title: NASA data helps Maine oyster farmers choose...
+DEBUG: CognitiveScorer.score_article called for When lightning strikes: Models of multi-ignition wildfires could predict catastrophic events
+DEBUG: sending to LLM (len=378): Title: When lightning strikes: Models of multi-ign...
+DEBUG: CognitiveScorer.score_article called for Elon Musk’s Grok ‘Undressing’ Problem Isn’t Fixed
+DEBUG: sending to LLM (len=277): Title: Elon Musk’s Grok ‘Undressing’ Problem Isn’t...
+DEBUG: CognitiveScorer.score_article called for Save $50 on the OnePlus Watch 3, Which Has Revolutionary Battery Tech
+DEBUG: sending to LLM (len=244): Title: Save $50 on the OnePlus Watch 3, Which Has ...
+DEBUG: CognitiveScorer.score_article called for Why ICE Can Kill With Impunity
+DEBUG: sending to LLM (len=219): Title: Why ICE Can Kill With Impunity
+
+Summary: Ov...
+DEBUG: CognitiveScorer.score_article called for OpenAI Invests in Sam Altman’s New Brain-Tech Startup Merge Labs
+DEBUG: sending to LLM (len=253): Title: OpenAI Invests in Sam Altman’s New Brain-Te...
+DEBUG: CognitiveScorer.score_article called for Minnesota Is Just the Beginning. California and New York Are ‘Next’
+DEBUG: sending to LLM (len=231): Title: Minnesota Is Just the Beginning. California...
+DEBUG: CognitiveScorer.score_article called for AI video startup, Higgsfield, founded by ex-Snap exec, lands $1.3B valuation
+DEBUG: sending to LLM (len=266): Title: AI video startup, Higgsfield, founded by ex...
+DEBUG: CognitiveScorer.score_article called for Iran’s internet shutdown is now one of its longest ever, as protests continue
+DEBUG: sending to LLM (len=244): Title: Iran’s internet shutdown is now one of its ...
+DEBUG: CognitiveScorer.score_article called for The US imposes 25% tariff on Nvidia’s H200 AI chips headed to China
+DEBUG: sending to LLM (len=234): Title: The US imposes 25% tariff on Nvidia’s H200 ...
+DEBUG: CognitiveScorer.score_article called for OpenAI invests in Sam Altman’s brain computer interface startup Merge Labs
+DEBUG: sending to LLM (len=332): Title: OpenAI invests in Sam Altman’s brain comput...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Amazon’s New World: Aeternum MMO will shut down next year
+DEBUG: sending to LLM (len=413): Title: Amazon’s New World: Aeternum MMO will shut ...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Apple lost the AI race — now the real challenge starts
+DEBUG: sending to LLM (len=408): Title: Apple lost the AI race — now the real chall...
+DEBUG: CognitiveScorer.score_article called for Democrats push FTC to investigate Trump Mobile
+DEBUG: sending to LLM (len=428): Title: Democrats push FTC to investigate Trump Mob...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Here are the best AirPods deals you can get right now
+DEBUG: sending to LLM (len=425): Title: Here are the best AirPods deals you can get...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Amazon is buying copper harvested by bacteria for its data centers
+DEBUG: sending to LLM (len=493): Title: Amazon is buying copper harvested by bacter...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for The Download: spying on the spies, and promising climate tech
+DEBUG: sending to LLM (len=425): Title: The Download: spying on the spies, and prom...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Three climate technologies breaking through in 2026
+DEBUG: sending to LLM (len=398): Title: Three climate technologies breaking through...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for The Download: next-gen nuclear, and the data center backlash
+DEBUG: sending to LLM (len=471): Title: The Download: next-gen nuclear, and the dat...
+DEBUG: CognitiveScorer.score_article called for Data centers are amazing. Everyone hates them.
+DEBUG: sending to LLM (len=457): Title: Data centers are amazing. Everyone hates th...
+DEBUG: CognitiveScorer.score_article called for STAT+: On Day 4 of JPM, a chat with Regeneron’s George Yancopoulos, an IPO forecast, and all eyes on J&J
+DEBUG: sending to LLM (len=618): Title: STAT+: On Day 4 of JPM, a chat with Regener...
+DEBUG: CognitiveScorer.score_article called for STAT+: Trump releases health care plan amid pressure over affordability
+DEBUG: sending to LLM (len=998): Title: STAT+: Trump releases health care plan amid...
+DEBUG: CognitiveScorer.score_article called for STAT+: Former Emergent BioSolutions CEO sued for insider trading, company reaches $900K settlement in N.Y.
+DEBUG: sending to LLM (len=288): Title: STAT+: Former Emergent BioSolutions CEO sue...
+DEBUG: CognitiveScorer.score_article called for STAT+: Negotiations over ACA subsidy bill drag on
+DEBUG: sending to LLM (len=1010): Title: STAT+: Negotiations over ACA subsidy bill d...
+DEBUG: CognitiveScorer.score_article called for Democrats say America’s role as a scientific leader is slipping, while Republicans remain unworried
+DEBUG: sending to LLM (len=250): Title: Democrats say America’s role as a scientifi...
+DEBUG: CognitiveScorer.score_article called for Cyberthieves hit European Space Agency, stealing hundreds of gigabytes of data
+DEBUG: sending to LLM (len=310): Title: Cyberthieves hit European Space Agency, ste...
+DEBUG: CognitiveScorer.score_article called for How Mars 'punches above its weight' to influence Earth's climate
+DEBUG: sending to LLM (len=244): Title: How Mars 'punches above its weight' to infl...
+DEBUG: CognitiveScorer.score_article called for Fragment of lost tectonic plate discovered where San Andreas and Cascadia faults meet
+DEBUG: sending to LLM (len=297): Title: Fragment of lost tectonic plate discovered ...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for New map of Antarctica reveals hidden world of lakes, valleys and mountains buried beneath miles of ice
+DEBUG: sending to LLM (len=266): Title: New map of Antarctica reveals hidden world ...
+DEBUG: CognitiveScorer.score_article called for These genes were thought to lead to blindness 100% of the time. They don't.
+DEBUG: sending to LLM (len=232): Title: These genes were thought to lead to blindne...
+DEBUG: CognitiveScorer.score_article called for Our model of the universe is deeply flawed — unless space is actually a 'sticky fluid', new research hints
+DEBUG: sending to LLM (len=287): Title: Our model of the universe is deeply flawed ...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for High-dimensional spatial proteomics and novel machine learning pipeline identifies disease specific renal damage states
+DEBUG: sending to LLM (len=1667): Title: High-dimensional spatial proteomics and nov...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Plasma proteomics reveal heterogeneous subtypes of depression linked to inflammation and aging
+DEBUG: sending to LLM (len=1541): Title: Plasma proteomics reveal heterogeneous subt...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Distinct CA1 inputs support shifts in neural dimensionality and memory resolution
+DEBUG: sending to LLM (len=1386): Title: Distinct CA1 inputs support shifts in neura...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Aging macaques bridge the translational gap in perivascular space biology
+DEBUG: sending to LLM (len=678): Title: Aging macaques bridge the translational gap...
+DEBUG: CognitiveScorer.score_article called for Ift43 Controls the Ciliary Levels of Gli2 and Gli3
+DEBUG: sending to LLM (len=1546): Title: Ift43 Controls the Ciliary Levels of Gli2 a...
+DEBUG: CognitiveScorer.score_article called for Historic ocean treaty to safeguard and sustainably use the high seas to take effect on Jan. 17
+DEBUG: sending to LLM (len=277): Title: Historic ocean treaty to safeguard and sust...
+DEBUG: CognitiveScorer.score_article called for Do-it-yourself ammonia production: Renewable-powered system uses calcium to reduce emissions and scale for farmers
+DEBUG: sending to LLM (len=275): Title: Do-it-yourself ammonia production: Renewabl...
+DEBUG: CognitiveScorer.score_article called for NASA’s SpaceX Crew-11 Wraps Up Space Station Science
+DEBUG: sending to LLM (len=481): Title: NASA’s SpaceX Crew-11 Wraps Up Space Statio...
+DEBUG: CognitiveScorer.score_article called for NPEPPS segmental duplication drives position effect expression of TBC1D3 in the human brain
+DEBUG: sending to LLM (len=1656): Title: NPEPPS segmental duplication drives positio...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for A multi-plant transcriptomic atlas reveals conserved and lineage specific defense architectures in response to Botrytis cinerea
+DEBUG: sending to LLM (len=1948): Title: A multi-plant transcriptomic atlas reveals ...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for The 3D Genome of Gigaspora margarita Unveils Stable Chromatin and Nucleolar Organization and Symbiont-Dependent Genome Dynamics
+DEBUG: sending to LLM (len=1743): Title: The 3D Genome of Gigaspora margarita Unveil...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+DEBUG: CognitiveScorer.score_article called for Joint Segmental Duplication Co-option Drives Human-specific Transcriptional Readthrough and Expression Fine-tuning of NPEPPS-TBC1D3
+DEBUG: sending to LLM (len=1580): Title: Joint Segmental Duplication Co-option Drive...
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+Error communicating with LLM: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)
+Respuesta LLM inválida: {'error': "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"}
+2026-01-15 18:02:42 | INFO     | {'event': 'collection_cycle.scoring.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'system', 'latency': 0.0, 'details': {'articles_scored': 91, 'articles_included': 40, 'articles_excluded': 51, 'average_score': 0.5079000000000004}}
+2026-01-15 18:02:42 | INFO     | 📊 MÉTRICAS DE PERFORMANCE CICLO COMPLETO
+2026-01-15 18:02:42 | INFO     |   total_duration_seconds: 1387.072
+2026-01-15 18:02:42 | INFO     |   articles_per_second: 0.027
+2026-01-15 18:02:42 | INFO     |   sources_per_minute: 1.038
+2026-01-15 18:02:42 | INFO     |   success_rate_percent: 75.000
+2026-01-15 18:02:42 | INFO     | {'event': 'collection_cycle.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'system', 'latency': 1387.0237384130014, 'details': {'sources_processed': 24, 'articles_found': 37, 'articles_saved': 7, 'articles_scored': 91, 'final_selection_count': 10}}
+
+📊 RESUMEN DE RESULTADOS:
+----------------------------------------
+⏱️  Duración: 1387.1 segundos
+🌐 Fuentes procesadas: 24
+📰 Artículos encontrados: 37
+💾 Artículos guardados: 7
+🎯 Artículos puntuados: 91
+⭐ Selección final: 10
+📈 Tasa de éxito: 75.0%
+⚡ Velocidad: 0.0 artículos/segundo
+
+⭐ TOP 5 ARTÍCULOS:
+================================================================================
+ 1. Statins may help almost everyone with type 2 diabetes liv...
+    📊 Score: 0.791 | 🔗 Fuente: ScienceDaily
+
+ 2. High-dimensional spatial proteomics and novel machine lea...
+    📊 Score: 0.756 | 🔗 Fuente: bioRxiv
+
+ 3. Deep-learning analysis of 3D microarchitectural remodelin...
+    📊 Score: 0.698 | 🔗 Fuente: Science
+
+ 4. A hierarchical shell locks and stabilizes perovskite nano...
+    📊 Score: 0.698 | 🔗 Fuente: Science
+
+ 5. Campus protests and civil disobedience: does academia hav...
+    📊 Score: 0.691 | 🔗 Fuente: Nature
+2026-01-15 18:02:42 | INFO     | {'event': 'cli.collection.completed', 'trace_id': '34f92f08-2824-42fa-921b-9fed11f9526a', 'session_id': '5d20dbf7-20260115-203935', 'source_id': 'cli', 'latency': 1387.0295840979961, 'details': {'sources_processed': 24, 'articles_found': 37, 'articles_saved': 7, 'articles_scored': 91, 'final_selection_count': 10}}
+🎉 ¡Recolección completada exitosamente!
+2026-01-15 18:02:42 - Orchestrator - INFO - News Collector finished successfully.
+2026-01-15 18:02:42 - Orchestrator - INFO - Total candidate content items: 1
+2026-01-15 18:02:42 - Orchestrator - INFO - BULK MODE: Limiting to first 5 item(s)
+2026-01-15 18:02:42 - Orchestrator - INFO - Auto-processing disabled. New articles saved to inbox.

@@ -55,6 +55,7 @@ simhash_candidate_window = 500
 daily_top_count = 10
 minimum_score = 0.3
 mode = "cognitive"
+llm_model = "llama3.2"  # Usar modelo 3B optimizado para velocidad
 
 workers = 1
 reranker_seed = 1337

@@ -164,7 +164,32 @@ def _select_export_articles(
     return articles, selected_path
 
 
-def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None):
+def run_collector_script(source_dir: Path, fast_mode: bool = False):
+    """Runs the news collector script located at project root."""
+    logger.info("Starting News Collector...")
+    # main.py is in apps/refinery/main.py -> root is 2 levels up
+    root_dir = Path(__file__).resolve().parents[2]
+    script_path = root_dir / "run_collector.py"
+    
+    if not script_path.exists():
+        logger.error(f"Collector script not found at {script_path}")
+        return
+
+    try:
+        # Run using the current python interpreter from the root directory
+        cmd = [sys.executable, str(script_path), "--export-json", "data/exports/latest_articles.json"]
+        if fast_mode:
+            cmd.append("--fast")
+
+        subprocess.run(cmd, check=True, cwd=root_dir)
+        logger.info("News Collector finished successfully.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"News Collector failed with exit code {e.returncode}")
+    except Exception as e:
+        logger.error(f"Error running collector: {e}")
+
+
+def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False):
     """
     Main entry point for the Noticiencias Refinery.
     
@@ -222,8 +247,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         return {"status": "success", "message": "Source data synced."}
 
     # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
-    # SKIP COLLECTOR FOR TESTING (avoid dependency issues)
-    # run_collector_script(SOURCE_DIR)
+    run_collector_script(SOURCE_DIR, fast_mode=fast_mode)
 
     # Manual Injection for Testing
     data_dir = source_dir / "data"
@@ -346,6 +370,10 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         limit = 5 
         articles_to_process = articles_to_process[:limit]
         logger.info(f"BULK MODE: Limiting to first {limit} item(s)")
+
+    if not process_new_content and not process_id:
+        logger.info("Auto-processing disabled. New articles saved to inbox.")
+        return {"status": "success", "message": f"{len(articles_to_process)} articles collected. Ready for review.", "processed_count": 0}
 
     processed_count = 0
     try:

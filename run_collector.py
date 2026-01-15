@@ -19,6 +19,7 @@ Uso:
     python run_collector.py --dry-run                   # Modo prueba
     python run_collector.py --sources nature science    # Fuentes específicas
     python run_collector.py --quiet                     # Modo silencioso
+    python run_collector.py --fast                      # Modo Rápido (Skip AI Scoring)
 """
 
 import argparse
@@ -95,8 +96,21 @@ def run_simple_collection(args):
 
         # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
 
+        # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
+        
+        config_override = {}
+        if args.fast:
+            print("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
+            # Correctly map to what main.py expectes: flat keys, full weight dict
+            config_override["scoring_weights"] = {
+                 "source_credibility": 0.30,
+                 "recency": 0.30,
+                 "content_quality": 0.40,
+                 "cognitive_engagement": 0.0  # Explicitly 0 to trigger skip
+            }
+
         print("🔧 Inicializando sistema...")
-        system = create_system()
+        system = create_system(config_override=config_override)
 
         logger_factory = setup_logging()
         run_logger = logger_factory.create_module_logger("cli.run")
@@ -395,6 +409,12 @@ Ejemplos de uso:
         nargs="?",
         const="data/exports/latest_articles.json",
         help="Export top articles to JSON file (default: data/exports/latest_articles.json)",
+    )
+
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Modo Rápido: Desactiva análisis cognitivo profundo para evitar timeouts.",
     )
 
     args = parser.parse_args()

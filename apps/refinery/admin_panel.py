@@ -111,7 +111,7 @@ def save_toml_config(config_data):
         toml.dump(config_data, f)
 
 # --- Tabs ---
-tab1, tab2, tab3, tab4 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "🚀 Operaciones", "📈 Analítica"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "🚀 Operaciones", "📈 Analítica", "🗑️ Gestión"])
 
 # --- Tab 1: AI Settings ---
 with tab1:
@@ -253,16 +253,17 @@ with tab3:
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
     with col_sync:
-        if st.button("🔄 Sincronizar Datos", help="Traer últimos artículos del Colector Cloud"):
-            with st.spinner("Sincronizando datos..."):
+        fast_mode = st.checkbox("⚡ Modo Rápido (Sin análisis profundo)", value=True, help="Recomendado para primera carga de muchas fuentes.")
+        if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias (Web Scraping) y traer nuevos artículos"):
+            with st.spinner("Ejecutando recolección de noticias (esto puede tardar unos minutos)..."):
                 if not auth_ok:
                     st.warning("Autenticación requerida para sincronizar.")
                 else:
                     try:
                         # Direct call to main module instead of subprocess
-                        result = run_refinery(fetch_only=True)
+                        result = run_refinery(fetch_only=False, fast_mode=fast_mode)
                         if result.get("status") == "success":
-                            st.success("¡Sincronización Completa!")
+                            st.success("¡Recolección Completa!")
                         else:
                             st.error("Fallo en Sincronización")
                             st.expander("Detalles del Error").write(result.get("message"))
@@ -586,3 +587,105 @@ with tab4:
     except Exception as e:
         st.error(f"Error cargando analítica: {e}")
         st.info("Asegura que la BD esté inicializada y contenga datos.")
+
+# --- Tab 5: Content Management ---
+with tab5:
+    st.header("Gestionar Contenido Publicado")
+    
+    st.info("⚠️ Aquí puedes eliminar artículos que ya han sido publicados en el repositorio destino.")
+    
+    env_vars = dict(load_env_file())
+    if require_refinery_auth(env_vars):
+        # reuse GitHandler logic from main or init new one
+        from src.services.git_service import GitHandler
+        import git
+        
+        TARGET_DIR = BASE_DIR / "temp" / "target"
+        POSTS_DIR = TARGET_DIR / "src/content/posts"
+        
+        # 1. Ensure we have the latest state
+        if st.button("🔄 Refrescar Lista de Artículos Publicados"):
+            if not TARGET_DIR.exists():
+                st.warning("El repositorio destino no está clonado en temp/target. Ejecuta una sincronización primero.")
+            else:
+                 try:
+                    repo = git.Repo(TARGET_DIR)
+                    origin = repo.remotes.origin
+                    origin.pull()
+                    st.success("Repositorio actualizado.")
+                 except Exception as e:
+                    st.error(f"Error actualizando repo: {e}")
+
+        # 2. List Files
+        if TARGET_DIR.exists() and POSTS_DIR.exists():
+            files = sorted(list(POSTS_DIR.glob("*.md")), reverse=True)
+            
+            if not files:
+                st.info("No hay artículos en src/content/posts.")
+            else:
+                st.write(f"Encontrados **{len(files)}** artículos.")
+                
+                # Table layout
+                for f in files:
+                    col_name, col_act = st.columns([3, 2])
+                    with col_name:
+                        st.text(f.name)
+                    with col_act:
+                        # Extract traceability ID
+                        refinery_id = None
+                        try:
+                            content = f.read_text(encoding="utf-8", errors="ignore")
+                            # Simple regex for frontmatter
+                            import re
+                            match = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
+                            if match:
+                                refinery_id = match.group(1)
+                        except:
+                            pass
+
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            if st.button("🗑️ Archivar", key=f"del_arch_{f.name}", help="Borra de la web, pero NO vuelve a aparecer en Inbox."):
+                                try:
+                                    repo = git.Repo(TARGET_DIR)
+                                    repo.index.remove([str(f.relative_to(TARGET_DIR))])
+                                    f.unlink()
+                                    repo.index.commit(f"Deleted (Archived) {f.name}")
+                                    repo.remotes.origin.push()
+                                    st.success(f"Archivado: {f.name}")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                        
+                        with c2:
+                            if st.button("♻️ Resetear", key=f"del_reset_{f.name}", help="Borra de la web Y permite volver a procesarlo (Inbox)."):
+                                try:
+                                    # 1. Git Delete
+                                    repo = git.Repo(TARGET_DIR)
+                                    repo.index.remove([str(f.relative_to(TARGET_DIR))])
+                                    f.unlink()
+                                    repo.index.commit(f"Deleted (Reset) {f.name}")
+                                    repo.remotes.origin.push()
+                                    
+                                    # 2. DB Reset
+                                    # We try to delete by ID if found, otherwise by filename (legacy)
+                                    db_manager = RefineryDatabaseManager(REFINERY_DB_PATH)
+                                    
+                                    # Logic: The DB stores the INPUT filename (e.g. 123.md) or the ID.
+                                    # The OUTPUT filename is YYYY-MM-DD-slug.md.
+                                    # We need to map Output -> Input.
+                                    # Ideally we use refinery_id. If not, we can't reliably reset.
+                                    if refinery_id:
+                                         # Try both ID and ID.md to be safe
+                                        db_manager.delete_record(refinery_id)
+                                        db_manager.delete_record(f"{refinery_id}.md")
+                                        st.success(f"Reset: {f.name} (ID: {refinery_id}) -> Inbox desbloqueado.")
+                                    else:
+                                        st.warning("No se encontró 'refinery_id' en el archivo. Solo se borró de la web.")
+                                    
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+        else:
+             st.warning("No se encuentra el directorio de posts. Ejecuta una sincronización primero para clonar el repo.")
+
