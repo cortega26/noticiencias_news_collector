@@ -51,7 +51,7 @@ def save_env_file(env_vars):
             else:
                 f.write(f"{key}={value}\n")
 
-def require_refinery_auth(env_vars: dict[str, str]) -> bool:
+def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> bool:
     """Require a UI access token unless an explicit unsafe bypass is enabled."""
     bypass = (
         str(env_vars.get(REFINERY_UI_BYPASS_KEY, "")).strip() == "1"
@@ -77,6 +77,7 @@ def require_refinery_auth(env_vars: dict[str, str]) -> bool:
             "Token de acceso",
             type="password",
             help="Ingresa REFINERY_UI_TOKEN para habilitar acciones de escritura.",
+            key=key
         )
         if entered:
             if entered == token:
@@ -248,7 +249,7 @@ with tab3:
     
     st.info("ℹ️ Selecciona un artículo para refinar y publicar.")
     env_vars = dict(load_env_file())
-    auth_ok = require_refinery_auth(env_vars)
+    auth_ok = require_refinery_auth(env_vars, key="auth_ops")
     
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
@@ -599,7 +600,7 @@ with tab5:
     st.info("⚠️ Aquí puedes eliminar artículos que ya han sido publicados en el repositorio destino.")
     
     env_vars = dict(load_env_file())
-    if require_refinery_auth(env_vars):
+    if require_refinery_auth(env_vars, key="auth_cms"):
         # reuse GitHandler logic from main or init new one
         from src.services.git_service import GitHandler
         import git
