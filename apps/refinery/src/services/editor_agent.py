@@ -43,157 +43,77 @@ class EditorAgent:
             r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U00002600-\U000026FF]",
             flags=re.UNICODE,
         )
+        self.prompts = self._load_prompts()
 
-    def _build_formatting_instructions(self) -> str:
-        instructions = self._load_formatting_instructions()
-        return instructions if instructions else _DEFAULT_FORMATTING_INSTRUCTIONS
-
-    def _load_formatting_instructions(self) -> str:
+    def _load_prompts(self) -> dict:
+        """Loads prompt templates from yaml config."""
+        prompts_path = Path(__file__).resolve().parents[2] / "config" / "prompts.yaml"
         try:
-            content = _FORMATTING_PATH.read_text(encoding="utf-8").strip()
-        except FileNotFoundError:
-            logger.warning(
-                "Formatting instructions file missing: %s", _FORMATTING_PATH
-            )
-            return ""
-        except Exception as exc:
-            logger.warning(
-                "Error reading formatting instructions: %s", exc
-            )
-            return ""
+            import yaml
+            if prompts_path.exists():
+                return yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
+        except ImportError:
+            logger.warning("PyYAML not installed, falling back to basic prompts.")
+        except Exception as e:
+            logger.error(f"Error loading prompts: {e}")
+        
+        # Fallback prompts if file missing or parse error
+        return {
+            "translator": {"system": "Translate to Spanish. Keep it neutral."},
+            "editor": {"system": "Rewrite as a science journalist for LatAm. No hype."},
+            "headline": {"system": "Generate 3 headlines (json)."}
+        }
 
-        if not content:
-            logger.warning("Formatting instructions file is empty: %s", _FORMATTING_PATH)
-            return ""
-
-        return content + "\n\n"
-
+    # ... (Keep helper methods _strip_emojis, _inject_frontmatter_field etc. if needed) ...
+    # Re-implementing helper methods locally to ensure they are available within the class scope
+    
     def _strip_emojis(self, text: str) -> str:
         return self._emoji_re.sub("", text)
 
-    def _strip_tldr_visual(self, text: str) -> str:
-        lines = text.splitlines()
-        output = []
-        skipping = False
-
-        for line in lines:
-            if not skipping and re.search(r"TL;DR Visual", line, flags=re.IGNORECASE):
-                skipping = True
-                continue
-
-            if skipping:
-                if re.match(r"^\s*\*\*.+\*\*\s*$", line):
-                    skipping = False
-                    output.append(line)
-                else:
-                    continue
-            else:
-                output.append(line)
-
-        return "\n".join(output)
-
     def _inject_frontmatter_field(self, text: str, key: str, value: str) -> str:
         if not text.startswith("---"):
-            return text
-
+            return f"---\n{key}: \"{value}\"\n---\n\n{text}"
+            
         lines = text.splitlines()
         end_idx = None
         for idx in range(1, len(lines)):
             if lines[idx].strip() == "---":
                 end_idx = idx
                 break
+        
         if end_idx is None:
-            return text
+             return f"---\n{key}: \"{value}\"\n---\n\n{text}"
 
         for line in lines[1:end_idx]:
             if line.strip().lower().startswith(f"{key.lower()}:"):
                 return text
 
-        insert_line = f'{key}: "{value}"'
-        lines.insert(end_idx, insert_line)
+        lines.insert(end_idx, f'{key}: "{value}"')
         return "\n".join(lines)
+    
+    def _extract_markdown_content(self, text: str) -> str:
+        """Helper to extract clean markdown from potential LLM chatter."""
+        # If LLM wraps code in ```markdown ... ```
+        match = re.search(r"```markdown\s*(.*?)\s*```", text, re.DOTALL)
+        if match:
+            return match.group(1)
+        match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
+        if match:
+            return match.group(1)
+        return text
 
-    def _normalize_frontmatter_keys(self, text: str) -> str:
-        if not text.startswith("---"):
-            return text
-
-        lines = text.splitlines()
-        end_idx = None
-        for idx in range(1, len(lines)):
-            if lines[idx].strip() == "---":
-                end_idx = idx
-                break
-        if end_idx is None:
-            return text
-
-        normalized = []
-        for line in lines[1:end_idx]:
-            if ":" not in line:
-                normalized.append(line)
-                continue
-            key, rest = line.split(":", 1)
-            normalized.append(f"{key.strip().lower()}:{rest}")
-
-        return "\n".join([lines[0], *normalized, *lines[end_idx:]])
-
-    def _remove_frontmatter_field(self, text: str, key: str) -> str:
-        if not text.startswith("---"):
-            return text
-
-        lines = text.splitlines()
-        end_idx = None
-        for idx in range(1, len(lines)):
-            if lines[idx].strip() == "---":
-                end_idx = idx
-                break
-        if end_idx is None:
-            return text
-
-        key_lower = key.lower()
-        filtered = [
-            line
-            for line in lines[1:end_idx]
-            if not line.strip().lower().startswith(f"{key_lower}:")
-        ]
-
-        return "\n".join([lines[0], *filtered, *lines[end_idx:]])
-
-    def _upsert_frontmatter_field(self, text: str, key: str, value: str) -> str:
-        if not text.startswith("---"):
-            return text
-
-        lines = text.splitlines()
-        end_idx = None
-        for idx in range(1, len(lines)):
-            if lines[idx].strip() == "---":
-                end_idx = idx
-                break
-        if end_idx is None:
-            return text
-
-        key_lower = key.lower()
-        updated = False
-        for idx in range(1, end_idx):
-            if lines[idx].strip().lower().startswith(f"{key_lower}:"):
-                lines[idx] = f'{key_lower}: "{value}"'
-                updated = True
-                break
-
-        if not updated:
-            lines.insert(end_idx, f'{key_lower}: "{value}"')
-
-        return "\n".join(lines)
-
-    def _send_prompt(self, prompt: str) -> str:
+    def _send_prompt(self, prompt: str, system: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": True
         }
+        if system:
+            payload["system"] = system
 
         logger.info(f"Sending prompt to Ollama ({self.model})...")
-        print("Processing", end="", flush=True)
+        print(f"Processing ({system[:20]}...)", end="", flush=True)
         
         try:
             start_time = time.time()
@@ -209,7 +129,8 @@ class EditorAgent:
                         if 'response' in json_response:
                             chunk = json_response['response']
                             full_text.append(chunk)
-                            if len(full_text) % 5 == 0:
+                            # Feedback dot every 5 chunks
+                            if len(full_text) % 20 == 0:
                                 print(".", end="", flush=True)
                         if json_response.get('done', False):
                             break
@@ -227,34 +148,44 @@ class EditorAgent:
             logger.error(f"Error communicating with Ollama: {e}")
             raise
 
+    def _translate_scientific(self, content: str) -> str:
+        """Stage 1: Scientific Translation"""
+        system_prompt = self.prompts.get("translator", {}).get("system", "")
+        return self._send_prompt(content, system=system_prompt)
+
+    def _adapt_editorial(self, translated_content: str) -> str:
+        """Stage 2: Editorial Adaptation"""
+        system_prompt = self.prompts.get("editor", {}).get("system", "")
+        return self._send_prompt(translated_content, system=system_prompt)
+
+    def _generate_headlines(self, adapted_content: str) -> dict:
+        """Stage 3: Headline Generation"""
+        system_prompt = self.prompts.get("headline", {}).get("system", "")
+        # Prompt explicitly for JSON in the message body as well to be safe
+        prompt = f"Analyze this article and generate headlines keys: direct, question, benefit.\n\n{adapted_content[:2000]}"
+        response = self._send_prompt(prompt, system=system_prompt)
+        
+        try:
+            # Try to find JSON block
+            match = re.search(r"\{.*\}", response, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return json.loads(response)
+        except:
+            return {"direct": "Error generating headline", "question": "", "benefit": ""}
+
     def process_article(self, raw_text: str | dict) -> str:
         """
-        Sends the content to Ollama for translation and refinement.
-        Accepts either a raw text string or an article dictionary.
+        Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         """
-        # Default prompt if not specified in .env
-        # "Future Translator v1" Strategy
-        default_instruction = (
-            "Eres el Editor Visionario de 'Noticiencias'. Tu misión no es solo traducir, sino 'traducir el futuro'. "
-            "Toma el siguiente texto técnico y conviértelo en una narrativa apasionante en ESPAÑOL que explique por qué esto cambia nuestras vidas.\n\n"
-            + self._build_formatting_instructions()
-            + "Output ONLY the final Markdown content with a YAML Frontmatter block containing "
-            "title, author (AI), date (use today's date in YYYY-MM-DD format), and image (if provided). "
-            "Use lowercase frontmatter keys (title, author, date, image, source_url). "
-            "Ensure the frontmatter starts and ends with '---'. "
-            "Do not include any preamble, just the markdown."
-        )
-        
-        instruction = os.getenv("OLLAMA_PROMPT", default_instruction)
-        
-        content_to_process = ""
-        image_info = ""
-        source_info = ""
-        has_image = False
+        # 1. Extract Info
+        title = ""
+        summary = ""
+        content = ""
+        image_url = None
         source_url = None
-
+        
         if isinstance(raw_text, dict):
-            # It's an article dictionary
             title = raw_text.get("title", "")
             summary = raw_text.get("summary", "")
             content = raw_text.get("content", "")
@@ -264,70 +195,54 @@ class EditorAgent:
                 or (raw_text.get("metadata") or {}).get("original_url")
                 or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get("entry_id")
             )
-            
-            content_to_process = f"Title: {title}\\n\\nSummary: {summary}\\n\\nContent: {content}"
-            if image_url:
-                image_info = f"\\n\\nIMPORTANT: The article has an associated image URL: {image_url}. Include this exact URL in the YAML frontmatter as 'image: {image_url}'."
-                has_image = True
-            if source_url:
-                source_info = (
-                    "\\n\\nIMPORTANT: Add a final line with the original source "
-                    f"link formatted as 'Fuente original: [{source_url}]({source_url})'."
-                )
         else:
-            # It's just a string
-            content_to_process = raw_text
+            content = raw_text
 
-        prompt = f"{instruction}{image_info}{source_info}\\n\\n---\\n\\n{content_to_process}"
+        input_text = f"Title: {title}\nSummary: {summary}\nContent: {content}"
         
-        result_text = self._send_prompt(prompt)
+        # 2. Pipeline Execution
+        print("\n--- STAGE 1: Scientific Translation ---")
+        translated_text = self._translate_scientific(input_text)
         
-        # Post-processing: Validate and Fix YAML Frontmatter
-        if result_text.startswith("---"):
-            delimiter_count = result_text.count("---")
-            if delimiter_count == 1:
-                lines = result_text.split('\\n')
-                fixed_lines = []
-                closed = False
-                for i, line in enumerate(lines):
-                    fixed_lines.append(line)
-                    if i > 0 and not closed:
-                        if line.strip() == "" or line.startswith("#"):
-                            fixed_lines.insert(-1, "---")
-                            closed = True
-                
-                if not closed:
-                    fixed_lines.append("---")
-                
-                result_text = "\\n".join(fixed_lines)
+        print("\n--- STAGE 2: Editorial Adaptation ---")
+        # We pass the translated text to the editor
+        final_content = self._adapt_editorial(translated_text)
+        final_content = self._extract_markdown_content(final_content) # Cleanup
         
-        result_text = self._normalize_frontmatter_keys(result_text)
-
+        print("\n--- STAGE 3: Metadata & Headlines ---")
+        headlines = self._generate_headlines(final_content)
+        
+        # 3. Assemble Final Artifact
+        # Choose the 'direct' headline by default or a combination
+        final_title = headlines.get("direct", title) # Fallback to original if fail
+        
+        # Construct Frontmatter
+        metadata_block = [
+            "---",
+            f"title: \"{final_title}\"",
+            f"date: \"{time.strftime('%Y-%m-%d')}\"",
+            "author: \"Noticiencias AI\"",
+        ]
+        
+        if image_url:
+            metadata_block.append(f"image: \"{image_url}\"")
         if source_url:
-            result_text = self._upsert_frontmatter_field(
-                result_text, "source_url", source_url
-            )
-
-        if has_image and image_url:
-            result_text = self._upsert_frontmatter_field(
-                result_text, "image", image_url
-            )
-        else:
-            result_text = self._remove_frontmatter_field(result_text, "image")
-
-        if not has_image:
-            result_text = self._strip_tldr_visual(result_text)
-
-        if source_url and not re.search(
-            r"Fuente original:", result_text, flags=re.IGNORECASE
-        ):
-            result_text = (
-                result_text.rstrip()
-                + f"\\n\\nFuente original: [{source_url}]({source_url})\\n"
-            )
-
-        result_text = self._strip_emojis(result_text)
-        return result_text
+            metadata_block.append(f"source_url: \"{source_url}\"")
+            
+        # Add generated headlines as hidden metadata for A/B testing potential
+        metadata_block.append(f"headlines_variants:")
+        metadata_block.append(f"  question: \"{headlines.get('question', '')}\"")
+        metadata_block.append(f"  benefit: \"{headlines.get('benefit', '')}\"")
+        
+        metadata_block.append("---\n")
+        
+        full_article = "\n".join(metadata_block) + "\n" + final_content
+        
+        # Append source link footer if missing
+        if source_url and "Fuente original" not in full_article:
+             full_article += f"\n\nFuente original: [{source_url}]({source_url})"
+             
+        return self._strip_emojis(full_article)
 
     def generate_social_content(self, article_content: str, url: str = "") -> str:
         """Generates social media posts (Twitter/LinkedIn) for the refined article."""
