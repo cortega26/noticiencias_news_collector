@@ -407,6 +407,10 @@ with tab3:
                     # Filter strictly for existing columns
                     display_cols = [c for c in display_cols if c in df.columns]
                     
+                    # Sort by score descending
+                    if "score" in df.columns:
+                        df = df.sort_values(by="score", ascending=False)
+
                     # Display interactive table
                     # We use a selection box for simplicity as st.dataframe selection is newer
                     
