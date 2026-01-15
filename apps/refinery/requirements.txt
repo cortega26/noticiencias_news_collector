@@ -5,3 +5,6 @@ python-dotenv
 streamlit
 toml
 watchdog
+PyYAML
+sqlalchemy
+loguru

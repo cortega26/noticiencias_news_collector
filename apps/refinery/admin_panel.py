@@ -7,7 +7,10 @@ import sys
 import importlib.util
 
 # Import refinery main explicitly to avoid ambiguous module resolution.
+# Import refinery main explicitly to avoid ambiguous module resolution.
 sys.path.append(str(Path(__file__).parent))
+# Add project root to sys.path to find 'news_collector'
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 REFINERY_MAIN_PATH = Path(__file__).parent / "main.py"
 spec = importlib.util.spec_from_file_location("refinery_main", REFINERY_MAIN_PATH)
 if spec is None or spec.loader is None:
@@ -282,6 +285,43 @@ with tab3:
         JSON_PATH = CLONED_PATH
     elif SIBLING_PATH.exists():
         JSON_PATH = SIBLING_PATH
+    # If JSON is missing, try to generate it from local MD files (Mock/Test Data)
+    if not (JSON_PATH and JSON_PATH.exists()):
+        data_dir = CLONED_PATH.parent.parent # temp/source/data
+        md_files = list(data_dir.glob("*.md"))
+        if md_files:
+            try:
+                # Generate a temporary JSON for the UI to consume
+                temp_articles = []
+                for mf in md_files:
+                    temp_articles.append({
+                        "id": mf.name,
+                        "title": mf.stem.replace("_", " ").title(),
+                        "summary": "Local Markdown File (Mock/Test Data)",
+                        "score": 0.99,
+                        "published_date": "2025-01-01",
+                        "file_path": str(mf),
+                        "components": {
+                            "source_credibility": 1.0,
+                            "recency": 1.0,
+                            "content_quality": 1.0,
+                            "cognitive_engagement_norm": 1.0
+                        }
+                    })
+                
+                # Write to where the app expects it (or a temp location)
+                # CLONED_PATH is .../exports/latest_articles.json
+                # We will write it there so the next check passes
+                CLONED_PATH.parent.mkdir(parents=True, exist_ok=True)
+                import json
+                with open(CLONED_PATH, "w", encoding="utf-8") as f:
+                    json.dump({"articles": temp_articles}, f, indent=2)
+                
+                JSON_PATH = CLONED_PATH
+                st.toast(f"ℹ️ Se generó un archivo JSON temporal desde {len(md_files)} archivos MD locales.", icon="🛠️")
+            except Exception as e:
+                st.error(f"Error generando datos mock: {e}")
+
     if JSON_PATH and JSON_PATH.exists():
         import json
         import pandas as pd
