@@ -107,6 +107,35 @@ class CollectorArticleModel(BaseModel):
             )
         return self
 
+    @field_validator("content")
+    @classmethod
+    def validate_content_quality(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value.strip()) < TEXT_PROCESSING_CONFIG.get("min_content_length", 50):
+            raise ValueError("content is too short to be valid")
+        
+        # Basic quote balancing check
+        quote_count = value.count('"')
+        if quote_count % 2 != 0:
+            # Heuristic: Odd number of quotes often indicates truncation mid-sentence or mid-quote.
+            raise ValueError(f"content has unbalanced double quotes (count={quote_count}), indicating possible truncation")
+        return value
+
+    @field_validator("authors", mode="after")
+    @classmethod
+    def validate_authors_meaningful(cls, value: List[str]) -> List[str]:
+        generic_names = {"admin", "staff", "editor", "redaction", "anonymous"}
+        filtered = [
+            a for a in value 
+            if a.lower().replace(".", "").strip() not in generic_names
+        ]
+        if not filtered and value:
+            # If all authors were generic, we might want to return empty or raise.
+            # Let's return empty to indicate 'no specific author'.
+            return []
+        return filtered
+
     def model_dump_for_storage(self) -> Dict[str, Any]:
         """Return a dict ready for persistence."""
         data = self.model_dump(mode="python")

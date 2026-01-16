@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+  <title>Noticiencias Canary Feed</title>
+  <description>A feed for regression testing</description>
+  <link>https://noticiencias.com/canary</link>
+  <lastBuildDate>Mon, 06 Sep 2025 00:01:00 +0000</lastBuildDate>
+  <pubDate>Mon, 06 Sep 2025 16:20:00 +0000</pubDate>
+  <ttl>1800</ttl>
+
+  <item>
+    <title>Canary Article 1: Perfect Valid Article</title>
+    <description>This is a perfect summary for the first canary article. It has enough words to pass validation.</description>
+    <link>https://noticiencias.com/canary/1</link>
+    <guid isPermaLink="true">https://noticiencias.com/canary/1</guid>
+    <pubDate>Mon, 06 Sep 2025 16:20:00 +0000</pubDate>
+    <dc:creator>Jane Doe</dc:creator>
+    <category>Science</category>
+    <content:encoded><![CDATA[
+      <p>This is the main content of article 1. It is very clean and nice.</p>
+      <p>It should pass all validators including length and "quote balancing".</p>
+      <p>We add some more text to be safe on length. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+    ]]></content:encoded>
+  </item>
+
+  <item>
+    <title>Canary Article 2: Messy HTML &amp; Metadata</title>
+    <description>&lt;p&gt;This description has &lt;b&gt;HTML&lt;/b&gt; inside it.&lt;/p&gt; It should be cleaned.</description>
+    <link>https://noticiencias.com/canary/2</link>
+    <guid>canary-2-unique-id</guid>
+    <pubDate>Sun, 05 Sep 2025 12:00:00 GMT</pubDate>
+    <dc:creator>Dr. Smith</dc:creator>
+    <dc:creator>Prof. Jones</dc:creator>
+    <category>Technology</category>
+    <content:encoded><![CDATA[
+      <div>
+        <h1>Big Title</h1>
+        <p>This content has structure.</p>
+        <script>alert('remove me')</script>
+        <p>The script above should be gone.</p>
+        <p>Multiple paragraphs to Ensure length is sufficient for the validation rules we just added.</p>
+        <p>More text here to be absolutely sure we are over 50 chars.</p>
+      </div>
+    ]]></content:encoded>
+  </item>
+</channel>
+</rss>
