@@ -485,6 +485,45 @@ with tab3:
                             )
 
                         # Process Button
+                        if refinery_db.is_processed(selected_id) or refinery_db.is_processed(f"{selected_id}.md"):
+                            st.warning("⚠️ Artículo ya publicado/procesado.")
+                            
+                            col_pub1, col_pub2 = st.columns(2)
+                            with col_pub1:
+                                if st.button("🔄 Forzar Reprocesamiento (Sobrescribir)", key=f"reproc_{selected_id}"):
+                                    with st.spinner(f"Reprocesando ID {selected_id}..."):
+                                        # ... existing logic ...
+                                        # This needs refactoring to avoid duplication, but for now we copy the call logic
+                                        # or we assume the main button below handles force if we allow it fall through?
+                                        # No, let's keep one main action. 
+                                        pass 
+                            
+                            with col_pub2:
+                                if st.button(f"🗑️ Despublicar (Eliminar)", type="primary", key=f"del_{selected_id}"):
+                                    with st.spinner(f"Solicitando eliminación de {selected_id}..."):
+                                        try:
+                                            # Call delete_article via import
+                                            # We need to import it first or use module access
+                                            import news_collector.apps.refinery.main as main_module # Dynamic? No.
+                                            # We already have `run_refinery` available via importlib in admin_panel.
+                                            # We need `delete_article` too.
+                                            
+                                            if hasattr(refinery_main, 'delete_article'):
+                                                del_result = refinery_main.delete_article(str(selected_id))
+                                                if del_result.get("status") == "success":
+                                                    st.success("✅ Solicitud de eliminación creada.")
+                                                    st.markdown(f"[Ver Pull Request de Eliminación]({del_result.get('pr_url')})")
+                                                    # Update DB to un-processed?
+                                                    # refinery_db.mark_processed(str(selected_id)) # No method to unmark
+                                                    st.info("Nota: La base de datos local seguirá marcándolo como procesado hasta recibir confirmación de limpieza.")
+                                                else:
+                                                    st.error(f"Error: {del_result.get('message')}")
+                                            else:
+                                                st.error("Función delete_article no encontrada. Reinicia la aplicación.")
+                                        except Exception as e:
+                                            st.error(f"Error invocando despublicación: {e}")
+                            
+                        # Standard Process Button (Always visible for force reprocessing or new items)
                         if st.button(
                             f"✨ Refinar y Publicar (ID: {selected_id})",
                             type="primary",

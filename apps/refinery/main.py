@@ -524,6 +524,66 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
          
     return {"status": "success", "processed_count": processed_count}
 
+def delete_article(article_id: str) -> dict:
+    """
+    Locates and deletes an article from the target repo based on its refinery_id.
+    Creates a Pull Request for the deletion.
+    """
+    logger.info(f"Initiating One-Click Unpublish for ID: {article_id}")
+    
+    try:
+        config = load_config()
+        git_handler = GitHubPublisher(config.GITHUB_TOKEN)
+        
+        # 1. Clone Target
+        if TARGET_DIR.exists():
+            shutil.rmtree(TARGET_DIR, ignore_errors=True)
+        git_handler.clone_repo(config.TARGET_REPO_URL, TARGET_DIR)
+        target_repo_obj = git.Repo(TARGET_DIR)
+        
+        # 2. Search for File
+        posts_dir = TARGET_DIR / "src/content/posts"
+        target_file = None
+        
+        if posts_dir.exists():
+            for file_path in posts_dir.glob("*.md"):
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                    if f'refinery_id: "{article_id}"' in content:
+                        target_file = file_path
+                        break
+                except:
+                    continue
+        
+        if not target_file:
+            logger.warning(f"Article ID {article_id} not found in published content.")
+            return {"status": "error", "message": "Article not found in remote content."}
+            
+        # 3. Create Branch
+        branch_name = git_handler.create_branch(target_repo_obj, branch_prefix="delete/article")
+        
+        # 4. Delete File
+        filename = target_file.name
+        target_file.unlink()
+        logger.info(f"Deleted file: {filename}")
+        
+        # 5. Commit & Push
+        git_handler.commit_and_push(target_repo_obj, f"Unpublish article: {filename}", branch_name)
+        
+        # 6. Create PR
+        pr_url = git_handler.create_pull_request(
+            repo_url=config.TARGET_REPO_URL,
+            branch_name=branch_name,
+            title=f"Unpublish: {filename}",
+            body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}"
+        )
+        
+        return {"status": "success", "pr_url": pr_url, "file_name": filename}
+
+    except Exception as e:
+        logger.error(f"Failed to delete article: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 if __name__ == "__main__":
     import git
@@ -534,8 +594,13 @@ if __name__ == "__main__":
     parser.add_argument("--process-id", type=str, help="Process a specific article ID (or title) only.")
     parser.add_argument("--dev", action="store_true", help="Enable development features (like mock generation).")
     parser.add_argument("--skip-visuals", action="store_true", help="Skip the visual analysis step (faster).")
-    parser.add_argument("--export-path", type=str, help="Optional JSON export path to use.")
+    parser.add_argument("--delete-id", type=str, help="Unpublish/Delete a specific article ID.")
     args = parser.parse_args()
+
+    if args.delete_id:
+        result = delete_article(args.delete_id)
+        print(json.dumps(result)) # Output for caller
+        sys.exit(0 if result["status"] == "success" else 1)
 
     main(
         fetch_only=args.fetch_only,
