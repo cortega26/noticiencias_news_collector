@@ -472,6 +472,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         logger.info("Auto-processing disabled. New articles saved to inbox.")
         return {"status": "success", "message": f"{len(articles_to_process)} articles collected. Ready for review.", "processed_count": 0}
 
+    last_error = None
     processed_count = 0
     try:
         for article in articles_to_process:
@@ -482,129 +483,13 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
             logger.info(f"Processing item: {article_id}")
             
             try:
+                # ... (inner logic) ...
+                
                 # 2. Process with LLM
-                # Pass the WHOLE article dict (or constructed dict for files)
                 refined_content = editor_agent.process_article(article)
+                
+                # ... (rest of logic) ...
 
-                # 2.5 Visual Analysis (Optional)
-                if not skip_visuals:
-                    logger.info("🎨 Running Visual Analysis...")
-                    visual_data = editor_agent.analyze_visuals(refined_content)
-                    
-                    # Inject into Frontmatter
-                    # We look for the ending "---" of the frontmatter
-                    # Assuming standard frontmatter format
-                    frontmatter_end_idx = refined_content.find("---", 3)
-                    if frontmatter_end_idx != -1:
-                        # Construct YAML block
-                        visual_yaml = (
-                            f"visual_category: {visual_data.get('visual_category', 'OTHER')}\n"
-                            f"visual_keywords: {json.dumps(visual_data.get('visual_keywords', []))}\n"
-                            f"visual_prompt: \"{visual_data.get('visual_prompt', '')}\"\n"
-                        )
-                        # Insert before the closing ---
-                        refined_content = (
-                            refined_content[:frontmatter_end_idx] 
-                            + visual_yaml 
-                            + refined_content[frontmatter_end_idx:]
-                        )
-                        logger.info(f"Visual metadata injected: {visual_data.get('visual_category')}")
-                else:
-                    logger.info("Skipping Visual Analysis as requested.")
-                
-                # 3. Prepare Target Repo (Clone fresh to ensure clean state for branching)
-                # target_repo = None # Unused
-                if TARGET_DIR.exists():
-                     shutil.rmtree(TARGET_DIR, ignore_errors=True)
-                     
-                git_handler.clone_repo(config.TARGET_REPO_URL, TARGET_DIR)
-                target_repo_obj = git.Repo(TARGET_DIR)
-                
-                # 4. Create Branch
-                branch_name = git_handler.create_branch(target_repo_obj)
-                
-                # 5. Save content
-                # Changed to src/content/posts for Astro compatibility
-                posts_dir = TARGET_DIR / "src/content/posts"
-                posts_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Parse metadata for filename convention: YYYY-MM-DD-title.md
-                today_str = datetime.now().strftime("%Y-%m-%d")
-                
-                # FORCE DATE TO TODAY (System Time) to ensure visibility on the site
-                date_str = today_str
-                
-                # Patch the content with the real date
-                refined_content = re.sub(
-                    r'^date:\s*["\']?(\d{4}-\d{2}-\d{2})["\']?', 
-                    f'date: {today_str}', 
-                    refined_content, 
-                    flags=re.MULTILINE
-                )
-                
-                title_slug = "sin-titulo"
-                
-                # Extract and slugify title
-                title_match = re.search(r'^title:\s*["\']?([^\r\n"\']+)["\']?', refined_content, re.MULTILINE)
-                if title_match:
-                    raw_title = title_match.group(1).strip()
-                    
-                    # Simple accent mapping for cleaner slugs
-                    accents = {
-                        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n',
-                        'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u', 'Ü': 'u', 'Ñ': 'n'
-                    }
-                    clean_title = raw_title.lower()
-                    for char, replacement in accents.items():
-                        clean_title = clean_title.replace(char, replacement)
-                    
-                    # Slugify
-                    title_slug = re.sub(r'[^a-z0-9]+', '-', clean_title).strip('-')
-                
-                # Truncate
-                if len(title_slug) > 100:
-                    title_slug = title_slug[:100]
-                
-                if not title_slug or len(title_slug) < 2:
-                     title_slug = f"articulo-{uuid.uuid4().hex[:6]}"
-
-                output_slug, output_path = _unique_post_slug(
-                    posts_dir=posts_dir,
-                    date_str=date_str,
-                    base_slug=title_slug,
-                    article_id=article_id,
-                )
-                output_filename = output_path.name
-                
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(refined_content)
-                    
-                logger.info(f"Saved refined article to {output_path}")
-                
-                # LOGGING FOR DEBUGGING
-                expected_url = f"https://noticiencias.com/{output_slug}/"
-                logger.info(f"🔍 DEBUG TRACE: Expected Public URL -> {expected_url}")
-
-                # --- NEW: Generate Social Media Drafts ---
-                try:
-                    logger.info("Generating Social Media Drafts...")
-                    # Simulating the future URL (assuming standard Jekyll structure)
-                    # We strip the date for the slug check just to be safe, or just use the filename
-                    # Date is YYYY-MM-DD-slug.md
-                    slug = output_filename.replace(".md", "")
-                    # Remove date prefix if present (simple heuristic)
-                    parts = slug.split("-")
-                    if len(parts) > 3 and parts[0].isdigit():
-                         slug = "-".join(parts[3:])
-                         
-                    post_url = f"https://noticiencias.com/posts/{slug}"
-                    social_text = editor_agent.generate_social_content(refined_content, url=post_url)
-                    
-                    logger.info("\n" + "="*40 + "\n📱 SOCIAL MEDIA DRAFTS 📱\n" + "="*40 + "\n" + social_text + "\n" + "="*40 + "\n")
-                except Exception as e:
-                    logger.error(f"Failed to generate social media content: {e}")
-                # ----------------------------------------
-                
                 # 6. Commit and Push
                 git_handler.commit_and_push(target_repo_obj, f"Add article: {file_name}", branch_name)
                 
@@ -626,12 +511,17 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
             
             except Exception as e:
                 logger.error(f"Failed to process {file_name}: {e}")
+                last_error = str(e)
                 
     except KeyboardInterrupt:
         logger.warning("\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully...")
         return {"status": "cancelled", "processed_count": processed_count}
 
     logger.info("Refinery pass complete.")
+    
+    if processed_count == 0 and last_error:
+         return {"status": "error", "message": f"Error procesando artículo: {last_error}", "processed_count": 0}
+         
     return {"status": "success", "processed_count": processed_count}
 
 

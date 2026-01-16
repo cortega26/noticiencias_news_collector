@@ -159,8 +159,9 @@ class EditorAgent:
             if match:
                 return json.loads(match.group(0))
             return json.loads(response)
-        except:
-            return {"direct": "Error generating headline", "question": "", "benefit": ""}
+        except Exception as e:
+            logger.error(f"Failed to generate headlines: {e}")
+            raise ValueError("Failed to generate headlines via LLM. Check Ollama connection or prompt.") from e
 
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
         """Returns the path for a cached stage artifact."""
@@ -216,6 +217,10 @@ class EditorAgent:
 
         input_text = f"Title: {title}\nSummary: {summary}\nContent: {content}"
         
+        # Validation: content length
+        if len(content.strip()) < 500:
+             raise ValueError(f"Content too short ({len(content)} chars). Likely paywalled or empty.")
+
         # 2. Pipeline Execution
         
         # --- STAGE 1: Scientific Translation ---
