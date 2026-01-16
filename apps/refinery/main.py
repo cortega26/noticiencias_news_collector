@@ -11,6 +11,12 @@ import git
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+# Add project root to sys.path to allow imports if running standalone or via streamlit
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from src.utils.config import load_config
 from src.utils.logger import setup_logger
 from news_collector.components.publishing import GitHubPublisher
@@ -18,12 +24,7 @@ from news_collector.components.editorial import EditorAgent
 from news_collector.components.editorial import EditorAgent
 from src.database import DatabaseManager
 
-# Add project root to sys.path to allow imports if running standalone or via streamlit
-project_root = Path(__file__).resolve().parents[2]
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-from news_collector.main import create_system
+from main import create_system
 import asyncio
 from datetime import timezone
 

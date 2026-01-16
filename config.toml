@@ -4,9 +4,9 @@ debug = false
 timezone = "UTC"
 
 [paths]
-data_dir = "/home/cortega26/noticiencias_news_collector/data"
-logs_dir = "/home/cortega26/noticiencias_news_collector/data/logs"
-dlq_dir = "/home/cortega26/noticiencias_news_collector/data/dlq"
+data_dir = "./data"
+logs_dir = "./data/logs"
+dlq_dir = "./data/dlq"
 
 [database]
 driver = "sqlite"
@@ -79,7 +79,7 @@ default_language = "es"
 
 [logging]
 level = "INFO"
-file_path = "/home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+file_path = "./data/logs/collector.log"
 max_file_size_mb = 10
 retention_days = 30
 format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
