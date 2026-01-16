@@ -365,6 +365,8 @@ with tab3:
         import pandas as pd
         
         try:
+            refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH) # Initialize early for safety
+            
             with open(JSON_PATH, "r", encoding="utf-8") as f:
                 payload = json.load(f)
             if isinstance(payload, dict):
@@ -387,10 +389,10 @@ with tab3:
                 st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
 
             if articles:
-                # refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH) -> Moved below
+                refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH)
                 available_articles = []
-                # ...
-
+                
+                filtered_count = 0
                 for art in articles:
                     art_id = str(art.get("id", art.get("title")))
                     
@@ -723,17 +725,26 @@ with tab5:
 
                         c1, c2 = st.columns(2)
                         with c1:
-                            if st.button("🗑️ Archivar", key=f"del_arch_{f.name}", help="Borra de la web, pero NO vuelve a aparecer en Inbox."):
-                                try:
-                                    repo = git.Repo(TARGET_DIR)
-                                    repo.index.remove([str(f.relative_to(TARGET_DIR))])
-                                    f.unlink()
-                                    repo.index.commit(f"Deleted (Archived) {f.name}")
-                                    repo.remotes.origin.push()
-                                    st.success(f"Archivado: {f.name}")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Error: {e}")
+                            if st.button("🗑️ Despublicar", key=f"del_arch_{f.name}", help="Elimina el artículo del sitio web (vía Pull Request)."):
+                                if refinery_id:
+                                    with st.spinner(f"Creando solicitud de eliminación para ID {refinery_id}..."):
+                                        try:
+                                            # Use shared delete capability
+                                            import news_collector.apps.refinery.main as main_module
+                                            if hasattr(refinery_main, 'delete_article'):
+                                                # Use the imported spec module
+                                                del_result = refinery_main.delete_article(str(refinery_id))
+                                                if del_result.get("status") == "success":
+                                                    st.success("✅ PR de eliminación creado.")
+                                                    st.markdown(f"[Fusionar PR en GitHub]({del_result.get('pr_url')})")
+                                                else:
+                                                    st.error(f"Error: {del_result.get('message')}")
+                                            else:
+                                                st.error("Función delete_article no cargada.")
+                                        except Exception as e:
+                                            st.error(f"Error: {e}")
+                                else:
+                                    st.error("No se encontró refinery_id en el archivo. Eliminación manual requerida.")
                         
                         with c2:
                             if st.button("♻️ Resetear", key=f"del_reset_{f.name}", help="Borra de la web Y permite volver a procesarlo (Inbox)."):
