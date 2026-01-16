@@ -381,16 +381,15 @@ with tab3:
             # ------------------------
             # ------------------------
             
-            if articles:
-                available_articles = []
-                filtered_count = 0
-                
-                # UX IMPROVEMENT: Allow showing processed items
-                show_processed = st.sidebar.checkbox("Mostrar artículos procesados (Force Reprocess)", value=False)
+            # UX IMPROVEMENT: Allow showing processed items
+            show_processed = st.sidebar.checkbox("Mostrar artículos procesados (Force Reprocess)", value=False)
+            if show_processed:
+                st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
 
-                # DEBUG: Path
-                if show_processed:
-                    st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
+            if articles:
+                # refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH) -> Moved below
+                available_articles = []
+                # ...
 
                 for art in articles:
                     art_id = str(art.get("id", art.get("title")))
