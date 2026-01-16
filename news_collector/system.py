@@ -242,7 +242,7 @@ class NewsCollectorSystem:
                 }
             )
 
-            final_selection = self._execute_final_selection(scoring_results)
+            final_selection = self._execute_final_selection(scoring_results, collection_results)
             final_report = self._generate_session_report(
                 collection_results, scoring_results, final_selection, session_id
             )
@@ -719,10 +719,24 @@ class NewsCollectorSystem:
             }
 
     def _execute_final_selection(
-        self, scoring_results: Dict[str, Any]
+        self, scoring_results: Dict[str, Any], collection_results: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Ejecuta la selección final de mejores artículos."""
         try:
+            # Check for simulated articles in dry-run
+            if collection_results and "articles" in collection_results:
+                 # Dry-run simulation mode
+                 selected_articles = collection_results["articles"]
+                 return {
+                    "success": True,
+                    "selected_count": len(selected_articles),
+                    "articles": selected_articles,
+                    "selection_criteria": {
+                        "mode": "dry_run_simulation"
+                    },
+                }
+
+            # Normal path (Database)
             # Obtener mejores artículos
             top_articles = self.db_manager.get_articles_by_score(
                 limit=SCORING_CONFIG["daily_top_count"],
@@ -817,13 +831,37 @@ class NewsCollectorSystem:
         """Simula recolección para modo dry_run."""
         import random
 
+        # Generar artículos simulados para validar contrato
+        simulated_articles = []
+        for i in range(random.randint(5, 15)):
+            simulated_articles.append({
+                "title": f"Artículo Simulado {i+1}",
+                "url": f"https://example.com/article/{i+1}",
+                "source_id": "simulation", # Required by Contract
+                "published_date": datetime.now(timezone.utc).isoformat(),
+                "summary": f"Resumen del artículo simulado {i+1} para pruebas de contrato.",
+                "content": "Contenido completo simulado...",
+                "author": "Simulador",
+                "categories": ["test", "simulation"],
+                "tags": ["e2e", "contract"],
+                "editorial_score": random.uniform(0.5, 0.9)
+            })
+
         simulated_results = {
             "collection_summary": {
                 "sources_processed": len(sources),
-                "articles_found": random.randint(10, 50),
-                "articles_saved": random.randint(5, 25),
+                "articles_found": len(simulated_articles),
+                "articles_saved": len(simulated_articles), # En simulación asumimos guardado
                 "success_rate_percent": random.uniform(80, 95),
-            }
+            },
+            "source_details": {
+                "simulation": {
+                    "success": True, 
+                    "articles_found": len(simulated_articles),
+                    "articles_saved": len(simulated_articles)
+                }
+            },
+            "articles": simulated_articles # Para acceso directo en dry-run
         }
 
         self.logger.create_module_logger("simulation").info(
