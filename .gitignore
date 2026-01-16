@@ -116,6 +116,7 @@ dmypy.json
 data/logs/
 data/dlq/
 data/exports/
+!data/exports/latest_articles.json
 temp/
 debug_output.txt
 test_output*.txt

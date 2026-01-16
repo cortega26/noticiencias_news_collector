@@ -201,36 +201,70 @@ class AsyncRSSCollector(RSSCollector):
              if cached_headers.get("last_modified"):
                  req_headers["If-Modified-Since"] = cached_headers["last_modified"]
 
-             # Use httpx client
-             response = await client.get(feed_url, headers=req_headers)
-             status = response.status_code
+             # SSRF-SAFE FETCH WITH REDIRECT VALIDATION
+             current_url = feed_url
+             redirect_count = 0
+             max_redirects = 5
              
-             if status == 304:
-                 return (None, 304)
-             
-             if status >= 400:
-                 return (None, status)
-             
-             content = response.content # bytes
-             text = response.text    # str
-             
-             etag = response.headers.get("ETag")
-             lm = response.headers.get("Last-Modified")
-             ch = hashlib.sha256(content).hexdigest()
-             
-             if cached_headers.get("content_hash") == ch:
+             while redirect_count <= max_redirects:
+                 # Validate URL safety before request
+                 await asyncio.to_thread(validate_url_safety_sync, current_url)
+                 
+                 # Manual request execution (no auto-follow)
+                 response = await client.get(
+                     current_url, 
+                     headers=req_headers, 
+                     follow_redirects=False
+                 )
+                 
+                 status = response.status_code
+                 
+                 # Handle Redirects
+                 if 300 <= status < 400:
+                     redirect_count += 1
+                     location = response.headers.get("Location")
+                     if not location:
+                         self._emit_log("error", "collector.feed.redirect_error", source_id=source_id, details={"error": "Redirect without Location header"})
+                         return (None, None)
+                     
+                     # Resolving relative redirects if necessary
+                     from urllib.parse import urljoin
+                     current_url = urljoin(current_url, location)
+                     
+                     # Loop back to validate new URL
+                     continue
+                 
+                 # Handle Success/Not Modified
+                 if status == 304:
+                     return (None, 304)
+                 
+                 if status >= 400:
+                     return (None, status)
+                 
+                 # Valid response found
+                 content = response.content # bytes
+                 text = response.text    # str
+                 
+                 etag = response.headers.get("ETag")
+                 lm = response.headers.get("Last-Modified")
+                 ch = hashlib.sha256(content).hexdigest()
+                 
+                 if cached_headers.get("content_hash") == ch:
+                     await asyncio.to_thread(
+                         self.db_manager.update_source_feed_metadata, 
+                         source_id, etag=etag, last_modified=lm, content_hash=ch
+                     )
+                     return (None, 304)
+
                  await asyncio.to_thread(
                      self.db_manager.update_source_feed_metadata, 
                      source_id, etag=etag, last_modified=lm, content_hash=ch
                  )
-                 return (None, 304)
-
-             await asyncio.to_thread(
-                 self.db_manager.update_source_feed_metadata, 
-                 source_id, etag=etag, last_modified=lm, content_hash=ch
-             )
+                 
+                 return (text, status)
              
-             return (text, status)
+             self._emit_log("error", "collector.feed.too_many_redirects", source_id=source_id, details={"max": max_redirects})
+             return (None, None)
 
         except Exception as e:
             self._emit_log("error", "collector.feed.fetch_async_error", source_id=source_id, details={"error": str(e)})

@@ -50,7 +50,7 @@ jobs:
         git config --global user.email "bot@noticiencias.com"
         
         # Check for changes in data/ folder
-        git add data/ data/exports/latest_articles.json
+        git add data/exports/latest_articles.json
         
         # Only commit if there are changes
         if git diff --staged --quiet; then
