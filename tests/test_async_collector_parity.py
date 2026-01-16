@@ -86,7 +86,7 @@ class MockAsyncClient:
         self.captured_headers: Dict[str, str] | None = None
 
     async def get(
-        self, url: str, timeout: float, headers: Dict[str, str] | None = None
+        self, url: str, timeout: float | None = None, headers: Dict[str, str] | None = None, **kwargs
     ):
         self.captured_headers = headers or {}
         return self.response
@@ -103,8 +103,9 @@ def async_collector(monkeypatch: pytest.MonkeyPatch) -> AsyncRSSCollector:
 
 @pytest.mark.anyio
 async def test_async_fetch_feed_uses_conditional_headers(
-    async_collector: AsyncRSSCollector,
+    async_collector: AsyncRSSCollector, monkeypatch: pytest.MonkeyPatch
 ):
+    monkeypatch.setattr("news_collector.collectors.async_rss_collector.validate_url_safety_sync", lambda url: True)
     async_collector.db_manager.update_source_feed_metadata(
         "source1",
         etag='"old"',
@@ -123,7 +124,7 @@ async def test_async_fetch_feed_uses_conditional_headers(
     client = MockAsyncClient(response)
 
     content, status = await async_collector._fetch_feed_async(
-        client, "source1", "https://example.com/feed"
+        "source1", "https://example.com/feed", client
     )
 
     assert status == 200
@@ -161,7 +162,7 @@ async def test_async_collector_serializes_per_domain_requests(
     monkeypatch.setattr(
         AsyncRSSCollector,
         "_extract_articles_from_feed",
-        lambda self, parsed_feed, source_config: [],
+        lambda self, parsed_feed, source_config, source_id: [],
         raising=False,
     )
     monkeypatch.setattr(
@@ -177,9 +178,14 @@ async def test_async_collector_serializes_per_domain_requests(
     async def fake_sleep(duration: float):
         sleeps.append(duration)
         current_time["value"] += duration
+    
+    def fake_sleep_sync(duration: float):
+        sleeps.append(duration)
+        current_time["value"] += duration
 
     monkeypatch.setattr("time.time", fake_time)
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr("time.sleep", fake_sleep_sync)
 
     sources = {
         "src-a": {

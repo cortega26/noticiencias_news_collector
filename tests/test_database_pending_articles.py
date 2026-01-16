@@ -17,7 +17,7 @@ from news_collector.config import ALL_SOURCES, ENRICHMENT_CONFIG
 
 pytestmark = pytest.mark.e2e
 
-from main import NewsCollectorSystem
+from news_collector.system import NewsCollectorSystem
 from news_collector.contracts import CollectorArticleModel
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
@@ -44,7 +44,7 @@ def _basic_article_payload(**overrides: object) -> dict[str, object]:
         "original_url": f"https://example.com/{PENDING_TOKEN}",
         "title": "Artículo pendiente para scoring con contenido válido",
         "summary": _long_summary(),
-        "content": "Contenido enriquecido del artículo con detalles relevantes.",
+        "content": "Contenido enriquecido del artículo con detalles relevantes. " * 20,
         "source_id": "nature",
         "source_name": ALL_SOURCES["nature"]["name"],
         "category": "science",

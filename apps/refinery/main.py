@@ -24,7 +24,7 @@ from news_collector.components.editorial import EditorAgent
 from news_collector.components.editorial import EditorAgent
 from src.database import DatabaseManager
 
-from main import create_system
+from news_collector.system import create_system
 import asyncio
 from datetime import timezone
 

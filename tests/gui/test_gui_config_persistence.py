@@ -7,6 +7,8 @@ from types import SimpleNamespace
 from typing import Callable
 
 import pytest
+import pytest
+pytest.importorskip("tkinter")
 import tkinter as tk
 
 from noticiencias.config_manager import (

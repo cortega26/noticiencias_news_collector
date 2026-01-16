@@ -22,7 +22,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
         "**El Impacto (Lead)**\n"
         "Texto base.\n"
     )
-    agent._send_prompt = lambda prompt: sample_output  # type: ignore[method-assign]
+    agent._send_prompt = lambda prompt, system=None: sample_output  # type: ignore[method-assign]
 
     result = agent.process_article(
         {
