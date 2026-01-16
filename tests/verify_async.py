@@ -6,7 +6,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from main import NewsCollectorSystem
+from news_collector.system import NewsCollectorSystem
 from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 from news_collector.config.settings import COLLECTION_CONFIG
 

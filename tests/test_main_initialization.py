@@ -43,8 +43,8 @@ if importlib.util.find_spec("fastapi") is None:
 
 pytestmark = pytest.mark.e2e
 
-import main
-from main import NewsCollectorSystem
+import news_collector.system
+from news_collector.system import NewsCollectorSystem
 
 
 class MockModuleLogger:
@@ -116,10 +116,10 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
 
     test_logger = MockLogger()
 
-    monkeypatch.setattr(main, "setup_logging", lambda: test_logger)
+    monkeypatch.setattr(news_collector.system, "setup_logging", lambda: test_logger)
     mock_db_manager = MockDatabaseManager()
-    monkeypatch.setattr(main, "get_database_manager", lambda: mock_db_manager)
-    monkeypatch.setattr(main, "RSSCollector", lambda: MockCollector())
+    monkeypatch.setattr(news_collector.system, "get_database_manager", lambda: mock_db_manager)
+    monkeypatch.setattr(news_collector.system, "RSSCollector", lambda: MockCollector())
 
     def fake_setup_scoring(self):
         self.scorer = object()

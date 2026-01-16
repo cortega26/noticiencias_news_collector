@@ -15,7 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import main
+from news_collector.system import NewsCollectorSystem
 
 
 class StructuredModuleLogger:
@@ -90,7 +90,7 @@ def test_collection_cycle_logs_and_emits_metrics(
     logger_factory = StubLoggerFactory()
     metrics_stub = StubMetrics()
 
-    system = main.NewsCollectorSystem()
+    system = NewsCollectorSystem()
     system.logger = logger_factory
     system.system_logger = logger_factory.create_module_logger("system")
     system.metrics = metrics_stub
@@ -146,7 +146,7 @@ def test_collection_cycle_logs_and_emits_metrics(
     }
 
     monkeypatch.setattr(
-        main.NewsCollectorSystem,
+        NewsCollectorSystem,
         "_get_sources_to_process",
         lambda self, _sources_filter: {"source_a": {}, "source_b": {}},
     )
@@ -157,22 +157,22 @@ def test_collection_cycle_logs_and_emits_metrics(
         return scoring_results
 
     monkeypatch.setattr(
-        main.NewsCollectorSystem,
+        NewsCollectorSystem,
         "_execute_collection",
         _execute_collection,
     )
     monkeypatch.setattr(
-        main.NewsCollectorSystem,
+        NewsCollectorSystem,
         "_execute_scoring",
         _execute_scoring,
     )
     monkeypatch.setattr(
-        main.NewsCollectorSystem,
+        NewsCollectorSystem,
         "_execute_final_selection",
-        lambda self, _scoring_results: final_selection,
+        lambda self, _scoring_results, _collection_results=None: final_selection,
     )
     monkeypatch.setattr(
-        main.NewsCollectorSystem,
+        NewsCollectorSystem,
         "_generate_session_report",
         lambda self, *_args, **_kwargs: final_summary,
     )
@@ -232,6 +232,7 @@ def test_cli_logging(
         dry_run=False,
         show_articles=0,
         verbose=False,
+        fast=False,
     )
 
     assert run_simple_collection(args) is True
