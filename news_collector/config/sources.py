@@ -122,15 +122,15 @@ SCIENCE_MEDIA = {
         "description": "Agregador de noticias científicas de universidades",
         "typical_delay": 0,
     },
-    "eurekalert": {
-        "name": "EurekAlert!",
-        "url": "https://www.eurekalert.org/rss.xml", 
-        "credibility_score": 0.90,
+    "scitechdaily": {
+        "name": "SciTechDaily",
+        "url": "https://scitechdaily.com/feed/", 
+        "credibility_score": 0.88,
         "update_frequency": "daily",
         "category": "multidisciplinary",
         "language": "en",
         "impact_factor": None,
-        "description": "Global source for science news (AAAS)",
+        "description": "Science and technology news and analysis",
         "typical_delay": 0,
     },
     "sciencedaily_top": {
@@ -240,15 +240,15 @@ INSTITUTIONAL_SOURCES = {
         "description": "Investigación de una de las mejores universidades técnicas",
         "typical_delay": 0,
     },
-    "stanford_news": {
-        "name": "Stanford News",
-        "url": "https://news.stanford.edu/feed/",
+    "yale_news": {
+        "name": "Yale News",
+        "url": "https://news.yale.edu/topics/science-technology/rss",
         "credibility_score": 0.90,
         "update_frequency": "daily",
         "category": "multidisciplinary",
         "language": "en",
         "impact_factor": None,
-        "description": "Investigación de Stanford, especialmente fuerte en AI y medicina",
+        "description": "Yale University Science & Technology News",
         "typical_delay": 0,
     },
     "nasa_news": {
@@ -317,7 +317,7 @@ PREPRINT_SOURCES = {
 COMMUNITY_FEEDS = {
     "reddit_science": {
         "name": "r/science",
-        "url": "https://www.reddit.com/r/science/.rss",
+        "url": "https://www.reddit.com/r/science/new/.rss",
         "credibility_score": 0.6,  # Comunidad moderada (AMA verificados)
         "update_frequency": "hourly",  # Respetar rate limit de Reddit (>=30s entre requests)
         "category": "community_science",
