@@ -15,7 +15,18 @@ from src.utils.config import load_config
 from src.utils.logger import setup_logger
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.components.editorial import EditorAgent
+from news_collector.components.editorial import EditorAgent
 from src.database import DatabaseManager
+
+# Add project root to sys.path to allow imports if running standalone or via streamlit
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from news_collector.main import create_system
+import asyncio
+from datetime import timezone
+
 
 logger = setup_logger("Orchestrator")
 
@@ -165,28 +176,109 @@ def _select_export_articles(
 
 
 def run_collector_script(source_dir: Path, fast_mode: bool = False):
-    """Runs the news collector script located at project root."""
-    logger.info("Starting News Collector...")
-    # main.py is in apps/refinery/main.py -> root is 2 levels up
-    root_dir = Path(__file__).resolve().parents[2]
-    script_path = root_dir / "run_collector.py"
+    """Runs the news collector direct via API."""
+    logger.info("Starting News Collector (Direct API)...")
     
-    if not script_path.exists():
-        logger.error(f"Collector script not found at {script_path}")
-        return
-
     try:
-        # Run using the current python interpreter from the root directory
-        cmd = [sys.executable, str(script_path), "--export-json", "data/exports/latest_articles.json"]
+        # 1. Configuration
+        config_override = {}
         if fast_mode:
-            cmd.append("--fast")
+             logger.info("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
+             config_override["scoring_weights"] = {
+                 "source_credibility": 0.30,
+                 "recency": 0.30,
+                 "content_quality": 0.40,
+                 "cognitive_engagement": 0.0 
+            }
 
-        subprocess.run(cmd, check=True, cwd=root_dir)
-        logger.info("News Collector finished successfully.")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"News Collector failed with exit code {e.returncode}")
+        # 2. Initialize System
+        system = create_system(config_override=config_override)
+        
+        if not system.initialize():
+            logger.error("System initialization failed.")
+            return
+
+        # 3. Run Method Wrapper (Async to Sync)
+        async def _run_and_export():
+             # Run Collection
+             await system.run_collection_cycle(dry_run=False)
+             
+             # Export Logic (Shared with run_collector.py)
+             export_path = Path("data/exports/latest_articles.json") # Relative to CWD (root)
+             # But wait, logic below expects it in source_dir/data/... or just data/...
+             
+             # admin_panel expects: BASE_DIR / "temp" / "source" / "data" / "exports" / ...
+             # OR SIBLING_PATH = NEWS_COLLECTOR_PATH / "data" / "exports" / ...
+             
+             # If we are running in process, we are likely in project root or apps/refinery?
+             # admin_panel sets CWD? No.
+             
+             # Just write to where admin_panel looks:
+             # If running from admin_panel, CWD might be apps/refinery or root. 
+             # admin_panel checks `CLONED_PATH` and `SIBLING_PATH`.
+             
+             # We will try to write to the standard location relative to project root
+             target_export_path = project_root / "data/exports/latest_articles.json"
+             target_export_path.parent.mkdir(parents=True, exist_ok=True)
+             
+             logger.info(f"Exporting results to {target_export_path}")
+             
+             # Get articles
+             articles = await asyncio.to_thread(
+                 system.db_manager.get_articles_by_score, limit=50, exclude_published=True
+             )
+             
+             serialized_articles = []
+             for art in articles:
+                art_dict = {
+                    "id": art.id,
+                    "title": art.title,
+                    "url": art.url,
+                    "summary": art.summary,
+                    "content": art.content,
+                    "source_name": art.source_name,
+                    "published_date": art.published_date.isoformat() if art.published_date else None,
+                    "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                    "published_url": getattr(art, "published_url", None),
+                    "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                    "score": art.final_score,
+                    "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                    "metadata": art.article_metadata,
+                    "authors": art.authors,
+                    "category": art.category,
+                    "components": art.score_components or {}
+                }
+                serialized_articles.append(art_dict)
+            
+             export_payload = {
+                "schema_version": 1,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "contract": "news_collector.export.v1",
+                "article_count": len(serialized_articles),
+                "articles": serialized_articles,
+             }
+
+             with open(target_export_path, 'w', encoding='utf-8') as f:
+                json.dump(export_payload, f, indent=2, ensure_ascii=False)
+                
+        # 4. Handle Execution Loop
+        try:
+             asyncio.run(_run_and_export())
+             logger.info("News Collector finished successfully.")
+        except RuntimeError as e:
+             if "loop" in str(e).lower():
+                  # If loop exists (e.g. Streamlit), try to schedule it?
+                  # Or use run_until_complete if we can access the loop?
+                  # For now, let's assume standard script execution or thread.
+                  # If we fail here, we might need nest_asyncio
+                  logger.error(f"Async loop conflict: {e}")
+                  raise
+             raise
+
     except Exception as e:
         logger.error(f"Error running collector: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False):
