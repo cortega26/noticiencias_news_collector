@@ -228,7 +228,7 @@ source .venv/bin/activate
 
 # 3. Instalar dependencias y correr
 pip install -r requirements.txt
-streamlit run main.py
+streamlit run admin_panel.py
 ```
 Esto lanzará la interfaz en `http://localhost:8501`.
 

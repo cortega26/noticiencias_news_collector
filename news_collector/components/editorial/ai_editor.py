@@ -256,7 +256,7 @@ class EditorAgent:
             f"title: \"{final_title}\"",
             f"date: \"{time.strftime('%Y-%m-%d')}\"",
             "author: \"Noticiencias AI\"",
-            f"category: \"{final_category}\"",
+            f"categories: [\"{final_category}\"]",
             f"tags: [\"{raw_category}\"]"
         ]
         

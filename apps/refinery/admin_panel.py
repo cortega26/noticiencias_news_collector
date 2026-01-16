@@ -11,10 +11,22 @@ import importlib.util
 sys.path.append(str(Path(__file__).parent))
 # Add project root to sys.path to find 'news_collector'
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-REFINERY_MAIN_PATH = Path(__file__).parent / "main.py"
-spec = importlib.util.spec_from_file_location("refinery_main", REFINERY_MAIN_PATH)
+# Force reload of critical modules to pick up schema changes without restart
+try:
+    if "news_collector.components.editorial.ai_editor" in sys.modules:
+        importlib.reload(sys.modules["news_collector.components.editorial.ai_editor"])
+    # MUST reload the package too because main.py imports from here
+    if "news_collector.components.editorial" in sys.modules:
+        importlib.reload(sys.modules["news_collector.components.editorial"])
+    if "news_collector.system" in sys.modules:
+        importlib.reload(sys.modules["news_collector.system"])
+except Exception as e:
+    print(f"Warning: Failed to reload modules: {e}")
+
+RUN_REFINERY_PATH = Path(__file__).parent / "main.py"
+spec = importlib.util.spec_from_file_location("refinery_main", RUN_REFINERY_PATH)
 if spec is None or spec.loader is None:
-    raise RuntimeError(f"Unable to load refinery main from {REFINERY_MAIN_PATH}")
+    raise RuntimeError(f"Unable to load refinery main from {RUN_REFINERY_PATH}")
 refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
@@ -30,9 +42,10 @@ st.title("🎛️ Panel de Control Unificado Noticiencias")
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
-REFINERY_DB_PATH = BASE_DIR.parent.parent / "refinery.db"
 REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"
 REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
+
+# Paths continued below after NEWS_COLLECTOR_PATH logic...
 
 # --- Helper Functions ---
 def load_env_file():
@@ -97,6 +110,7 @@ collector_path_str = env_config.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR
 NEWS_COLLECTOR_PATH = Path(collector_path_str).resolve()
 
 COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
+REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / "refinery.db"
 
 def load_toml_config():
     if not COLLECTOR_CONFIG_PATH.exists():
@@ -368,13 +382,29 @@ with tab3:
             # ------------------------
             
             if articles:
-                refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH)
                 available_articles = []
                 filtered_count = 0
+                
+                # UX IMPROVEMENT: Allow showing processed items
+                show_processed = st.sidebar.checkbox("Mostrar artículos procesados (Force Reprocess)", value=False)
+
+                # DEBUG: Path
+                if show_processed:
+                    st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
 
                 for art in articles:
                     art_id = str(art.get("id", art.get("title")))
-                    if (
+                    
+                    # DEBUG SPECIFIC ID
+                    if art_id == "169":
+                        is_processed_raw = refinery_db.is_processed(art_id)
+                        is_processed_md = refinery_db.is_processed(f"{art_id}.md")
+                        # Only show debug if relevant or debug mode
+                        if not show_processed and (is_processed_raw or is_processed_md):
+                             # Keep this unobtrusive or remove it if user is tired of it
+                             pass
+                    
+                    if not show_processed and (
                         refinery_db.is_processed(art_id)
                         or refinery_db.is_processed(f"{art_id}.md")
                     ):
@@ -519,7 +549,9 @@ with tab4:
     st.header("📈 Analítica del Sistema")
     
     try:
-        db = DatabaseManager(DATABASE_CONFIG)
+        # Use simple DB manager pointing to correct path with CONFIG DICT
+        db_config = {"type": "sqlite", "path": Path(REFINERY_DB_PATH)}
+        db = DatabaseManager(db_config)
         
         # 1. KPIs
         col_k1, col_k2, col_k3 = st.columns(3)
@@ -603,16 +635,26 @@ with tab5:
         
         # 1. Ensure we have the latest state
         if st.button("🔄 Refrescar Lista de Artículos Publicados"):
-            if not TARGET_DIR.exists():
-                st.warning("El repositorio destino no está clonado en temp/target. Ejecuta una sincronización primero.")
-            else:
-                 try:
-                    repo = git.Repo(TARGET_DIR)
-                    origin = repo.remotes.origin
-                    origin.pull()
-                    st.success("Repositorio actualizado.")
-                 except Exception as e:
-                    st.error(f"Error actualizando repo: {e}")
+            gh_handler = GitHubPublisher(env_vars.get("GITHUB_TOKEN"))
+            target_url = env_vars.get("TARGET_REPO_URL")
+            
+            with st.spinner("Sincronizando repo destino..."):
+                try:
+                    if not TARGET_DIR.exists():
+                        st.info("Clonando repositorio destino...")
+                        gh_handler.clone_repo(target_url, TARGET_DIR)
+                    else:
+                        try:
+                            repo = git.Repo(TARGET_DIR)
+                            repo.remotes.origin.pull()
+                        except Exception as e:
+                            st.warning(f"Error sincronizando (intentando reclonar): {e}")
+                            import shutil
+                            shutil.rmtree(TARGET_DIR, ignore_errors=True)
+                            gh_handler.clone_repo(target_url, TARGET_DIR)
+                    st.success("Repositorio actualizado y sincronizado.")
+                except Exception as e:
+                    st.error(f"Fallo crítico actualizando repo: {e}")
 
         # 2. List Files
         if TARGET_DIR.exists() and POSTS_DIR.exists():
@@ -667,19 +709,21 @@ with tab5:
                                     
                                     # 2. DB Reset
                                     # We try to delete by ID if found, otherwise by filename (legacy)
-                                    db_manager = RefineryDatabaseManager(REFINERY_DB_PATH)
+                                    db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
                                     
-                                    # Logic: The DB stores the INPUT filename (e.g. 123.md) or the ID.
-                                    # The OUTPUT filename is YYYY-MM-DD-slug.md.
-                                    # We need to map Output -> Input.
-                                    # Ideally we use refinery_id. If not, we can't reliably reset.
                                     if refinery_id:
                                          # Try both ID and ID.md to be safe
-                                        db_manager.delete_record(refinery_id)
-                                        db_manager.delete_record(f"{refinery_id}.md")
-                                        st.success(f"Reset: {f.name} (ID: {refinery_id}) -> Inbox desbloqueado.")
+                                        res1 = db_manager.delete_record(refinery_id)
+                                        # Also try legacy filename format just in case
+                                        res2 = db_manager.delete_record(f"{refinery_id}.md")
+                                        
+                                        if res1 or res2:
+                                            st.success(f"Reset: {f.name} (ID: {refinery_id}) -> Inbox desbloqueado.")
+                                        else:
+                                            # If logic returns False/None on failure, we persist w warning
+                                            st.warning(f"Archivo eliminado del repo, pero NO se encontró registro en BD (ID: {refinery_id}). Inbox puede no mostrarlo si ya estaba limpio.")
                                     else:
-                                        st.warning("No se encontró 'refinery_id' en el archivo. Solo se borró de la web.")
+                                        st.warning("No se encontró ID en frontmatter. Solo se eliminó el archivo.")
                                     
                                     st.rerun()
                                 except Exception as e:
