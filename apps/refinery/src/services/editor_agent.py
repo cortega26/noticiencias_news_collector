@@ -202,11 +202,29 @@ class EditorAgent:
                 or (raw_text.get("metadata") or {}).get("original_url")
                 or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get("entry_id")
             )
+            raw_category = (raw_text.get("metadata") or {}).get("category", "other")
             article_id = str(raw_text.get("id") or "unknown")
         else:
             content = raw_text
             import hashlib
             article_id = hashlib.md5(content.encode()).hexdigest()[:8]
+            raw_category = "other"
+
+        # Map source category to site category
+        category_map = {
+            "medicine": "Salud",
+            "biology": "Salud",
+            "technology": "Tecnología",
+            "artificial_intelligence": "Tecnología", 
+            "engineering": "Tecnología",
+            "space": "Ciencia",
+            "physics": "Ciencia",
+            "popular_science": "Ciencia",
+            "community_science": "Ciencia",
+            "multidisciplinary": "Ciencia"
+        }
+        
+        final_category = category_map.get(raw_category, "Ciencia")
 
         input_text = f"Title: {title}\nSummary: {summary}\nContent: {content}"
         
@@ -250,6 +268,8 @@ class EditorAgent:
             f"title: \"{final_title}\"",
             f"date: \"{time.strftime('%Y-%m-%d')}\"",
             "author: \"Noticiencias AI\"",
+            f"category: \"{final_category}\"",
+            f"tags: [\"{raw_category}\"]"
         ]
         
         if image_url:
