@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
+import asyncio
 
 from news_collector.config.settings import DLQ_DIR
 
@@ -76,27 +77,17 @@ class BaseCollector(ABC):
     ) -> Dict[str, Any]:
         """
         Método abstracto que debe implementar cada colector específico.
-
-        Este es el corazón de cada colector: define cómo recopilar información
-        de una fuente específica. Cada tipo de colector (RSS, API, etc.)
-        implementará este método según sus necesidades particulares.
-
-        Args:
-            source_id: Identificador único de la fuente
-            source_config: Configuración completa de la fuente
-
-        Returns:
-            Diccionario con estadísticas de la recolección:
-            {
-                'source_id': str,
-                'success': bool,
-                'articles_found': int,
-                'articles_saved': int,
-                'error_message': Optional[str],
-                'processing_time': float
-            }
         """
         pass
+
+    async def collect_from_source_async(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Versión asíncrona de collect_from_source.
+        Por defecto, delega a la versión síncrona usando un hilo.
+        """
+        return await asyncio.to_thread(self.collect_from_source, source_id, source_config)
 
     def collect_from_multiple_sources(
         self,
@@ -105,66 +96,66 @@ class BaseCollector(ABC):
         session_id: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Coordina la recolección de múltiples fuentes de manera estructurada."""
-
+        """Coordina la recolección de múltiples fuentes de manera secuencial."""
+        # This is a synchronous wrapper around the logic, but for backward compatibility
+        # we can keep the loop here or even reuse the async logic via asyncio.run if appropriate,
+        # but to avoid event loop conflicts, we keep the original sync loop logic identical.
+        
         self._set_runtime_context(session_id=session_id, trace_id=trace_id)
         self.start_time = datetime.now(timezone.utc)
+        self._emit_initial_batch_log(len(sources_config))
+        self._reset_stats()
+        
+        source_results: Dict[str, Dict[str, Any]] = {}
 
+        for source_id, source_config in sources_config.items():
+            result = self._process_single_source_sync(source_id, source_config)
+            source_results[source_id] = result
+
+        return self._finalize_collection_cycle(source_results)
+
+    async def collect_from_multiple_sources_async(
+        self,
+        sources_config: Dict[str, Dict[str, Any]],
+        *,
+        session_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Coordina la recolección de múltiples fuentes de manera asíncrona (paralela)."""
+        self._set_runtime_context(session_id=session_id, trace_id=trace_id)
+        self.start_time = datetime.now(timezone.utc)
+        self._emit_initial_batch_log(len(sources_config))
+        self._reset_stats()
+
+        tasks = []
+        for source_id, source_config in sources_config.items():
+            tasks.append(self._process_single_source_async(source_id, source_config))
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        source_results = {}
+        for source_id, result in zip(sources_config.keys(), results):
+            if isinstance(result, Exception):
+                # Fallback for unexpected task failures
+                error_res = self._create_error_result(source_id, result)
+                source_results[source_id] = error_res
+                self.stats["total_errors"] += 1
+            else:
+                 source_results[source_id] = result
+
+        return self._finalize_collection_cycle(source_results)
+
+    # --- Internal Helpers for Code Reuse ---
+
+    def _emit_initial_batch_log(self, count):
         self._emit_log(
             "info",
             "collector.batch.start",
             latency=0.0,
-            details={"sources": len(sources_config)},
+            details={"sources": count},
         )
 
-        self._reset_stats()
-        source_results: Dict[str, Dict[str, Any]] = {}
-
-        for source_id, source_config in sources_config.items():
-            try:
-                self._pre_process_source(source_id, source_config)
-                source_result = self.collect_from_source(source_id, source_config)
-                self._update_global_stats(source_result)
-                self._post_process_source(source_id, source_config, source_result)
-                source_results[source_id] = source_result
-
-                event_name = (
-                    "collector.source.completed"
-                    if source_result.get("success", False)
-                    else "collector.source.failed"
-                )
-                level = "info" if source_result.get("success", False) else "warning"
-                self._emit_log(
-                    level,
-                    event_name,
-                    source_id=source_id,
-                    latency=float(source_result.get("processing_time") or 0.0),
-                    details={
-                        "articles_found": source_result.get("articles_found", 0),
-                        "articles_saved": source_result.get("articles_saved", 0),
-                        "error_message": source_result.get("error_message"),
-                    },
-                )
-
-            except Exception as exc:
-                error_result = {
-                    "source_id": source_id,
-                    "success": False,
-                    "articles_found": 0,
-                    "articles_saved": 0,
-                    "error_message": f"Error inesperado: {exc}",
-                    "processing_time": 0.0,
-                }
-                source_results[source_id] = error_result
-                self.stats["total_errors"] += 1
-
-                self._emit_log(
-                    "error",
-                    "collector.source.exception",
-                    source_id=source_id,
-                    details={"error": str(exc)},
-                )
-
+    def _finalize_collection_cycle(self, source_results):
         end_time = datetime.now(timezone.utc)
         self.stats["processing_time_seconds"] = (
             end_time - (self.start_time or end_time)
@@ -184,9 +175,72 @@ class BaseCollector(ABC):
                 "errors": self.stats["total_errors"],
             },
         )
-
         self._reset_runtime_context()
         return final_report
+
+    def _process_single_source_sync(self, source_id, source_config):
+        try:
+            self._pre_process_source(source_id, source_config)
+            source_result = self.collect_from_source(source_id, source_config)
+            self._update_global_stats(source_result)
+            self._post_process_source(source_id, source_config, source_result)
+            self._emit_source_log(source_id, source_result)
+            return source_result
+        except Exception as exc:
+            return self._handle_source_exception(source_id, exc)
+
+    async def _process_single_source_async(self, source_id, source_config):
+        try:
+            # Note: _pre_process_source might be sync, but it's usually fast. 
+            # If it were heavy, we'd need to asyncify it too.
+            self._pre_process_source(source_id, source_config)
+            source_result = await self.collect_from_source_async(source_id, source_config)
+            self._update_global_stats(source_result)
+            self._post_process_source(source_id, source_config, source_result)
+            self._emit_source_log(source_id, source_result)
+            return source_result
+        except Exception as exc:
+            return self._handle_source_exception(source_id, exc)
+
+    def _emit_source_log(self, source_id, source_result):
+        event_name = (
+            "collector.source.completed"
+            if source_result.get("success", False)
+            else "collector.source.failed"
+        )
+        level = "info" if source_result.get("success", False) else "warning"
+        self._emit_log(
+            level,
+            event_name,
+            source_id=source_id,
+            latency=float(source_result.get("processing_time") or 0.0),
+            details={
+                "articles_found": source_result.get("articles_found", 0),
+                "articles_saved": source_result.get("articles_saved", 0),
+                "error_message": source_result.get("error_message"),
+            },
+        )
+
+    def _handle_source_exception(self, source_id, exc):
+        error_result = self._create_error_result(source_id, exc)
+        self.stats["total_errors"] += 1
+        self._emit_log(
+            "error",
+            "collector.source.exception",
+            source_id=source_id,
+            details={"error": str(exc)},
+        )
+        return error_result
+
+    def _create_error_result(self, source_id, exc):
+        return {
+            "source_id": source_id,
+            "success": False,
+            "articles_found": 0,
+            "articles_saved": 0,
+            "error_message": f"Error inesperado: {exc}",
+            "processing_time": 0.0,
+        }
 
     def set_logger_factory(self, logger_factory: "NewsCollectorLogger") -> None:
         """Actualiza la fábrica de loggers reutilizando el mismo módulo."""

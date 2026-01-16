@@ -90,18 +90,30 @@ class NewsCollectorLogger:
         En desarrollo mostramos logs coloridos y detallados.
         En producción mostramos logs más compactos y profesionales.
         """
+        
+        def console_filter(record):
+            """Filtra logs estructurados (JSON) de nivel INFO para evitar spam en consola."""
+            msg = str(record["message"]).strip()
+            # Si parece un log estructurado (empieza con llaves y tiene 'event')
+            if (msg.startswith("{'event'") or msg.startswith('{"event"')):
+                # Permitir solo si es WARNING o ERROR, ocultar INFO/DEBUG
+                if record["level"].no >= 30: # WARNING=30
+                    return True
+                return False
+            return True
+
         if DEBUG:
             # Formato desarrollo: colorido y con detalles completos
             console_format = (
-                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                "<green>{time:HH:mm:ss}</green> | "
                 "<level>{level: <8}</level> | "
                 "<cyan>{name}</cyan>:<cyan>{line}</cyan> | "
                 "<level>{message}</level>"
             )
             console_level = "DEBUG"
         else:
-            # Formato producción: más limpio y profesional
-            console_format = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}"
+            # Formato producción: más limpio y profesional (sin fecha, solo hora)
+            console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {message}"
             console_level = config.get("level", "INFO")
 
         logger.add(
@@ -109,6 +121,7 @@ class NewsCollectorLogger:
             format=console_format,
             level=console_level,
             colorize=True,
+            filter=console_filter, # Aplicar filtro anti-spam
             backtrace=DEBUG,  # Stack traces detallados solo en desarrollo
             diagnose=DEBUG,  # Variables locales solo en desarrollo
         )

@@ -125,10 +125,19 @@ class DatabaseManager:
                     echo=False,  # Cambiar a True para ver todas las consultas SQL
                     connect_args={
                         "check_same_thread": False,  # Necesario para SQLite con threads
-                        "timeout": 20,  # Timeout de 20 segundos para locks
+                        "timeout": 30,  # Aumentado a 30s para concurrencia async
                     },
-                    pool_pre_ping=True,  # Verifica conexiones antes de usarlas
+                    pool_pre_ping=True,
                 )
+                
+                # Habilitar WAL mode para mejorar concurrencia
+                from sqlalchemy import event
+                @event.listens_for(self.engine, "connect")
+                def set_sqlite_pragma(dbapi_connection, connection_record):
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA journal_mode=WAL")
+                    cursor.execute("PRAGMA synchronous=NORMAL")
+                    cursor.close()
 
             elif self.config["type"] == "postgresql":
                 query_params: Dict[str, Any] = {}
@@ -336,6 +345,16 @@ class DatabaseManager:
                         ),
                         "articles",
                         "uq_articles_content_hash",
+                    )
+                )
+
+            # Add index for published_date to optimize range queries
+            if "ix_articles_published_date" not in existing_article_indexes:
+                migrations.append(
+                    (
+                        "CREATE INDEX IF NOT EXISTS ix_articles_published_date ON articles (published_date)",
+                        "articles",
+                        "ix_articles_published_date",
                     )
                 )
 

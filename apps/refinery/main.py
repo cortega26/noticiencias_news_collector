@@ -13,8 +13,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from src.utils.config import load_config
 from src.utils.logger import setup_logger
-from src.services.git_service import GitHandler
-from src.services.editor_agent import EditorAgent
+from news_collector.components.publishing import GitHubPublisher
+from news_collector.components.editorial import EditorAgent
 from src.database import DatabaseManager
 
 logger = setup_logger("Orchestrator")
@@ -66,7 +66,7 @@ def _unique_post_slug(
 
 
 def _safe_clone_source_repo(
-    git_handler: GitHandler,
+    git_handler: GitHubPublisher,
     repo_url: str,
     source_dir: Path,
 ) -> Path:
@@ -213,7 +213,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # Initialize Database
     db_manager = DatabaseManager(DB_PATH)
 
-    git_handler = GitHandler(config.GITHUB_TOKEN)
+    git_handler = GitHubPublisher(config.GITHUB_TOKEN)
     editor_agent = EditorAgent(config.OLLAMA_API_URL, config.OLLAMA_MODEL)
 
     source_dir = SOURCE_DIR
