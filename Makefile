@@ -54,8 +54,8 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Creating virtual environment in $(VENV)"
 	@$(PYTHON) -m venv $(VENV)
 	@$(PIP) install --upgrade pip
-	@$(PIP) install -r requirements.lock
-	@$(PIP) install -r requirements-security.lock
+	@$(PIP) install --no-deps --require-hashes -r requirements.lock
+	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
 	@$(PIP) install ruff mypy black isort pre-commit pdoc
 	@touch $(BOOTSTRAP_STAMP)
 

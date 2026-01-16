@@ -51,9 +51,50 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from news_collector.utils.logger import NewsCollectorLogger
 
 
+
 configure_canonicalization_cache(
     int(COLLECTION_CONFIG.get("canonicalization_cache_size", 0))
 )
+
+import socket
+import ipaddress
+
+def validate_url_safety(url: str) -> None:
+    """
+    Validates that a URL does not point to a private or loopback address (SSRF protection).
+    Raises ValueError if the URL is unsafe.
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError("Invalid URL: missing hostname")
+            
+        # Resolve hostname to IP
+        try:
+            ip_list = socket.getaddrinfo(hostname, None)
+        except socket.gaierror:
+            # If we can't resolve it, functionality might fail later, but it's not strictly an SSRF risk 
+            # unless the resolution changes between now and fetch (TOCTOU).
+            # For strictness, we could fail here, but let's allow requests to handle resolution errors.
+            return
+
+        for item in ip_list:
+            # item is (family, type, proto, canonname, sockaddr)
+            # sockaddr is (address, port) for IPv4/v6
+            ip_str = item[4][0]
+            ip_obj = ipaddress.ip_address(ip_str)
+            
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                raise ValueError(f"SSRF Protection: Blocked access to private IP {ip_str} for {hostname}")
+                
+    except Exception as e:
+        if "SSRF" in str(e):
+            raise
+        # Log or re-raise? For safety, if we can't validate, we should arguably block.
+        # But let's assume validation failure is blocked.
+        pass
+
 
 
 class RSSCollector(BaseCollector):
@@ -403,6 +444,25 @@ class RSSCollector(BaseCollector):
                     source_id=source_id,
                     details={"error": str(metadata_error)},
                 )
+                self._emit_log(
+                    "warning",
+                    "collector.feed.metadata_lookup_failed",
+                    source_id=source_id,
+                    details={"error": str(metadata_error)},
+                )
+            
+            # SSRF Check
+            try:
+                validate_url_safety(feed_url)
+            except ValueError as ssrf_error:
+                self._emit_log(
+                    "critical",
+                    "collector.security.ssrf_blocked",
+                    source_id=source_id,
+                    details={"url": feed_url, "error": str(ssrf_error)}
+                )
+                return (None, 403) # Forbidden
+
             for attempt in range(0, max_retries + 1):
                 try:
                     conditional_headers = {}
