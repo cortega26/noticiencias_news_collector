@@ -5,6 +5,7 @@ import os
 import re
 from pathlib import Path
 from news_collector.utils.logger import get_logger
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
@@ -80,7 +81,6 @@ class EditorAgent:
             return match.group(1)
         return text
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
     @retry(
         stop=stop_after_attempt(3),
