@@ -4,36 +4,10 @@ import time
 import os
 import re
 from pathlib import Path
-from src.utils.logger import setup_logger
+from news_collector.utils.logger import get_logger
 
-logger = setup_logger("EditorAgent")
-
-_FORMATTING_PATH = (
-    Path(__file__).resolve().parents[2] / "config" / "editor_formatting.md"
-)
-
-_DEFAULT_FORMATTING_INSTRUCTIONS = (
-    "## 1. Reglas de Estilo (La Voz)\n"
-    "- **Tono**: Visionario pero accesible. Piensa en un documental de alta gama.\n"
-    "- **Prohibido**: No uses jerga académica sin explicarla. No uses 'voz pasiva' (e.g. 'fue descubierto').\n"
-    "- **Obligatorio**: Usa analogías cotidianas para conceptos complejos.\n"
-    "- **Prohibido**: No uses emojis en ninguna parte del texto.\n\n"
-    "## 2. El Titular (Gancho Cognitivo)\n"
-    "Escribe un título que combine BENFFICIO + CURIOSIDAD. Nada de 'Nuevo estudio revela...'.\n"
-    "- Malo: 'Avance en fusión nuclear en NIF'\n"
-    "- Bueno: 'Adiós a la factura de luz: La fusión nuclear ya es rentable'\n\n"
-    "## 3. Estructura del Artículo (Estricta)\n"
-    "Tu output debe seguir este orden:\n\n"
-    "Si hay URL de imagen, incluye una sección '**TL;DR Visual**' con 3 puntos bala. Si no hay imagen, omite esta sección por completo.\n\n"
-    "**El Impacto (Lead)**\n"
-    "- Empieza con el futuro. ¿Cómo se ve el mundo con esto? No empieces con 'Científicos de la universidad de...'.\n\n"
-    "**La Anomalía (El Problema)**\n"
-    "- ¿Por qué no teníamos esto antes? ¿Cuál era el obstáculo?\n\n"
-    "**La Solución (El Hallazgo)**\n"
-    "- Explica el 'cómo' usando una analogía simple.\n\n"
-    "**Lo Que No Sabemos (Honestidad)**\n"
-    "- ¿Qué falta? ¿Cuándo llegará a mi casa? Sé brutalmente honesto.\n\n"
-)
+# Use the centralized logger factory
+logger = get_logger().create_module_logger("components.editorial.ai_editor")
 
 class EditorAgent:
     def __init__(self, api_url: str, model: str):
@@ -49,7 +23,12 @@ class EditorAgent:
 
     def _load_prompts(self) -> dict:
         """Loads prompt templates from yaml config."""
-        prompts_path = Path(__file__).resolve().parents[2] / "config" / "prompts.yaml"
+        # Config is expected to be in noticiencias_news_collector/config/prompts.yaml
+        # This file is deep in news_collector/components/editorial/ai_editor.py
+        # root is 3 levels up: ../../../
+        project_root = Path(__file__).resolve().parents[3]
+        prompts_path = project_root / "config" / "prompts.yaml"
+        
         try:
             import yaml
             if prompts_path.exists():
@@ -113,6 +92,7 @@ class EditorAgent:
 
         logger.info(f"Sending prompt to Ollama ({self.model})...")
         sys_preview = (system or "")[:20]
+        # In a component context, print might not be ideal, but keeping consistent with original behavior for CLI usage
         print(f"Processing ({sys_preview}...)", end="", flush=True)
         
         try:

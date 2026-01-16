@@ -594,8 +594,8 @@ with tab5:
     
     env_vars = dict(load_env_file())
     if require_refinery_auth(env_vars, key="auth_cms"):
-        # reuse GitHandler logic from main or init new one
-        from src.services.git_service import GitHandler
+        # reuse GitHubPublisher logic from main or init new one
+        from news_collector.components.publishing import GitHubPublisher
         import git
         
         TARGET_DIR = BASE_DIR / "temp" / "target"

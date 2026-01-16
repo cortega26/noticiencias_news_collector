@@ -82,7 +82,7 @@ class Article(Base):
 
     # Metadatos temporales
     # ===================
-    published_date = Column(DateTime(timezone=True))  # Cuándo se publicó originalmente
+    published_date = Column(DateTime(timezone=True), index=True)  # Cuándo se publicó originalmente
     published_at = Column(DateTime(timezone=True))  # Cuándo publicamos en Noticiencias
     published_url = Column(String(500))  # URL pública en Noticiencias si aplica
     collected_date = Column(

@@ -5,11 +5,15 @@ import tempfile
 import uuid
 import requests
 from pathlib import Path
-from src.utils.logger import setup_logger
+from news_collector.utils.logger import get_logger
 
-logger = setup_logger("GitService")
+logger = get_logger().create_module_logger("components.publishing.github_publisher")
 
-class GitHandler:
+class GitHubPublisher:
+    """
+    Handles interactions with Git and GitHub for publishing articles.
+    Formerly 'GitHandler' in the refinery app.
+    """
     def __init__(self, github_token: str):
         self.github_token = github_token
         self._askpass_path: Path | None = None
@@ -81,12 +85,7 @@ class GitHandler:
             shutil.rmtree(path, onerror=on_rm_error)
 
     def clone_repo(self, repo_url: str, target_dir: Path) -> git.Repo:
-        """Clones a repository to a target directory.
-        Since we might need to authenticate for push, we can inject token into URL if needed,
-        but for public clone likely not needed. For push we will need it.
-        We will assume the user has git credentials configured OR we inject token.
-        For safety/simplicity in this script, we can inject token into the remote URL for the target repo.
-        """
+        """Clones a repository to a target directory."""
         self._cleanup_dir(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
         
@@ -121,7 +120,6 @@ class GitHandler:
     def create_pull_request(self, repo_url: str, branch_name: str, title: str, body: str, base_branch: str = "main") -> str:
         """Creates a Pull Request via GitHub API."""
         # Extract owner and repo from URL
-        # URL format: https://github.com/owner/repo.git or similar
         clean_url = repo_url.rstrip(".git")
         parts = clean_url.split("/")
         owner = parts[-2]
