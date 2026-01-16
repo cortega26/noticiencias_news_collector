@@ -39,6 +39,8 @@ class EditorAgent:
     def __init__(self, api_url: str, model: str):
         self.api_url = api_url
         self.model = model
+        self.cache_dir = Path("temp/cache")
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._emoji_re = re.compile(
             r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U00002600-\U000026FF]",
             flags=re.UNICODE,
@@ -64,9 +66,6 @@ class EditorAgent:
             "headline": {"system": "Generate 3 headlines (json)."}
         }
 
-    # ... (Keep helper methods _strip_emojis, _inject_frontmatter_field etc. if needed) ...
-    # Re-implementing helper methods locally to ensure they are available within the class scope
-    
     def _strip_emojis(self, text: str) -> str:
         return self._emoji_re.sub("", text)
 
@@ -113,7 +112,8 @@ class EditorAgent:
             payload["system"] = system
 
         logger.info(f"Sending prompt to Ollama ({self.model})...")
-        print(f"Processing ({system[:20]}...)", end="", flush=True)
+        sys_preview = (system or "")[:20]
+        print(f"Processing ({sys_preview}...)", end="", flush=True)
         
         try:
             start_time = time.time()
@@ -174,9 +174,15 @@ class EditorAgent:
         except:
             return {"direct": "Error generating headline", "question": "", "benefit": ""}
 
+    def _get_cache_path(self, article_id: str, stage: str) -> Path:
+        """Returns the path for a cached stage artifact."""
+        safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', str(article_id))
+        return self.cache_dir / f"{safe_id}_{stage}.txt"
+
     def process_article(self, raw_text: str | dict) -> str:
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
+        Includes checkpointing to prevent data loss.
         """
         # 1. Extract Info
         title = ""
@@ -184,6 +190,7 @@ class EditorAgent:
         content = ""
         image_url = None
         source_url = None
+        article_id = "unknown"
         
         if isinstance(raw_text, dict):
             title = raw_text.get("title", "")
@@ -195,21 +202,42 @@ class EditorAgent:
                 or (raw_text.get("metadata") or {}).get("original_url")
                 or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get("entry_id")
             )
+            article_id = str(raw_text.get("id") or "unknown")
         else:
             content = raw_text
+            import hashlib
+            article_id = hashlib.md5(content.encode()).hexdigest()[:8]
 
         input_text = f"Title: {title}\nSummary: {summary}\nContent: {content}"
         
         # 2. Pipeline Execution
+        
+        # --- STAGE 1: Scientific Translation ---
         print("\n--- STAGE 1: Scientific Translation ---")
-        translated_text = self._translate_scientific(input_text)
+        cache_s1 = self._get_cache_path(article_id, "stage1_translation")
+        if cache_s1.exists():
+             print(f"(Loaded from cache: {cache_s1})")
+             translated_text = cache_s1.read_text(encoding="utf-8")
+        else:
+             translated_text = self._translate_scientific(input_text)
+             cache_s1.write_text(translated_text, encoding="utf-8")
         
+        # --- STAGE 2: Editorial Adaptation ---
         print("\n--- STAGE 2: Editorial Adaptation ---")
-        # We pass the translated text to the editor
-        final_content = self._adapt_editorial(translated_text)
-        final_content = self._extract_markdown_content(final_content) # Cleanup
+        cache_s2 = self._get_cache_path(article_id, "stage2_editorial")
+        if cache_s2.exists():
+             print(f"(Loaded from cache: {cache_s2})")
+             final_content = cache_s2.read_text(encoding="utf-8")
+        else:
+             final_content = self._adapt_editorial(translated_text)
+             final_content = self._extract_markdown_content(final_content) # Cleanup
+             cache_s2.write_text(final_content, encoding="utf-8")
         
+        # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
+        # Stage 3 is fast enough relative to others, and depends on final content structure.
+        # We could cache it, but usually we want to regenerate headlines if we tweak code.
+        # For now, we won't cache Stage 3 to allow easier re-runs of the final formatting.
         headlines = self._generate_headlines(final_content)
         
         # 3. Assemble Final Artifact
@@ -229,11 +257,8 @@ class EditorAgent:
         if source_url:
             metadata_block.append(f"source_url: \"{source_url}\"")
         
-        # Inject Internal ID for traceability/reset
-        # ID is not passed explicitly to process_article, we might need to change signature 
-        # or inject it into raw_text dict before calling.
-        if isinstance(raw_text, dict) and "id" in raw_text:
-             metadata_block.append(f"refinery_id: \"{raw_text['id']}\"")
+        if article_id != "unknown":
+             metadata_block.append(f"refinery_id: \"{article_id}\"")
 
         # Add generated headlines as hidden metadata for A/B testing potential
         metadata_block.append(f"headlines_variants:")
