@@ -31,12 +31,7 @@ def create_scorer(weights=None, mode: str | None = None):
     print(f"DEBUG: create_scorer selected_mode={selected_mode} (from config: {SCORING_CONFIG.get('mode')})")
     
     if selected_mode == "cognitive":
-        # Create LLM Client with model from config if specified
-        llm_model = SCORING_CONFIG.get("llm_model")
         llm_client = None
-        if llm_model:
-            print(f"DEBUG: Initializing LLM Client with model: {llm_model}")
-            llm_client = LLMClient(model=llm_model)
 
         # Supports dynamic weight adjustment from UI
         return CognitiveScorer(

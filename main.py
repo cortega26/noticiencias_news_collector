@@ -22,6 +22,9 @@ def main():
     parser.add_argument(
         "--stats", action="store_true", help="Mostrar estadísticas del sistema"
     )
+    parser.add_argument(
+        "--export-json", type=str, help="Ruta para exportar resultados a JSON"
+    )
 
     args = parser.parse_args()
 
@@ -50,6 +53,20 @@ def main():
         else:
             print("\n🚀 Ejecutando ciclo de recolección...")
             results = asyncio.run(system.run_collection_cycle(args.sources, args.dry_run))
+
+            if args.export_json:
+                import json
+                from pathlib import Path
+                
+                export_path = Path(args.export_json)
+                export_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # En dry-run, usamos los resultados simulados
+                # Para validación, aseguramos que la estructura coincida con lo esperado
+                
+                with open(export_path, "w", encoding="utf-8") as f:
+                    json.dump(results, f, ensure_ascii=False, indent=2, default=str)
+                print(f"\n💾 Resultados exportados a: {export_path}")
 
             print("\n📈 RESUMEN DE RESULTADOS:")
             summary = results["summary"]

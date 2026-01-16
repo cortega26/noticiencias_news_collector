@@ -189,11 +189,11 @@ Otros subcomandos disponibles: `--dump-defaults`, `--print-schema`, `--set clave
 ## Uso
 ### Recolección básica
 ```bash
-.venv/bin/python run_collector.py --help
-.venv/bin/python run_collector.py --dry-run
-.venv/bin/python run_collector.py --sources nature science
-.venv/bin/python run_collector.py --list-sources
-.venv/bin/python run_collector.py --healthcheck --healthcheck-max-pending 50
+.venv/bin/python main.py --help
+.venv/bin/python main.py --dry-run
+.venv/bin/python main.py --sources nature science
+.venv/bin/python main.py --list-sources
+.venv/bin/python main.py --healthcheck --healthcheck-max-pending 50
 ```
 Flags destacados:
 - `--dry-run`: simula sin escribir en almacenamiento.
