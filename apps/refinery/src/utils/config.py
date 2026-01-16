@@ -15,6 +15,9 @@ class Config(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 def load_config() -> Config:
+    # Force reload from .env in case it changed (e.g. via UI)
+    load_dotenv(override=True)
+
     # Ensure critical env vars are present
     required_vars = ["GITHUB_TOKEN", "SOURCE_REPO_URL", "TARGET_REPO_URL"]
     missing = [var for var in required_vars if not os.getenv(var)]

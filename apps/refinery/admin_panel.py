@@ -215,6 +215,28 @@ with tab2:
                     value=config_data["collection"].get("max_articles_per_source", 50)
                 )
 
+        # New Column for Scoring Model
+        with col_c2:
+            st.subheader("🧠 IA de Scoring")
+            # Load from env specifically for scoring to allow override
+            env_vars_scoring = load_env_file()
+            current_scoring_model = env_vars_scoring.get("NOTICIENCIAS__SCORING__LLM_MODEL", "llama3.2")
+            
+            new_scoring_model = st.selectbox(
+                "Modelo para Clasificación (Rápido)",
+                ["llama3.2", "mistral", "llama3.1:8b"],
+                index=0 if "3.2" in current_scoring_model else 0,
+                help="Usar un modelo más pequeño/rápido para la fase de recolección."
+            )
+            
+            # We save this to .env immediately when changed, or purely rely on config.toml if supported?
+            # Config schema says it's part of ScoringConfig. 
+            # If we write to .env it overrides everything.
+            if new_scoring_model != current_scoring_model:
+                env_vars_scoring["NOTICIENCIAS__SCORING__LLM_MODEL"] = new_scoring_model
+                save_env_file(env_vars_scoring)
+                st.toast(f"Modelo de scoring actualizado a: {new_scoring_model}")
+
         # Scoring Weights
         st.subheader("⚖️ Pesos de Scoring (Total debe ser ~1.0)")
         if "scoring" in config_data and "weights" in config_data["scoring"]:
