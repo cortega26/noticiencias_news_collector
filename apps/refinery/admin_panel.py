@@ -361,39 +361,10 @@ with tab3:
                 st.error("Formato de exportación inválido: no es una lista de artículos.")
                 articles = []
             
-            # --- RE-SCORING LOGIC ---
-            # Apply current weights from config_data to loaded articles
-            if articles and "scoring" in config_data and "weights" in config_data["scoring"]:
-                current_weights = config_data["scoring"]["weights"]
-                recalc_count = 0
-                for art in articles:
-                    # We need the 'components' data to re-calculate without calling LLM
-                    # If 'components' is missing, we can't re-score accurately without full re-process
-                    if "components" in art:
-                        comps = art["components"]
-                        
-                        # Extract component scores (default to 0 if missing)
-                        s_score = comps.get("source_credibility", 0.0)
-                        r_score = comps.get("recency", 0.0)
-                        q_score = comps.get("content_quality", 0.0)
-                        c_score = comps.get("cognitive_engagement_norm", 0.0)
-                        
-                        # Calculate new final score
-                        new_final = (
-                            s_score * current_weights.get("source_credibility", 0.25) +
-                            r_score * current_weights.get("recency", 0.20) +
-                            q_score * current_weights.get("content_quality", 0.25) +
-                            c_score * current_weights.get("engagement_potential", 0.30)
-                        )
-                        
-                        # Update article data in memory
-                        art["score"] = round(new_final, 4)
-                        recalc_count += 1
-                
-                if recalc_count > 0:
-                    st.toast(f"✅ Se recalcularon {recalc_count} puntajes con los pesos actuales.", icon="🧮")
-                else:
-                    st.warning("⚠️ No se pudieron recalcular puntajes. Los datos cargados son 'Legacy' (sin desglose de componentes). Por favor, ejecuta una nueva recolección con el modo 'cognitive' activado.")
+            # --- RE-SCORING LOGIC DISABLED ---
+            # We trust the score coming from the collector (especially for Cognitive Mode).
+            # The Admin Panel should not overwrite with default static weights.
+            # ------------------------
             # ------------------------
             
             if articles:
