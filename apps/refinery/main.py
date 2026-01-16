@@ -247,7 +247,11 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         return {"status": "success", "message": "Source data synced."}
 
     # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
-    run_collector_script(SOURCE_DIR, fast_mode=fast_mode)
+    # SKIP if process_id is set (Refine Only Mode) to separate workflows
+    if not process_id:
+        run_collector_script(SOURCE_DIR, fast_mode=fast_mode)
+    else:
+        logger.info(f"Skipping Collector (Refine Only Mode for ID: {process_id})")
 
     # Manual Injection for Testing
     data_dir = source_dir / "data"
