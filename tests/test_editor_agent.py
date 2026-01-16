@@ -6,12 +6,7 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-REFINERY_DIR = ROOT / "apps" / "refinery"
-if str(REFINERY_DIR) not in sys.path:
-    sys.path.insert(0, str(REFINERY_DIR))
-
-from src.services.editor_agent import EditorAgent  # noqa: E402
+from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
 
 
 def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
@@ -58,7 +53,7 @@ def test_process_article_keeps_sections_with_image() -> None:
         "**El Impacto (Lead)**\n"
         "Texto base.\n"
     )
-    agent._send_prompt = lambda prompt: sample_output  # type: ignore[method-assign]
+    agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
 
     result = agent.process_article(
         {
