@@ -155,6 +155,7 @@ class NewsCollectorLogger:
             retention=config.get("retention", "30 days"),
             compression="gz",  # Comprimir logs antiguos
             enqueue=True,  # Threading seguro
+            serialize=True, # SRE Requirement: Structured JSON logs
             backtrace=True,  # Stack traces completos en archivo
             diagnose=True,  # Variables locales en archivo
         )
