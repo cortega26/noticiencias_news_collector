@@ -682,6 +682,14 @@ class RSSCollector(BaseCollector):
                     "image_url": self._extract_image_url(entry),
                 }
 
+                # NEW: Always Fetch Full Text (User Requirement)
+                # We do not trust RSS summaries to be representative.
+                from news_collector.utils.full_text import fetch_full_article
+                self._emit_log("info", "collector.article.fetching_full_text", details={"url": canonical_url})
+                full_text = fetch_full_article(canonical_url, self.session)
+                if full_text:
+                    article_data["content"] = full_text
+                
                 # Validar que tengamos información mínima necesaria
                 if self._validate_article_data(article_data):
                     articles.append(article_data)
@@ -956,6 +964,7 @@ class RSSCollector(BaseCollector):
                 "url": raw_article["url"],
                 "title": raw_article["title"][:500],  # Limitar longitud del título
                 "summary": raw_article.get("summary", "")[:2000],  # Limitar resumen
+                "content": raw_article.get("content"),  # Full text content
                 "source_id": source_id,
                 "source_name": source_config["name"],
                 "category": source_config["category"],
@@ -986,8 +995,9 @@ class RSSCollector(BaseCollector):
                 processed_article["journal"] = feed_title
 
             # Calcular estadísticas básicas del texto
+            content_text = processed_article.get("content") or ""
             content_for_stats = (
-                f"{processed_article['title']} {processed_article['summary']}"
+                f"{processed_article['title']} {processed_article['summary']} {content_text}"
             )
             processed_article["word_count"] = len(content_for_stats.split())
             processed_article["reading_time_minutes"] = max(
@@ -1156,8 +1166,9 @@ class RSSCollector(BaseCollector):
             return False
 
         # Verificar que el contenido no sea demasiado corto
-        summary = article_data.get("summary", "")
-        if len(summary) < TEXT_PROCESSING_CONFIG["min_content_length"]:
+        # Check 'content' first (full_text), fallback to 'summary'
+        text_to_check = article_data.get("content") or article_data.get("summary", "")
+        if len(text_to_check) < TEXT_PROCESSING_CONFIG["min_content_length"]:
             return False
 
         # Verificar que no sea spam o clickbait obvio

@@ -64,7 +64,7 @@ topic_cap_percentage = 0.6
 
 [text_processing]
 supported_languages = [ "en", "es", "pt", "fr",]
-min_content_length = 100
+min_content_length = 1000
 boost_keywords = [ "breakthrough", "discovery", "research", "study", "clinical trial", "peer-reviewed", "published", "journal", "university", "scientists", "artificial intelligence", "machine learning", "climate change", "medical", "technology", "innovation", "Nobel", "FDA approved",]
 penalty_keywords = [ "shocking", "you won't believe", "doctors hate", "miracle cure", "secret", "conspiracy", "hoax", "fake news",]
 

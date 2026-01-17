@@ -126,7 +126,7 @@ def save_toml_config(config_data):
         toml.dump(config_data, f)
 
 # --- Tabs ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "🚀 Operaciones", "📈 Analítica", "🗑️ Gestión"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "💼 Gestión", "📈 Analítica", "🚀 Publicados"])
 
 # --- Tab 1: AI Settings ---
 with tab1:
@@ -290,15 +290,16 @@ with tab3:
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
     with col_sync:
-        fast_mode = st.checkbox("⚡ Modo Rápido (Sin análisis profundo)", value=True, help="Recomendado para primera carga de muchas fuentes.")
-        if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias (Web Scraping) y traer nuevos artículos"):
-            with st.spinner("Ejecutando recolección de noticias (esto puede tardar unos minutos)..."):
+        # User requested to eliminate Fast Mode to ensure quality discrimination
+        st.info("🧠 Modo Cognitivo Activo (Análisis Profundo)")
+        if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos)."):
+            with st.spinner("Ejecutando recolección y análisis cognitivo..."):
                 if not auth_ok:
                     st.warning("Autenticación requerida para sincronizar.")
                 else:
                     try:
                         # Direct call to main module instead of subprocess
-                        result = run_refinery(fetch_only=False, fast_mode=fast_mode)
+                        result = run_refinery(fetch_only=False, fast_mode=False)
                         if result.get("status") == "success":
                             st.success("¡Recolección Completa!")
                         else:
@@ -730,7 +731,8 @@ with tab5:
                                     with st.spinner(f"Creando solicitud de eliminación para ID {refinery_id}..."):
                                         try:
                                             # Use shared delete capability
-                                            import news_collector.apps.refinery.main as main_module
+                                            # We already have `run_refinery` available via importlib in admin_panel.
+                                            
                                             if hasattr(refinery_main, 'delete_article'):
                                                 # Use the imported spec module
                                                 del_result = refinery_main.delete_article(str(refinery_id))
