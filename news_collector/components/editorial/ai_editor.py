@@ -182,9 +182,14 @@ class EditorAgent:
         article_id = "unknown"
         
         if isinstance(raw_text, dict):
-            title = raw_text.get("title", "")
-            summary = raw_text.get("summary", "")
-            content = raw_text.get("content", "")
+            title = raw_text.get("title", "") or ""
+            summary = raw_text.get("summary", "") or ""
+            content = raw_text.get("content", "") or ""
+            
+            # Fallback for RSS feeds where "content" is often in "summary"
+            if not content and summary:
+                 content = summary
+
             image_url = raw_text.get("image_url")
             source_url = (
                 raw_text.get("url")
@@ -215,10 +220,10 @@ class EditorAgent:
         
         final_category = category_map.get(raw_category, "Ciencia")
 
-        input_text = f"Title: {title}\nSummary: {summary}\nContent: {content}"
+        input_text = f"Title: {title}\nContent: {content}"
         
         # Validation: content length
-        if len(content.strip()) < 500:
+        if len(content.strip()) < 1000:
              raise ValueError(f"Content too short ({len(content)} chars). Likely paywalled or empty.")
 
         # 2. Pipeline Execution
