@@ -15,14 +15,27 @@ el mantenimiento y la extensión del sistema.
 
 import hashlib
 import json
+import random
+import time
+import urllib.robotparser as robotparser
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 import asyncio
+import httpx
 
-from news_collector.config.settings import DLQ_DIR
-
+from news_collector.contracts import CollectorArticleModel
+from news_collector.config.settings import (
+    COLLECTION_CONFIG,
+    DLQ_DIR,
+    RATE_LIMITING_CONFIG,
+    ROBOTS_CONFIG,
+    TEXT_PROCESSING_CONFIG,
+)
+from news_collector.collectors.rate_limit_utils import calculate_effective_delay
+from news_collector.storage.database import get_database_manager
 from news_collector.utils.logger import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
@@ -70,6 +83,13 @@ class BaseCollector(ABC):
 
         # Idempotency tracking for this run
         self._job_keys_seen: set[str] = set()
+
+        # Per-domain rate limiting state
+        self._domain_last_request: Dict[str, float] = {}
+        # Robots cache per domain (timestamp, parser)
+        self._robots_cache: Dict[str, Tuple[float, robotparser.RobotFileParser]] = {}
+        
+        self.db_manager = get_database_manager()
 
     @abstractmethod
     def collect_from_source(
@@ -439,6 +459,81 @@ class BaseCollector(ABC):
     def _register_job(self, job_key: str) -> None:
         self._job_keys_seen.add(job_key)
 
+    # Robots/TOS helpers
+    # ==================
+    def _get_robots(self, domain: str) -> Optional[robotparser.RobotFileParser]:
+        if not ROBOTS_CONFIG["respect_robots"]:
+            return None
+        now = time.time()
+        ttl = ROBOTS_CONFIG["cache_ttl_seconds"]
+        cached = self._robots_cache.get(domain)
+        if cached and (now - cached[0] < ttl):
+            return cached[1]
+        try:
+            robots_url = f"https://{domain}/robots.txt"
+            # Use a short timeout for robots.txt to avoid blocking
+            resp = httpx.get(
+                robots_url,
+                timeout=5.0,
+                headers={"User-Agent": COLLECTION_CONFIG["user_agent"]},
+                follow_redirects=True,
+            )
+            if resp.status_code >= 400:
+                return None
+            rp = robotparser.RobotFileParser()
+            rp.parse(resp.text.splitlines())
+            self._robots_cache[domain] = (now, rp)
+            return rp
+        except Exception:
+            return None
+
+    def _respect_robots(self, url: str) -> Tuple[bool, Optional[float]]:
+        if not ROBOTS_CONFIG["respect_robots"]:
+            return (True, None)
+        try:
+            domain = urlparse(url).netloc
+            rp = self._get_robots(domain)
+            if not rp:
+                return (True, None)
+            ua = COLLECTION_CONFIG["user_agent"]
+            try:
+                allowed = rp.can_fetch(ua, url)
+            except Exception:
+                allowed = True
+            try:
+                delay = rp.crawl_delay(ua)
+            except Exception:
+                delay = None
+            return (allowed, delay)
+        except Exception:
+            # Fail open if URL parsing fails
+            return (True, None)
+
+    # Per-domain rate limiting with robots.txt crawl-delay
+    def _enforce_domain_rate_limit(
+        self,
+        domain: str,
+        robots_delay: Optional[float] = None,
+        source_min_delay: Optional[float] = None,
+    ):
+        now = time.time()
+        last = self._domain_last_request.get(domain, 0.0)
+        effective_delay = calculate_effective_delay(
+            domain, robots_delay, source_min_delay
+        )
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        wait = (last + effective_delay + jitter) - now
+        if wait > 0:
+            time.sleep(wait)
+        self._domain_last_request[domain] = time.time()
+
+    def _backoff_sleep(self, attempt: int):
+        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
+        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        delay = min(max_b, (base * (2**attempt)) + jitter)
+        time.sleep(delay)
+
     # Dead-letter queue
     # =================
     def _send_to_dlq(
@@ -474,6 +569,118 @@ class BaseCollector(ABC):
                 details={"error": str(exc), "path": str(path)},
             )
         return path
+
+    def _save_article(
+        self, article_data: CollectorArticleModel | Dict[str, Any]
+    ) -> bool:
+        """
+        Guarda un artículo procesado en la base de datos.
+        """
+        if isinstance(article_data, CollectorArticleModel):
+            title = article_data.title
+            source_id = article_data.source_id
+            url_value = str(article_data.url)
+        else:
+            title = article_data.get("title", "sin título")
+            source_id = article_data.get("source_id")
+            url_value = article_data.get("url")
+
+        try:
+            saved_article = self.db_manager.save_article(article_data)
+            if saved_article:
+                self._emit_log(
+                    "info",
+                    "collector.article.saved",
+                    source_id=source_id,
+                    article_id=getattr(saved_article, "id", None),
+                    details={
+                        "title": title[:120],
+                        "url": getattr(saved_article, "url", url_value),
+                    },
+                )
+                return True
+
+            self._emit_log(
+                "debug",
+                "collector.article.duplicate",
+                source_id=source_id,
+                details={"title": title[:120], "url": url_value},
+            )
+            return False
+
+        except ValueError as exc:
+            self._emit_log(
+                "error",
+                "collector.article.save_validation_error",
+                source_id=source_id,
+                details={"error": str(exc), "title": title[:120]},
+            )
+            return False
+        except Exception as exc:
+            self._emit_log(
+                "error",
+                "collector.article.save_exception",
+                source_id=source_id,
+                details={"error": str(exc), "title": title[:120]},
+            )
+            return False
+
+    def _update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
+        """
+        Actualiza las estadísticas de una fuente después de la recolección.
+        """
+        try:
+            self.db_manager.update_source_stats(source_id, stats)
+        except Exception as exc:
+            self._emit_log(
+                "error",
+                "collector.source.stats_update_failed",
+                source_id=source_id,
+                details={"error": str(exc)},
+            )
+
+    def _validate_article_data(self, article_data: Dict[str, Any]) -> bool:
+        """
+        Valida que un artículo tenga la información mínima necesaria.
+        """
+        # Verificaciones básicas
+        if not article_data.get("title") or len(article_data["title"].strip()) < 10:
+            return False
+
+        if not article_data.get("url") or not article_data["url"].startswith("http"):
+            return False
+
+        # Verificar que el contenido no sea demasiado corto
+        # Check 'content' first (full_text), fallback to 'summary'
+        text_to_check = article_data.get("content") or article_data.get("summary", "")
+        if len(text_to_check) < TEXT_PROCESSING_CONFIG["min_content_length"]:
+            return False
+
+        # Verificar que no sea spam o clickbait obvio
+        title_lower = article_data["title"].lower()
+        penalty_keywords = TEXT_PROCESSING_CONFIG["penalty_keywords"]
+
+        if any(keyword.lower() in title_lower for keyword in penalty_keywords):
+            self._emit_log(
+                "debug",
+                "collector.article.penalty_keyword_rejected",
+                source_id=article_data.get("source_id"),
+                details={"title": article_data["title"]},
+            )
+            return False
+
+        return True
+
+    def _clean_text(self, text: str) -> str:
+        """
+        Limpia y normaliza texto de manera consistente.
+        """
+        if not text:
+            return ""
+
+        from news_collector.utils.text_cleaner import normalize_text
+
+        return normalize_text(text)
 
     def _generate_recommendations(
         self, source_results: Dict[str, Dict[str, Any]]
@@ -616,9 +823,13 @@ def create_collector(collector_type: str) -> BaseCollector:
     """
     if collector_type.lower() == "rss":
         from .rss_collector import RSSCollector
-
         return RSSCollector()
-
+    elif collector_type.lower() == "html":
+        from .html_collector import HtmlCollector
+        return HtmlCollector()
+    elif collector_type.lower() == "async_rss":
+        from .async_rss_collector import AsyncRSSCollector
+        return AsyncRSSCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 

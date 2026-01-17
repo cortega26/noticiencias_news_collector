@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031440Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "yale_news",
+  "url": "https://ventures.yale.edu/news/yale-spinout-quantum-circuits-be-acquired-d-wave-expanding-quantum-rd-new-haven",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

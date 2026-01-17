@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031439Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "livescience",
+  "url": "https://www.livescience.com/health/neuroscience/zombie-cells-may-drive-common-form-of-epilepsy",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

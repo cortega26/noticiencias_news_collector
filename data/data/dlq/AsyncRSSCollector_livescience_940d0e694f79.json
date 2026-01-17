@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031152Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "livescience",
+  "url": "https://www.livescience.com/space/space-exploration/artemis-2-update-nasa-to-wheel-historic-11-million-pound-rocket-to-the-launch-pad-this-weekend",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

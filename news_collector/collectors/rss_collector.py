@@ -74,7 +74,6 @@ class RSSCollector(BaseCollector):
 
     def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
         super().__init__(logger_factory=logger_factory)
-        self.db_manager = get_database_manager()
         self.session = self._create_session()
 
         # Estadísticas de la sesión actual
@@ -85,10 +84,6 @@ class RSSCollector(BaseCollector):
             "errors_encountered": 0,
             "start_time": datetime.now(timezone.utc),
         }
-        # Per-domain rate limiting state
-        self._domain_last_request: Dict[str, float] = {}
-        # Robots cache per domain (timestamp, parser)
-        self._robots_cache: Dict[str, Tuple[float, robotparser.RobotFileParser]] = {}
 
     def _create_session(self) -> requests.Session:
         """
@@ -122,73 +117,7 @@ class RSSCollector(BaseCollector):
 
         return session
 
-    # Robots/TOS helpers
-    def _get_robots(self, domain: str) -> Optional[robotparser.RobotFileParser]:
-        if not ROBOTS_CONFIG["respect_robots"]:
-            return None
-        now = time.time()
-        ttl = ROBOTS_CONFIG["cache_ttl_seconds"]
-        cached = self._robots_cache.get(domain)
-        if cached and (now - cached[0] < ttl):
-            return cached[1]
-        try:
-            robots_url = f"https://{domain}/robots.txt"
-            resp = httpx.get(
-                robots_url,
-                timeout=5.0,
-                headers={"User-Agent": COLLECTION_CONFIG["user_agent"]},
-            )
-            if resp.status_code >= 400:
-                return None
-            rp = robotparser.RobotFileParser()
-            rp.parse(resp.text.splitlines())
-            self._robots_cache[domain] = (now, rp)
-            return rp
-        except Exception:
-            return None
 
-    def _respect_robots(self, url: str) -> Tuple[bool, Optional[float]]:
-        if not ROBOTS_CONFIG["respect_robots"]:
-            return (True, None)
-        domain = urlparse(url).netloc
-        rp = self._get_robots(domain)
-        if not rp:
-            return (True, None)
-        ua = COLLECTION_CONFIG["user_agent"]
-        try:
-            allowed = rp.can_fetch(ua, url)
-        except Exception:
-            allowed = True
-        try:
-            delay = rp.crawl_delay(ua)
-        except Exception:
-            delay = None
-        return (allowed, delay)
-
-    # Per-domain rate limiting with robots.txt crawl-delay
-    def _enforce_domain_rate_limit(
-        self,
-        domain: str,
-        robots_delay: Optional[float] = None,
-        source_min_delay: Optional[float] = None,
-    ):
-        now = time.time()
-        last = self._domain_last_request.get(domain, 0.0)
-        effective_delay = calculate_effective_delay(
-            domain, robots_delay, source_min_delay
-        )
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
-        wait = (last + effective_delay + jitter) - now
-        if wait > 0:
-            time.sleep(wait)
-        self._domain_last_request[domain] = time.time()
-
-    def _backoff_sleep(self, attempt: int):
-        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
-        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
-        delay = min(max_b, (base * (2**attempt)) + jitter)
-        time.sleep(delay)
 
     def collect_from_source(
         self, source_id: str, source_config: Dict[str, Any]
@@ -429,12 +358,14 @@ class RSSCollector(BaseCollector):
             for attempt in range(0, max_retries + 1):
                 try:
                     conditional_headers = {}
-                    if cached_headers.get("etag"):
-                        conditional_headers["If-None-Match"] = cached_headers["etag"]
-                    if cached_headers.get("last_modified"):
-                        conditional_headers["If-Modified-Since"] = cached_headers[
-                            "last_modified"
-                        ]
+                    # FORCE REFRESH: Temporarily disable ETag/Last-Modified to ensure we re-process feeds
+                    # and trigger the full-text fetcher for existing items.
+                    # if cached_headers.get("etag"):
+                    #     conditional_headers["If-None-Match"] = cached_headers["etag"]
+                    # if cached_headers.get("last_modified"):
+                    #     conditional_headers["If-Modified-Since"] = cached_headers[
+                    #         "last_modified"
+                    #     ]
 
                     response = self.session.get(
                         feed_url,
@@ -686,7 +617,13 @@ class RSSCollector(BaseCollector):
                 # We do not trust RSS summaries to be representative.
                 from news_collector.utils.full_text import fetch_full_article
                 self._emit_log("info", "collector.article.fetching_full_text", details={"url": canonical_url})
+                
+                # DEBUG LOGGING (Using WARNING to ensure visibility in Streamlit logs)
+                self._emit_log("warning", "debug.fetching_full_text", details={"url": canonical_url})
                 full_text = fetch_full_article(canonical_url, self.session)
+                text_len = len(full_text) if full_text else 0
+                self._emit_log("warning", "debug.full_text_result", details={"url": canonical_url, "length": text_len})
+                
                 if full_text:
                     article_data["content"] = full_text
                 
@@ -1075,130 +1012,6 @@ class RSSCollector(BaseCollector):
             )
             return None
 
-    def _save_article(
-        self, article_data: CollectorArticleModel | Dict[str, Any]
-    ) -> bool:
-        """
-        Guarda un artículo procesado en la base de datos.
-
-        Este método es como tener un archivista meticuloso que verifica
-        que no tengamos duplicados antes de agregar cada nuevo documento
-        a nuestra colección.
-        """
-        if isinstance(article_data, CollectorArticleModel):
-            title = article_data.title
-            source_id = article_data.source_id
-            url_value = str(article_data.url)
-        else:
-            title = article_data.get("title", "sin título")
-            source_id = article_data.get("source_id")
-            url_value = article_data.get("url")
-
-        try:
-            saved_article = self.db_manager.save_article(article_data)
-            if saved_article:
-                self._emit_log(
-                    "info",
-                    "collector.article.saved",
-                    source_id=source_id,
-                    article_id=getattr(saved_article, "id", None),
-                    details={
-                        "title": title[:120],
-                        "url": getattr(saved_article, "url", url_value),
-                    },
-                )
-                return True
-
-            self._emit_log(
-                "debug",
-                "collector.article.duplicate",
-                source_id=source_id,
-                details={"title": title[:120], "url": url_value},
-            )
-            return False
-
-        except ValueError as exc:
-            self._emit_log(
-                "error",
-                "collector.article.save_validation_error",
-                source_id=source_id,
-                details={"error": str(exc), "title": title[:120]},
-            )
-            return False
-        except Exception as exc:
-            self._emit_log(
-                "error",
-                "collector.article.save_exception",
-                source_id=source_id,
-                details={"error": str(exc), "title": title[:120]},
-            )
-            return False
-
-    def _update_source_stats(self, source_id: str, stats: Dict[str, Any]) -> None:
-        """
-        Actualiza las estadísticas de una fuente después de la recolección.
-
-        Este método mantiene un registro detallado del performance de cada
-        fuente, como mantener un expediente de cada proveedor de libros.
-        """
-        try:
-            self.db_manager.update_source_stats(source_id, stats)
-        except Exception as exc:
-            self._emit_log(
-                "error",
-                "collector.source.stats_update_failed",
-                source_id=source_id,
-                details={"error": str(exc)},
-            )
-
-    def _validate_article_data(self, article_data: Dict[str, Any]) -> bool:
-        """
-        Valida que un artículo tenga la información mínima necesaria.
-
-        Este método es como un control de calidad que asegura que solo
-        artículos con información suficiente pasen al siguiente paso.
-        """
-        # Verificaciones básicas
-        if not article_data.get("title") or len(article_data["title"].strip()) < 10:
-            return False
-
-        if not article_data.get("url") or not article_data["url"].startswith("http"):
-            return False
-
-        # Verificar que el contenido no sea demasiado corto
-        # Check 'content' first (full_text), fallback to 'summary'
-        text_to_check = article_data.get("content") or article_data.get("summary", "")
-        if len(text_to_check) < TEXT_PROCESSING_CONFIG["min_content_length"]:
-            return False
-
-        # Verificar que no sea spam o clickbait obvio
-        title_lower = article_data["title"].lower()
-        penalty_keywords = TEXT_PROCESSING_CONFIG["penalty_keywords"]
-
-        if any(keyword.lower() in title_lower for keyword in penalty_keywords):
-            self._emit_log(
-                "debug",
-                "collector.article.penalty_keyword_rejected",
-                source_id=article_data.get("source_id"),
-                details={"title": article_data["title"]},
-            )
-            return False
-
-        return True
-
-    def _clean_text(self, text: str) -> str:
-        """
-        Limpia y normaliza texto de manera consistente.
-
-        Este método es como tener un editor que aplica reglas de estilo
-        consistentes a cada texto que procesamos.
-        """
-        if not text:
-            return ""
-
-        from news_collector.utils.text_cleaner import normalize_text
-
-        return normalize_text(text)
 
     def get_session_stats(self) -> Dict[str, Any]:
         """

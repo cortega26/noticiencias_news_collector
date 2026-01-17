@@ -53,8 +53,8 @@ class ArticleEnrichmentModel(BaseModel):
     """Validated enrichment payload with deterministic structure."""
 
     language: str = Field(min_length=2)
-    normalized_title: str = Field(min_length=1)
-    normalized_summary: str = Field(min_length=1)
+    normalized_title: str = Field(min_length=0) # Allow empty if normalization fails
+    normalized_summary: str = Field(min_length=0) # Allow empty
     entities: List[str] = Field(default_factory=list)
     topics: List[str] = Field(default_factory=list)
     sentiment: str = Field(min_length=3)

@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031155Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "space_com",
+  "url": "https://www.space.com/space-exploration/artemis/nasa-hopes-to-launch-artemis-2-astronauts-to-the-moon-next-month-but-its-going-to-be-tight-this-is-not-a-rush",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

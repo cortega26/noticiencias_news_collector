@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031155Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "space_com",
+  "url": "https://www.space.com/space-exploration/in-rejection-of-trumps-deep-cuts-congress-passes-usd24-4-billion-budget-for-nasa",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

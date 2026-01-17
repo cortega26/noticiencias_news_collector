@@ -383,6 +383,32 @@ def load_config(
             env_var=key,
         )
 
+    # LEGACY/FLAT ENV VAR MAPPING LAYER
+    # Helps map flat .env vars (e.g. GITHUB_TOKEN) to new nested schema (github.token)
+    legacy_map = {
+        "GITHUB_TOKEN": "github.token",
+        "GITHUB_USER_NAME": "github.user_name",
+        "GITHUB_USER_EMAIL": "github.user_email",
+        "SOURCE_REPO_URL": "github.source_repo_url",
+        "TARGET_REPO_URL": "github.target_repo_url",
+        "OLLAMA_API_URL": "ollama.api_url",
+        "OLLAMA_MODEL": "ollama.model",
+    }
+    
+    # Check both raw env and .env file data for these keys
+    combined_env_sources = {**env_file_data, **runtime_env}
+    
+    for legacy_key, target_path in legacy_map.items():
+        if legacy_key in combined_env_sources:
+             val = combined_env_sources[legacy_key]
+             if val: # Only apply if not empty
+                 _assign_path(merged, target_path, val)
+                 provenance[target_path] = ConfigValueOrigin(
+                    layer="legacy_env",
+                    source="compatibility_mapping",
+                    env_var=legacy_key
+                 )
+
     try:
         config = Config.model_validate(merged)
     except ValidationError as exc:

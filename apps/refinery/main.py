@@ -17,11 +17,11 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config
+from noticiencias.config_manager import load_config
 from src.utils.logger import setup_logger
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.components.editorial import EditorAgent
-from news_collector.components.editorial import EditorAgent
+# from news_collector.components.editorial import EditorAgent # Removed duplicate
 from src.database import DatabaseManager
 
 from news_collector.system import create_system
@@ -306,8 +306,8 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # Initialize Database
     db_manager = DatabaseManager(DB_PATH)
 
-    git_handler = GitHubPublisher(config.GITHUB_TOKEN)
-    editor_agent = EditorAgent(config.OLLAMA_API_URL, config.OLLAMA_MODEL)
+    git_handler = GitHubPublisher(config.github.token)
+    editor_agent = EditorAgent(config.ollama.api_url, config.ollama.model)
 
     source_dir = SOURCE_DIR
     preferred_export_path = None
@@ -327,7 +327,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     else:
         try:
             source_dir = _safe_clone_source_repo(
-                git_handler, config.SOURCE_REPO_URL, source_dir
+                git_handler, config.github.source_repo_url, source_dir
             )
         except Exception as e:
             logger.critical(f"Failed to clone source repo: {e}")
@@ -474,13 +474,34 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     last_error = None
     processed_count = 0
+    
+    # Initialize Target Repo (Clone if needed)
+    target_repo_obj = None
+    try:
+        if TARGET_DIR.exists():
+             shutil.rmtree(TARGET_DIR, ignore_errors=True)
+             
+        logger.info(f"Cloning Target Repo: {config.github.target_repo_url}")
+        git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
+        target_repo_obj = git.Repo(TARGET_DIR)
+        
+        # Configure User
+        with target_repo_obj.config_writer() as git_config:
+            git_config.set_value("user", "name", config.github.user_name)
+            git_config.set_value("user", "email", config.github.user_email)
+            
+    except Exception as e:
+        logger.critical(f"Failed to clone/init target repo: {e}")
+        return {"status": "error", "message": f"Critical Git Error: {e}", "processed_count": 0}
+
     try:
         for article in articles_to_process:
             # Identifier
             article_id = str(article.get("id", article.get("title")))
             file_name = f"{article_id}.md" # logical filename for logs
+            branch_name = None # Initialize to avoid UnboundLocalError
             
-            logger.info(f"Processing item: {article_id}")
+            logger.info(f"Processing item: {article_id} (Version: Restored Logic)")
             
             try:
                 # ... (inner logic) ...
@@ -488,14 +509,42 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                 # 2. Process with LLM
                 refined_content = editor_agent.process_article(article)
                 
-                # ... (rest of logic) ...
+                # 3. Determine Output Filename
+                date_str = datetime.now().strftime("%Y-%m-%d")
+                
+                # Try to extract slug from frontmatter
+                output_slug = f"article-{article_id}"
+                if "slug:" in refined_content:
+                    try:
+                        import re
+                        match = re.search(r'slug:\s*"?([^"\n]+)"?', refined_content)
+                        if match:
+                            output_slug = match.group(1).strip()
+                    except:
+                        pass
+                
+                output_filename = f"{date_str}-{output_slug}.md"
+                
+                # 4. Save to Target Repo structure
+                # Ensure structure exists: src/content/posts
+                posts_path = TARGET_DIR / "src/content/posts"
+                posts_path.mkdir(parents=True, exist_ok=True)
+                
+                target_file_path = posts_path / output_filename
+                with open(target_file_path, "w", encoding="utf-8") as f:
+                    f.write(refined_content)
+                
+                logger.info(f"Written content to {target_file_path}")
+
+                # 5. Create Branch
+                branch_name = git_handler.create_branch(target_repo_obj, branch_prefix="content/add")
 
                 # 6. Commit and Push
-                git_handler.commit_and_push(target_repo_obj, f"Add article: {file_name}", branch_name)
+                git_handler.commit_and_push(target_repo_obj, f"Add article: {output_filename}", branch_name)
                 
                 # 7. Create PR
                 pr_url = git_handler.create_pull_request(
-                    repo_url=config.TARGET_REPO_URL,
+                    repo_url=config.github.target_repo_url,
                     branch_name=branch_name,
                     title=f"News: {date_str} - {output_slug}",
                     body=f"Automated submission for {file_name}.\n\nProcessed by Noticiencias Refinery."
@@ -533,12 +582,12 @@ def delete_article(article_id: str) -> dict:
     
     try:
         config = load_config()
-        git_handler = GitHubPublisher(config.GITHUB_TOKEN)
+        git_handler = GitHubPublisher(config.github.token)
         
         # 1. Clone Target
         if TARGET_DIR.exists():
             shutil.rmtree(TARGET_DIR, ignore_errors=True)
-        git_handler.clone_repo(config.TARGET_REPO_URL, TARGET_DIR)
+        git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
         target_repo_obj = git.Repo(TARGET_DIR)
         
         # 2. Search for File
@@ -572,7 +621,7 @@ def delete_article(article_id: str) -> dict:
         
         # 6. Create PR
         pr_url = git_handler.create_pull_request(
-            repo_url=config.TARGET_REPO_URL,
+            repo_url=config.github.target_repo_url,
             branch_name=branch_name,
             title=f"Unpublish: {filename}",
             body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}"
