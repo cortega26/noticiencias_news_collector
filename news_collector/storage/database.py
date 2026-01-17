@@ -466,6 +466,18 @@ class DatabaseManager:
                 # Verificar si ya existe por URL
                 existing = session.query(Article).filter_by(url=payload["url"]).first()
                 if existing:
+                    # HEALING LOGIC: If existing content is missing/short but we found better content, update it.
+                    new_content = payload.get("content")
+                    old_content = existing.content
+                    if new_content and len(new_content) > 1000:
+                        if not old_content or len(old_content) < 1000:
+                            logger.info(f"✨ Healing article {existing.id} with better content ({len(new_content)} chars)")
+                            existing.content = new_content
+                            existing.summary = payload.get("summary") # Update summary too if needed
+                            session.add(existing)
+                            session.flush()
+                            return existing
+
                     logger.debug(f"Artículo ya existe: {payload['url']}")
                     return None
 
