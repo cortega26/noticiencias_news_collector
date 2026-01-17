@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031155Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "space_com",
+  "url": "https://www.space.com/space-exploration/artemis/artemis-2-sls-orion-rocket-rollout-launch-pad-ksc-webcast",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

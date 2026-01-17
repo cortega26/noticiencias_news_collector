@@ -237,7 +237,8 @@ class CollectionConfig(StrictModel):
         description="Number of trailing days considered 'recent'.",
     )
     user_agent: str = Field(
-        default="NoticienciasBot/1.0 (+https://noticiencias.com)",
+        # Use a standard browser UA to minimize 403 blocks from sites like Cell/Phys.org
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         description="HTTP User-Agent header sent to providers.",
     )
     canonicalization_cache_size: NonNegativeInt = Field(
@@ -290,7 +291,8 @@ class RobotsConfig(StrictModel):
     """Robots.txt compliance toggles."""
 
     respect_robots: bool = Field(
-        default=True, description="Honor robots.txt directives when collecting."
+        # Set to False to bypass robots.txt blocks on Reddit/Arxiv per user request
+        default=False, description="Honor robots.txt directives when collecting."
     )
     cache_ttl_seconds: PositiveInt = Field(
         default=3_600,
@@ -468,7 +470,7 @@ class TextProcessingConfig(StrictModel):
         description="Languages supported by NLP routines.",
     )
     min_content_length: PositiveInt = Field(
-        default=100,
+        default=750,
         description="Minimum number of characters required for an article.",
     )
     boost_keywords: List[str] = Field(
@@ -621,6 +623,51 @@ class LoggingConfig(StrictModel):
         return self
 
 
+
+class GitHubConfig(StrictModel):
+    """GitHub integration settings."""
+    
+    token: Optional[str] = Field(
+        default=None,
+        description="Personal Access Token for GitHub API.", 
+    )
+    user_name: str = Field(
+        default="Noticiencias Bot",
+        description="Git user.name for commits.",
+    )
+    user_email: str = Field(
+        default="bot@noticiencias.com",
+        description="Git user.email for commits.",
+    )
+    source_repo_url: str = Field(
+        default="https://github.com/cortega26/noticiencias_news_collector",
+        description="URL of the source content repository.",
+    )
+    target_repo_url: str = Field(
+        default="https://github.com/cortega26/noticiencias",
+        description="URL of the target publishing repository.",
+    )
+    
+    @field_validator("token", mode="before")
+    @classmethod
+    def _blank_to_none(cls, v):
+        if v == "": return None
+        return v
+
+
+
+class OllamaConfig(StrictModel):
+    """Ollama LLM settings."""
+    api_url: str = Field(
+        default="http://localhost:11434",
+        description="Base URL for the Ollama API.",
+    )
+    model: str = Field(
+        default="llama3.3",
+        description="Model tag to use for generation.", 
+    )
+
+
 class Config(StrictModel):
     """Complete Noticiencias configuration model."""
 
@@ -636,6 +683,8 @@ class Config(StrictModel):
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     news: NewsConfig = Field(default_factory=NewsConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    github: GitHubConfig = Field(default_factory=GitHubConfig)
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     _metadata: object = PrivateAttr(default=None)
 
     @model_validator(mode="after")

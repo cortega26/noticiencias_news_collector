@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031154Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "wired",
+  "url": "https://www.wired.com/story/the-campaign-to-destroy-renee-good/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

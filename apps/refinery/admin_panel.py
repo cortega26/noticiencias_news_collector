@@ -11,6 +11,9 @@ import importlib.util
 sys.path.append(str(Path(__file__).parent))
 # Add project root to sys.path to find 'news_collector'
 sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+# DEBUG: DIAGNOSE IMPORTS - REMOVED
+
 # Force reload of critical modules to pick up schema changes without restart
 try:
     if "news_collector.components.editorial.ai_editor" in sys.modules:
@@ -20,6 +23,11 @@ try:
         importlib.reload(sys.modules["news_collector.components.editorial"])
     if "news_collector.system" in sys.modules:
         importlib.reload(sys.modules["news_collector.system"])
+    # Force reload config definitions to pick up schema changes
+    if "noticiencias.config_schema" in sys.modules:
+        importlib.reload(sys.modules["noticiencias.config_schema"])
+    if "noticiencias.config_manager" in sys.modules:
+        importlib.reload(sys.modules["noticiencias.config_manager"])
 except Exception as e:
     print(f"Warning: Failed to reload modules: {e}")
 
@@ -42,6 +50,9 @@ st.title("🎛️ Panel de Control Unificado Noticiencias")
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
+# Load environment variables into os.environ for main.py to see them
+dotenv.load_dotenv(ENV_FILE, override=True)
+
 REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"
 REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 

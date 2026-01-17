@@ -9,6 +9,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
+from noticiencias.config_manager import load_config
 
 class EditorAgent:
     def __init__(self, api_url: str, model: str):
@@ -20,6 +21,11 @@ class EditorAgent:
             r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U00002600-\U000026FF]",
             flags=re.UNICODE,
         )
+        try:
+            self.min_content_length = load_config().text_processing.min_content_length
+        except Exception:
+            self.min_content_length = 750 # Fallback
+            
         self.prompts = self._load_prompts()
 
     def _load_prompts(self) -> dict:
@@ -146,6 +152,47 @@ class EditorAgent:
         system_prompt = self.prompts.get("editor", {}).get("system", "")
         return self._send_prompt(translated_content, system=system_prompt)
 
+    def _extract_json(self, text: str) -> dict:
+        """
+        Robustly extracts a JSON object from text by finding the outer braces.
+        Handles nested objects by counting braces.
+        """
+        text = text.strip()
+        
+        # 1. Try direct parse (fastest)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # 2. Bracket counting
+        start_idx = text.find('{')
+        if start_idx == -1:
+            raise ValueError("No JSON object found (missing '{')")
+
+        nesting = 0
+        for i, char in enumerate(text[start_idx:], start=start_idx):
+            if char == '{':
+                nesting += 1
+            elif char == '}':
+                nesting -= 1
+                if nesting == 0:
+                    # Found the closing brace of the root object
+                    json_str = text[start_idx : i + 1]
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError as e:
+                        # Sometimes regex or cleanup is still needed inside
+                        # Let's try to aggressive clean common issues
+                        try:
+                            # Remove markdown code blocks if inside
+                            clean_str = json_str.replace("```json", "").replace("```", "")
+                            return json.loads(clean_str)
+                        except:
+                            raise ValueError(f"Extracted block is invalid JSON: {e}")
+        
+        raise ValueError("No valid JSON object found (unbalanced braces)")
+
     def _generate_headlines(self, adapted_content: str) -> dict:
         """Stage 3: Headline Generation"""
         system_prompt = self.prompts.get("headline", {}).get("system", "")
@@ -154,14 +201,13 @@ class EditorAgent:
         response = self._send_prompt(prompt, system=system_prompt)
         
         try:
-            # Try to find JSON block
-            match = re.search(r"\{.*\}", response, re.DOTALL)
-            if match:
-                return json.loads(match.group(0))
-            return json.loads(response)
+            return self._extract_json(response)
         except Exception as e:
-            logger.error(f"Failed to generate headlines: {e}")
-            raise ValueError("Failed to generate headlines via LLM. Check Ollama connection or prompt.") from e
+            logger.error(f"Failed to generate headlines: {e} | Response snippet: {response[:100]}...")
+            # Fallback to empty if fails, don't crash the whole pipeline, 
+            # OR raise if strictly required. The original code raised, so let's log and re-raise or return empty?
+            # Original raised ValueError.
+            raise ValueError(f"Failed to generate headlines: {e}") from e
 
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
         """Returns the path for a cached stage artifact."""
@@ -223,7 +269,7 @@ class EditorAgent:
         input_text = f"Title: {title}\nContent: {content}"
         
         # Validation: content length
-        if len(content.strip()) < 1000:
+        if len(content.strip()) < self.min_content_length:
              raise ValueError(f"Content too short ({len(content)} chars). Likely paywalled or empty.")
 
         # 2. Pipeline Execution
@@ -264,7 +310,7 @@ class EditorAgent:
         metadata_block = [
             "---",
             f"title: \"{final_title}\"",
-            f"date: \"{time.strftime('%Y-%m-%d')}\"",
+            f"date: {time.strftime('%Y-%m-%d')}",
             "author: \"Noticiencias AI\"",
             f"categories: [\"{final_category}\"]",
             f"tags: [\"{raw_category}\"]"
@@ -328,14 +374,11 @@ class EditorAgent:
 
         result = self._send_prompt(prompt)
         
-        # Safe JSON parsing
+        # Safe JSON parsing via robust extractor
         try:
-            # Strip markdown code blocks if present
-            clean_result = result.replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_result)
-            return data
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse visual analysis JSON: {result}")
+            return self._extract_json(result)
+        except Exception as e:
+            logger.error(f"Failed to parse visual analysis JSON: {e} | Response snippet: {result[:100]}...")
             return {
                 "visual_category": "OTHER",
                 "visual_keywords": [],

@@ -417,23 +417,16 @@ class NewsCollectorSystem:
     def _setup_collectors(self):
         """Configura los colectores del sistema."""
         try:
-            if COLLECTION_CONFIG.get("async_enabled"):
-                from news_collector.collectors.async_rss_collector import AsyncRSSCollector
-
-                self.collector = AsyncRSSCollector(logger_factory=self.logger)
-            else:
-                self.collector = RSSCollector(logger_factory=self.logger)
-        except Exception:
-            # Fallback seguro
-            try:
-                self.collector = RSSCollector()
-            except Exception:
-                self.collector = RSSCollector(logger_factory=None)
-
-        if hasattr(self.collector, "set_logger_factory"):
-            self.collector.set_logger_factory(self.logger)
-
-        self.logger.create_module_logger("collectors").info("Colectores configurados")
+            from news_collector.collectors.dispatcher import CollectorDispatcher
+            
+            self.collector = CollectorDispatcher(logger_factory=self.logger)
+            self.logger.create_module_logger("collectors").info("Dispatcher de colectores configurado")
+            
+        except Exception as e:
+            self.logger.create_module_logger("collectors").error(
+                f"Error fatal configurando colectores: {str(e)}"
+            )
+            raise
 
     def _setup_scoring(self):
         """Configura el sistema de scoring."""

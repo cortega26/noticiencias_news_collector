@@ -275,6 +275,41 @@ INSTITUTIONAL_SOURCES = {
     },
 }
 
+# Laboratorios de IA (HTML Sources)
+# =================================
+AI_LABS = {
+    "openai_research": {
+        "name": "OpenAI Research",
+        "url": "https://openai.com/research",
+        "credibility_score": 0.92,
+        "update_frequency": "weekly",
+        "category": "artificial_intelligence",
+        "language": "en",
+        "impact_factor": None,
+        "description": "Latest research from OpenAI",
+        "collector_type": "html",
+        "html_selectors": {
+            "container": "li.tex-0", # Example selector, needs verification
+            "link": "a",
+            "title": "span"
+        }
+    },
+    "deepmind_blog": {
+        "name": "Google DeepMind",
+        "url": "https://deepmind.google/discover/blog/",
+        "credibility_score": 0.95,
+        "update_frequency": "weekly",
+        "category": "artificial_intelligence",
+        "language": "en",
+        "collector_type": "html",
+        "html_selectors": {
+            "container": ".card", 
+            "link": "a", 
+            "title": ".card__title"
+        }
+    }
+}
+
 # Repositorios de Preprints
 # ========================
 # Estos sitios publican investigación antes de peer review.
@@ -353,6 +388,7 @@ ALL_SOURCES = _with_feed_cache_fields(
         **INSTITUTIONAL_SOURCES,
         **PREPRINT_SOURCES,
         **COMMUNITY_FEEDS,
+        **AI_LABS,
     }
 )
 

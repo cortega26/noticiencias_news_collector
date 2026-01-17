@@ -11,11 +11,17 @@ def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> 
     Fetches and extracts the main text content from a URL.
     Used when RSS summary is too short.
     """
+    # Use a Browser-like User-Agent to avoid being blocked (e.g. by LiveScience)
+    browser_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    
     try:
         if session:
-            response = session.get(url, timeout=10)
+            # Override session headers for this request
+            response = session.get(url, timeout=15, headers=browser_headers)
         else:
-            response = requests.get(url, timeout=10, headers={"User-Agent": "NoticienciasBot/1.0"})
+            response = requests.get(url, timeout=15, headers=browser_headers)
         
         response.raise_for_status()
         

@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T031440Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "wired",
+  "url": "https://www.wired.com/story/former-usds-leaders-launch-tech-reform-project-doge/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

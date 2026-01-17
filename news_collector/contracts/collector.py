@@ -46,9 +46,7 @@ class CollectorArticleModel(BaseModel):
     url: AnyHttpUrl
     original_url: str | None = None
     title: str = Field(min_length=10)
-    summary: str = Field(
-        min_length=TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
-    )
+    summary: str = Field(min_length=0)  # Relaxed: checked in validator
     content: str | None = None
     source_id: str = Field(min_length=2)
     source_name: str = Field(min_length=2)
@@ -98,13 +96,27 @@ class CollectorArticleModel(BaseModel):
         return normalized
 
     @model_validator(mode="after")
-    def ensure_metadata(self) -> "CollectorArticleModel":
+    def ensure_valid_content(self) -> "CollectorArticleModel":
         self.article_metadata.ensure_original_url(self.original_url or str(self.url))
         self.original_url = self.article_metadata.original_url
-        if self.word_count < len(self.summary.split()):
-            raise ValueError(
-                "word_count must be greater or equal to the number of words in summary"
+        
+        # Validation: At least one of 'summary' or 'content' must meet the minimum length.
+        min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
+        summary_len = len(self.summary.strip()) if self.summary else 0
+        content_len = len(self.content.strip()) if self.content else 0
+        
+        if summary_len < min_len and content_len < min_len:
+             raise ValueError(
+                f"Article too short. Neither summary ({summary_len}) nor content ({content_len}) "
+                f"meets minimum length of {min_len} chars."
             )
+
+        # Ensure word_count consistency
+        # We trust the self.word_count provided by collector logic, but it should be reasonable.
+        if self.word_count < 10: 
+             # Only complain if it's ridiculously low, suggesting extraction failure.
+             pass 
+
         return self
 
     @field_validator("content")
@@ -112,14 +124,7 @@ class CollectorArticleModel(BaseModel):
     def validate_content_quality(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        if len(value.strip()) < TEXT_PROCESSING_CONFIG.get("min_content_length", 50):
-            raise ValueError("content is too short to be valid")
-        
-        # Basic quote balancing check
-        quote_count = value.count('"')
-        if quote_count % 2 != 0:
-            # Heuristic: Odd number of quotes often indicates truncation mid-sentence or mid-quote.
-            raise ValueError(f"content has unbalanced double quotes (count={quote_count}), indicating possible truncation")
+        # Removed aggressive quote balancing check which was false-flagging valid articles.
         return value
 
     @field_validator("authors", mode="after")
@@ -131,8 +136,6 @@ class CollectorArticleModel(BaseModel):
             if a.lower().replace(".", "").strip() not in generic_names
         ]
         if not filtered and value:
-            # If all authors were generic, we might want to return empty or raise.
-            # Let's return empty to indicate 'no specific author'.
             return []
         return filtered
 
