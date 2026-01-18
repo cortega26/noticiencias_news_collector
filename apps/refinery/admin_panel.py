@@ -842,114 +842,83 @@ with tab5:
             else:
                 st.write(f"Encontrados **{len(files)}** artículos.")
                 
-                # Parse files into data for table
-                table_data = []
+                # Legacy Table Header
+                h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
+                h1.markdown("**Título**")
+                h2.markdown("**Archivo**")
+                h3.markdown("**Acción 1**")
+                h4.markdown("**Acción 2**")
+                st.markdown("---")
+                
                 for f in files:
-                    # Extract metadata
+                    # Parse metadata (Same logic as before)
                     refinery_id = None
-                    article_title = f.name # Fallback
+                    article_title = f.name 
                     try:
                         content = f.read_text(encoding="utf-8", errors="ignore")
                         import re
-                        # Extract ID
                         match_id = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
-                        if match_id:
-                            refinery_id = match_id.group(1)
+                        if match_id: refinery_id = match_id.group(1)
                         
-                        # Extract Title
                         match_title = re.search(r'^title:\s*(.*)$', content, re.MULTILINE)
                         if match_title:
-                            raw_title = match_title.group(1).strip()
-                            # Clean quotes if present
-                            if (raw_title.startswith('"') and raw_title.endswith('"')) or (raw_title.startswith("'") and raw_title.endswith("'")):
-                                raw_title = raw_title[1:-1]
-                            article_title = raw_title
+                            raw = match_title.group(1).strip()
+                            if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+                                raw = raw[1:-1]
+                            article_title = raw
                     except:
                         pass
                     
-                    table_data.append({
-                        "Título": article_title,
-                        "Archivo": f.name,
-                        "ID": refinery_id or "N/A",
-                        "_path": f # Hidden for logic
-                    })
-                
-                # Display as Table
-                import pandas as pd
-                df = pd.DataFrame(table_data)
-                
-                # Configure grid options if desired, but st.dataframe is sufficient
-                st.dataframe(
-                    df[["Título", "Archivo", "ID"]], 
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "Título": st.column_config.TextColumn("Título", width="medium"),
-                        "Archivo": st.column_config.TextColumn("Archivo", width="small"),
-                        "ID": st.column_config.TextColumn("ID", width="small"),
-                    }
-                )
-                
-                st.markdown("---")
-                st.subheader("🛠️ Acciones")
-                
-                # Selection for Action
-                # Create a mapping for the selectbox
-                options_map = {f"{r['Título']} ({r['Archivo']})": r for r in table_data}
-                
-                selected_label = st.selectbox("Seleccionar Artículo para Gestionar:", options=list(options_map.keys()))
-                
-                if selected_label:
-                    selected_item = options_map[selected_label]
-                    f_path = selected_item["_path"]
-                    refinery_id_sel = selected_item["ID"] if selected_item["ID"] != "N/A" else None
+                    # Row Layout
+                    c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1.5])
                     
-                    col_act1, col_act2 = st.columns(2)
+                    with c1:
+                        st.write(article_title)
+                    with c2:
+                        st.caption(f.name)
+                        if refinery_id:
+                            st.caption(f"ID: `{refinery_id}`")
                     
-                    with col_act1:
-                        if st.button(f"🗑️ Despublicar '{selected_item['Título'][:30]}...'", type="primary", key=f"del_arch_tbl"):
-                             if refinery_id_sel:
-                                with st.spinner(f"Creando solicitud de eliminación para ID {refinery_id_sel}..."):
+                    with c3:
+                        if st.button("🗑️ Despublicar", key=f"btn_del_{f.name}", use_container_width=True):
+                            if refinery_id:
+                                # Copy-paste of delete logic
+                                with st.spinner("Solicitando eliminación..."):
                                     try:
                                         if hasattr(refinery_main, 'delete_article'):
-                                            del_result = refinery_main.delete_article(str(refinery_id_sel))
-                                            if del_result.get("status") == "success":
-                                                st.success("✅ PR de eliminación creado.")
-                                                st.markdown(f"[Fusionar PR en GitHub]({del_result.get('pr_url')})")
+                                            res = refinery_main.delete_article(str(refinery_id))
+                                            if res.get("status") == "success":
+                                                st.toast("✅ PR Creado", icon="🗑️")
+                                                st.markdown(f"[Ver PR]({res.get('pr_url')})")
                                             else:
-                                                st.error(f"Error: {del_result.get('message')}")
+                                                st.error(res.get("message"))
                                         else:
-                                            st.error("Función delete_article no cargada.")
+                                            st.error("Función no cargada")
                                     except Exception as e:
-                                        st.error(f"Error: {e}")
-                             else:
-                                st.error("No se encontró refinery_id. Eliminación manual requerida.")
+                                        st.error(str(e))
+                            else:
+                                st.error("Sin ID")
 
-                    with col_act2:
-                         if st.button("♻️ Resetear (Inbox)", key=f"reset_arch_tbl"):
+                    with c4:
+                        if st.button("♻️ Reset", key=f"btn_rst_{f.name}", use_container_width=True):
+                            # Copy-paste of reset logic
                             try:
-                                # 1. Git Delete
                                 repo = git.Repo(TARGET_DIR)
-                                repo.index.remove([str(f_path.relative_to(TARGET_DIR))])
-                                f_path.unlink()
-                                repo.index.commit(f"Deleted (Reset) {f_path.name}")
+                                repo.index.remove([str(f.relative_to(TARGET_DIR))])
+                                f.unlink()
+                                repo.index.commit(f"Deleted (Reset) {f.name}")
                                 repo.remotes.origin.push()
                                 
-                                # 2. DB Reset
                                 db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
-                                if refinery_id_sel:
-                                    res1 = db_manager.delete_record(refinery_id_sel)
-                                    res2 = db_manager.delete_record(f"{refinery_id_sel}.md")
-                                    if res1 or res2:
-                                        st.success("✅ Reset exitoso. Articulo devuelto al Inbox.")
-                                    else:
-                                        st.warning("Eliminado del repo, pero no encontrado en BD local.")
-                                else:
-                                    st.warning("Eliminado del repo. Sin ID para limpiar BD.")
-                                
+                                if refinery_id:
+                                    db_manager.delete_record(refinery_id)
+                                    db_manager.delete_record(f"{refinery_id}.md")
+                                st.success("Reset OK")
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Error: {e}")
+                                st.error(str(e))
+                    
+                    st.divider()
 
         else:
              st.warning("No se encuentra el directorio de posts. Ejecuta una sincronización primero para clonar el repo.")
