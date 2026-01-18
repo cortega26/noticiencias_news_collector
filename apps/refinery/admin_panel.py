@@ -842,79 +842,114 @@ with tab5:
             else:
                 st.write(f"Encontrados **{len(files)}** artículos.")
                 
-                # Table layout
+                # Parse files into data for table
+                table_data = []
                 for f in files:
-                    col_name, col_act = st.columns([3, 2])
-                    with col_name:
-                        st.text(f.name)
-                    with col_act:
-                        # Extract traceability ID
-                        refinery_id = None
-                        try:
-                            content = f.read_text(encoding="utf-8", errors="ignore")
-                            # Simple regex for frontmatter
-                            import re
-                            match = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
-                            if match:
-                                refinery_id = match.group(1)
-                        except:
-                            pass
-
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            if st.button("🗑️ Despublicar", key=f"del_arch_{f.name}", help="Elimina el artículo del sitio web (vía Pull Request)."):
-                                if refinery_id:
-                                    with st.spinner(f"Creando solicitud de eliminación para ID {refinery_id}..."):
-                                        try:
-                                            # Use shared delete capability
-                                            # We already have `run_refinery` available via importlib in admin_panel.
-                                            
-                                            if hasattr(refinery_main, 'delete_article'):
-                                                # Use the imported spec module
-                                                del_result = refinery_main.delete_article(str(refinery_id))
-                                                if del_result.get("status") == "success":
-                                                    st.success("✅ PR de eliminación creado.")
-                                                    st.markdown(f"[Fusionar PR en GitHub]({del_result.get('pr_url')})")
-                                                else:
-                                                    st.error(f"Error: {del_result.get('message')}")
-                                            else:
-                                                st.error("Función delete_article no cargada.")
-                                        except Exception as e:
-                                            st.error(f"Error: {e}")
-                                else:
-                                    st.error("No se encontró refinery_id en el archivo. Eliminación manual requerida.")
+                    # Extract metadata
+                    refinery_id = None
+                    article_title = f.name # Fallback
+                    try:
+                        content = f.read_text(encoding="utf-8", errors="ignore")
+                        import re
+                        # Extract ID
+                        match_id = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
+                        if match_id:
+                            refinery_id = match_id.group(1)
                         
-                        with c2:
-                            if st.button("♻️ Resetear", key=f"del_reset_{f.name}", help="Borra de la web Y permite volver a procesarlo (Inbox)."):
-                                try:
-                                    # 1. Git Delete
-                                    repo = git.Repo(TARGET_DIR)
-                                    repo.index.remove([str(f.relative_to(TARGET_DIR))])
-                                    f.unlink()
-                                    repo.index.commit(f"Deleted (Reset) {f.name}")
-                                    repo.remotes.origin.push()
-                                    
-                                    # 2. DB Reset
-                                    # We try to delete by ID if found, otherwise by filename (legacy)
-                                    db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
-                                    
-                                    if refinery_id:
-                                         # Try both ID and ID.md to be safe
-                                        res1 = db_manager.delete_record(refinery_id)
-                                        # Also try legacy filename format just in case
-                                        res2 = db_manager.delete_record(f"{refinery_id}.md")
-                                        
-                                        if res1 or res2:
-                                            st.success(f"Reset: {f.name} (ID: {refinery_id}) -> Inbox desbloqueado.")
+                        # Extract Title
+                        match_title = re.search(r'^title:\s*(.*)$', content, re.MULTILINE)
+                        if match_title:
+                            raw_title = match_title.group(1).strip()
+                            # Clean quotes if present
+                            if (raw_title.startswith('"') and raw_title.endswith('"')) or (raw_title.startswith("'") and raw_title.endswith("'")):
+                                raw_title = raw_title[1:-1]
+                            article_title = raw_title
+                    except:
+                        pass
+                    
+                    table_data.append({
+                        "Título": article_title,
+                        "Archivo": f.name,
+                        "ID": refinery_id or "N/A",
+                        "_path": f # Hidden for logic
+                    })
+                
+                # Display as Table
+                import pandas as pd
+                df = pd.DataFrame(table_data)
+                
+                # Configure grid options if desired, but st.dataframe is sufficient
+                st.dataframe(
+                    df[["Título", "Archivo", "ID"]], 
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Título": st.column_config.TextColumn("Título", width="medium"),
+                        "Archivo": st.column_config.TextColumn("Archivo", width="small"),
+                        "ID": st.column_config.TextColumn("ID", width="small"),
+                    }
+                )
+                
+                st.markdown("---")
+                st.subheader("🛠️ Acciones")
+                
+                # Selection for Action
+                # Create a mapping for the selectbox
+                options_map = {f"{r['Título']} ({r['Archivo']})": r for r in table_data}
+                
+                selected_label = st.selectbox("Seleccionar Artículo para Gestionar:", options=list(options_map.keys()))
+                
+                if selected_label:
+                    selected_item = options_map[selected_label]
+                    f_path = selected_item["_path"]
+                    refinery_id_sel = selected_item["ID"] if selected_item["ID"] != "N/A" else None
+                    
+                    col_act1, col_act2 = st.columns(2)
+                    
+                    with col_act1:
+                        if st.button(f"🗑️ Despublicar '{selected_item['Título'][:30]}...'", type="primary", key=f"del_arch_tbl"):
+                             if refinery_id_sel:
+                                with st.spinner(f"Creando solicitud de eliminación para ID {refinery_id_sel}..."):
+                                    try:
+                                        if hasattr(refinery_main, 'delete_article'):
+                                            del_result = refinery_main.delete_article(str(refinery_id_sel))
+                                            if del_result.get("status") == "success":
+                                                st.success("✅ PR de eliminación creado.")
+                                                st.markdown(f"[Fusionar PR en GitHub]({del_result.get('pr_url')})")
+                                            else:
+                                                st.error(f"Error: {del_result.get('message')}")
                                         else:
-                                            # If logic returns False/None on failure, we persist w warning
-                                            st.warning(f"Archivo eliminado del repo, pero NO se encontró registro en BD (ID: {refinery_id}). Inbox puede no mostrarlo si ya estaba limpio.")
+                                            st.error("Función delete_article no cargada.")
+                                    except Exception as e:
+                                        st.error(f"Error: {e}")
+                             else:
+                                st.error("No se encontró refinery_id. Eliminación manual requerida.")
+
+                    with col_act2:
+                         if st.button("♻️ Resetear (Inbox)", key=f"reset_arch_tbl"):
+                            try:
+                                # 1. Git Delete
+                                repo = git.Repo(TARGET_DIR)
+                                repo.index.remove([str(f_path.relative_to(TARGET_DIR))])
+                                f_path.unlink()
+                                repo.index.commit(f"Deleted (Reset) {f_path.name}")
+                                repo.remotes.origin.push()
+                                
+                                # 2. DB Reset
+                                db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
+                                if refinery_id_sel:
+                                    res1 = db_manager.delete_record(refinery_id_sel)
+                                    res2 = db_manager.delete_record(f"{refinery_id_sel}.md")
+                                    if res1 or res2:
+                                        st.success("✅ Reset exitoso. Articulo devuelto al Inbox.")
                                     else:
-                                        st.warning("No se encontró ID en frontmatter. Solo se eliminó el archivo.")
-                                    
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Error: {e}")
+                                        st.warning("Eliminado del repo, pero no encontrado en BD local.")
+                                else:
+                                    st.warning("Eliminado del repo. Sin ID para limpiar BD.")
+                                
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+
         else:
              st.warning("No se encuentra el directorio de posts. Ejecuta una sincronización primero para clonar el repo.")
-
