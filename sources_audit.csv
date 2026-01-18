@@ -1,0 +1,27 @@
+Source ID,Status,Feed HTTP Code,Content Error,Error Details,Action Item
+reddit_science,CRITICAL,403 Forbidden,N/A,Feed access blocked by Reddit.,Investigate RSS bridge or Reddit API.
+science,PARTIAL,200 OK,403 Forbidden,Full text fetch blocked (Cloudflare/Bot protection).,Implement headless w/ stealth or proxies.
+nature,PARTIAL,200 OK,406 Not Acceptable,Client headers rejected by server.,Fix User-Agent or Accept headers.
+nejm,PARTIAL,200 OK,403 Forbidden,Full text fetch blocked.,Implement headless w/ stealth.
+cell,PARTIAL,200 OK,403 Forbidden,Full text fetch blocked.,Implement headless w/ stealth.
+scitechdaily,PARTIAL,200 OK,403 Forbidden,Full text fetch blocked.,Check robots.txt or headers.
+phys_org,WARNING,200 OK,429 Too Many Requests,Rate limiting active.,Increase delay between requests.
+deepmind_blog,BROKEN,200 OK,Validation Error,Content/Summary is empty (0 chars). Scraper selectors likely broken.,Update selectors in HtmlCollector.
+yale_news,OK (Transient),200 OK,500 Server Error,One article failed (Server Error). Others saved.,Monitor.
+arxiv_ai,OK,200 OK,None,Working correctly.,None
+biorxiv,OK,200 OK,None,Working correctly.,None
+new_scientist,OK,200 OK,None,Working correctly.,None
+stat_news,OK,200 OK,None,Working correctly.,None
+scientific_american,OK,200 OK,None,Working correctly.,None
+techcrunch,OK,200 OK,None,Working correctly.,None
+livescience,OK,200 OK,None,Working correctly.,None
+the_verge,OK,200 OK,None,Working correctly.,None
+mit_tech_review,OK,200 OK,None,Working correctly.,None
+nasa_news,OK,200 OK,None,Working correctly.,None
+wired,OK,200 OK,None,Working correctly.,None
+space_com,OK,200 OK,None,Working correctly.,None
+mit_news,OK,200 OK,None,Working correctly.,None
+nih_news,OK,200 OK,None,Working correctly.,None
+sciencedaily_top,OK,200 OK,None,Working correctly.,None
+arstechnica,OK,200 OK,None,Working correctly.,None
+openai_research,BROKEN,N/A,Validation Error,Headless collector getting invalid payload (validation errors).,Debug HeadlessCollector output.

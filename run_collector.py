@@ -39,6 +39,7 @@ try:
     from news_collector.config import ALL_SOURCES
     from main import create_system
     from news_collector import setup_logging
+    from news_collector.diagnostics import SourceHealthTracker
 except ImportError as e:
     print(f"❌ Error importando módulos: {e}")
     print(
@@ -110,7 +111,8 @@ def run_simple_collection(args):
             }
 
         print("🔧 Inicializando sistema...")
-        system = create_system(config_override=config_override)
+        tracker = SourceHealthTracker()
+        system = create_system(config_override=config_override, health_tracker=tracker)
 
         logger_factory = setup_logging()
         run_logger = logger_factory.create_module_logger("cli.run")
@@ -224,6 +226,10 @@ def run_simple_collection(args):
                 ),
             }
         )
+
+        # Diagnostics Report
+        tracker.export_json("data/exports/source_health.json")
+        tracker.print_summary_table()
 
         print("🎉 ¡Recolección completada exitosamente!")
         return True

@@ -138,7 +138,7 @@ def test_cli_dry_run_invokes_collection(monkeypatch: pytest.MonkeyPatch, logger_
     """``--dry-run`` should forward the flag and report simulation mode."""
 
     system = FakeSystem()
-    monkeypatch.setattr(run_collector, "create_system", lambda: system)
+    monkeypatch.setattr(run_collector, "create_system", lambda *a, **k: system)
 
     exit_code = _invoke_cli(monkeypatch, ["--dry-run", "--show-articles", "0"]).code
 
@@ -155,7 +155,7 @@ def test_cli_filters_sources(monkeypatch: pytest.MonkeyPatch, logger_factory: Lo
     """Invalid sources should be reported while valid ones are processed."""
 
     system = FakeSystem()
-    monkeypatch.setattr(run_collector, "create_system", lambda: system)
+    monkeypatch.setattr(run_collector, "create_system", lambda *a, **k: system)
 
     exit_code = _invoke_cli(
         monkeypatch,
@@ -245,7 +245,7 @@ def test_cli_initialize_failure_logs_error(
     """Failed system initialization should emit a structured error log."""
 
     system = FakeSystem(initialize_result=False)
-    monkeypatch.setattr(run_collector, "create_system", lambda: system)
+    monkeypatch.setattr(run_collector, "create_system", lambda *a, **k: system)
 
     exit_code = _invoke_cli(monkeypatch, ["--show-articles", "0"]).code
 
@@ -267,7 +267,7 @@ def test_cli_collection_exception_logs_error(
     """Unexpected exceptions should be surfaced via structured logging."""
 
     system = FakeSystem(raise_on_run=True)
-    monkeypatch.setattr(run_collector, "create_system", lambda: system)
+    monkeypatch.setattr(run_collector, "create_system", lambda *a, **k: system)
 
     exit_code = _invoke_cli(monkeypatch, ["--show-articles", "0"]).code
 

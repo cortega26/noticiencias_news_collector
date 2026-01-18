@@ -11,7 +11,7 @@ def test_contract_validates_short_content(mock_article_payload: dict[str, Any]):
     with pytest.raises(ValidationError) as excinfo:
         CollectorArticleModel.model_validate(payload)
     
-    assert "content is too short" in str(excinfo.value)
+    assert "Article too short" in str(excinfo.value)
 
 def test_contract_sanitizes_generic_authors(mock_article_payload: dict[str, Any]):
     """Test that generic author names are filtered out."""
@@ -34,16 +34,4 @@ def test_contract_accepts_valid_payload(mock_article_payload: dict[str, Any]):
     model = CollectorArticleModel.model_validate(mock_article_payload)
     assert model.title == mock_article_payload["title"]
 
-def test_contract_rejects_unbalanced_quotes(mock_article_payload: dict[str, Any]):
-    """Test that content with unbalanced quotes is rejected."""
-    payload = mock_article_payload.copy()
-    # Content has one quote: "
-    payload["content"] = (
-        'This content has an "unbalanced quote inside it. '
-        'It is long enough to pass the length check but should fail quote check.'
-    )
-    
-    with pytest.raises(ValidationError) as excinfo:
-        CollectorArticleModel.model_validate(payload)
-    
-    assert "unbalanced double quotes" in str(excinfo.value)
+

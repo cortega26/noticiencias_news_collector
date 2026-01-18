@@ -201,66 +201,60 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False):
 
         # 3. Run Method Wrapper (Async to Sync)
         async def _run_and_export():
-             # Run Collection
-             await system.run_collection_cycle(dry_run=False)
-             
-             # Export Logic (Shared with run_collector.py)
-             export_path = Path("data/exports/latest_articles.json") # Relative to CWD (root)
-             # But wait, logic below expects it in source_dir/data/... or just data/...
-             
-             # admin_panel expects: BASE_DIR / "temp" / "source" / "data" / "exports" / ...
-             # OR SIBLING_PATH = NEWS_COLLECTOR_PATH / "data" / "exports" / ...
-             
-             # If we are running in process, we are likely in project root or apps/refinery?
-             # admin_panel sets CWD? No.
-             
-             # Just write to where admin_panel looks:
-             # If running from admin_panel, CWD might be apps/refinery or root. 
-             # admin_panel checks `CLONED_PATH` and `SIBLING_PATH`.
-             
-             # We will try to write to the standard location relative to project root
-             target_export_path = project_root / "data/exports/latest_articles.json"
-             target_export_path.parent.mkdir(parents=True, exist_ok=True)
-             
-             logger.info(f"Exporting results to {target_export_path}")
-             
-             # Get articles
-             articles = await asyncio.to_thread(
-                 system.db_manager.get_articles_by_score, limit=50, exclude_published=True
-             )
-             
-             serialized_articles = []
-             for art in articles:
-                art_dict = {
-                    "id": art.id,
-                    "title": art.title,
-                    "url": art.url,
-                    "summary": art.summary,
-                    "content": art.content,
-                    "source_name": art.source_name,
-                    "published_date": art.published_date.isoformat() if art.published_date else None,
-                    "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
-                    "published_url": getattr(art, "published_url", None),
-                    "collected_date": art.collected_date.isoformat() if art.collected_date else None,
-                    "score": art.final_score,
-                    "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
-                    "metadata": art.article_metadata,
-                    "authors": art.authors,
-                    "category": art.category,
-                    "components": art.score_components or {}
-                }
-                serialized_articles.append(art_dict)
-            
-             export_payload = {
-                "schema_version": 1,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "contract": "news_collector.export.v1",
-                "article_count": len(serialized_articles),
-                "articles": serialized_articles,
-             }
+             try:
+                 # Run Collection
+                 await system.run_collection_cycle(dry_run=False)
+                 
+                 # Export Logic (Shared with run_collector.py)
+                 export_path = Path("data/exports/latest_articles.json") # Relative to CWD (root)
+                 
+                 # We will try to write to the standard location relative to project root
+                 target_export_path = project_root / "data/exports/latest_articles.json"
+                 target_export_path.parent.mkdir(parents=True, exist_ok=True)
+                 
+                 logger.info(f"Exporting results to {target_export_path}")
+                 
+                 # Get articles
+                 articles = await asyncio.to_thread(
+                     system.db_manager.get_articles_by_score, limit=50, exclude_published=True
+                 )
+                 
+                 serialized_articles = []
+                 for art in articles:
+                    art_dict = {
+                        "id": art.id,
+                        "title": art.title,
+                        "url": art.url,
+                        "summary": art.summary,
+                        "content": art.content,
+                        "source_name": art.source_name,
+                        "published_date": art.published_date.isoformat() if art.published_date else None,
+                        "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                        "published_url": getattr(art, "published_url", None),
+                        "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                        "score": art.final_score,
+                        "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                        "metadata": art.article_metadata,
+                        "authors": art.authors,
+                        "category": art.category,
+                        "components": art.score_components or {}
+                    }
+                    serialized_articles.append(art_dict)
+                
+                 export_payload = {
+                    "schema_version": 1,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "contract": "news_collector.export.v1",
+                    "article_count": len(serialized_articles),
+                    "articles": serialized_articles,
+                 }
 
-             with open(target_export_path, 'w', encoding='utf-8') as f:
-                json.dump(export_payload, f, indent=2, ensure_ascii=False)
+                 with open(target_export_path, 'w', encoding='utf-8') as f:
+                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
+                    
+             finally:
+                 if hasattr(system, 'shutdown'):
+                     await system.shutdown()
                 
         # 4. Handle Execution Loop
         try:

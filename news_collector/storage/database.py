@@ -428,6 +428,18 @@ class DatabaseManager:
                     raise
 
     # =====================================
+    # Operaciones Principales (Public API)
+    # =====================================
+
+    def article_exists(self, url: str) -> bool:
+        """
+        Check if an article with the given URL already exists in the database.
+        Efficient query using exists().
+        """
+        with self.get_session() as session:
+            return session.query(
+                session.query(Article).filter_by(url=url).exists()
+            ).scalar()
     # OPERACIONES CON ARTÍCULOS
     # =====================================
 
@@ -1120,6 +1132,30 @@ class DatabaseManager:
                 result["deleted_score_logs"],
             )
             return result
+
+    def clear_all_articles(self) -> int:
+        """
+        Elimina TODOS los artículos recolectados de la base de datos.
+        
+        Esta operación es destructiva e irreversible. Equivale a un "Factory Reset"
+        del contenido recolectado.
+        """
+        with self.get_session() as session:
+            try:
+                # Eliminar logs de scoring primero para evitar problemas de FK si no hay cascade
+                deleted_logs = session.query(ScoreLog).delete()
+                # Eliminar artículos
+                deleted_articles = session.query(Article).delete()
+                
+                # Opcional: Resetear timestamps de fuentes para que vuelvan a buscar todo?
+                # Si borramos el contenido, las fuentes deberían poder volver a traerlo si el feed lo tiene.
+                # No reseteamos las métricas de fuentes (consecutive_failures etc) para mantener historia de salud.
+                
+                logger.info(f"🚨 CACHÉ VACIADA: {deleted_articles} artículos y {deleted_logs} logs eliminados.")
+                return deleted_articles
+            except Exception as e:
+                logger.error(f"Error vaciando caché: {e}")
+                raise
 
     def get_health_status(self) -> Dict[str, Any]:
         """

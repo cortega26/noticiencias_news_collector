@@ -44,7 +44,7 @@ backoff_max = 10.0
 jitter_max = 0.3
 
 [robots]
-respect_robots = true
+respect_robots = false
 cache_ttl_seconds = 3600
 
 [dedup]
@@ -91,16 +91,16 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 "reddit.com" = 30.0
 
 [scoring.weights]
-source_credibility = 0.1
-recency = 0.1
-content_quality = 0.1
-engagement_potential = 0.7
+source_credibility = 0.15
+recency = 0.20
+content_quality = 0.35
+engagement_potential = 0.30
 
 [scoring.feature_weights]
-source_credibility = 0.3
-freshness = 0.25
-content_quality = 0.25
-engagement = 0.2
+source_credibility = 0.15
+freshness = 0.20
+content_quality = 0.35
+engagement = 0.30
 
 [scoring.freshness]
 half_life_hours = 18.0

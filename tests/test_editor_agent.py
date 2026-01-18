@@ -28,7 +28,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
         {
             "title": "Demo",
             "summary": "Resumen",
-            "content": "Contenido",
+            "content": "Contenido " * 200,
             "image_url": None,
             "url": "https://example.com/source",
         }
@@ -59,7 +59,7 @@ def test_process_article_keeps_sections_with_image() -> None:
         {
             "title": "Demo",
             "summary": "Resumen",
-            "content": "Contenido",
+            "content": "Contenido " * 200,
             "image_url": "https://example.com/image.jpg",
             "url": "https://example.com/source",
         }

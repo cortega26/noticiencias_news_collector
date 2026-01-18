@@ -21,7 +21,7 @@ def mock_article_payload():
         "content": (
             "This is the main content of the article. It has enough words to pass the validation "
             "checks. We need to ensure that the content is sufficiently long so that the heuristic "
-            "rules for quality do not trigger a validation error. This should be more than enough characters now."
+            "rules for quality do not trigger a validation error. This should be more than enough characters now. " * 30
         ),
         "source_id": "test_source",
         "source_name": "Test Source",

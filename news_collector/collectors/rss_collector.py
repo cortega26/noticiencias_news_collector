@@ -43,9 +43,10 @@ from news_collector.utils.url_canonicalizer import (
     configure_canonicalization_cache,
 )
 
-from ..storage.database import get_database_manager
+from news_collector.storage.database import get_database_manager
 from .base_collector import BaseCollector
 from .rate_limit_utils import calculate_effective_delay
+from news_collector.scoring.pre_scorer import PreScorer
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from news_collector.utils.logger import NewsCollectorLogger
@@ -72,9 +73,10 @@ class RSSCollector(BaseCollector):
     colectores que podríamos agregar en el futuro (APIs, web scraping, etc.).
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
-        super().__init__(logger_factory=logger_factory)
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+        super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         self.session = self._create_session()
+        self.pre_scorer = PreScorer()
 
         # Estadísticas de la sesión actual
         self.session_stats = {
@@ -236,6 +238,7 @@ class RSSCollector(BaseCollector):
                 )
             stats["articles_found"] = len(raw_articles)
 
+
             if not raw_articles:
                 self._emit_log(
                     "info",
@@ -245,15 +248,20 @@ class RSSCollector(BaseCollector):
                 )
                 stats["success"] = True
                 return stats
+            
+            if self.health_tracker:
+                self.health_tracker.record_success(source_id, "fetch")
+                self.health_tracker.record_success(source_id, "parse")
 
-            saved_count = 0
+            # Batch process candidates for filtering pipeline
+            processed_candidates = []
             for raw_article in raw_articles:
                 try:
                     processed_article = self._process_article(
                         raw_article, source_id, source_config
                     )
-                    if processed_article and self._save_article(processed_article):
-                        saved_count += 1
+                    if processed_article:
+                        processed_candidates.append(processed_article)
                 except Exception as exc:
                     self._emit_log(
                         "error",
@@ -268,6 +276,8 @@ class RSSCollector(BaseCollector):
                     )
                     self.session_stats["errors_encountered"] += 1
 
+            # Apply strict sequential filters and save
+            saved_count = self._filter_and_save_articles(source_id, processed_candidates, limit=5)
             stats["articles_saved"] = saved_count
             stats["success"] = True
 
@@ -291,6 +301,8 @@ class RSSCollector(BaseCollector):
                 source_id=source_id,
                 details={"error": str(exc), "url": source_config.get("url")},
             )
+            if self.health_tracker:
+                self.health_tracker.record_failure(source_id, "collector.fetch", "network_error", {"error": str(exc)})
 
         except Exception as exc:
             stats["error_message"] = f"Error inesperado: {exc}"
@@ -300,6 +312,8 @@ class RSSCollector(BaseCollector):
                 source_id=source_id,
                 details={"error": str(exc)},
             )
+            if self.health_tracker:
+                 self.health_tracker.record_failure(source_id, "collector.fetch", "unexpected_error", {"error": str(exc)})
 
         finally:
             stats["processing_time"] = time.time() - start_time
@@ -360,12 +374,12 @@ class RSSCollector(BaseCollector):
                     conditional_headers = {}
                     # FORCE REFRESH: Temporarily disable ETag/Last-Modified to ensure we re-process feeds
                     # and trigger the full-text fetcher for existing items.
-                    # if cached_headers.get("etag"):
-                    #     conditional_headers["If-None-Match"] = cached_headers["etag"]
-                    # if cached_headers.get("last_modified"):
-                    #     conditional_headers["If-Modified-Since"] = cached_headers[
-                    #         "last_modified"
-                    #     ]
+                    if cached_headers.get("etag"):
+                        conditional_headers["If-None-Match"] = cached_headers["etag"]
+                    if cached_headers.get("last_modified"):
+                        conditional_headers["If-Modified-Since"] = cached_headers[
+                            "last_modified"
+                        ]
 
                     response = self.session.get(
                         feed_url,
@@ -575,14 +589,22 @@ class RSSCollector(BaseCollector):
         diferentes estilos de catálogos (RSS, Atom, diferentes versiones)
         y extraer la información esencial de cada libro de manera consistente.
         """
-        articles = []
+        # candidates = []
         max_articles = COLLECTION_CONFIG["max_articles_per_source"]
+        
+        # INTELLIGENT SELECTION: Fetch stricter pool (e.g. 4x limit)
+        # to allow AI to select the best ones.
+        candidate_multiplier = 4
+        fetch_limit = max_articles * candidate_multiplier
+        
         recent_threshold = datetime.now(timezone.utc) - timedelta(
             days=COLLECTION_CONFIG["recent_days_threshold"]
         )
 
-        # Procesar entradas del feed
-        for entry in parsed_feed.entries[:max_articles]:
+        candidates = []
+
+        # 1. PHASE ONE: Extract Metadata Candidates
+        for entry in parsed_feed.entries[:fetch_limit]:
             try:
                 # Extraer fecha de publicación
                 pub_dt, pub_off_min, pub_tz_name = self._extract_publication_timestamp(
@@ -593,11 +615,19 @@ class RSSCollector(BaseCollector):
                 if pub_dt and pub_dt < recent_threshold:
                     continue
 
-                # Extraer información básica
                 original_url = entry.get("link", "")
                 canonical_url = canonicalize_url(original_url)
+                
+                # Check duplication EARLY to save AI tokens
+                # We can check if URL exists in DB? Or just Job Key?
+                # Job Key is per source, not per article.
+                # DB check is expensive but better than scoring duplicates.
+                if self.db_manager.article_exists(canonical_url): 
+                     # Check DB for existing article to avoid re-processing
+                     print(f"DEBUG: Skipping duplicate URL: {canonical_url}")
+                     continue
 
-                article_data = {
+                candidate_data = {
                     "title": self._clean_text(entry.get("title", "Sin título")),
                     "url": canonical_url,
                     "summary": self._extract_summary(entry),
@@ -611,36 +641,50 @@ class RSSCollector(BaseCollector):
                     ),
                     "original_url": original_url,
                     "image_url": self._extract_image_url(entry),
+                    "credibility_score": 1.0,  # Default, adjusted by scorer later
+                    "entry_ref": entry # Keep ref if needed
                 }
+                
+                # Basic validation
+                if len(candidate_data["title"]) < 5: continue
+                
+                candidates.append(candidate_data)
+                
+            except Exception:
+                continue
 
-                # NEW: Always Fetch Full Text (User Requirement)
-                # We do not trust RSS summaries to be representative.
-                from news_collector.utils.full_text import fetch_full_article
-                self._emit_log("info", "collector.article.fetching_full_text", details={"url": canonical_url})
+        if len(candidates) > max_articles:
+            self._emit_log("warning", "collector.prescorer.ranking_start", details={"candidates": len(candidates), "limit": max_articles})
+            
+            selected_candidates = self.pre_scorer.select_top_candidates(
+                candidates, 
+                limit=max_articles, 
+                source_context=source_config.get("name", source_id)
+            )
+            print(f"✅ PreScorer: Selected {len(selected_candidates)} best articles.")
+        else:
+            selected_candidates = candidates
+
+        # 3. PHASE THREE: Deep Processing (Full Text)
+        articles = []
+        from news_collector.utils.full_text import fetch_full_article
+        
+        for cand in selected_candidates:
+            try:
+                self._emit_log("info", "collector.article.fetching_full_text", details={"url": cand["url"]})
                 
-                # DEBUG LOGGING (Using WARNING to ensure visibility in Streamlit logs)
-                self._emit_log("warning", "debug.fetching_full_text", details={"url": canonical_url})
-                full_text = fetch_full_article(canonical_url, self.session)
-                text_len = len(full_text) if full_text else 0
-                self._emit_log("warning", "debug.full_text_result", details={"url": canonical_url, "length": text_len})
-                
+                full_text = fetch_full_article(cand["url"], self.session)
                 if full_text:
-                    article_data["content"] = full_text
+                    cand["content"] = full_text
                 
-                # Validar que tengamos información mínima necesaria
-                if self._validate_article_data(article_data):
-                    articles.append(article_data)
-
-            except Exception as exc:
-                self._emit_log(
-                    "warning",
-                    "collector.article.extract_failed",
-                    source_id=source_id,
-                    details={
-                        "error": str(exc),
-                        "url": entry.get("link"),
-                    },
-                )
+                # Create final dict (cleanup helper props if any)
+                if "entry_ref" in cand: del cand["entry_ref"]
+                
+                if self._validate_article_data(cand):
+                    articles.append(cand)
+                    
+            except Exception as e:
+                self._emit_log("warning", "collector.article.process_failed", details={"error": str(e)})
                 continue
 
         return articles

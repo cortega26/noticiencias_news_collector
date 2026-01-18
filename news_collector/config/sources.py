@@ -287,11 +287,11 @@ AI_LABS = {
         "language": "en",
         "impact_factor": None,
         "description": "Latest research from OpenAI",
-        "collector_type": "html",
-        "html_selectors": {
-            "container": "li.tex-0", # Example selector, needs verification
+        "collector_type": "headless",
+        "selectors": {
+            "item": "div.snap-start", 
             "link": "a",
-            "title": "span"
+            "title": "div.text-h5 p"
         }
     },
     "deepmind_blog": {

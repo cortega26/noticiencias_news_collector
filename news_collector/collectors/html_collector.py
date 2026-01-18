@@ -31,8 +31,8 @@ class HtmlCollector(BaseCollector):
     - Navegación optimizada con robots.txt compliance.
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
-        super().__init__(logger_factory=logger_factory)
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+        super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         self.headers = {
             "User-Agent": COLLECTION_CONFIG["user_agent"],
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -61,6 +61,8 @@ class HtmlCollector(BaseCollector):
             "error_message": None,
             "processing_time": 0,
         }
+        if self.health_tracker:
+             self.health_tracker.record_attempt(source_id)
 
         url = source_config.get("url")
         if not url:
@@ -94,6 +96,13 @@ class HtmlCollector(BaseCollector):
                 response = await client.get(url)
                 if response.status_code >= 400:
                     stats["error_message"] = f"Error HTTP {response.status_code}"
+                    if self.health_tracker:
+                        self.health_tracker.record_failure(
+                            source_id, 
+                            "collector.fetch.http", 
+                            f"HTTP Error {response.status_code}", 
+                            {"status_code": response.status_code, "url": url}
+                        )
                     return stats
                 
                 html_content = response.text
@@ -107,10 +116,14 @@ class HtmlCollector(BaseCollector):
                 stats["error_message"] = f"Error de parsing: {str(e)}"
                 return stats
 
+            if self.health_tracker:
+                 self.health_tracker.record_success(source_id, "fetch")
+                 self.health_tracker.record_success(source_id, "parse", count=len(raw_articles))
+
             stats["articles_found"] = len(raw_articles)
             
             # 4. Save
-            saved_count = 0
+            processed_candidates = []
             for raw in raw_articles:
                 # Rate limit between articles
                 self._enforce_domain_rate_limit(domain, robots_delay, source_config.get("min_delay_seconds"))
@@ -123,15 +136,19 @@ class HtmlCollector(BaseCollector):
 
                 # Basic validation hook
                 processed = self._process_article_html(raw, source_config, source_id)
-                if processed and self._save_article(processed): 
-                    saved_count += 1
+                if processed:
+                    processed_candidates.append(processed)
             
+            # Apply strict sequential filters and save
+            saved_count = self._filter_and_save_articles(source_id, processed_candidates, limit=5)
             stats["articles_saved"] = saved_count
             stats["success"] = True
 
         except Exception as e:
             stats["error_message"] = f"Excepción inesperada: {str(e)}"
             self._emit_log("error", "collector.html.exception", source_id=source_id, details={"error": str(e)})
+            if self.health_tracker:
+                 self.health_tracker.record_failure(source_id, "collector.fetch", "exception", {"error": str(e)})
 
         finally:
              stats["processing_time"] = time.time() - start_time

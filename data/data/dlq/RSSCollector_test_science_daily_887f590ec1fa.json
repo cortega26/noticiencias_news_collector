@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260117T195304Z",
+  "collector": "RSSCollector",
+  "source_id": "test_science_daily",
+  "url": "https://example.com/articles/nasa-confirms-water-on-mars",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}
