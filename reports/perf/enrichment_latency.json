@@ -1,9 +1,9 @@
 {
   "metrics": {
     "samples": 18,
-    "mean_seconds": 3.677838887799428e-05,
-    "p95_seconds": 5.077290043118406e-05,
-    "max_seconds": 7.127999924705364e-05
+    "mean_seconds": 3.588861161713592e-05,
+    "p95_seconds": 5.3545698028756266e-05,
+    "max_seconds": 7.564399857074022e-05
   },
   "thresholds": {
     "p95_seconds": 0.25,

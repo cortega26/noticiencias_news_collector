@@ -4,6 +4,7 @@ import os
 import dotenv
 from pathlib import Path
 import sys
+import sqlite3
 import importlib.util
 
 # Import refinery main explicitly to avoid ambiguous module resolution.
@@ -41,6 +42,15 @@ run_refinery = refinery_main.main
 from news_collector.storage.database import DatabaseManager
 from src.database import DatabaseManager as RefineryDatabaseManager
 from news_collector.config.settings import DATABASE_CONFIG
+
+import logging
+# Configure logging with timestamps for console output
+logging.basicConfig(
+    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    level=logging.INFO,
+    datefmt='%H:%M:%S',
+    force=True
+)
 
 # Page Config
 st.set_page_config(page_title="Panel de Control Noticiencias", page_icon="🎛️", layout="wide")
@@ -121,7 +131,9 @@ collector_path_str = env_config.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR
 NEWS_COLLECTOR_PATH = Path(collector_path_str).resolve()
 
 COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
-REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / "refinery.db"
+# Use configured DB path to ensure we wipe the correct DB
+configured_db_path = DATABASE_CONFIG.get("path", "refinery.db")
+REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / configured_db_path
 
 def load_toml_config():
     if not COLLECTOR_CONFIG_PATH.exists():
@@ -196,22 +208,56 @@ with tab1:
                 else "0"
             )
             
-        st.subheader("📝 Prompt del Sistema (Personalidad)")
-        default_prompt = (
-            "You are a science communicator for 'Noticiencias'. "
-            "Translate the following technical text to Spanish. "
-            "Then, rewrite it to be punchy, engaging, and easy to understand for a general audience. "
-            "Maintain accuracy but improve flow. "
-            "Output ONLY the final Markdown content with a YAML Frontmatter block containing "
-            "title, author (AI), and date (use today's date in YYYY-MM-DD format). "
-            "Ensure the frontmatter starts and ends with '---'. "
-            "Do not include any preamble, just the markdown."
-        )
-        current_prompt = env_vars.get("OLLAMA_PROMPT", default_prompt)
-        # Use height=200 for a nice big editor
-        env_vars["OLLAMA_PROMPT"] = st.text_area("Editar instrucciones de la IA:", value=current_prompt, height=200)
+        st.subheader("📝 Prompts del Sistema (Definidos en prompts.yaml)")
+        
+        # Path to prompts.yaml
+        PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
+        
+        import yaml
+        
+        current_prompts = {}
+        if PROMPTS_YAML_PATH.exists():
+            try:
+                with open(PROMPTS_YAML_PATH, "r", encoding="utf-8") as f:
+                    current_prompts = yaml.safe_load(f) or {}
+            except Exception as e:
+                st.error(f"Error leyendo prompts.yaml: {e}")
+        else:
+            st.warning("⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar.")
+            
+        # Translator Prompt
+        st.markdown("##### 1. Traductor (Fase 1)")
+        trans_sys = current_prompts.get("translator", {}).get("system", "")
+        new_trans_sys = st.text_area("Prompt Traductor", value=trans_sys, height=150, key="prompt_trans")
+        
+        # Editor Prompt
+        st.markdown("##### 2. Editor (Fase 2)")
+        edit_sys = current_prompts.get("editor", {}).get("system", "")
+        new_edit_sys = st.text_area("Prompt Editor", value=edit_sys, height=200, key="prompt_edit")
 
-        if st.button("💾 Guardar Configuración IA"):
+        # Headline Prompt
+        st.markdown("##### 3. Titulares (Fase 3)")
+        head_sys = current_prompts.get("headline", {}).get("system", "")
+        new_head_sys = st.text_area("Prompt Titulares", value=head_sys, height=100, key="prompt_head")
+
+        if st.button("💾 Guardar Prompts (YAML)"):
+            updated_prompts = current_prompts.copy()
+            if "translator" not in updated_prompts: updated_prompts["translator"] = {}
+            if "editor" not in updated_prompts: updated_prompts["editor"] = {}
+            if "headline" not in updated_prompts: updated_prompts["headline"] = {}
+            
+            updated_prompts["translator"]["system"] = new_trans_sys
+            updated_prompts["editor"]["system"] = new_edit_sys
+            updated_prompts["headline"]["system"] = new_head_sys
+            
+            try:
+                with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
+                    yaml.dump(updated_prompts, f, allow_unicode=True, default_flow_style=False)
+                st.success("¡Prompts actualizados en config/prompts.yaml!")
+            except Exception as e:
+                st.error(f"Error guardando prompts: {e}")
+            
+            # Also save env vars if any other changes were made
             save_env_file(env_vars)
             st.success("¡Variables de entorno actualizadas!")
     else:
@@ -289,6 +335,85 @@ with tab2:
         if st.button("💾 Guardar Config Colector"):
             save_toml_config(config_data)
             st.success("¡config.toml actualizado con éxito!")
+
+        st.markdown("---")
+        st.subheader("🧹 Mantenimiento del Sistema")
+        with st.expander("🚨 Reinicio de Fábrica (Reset Total)", expanded=True):
+            st.warning("⚠️ Esta acción borrará TODOS los datos: artículos en base de datos, caché y archivos exportados. Úsalo para empezar de cero.")
+            
+            # Confirmation Checkbox to prevent accidental clicks
+            confirm_delete = st.checkbox("Confirmo que deseo vaciar TODO el sistema (Backend + Frontend).")
+            
+            if st.button("🧨 EJECUTAR RESET TOTAL", type="primary", disabled=not confirm_delete):
+                 with st.spinner("Eliminando datos y reseteando caché..."):
+                     try:
+                         # Use the DatabaseManager for the persistent storage
+                         db_man = DatabaseManager({"type": "sqlite", "path": REFINERY_DB_PATH})
+                         count = db_man.clear_all_articles()
+                         
+                         # Clean up export files to reflect empty state immediately
+                         paths_to_clean = [
+                             BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json",
+                             NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
+                         ]
+                         
+                         for p in paths_to_clean:
+                             if p.exists():
+                                 try:
+                                     p.unlink()
+                                 except Exception:
+                                     pass
+                         
+                         # 2. Clear Refinery Workflow State (refinery.db)
+                         # This DB tracks which files have been turned into PRs.
+                         # We must wipe it so the UI allows re-processing the same content if desired.
+                         refinery_db_path = NEWS_COLLECTOR_PATH / "refinery.db"
+                         if refinery_db_path.exists():
+                             try:
+                                 refinery_db_path.unlink()
+                                 st.success(f"✅ Estado del flujo de trabajo reiniciado ({refinery_db_path.name} eliminado).")
+                             except Exception as e:
+                                 st.warning(f"No se pudo eliminar {refinery_db_path.name}: {e}")
+
+                         # 3. Clean Job History & Source Metadata to force re-fetch
+                         # If we don't clear this, the collector will think it just ran 
+                         # and skip everything (304 Not Modified or "Duplicate Job")
+                         with sqlite3.connect(REFINERY_DB_PATH) as conn:
+                             cursor = conn.cursor()
+                             
+                             # Wipe all article data
+                             tables_to_wipe = ["articles", "article_metrics", "score_logs"]
+                             for table in tables_to_wipe:
+                                 try:
+                                     cursor.execute(f"DELETE FROM {table}")
+                                     st.write(f"  - Tabla `{table}` limpiada.")
+                                 except Exception:
+                                     pass # Table might not exist yet
+                             
+                             # Reset Source Metadata (Force Re-fetch)
+                             try:
+                                 cursor.execute("""
+                                     UPDATE sources 
+                                     SET last_checked = NULL, 
+                                         last_successful_check = NULL, 
+                                         feed_etag = NULL, 
+                                         feed_last_modified = NULL
+                                 """)
+                                 st.write("  - Metadatos de fuentes reiniciados (forzando re-colección).")
+                             except Exception as e:
+                                 st.warning(f"No se pudieron reiniciar fuentes: {e}")
+                                 
+                             conn.commit()
+
+                         # Clear Streamlit Cache
+                         st.cache_data.clear()
+                         
+                         st.success(f"✅ SISTEMA LIMPIO. {count} artículos eliminados. Caché purgada.")
+                         import time
+                         time.sleep(2) # Give user time to see success message
+                         st.rerun()
+                     except Exception as e:
+                         st.error(f"Error durante limpieza: {e}")
 
 # --- Tab 3: Operations ---
 with tab3:

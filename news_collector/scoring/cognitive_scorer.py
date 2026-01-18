@@ -1,225 +1,456 @@
 import logging
 import json
+import sqlite3
+import time
+import asyncio
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from pathlib import Path
+from typing import Dict, Any, List, Optional, Tuple
 
 from news_collector.storage.models import Article
 from news_collector.utils.llm_client import LLMClient
 from .basic_scorer import BasicScorer
+from .heuristic_scorer import HeuristicScorer
 
 logger = logging.getLogger(__name__)
 
+CACHE_DB_PATH = Path("data/cache_cognitive.db")
+
 class CognitiveScorer(BasicScorer):
     """
-    Scorer avanzado que utiliza IA para evaluar el 'Engagement Cognitivo'.
-    Extiende BasicScorer para reutilizar métricas base (Fuente, Recencia, Calidad)
-    y combina con análisis semántico profundo.
+    Advanced Scorer using a Hybrid Strategy (LLM + Heuristic + Cache).
+    
+    Strategy:
+    1. Check Cache (SQLite) for existing cognitive scores.
+    2. If miss, check LLM Health & Budget.
+    3. If healthy, Call LLM (Batched).
+    4. If unhealthy/timeout/budget-exhausted, Fallback to HeuristicScorer.
     """
     
     def __init__(self, weights: Optional[Dict[str, float]] = None, llm_client: LLMClient = None):
-        print("DEBUG: CognitiveScorer INITIALIZED")
-        # Default weights if none provided (Prompt Maestro formula)
+        print(f"{datetime.now().strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)")
+        
+        # 1. Weights Setup
         default_weights = {
             "source_credibility": 0.20,
             "recency": 0.20,
             "content_quality": 0.20,
             "cognitive_engagement": 0.40
         }
-        
-        # If weights are provided (e.g. from UI/Config), we use them.
-        # We need to ensure 'engagement_potential' from standard config maps to 'cognitive_engagement' 
-        # if the latter is missing.
         final_weights = weights.copy() if weights else default_weights
         
-        if "engagement_potential" in final_weights and "cognitive_engagement" not in final_weights:
-            final_weights["cognitive_engagement"] = final_weights.pop("engagement_potential")
+        # Ensure 'engagement_potential' is used internally to match BaseScorer and config
+        if "cognitive_engagement" in final_weights:
+            final_weights["engagement_potential"] = final_weights.pop("cognitive_engagement")
             
         super().__init__(weights=final_weights)
-        self.llm = llm_client or LLMClient()
-        self.version = "2.0-cognitive"
-
-    def score_article(
-        self, article: Article, source_config: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        """
-        Calcula el score usando el algoritmo 'Prompt Maestro'.
-        """
-        print(f"DEBUG: CognitiveScorer.score_article called for {article.title}")
-        try:
-            # 1. Métricas Base (Reutilizadas de BasicScorer, retornan 0-1)
-            source_score = self._calculate_source_credibility_score(article, source_config)
-            recency_score = self._calculate_recency_score(article)
-            content_score = self._calculate_content_quality_score(article)
-            
-            # 2. Cognitive Engagement (Calculado vía LLM, retorna 0-5, normalizamos a 0-1)
-            cognitive_result = self._calculate_cognitive_engagement(article)
-            cognitive_raw = cognitive_result.get("score", 0.0) # 0-5
-            cognitive_score = min(1.0, cognitive_raw / 5.0) # Normalizado 0-1
-            
-            # 3. Cálculo Final
-            # FinalScore = 0.2*Source + 0.2*Recency + 0.2*Quality + 0.4*Cognitive
-            final_score = (
-                source_score * self.weights["source_credibility"] +
-                recency_score * self.weights["recency"] +
-                content_score * self.weights["content_quality"] +
-                cognitive_score * self.weights["cognitive_engagement"]
-            )
-             
-            final_score = max(0.0, min(1.0, final_score))
-            
-            # 4. Decisión Editorial
-            # < 0.60 Descartar, 0.60-0.74 Publicable, >= 0.75 Prioridad
-            decision = "discard"
-            if final_score >= 0.75:
-                decision = "priority"
-            elif final_score >= 0.60:
-                decision = "publishable"
-                
-            should_include = final_score >= 0.60
-            
-            result = {
-                "final_score": round(final_score, 4),
-                "should_include": should_include,
-                "decision_label": decision,
-                "components": {
-                    "source_credibility": round(source_score, 4),
-                    "recency": round(recency_score, 4),
-                    "content_quality": round(content_score, 4),
-                    "cognitive_engagement_norm": round(cognitive_score, 4),
-                    "cognitive_engagement_raw": round(cognitive_raw, 2),
-                    # Required by ScoringRequestModel contract
-                    "engagement": round(cognitive_score, 4),
-                },
-                "cognitive_details": cognitive_result.get("details", {}),
-                "weights": self.weights.copy(),
-                "explanation": self._generate_cognitive_explanation(
-                    article, final_score, source_score, recency_score, content_score, cognitive_score, cognitive_result
-                ),
-                "version": self.version,
-                "calculated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            logger.info(f"🧠 Cognitive Score: {final_score:.3f} ({decision}) - {article.title[:40]}...")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error en CognitiveScorer para {article.id}: {e}", exc_info=True)
-            # Fallback a implementación base via instancia limpia
-            weights = {
-                "source_credibility": 0.25,
-                "recency": 0.20,
-                "content_quality": 0.25,
-                "engagement_potential": 0.30,
-            }
-            from .basic_scorer import BasicScorer
-            fallback_scorer = BasicScorer(weights)
-            return fallback_scorer.score_article(article, source_config)
-
-    def _calculate_cognitive_engagement(self, article: Article) -> Dict[str, Any]:
-        """
-        Consulta al LLM para evaluar las 5 dimensiones del Engagement Cognitivo.
-        """
-        # FAST MODE OPTIMIZATION: Skip LLM if weight is 0
-        if self.weights.get("cognitive_engagement", 0) <= 0:
-            return {
-                "score": 0.0,
-                "details": {"fast_mode": True},
-                "reasoning": "Skipped due to Fast Mode (weight=0)"
-            }
-
-        text_content = f"Title: {article.title}\n\nSummary: {article.summary}\n\nContent Fragment: {(article.content or '')[:1000]}"
-        print(f"DEBUG: sending to LLM (len={len(text_content)}): {text_content[:50]}...")
         
+        # 2. Components
+        self.llm = llm_client or LLMClient()
+        self.heuristic = HeuristicScorer()
+        self.version = "2.1-hybrid"
+        
+        # 3. Budget Config
+        self.max_cycle_budget_sec = 45.0
+        self.batch_timeout_sec = 20.0
+        self.cycle_start_time = time.time()
+        self.llm_calls_count = 0
+        self.heuristic_used_count = 0
+        self.is_llm_healthy = True # Assume true initially, checked per cycle/batch
+        
+        # 4. Cache Init
+        self._init_cache()
+
+    def _init_cache(self):
+        try:
+            CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with sqlite3.connect(CACHE_DB_PATH) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS cognitive_scores (
+                        key TEXT PRIMARY KEY,
+                        score REAL,
+                        details TEXT,
+                        reasoning TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON cognitive_scores(created_at)")
+        except Exception as e:
+            logger.error(f"Failed to init cognitive cache: {e}")
+
+    def _get_cache_key(self, article: Article) -> str:
+        # Simple key: Title + URL hash. 
+        # In prod, maybe hash inputs. For now, string concat is fine for uniqueness.
+        safe_url = article.url or "no_url"
+        safe_title = article.title or "no_title"
+        return f"{safe_title[:50]}_{safe_url[-50:]}".replace(" ", "_")
+
+    def reset_cycle_metrics(self):
+        """Call this at the start of a collection cycle."""
+        self.cycle_start_time = time.time()
+        self.llm_calls_count = 0
+        self.heuristic_used_count = 0
+        self.is_llm_healthy = self.llm.is_healthy()
+        logger.info(f"CognitiveScorer Cycle Start. LLM Healthy: {self.is_llm_healthy}")
+
+    def _check_budget(self) -> bool:
+        """Return True if we have budget left."""
+        if not self.is_llm_healthy:
+            return False
+        elapsed = time.time() - self.cycle_start_time
+        return elapsed < self.max_cycle_budget_sec
+
+    def _get_from_cache(self, key: str) -> Optional[Dict[str, Any]]:
+        try:
+            with sqlite3.connect(CACHE_DB_PATH) as conn:
+                cursor = conn.execute("SELECT score, details, reasoning FROM cognitive_scores WHERE key=?", (key,))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "score": row[0],
+                        "details": json.loads(row[1]),
+                        "reasoning": row[2] + " (Cached)"
+                    }
+        except Exception:
+            pass
+        return None
+
+    def _save_to_cache(self, key: str, result: Dict[str, Any]):
+        try:
+            with sqlite3.connect(CACHE_DB_PATH) as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO cognitive_scores (key, score, details, reasoning) VALUES (?, ?, ?, ?)",
+                    (key, result["score"], json.dumps(result["details"]), result.get("reasoning", ""))
+                )
+        except Exception as e:
+            logger.warning(f"Cache write failed: {e}")
+
+    async def score_batch_async(self, payload_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Batched Scoring entry point.
+        Scores a list of articles using Hybrid Strategy.
+        """
+        # 1. Prep
+        results_map = {} # map index -> result
+        articles_to_process = [] # list of (index, article_obj)
+        
+        # 2. Check Cache first for all
+        for i, payload in enumerate(payload_list):
+            article_data = payload.get("article", payload)
+            # Reconstruct minimalist Article object for logic reuse
+            # using SafeNamespace trick from basic_scorer if needed, but here we can just pass dict to helpers if careful
+            # Better to use the helper from basic scorer or just cast.
+            # Let's instantiate a temporary Article model for cleanliness if possible, or simple object.
+            # Assuming payload has dictionaries matching Article model structure.
+            
+                # Simple wrapper
+            class Wrapper:
+                def __init__(self, d): self.__dict__ = d
+                def __getattr__(self, k): return self.__dict__.get(k)
+            
+            # Ensure dates are parsed/defaulted
+            for date_field in ["published_date", "collected_date"]:
+                val = article_data.get(date_field)
+                if isinstance(val, str):
+                    try:
+                        article_data[date_field] = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                    except (ValueError, TypeError):
+                        pass
+                        
+            if not article_data.get("collected_date"):
+                article_data["collected_date"] = datetime.now(timezone.utc)
+                
+            art_obj = Wrapper(article_data)
+            
+            key = self._get_cache_key(art_obj)
+            cached = self._get_from_cache(key)
+            if cached:
+                # Apply cache hit immediately
+                results_map[i] = self._finalize_score(art_obj, cached, payload.get("source_config"))
+            else:
+                articles_to_process.append((i, art_obj))
+
+        # 3. Process remaining items
+        if articles_to_process:
+            # Check budget/health once for the batch
+            # If healthy, try to batch call LLM
+            # If not, use heuristic for all
+            
+            use_llm = self._check_budget()
+            
+            if use_llm:
+                # Prepare Batch
+                # We can do chunks if list is huge, but usually system passes chunks.
+                # Let's assume input list is reasonable (e.g. 10-20).
+                
+                # Extract text for LLM
+                batch_inputs = []
+                indices_for_llm = []
+                
+                for idx, art in articles_to_process:
+                    text = f"Title: {art.title}\nSummary: {art.summary}\nContent: {(art.content or '')[:800]}"
+                    batch_inputs.append(text)
+                    indices_for_llm.append(idx)
+                    
+                # Call LLM Batch
+                llm_results = await self._call_llm_batch(batch_inputs)
+                
+                # Check results
+                if llm_results:
+                    for j, res in enumerate(llm_results):
+                        original_idx = indices_for_llm[j]
+                        art = articles_to_process[j][1] # (idx, art)
+                        
+                        # Cache it
+                        key = self._get_cache_key(art)
+                        self._save_to_cache(key, res)
+                        
+                        # Finalize
+                        results_map[original_idx] = self._finalize_score(art, res, payload_list[original_idx].get("source_config"))
+                else:
+                    # LLM failed completely for batch -> Fallback to heuristic for these
+                    self.is_llm_healthy = False # Mark unhealthy for rest of cycle? Maybe just transient.
+                    use_llm = False # Trigger fallback block below
+                    
+            if not use_llm:
+                # Heuristic Fallback for everyone remaining
+                for idx, art in articles_to_process:
+                    if idx in results_map: continue # Already handled (if partial LLM success?)
+                    
+                    self.heuristic_used_count += 1
+                    h_score = self.heuristic.calculate_score(art)
+                    res = {
+                        "score": h_score, # 0-1 matches 0-5 normalized? No heuristic returns 0-1
+                        "details": {"heuristic": True},
+                        "reasoning": "Heuristic fallback (Budget/LLM unavailable)"
+                    }
+                    results_map[idx] = self._finalize_score(art, res, payload_list[idx].get("source_config"), is_heuristic=True)
+
+        # 4. Reconstruct ordered list
+        final_results = []
+        for i in range(len(payload_list)):
+            if i in results_map:
+                final_results.append(results_map[i])
+            else:
+                logger.error(f"Missing result for index {i} in batch scoring")
+                # Fallback for missing items
+                final_results.append({
+                    "final_score": 0.0,
+                    "should_include": False,
+                    "components": {},
+                    "decision_label": "error",
+                    "explanation": {"reasoning": "Missing from batch results"}
+                })
+            
+        return final_results
+
+    async def _call_llm_batch(self, inputs: List[str]) -> Optional[List[Dict[str, Any]]]:
+        """
+        Call LLM with a batch of articles to calculate NQI metrics.
+        """
+        if not inputs: return []
+        
+        self.llm_calls_count += 1
+        
+        joined_inputs = ""
+        for k, text in enumerate(inputs):
+            joined_inputs += f"--- ITEM {k+1} ---\n{text}\n\n"
+            
         system_prompt = (
-            "Eres el motor de evaluación cognitiva de Noticiencias. "
-            "Tu objetivo no es maximizar clics, sino identificar noticias con mayor potencial de impacto intelectual.\n"
-            "Analiza el siguiente artículo y puntúa de 0 a 5 los siguientes sub-ejes:\n"
-            "1. Contraintuitivo: ¿Qué creencia común queda invalidada o tensionada?\n"
-            "2. ImpactoHumano: ¿Afecta decisiones reales del lector promedio?\n"
-            "3. ConflictoIdeas: ¿Enfrenta paradigmas, modelos o teorías?\n"
-            "4. Incertidumbre: ¿Qué aspecto relevante aún no se entiende?\n"
-            "5. UtilidadPractica: ¿Cambia comportamiento o mentalidad mañana?\n"
-            "\n"
-            "Retorna SOLO un JSON con este formato:\n"
-            "{\n"
-            '  "scores": {\n'
-            '    "contraintuitivo": 0-5,\n'
-            '    "impacto_humano": 0-5,\n'
-            '    "conflicto_ideas": 0-5,\n'
-            '    "incertidumbre": 0-5,\n'
-            '    "utilidad_practica": 0-5\n'
-            "  },\n"
-            '  "reasoning": "Breve justificación de 1 linea"\n'
-            "}"
+            "You are a Senior Editor at 'Noticiencias'. Evaluate these science news items for the Latin American audience.\n"
+            "For EACH item, output a JSON object with scores (0-5):\n"
+            "1. substance (Scientific rigor, data density, evidence depth)\n"
+            "2. narrative (Storytelling potential, tension, wow factor)\n"
+            "3. relevance (Relevance for LatAm, universal appeal, accessibility)\n"
+            "4. credibility (Trustworthiness, lack of hype)\n\n"
+            "Return a JSON Object: { 'results': [ { 'item_index': 1, 'scores': {...}, 'reasoning': '...' }, ... ] }"
         )
         
-        response = self.llm.generate(prompt=text_content, system=system_prompt, format="json")
-        
-        if isinstance(response, dict) and "scores" in response:
-            scores = response["scores"]
-            # Calcular promedio 0-5
-            # CognitiveEngagement = 0.20 * sum(sub-ejes)
-            # Equivalente a promedio simple si hay 5 ejes.
-            values = [
-                float(scores.get("contraintuitivo", 0)),
-                float(scores.get("impacto_humano", 0)),
-                float(scores.get("conflicto_ideas", 0)),
-                float(scores.get("incertidumbre", 0)),
-                float(scores.get("utilidad_practica", 0)),
-            ]
-            raw_average = sum(values) / 5.0 * 5.0 # Espera, la formula es 0.20 * sum.
-            # Si suma es 25, 0.2 * 25 = 5.
-            # Sí, es la suma multiplicada por 0.2, que es matemáticamente el promedio si se divide por 1 (no, 0.2 = 1/5).
-            # Entonces es simplemente el promedio de los 5 valores.
-            raw_score = sum(values) * 0.20
+        try:
+            # Usage of asyncio.to_thread to wrap synchronous LLM call
+            resp = await asyncio.to_thread(
+                self._safe_llm_generate, joined_inputs, system_prompt
+            )
             
-            return {
-                "score": raw_score, # 0-5 scale
-                "details": scores,
-                "reasoning": response.get("reasoning", "")
-            }
-        
-        logger.warning(f"Respuesta LLM inválida: {response}")
-        return {"score": 0.0, "details": {}, "reasoning": "Error en LLM"}
+            if not resp or "results" not in resp:
+                return None
+            
+            outputs = []
+            res_list = resp["results"]
+            res_map = {r.get("item_index", i+1): r for i, r in enumerate(res_list)}
+            
+            for i in range(len(inputs)):
+                item_res = res_map.get(i+1)
+                if item_res and "scores" in item_res:
+                    scores = item_res["scores"]
+                    
+                    # Extract dimensions (0-5)
+                    substance = float(scores.get("substance", 0))
+                    narrative = float(scores.get("narrative", 0))
+                    relevance = float(scores.get("relevance", 0))
+                    credibility = float(scores.get("credibility", 0))
+                    
+                    # Calculate NQI Score (Normalized 0-1) based on NEW weights
+                    # We calc a raw weighted score here just for metadata, 
+                    # but real finalized score happens in _finalize_score using config weights.
+                    # NQI = (Sub*0.35 + Nar*0.30 + Rel*0.20 + Cred*0.15) / 5.0
+                    raw_nqi = (substance*0.35 + narrative*0.30 + relevance*0.20 + credibility*0.15)
+                    norm_score = min(1.0, raw_nqi / 5.0) 
+                    
+                    details = scores.copy()
+                    details["reasoning"] = item_res.get("reasoning", "")
+                    
+                    outputs.append({
+                        "score": norm_score,
+                        "details": details,
+                        "reasoning": item_res.get("reasoning", "")
+                    })
+                else:
+                    outputs.append({
+                        "score": 0.0,
+                        "details": {"error": "Missing in batch response"},
+                        "reasoning": "Batch parsing error"
+                    })
+            return outputs
+            
+        except Exception as e:
+            logger.warning(f"Batch LLM failed: {e}")
+            return None
 
-    def _generate_cognitive_explanation(
-        self, article, final, source, recency, content, cognitive_norm, cognitive_details
-    ):
-        # Reimplementación completa para soportar la estructura cognitiva
-        explanation = {
-            "overall_assessment": self._get_overall_assessment(final),
-            "component_breakdown": {
-                "source_credibility": {
-                    "score": source,
-                    "weight": self.weights["source_credibility"],
-                    "contribution": source * self.weights["source_credibility"],
-                    "factors": self._explain_source_score(article),
-                },
-                "recency": {
-                    "score": recency,
-                    "weight": self.weights["recency"],
-                    "contribution": recency * self.weights["recency"],
-                    "factors": self._explain_recency_score(article),
-                },
-                "content_quality": {
-                    "score": content,
-                    "weight": self.weights["content_quality"],
-                    "contribution": content * self.weights["content_quality"],
-                    "factors": self._explain_content_score(article),
-                },
-                "cognitive_engagement": {
-                    "score": cognitive_norm,
-                    "weight": self.weights["cognitive_engagement"],
-                    "contribution": cognitive_norm * self.weights["cognitive_engagement"],
-                    "factors": ["Evaluación por IA", f"Reasoning: {cognitive_details.get('reasoning', '')}"],
-                    "details": cognitive_details
-                },
+    def _safe_llm_generate(self, prompt, system) -> Dict:
+        try:
+            return self.llm.generate(prompt, system=system, format="json")
+        except Exception:
+            return None
+
+    def _finalize_score(self, article, cognitive_res, source_config, is_heuristic=False) -> Dict[str, Any]:
+        """
+        Combine metrics into Final NQI Score.
+        Mapping NQI Dimensions to Config Keys to maintain schema compatibility:
+        - content_quality     <-- Substance
+        - engagement_potential <-- Narrative
+        - recency             <-- Time Decay + Relevance (Hybrid)
+        - source_credibility  <-- Source Reputation + Credibility (Hybrid)
+        """
+        
+        # 1. Base Metrics from BasicScorer logic
+        base_source = self._calculate_source_credibility_score(article, source_config)
+        base_recency = self._calculate_recency_score(article) 
+        # base_content and base_engagement ignored if we have cognitive data
+        
+        # 2. Extract Cognitive Dimensions (Normalized 0-1)
+        # If heuristic fallback, these come from HeuristicScorer (which already computed NQI)
+        # If LLM, they come from "scores" dict.
+        
+        details = cognitive_res.get("details", {})
+        
+        if is_heuristic:
+            # HeuristicScorer logic already fused everything into 'score'.
+            # We can try to unpack if HeuristicScorer returned details? 
+            # Current HeuristicScorer returns float only.
+            # So we trust the single score as the "Global NQI".
+            # To fit the schema, we assign the global score to all comps or just use it.
+            # Let's trust final_score directly.
+            
+            final_score = cognitive_res["score"]
+            # Fill components with the same value for simplicity or re-calc heuristic components?
+            # Re-running heuristic breakdowns is cheap.
+            
+            # Actually, to be clean, let's just assign:
+            comp_substance = final_score
+            comp_narrative = final_score
+            comp_relevance = final_score
+            comp_credibility = final_score
+            
+        else:
+            # LLM output available
+            # Normalize 0-5 to 0-1
+            to_norm = lambda x: min(1.0, float(x)/5.0)
+            
+            comp_substance = to_norm(details.get("substance", 0))
+            comp_narrative = to_norm(details.get("narrative", 0))
+            comp_relevance = to_norm(details.get("relevance", 0))
+            comp_credibility = to_norm(details.get("credibility", 0))
+        
+        # 3. Hybrid Usage (Blending LLM with deterministic signals)
+        
+        # A. Substance (35%): Blend LLM Substance (0.8) with Data Density/Length? 
+        # For now, trust LLM if available.
+        final_content_quality = comp_substance
+        
+        # B. Narrative (30%): Trust LLM Narrative.
+        final_engagement = comp_narrative
+        
+        # C. Relevance (20%): Blend Time Decay (Recency) with Semantic Relevance
+        # If article is old (low recency), it kills relevance.
+        # If Relevance is low (no LatAm/boring), it lowers score.
+        final_recency = (base_recency * 0.5) + (comp_relevance * 0.5)
+        
+        # D. Credibility (15%): Blend Domain Authority (Source Score) with Content Credibility (LLM)
+        final_source_cred = (base_source * 0.5) + (comp_credibility * 0.5)
+        
+        # 4. Final Weighted Sum using Config Weights
+        # weights should be: content=0.35, engagement=0.30, recency=0.20, source=0.15
+        final_score = (
+            final_content_quality * self.weights["content_quality"] +
+            final_engagement * self.weights["engagement_potential"] +
+            final_recency * self.weights["recency"] +
+            final_source_cred * self.weights["source_credibility"]
+        )
+        
+        final_score = max(0.0, min(1.0, final_score))
+        
+        decision = "discard"
+        if final_score >= 0.75: decision = "priority"
+        elif final_score >= 0.60: decision = "publishable"
+        
+        return {
+            "final_score": round(final_score, 4),
+            "should_include": final_score >= 0.60,
+            "decision_label": decision,
+            "components": {
+                "source_credibility": round(final_source_cred, 4),
+                "recency": round(final_recency, 4),
+                "content_quality": round(final_content_quality, 4),
+                "engagement_potential": round(final_engagement, 4),
+                "nqi_substance": round(comp_substance, 4),
+                "nqi_narrative": round(comp_narrative, 4),
+                "nqi_relevance": round(comp_relevance, 4),
+                "nqi_credibility": round(comp_credibility, 4)
             },
-            # Simplified lists for now as the parent helpers methods need args I might not have handy or they work ok
-            "key_strengths": [], 
-            "improvement_areas": [],
-            "recommendation": (
-                "priority" if final >= 0.75 else "publishable" if final >= 0.60 else "discard"
+            "cognitive_details": details,
+            "weights": self.weights.copy(),
+            "explanation": self._generate_cognitive_explanation(
+                article, final_score, final_source_cred, final_recency, final_content_quality, final_engagement, cognitive_res
             ),
+            "version": self.version,
+            "calculated_at": datetime.now(timezone.utc).isoformat(),
         }
-        return explanation
+
+    def _generate_cognitive_explanation(self, article, final, source, recency, content, engagement, cognitive_res):
+        return {
+            "overall_assessment": self._get_overall_assessment(final),
+            "reasoning": cognitive_res.get("reasoning", "")
+        }
+
+    # Override single score for compatibility (if called directly)
+    def score_article(self, article: Article, source_config: Dict[str, Any] = None) -> Dict[str, Any]:
+        # Synchronous single item score - usually NOT used if batching enabled
+        # But implemented for safety.
+        # Use cache or heuristic fallback immediately to avoid blocking if LLM needed?
+        # Or try LLM?
+        # Let's try LLM if healthy.
+        key = self._get_cache_key(article)
+        cached = self._get_from_cache(key)
+        if cached:
+            return self._finalize_score(article, cached, source_config)
+            
+        if self._check_budget():
+             # Try single LLM call ... reuse logic from original class ...
+             # For now, just fallback to heuristic to encourage batching usage.
+             pass
+             
+        # Fallback
+        h_score = self.heuristic.calculate_score(article)
+        res = {"score": h_score, "details": {"heuristic": True}, "reasoning": "Single-item Fallback"}
+        return self._finalize_score(article, res, source_config, is_heuristic=True)

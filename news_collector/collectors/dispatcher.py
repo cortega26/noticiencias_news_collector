@@ -10,9 +10,11 @@ class CollectorDispatcher:
     según el tipo de fuente (RSS, HTML, etc.).
     """
 
-    def __init__(self, logger_factory=None):
+    def __init__(self, logger_factory=None, health_tracker=None):
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
+        self.health_tracker = health_tracker
+        print(f"DEBUG: Dispatcher init health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}")
         
         # Initialize collectors dynamically or lazily?
         # For now, initialize known ones.
@@ -29,16 +31,36 @@ class CollectorDispatcher:
         except Exception as e:
             print(f"Error initializing HTML collector: {e}")
 
+        try:
+            self.collectors["headless"] = create_collector("headless")
+        except Exception as e:
+            # Headless might fail if browsers not installed, that's okay, we log it
+            print(f"Error initializing Headless collector (check playwright install): {e}")
+
         if self.logger_factory:
             for c in self.collectors.values():
                  if hasattr(c, "set_logger_factory"):
                      c.set_logger_factory(self.logger_factory)
+        
+        if self.health_tracker:
+            for name, c in self.collectors.items():
+                if hasattr(c, "health_tracker"):
+                    c.health_tracker = self.health_tracker
+                    print(f"DEBUG: Dispatcher set tracker on {name} ({type(c)})")
+                else:
+                    print(f"DEBUG: Collector {name} ({type(c)}) bas NO health_tracker attr")
 
     def set_logger_factory(self, logger_factory):
         self.logger_factory = logger_factory
         for c in self.collectors.values():
              if hasattr(c, "set_logger_factory"):
                  c.set_logger_factory(logger_factory)
+
+    def set_health_tracker(self, health_tracker):
+        self.health_tracker = health_tracker
+        for c in self.collectors.values():
+            if hasattr(c, "health_tracker"):
+                c.health_tracker = health_tracker
 
     def collect_from_multiple_sources(
         self,
@@ -144,6 +166,15 @@ class CollectorDispatcher:
 
     def is_healthy(self) -> bool:
         return all(c.is_healthy() for c in self.collectors.values())
+
+    async def close(self):
+        """Close all initialized collectors."""
+        for c in self.collectors.values():
+            if hasattr(c, "close"):
+                if asyncio.iscoroutinefunction(c.close):
+                    await c.close()
+                else:
+                    c.close()
 
     def get_stats(self) -> Dict[str, Any]:
         stats = {}

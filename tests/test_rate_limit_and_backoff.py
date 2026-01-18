@@ -47,6 +47,7 @@ def _setup_collector(tmp_path, monkeypatch):
         "update_frequency": "daily",
     }
     db_manager.initialize_sources({"test_source": source_config})
+    collector.db_manager = db_manager
     return collector, db_manager, source_config
 
 

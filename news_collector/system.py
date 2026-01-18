@@ -19,6 +19,7 @@ from news_collector.config import (
     SCORING_CONFIG,
 )
 from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
+from news_collector.validation.validator import ContentValidator
 
 
 class NewsCollectorSystem:
@@ -29,7 +30,7 @@ class NewsCollectorSystem:
     y puede dirigir la operación completa de manera eficiente y coordinada.
     """
 
-    def __init__(self, config_override: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_override: Optional[Dict[str, Any]] = None, health_tracker: Optional[Any] = None):
         """
         Inicializa el sistema completo.
 
@@ -38,7 +39,9 @@ class NewsCollectorSystem:
         """
         self.system_id = str(uuid.uuid4())[:8]
         self.start_time = datetime.now(timezone.utc)
+        self.start_time = datetime.now(timezone.utc)
         self.config_override = config_override or {}
+        self.health_tracker = health_tracker
 
         # Componentes principales
         self.db_manager = None
@@ -47,6 +50,7 @@ class NewsCollectorSystem:
         self.logger = None
         self.system_logger = None
         self.metrics = None
+        self.validator = None
 
         # Estado del sistema
         self.is_initialized = False
@@ -102,6 +106,7 @@ class NewsCollectorSystem:
 
             self._setup_database()
             self._setup_collectors()
+            self._setup_validation()
             self._setup_scoring()
 
             health_status = self._check_system_health()
@@ -230,6 +235,21 @@ class NewsCollectorSystem:
                 collection_results, session_id=session_id, trace_id=trace_id
             )
 
+            validation_results = self._execute_validation(collection_results, dry_run)
+            session_logger.info(
+                {
+                    "event": "collection_cycle.validation.completed",
+                    "trace_id": trace_id,
+                    "session_id": session_id,
+                    "source_id": "system",
+                    "latency": 0.0,
+                    "details": {
+                        "validated": validation_results.get("validated_count", 0),
+                        "rejected": validation_results.get("rejected_count", 0)
+                    },
+                }
+            )
+
             scoring_results = await self._execute_scoring(collection_results, dry_run)
             session_logger.info(
                 {
@@ -250,6 +270,13 @@ class NewsCollectorSystem:
             self.logger.log_performance_metrics(
                 final_report["performance_metrics"], "CICLO COMPLETO"
             )
+
+            # Log informativo solicitado por usuario
+            source_details = collection_results.get("source_details", {})
+            total_sources = len(source_details)
+            sources_with_data = sum(1 for res in source_details.values() if res.get("articles_saved", 0) > 0)
+            if self.system_logger:
+                self.system_logger.info(f"📊 Reporte de Recolección: {sources_with_data}/{total_sources} fuentes produjeron información con éxito (artículos guardados).")
 
             session_logger.info(
                 {
@@ -375,6 +402,20 @@ class NewsCollectorSystem:
             )
             raise
 
+    async def shutdown(self):
+        """Cierra ordenadamente los componentes del sistema."""
+        if self.collector and hasattr(self.collector, "close"):
+             if asyncio.iscoroutinefunction(self.collector.close):
+                 await self.collector.close()
+             else:
+                 self.collector.close()
+        
+        if self.db_manager:
+            self.db_manager.close()
+            
+        if self.system_logger:
+            self.system_logger.info("Sistema apagado correctamente.")
+
     # Métodos privados de inicialización
     # ==================================
 
@@ -419,7 +460,8 @@ class NewsCollectorSystem:
         try:
             from news_collector.collectors.dispatcher import CollectorDispatcher
             
-            self.collector = CollectorDispatcher(logger_factory=self.logger)
+            self.collector = CollectorDispatcher(logger_factory=self.logger, health_tracker=self.health_tracker)
+            print(f"DEBUG: System created Dispatcher with health_tracker={self.health_tracker} id={id(self.health_tracker) if self.health_tracker else 'None'}")
             self.logger.create_module_logger("collectors").info("Dispatcher de colectores configurado")
             
         except Exception as e:
@@ -427,6 +469,11 @@ class NewsCollectorSystem:
                 f"Error fatal configurando colectores: {str(e)}"
             )
             raise
+
+    def _setup_validation(self):
+        """Configura el sistema de validación."""
+        self.validator = ContentValidator()
+        self.logger.create_module_logger("validation").info("Sistema de validación configurado")
 
     def _setup_scoring(self):
         """Configura el sistema de scoring."""
@@ -550,11 +597,22 @@ class NewsCollectorSystem:
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Ejecuta la fase de recolección de artículos."""
+        
+        # Setup dry_run mock
+        original_save = None
         if dry_run:
-            # En modo dry_run, simular recolección
-            return self._simulate_collection(sources)
-        else:
-            # Recolección real
+            original_save = self.db_manager.save_article
+            
+            class DummyArticle:
+                id = 999999
+            
+            def mock_save(*args, **kwargs):
+                return DummyArticle()
+                
+            self.db_manager.save_article = mock_save
+
+        try:
+            # Recolección real (incluso en dry_run, solo evitamos guardar)
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
                 # Ejecutar versión async si está disponible
                 return await self.collector.collect_from_multiple_sources_async(
@@ -567,6 +625,9 @@ class NewsCollectorSystem:
                 session_id=session_id,
                 trace_id=trace_id,
             )
+        finally:
+            if original_save:
+                self.db_manager.save_article = original_save
 
     def _record_collection_observability(
         self, collection_results: Dict[str, Any], session_id: str, trace_id: str
@@ -618,6 +679,68 @@ class NewsCollectorSystem:
                         session_id=session_id,
                     )
 
+    def _execute_validation(self, collection_results: Dict[str, Any], dry_run: bool) -> Dict[str, Any]:
+        """Ejecuta la fase de validación de artículos recolectados."""
+        if dry_run:
+            # En dry_run no validamos porque no hay artículos en DB
+            return {"success": True, "validated_count": 0, "rejected_count": 0}
+            
+        pending_articles = self.db_manager.get_pending_articles()
+        
+        # Convert to list of dicts for validator, keeping reference to object
+        articles_to_validate = [article.to_dict() for article in pending_articles]
+        # We need content which is sometimes not in to_dict completely or we need to ensure full fields
+        # validator uses: content, summary, title. to_dict has them?
+        # to_dict has summary, title. Content is missing in to_dict default?
+        # Let's check Article.to_dict in models.py. 
+        # It does NOT have 'content' in to_dict (line 216 in models.py). 
+        # So we must add it manually for validation.
+        
+        for i, article in enumerate(pending_articles):
+            articles_to_validate[i]["content"] = article.content
+            
+        validation_results = self.validator.validate_batch(articles_to_validate)
+        
+        rejected_count = 0
+        validated_count = len(pending_articles)
+        
+        # Process invalid articles
+        if validation_results["invalid"]:
+            from news_collector.storage.models import Article
+            
+            with self.db_manager.get_session() as session:
+                for invalid_item in validation_results["invalid"]:
+                    article_data = invalid_item["article"]
+                    reason = invalid_item["reason"]
+                    rule_name = invalid_item["rule"]
+                    
+                    # Find and update article
+                    article_id = article_data["id"]
+                    
+                    # We accept that get_session creates a new session, so we need to fetch object again
+                    # or merge. Fetching is safer.
+                    article = session.query(Article).filter_by(id=article_id).first()
+                    if article:
+                        article.processing_status = "rejected"
+                        article.error_message = f"Validation failed: {rule_name} - {reason}"
+                        rejected_count += 1
+        
+        self.logger.create_module_logger("validation").info(
+            {
+                "event": "validation.completed",
+                "total": validated_count,
+                "rejected": rejected_count,
+                "valid": validated_count - rejected_count
+            }
+        )
+            
+        return {
+            "success": True, 
+            "validated_count": validated_count, 
+            "rejected_count": rejected_count,
+            "details": validation_results
+        }
+
     async def _execute_scoring(
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
@@ -645,6 +768,12 @@ class NewsCollectorSystem:
                 "scoring_workers"
             ) or SCORING_CONFIG.get("workers", 4)
             
+            # Reset metrics if supported
+            if hasattr(self.scorer, "reset_cycle_metrics"):
+                self.scorer.reset_cycle_metrics()
+
+            # Prepare payloads for all articles
+            payloads = []
             for article in pending_articles:
                 # Convert ORM object to dict for safe thread usage
                 article_data = {
@@ -671,11 +800,26 @@ class NewsCollectorSystem:
                     "article": article_data,
                     "source_config": ALL_SOURCES.get(article.source_id)
                 }
-                
-                tasks.append(self.scorer.score_article_async(payload))
+                payloads.append(payload)
 
-            if tasks:
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Execute Scoring (Batch or Sequential)
+            results = []
+            if payloads:
+                if hasattr(self.scorer, "score_batch_async"):
+                    # New Hybrid Batch Scorer
+                    try:
+                        results = await self.scorer.score_batch_async(payloads)
+                    except Exception as e:
+                        self.logger.create_module_logger("scoring").error(f"Batch scoring failed: {e}")
+                        # Fallback to empty results -> error handling loop below will catch checks
+                        results = [e] * len(payloads)
+                else:
+                    # Legacy Sequential
+                    tasks = [self.scorer.score_article_async(p) for p in payloads]
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            if results:
+                # results populated above by batch or legacy gathering
 
                 for article, score_result in zip(pending_articles, results):
                     if isinstance(score_result, Exception):
@@ -900,17 +1044,19 @@ class NewsCollectorSystem:
 
 def create_system(
     config_override: Optional[Dict[str, Any]] = None,
+    health_tracker: Optional[Any] = None,
 ) -> NewsCollectorSystem:
     """
     Factory function para crear una instancia del sistema.
 
     Args:
         config_override: Configuración opcional para override
+        health_tracker: Tracker opcional para diagnósticos
 
     Returns:
         Instancia configurada del NewsCollectorSystem
     """
-    return NewsCollectorSystem(config_override)
+    return NewsCollectorSystem(config_override, health_tracker=health_tracker)
 
 
 def run_quick_collection(

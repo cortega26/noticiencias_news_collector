@@ -40,6 +40,7 @@ from news_collector.utils.logger import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
     from news_collector.utils.logger import NewsCollectorLogger
+    from news_collector.diagnostics import SourceHealthTracker
 
 
 class BaseCollector(ABC):
@@ -55,10 +56,11 @@ class BaseCollector(ABC):
     mientras permitimos customización específica por tipo de colector.
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional["SourceHealthTracker"] = None) -> None:
         """Inicialización común para todos los colectores."""
 
         self.collector_type = self.__class__.__name__
+        self.health_tracker = health_tracker
         self.start_time: Optional[datetime] = None
         self.stats = {
             "total_sources_processed": 0,
@@ -610,10 +612,10 @@ class BaseCollector(ABC):
 
         except ValueError as exc:
             self._emit_log(
-                "error",
+                "warning",
                 "collector.article.save_validation_error",
                 source_id=source_id,
-                details={"error": str(exc), "title": title[:120]},
+                details={"error": str(exc).split('\n')[0], "title": title[:60]}, 
             )
             return False
         except Exception as exc:
@@ -650,10 +652,20 @@ class BaseCollector(ABC):
         if not article_data.get("url") or not article_data["url"].startswith("http"):
             return False
 
-        # Verificar que el contenido no sea demasiado corto
-        # Check 'content' first (full_text), fallback to 'summary'
-        text_to_check = article_data.get("content") or article_data.get("summary", "")
-        if len(text_to_check) < TEXT_PROCESSING_CONFIG["min_content_length"]:
+        # Verificar que el contenido no sea demasiado corto - STRICT CHECK on full content
+        # User requirement: "use the 1000 chars STRICTLY against the full length of the articles and NOTHING ELSE"
+        content = article_data.get("content")
+        if not content or len(content) < TEXT_PROCESSING_CONFIG["min_content_length"]:
+            self._emit_log(
+                "debug",
+                "collector.article.validation_failed",
+                source_id=article_data.get("source_id"),
+                details={
+                    "reason": "content_too_short", 
+                    "length": len(content) if content else 0,
+                    "min_required": TEXT_PROCESSING_CONFIG["min_content_length"]
+                },
+            )
             return False
 
         # Verificar que no sea spam o clickbait obvio
@@ -670,6 +682,80 @@ class BaseCollector(ABC):
             return False
 
         return True
+
+    def _filter_and_save_articles(self, source_id: str, articles_data: List[Dict[str, Any]], limit: int = 5) -> int:
+        """
+        Apply strict sequential filters:
+        1. Min Content Length (already done partially in validation, but double checking)
+        2. Duplicate Check
+        3. Top-N Sorting
+        """
+        saved_count = 0
+        min_length = TEXT_PROCESSING_CONFIG.get("min_content_length", 1000)
+        
+        valid_candidates = []
+        
+        # Filter 1: Validation & Content Length (Pre-validation)
+        for data in articles_data:
+            try:
+                # Basic model validation
+                if isinstance(data, dict):
+                    article = CollectorArticleModel(**data)
+                else:
+                    article = data
+                
+                # Strict length check (business rule filter)
+                if len(article.content or "") < min_length:
+                     self._emit_log("info", "collector.filter.length_rejected", source_id=source_id, details={"url": str(article.url), "len": len(article.content or "")})
+                     if self.health_tracker:
+                         self.health_tracker.record_filter_rejection(source_id, "min_length")
+                     continue
+
+                if self.health_tracker:
+                    self.health_tracker.record_success(source_id, "validate")
+                    self.health_tracker.record_success(source_id, "filter") # Length passed
+                
+                valid_candidates.append(article)
+                
+            except Exception as e:
+                # Validation error
+                error_msg = str(e)
+                self._emit_log("error", "collector.validate.error", source_id=source_id, details={"error": error_msg})
+                if self.health_tracker:
+                    self.health_tracker.record_failure(source_id, "collector.validate_payload", "validation_error", {"error": error_msg})
+                continue
+                
+        # Filter 2: Duplicate Check (Already Published)
+        unique_candidates = []
+        for article in valid_candidates:
+            if self.db_manager.article_exists(str(article.url)):
+                if self.health_tracker:
+                     self.health_tracker.record_filter_rejection(source_id, "duplicate")
+                continue
+            unique_candidates.append(article)
+            
+        # Filter 3: Top-N Sorting
+        # Sort by impact factor (if we had it per article) or published_date
+        unique_candidates.sort(
+            key=lambda x: getattr(x, "published_date", None)
+            or getattr(x, "published_at", None)
+            or datetime.min,
+            reverse=True,
+        )
+        
+        top_n = unique_candidates[:limit]
+        skipped_top_n = len(unique_candidates) - len(top_n)
+        if self.health_tracker and skipped_top_n > 0:
+            self.health_tracker.record_filter_rejection(source_id, "top_n", skipped_top_n)
+            
+        # Save Phase
+        for article in top_n:
+            if self._save_article(article):
+                saved_count += 1
+                if self.health_tracker:
+                    self.health_tracker.record_success(source_id, "save")
+                
+        return saved_count
 
     def _clean_text(self, text: str) -> str:
         """
@@ -830,6 +916,9 @@ def create_collector(collector_type: str) -> BaseCollector:
     elif collector_type.lower() == "async_rss":
         from .async_rss_collector import AsyncRSSCollector
         return AsyncRSSCollector()
+    elif collector_type.lower() == "headless":
+        from .headless_collector import HeadlessCollector
+        return HeadlessCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 

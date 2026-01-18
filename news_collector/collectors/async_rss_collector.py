@@ -4,6 +4,7 @@ import time
 import httpx
 import feedparser
 import hashlib
+import random
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 from news_collector.utils.security import validate_url_safety as validate_url_safety_sync
 
@@ -21,8 +22,9 @@ class AsyncRSSCollector(RSSCollector):
     pero reimplementa la fase de I/O (fetching) usando httpx.
     """
     
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None) -> None:
-        super().__init__(logger_factory=logger_factory)
+    
+    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+        super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
 
     async def collect_from_multiple_sources_async(
         self,
@@ -107,6 +109,7 @@ class AsyncRSSCollector(RSSCollector):
             "error_message": None,
             "processing_time": 0,
         }
+        print(f"DEBUG: AsyncRSSCollector internal processing {source_id}. health_tracker is {self.health_tracker} (id={id(self.health_tracker) if self.health_tracker else 'None'})")
 
         try:
             url = source_config["url"]
@@ -136,14 +139,22 @@ class AsyncRSSCollector(RSSCollector):
             
             if status_code == 304:
                 stats["success"] = True
+                if self.health_tracker:
+                     self.health_tracker.record_success(source_id, "fetch")
                 return stats
 
             if not feed_content:
                 stats["error_message"] = "No se pudo obtener el feed"
                 return stats
+            
+            if self.health_tracker:
+                self.health_tracker.record_success(source_id, "fetch")
 
             # 4. Parse Feed (CPU bound -> execute in thread)
             parsed_feed = await asyncio.to_thread(feedparser.parse, feed_content)
+            
+            if self.health_tracker:
+                self.health_tracker.record_success(source_id, "parse")
 
             if parsed_feed.bozo and not self._is_acceptable_bozo(parsed_feed):
                 stats["error_message"] = f"Feed malformado: {parsed_feed.bozo_exception}"
@@ -161,15 +172,17 @@ class AsyncRSSCollector(RSSCollector):
 
             # 6. Process & Save Articles
             def process_batch():
-                count = 0
+                processed_candidates = []
                 for raw in raw_articles:
                     try:
                         processed = self._process_article(raw, source_id, source_config)
-                        if processed and self._save_article(processed):
-                            count += 1
+                        if processed:
+                            processed_candidates.append(processed)
                     except Exception as e:
                         pass # Logged inside
-                return count
+                
+                # Apply strict sequential filters and save
+                return self._filter_and_save_articles(source_id, processed_candidates, limit=5)
 
             saved_count = await asyncio.to_thread(process_batch)
 
@@ -179,6 +192,8 @@ class AsyncRSSCollector(RSSCollector):
         except Exception as exc:
             # Catch validation errors too
             stats["error_message"] = str(exc)
+            if self.health_tracker:
+                 self.health_tracker.record_failure(source_id, "collector.fetch", "exception", {"error": str(exc)})
             
         finally:
             stats["processing_time"] = time.time() - start_time
@@ -186,9 +201,19 @@ class AsyncRSSCollector(RSSCollector):
         
         return stats
 
+    async def _backoff_sleep_async(self, attempt: int) -> None:
+        """Asynchronous backoff sleep."""
+        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
+        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        
+        delay = min(max_b, (base * (2**attempt)) + jitter)
+        await asyncio.sleep(delay)
+
     async def _fetch_feed_async(
         self, source_id: str, feed_url: str, client: httpx.AsyncClient
     ) -> Tuple[Optional[str], Optional[int]]:
+        max_retries = RATE_LIMITING_CONFIG["max_retries"]
         try:
              # DB Access: Sync -> Thread
              cached_headers = await asyncio.to_thread(
@@ -206,66 +231,103 @@ class AsyncRSSCollector(RSSCollector):
              redirect_count = 0
              max_redirects = 5
              
-             while redirect_count <= max_redirects:
-                 # Validate URL safety before request
-                 await asyncio.to_thread(validate_url_safety_sync, current_url)
-                 
-                 # Manual request execution (no auto-follow)
-                 response = await client.get(
-                     current_url, 
-                     headers=req_headers, 
-                     follow_redirects=False
-                 )
-                 
-                 status = response.status_code
-                 
-                 # Handle Redirects
-                 if 300 <= status < 400:
-                     redirect_count += 1
-                     location = response.headers.get("Location")
-                     if not location:
-                         self._emit_log("error", "collector.feed.redirect_error", source_id=source_id, details={"error": "Redirect without Location header"})
+             for attempt in range(max_retries + 1):
+                 while redirect_count <= max_redirects:
+                     # Validate URL safety before request
+                     await asyncio.to_thread(validate_url_safety_sync, current_url)
+                     
+                     # Manual request execution (no auto-follow)
+                     try:
+                         response = await client.get(
+                             current_url, 
+                             headers=req_headers, 
+                             follow_redirects=False
+                         )
+                     except (httpx.RequestError, httpx.TimeoutException) as req_err:
+                         # Network level errors are also candidates for retry
+                         if attempt < max_retries:
+                             await self._backoff_sleep_async(attempt)
+                             break # Break inner while to continue outer for loop? No. 
+                             # We need to restart the request.
+                             # If we break here, we go to next attempt?
+                             # Logic structure:
+                             # for attempt:
+                             #    try: 
+                             #       do_request
+                             #    except:
+                             #       retry
+                         self._emit_log("warning", "collector.feed.network_error", source_id=source_id, details={"error": str(req_err)})
                          return (None, None)
+
+                     status = response.status_code
                      
-                     # Resolving relative redirects if necessary
-                     from urllib.parse import urljoin
-                     current_url = urljoin(current_url, location)
+                     # Check for Retryable Status Codes
+                     if status in (429, 500, 502, 503, 504):
+                         if attempt < max_retries:
+                             await self._backoff_sleep_async(attempt)
+                             # Break from redirects loop to retry the request from scratch (outer loop)
+                             # Wait, current_url might have changed!
+                             # Should we reset redirect_count?
+                             # If 429 happens after 2 redirects, we should probably just retry the CURRENT url.
+                             # But my loop stricture is: outer attempt -> inner redirects.
+                             # If inner fails with 429, we want to retry.
+                             # Cleaner: Move status check OUTSIDE redirect loop? 
+                             # Or use recursion? 
+                             # Or just handle it.
+                             break 
+                         
+                         self._emit_log("warning", "collector.feed.status_retry_exhausted", source_id=source_id, details={"status": status})
+                         return (None, status)
+
+                     # Handle Not Modified (304)
+                     if status == 304:
+                         return (None, 304)
+
+                     # Handle Redirects
+                     if 300 <= status < 400 and status != 304:
+                         redirect_count += 1
+                         location = response.headers.get("Location")
+                         if not location:
+                             self._emit_log("error", "collector.feed.redirect_error", source_id=source_id, details={"error": "Redirect without Location header"})
+                             return (None, None)
+                         
+                         from urllib.parse import urljoin
+                         current_url = urljoin(current_url, location)
+                         continue
                      
-                     # Loop back to validate new URL
-                     continue
-                 
-                 # Handle Success/Not Modified
-                 if status == 304:
-                     return (None, 304)
-                 
-                 if status >= 400:
-                     return (None, status)
-                 
-                 # Valid response found
-                 content = response.content # bytes
-                 text = response.text    # str
-                 
-                 etag = response.headers.get("ETag")
-                 lm = response.headers.get("Last-Modified")
-                 ch = hashlib.sha256(content).hexdigest()
-                 
-                 if cached_headers.get("content_hash") == ch:
+                     if status >= 400:
+                         return (None, status)
+                     
+                     # Valid response found
+                     content = response.content # bytes
+                     text = response.text    # str
+                     
+                     etag = response.headers.get("ETag")
+                     lm = response.headers.get("Last-Modified")
+                     ch = hashlib.sha256(content).hexdigest()
+                     
+                     if cached_headers.get("content_hash") == ch:
+                         await asyncio.to_thread(
+                             self.db_manager.update_source_feed_metadata, 
+                             source_id, etag=etag, last_modified=lm, content_hash=ch
+                         )
+                         return (None, 304)
+
                      await asyncio.to_thread(
                          self.db_manager.update_source_feed_metadata, 
                          source_id, etag=etag, last_modified=lm, content_hash=ch
                      )
-                     return (None, 304)
-
-                 await asyncio.to_thread(
-                     self.db_manager.update_source_feed_metadata, 
-                     source_id, etag=etag, last_modified=lm, content_hash=ch
-                 )
+                     
+                     return (text, status)
                  
-                 return (text, status)
-             
-             self._emit_log("error", "collector.feed.too_many_redirects", source_id=source_id, details={"max": max_redirects})
+                 # End of while loop (redirects exhausted or broken for retry)
+                 if redirect_count > max_redirects:
+                     self._emit_log("error", "collector.feed.too_many_redirects", source_id=source_id, details={"max": max_redirects})
+                     return (None, None)
+                     
              return (None, None)
 
         except Exception as e:
             self._emit_log("error", "collector.feed.fetch_async_error", source_id=source_id, details={"error": str(e)})
             return (None, None)
+

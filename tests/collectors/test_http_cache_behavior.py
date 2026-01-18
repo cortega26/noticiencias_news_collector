@@ -140,14 +140,14 @@ def test_async_fetch_uses_conditional_headers() -> None:
 
     class MockClient:
         async def get(
-            self, url: str, timeout: float, headers: dict[str, str] | None = None
+            self, url: str, timeout: float | None = None, headers: dict[str, str] | None = None, follow_redirects: bool = True
         ):
             captured["headers"] = headers or {}
             return _Response200()
 
     async def _run():
         return await collector._fetch_feed_async(
-            MockClient(), "source-1", "https://example.com/feed"
+             "source-1", "https://example.com/feed", MockClient()
         )
 
     content, status = asyncio.run(_run())
@@ -173,13 +173,13 @@ def test_async_fetch_skips_when_content_hash_matches() -> None:
 
     class MockClient:
         async def get(
-            self, url: str, timeout: float, headers: dict[str, str] | None = None
+            self, url: str, timeout: float | None = None, headers: dict[str, str] | None = None, follow_redirects: bool = True
         ):
             return _Response200Same()
 
     async def _run():
         return await collector._fetch_feed_async(
-            MockClient(), "source-1", "https://example.com/feed"
+            "source-1", "https://example.com/feed", MockClient()
         )
 
     content, status = asyncio.run(_run())
@@ -202,7 +202,7 @@ def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class MockClient:
         async def get(
-            self, url: str, timeout: float, headers: dict[str, str] | None = None
+            self, url: str, timeout: float | None = None, headers: dict[str, str] | None = None, follow_redirects: bool = True
         ):
             return next(responses)
 
@@ -210,7 +210,7 @@ def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def _run():
         return await collector._fetch_feed_async(
-            MockClient(), "source-1", "https://example.com/feed"
+            "source-1", "https://example.com/feed", MockClient()
         )
 
     content, status = asyncio.run(_run())

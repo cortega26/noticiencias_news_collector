@@ -60,6 +60,36 @@ class LLMClient:
             or env_values.get("OLLAMA_MODEL")
             or "llama3.2:1b"
         )
+        self.timeout = int(
+            os.getenv("OLLAMA_TIMEOUT")
+            or env_values.get("OLLAMA_TIMEOUT")
+            or 5  # Reduced from 600 to 5s to prevent stalling
+        )
+
+    def is_healthy(self) -> bool:
+        """
+        Fast health check to determine if LLM is available.
+        Uses a short timeout (1s connect, 2s read).
+        """
+        try:
+            # Try /api/tags if using Ollama, or just a HEAD/GET request to base URL
+            # If api_url ends with /api/generate, try accessing the root or tags
+            base_url = self.api_url.replace("/api/generate", "")
+            tags_url = f"{base_url}/api/tags"
+            
+            # 1. Try tags endpoint (fastest for Ollama)
+            resp = requests.get(tags_url, timeout=(1.0, 2.0))
+            if resp.status_code == 200:
+                return True
+                
+            # 2. Fallback: Minimal generation
+            payload = {"model": self.model, "prompt": "hi", "stream": False}
+            resp = requests.post(self.api_url, json=payload, timeout=(1.0, 2.0))
+            return resp.status_code == 200
+            
+        except Exception as e:
+            logger.warning(f"LLM Health Check Failed: {e}")
+            return False
 
     def generate(self, prompt: str, system: Optional[str] = None, format: str = "json") -> Union[str, Dict[str, Any]]:
         """
@@ -90,7 +120,7 @@ class LLMClient:
         try:
             logger.debug(f"Sending prompt to LLM ({self.model})...")
             start_time = time.time()
-            response = requests.post(self.api_url, json=payload, timeout=300)
+            response = requests.post(self.api_url, json=payload, timeout=self.timeout)
             response.raise_for_status()
             
             data = response.json()

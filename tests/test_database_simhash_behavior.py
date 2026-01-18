@@ -41,7 +41,7 @@ def _article_payload(url: str, **overrides: object) -> dict[str, object]:
             "Resumen extenso utilizado para las pruebas de simhash y validación de contratos. "
             "Incluye suficiente longitud para cumplir los requisitos de contenido mínimo."
         ),
-        "content": "Contenido adicional para el cálculo de simhash. " * 20,
+        "content": "Contenido adicional para el cálculo de simhash. " * 30,
         "source_id": "test_source",
         "source_name": "Test Source",
         "category": "science",

@@ -1,0 +1,273 @@
+{
+  "session_info": {
+    "session_id": "bdf95a5a-20260117-135103",
+    "system_id": "bdf95a5a",
+    "start_time": "2026-01-17T13:51:03.122098+00:00",
+    "end_time": "2026-01-17T13:51:03.177780+00:00",
+    "duration_seconds": 0.055682
+  },
+  "collection_results": {
+    "collection_summary": {
+      "sources_processed": 26,
+      "articles_found": 6,
+      "articles_saved": 6,
+      "success_rate_percent": 93.51678646223942
+    },
+    "source_details": {
+      "simulation": {
+        "success": true,
+        "articles_found": 6,
+        "articles_saved": 6
+      }
+    },
+    "articles": [
+      {
+        "title": "Artículo Simulado 1",
+        "url": "https://example.com/article/1",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177453+00:00",
+        "summary": "Resumen del artículo simulado 1 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.8215460910572788
+      },
+      {
+        "title": "Artículo Simulado 2",
+        "url": "https://example.com/article/2",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177459+00:00",
+        "summary": "Resumen del artículo simulado 2 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.7906970570534049
+      },
+      {
+        "title": "Artículo Simulado 3",
+        "url": "https://example.com/article/3",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177461+00:00",
+        "summary": "Resumen del artículo simulado 3 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.77980567989413
+      },
+      {
+        "title": "Artículo Simulado 4",
+        "url": "https://example.com/article/4",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177463+00:00",
+        "summary": "Resumen del artículo simulado 4 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.6560864818012411
+      },
+      {
+        "title": "Artículo Simulado 5",
+        "url": "https://example.com/article/5",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177465+00:00",
+        "summary": "Resumen del artículo simulado 5 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.5552163586837878
+      },
+      {
+        "title": "Artículo Simulado 6",
+        "url": "https://example.com/article/6",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177467+00:00",
+        "summary": "Resumen del artículo simulado 6 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.5051307690803102
+      }
+    ]
+  },
+  "scoring_results": {
+    "success": true,
+    "statistics": {
+      "articles_scored": 6,
+      "articles_included": 2,
+      "articles_excluded": 3,
+      "average_score": 0.41095925464761673
+    }
+  },
+  "selection_results": {
+    "success": true,
+    "selected_count": 6,
+    "articles": [
+      {
+        "title": "Artículo Simulado 1",
+        "url": "https://example.com/article/1",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177453+00:00",
+        "summary": "Resumen del artículo simulado 1 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.8215460910572788
+      },
+      {
+        "title": "Artículo Simulado 2",
+        "url": "https://example.com/article/2",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177459+00:00",
+        "summary": "Resumen del artículo simulado 2 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.7906970570534049
+      },
+      {
+        "title": "Artículo Simulado 3",
+        "url": "https://example.com/article/3",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177461+00:00",
+        "summary": "Resumen del artículo simulado 3 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.77980567989413
+      },
+      {
+        "title": "Artículo Simulado 4",
+        "url": "https://example.com/article/4",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177463+00:00",
+        "summary": "Resumen del artículo simulado 4 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.6560864818012411
+      },
+      {
+        "title": "Artículo Simulado 5",
+        "url": "https://example.com/article/5",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177465+00:00",
+        "summary": "Resumen del artículo simulado 5 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.5552163586837878
+      },
+      {
+        "title": "Artículo Simulado 6",
+        "url": "https://example.com/article/6",
+        "source_id": "simulation",
+        "published_date": "2026-01-17T13:51:03.177467+00:00",
+        "summary": "Resumen del artículo simulado 6 para pruebas de contrato.",
+        "content": "Contenido completo simulado...",
+        "author": "Simulador",
+        "categories": [
+          "test",
+          "simulation"
+        ],
+        "tags": [
+          "e2e",
+          "contract"
+        ],
+        "editorial_score": 0.5051307690803102
+      }
+    ],
+    "selection_criteria": {
+      "mode": "dry_run_simulation"
+    }
+  },
+  "performance_metrics": {
+    "total_duration_seconds": 0.055682,
+    "articles_per_second": 6.0,
+    "sources_per_minute": 26.0,
+    "success_rate_percent": 93.51678646223942
+  },
+  "summary": {
+    "sources_processed": 26,
+    "articles_found": 6,
+    "articles_saved": 6,
+    "articles_scored": 6,
+    "final_selection_count": 6
+  }
+}
