@@ -306,6 +306,11 @@ class EditorAgent:
         # Choose the 'direct' headline by default or a combination
         final_title = headlines.get("direct", title) # Fallback to original if fail
         
+        # Sanitize title: ensure it's a string and not a list representation
+        if isinstance(final_title, list):
+            final_title = final_title[0] if final_title else "Untitled"
+        final_title = str(final_title).replace('"', '\\"')
+        
         # Construct Frontmatter
         metadata_block = [
             "---",
