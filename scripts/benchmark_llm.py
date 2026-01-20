@@ -11,10 +11,10 @@ logging.basicConfig(level=logging.INFO)
 TEXT_CONTENT = "X" * 1000  # 1000 chars
 
 try:
-    from news_collector.utils.llm_client import LLMClient
+    from news_collector.infrastructure.llm.provider import OllamaProvider
     
-    print("Initializing LLMClient (should utilize llama3.2:1b)...")
-    llm = LLMClient()
+    print("Initializing OllamaProvider (should utilize llama3.2:1b)...")
+    llm = OllamaProvider()
     print(f"Model: {llm.model}")
     
     system_prompt = (
@@ -25,7 +25,7 @@ try:
     start = time.time()
     
     try:
-        response = llm.generate(prompt=TEXT_CONTENT, system=system_prompt, format="json")
+        response = llm.generate_sync(prompt=TEXT_CONTENT, system=system_prompt, json_mode=True)
         duration = time.time() - start
         
         print(f"✅ Success!")

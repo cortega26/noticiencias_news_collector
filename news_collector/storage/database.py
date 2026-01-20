@@ -440,6 +440,44 @@ class DatabaseManager:
             return session.query(
                 session.query(Article).filter_by(url=url).exists()
             ).scalar()
+
+    def mark_article_published(self, article_id: int, pr_url: str) -> bool:
+        """
+        Marks an article as published (or PR created) in the main database.
+        Updates status to 'completed' and sets published_at timestamp.
+        """
+        with self.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if not article:
+                logger.warning(f"Could not find article {article_id} to mark as published.")
+                return False
+            
+            article.processing_status = "completed"
+            article.published_at = datetime.now(timezone.utc)
+            article.published_url = pr_url
+            # We don't change 'published_date' (original source date), only 'published_at' (our publish date)
+            
+            session.add(article)
+            logger.info(f"Marked article {article_id} as published (PR: {pr_url})")
+            return True
+
+    def is_article_published(self, article_id: int) -> bool:
+        """
+        Checks if an article has already been processed/published.
+        """
+        with self.get_session() as session:
+            # We check for ID existence and status
+            # We also treat 'completed' or having a published_url as published
+            stmt = session.query(Article).filter(Article.id == article_id)
+            article = stmt.first()
+            if not article:
+                return False
+            
+            return (
+                article.processing_status == "completed" 
+                or article.published_url is not None
+            )
+
     # OPERACIONES CON ARTÍCULOS
     # =====================================
 

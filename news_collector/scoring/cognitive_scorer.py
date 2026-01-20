@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 from news_collector.storage.models import Article
-from news_collector.utils.llm_client import LLMClient
+from news_collector.infrastructure.llm.provider import OllamaProvider
 from .basic_scorer import BasicScorer
 from .heuristic_scorer import HeuristicScorer
 
@@ -27,7 +27,7 @@ class CognitiveScorer(BasicScorer):
     4. If unhealthy/timeout/budget-exhausted, Fallback to HeuristicScorer.
     """
     
-    def __init__(self, weights: Optional[Dict[str, float]] = None, llm_client: LLMClient = None):
+    def __init__(self, weights: Optional[Dict[str, float]] = None, llm_client: OllamaProvider = None):
         print(f"{datetime.now().strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)")
         
         # 1. Weights Setup
@@ -46,9 +46,10 @@ class CognitiveScorer(BasicScorer):
         super().__init__(weights=final_weights)
         
         # 2. Components
-        self.llm = llm_client or LLMClient()
+        # Use provider directly
+        self.llm = llm_client or OllamaProvider()
         self.heuristic = HeuristicScorer()
-        self.version = "2.1-hybrid"
+        self.version = "2.2-hybrid-unified"
         
         # 3. Budget Config
         self.max_cycle_budget_sec = 45.0
@@ -56,7 +57,7 @@ class CognitiveScorer(BasicScorer):
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
-        self.is_llm_healthy = True # Assume true initially, checked per cycle/batch
+        self.is_llm_healthy = True 
         
         # 4. Cache Init
         self._init_cache()
@@ -90,8 +91,10 @@ class CognitiveScorer(BasicScorer):
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
-        self.is_llm_healthy = self.llm.is_healthy()
-        logger.info(f"CognitiveScorer Cycle Start. LLM Healthy: {self.is_llm_healthy}")
+        # Basic connectivity check or assume healthy until failure
+        # OllamaProvider doesn't have lightweight is_healthy, so assume True
+        self.is_llm_healthy = True 
+        logger.info(f"CognitiveScorer Cycle Start.")
 
     def _check_budget(self) -> bool:
         """Return True if we have budget left."""
@@ -137,13 +140,8 @@ class CognitiveScorer(BasicScorer):
         # 2. Check Cache first for all
         for i, payload in enumerate(payload_list):
             article_data = payload.get("article", payload)
-            # Reconstruct minimalist Article object for logic reuse
-            # using SafeNamespace trick from basic_scorer if needed, but here we can just pass dict to helpers if careful
-            # Better to use the helper from basic scorer or just cast.
-            # Let's instantiate a temporary Article model for cleanliness if possible, or simple object.
-            # Assuming payload has dictionaries matching Article model structure.
             
-                # Simple wrapper
+            # Simple wrapper
             class Wrapper:
                 def __init__(self, d): self.__dict__ = d
                 def __getattr__(self, k): return self.__dict__.get(k)
@@ -172,18 +170,10 @@ class CognitiveScorer(BasicScorer):
 
         # 3. Process remaining items
         if articles_to_process:
-            # Check budget/health once for the batch
-            # If healthy, try to batch call LLM
-            # If not, use heuristic for all
-            
             use_llm = self._check_budget()
             
             if use_llm:
                 # Prepare Batch
-                # We can do chunks if list is huge, but usually system passes chunks.
-                # Let's assume input list is reasonable (e.g. 10-20).
-                
-                # Extract text for LLM
                 batch_inputs = []
                 indices_for_llm = []
                 
@@ -208,19 +198,19 @@ class CognitiveScorer(BasicScorer):
                         # Finalize
                         results_map[original_idx] = self._finalize_score(art, res, payload_list[original_idx].get("source_config"))
                 else:
-                    # LLM failed completely for batch -> Fallback to heuristic for these
-                    self.is_llm_healthy = False # Mark unhealthy for rest of cycle? Maybe just transient.
-                    use_llm = False # Trigger fallback block below
+                    # LLM failed completely for batch -> Fallback to heuristic
+                    self.is_llm_healthy = False 
+                    use_llm = False 
                     
             if not use_llm:
-                # Heuristic Fallback for everyone remaining
+                # Heuristic Fallback
                 for idx, art in articles_to_process:
-                    if idx in results_map: continue # Already handled (if partial LLM success?)
+                    if idx in results_map: continue 
                     
                     self.heuristic_used_count += 1
                     h_score = self.heuristic.calculate_score(art)
                     res = {
-                        "score": h_score, # 0-1 matches 0-5 normalized? No heuristic returns 0-1
+                        "score": h_score, 
                         "details": {"heuristic": True},
                         "reasoning": "Heuristic fallback (Budget/LLM unavailable)"
                     }
@@ -267,10 +257,8 @@ class CognitiveScorer(BasicScorer):
         )
         
         try:
-            # Usage of asyncio.to_thread to wrap synchronous LLM call
-            resp = await asyncio.to_thread(
-                self._safe_llm_generate, joined_inputs, system_prompt
-            )
+            # Use async generation from OllamaProvider
+            resp = await self.llm.generate_async(joined_inputs, system=system_prompt, json_mode=True)
             
             if not resp or "results" not in resp:
                 return None
@@ -284,16 +272,11 @@ class CognitiveScorer(BasicScorer):
                 if item_res and "scores" in item_res:
                     scores = item_res["scores"]
                     
-                    # Extract dimensions (0-5)
                     substance = float(scores.get("substance", 0))
                     narrative = float(scores.get("narrative", 0))
                     relevance = float(scores.get("relevance", 0))
                     credibility = float(scores.get("credibility", 0))
                     
-                    # Calculate NQI Score (Normalized 0-1) based on NEW weights
-                    # We calc a raw weighted score here just for metadata, 
-                    # but real finalized score happens in _finalize_score using config weights.
-                    # NQI = (Sub*0.35 + Nar*0.30 + Rel*0.20 + Cred*0.15) / 5.0
                     raw_nqi = (substance*0.35 + narrative*0.30 + relevance*0.20 + credibility*0.15)
                     norm_score = min(1.0, raw_nqi / 5.0) 
                     
@@ -315,12 +298,6 @@ class CognitiveScorer(BasicScorer):
             
         except Exception as e:
             logger.warning(f"Batch LLM failed: {e}")
-            return None
-
-    def _safe_llm_generate(self, prompt, system) -> Dict:
-        try:
-            return self.llm.generate(prompt, system=system, format="json")
-        except Exception:
             return None
 
     def _finalize_score(self, article, cognitive_res, source_config, is_heuristic=False) -> Dict[str, Any]:

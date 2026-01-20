@@ -2,7 +2,7 @@ import logging
 import json
 from typing import List, Dict, Any, Optional
 
-from news_collector.utils.llm_client import LLMClient
+from news_collector.infrastructure.llm.provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +12,8 @@ class PreScorer:
     basándose en títulos y resúmenes antes de la extracción de texto completo.
     """
 
-    def __init__(self, llm_client: Optional[LLMClient] = None):
-        self.llm = llm_client or LLMClient()
+    def __init__(self, llm_client: Optional[OllamaProvider] = None):
+        self.llm = llm_client or OllamaProvider()
         self.model_name = self.llm.model
 
     def select_top_candidates(
@@ -57,9 +57,9 @@ class PreScorer:
         )
 
         try:
-            response = self.llm.generate(
+            response = self.llm.generate_sync(
                 prompt=prompt, 
-                format="json",
+                json_mode=True,
                 system="You are an expert Science Editor selecting the most important stories for publication. You output JSON only."
             )
 

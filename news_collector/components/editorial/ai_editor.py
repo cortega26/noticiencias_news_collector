@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 from news_collector.utils.logger import get_logger
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
+from news_collector.infrastructure.llm.provider import OllamaProvider
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
@@ -27,6 +27,14 @@ class EditorAgent:
             self.min_content_length = 750 # Fallback
             
         self.prompts = self._load_prompts()
+        
+        # Initialize unified provider
+        # Note: ai_editor uses a higher timeout (900s) than default
+        self.provider = OllamaProvider(
+            api_url=self.api_url, 
+            model=self.model,
+            timeout=900
+        )
 
     def _load_prompts(self) -> dict:
         """Loads prompt templates from yaml config."""
@@ -88,48 +96,24 @@ class EditorAgent:
         return text
 
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(requests.exceptions.RequestException),
-        before_sleep=before_sleep_log(logger, "WARNING")
-    )
     def _send_prompt(self, prompt: str, system: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": True
-        }
-        if system:
-            payload["system"] = system
-
         logger.info(f"Sending prompt to Ollama ({self.model})...")
         sys_preview = (system or "")[:20]
-        # In a component context, print might not be ideal, but keeping consistent with original behavior for CLI usage
         print(f"Processing ({sys_preview}...)", end="", flush=True)
         
         try:
             start_time = time.time()
-            response = requests.post(self.api_url, json=payload, stream=True, timeout=900)
-            response.raise_for_status()
+            # Use provider's sync iterator which handles retries
+            generator = self.provider.generate_sync(prompt, system=system, stream=True)
             
             full_text = []
-            
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        json_response = json.loads(line)
-                        if 'response' in json_response:
-                            chunk = json_response['response']
-                            full_text.append(chunk)
-                            # Feedback dot every 5 chunks
-                            if len(full_text) % 20 == 0:
-                                print(".", end="", flush=True)
-                        if json_response.get('done', False):
-                            break
-                    except json.JSONDecodeError:
-                        continue
+            count = 0
+            for chunk in generator:
+                full_text.append(chunk)
+                count += 1
+                if count % 20 == 0:
+                    print(".", end="", flush=True)
             
             print(" Done!")
             duration = time.time() - start_time
@@ -137,7 +121,7 @@ class EditorAgent:
             
             return "".join(full_text).strip()
             
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print("")
             logger.error(f"Error communicating with Ollama: {e}")
             raise
@@ -154,44 +138,16 @@ class EditorAgent:
 
     def _extract_json(self, text: str) -> dict:
         """
-        Robustly extracts a JSON object from text by finding the outer braces.
-        Handles nested objects by counting braces.
+        Robustly extracts a JSON object using the provider's logic.
         """
-        text = text.strip()
-        
-        # 1. Try direct parse (fastest)
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
-
-        # 2. Bracket counting
-        start_idx = text.find('{')
-        if start_idx == -1:
-            raise ValueError("No JSON object found (missing '{')")
-
-        nesting = 0
-        for i, char in enumerate(text[start_idx:], start=start_idx):
-            if char == '{':
-                nesting += 1
-            elif char == '}':
-                nesting -= 1
-                if nesting == 0:
-                    # Found the closing brace of the root object
-                    json_str = text[start_idx : i + 1]
-                    try:
-                        return json.loads(json_str)
-                    except json.JSONDecodeError as e:
-                        # Sometimes regex or cleanup is still needed inside
-                        # Let's try to aggressive clean common issues
-                        try:
-                            # Remove markdown code blocks if inside
-                            clean_str = json_str.replace("```json", "").replace("```", "")
-                            return json.loads(clean_str)
-                        except:
-                            raise ValueError(f"Extracted block is invalid JSON: {e}")
-        
-        raise ValueError("No valid JSON object found (unbalanced braces)")
+        result = self.provider._extract_json(text)
+        if not result and "{" in text:
+             # If provider returned empty but there might be JSON, raise strict error 
+             # to match original behavior of raising ValueError?
+             # Original raised ValueError if no JSON found.
+             # Provider returns {}
+             raise ValueError("No parsing valid JSON object found")
+        return result
 
     def _generate_headlines(self, adapted_content: str) -> dict:
         """Stage 3: Headline Generation"""
@@ -341,6 +297,17 @@ class EditorAgent:
         # Append source link footer if missing
         if source_url and "Fuente original" not in full_article:
              full_article += f"\n\nFuente original: [{source_url}]({source_url})"
+
+        # Logic to strip Visual planning section if no image is present (Rule from tests)
+        if not image_url:
+            # Regex to remove **TL;DR Visual**... up to next **Header** or end of string
+            # Using DOTALL to match newlines
+            full_article = re.sub(
+                r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)", 
+                "", 
+                full_article, 
+                flags=re.DOTALL | re.MULTILINE
+            )
              
         return self._strip_emojis(full_article)
 

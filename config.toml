@@ -3,6 +3,16 @@ environment = "development"
 debug = false
 timezone = "UTC"
 
+[github]
+source_repo_url = ""
+target_repo_url = ""
+# token is loaded from .env
+
+[ollama]
+api_url = "http://localhost:11434/api/generate"
+model = "llama3.2"
+timeout = 300
+
 [paths]
 data_dir = "./data"
 logs_dir = "./data/logs"
@@ -55,7 +65,7 @@ simhash_candidate_window = 500
 daily_top_count = 10
 minimum_score = 0.3
 mode = "cognitive"
-# llm_model removed
+llm_model = "llama3.2"
 
 workers = 1
 reranker_seed = 1337

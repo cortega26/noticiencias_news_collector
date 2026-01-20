@@ -22,11 +22,12 @@ from src.utils.logger import setup_logger
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.components.editorial import EditorAgent
 # from news_collector.components.editorial import EditorAgent # Removed duplicate
-from src.database import DatabaseManager
+from news_collector.storage.database import DatabaseManager
 
 from news_collector.system import create_system
 import asyncio
 from datetime import timezone
+from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 
 logger = setup_logger("Orchestrator")
@@ -35,7 +36,7 @@ PROCESSED_LOG_FILE = "processed_log.json"
 TEMP_DIR = Path("temp")
 SOURCE_DIR = TEMP_DIR / "source"
 TARGET_DIR = TEMP_DIR / "target"
-DB_PATH = Path("refinery.db")
+# DB_PATH = Path("refinery.db") # Deprecated
 
 def _is_file_lock_error(exc: Exception) -> bool:
     winerror = getattr(exc, "winerror", None)
@@ -119,14 +120,14 @@ def _load_export_articles(
         art_id = str(art.get("id", art.get("title")))
         if process_id and str(art_id) != str(process_id):
             continue
-        if (
-            not process_id
-            and (
-                db_manager.is_processed(art_id)
-                or db_manager.is_processed(f"{art_id}.md")
-            )
-        ):
-            continue
+        # Check if already processed using Main DB
+        try:
+            numeric_id = int(art_id)
+            if not process_id and db_manager.is_article_published(numeric_id):
+                continue
+        except ValueError:
+            # Fallback or skip if ID is not numeric (rare/legacy)
+            pass
         articles.append(art)
     return articles
 
@@ -205,52 +206,17 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False):
                  # Run Collection
                  await system.run_collection_cycle(dry_run=False)
                  
-                 # Export Logic (Shared with run_collector.py)
-                 export_path = Path("data/exports/latest_articles.json") # Relative to CWD (root)
-                 
-                 # We will try to write to the standard location relative to project root
+                 # Export Logic
                  target_export_path = project_root / "data/exports/latest_articles.json"
-                 target_export_path.parent.mkdir(parents=True, exist_ok=True)
                  
                  logger.info(f"Exporting results to {target_export_path}")
                  
-                 # Get articles
-                 articles = await asyncio.to_thread(
-                     system.db_manager.get_articles_by_score, limit=50, exclude_published=True
+                 # Use unified system export
+                 await asyncio.to_thread(
+                     system.export_latest_articles, 
+                     file_path=target_export_path, 
+                     limit=50
                  )
-                 
-                 serialized_articles = []
-                 for art in articles:
-                    art_dict = {
-                        "id": art.id,
-                        "title": art.title,
-                        "url": art.url,
-                        "summary": art.summary,
-                        "content": art.content,
-                        "source_name": art.source_name,
-                        "published_date": art.published_date.isoformat() if art.published_date else None,
-                        "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
-                        "published_url": getattr(art, "published_url", None),
-                        "collected_date": art.collected_date.isoformat() if art.collected_date else None,
-                        "score": art.final_score,
-                        "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
-                        "metadata": art.article_metadata,
-                        "authors": art.authors,
-                        "category": art.category,
-                        "components": art.score_components or {}
-                    }
-                    serialized_articles.append(art_dict)
-                
-                 export_payload = {
-                    "schema_version": 1,
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "contract": "news_collector.export.v1",
-                    "article_count": len(serialized_articles),
-                    "articles": serialized_articles,
-                 }
-
-                 with open(target_export_path, 'w', encoding='utf-8') as f:
-                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
                     
              finally:
                  if hasattr(system, 'shutdown'):
@@ -298,10 +264,18 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         return {"status": "error", "message": str(e)}
 
     # Initialize Database
-    db_manager = DatabaseManager(DB_PATH)
+    db_manager = DatabaseManager()
 
     git_handler = GitHubPublisher(config.github.token)
     editor_agent = EditorAgent(config.ollama.api_url, config.ollama.model)
+    
+    # Initialize Engine
+    engine = RefineryEngine(
+        db_manager=db_manager,
+        git_handler=git_handler,
+        editor_agent=editor_agent,
+        config=config.github
+    )
 
     source_dir = SOURCE_DIR
     preferred_export_path = None
@@ -489,73 +463,16 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         return {"status": "error", "message": f"Critical Git Error: {e}", "processed_count": 0}
 
     try:
-        for article in articles_to_process:
-            # Identifier
-            article_id = str(article.get("id", article.get("title")))
-            file_name = f"{article_id}.md" # logical filename for logs
-            branch_name = None # Initialize to avoid UnboundLocalError
-            
-            logger.info(f"Processing item: {article_id} (Version: Restored Logic)")
-            
-            try:
-                # ... (inner logic) ...
-                
-                # 2. Process with LLM
-                refined_content = editor_agent.process_article(article)
-                
-                # 3. Determine Output Filename
-                date_str = datetime.now().strftime("%Y-%m-%d")
-                
-                # Try to extract slug from frontmatter
-                output_slug = f"article-{article_id}"
-                if "slug:" in refined_content:
-                    try:
-                        import re
-                        match = re.search(r'slug:\s*"?([^"\n]+)"?', refined_content)
-                        if match:
-                            output_slug = match.group(1).strip()
-                    except:
-                        pass
-                
-                output_filename = f"{date_str}-{output_slug}.md"
-                
-                # 4. Save to Target Repo structure
-                # Ensure structure exists: src/content/posts
-                posts_path = TARGET_DIR / "src/content/posts"
-                posts_path.mkdir(parents=True, exist_ok=True)
-                
-                target_file_path = posts_path / output_filename
-                with open(target_file_path, "w", encoding="utf-8") as f:
-                    f.write(refined_content)
-                
-                logger.info(f"Written content to {target_file_path}")
-
-                # 5. Create Branch
-                branch_name = git_handler.create_branch(target_repo_obj, branch_prefix="content/add")
-
-                # 6. Commit and Push
-                git_handler.commit_and_push(target_repo_obj, f"Add article: {output_filename}", branch_name)
-                
-                # 7. Create PR
-                pr_url = git_handler.create_pull_request(
-                    repo_url=config.github.target_repo_url,
-                    branch_name=branch_name,
-                    title=f"News: {date_str} - {output_slug}",
-                    body=f"Automated submission for {file_name}.\n\nProcessed by Noticiencias Refinery."
-                )
-                
-                if pr_url:
-                    logger.info(f"Pull Request created successfully: {pr_url}")
-                    # MARK AS PROCESSED IN DB
-                    db_manager.mark_processed(file_name)
-                    processed_count += 1
-                else:
-                    logger.error("Failed to create PR.")
-            
-            except Exception as e:
-                logger.error(f"Failed to process {file_name}: {e}")
-                last_error = str(e)
-                
+        if articles_to_process:
+            summary = engine.process_articles(articles_to_process, target_repo_obj, TARGET_DIR)
+            processed_count = summary["processed_count"]
+            if summary["errors"]:
+                 last_error = str(summary["errors"][-1])
+                 logger.warning(f"Engine reported {len(summary['errors'])} errors.")
+    except Exception as e:
+         logger.error(f"Engine execution failed: {e}")
+         return {"status": "error", "message": f"Engine failed: {e}", "processed_count": 0}
+         
     except KeyboardInterrupt:
         logger.warning("\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully...")
         return {"status": "cancelled", "processed_count": processed_count}
@@ -595,7 +512,7 @@ def delete_article(article_id: str) -> dict:
                     if f'refinery_id: "{article_id}"' in content:
                         target_file = file_path
                         break
-                except:
+                except Exception:
                     continue
         
         if not target_file:

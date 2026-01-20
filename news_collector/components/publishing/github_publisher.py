@@ -95,12 +95,34 @@ class GitHubPublisher:
         logger.info(f"Cloning {self._strip_credentials(repo_url)} to {target_dir}...")
         return git.Repo.clone_from(auth_url, target_dir, env=env or None)
 
-    def create_branch(self, repo: git.Repo, branch_prefix: str = "news/article") -> str:
-        """Creates a new branch with a unique name."""
-        branch_name = f"{branch_prefix}-{uuid.uuid4().hex[:8]}"
-        new_branch = repo.create_head(branch_name)
+    def create_branch(self, repo: git.Repo, branch_prefix: str = "news/article", explicit_name: str | None = None) -> str:
+        """
+        Creates a new branch.
+        
+        Args:
+            repo: The git repository object.
+            branch_prefix: Prefix for the branch name (e.g. 'news/article').
+            explicit_name: Optional explicit suffix (e.g. article slug) for deterministic naming.
+                          If None, a random UUID is used.
+        """
+        if explicit_name:
+            # Sanitize explicit name just in case
+            safe_suffix = "".join(c if c.isalnum() or c in "-_" else "-" for c in explicit_name).strip("-")
+            branch_name = f"{branch_prefix}-{safe_suffix}"
+        else:
+            branch_name = f"{branch_prefix}-{uuid.uuid4().hex[:8]}"
+            
+        # Check if branch exists to avoid error? 
+        # git.Repo.create_head will raise if it exists. 
+        # For idempotency, we should check.
+        if branch_name in repo.heads:
+            logger.info(f"Branch {branch_name} already exists. Checking it out.")
+            new_branch = repo.heads[branch_name]
+        else:
+            new_branch = repo.create_head(branch_name)
+            
         new_branch.checkout()
-        logger.info(f"Created and checked out branch: {branch_name}")
+        logger.info(f"Checked out branch: {branch_name}")
         return branch_name
 
     def commit_and_push(self, repo: git.Repo, message: str, branch_name: str):
