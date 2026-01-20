@@ -47,6 +47,7 @@ from news_collector.storage.database import get_database_manager
 from .base_collector import BaseCollector
 from .rate_limit_utils import calculate_effective_delay
 from news_collector.scoring.pre_scorer import PreScorer
+from news_collector.logic.parsers.rss_parser import RssParser
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from news_collector.utils.logger import NewsCollectorLogger
@@ -77,6 +78,7 @@ class RSSCollector(BaseCollector):
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         self.session = self._create_session()
         self.pre_scorer = PreScorer()
+        self.parser = RssParser()
 
         # Estadísticas de la sesión actual
         self.session_stats = {
@@ -557,24 +559,7 @@ class RSSCollector(BaseCollector):
             return (None, None)
 
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
-        """
-        Determina si un feed "bozo" (malformado) es aceptable para procesar.
-
-        feedparser marca muchos feeds como "bozo" por pequeñas imperfecciones
-        que no impiden extraer información útil. Este método es como tener
-        un experto que puede distinguir entre errores menores y problemas graves.
-        """
-        if not parsed_feed.bozo:
-            return True
-
-        # Excepciones que podemos tolerar
-        acceptable_exceptions = [
-            "InvalidDocument",  # Documentos con pequeños errores de formato
-            "UndeclaredNamespace",  # Namespaces no declarados pero manejables
-        ]
-
-        exception_name = parsed_feed.bozo_exception.__class__.__name__
-        return exception_name in acceptable_exceptions
+        return self.parser.is_acceptable_bozo(parsed_feed)
 
     def _extract_articles_from_feed(
         self,
@@ -583,76 +568,50 @@ class RSSCollector(BaseCollector):
         source_id: str,
     ) -> List[Dict[str, Any]]:
         """
-        Extrae artículos individuales de un feed parseado.
-
-        Este método es como tener un bibliotecario experto que puede leer
-        diferentes estilos de catálogos (RSS, Atom, diferentes versiones)
-        y extraer la información esencial de cada libro de manera consistente.
+        Extrae artículos usando el RssParser logic.
         """
-        # candidates = []
-        max_articles = COLLECTION_CONFIG["max_articles_per_source"]
+        # Fetch multiplier logic is now implicit since parser returns all valid items,
+        # but we effectively just get candidates.
         
-        # INTELLIGENT SELECTION: Fetch stricter pool (e.g. 4x limit)
-        # to allow AI to select the best ones.
-        candidate_multiplier = 4
-        fetch_limit = max_articles * candidate_multiplier
+        candidates = self.parser.extract_items(parsed_feed, source_config)
         
+        # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
+        filtered_candidates = []
         recent_threshold = datetime.now(timezone.utc) - timedelta(
             days=COLLECTION_CONFIG["recent_days_threshold"]
         )
-
-        candidates = []
-
-        # 1. PHASE ONE: Extract Metadata Candidates
-        for entry in parsed_feed.entries[:fetch_limit]:
-            try:
-                # Extraer fecha de publicación
-                pub_dt, pub_off_min, pub_tz_name = self._extract_publication_timestamp(
-                    entry
-                )
-
-                # Filtrar artículos muy antiguos (opcional, según configuración)
-                if pub_dt and pub_dt < recent_threshold:
-                    continue
-
-                original_url = entry.get("link", "")
-                canonical_url = canonicalize_url(original_url)
+        
+        max_articles = COLLECTION_CONFIG["max_articles_per_source"]
+        candidate_multiplier = 4
+        fetch_limit = max_articles * candidate_multiplier
+        
+        count = 0
+        for cand in candidates:
+            if count >= fetch_limit:
+                break
                 
-                # Check duplication EARLY to save AI tokens
-                # We can check if URL exists in DB? Or just Job Key?
-                # Job Key is per source, not per article.
-                # DB check is expensive but better than scoring duplicates.
-                if self.db_manager.article_exists(canonical_url): 
-                     # Check DB for existing article to avoid re-processing
-                     print(f"DEBUG: Skipping duplicate URL: {canonical_url}")
-                     continue
-
-                candidate_data = {
-                    "title": self._clean_text(entry.get("title", "Sin título")),
-                    "url": canonical_url,
-                    "summary": self._extract_summary(entry),
-                    "published_date": pub_dt,
-                    "published_tz_offset_minutes": pub_off_min,
-                    "published_tz_name": pub_tz_name,
-                    "authors": self._extract_authors(entry),
-                    "category": source_config["category"],
-                    "source_metadata": self._extract_source_metadata(
-                        entry, parsed_feed
-                    ),
-                    "original_url": original_url,
-                    "image_url": self._extract_image_url(entry),
-                    "credibility_score": 1.0,  # Default, adjusted by scorer later
-                    "entry_ref": entry # Keep ref if needed
-                }
-                
-                # Basic validation
-                if len(candidate_data["title"]) < 5: continue
-                
-                candidates.append(candidate_data)
-                
-            except Exception:
+            # Date filter
+            if cand.get("published_date") and cand["published_date"] < recent_threshold:
                 continue
-
+                
+            # Duplicate filter
+            if self.db_manager.article_exists(cand["url"]):
+                 continue
+                 
+            filtered_candidates.append(cand)
+            count += 1
+            
+        # The rest of the logic (PreScorer, Full Text) remains in collect_from_source loop
+        # Wait, collect_from_source calls this method to get 'raw_articles'.
+        # And then it iterates 'raw_articles', calls _process_article.
+        # But _process_article duplicates some logic?
+        
+        # Let's return the candidates. The original method also did PreScoring?
+        # Yes, original method at lines 656+ called PreScorer internally!
+        # I must preserve that logic.
+        
+        candidates = filtered_candidates
+            
         if len(candidates) > max_articles:
             self._emit_log("warning", "collector.prescorer.ranking_start", details={"candidates": len(candidates), "limit": max_articles})
             
@@ -661,7 +620,6 @@ class RSSCollector(BaseCollector):
                 limit=max_articles, 
                 source_context=source_config.get("name", source_id)
             )
-            print(f"✅ PreScorer: Selected {len(selected_candidates)} best articles.")
         else:
             selected_candidates = candidates
 
@@ -680,6 +638,21 @@ class RSSCollector(BaseCollector):
                 # Create final dict (cleanup helper props if any)
                 if "entry_ref" in cand: del cand["entry_ref"]
                 
+                # _validate_article_data was called? No, it was called in loop.
+                # Actually, the original method returned 'articles'.
+                # And 'collect_from_source' gets 'raw_articles' and THEN calls '_process_article'.
+                # Wait. In original code:
+                # line 232: raw_articles = self._extract_articles_from_feed(...)
+                # line 260: processed_article = self._process_article(raw_article...)
+                
+                # BUT, inside `_extract_articles_from_feed` (lines 579-690):
+                # It DID fetch full text (lines 669-688).
+                # It DID return a list of dicts.
+                # It DID call _validate_article_data (line 683).
+                
+                # So I DO need to include the PreScorer and FullText fetching here.
+                # The extracted RssParser only does the "PHASE ONE" extraction.
+                
                 if self._validate_article_data(cand):
                     articles.append(cand)
                     
@@ -689,241 +662,12 @@ class RSSCollector(BaseCollector):
 
         return articles
 
-    def _extract_publication_timestamp(self, entry) -> Tuple[datetime, int, str]:
-        """
-        Extrae la fecha de publicación de manera robusta.
+    def _validate_article_data(self, article: Dict[str, Any]) -> bool:
+        """Helper to validate minimal requirements before returning from extract."""
+        if not article.get("url"): return False
+        if not article.get("title"): return False
+        return True
 
-        Las fechas en RSS son notoriamente inconsistentes. Este método
-        es como tener un traductor que entiende todos los dialectos posibles
-        de cómo se puede expresar una fecha.
-        """
-        from news_collector.utils.datetime_utils import parse_to_utc_with_tzinfo
-
-        date_fields = ["published_parsed", "updated_parsed", "published", "updated"]
-        for field in date_fields:
-            if hasattr(entry, field):
-                date_value = getattr(entry, field)
-                if date_value:
-                    try:
-                        return parse_to_utc_with_tzinfo(date_value)
-                    except Exception as exc:
-                        self._emit_log(
-                            "debug",
-                            "collector.article.timestamp_parse_failed",
-                            details={
-                                "field": field,
-                                "value": str(date_value),
-                                "error": str(exc),
-                            },
-                        )
-                        continue
-        # Fallback: now in UTC
-        dt, off, name = parse_to_utc_with_tzinfo(None)
-        return dt, off, name
-
-    def _extract_summary(self, entry) -> str:
-        """
-        Extrae y limpia el resumen del artículo.
-
-        Los feeds RSS pueden tener el contenido en varios campos y formatos.
-        Este método es como tener un editor que sabe encontrar la esencia
-        del artículo sin importar cómo esté formateado.
-        """
-        # Campos posibles para el contenido
-        content_fields = ["summary", "description", "content"]
-
-        for field in content_fields:
-            if hasattr(entry, field):
-                content = getattr(entry, field)
-
-                # Manejar diferentes formatos de contenido
-                if isinstance(content, list) and content:
-                    content = (
-                        content[0].get("value", "")
-                        if isinstance(content[0], dict)
-                        else str(content[0])
-                    )
-                elif isinstance(content, dict):
-                    content = content.get("value", "")
-
-                if content and isinstance(content, str):
-                    # Limpiar HTML si existe
-                    cleaned_content = self._clean_html(content)
-                    if (
-                        len(cleaned_content)
-                        >= TEXT_PROCESSING_CONFIG["min_content_length"]
-                    ):
-                        return cleaned_content
-
-        return ""
-
-    def _clean_html(self, html_content: str) -> str:
-        """
-        Limpia contenido HTML para obtener texto plano.
-
-        Muchos feeds incluyen HTML en sus descripciones. Este método
-        es como tener un filtro inteligente que mantiene la información
-        importante pero elimina por completo el formato innecesario.
-        """
-        if not html_content:
-            return ""
-
-        try:
-            from news_collector.utils.text_cleaner import clean_html as _clean
-
-            return _clean(html_content)
-        except Exception as exc:
-            self._emit_log(
-                "warning",
-                "collector.article.html_cleanup_failed",
-                details={"error": str(exc)},
-            )
-            import re
-
-            text = re.sub("<[^<]+?>", "", html_content)
-            return " ".join(text.split())
-
-    def _extract_authors(self, entry) -> List[str]:
-        """
-        Extrae información de autores cuando está disponible.
-
-        La información de autores en feeds RSS es muy inconsistente.
-        Este método hace lo mejor posible para extraer esta información
-        valiosa cuando está presente.
-        """
-        authors = []
-
-        # Campos posibles para autores
-        if hasattr(entry, "author") and entry.author:
-            authors.append(self._clean_text(entry.author))
-
-        if hasattr(entry, "authors") and entry.authors:
-            for author in entry.authors:
-                if isinstance(author, dict):
-                    name = author.get("name") or author.get("email", "")
-                else:
-                    name = str(author)
-
-                if name:
-                    authors.append(self._clean_text(name))
-
-        # Buscar autores en tags personalizados (para algunos journals)
-        if hasattr(entry, "tags"):
-            for tag in entry.tags:
-                if "author" in tag.get("term", "").lower():
-                    authors.append(self._clean_text(tag.get("term", "")))
-
-        return list(set(authors))  # Remover duplicados
-
-    def _extract_image_url(self, entry) -> Optional[str]:
-        """
-        Extrae la URL de la imagen principal del artículo.
-        Busca en media_content, enclosures, links y thumbnails.
-        """
-        # 1. Media Content (common in RSS)
-        if hasattr(entry, "media_content"):
-            for media in entry.media_content:
-                if media.get("medium") == "image" and media.get("url"):
-                    return media["url"]
-
-        # 2. Enclosures
-        if hasattr(entry, "enclosures"):
-            for enclosure in entry.enclosures:
-                if enclosure.get("type", "").startswith("image/") and enclosure.get("href"):
-                    return enclosure["href"]
-
-        # 3. Media Thumbnail
-        if hasattr(entry, "media_thumbnail"):
-            # media_thumbnail might be a list
-            thumbnails = entry.media_thumbnail
-            if isinstance(thumbnails, list) and thumbnails:
-                return thumbnails[0].get("url")
-            elif isinstance(thumbnails, dict):
-                 return thumbnails.get("url")
-
-        # 4. Links with image type
-        if hasattr(entry, "links"):
-            for link in entry.links:
-                 if link.get("type", "").startswith("image/") and link.get("href"):
-                     return link["href"]
-        
-        return None
-
-    def _extract_source_metadata(self, entry, parsed_feed) -> Dict[str, Any]:
-        """
-        Extrae metadatos específicos de la fuente.
-
-        Diferentes fuentes incluyen información especializada en sus feeds.
-        Este método es como tener un detective que puede encontrar pistas
-        valiosas específicas de cada tipo de fuente.
-        """
-        metadata = {}
-
-        # DOI (muy importante para papers académicos)
-        doi = self._extract_doi(entry)
-        if doi:
-            metadata["doi"] = doi
-
-        # Tags/categorías
-        if hasattr(entry, "tags") and entry.tags:
-            metadata["tags"] = [
-                tag.get("term", "") for tag in entry.tags if tag.get("term")
-            ]
-
-        # Información del journal/revista
-        if hasattr(parsed_feed, "feed"):
-            feed_info = parsed_feed.feed
-            if hasattr(feed_info, "title"):
-                metadata["feed_title"] = feed_info.title
-
-        # Enlaces adicionales
-        if hasattr(entry, "links") and entry.links:
-            metadata["additional_links"] = [
-                {"href": link.get("href"), "type": link.get("type", "unknown")}
-                for link in entry.links
-                if link.get("href")
-            ]
-
-        # ID único del entry (útil para tracking)
-        if hasattr(entry, "id") and entry.id:
-            metadata["entry_id"] = entry.id
-
-        return metadata
-
-    def _extract_doi(self, entry) -> Optional[str]:
-        """
-        Extrae DOI (Digital Object Identifier) cuando está disponible.
-
-        Los DOIs son cruciales para artículos académicos porque proporcionan
-        un enlace permanente al paper original. Este método busca DOIs
-        en varios lugares donde pueden aparecer en feeds académicos.
-        """
-        import re
-
-        doi_pattern = r"10\.\d{4,}/[-._;()/:\w\[\]]+[^.\s]"
-
-        # Buscar en diferentes campos
-        search_fields = []
-
-        if hasattr(entry, "id"):
-            search_fields.append(entry.id)
-
-        if hasattr(entry, "summary"):
-            search_fields.append(entry.summary)
-
-        if hasattr(entry, "links"):
-            for link in entry.links:
-                if link.get("href"):
-                    search_fields.append(link["href"])
-
-        # Buscar patrón DOI en todos los campos
-        for field in search_fields:
-            if field and isinstance(field, str):
-                match = re.search(doi_pattern, field, re.IGNORECASE)
-                if match:
-                    return match.group()
-
-        return None
 
     def _process_article(
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]

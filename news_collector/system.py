@@ -355,6 +355,73 @@ class NewsCollectorSystem:
             )
             raise
 
+    def export_latest_articles(self, file_path: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+        """
+        Exports the latest top-scored articles to a JSON schema.
+        
+        Args:
+            file_path: Optional path to write the JSON file to.
+            limit: Number of articles to export.
+            
+        Returns:
+            The export dictionary payload.
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Sistema no inicializado")
+
+        try:
+            # Get articles
+            # Note: exclude_published=True allows Refinery to only see what needs work
+            articles = self.db_manager.get_articles_by_score(limit=limit, exclude_published=True)
+            
+            serialized_articles = []
+            for art in articles:
+                art_dict = {
+                    "id": art.id,
+                    "title": art.title,
+                    "url": art.url,
+                    "summary": art.summary,
+                    "content": art.content,
+                    "source_name": art.source_name,
+                    "published_date": art.published_date.isoformat() if art.published_date else None,
+                    "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                    "published_url": getattr(art, "published_url", None),
+                    "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                    "score": art.final_score,
+                    "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                    "metadata": art.article_metadata,
+                    "authors": art.authors,
+                    "category": art.category,
+                    "components": art.score_components or {}
+                }
+                serialized_articles.append(art_dict)
+        
+            export_payload = {
+                "schema_version": 1,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "contract": "news_collector.export.v1",
+                "article_count": len(serialized_articles),
+                "articles": serialized_articles,
+            }
+
+            if file_path:
+                path_obj = Path(json.dumps(file_path).strip('"')) if not isinstance(file_path, Path) else file_path
+                # Ensure we handle the path correctly whether string or Path
+                path_obj = Path(file_path)
+                path_obj.parent.mkdir(parents=True, exist_ok=True)
+                
+                with open(path_obj, 'w', encoding='utf-8') as f:
+                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
+                
+                if self.logger:
+                    self.logger.create_module_logger("system").info(f"Exported {len(serialized_articles)} articles to {path_obj}")
+
+            return export_payload
+
+        except Exception as e:
+            self.logger.log_error_with_context(e, {"operation": "export_latest_articles"})
+            raise
+
     def get_system_statistics(self) -> Dict[str, Any]:
         """
         Obtiene estadísticas completas del sistema.

@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import MagicMock
 from news_collector.editorial.council import EditorialCouncil, CouncilResult
-from news_collector.utils.llm_client import LLMClient
+from news_collector.infrastructure.llm.provider import OllamaProvider
 
 class TestEditorialCouncil(unittest.TestCase):
     def test_approval_logic(self):
         # Mock LLM Client
-        mock_llm = MagicMock(spec=LLMClient)
+        mock_llm = MagicMock(spec=OllamaProvider)
         
         # Scenario 1: Perfect Article
         mock_response_good = {
@@ -19,7 +19,7 @@ class TestEditorialCouncil(unittest.TestCase):
           "editorial_synthesis": {},
           "editor_approval": "Sí, es Noticiencias"
         }
-        mock_llm.generate.return_value = mock_response_good
+        mock_llm.generate_sync.return_value = mock_response_good
         
         council = EditorialCouncil(llm_client=mock_llm)
         result = council.evaluate_article("Title", "Summary")
@@ -38,7 +38,7 @@ class TestEditorialCouncil(unittest.TestCase):
           "editorial_synthesis": {},
           "editor_approval": "No, requiere cambios"
         }
-        mock_llm.generate.return_value = mock_response_bad
+        mock_llm.generate_sync.return_value = mock_response_bad
         
         result_bad = council.evaluate_article("Bad Title", "Summary")
         self.assertFalse(result_bad.is_approved)

@@ -40,7 +40,7 @@ refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
 from news_collector.storage.database import DatabaseManager
-from src.database import DatabaseManager as RefineryDatabaseManager
+# from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from news_collector.config.settings import DATABASE_CONFIG
 
 import logging
@@ -69,20 +69,30 @@ REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 # Paths continued below after NEWS_COLLECTOR_PATH logic...
 
 # --- Helper Functions ---
-def load_env_file():
+def load_secrets():
     if not ENV_FILE.exists():
-        # st.warning(f"⚠️ .env no encontrado en: {ENV_FILE}") # Too noisy on first run
         return {}
-    # Use dotenv to load values without polluting os.environ if we just want to edit
-    return dotenv.dotenv_values(ENV_FILE)
+    # Only load secrets
+    all_env = dotenv.dotenv_values(ENV_FILE)
+    # Filter for known secrets or return all (simplest is return all for now, but UI will separate)
+    return all_env
 
-def save_env_file(env_vars):
+def save_secrets(secrets_dict):
+    # Load existing to preserve other keys if needed, or just write what we have
+    # Better: Update existing file with new values
+    current = dotenv.dotenv_values(ENV_FILE)
+    current.update(secrets_dict)
+    
     with open(ENV_FILE, "w") as f:
-        for key, value in env_vars.items():
-            # Basic handling for quotes
-            if " " in str(value) and not str(value).startswith('"'):
+        for key, value in current.items():
+            # Only write known secrets or everything? Let's write everything that is in the dict
+            # keys that are NOT secrets should generally be removed from here if we migrate them
+            # But for safety, we just allow writing the passed dict + updates.
+            
+            # Simple approach: Write atomic
+             if " " in str(value) and not str(value).startswith('"'):
                 f.write(f'{key}="{value}"\n')
-            else:
+             else:
                 f.write(f"{key}={value}\n")
 
 def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> bool:
@@ -121,13 +131,16 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
             st.error("Token inválido.")
     return False
 
-# Load Env to get Path
-env_config = load_env_file()
+# Load Secrets for Auth
+secrets = load_secrets()
 # Default relative path
 # In monorepo structure, admin_panel is in apps/refinery, so root is up two levels
 DEFAULT_COLLECTOR_PATH = BASE_DIR.parent.parent
-# Get from env or default
-collector_path_str = env_config.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
+# Get from config (preferred) or env or default
+# We need to load TOML early to find PATH?
+# Chicken and egg. NEWS_COLLECTOR_PATH is expected in .env usually for bootstrapping.
+# We will keep NEWS_COLLECTOR_PATH in .env/secrets for now as it defines WHERE config.toml is.
+collector_path_str = secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
 NEWS_COLLECTOR_PATH = Path(collector_path_str).resolve()
 
 COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
@@ -154,59 +167,74 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & 
 # --- Tab 1: AI Settings ---
 with tab1:
     st.header("Configuración de Refinería")
-    env_vars = load_env_file()
     
-    # Convert to mutable dict if it's not
-    env_vars = dict(env_vars)
+    # Load both sources
+    secrets = dict(load_secrets())
+    config_data = load_toml_config() or {}
     
-    if env_vars or not ENV_FILE.exists(): # Allow editing even if empty
-        if not ENV_FILE.exists():
-            st.info(
-                f"Archivo de entorno de refinería: `{ENV_FILE}`. "
-                "Crea este archivo para guardar GITHUB_TOKEN y OLLAMA_*."
-            )
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("🤖 Modelo de IA")
-            current_model = env_vars.get("OLLAMA_MODEL", "llama3.2")
-            new_model = st.selectbox(
-                "Seleccionar Modelo Ollama", 
-                ["llama3.2", "llama3.3", "llama3.1:70b", "mistral"],
-                index=0 if "3.2" in current_model else 1
-            )
-            env_vars["OLLAMA_MODEL"] = new_model
-            
-            st.subheader("🔗 URL de API")
-            env_vars["OLLAMA_API_URL"] = st.text_input("Endpoint de Ollama", env_vars.get("OLLAMA_API_URL", "http://localhost:11434/api/generate"))
+    if not config_data:
+        st.error("No se pudo cargar config.toml. Verifica la ruta.")
 
-        with col2:
-            st.subheader("📂 Repositorios")
-            env_vars["SOURCE_REPO_URL"] = st.text_input("Repo Origen", env_vars.get("SOURCE_REPO_URL", ""))
-            env_vars["TARGET_REPO_URL"] = st.text_input("Repo Destino", env_vars.get("TARGET_REPO_URL", ""))
-            
-            # --- NEW: Configurable Path ---
-            env_vars["NEWS_COLLECTOR_PATH"] = st.text_input(
-                "Ruta News Collector (Local)", 
-                env_vars.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🤖 Modelo de IA")
+        # Read from TOML [ollama] section
+        ollama_cfg = config_data.get("ollama", {})
+        current_model = ollama_cfg.get("model", "llama3.2")
+        
+        new_model = st.selectbox(
+            "Seleccionar Modelo Ollama", 
+            ["llama3.2", "llama3.3", "llama3.1:70b", "mistral"],
+            index=0 if "3.2" in current_model else 1
+        )
+        
+        # Update TOML dict
+        if "ollama" not in config_data: config_data["ollama"] = {}
+        config_data["ollama"]["model"] = new_model
+        
+        st.subheader("🔗 URL de API")
+        current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
+        config_data["ollama"]["api_url"] = st.text_input("Endpoint de Ollama", current_api)
+
+    with col2:
+        st.subheader("📂 Repositorios")
+        github_cfg = config_data.get("github", {})
+        
+        config_data["github"]["source_repo_url"] = st.text_input("Repo Origen", github_cfg.get("source_repo_url", ""))
+        config_data["github"]["target_repo_url"] = st.text_input("Repo Destino", github_cfg.get("target_repo_url", ""))
+        
+        # --- PATH remains in Secrets/Env ---
+        secrets["NEWS_COLLECTOR_PATH"] = st.text_input(
+            "Ruta News Collector (Local)", 
+            secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
+        )
+        # ------------------------------
+        
+        st.markdown("##### 🔐 Secretos (.env)")
+        secrets["GITHUB_TOKEN"] = st.text_input("Token de GitHub", secrets.get("GITHUB_TOKEN", ""), type="password")
+        secrets[REFINERY_UI_TOKEN_KEY] = st.text_input(
+            "Token UI Refinery",
+            secrets.get(REFINERY_UI_TOKEN_KEY, ""),
+            type="password",
+            help="Requerido para ejecutar sincronizacion y publicar.",
+        )
+        secrets[REFINERY_UI_BYPASS_KEY] = (
+            "1"
+            if st.checkbox(
+                "Permitir acciones sin token (solo local)",
+                value=str(secrets.get(REFINERY_UI_BYPASS_KEY, "")).strip() == "1",
             )
-            # ------------------------------
-            
-            env_vars["GITHUB_TOKEN"] = st.text_input("Token de GitHub", env_vars.get("GITHUB_TOKEN", ""), type="password")
-            env_vars[REFINERY_UI_TOKEN_KEY] = st.text_input(
-                "Token UI Refinery",
-                env_vars.get(REFINERY_UI_TOKEN_KEY, ""),
-                type="password",
-                help="Requerido para ejecutar sincronizacion y publicar.",
-            )
-            env_vars[REFINERY_UI_BYPASS_KEY] = (
-                "1"
-                if st.checkbox(
-                    "Permitir acciones sin token (solo local)",
-                    value=str(env_vars.get(REFINERY_UI_BYPASS_KEY, "")).strip() == "1",
-                )
-                else "0"
-            )
+            else "0"
+        )
+        
+    # Save Button (Handles Both)
+    if st.button("💾 Guardar Configuración (Global)"):
+        # 1. Save TOML
+        save_toml_config(config_data)
+        # 2. Save Secrets
+        save_secrets(secrets)
+        st.success("¡Configuración y Secretos actualizados!")
             
         st.subheader("📝 Prompts del Sistema (Definidos en prompts.yaml)")
         
@@ -258,10 +286,9 @@ with tab1:
                 st.error(f"Error guardando prompts: {e}")
             
             # Also save env vars if any other changes were made
-            save_env_file(env_vars)
-            st.success("¡Variables de entorno actualizadas!")
-    else:
-        st.warning("No se encontró archivo .env y no se pudo crear.")
+            # save_secrets(secrets) # Prompts button handles prompts. Main button handles config.
+            # st.success("¡Variables de entorno actualizadas!") # Removed implicit save here
+    # else block removed as we init defaults
 
 # --- Tab 2: Scraper Settings ---
 with tab2:
@@ -289,9 +316,9 @@ with tab2:
         # New Column for Scoring Model
         with col_c2:
             st.subheader("🧠 IA de Scoring")
-            # Load from env specifically for scoring to allow override
-            env_vars_scoring = load_env_file()
-            current_scoring_model = env_vars_scoring.get("NOTICIENCIAS__SCORING__LLM_MODEL", "llama3.2")
+            # Read from Config
+            scoring_cfg = config_data.get("scoring", {})
+            current_scoring_model = scoring_cfg.get("llm_model", "llama3.2")
             
             new_scoring_model = st.selectbox(
                 "Modelo para Clasificación (Rápido)",
@@ -300,13 +327,14 @@ with tab2:
                 help="Usar un modelo más pequeño/rápido para la fase de recolección."
             )
             
-            # We save this to .env immediately when changed, or purely rely on config.toml if supported?
-            # Config schema says it's part of ScoringConfig. 
-            # If we write to .env it overrides everything.
             if new_scoring_model != current_scoring_model:
-                env_vars_scoring["NOTICIENCIAS__SCORING__LLM_MODEL"] = new_scoring_model
-                save_env_file(env_vars_scoring)
-                st.toast(f"Modelo de scoring actualizado a: {new_scoring_model}")
+                if "scoring" not in config_data: config_data["scoring"] = {}
+                config_data["scoring"]["llm_model"] = new_scoring_model
+                # We defer save to the main button below or add a specific one?
+                # The code structure below has a "Guardar Config Colector" button.
+                # Use st.warning to remind user to save
+                st.info(f"Modelo seleccionado: {new_scoring_model}. Recuerda guardar cambios.")
+
 
         # Scoring Weights
         st.subheader("⚖️ Pesos de Scoring (Total debe ser ~1.0)")
@@ -502,7 +530,7 @@ with tab3:
         import pandas as pd
         
         try:
-            refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH) # Initialize early for safety
+            refinery_db = DatabaseManager() # Initialize using global config
             
             with open(JSON_PATH, "r", encoding="utf-8") as f:
                 payload = json.load(f)
@@ -526,7 +554,7 @@ with tab3:
                 st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
 
             if articles:
-                refinery_db = RefineryDatabaseManager(REFINERY_DB_PATH)
+                refinery_db = DatabaseManager()
                 available_articles = []
                 
                 filtered_count = 0
@@ -535,19 +563,25 @@ with tab3:
                     
                     # DEBUG SPECIFIC ID
                     if art_id == "169":
-                        is_processed_raw = refinery_db.is_processed(art_id)
-                        is_processed_md = refinery_db.is_processed(f"{art_id}.md")
                         # Only show debug if relevant or debug mode
-                        if not show_processed and (is_processed_raw or is_processed_md):
-                             # Keep this unobtrusive or remove it if user is tired of it
+                        if not show_processed:
+                            # Keep this unobtrusive or remove it if user is tired of it
                              pass
                     
-                    if not show_processed and (
-                        refinery_db.is_processed(art_id)
-                        or refinery_db.is_processed(f"{art_id}.md")
-                    ):
-                        filtered_count += 1
-                        continue
+                    if not show_processed:
+                        try:
+                            numeric_id = int(art_id)
+                            # is_article_published is the new method in main DB
+                            if refinery_db.is_article_published(numeric_id):
+                                filtered_count += 1
+                                continue
+                        except ValueError:
+                             pass # If ID is not int, we can't check efficiently in main DB yet, or assume not processed
+                             
+                        # Check .md existence is handled by is_article_published? 
+                        # No, is_article_published checks DB status.
+                        # RefineryEngine previously checked file system. 
+                        # We trust DB status now.
                     available_articles.append(art)
 
                 if filtered_count > 0:
@@ -624,7 +658,13 @@ with tab3:
                             )
 
                         # Process Button
-                        if refinery_db.is_processed(selected_id) or refinery_db.is_processed(f"{selected_id}.md"):
+                        is_pub = False
+                        try:
+                            is_pub = refinery_db.is_article_published(int(selected_id))
+                        except ValueError:
+                            pass
+                            
+                        if is_pub:
                             st.warning("⚠️ Artículo ya publicado/procesado.")
                             
                             col_pub1, col_pub2 = st.columns(2)
@@ -727,8 +767,8 @@ with tab4:
     
     try:
         # Use simple DB manager pointing to correct path with CONFIG DICT
-        db_config = {"type": "sqlite", "path": Path(REFINERY_DB_PATH)}
-        db = DatabaseManager(db_config)
+        # Actually, global DatabaseManager() is better
+        db = DatabaseManager() # Using global config
         
         # 1. KPIs
         col_k1, col_k2, col_k3 = st.columns(3)
@@ -866,7 +906,7 @@ with tab5:
                             if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
                                 raw = raw[1:-1]
                             article_title = raw
-                    except:
+                    except Exception:
                         pass
                     
                     # Row Layout

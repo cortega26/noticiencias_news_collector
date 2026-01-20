@@ -51,28 +51,89 @@ class AsyncRSSCollector(RSSCollector):
         
         limits = httpx.Limits(max_keepalive_connections=50, max_connections=50)
 
+        from news_collector.collectors.rate_limit_utils import _normalize_domain, calculate_effective_delay
+        
         async with httpx.AsyncClient(limits=limits, headers=headers, timeout=timeout, follow_redirects=True) as client:
-            tasks = []
+            # Group sources by domain
+            sources_by_domain = {}
             for source_id, source_config in sources_config.items():
-                tasks.append(
-                    self._process_single_source_async_with_client(
-                        source_id, source_config, client
-                    )
-                )
+                domain = _normalize_domain(urlparse(source_config["url"]).netloc)
+                if domain not in sources_by_domain:
+                    sources_by_domain[domain] = []
+                sources_by_domain[domain].append((source_id, source_config))
             
-            # Execute all tasks
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            async def process_domain_group(domain, sources_list):
+                group_results = []
+                for idx, (sid, sconfig) in enumerate(sources_list):
+                    # Process source
+                    result = await self._process_single_source_async_with_client(sid, sconfig, client)
+                    group_results.append(result)
+                    
+                    # Sleep between requests to same domain if not last
+                    if idx < len(sources_list) - 1:
+                        # Calculate delay based on config
+                        # We use 0.0 for robots_delay here as simple enforcement, 
+                        # relying on the individual source processing to respect robots if needed,
+                        # but here we just want the configured domain delay.
+                        delay = calculate_effective_delay(domain, 0.0, 0.0) 
+                        await asyncio.sleep(delay)
+                return group_results
 
-        # Consolidate results logic
+            # Create task per domain
+            domain_tasks = []
+            for domain, sources_list in sources_by_domain.items():
+                domain_tasks.append(process_domain_group(domain, sources_list))
+            
+            # Execute all domain groups in parallel
+            domain_results_nested = await asyncio.gather(*domain_tasks, return_exceptions=True)
+            
+            # Flatten results
+            results = []
+            for group_res in domain_results_nested:
+                if isinstance(group_res, list):
+                    results.extend(group_res)
+                else:
+                    # If the whole domain group failed (unlikely with internal try/except)
+                    # We need to map which sources failed?
+                    # process_domain_group normally catches exceptions? 
+                    # Actually process_domain_group logic above doesn't have top-level try/except, 
+                    # but _process_single_source_async_with_client DOES.
+                    # So group_res should be a list unless system error.
+                    if isinstance(group_res, Exception):
+                         # Log fatal error for domain
+                         self._emit_log("error", "collector.domain_group_failed", details={"error": str(group_res)})
+                         pass
+        
+        # Re-map results to source_id (order is scrambled now)
+        # results is list of dicts. each dict has 'source_id'.
+        # Error results might not have source_id if _create_error_result fails?
+        # _create_error_result usually returns dict with source_id.
+        
+        # We need to reconstruct the list order expected by zip below?
+        # The code below uses zip(sources_config.keys(), results).
+        # THIS IS DANGEROUS now that we reordered execution.
+        
+        # FIXED LOGIC: Use a map
+        results_map = {}
+        for res in results:
+            if isinstance(res, dict) and "source_id" in res:
+                results_map[res["source_id"]] = res
+        
+        # Consolidate results logic using map
         source_results = {}
-        for source_id, result in zip(sources_config.keys(), results):
-            if isinstance(result, Exception):
-                error_res = self._create_error_result(source_id, result)
-                source_results[source_id] = error_res
-                self.stats["total_errors"] += 1
+        for source_id in sources_config.keys():
+            result = results_map.get(source_id)
+            if not result:
+                # Should not happen if all executed, unless Exception in gather
+                result = self._create_error_result(source_id, Exception("Result missing from execution"))
+            
+            if isinstance(result, Exception): # From gather exception?
+                 error_res = self._create_error_result(source_id, result)
+                 source_results[source_id] = error_res
+                 self.stats["total_errors"] += 1
             else:
                  source_results[source_id] = result
-
+                 
         return self._finalize_collection_cycle(source_results)
 
     async def _process_single_source_async_with_client(self, source_id, source_config, client):

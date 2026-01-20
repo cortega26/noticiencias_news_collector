@@ -171,8 +171,8 @@ class HtmlCollector(BaseCollector):
                         if isinstance(item, dict):
                             art = self._parse_json_ld_article(item)
                             if art: articles.append(art)
-            except:
-                pass
+            except Exception:
+                continue
         
         if articles:
             return articles
@@ -202,7 +202,7 @@ class HtmlCollector(BaseCollector):
                         "description": "",
                         "date": None
                     })
-            except:
+            except Exception:
                 continue
                 
         return articles

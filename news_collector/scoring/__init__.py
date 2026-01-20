@@ -8,7 +8,7 @@ from .feature_scorer import FeatureBasedScorer
 from .cognitive_scorer import CognitiveScorer
 from .interfaces import AsyncScorer
 
-from news_collector.utils.llm_client import LLMClient
+
 
 DEFAULT_SCORING_WEIGHTS = {
     "source_credibility": 0.25,

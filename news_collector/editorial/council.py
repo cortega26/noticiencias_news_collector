@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, Optional, List
 from dataclasses import dataclass
 
-from news_collector.utils.llm_client import LLMClient
+from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.config.prompts import EDITORIAL_COUNCIL_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -29,8 +29,8 @@ class EditorialCouncil:
     Agente que coordina la evaluación de artículos por el Consejo Editorial IA.
     """
 
-    def __init__(self, llm_client: Optional[LLMClient] = None):
-        self.llm = llm_client or LLMClient()
+    def __init__(self, llm_client: Optional[OllamaProvider] = None):
+        self.llm = llm_client or OllamaProvider()
 
     def evaluate_article(self, title: str, summary: str, content: str = "") -> Optional[CouncilResult]:
         """
@@ -52,10 +52,10 @@ class EditorialCouncil:
             article_text += f"FRAGMENTO CONTENIDO: {content[:1500]}..."
 
         try:
-            response = self.llm.generate(
+            response = self.llm.generate_sync(
                 prompt=article_text,
                 system=EDITORIAL_COUNCIL_SYSTEM_PROMPT,
-                format="json"
+                json_mode=True
             )
 
             if not response or "error" in response:
