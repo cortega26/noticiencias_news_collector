@@ -16,3 +16,9 @@ scikit-learn>=1.3.0
 sqlalchemy>=2.0.0
 textblob>=0.17.0
 tomli-w>=1.0.0
+# Admin Panel / GUI Dependencies
+streamlit>=1.30.0
+pandas>=2.0.0
+GitPython>=3.1.0
+PyYAML>=6.0.0
+toml>=0.10.0
