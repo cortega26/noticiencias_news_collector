@@ -130,7 +130,7 @@ class HtmlCollector(BaseCollector):
                 
                 # Fetch full content
                 if raw.get("url"):
-                    full_text = await self._fetch_article_content(client, raw["url"])
+                    full_text = await self._fetch_article_content(client, raw["url"], source_config)
                     if full_text:
                         raw["content"] = full_text
 
@@ -249,16 +249,25 @@ class HtmlCollector(BaseCollector):
             "tags": []
         }
 
-    async def _fetch_article_content(self, client: httpx.AsyncClient, url: str) -> Optional[str]:
+    async def _fetch_article_content(self, client: httpx.AsyncClient, url: str, config: Dict[str, Any]) -> Optional[str]:
         try:
              response = await client.get(url)
              if response.status_code >= 400: return None
              
              soup = BeautifulSoup(response.text, "html.parser")
-             # Heuristic: Find the element with most text or specific tags
-             # Simple version: Extract all <p> text from <article> or <main> or body
              
-             container = soup.find("article") or soup.find("main") or soup.find("div", class_="content") or soup.body
+             # Configurable selectors
+             selectors = config.get("html_selectors", {})
+             article_sel = selectors.get("article_selector")
+             
+             container = None
+             if article_sel:
+                 container = soup.select_one(article_sel)
+             
+             # Fallback heuristics
+             if not container:
+                 container = soup.find("article") or soup.find("main") or soup.find("div", class_="content") or soup.body
+             
              if not container: return None
              
              paragraphs = container.find_all("p")

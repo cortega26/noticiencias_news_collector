@@ -99,6 +99,17 @@ class HeadlessCollector(BaseCollector):
                 self._emit_log("warning", "collector.headless.empty_result", details={"dump_saved": "debug_headless.html"})
 
             for article in articles_data:
+                # If content/summary is missing, try to fetch it
+                if not article.get("content") and article.get("url"):
+                    try:
+                        full_text = await self._fetch_full_content(context, article["url"])
+                        if full_text:
+                            article["content"] = full_text
+                            # Update word count
+                            article["word_count"] = len(full_text.split())
+                    except Exception as e:
+                        self._emit_log("warning", "collector.headless.content_fetch_failed", details={"url": article["url"], "error": str(e)})
+
                 if self._save_article(article):
                     articles_saved += 1
             
@@ -189,6 +200,35 @@ class HeadlessCollector(BaseCollector):
                 continue
                 
         return extracted
+
+    async def _fetch_full_content(self, context: BrowserContext, url: str) -> Optional[str]:
+        page = await context.new_page()
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            
+            # Simple heuristic: grab all paragraph text
+            # Or use readability? For now, simple text extraction.
+            # We can improve this with configured selectors later.
+            
+            # Try to frame it to article/main
+            content_el = await page.query_selector("article") or await page.query_selector("main") or await page.query_selector("body")
+            
+            if content_el:
+                # Extract text from p tags
+                # This needs to be robust. 
+                # using evaluate to get text content is faster
+                text = await content_el.evaluate("""(element) => {
+                    return Array.from(element.querySelectorAll('p, h2, h3, li'))
+                        .map(p => p.innerText)
+                        .filter(t => t.length > 20)
+                        .join('\\n\\n');
+                }""")
+                return text
+            return None
+        except Exception:
+            return None
+        finally:
+            await page.close()
 
     # Synchronous shim (though we recommend async usage)
     def collect_from_source(self, source_id: str, source_config: Dict[str, Any]) -> Dict[str, Any]:

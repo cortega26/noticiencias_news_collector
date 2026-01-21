@@ -666,6 +666,10 @@ class OllamaConfig(StrictModel):
         default="llama3.3",
         description="Model tag to use for generation.", 
     )
+    timeout: PositiveInt = Field(
+        default=300,
+        description="Request timeout in seconds.",
+    )
 
 
 class Config(StrictModel):
