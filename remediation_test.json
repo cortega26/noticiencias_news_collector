@@ -1,0 +1,328 @@
+{
+  "session_info": {
+    "session_id": "adf19051-20260120-235218",
+    "system_id": "adf19051",
+    "start_time": "2026-01-20T23:52:18.744258+00:00",
+    "end_time": "2026-01-20T23:52:51.500063+00:00",
+    "duration_seconds": 32.755805
+  },
+  "collection_results": {
+    "source_details": {
+      "openai_research": {
+        "source_id": "openai_research",
+        "success": true,
+        "articles_found": 10,
+        "articles_saved": 10,
+        "error_message": null,
+        "processing_time": 32.591824
+      },
+      "deepmind_blog": {
+        "source_id": "deepmind_blog",
+        "success": true,
+        "articles_found": 25,
+        "articles_saved": 0,
+        "error_message": null,
+        "processing_time": 31.23394536972046
+      }
+    },
+    "collection_summary": {
+      "sources_processed": 2,
+      "articles_found": 35,
+      "articles_saved": 10,
+      "errors_encountered": 0,
+      "success_rate_percent": 100.0
+    }
+  },
+  "scoring_results": {
+    "success": true,
+    "statistics": {
+      "articles_scored": 35,
+      "articles_included": 16,
+      "articles_excluded": 18,
+      "average_score": 0.7780577124894186
+    }
+  },
+  "selection_results": {
+    "success": true,
+    "selected_count": 10,
+    "articles": [
+      {
+        "id": 32,
+        "title": "New moon of January 2026 brings prime views of Jupiter, Saturn and winter stars tonight",
+        "url": "https://space.com/stargazing/new-moon-brings-prime-views-of-jupiter-saturn-and-winter-stars",
+        "summary": "",
+        "source_name": "Space.com",
+        "category": "space",
+        "published_date": "2026-01-18T17:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.9276,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "Latest from Space.com",
+        "components": {
+          "source_credibility": 0.7425,
+          "recency": 0.9775,
+          "content_quality": 0.955,
+          "engagement": null,
+          "engagement_potential": 0.955,
+          "nqi_substance": 0.955,
+          "nqi_narrative": 0.955,
+          "nqi_relevance": 0.955,
+          "nqi_credibility": 0.955
+        }
+      },
+      {
+        "id": 42,
+        "title": "AI maps the hidden forces shaping cancer survival worldwide",
+        "url": "https://sciencedaily.com/releases/2026/01/260117053526.htm",
+        "summary": "",
+        "source_name": "ScienceDaily",
+        "category": "popular_science",
+        "published_date": "2026-01-17T18:26:53",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.9244,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "All Top News -- ScienceDaily",
+        "components": {
+          "source_credibility": 0.7825,
+          "recency": 0.9315,
+          "content_quality": 0.955,
+          "engagement": null,
+          "engagement_potential": 0.955,
+          "nqi_substance": 0.955,
+          "nqi_narrative": 0.955,
+          "nqi_relevance": 0.955,
+          "nqi_credibility": 0.955
+        }
+      },
+      {
+        "id": 23,
+        "title": "A once-in-a-generation discovery is transforming dairy farming",
+        "url": "https://sciencedaily.com/releases/2026/01/260116035340.htm",
+        "summary": "",
+        "source_name": "ScienceDaily",
+        "category": "popular_science",
+        "published_date": "2026-01-18T17:53:01",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8511,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "All Top News -- ScienceDaily",
+        "components": {
+          "source_credibility": 0.7325,
+          "recency": 0.9275,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 6,
+        "title": "How the ancient Romans managed their wealth (it wasn't just by hiding hoards)",
+        "url": "https://livescience.com/archaeology/how-the-ancient-romans-managed-their-wealth-it-wasnt-just-by-hiding-hoards",
+        "summary": "",
+        "source_name": "Live Science",
+        "category": "popular_science",
+        "published_date": "2026-01-18T18:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8498,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "Latest from Live Science",
+        "components": {
+          "source_credibility": 0.7235,
+          "recency": 0.9275,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 10,
+        "title": "15 Best Electric Bikes (2026), Tested and Reviewed: Commuting, Mountain Biking",
+        "url": "https://wired.com/gallery/best-electric-bikes/",
+        "summary": "",
+        "source_name": "Wired",
+        "category": "technology",
+        "published_date": "2026-01-18T16:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8451,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "WIRED",
+        "components": {
+          "source_credibility": 0.6925,
+          "recency": 0.9275,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 54,
+        "title": "6 Best Juicers (2026): Fast Juicers and Slow Juicers",
+        "url": "https://wired.com/gallery/the-best-juicer/",
+        "summary": "",
+        "source_name": "Wired",
+        "category": "technology",
+        "published_date": "2026-01-18T14:31:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8449,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "WIRED",
+        "components": {
+          "source_credibility": 0.6925,
+          "recency": 0.9262,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 4,
+        "title": "Demystifying college for enlisted veterans and service members",
+        "url": "https://news.mit.edu/2026/demystifying-college-enlisted-veterans-service-members-warrior-scholar-0118",
+        "summary": "“I went into the military right after high school, mostly because I didn’t really see the value of academics,” says Air Force veteran and MIT sophomore Justin Cole.His perspective on education shifted, however, after he experienced several natural disasters during his nine years of service. As a satellite systems operator in Colorado, Cole volunteered in the aftermath of the 2013 Black Forest fire, the state’s most destructive fire at the time. And in 2018, while he was leading a team in Okinawa conducting signal-monitoring work on communications satellites, two Category 5 typhoons barreled through the area within 26 days.“I realized, this climate stuff is really a prerequisite to national security objectives in almost every sense, so I knew that school was going to be the thing that would help prepare me to make a difference,” he says. In 2023, after leaving the Air Force to work for climate-focused nonprofits and take engineering courses, Cole participated in an intense, weeklong STEM boot camp at MIT. “It definitely reaffirmed that I wanted to continue down the path of at least getting a bachelor’s, and it also inspired me to apply to MIT,” he says. He transferred in 2024 and is majoring in climate system science and engineering.“It’s a lot like the MIT experience”MIT runs the boot camp every summer as part of the nonprofit Warrior-Scholar Project (WSP), which started at Yale University in 2012. WSP offers a range of programming designed to help enlisted veterans and service members transition from the military to higher education. The academic boot camp program, which aims to simulate a week of undergraduate life, is offered at 19 schools nationwide in three areas: business, college readiness, and STEM.MIT joined WSP in 2017 as one of the first three campuses to offer the STEM boot camp. “It was definitely rigorous,” Cole recalls, “not getting tons of sleep, grinding psets at night with friends ... it’s a lot like the MIT experience.” In addition to problem sets",
+        "source_name": "MIT News",
+        "category": "technology",
+        "published_date": "2026-01-18T09:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8423,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "MIT News",
+        "components": {
+          "source_credibility": 0.7075,
+          "recency": 0.9019,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 8,
+        "title": "Why Silicon Valley is really talking about fleeing California (it’s not the 5%)",
+        "url": "https://techcrunch.com/2026/01/17/why-silicon-valley-is-really-talking-about-fleeing-california-its-not-the-5/",
+        "summary": "",
+        "source_name": "TechCrunch",
+        "category": "technology",
+        "published_date": "2026-01-18T05:17:11",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8382,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "TechCrunch",
+        "components": {
+          "source_credibility": 0.6925,
+          "recency": 0.8929,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 20,
+        "title": "Who gets to inherit the stars? A space ethicist on what we’re not talking about",
+        "url": "https://techcrunch.com/2026/01/17/who-gets-to-inherit-the-stars-a-space-ethicist-on-what-were-not-talking-about/",
+        "summary": "",
+        "source_name": "TechCrunch",
+        "category": "technology",
+        "published_date": "2026-01-18T02:45:09",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8374,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "TechCrunch",
+        "components": {
+          "source_credibility": 0.6925,
+          "recency": 0.8887,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      },
+      {
+        "id": 30,
+        "title": "Trump administration’s legal setbacks are good news for offshore wind — and the grid",
+        "url": "https://techcrunch.com/2026/01/17/trump-administrations-legal-setbacks-are-good-news-for-offshore-wind-and-the-grid/",
+        "summary": "",
+        "source_name": "TechCrunch",
+        "category": "technology",
+        "published_date": "2026-01-17T21:30:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.8363,
+        "is_preprint": false,
+        "doi": null,
+        "journal": "TechCrunch",
+        "components": {
+          "source_credibility": 0.6925,
+          "recency": 0.8833,
+          "content_quality": 0.855,
+          "engagement": null,
+          "engagement_potential": 0.855,
+          "nqi_substance": 0.855,
+          "nqi_narrative": 0.855,
+          "nqi_relevance": 0.855,
+          "nqi_credibility": 0.855
+        }
+      }
+    ],
+    "selection_criteria": {
+      "minimum_score": 0.3,
+      "target_count": 10
+    }
+  },
+  "performance_metrics": {
+    "total_duration_seconds": 32.755805,
+    "articles_per_second": 1.068512894126705,
+    "sources_per_minute": 2.0,
+    "success_rate_percent": 100.0
+  },
+  "summary": {
+    "sources_processed": 2,
+    "articles_found": 35,
+    "articles_saved": 10,
+    "articles_scored": 35,
+    "final_selection_count": 10
+  }
+}

@@ -71,11 +71,11 @@ class AsyncRSSCollector(RSSCollector):
                     
                     # Sleep between requests to same domain if not last
                     if idx < len(sources_list) - 1:
+                        # Allow source config to override min delay (e.g. for fragile sites)
+                        config_delay = sconfig.get("min_delay_seconds", 0.0)
+                        
                         # Calculate delay based on config
-                        # We use 0.0 for robots_delay here as simple enforcement, 
-                        # relying on the individual source processing to respect robots if needed,
-                        # but here we just want the configured domain delay.
-                        delay = calculate_effective_delay(domain, 0.0, 0.0) 
+                        delay = calculate_effective_delay(domain, 0.0, config_delay) 
                         await asyncio.sleep(delay)
                 return group_results
 
@@ -196,7 +196,7 @@ class AsyncRSSCollector(RSSCollector):
                 return stats
 
             # 3. Fetch Feed
-            feed_content, status_code = await self._fetch_feed_async(source_id, url, client)
+            feed_content, status_code = await self._fetch_feed_async(source_id, url, client, source_config)
             
             if status_code == 304:
                 stats["success"] = True
@@ -272,7 +272,7 @@ class AsyncRSSCollector(RSSCollector):
         await asyncio.sleep(delay)
 
     async def _fetch_feed_async(
-        self, source_id: str, feed_url: str, client: httpx.AsyncClient
+        self, source_id: str, feed_url: str, client: httpx.AsyncClient, source_config: Dict[str, Any] = None
     ) -> Tuple[Optional[str], Optional[int]]:
         max_retries = RATE_LIMITING_CONFIG["max_retries"]
         try:
@@ -298,10 +298,16 @@ class AsyncRSSCollector(RSSCollector):
                      await asyncio.to_thread(validate_url_safety_sync, current_url)
                      
                      # Manual request execution (no auto-follow)
+                     
+                     # Merge source-specific headers (e.g. custom Accept or Auth)
+                     final_headers = req_headers.copy()
+                     if source_config and "headers" in source_config:
+                         final_headers.update(source_config["headers"])
+
                      try:
                          response = await client.get(
                              current_url, 
-                             headers=req_headers, 
+                             headers=final_headers, 
                              follow_redirects=False
                          )
                      except (httpx.RequestError, httpx.TimeoutException) as req_err:

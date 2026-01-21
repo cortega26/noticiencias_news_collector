@@ -63,7 +63,7 @@ class TestRefineryEngine(unittest.TestCase):
         # Check output file write (indirectly via mock path)
         # Note: mocking pathlib iterface is tricky, usually we trust write_text works or use tmp_path fixture.
         # Here we just check logical flow.
-        self.mock_db.mark_processed.assert_called_with("123.md")
+        self.mock_db.mark_article_published.assert_called_with(123, "http://pr.url")
 
     def test_process_articles_batch(self):
         articles = [{"id": "1"}, {"id": "2"}]

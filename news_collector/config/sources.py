@@ -36,6 +36,10 @@ ELITE_JOURNALS = {
         "impact_factor": 49.962,
         "description": "La revista científica más prestigiosa del mundo",
         "typical_delay": 0,  # Horas entre publicación y disponibilidad en RSS
+        "headers": {
+             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+             "User-Agent": "Mozilla/5.0 (compatible; NoticienciasBot/1.0; +http://noticiencias.com)",
+        },
     },
     "science": {
         "name": "Science",
@@ -121,6 +125,10 @@ SCIENCE_MEDIA = {
         "impact_factor": None,
         "description": "Agregador de noticias científicas de universidades",
         "typical_delay": 0,
+        "min_delay_seconds": 60,
+        "headers": {
+             "User-Agent": "NoticienciasBot/1.0 (Research Project; contact@noticiencias.com)"
+        },
     },
     "scitechdaily": {
         "name": "SciTechDaily",
@@ -305,7 +313,8 @@ AI_LABS = {
         "html_selectors": {
             "container": ".card", 
             "link": "a", 
-            "title": ".card__title"
+            "title": ".card__title",
+            "article_selector": "article"
         }
     }
 }

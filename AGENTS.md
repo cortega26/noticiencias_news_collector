@@ -1,190 +1,142 @@
-# AGENTS.md --- Noticiencias News Collector
+# AGENTS.md — Noticiencias Backend (News Collector)
 
-> **Audience:** developers, data engineers, and AI agents maintaining
-> the Noticiencias scientific news aggregation stack.\
-> **Purpose:** define architecture, contracts, operational workflow and
-> ---critically--- **anti‑regression guardrails** so the system only
-> moves forward without breaking what already works.
+> **Audience:** Data Engineers, AI Agents, and Bot Operators.
+> **Purpose:** The "Constitution" of the ingestion engine. Defines the lawful flow of data from chaos (web) to order (Astro content).
 
-------------------------------------------------------------------------
+---
 
-## 0) Architecture Snapshot
+## 0) Architecture Snapshot (v2.0)
 
-    [Scheduler]
-      └─▶ [collectors]
-              └─▶ [utils.parse] → [collectors.parsers]
-                      └─▶ [utils.dedupe]
-                              └─▶ [enrichment]
-                                      └─▶ [scoring]
-                                              └─▶ [reranker]
-                                                      └─▶ [storage]
-                                                              ├─▶ [serving]
-                                                              └─▶ [monitoring]
+Logical data flow:
 
--   **Messaging:** local dev uses in‑memory queues; production may swap
-    to Redis Streams/Kafka. Payloads must be idempotent.\
--   **Time:** persist in **UTC**; convert to America/Santiago only at
-    presentation layer.\
--   **Configuration:** YAML in `config/`; secrets via environment
-    variables only.\
--   **Idempotency:** canonical URL hash is the primary key; every stage
-    must accept replays safely.
+```mermaid
+graph TD
+    A[Scheduler] -->|Trigger| B(Collector)
+    B -->|Fetch HTML/RSS| C(Parser)
+    C -->|Extract Metadata| D{Deduplicator}
+    D -->|New Article| E[Enrichment]
+    E -->|Summary/Topics| F[Translation]
+    F -->|Es Content| G[Scorer]
+    G -->|Impact > 0.6| H[Editorial Council]
+    H -->|Draft Review| I[Publisher]
+    I -->|Git Commit| J((Astro Repo))
 
-------------------------------------------------------------------------
+    style D fill:#f9f,stroke:#333
+    style H fill:#bbf,stroke:#333
+```
 
-## 1) Shared Contracts & Schemas
+---
 
-### Event Envelope (v1)
+## 1) Core Entities & Contracts
 
-``` json
+### 1.1 The Article Model
+
+Strictly typed via `news_collector.contracts.collector.CollectorArticleModel`.
+
+| Field          | Type         | Constraint                                   |
+| :------------- | :----------- | :------------------------------------------- |
+| `url`          | `AnyHttpUrl` | Primary distinct key (after normalization)   |
+| `original_url` | `str`        | Must match `http(s)://`                      |
+| `title`        | `str`        | Min length: 10 chars                         |
+| `content`      | `str`        | Min length: 50 chars (combined with summary) |
+| `source_id`    | `str`        | Must coincide with `config.sources` key      |
+| `language`     | `str`        | ISO 639-1 (en, es). Defaults to 'en'.        |
+| `authors`      | `List[str]`  | Normalized. No "admin", "staff".             |
+
+### 1.2 Event Envelope
+
+All inter-agent messages must be wrapped:
+
+```json
 {
-  "event_id": "uuid4",
-  "stage": "collector.fetch | enrichment.ner | ...",
-  "trace_id": "uuid4",
-  "created_at": "ISO-UTC",
-  "payload": {},
-  "retry_count": 0,
-  "source": "collector:rss:esa",
-  "schema_version": 1
+  "event_id": "uuid",
+  "stage": "enrichment.translation",
+  "payload": { ...ArticleModel... },
+  "trace_id": "uuid",
+  "timestamp": "ISO-8601 UTC"
 }
 ```
 
-### Article Entity (v2)
+---
 
-``` json
-{
-  "article_id": "sha256(title|canonical_url|published_at)",
-  "source_id": "str",
-  "fetched_at": "ISO-UTC",
-  "published_at": "ISO-UTC or null",
-  "canonical_url": "https://...",
-  "title": "str",
-  "content": "normalized str",
-  "language": "iso639-1",
-  "authors": [],
-  "topics": [],
-  "dedupe_cluster_id": "uuid4 | null",
-  "impact_score": 0.0
-}
-```
+## 2) Agent Roles
 
-------------------------------------------------------------------------
+| Agent         | Module                 | Responsibility              | Guardrails                                         |
+| :------------ | :--------------------- | :-------------------------- | :------------------------------------------------- |
+| **Collector** | `collectors/`          | I/O with the outside world. | Rate Limits, Robot.txt, User-Agent.                |
+| **Parser**    | `collectors/parsers`   | Data Extraction.            | No "Untitled". Clean UTF-8.                        |
+| **Enricher**  | `enrichment/nlp_stack` | Summarization, Translation. | **Dedupe First**. No translation of duplicates.    |
+| **Scorer**    | `scoring/`             | Value Judgment.             | 0.0-1.0 range. >0.8 requires DOI/Academic Source.  |
+| **Editor**    | `editorial/council`    | Quality Assurance.          | Tone check. No "AI hallucinations" in translation. |
+| **Publisher** | `serving/`             | Output Generation.          | Clean Markdown. Valid Frontmatter.                 |
 
-## 2) Agent Directory
+---
 
-(Modules and responsibilities remain as previously defined:
-Orchestrator, Collectors, Parser, Dedupe, Enrichment, Scoring, Reranker,
-Storage, Serving, Monitoring.)
+## 3) Regression Guardrails (RG)
 
-------------------------------------------------------------------------
+### RG1: Efficiency First (Deduplication)
 
-## 3) Coding Standards
+- **Rule:** Expensive operations (LLM Translation, Scoring) MUST ONLY occur after deduplication.
+- **Implementation:** `utils.dedupe` checks `original_url` and Title Similarity (>0.9) before Enrichment stage.
 
--   Python 3.13+, typing mandatory on public interfaces.\
--   PEP‑8 + ruff; dataclasses for structured data.\
--   Structured logging with trace_id and stage.\
--   Never swallow exceptions.\
--   Datetimes always timezone.utc.\
--   Async collectors must respect rate limits.\
--   Every behavior change requires tests and docs.
+### RG2: Scientific Credibility
 
-------------------------------------------------------------------------
+- **Rule:** An article cannot be scored "High Impact" (>0.8) purely on sentiment.
+- **Requirement:** Must contain specific keywords (DOI, Journal Name, "Study", "Research") or come from a Trusted Source (NASA, MIT, specific Nature RSS).
 
-## 4) **REGRESSION GUARDRAILS (CORE SECTION)**
+### RG3: Ethical Scraping
 
-### RG0 --- Golden Rule
+- **Rule:** We are aggregators, not pirates.
+- **Full Text:** Do NOT store full text of paywalled articles. Store only Summary/Abstract.
+- **Attribution:** Every payload MUST have `original_url` and `source_name`.
+- **Robots.txt:** Respect `Disallow` unless explicitly whitelisted in `RobotsConfig` (e.g. for APIs that behave like buckets).
 
-**No bug is fixed without at least one regression test** that fails
-before the fix and passes after.
+### RG4: Reliability & Idempotency
 
-### RG1 --- Definition of Done
+- **Rule:** Running the pipeline twice on the same feed on the same day must yield the same result (or skip gracefully).
+- **Mechanism:** Use Content Hashes for ID generation.
 
-A PR is complete only if it: - Includes regression tests for any bug
-fix\
-- Passes lint + typecheck + tests\
-- Does not alter unrelated behavior\
-- Documents: **Symptom → Root Cause → Fix → Test**
+### RG5: Code Quality
 
-### RG2 --- Small Reversible PRs
+- **Style:** `ruff` compliant.
+- **Typing:** `mypy` strict mode for Contracts.
+- **Logs:** Structured JSON logs for machine consumption, concise text for humans.
 
--   Max **2 core files** per PR (`system.py`, collectors, storage).\
--   No mega‑refactors while unstable.
+---
 
-### RG3 --- No Mixed Refactor + Feature
+## 4) Operational Workflows
 
-New collector/features must be shipped first with tests; architectural
-cleanup comes in later PRs.
+### W1: Adding a Source
 
-### RG4 --- Standardized Failure Stages
+1.  Add entry to `config/sources.py`.
+2.  Run `scripts/verify_source.py --source <id>`.
+3.  Check `data/exports/source_health.json` for success.
 
-Errors must be tagged with: - collector.fetch\
-- collector.parse\
-- collector.validate_payload\
-- collector.apply_filters\
-- storage.upsert\
-- system.orchestrate
+### W2: Fixing a Broken Parser
 
-### RG5 --- Validation Error Logging
+1.  Identify failure stage (Fetch vs Parse).
+2.  Capture HTML dump from `temp/`.
+3.  Create a test fixture in `tests/fixtures/`.
+4.  Fix selector in `collectors/parsers/`.
+5.  Run `pytest tests/unit/parsers/`.
 
-On model validation failure log: - stage, source_id, collector_type\
-- `e.errors()` details\
-- example title/url\
-- safe metrics like `len(content)`
+### W3: Deployment
 
-### RG6 --- Source Health Report
+1.  `docker build` -> Tag with Git SHA.
+2.  `docker run` with env vars for Secrets.
 
-Each run must generate: `data/exports/source_health.json` with
-per‑source counters: fetch_ok, parsed_ok, validation_ok, saved, and
-primary failure reason.
+---
 
-### RG7 --- Testing Layers (Order)
+## 5) Change Governance
 
-1)  Contract tests\
-2)  Invariants\
-3)  Golden tests\
-4)  Smoke tests (fixtures, no real network)
+| Change Type                  | Agent Autonomy | Human Review?       |
+| :--------------------------- | :------------- | :------------------ |
+| **New Source Config**        | ✅ Allowed     | Recommended (Audit) |
+| **Parser Selector Fix**      | ✅ Allowed     | No                  |
+| **LLM Prompt Update**        | ❌ Forbidden   | **REQUIRED**        |
+| **Scoring Logic**            | ❌ Forbidden   | **REQUIRED**        |
+| **Dependency Major Upgrade** | ❌ Forbidden   | **REQUIRED**        |
 
-### RG8 --- Network Policy
+---
 
-Default suite must not depend on real network/headless.
-
-### RG9 --- Green Baseline First
-
-If unstable, revert to last green commit before new work.
-
-------------------------------------------------------------------------
-
-## 5) Local Development
-
--   `python -m venv .venv`\
--   `pip install -r requirements.lock`\
--   `pytest` / `ruff check` / `mypy src`
-
-------------------------------------------------------------------------
-
-## 6) Observability & Ops
-
--   Track ingest latency, dedupe F1, freshness, diversity.\
--   Alerts on backlog and scoring drift.
-
-------------------------------------------------------------------------
-
-## 7) Deployment
-
--   Docker versioned images\
--   Blue/green for scoring\
--   Feature flags in `config/features.yaml`
-
-------------------------------------------------------------------------
-
-## 8) Checklists
-
--   ETag implemented\
--   Canonical rules tested\
--   Dedupe tuned\
--   DLQ replay verified\
--   **Regression tests present for every fix**
-
-------------------------------------------------------------------------
-
-**End of AGENTS.md --- Unified & Regression‑Safe**
+**End of AGENTS.md**
