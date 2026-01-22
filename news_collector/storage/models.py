@@ -199,6 +199,7 @@ class Article(Base):
             "title": self.title,
             "url": self.url,
             "summary": self.summary,
+            "source_id": self.source_id,
             "source_name": self.source_name,
             "category": self.category,
             "published_date": (
