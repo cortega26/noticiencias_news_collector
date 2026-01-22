@@ -13,6 +13,7 @@ paths = [
   '''^apps/refinery/\.env\.example$''',
   '''^apps/refinery/admin_panel\.py$''',
   '''^tests/unit/scoring/test_cognitive_scorer\.py$''',
+  '''^README\.md$''',
 ]
 regexes = [
   '''dummy(_|-)secret''',
