@@ -90,8 +90,8 @@ format: lint-fix ## Alias for auto-formatting helpers
 type: typecheck ## Alias for static type checking (mypy)
 
 MYPY_TARGETS := scripts/generate_api_docs.py \
-src/utils/logger.py \
-src/utils/url_canonicalizer.py
+news_collector/utils/logger.py \
+news_collector/utils/url_canonicalizer.py
 
 typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 	@$(MYPY) --config-file=pyproject.toml $(MYPY_TARGETS)
