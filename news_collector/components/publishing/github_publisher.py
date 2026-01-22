@@ -80,7 +80,7 @@ class GitHubPublisher:
         if path.exists():
             # Handle readonly files on Windows
             def on_rm_error(func, path, exc_info):
-                os.chmod(path, 0o777)
+                os.chmod(path, 0o700)
                 func(path)
             shutil.rmtree(path, onerror=on_rm_error)
 

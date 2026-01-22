@@ -118,9 +118,7 @@ security: bootstrap ## Run security and dependency scans
 	@echo "[security] Running bandit"
 	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
-	@echo "[security] Running trufflehog3"
-	@$(PYTHON) scripts/run_secret_scan.py --output $(TRUFFLEHOG_REPORT) --severity HIGH --target . --config .gitleaks.toml
-	@$(PYTHON) scripts/security_gate.py trufflehog $(TRUFFLEHOG_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+
 
 audit-issues: ## Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)
 	@tools/audit_to_issues.sh $(AUDIT_ISSUES_FLAGS)

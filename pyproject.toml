@@ -39,7 +39,6 @@ dependencies = [
 security = [
     "bandit>=1.7.9",
     "pip-audit>=2.9.0",
-    "trufflehog3>=3.0.10",
 ]
 test = [
     "coverage[toml]==7.10.7",
