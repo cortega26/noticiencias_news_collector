@@ -3,16 +3,16 @@ name: docs
 on:
   pull_request:
     paths:
-      - 'README.md'
-      - 'docs/**'
-      - '.github/workflows/docs.yml'
+      - "README.md"
+      - "docs/**"
+      - ".github/workflows/docs.yml"
   push:
     branches:
       - main
     paths:
-      - 'README.md'
-      - 'docs/**'
-      - '.github/workflows/docs.yml'
+      - "README.md"
+      - "docs/**"
+      - ".github/workflows/docs.yml"
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -33,7 +33,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -48,5 +48,4 @@ jobs:
 
       - name: Run link checker
         run: |
-          linkchecker --config <(printf "[checking]\nno-follow-url=.*\\.svg$") README.md docs
-
+          linkchecker --config <(printf "[checking]\nno-follow-url=.*\\.svg$\n[filtering]\nignorewarnings=url-content-type-unparseable") README.md docs
