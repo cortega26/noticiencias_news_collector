@@ -82,13 +82,13 @@ def save_secrets(secrets_dict):
     # Better: Update existing file with new values
     current = dotenv.dotenv_values(ENV_FILE)
     current.update(secrets_dict)
-    
+
     with open(ENV_FILE, "w") as f:
         for key, value in current.items():
             # Only write known secrets or everything? Let's write everything that is in the dict
             # keys that are NOT secrets should generally be removed from here if we migrate them
             # But for safety, we just allow writing the passed dict + updates.
-            
+
             # Simple approach: Write atomic
              if " " in str(value) and not str(value).startswith('"'):
                 f.write(f'{key}="{value}"\n')
@@ -167,32 +167,32 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🧠 IA & Refinería", "📊 Scra
 # --- Tab 1: AI Settings ---
 with tab1:
     st.header("Configuración de Refinería")
-    
+
     # Load both sources
     secrets = dict(load_secrets())
     config_data = load_toml_config() or {}
-    
+
     if not config_data:
         st.error("No se pudo cargar config.toml. Verifica la ruta.")
 
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("🤖 Modelo de IA")
         # Read from TOML [ollama] section
         ollama_cfg = config_data.get("ollama", {})
         current_model = ollama_cfg.get("model", "llama3.2")
-        
+
         new_model = st.selectbox(
-            "Seleccionar Modelo Ollama", 
+            "Seleccionar Modelo Ollama",
             ["llama3.2", "llama3.3", "llama3.1:70b", "mistral"],
             index=0 if "3.2" in current_model else 1
         )
-        
+
         # Update TOML dict
         if "ollama" not in config_data: config_data["ollama"] = {}
         config_data["ollama"]["model"] = new_model
-        
+
         st.subheader("🔗 URL de API")
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
         config_data["ollama"]["api_url"] = st.text_input("Endpoint de Ollama", current_api)
@@ -200,17 +200,17 @@ with tab1:
     with col2:
         st.subheader("📂 Repositorios")
         github_cfg = config_data.get("github", {})
-        
+
         config_data["github"]["source_repo_url"] = st.text_input("Repo Origen", github_cfg.get("source_repo_url", ""))
         config_data["github"]["target_repo_url"] = st.text_input("Repo Destino", github_cfg.get("target_repo_url", ""))
-        
+
         # --- PATH remains in Secrets/Env ---
         secrets["NEWS_COLLECTOR_PATH"] = st.text_input(
-            "Ruta News Collector (Local)", 
+            "Ruta News Collector (Local)",
             secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
         )
         # ------------------------------
-        
+
         st.markdown("##### 🔐 Secretos (.env)")
         secrets["GITHUB_TOKEN"] = st.text_input("Token de GitHub", secrets.get("GITHUB_TOKEN", ""), type="password")
         secrets[REFINERY_UI_TOKEN_KEY] = st.text_input(
@@ -227,7 +227,7 @@ with tab1:
             )
             else "0"
         )
-        
+
     # Save Button (Handles Both)
     if st.button("💾 Guardar Configuración (Global)"):
         # 1. Save TOML
@@ -235,14 +235,14 @@ with tab1:
         # 2. Save Secrets
         save_secrets(secrets)
         st.success("¡Configuración y Secretos actualizados!")
-            
+
         st.subheader("📝 Prompts del Sistema (Definidos en prompts.yaml)")
-        
+
         # Path to prompts.yaml
         PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
-        
+
         import yaml
-        
+
         current_prompts = {}
         if PROMPTS_YAML_PATH.exists():
             try:
@@ -252,12 +252,12 @@ with tab1:
                 st.error(f"Error leyendo prompts.yaml: {e}")
         else:
             st.warning("⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar.")
-            
+
         # Translator Prompt
         st.markdown("##### 1. Traductor (Fase 1)")
         trans_sys = current_prompts.get("translator", {}).get("system", "")
         new_trans_sys = st.text_area("Prompt Traductor", value=trans_sys, height=150, key="prompt_trans")
-        
+
         # Editor Prompt
         st.markdown("##### 2. Editor (Fase 2)")
         edit_sys = current_prompts.get("editor", {}).get("system", "")
@@ -273,18 +273,18 @@ with tab1:
             if "translator" not in updated_prompts: updated_prompts["translator"] = {}
             if "editor" not in updated_prompts: updated_prompts["editor"] = {}
             if "headline" not in updated_prompts: updated_prompts["headline"] = {}
-            
+
             updated_prompts["translator"]["system"] = new_trans_sys
             updated_prompts["editor"]["system"] = new_edit_sys
             updated_prompts["headline"]["system"] = new_head_sys
-            
+
             try:
                 with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
                     yaml.dump(updated_prompts, f, allow_unicode=True, default_flow_style=False)
                 st.success("¡Prompts actualizados en config/prompts.yaml!")
             except Exception as e:
                 st.error(f"Error guardando prompts: {e}")
-            
+
             # Also save env vars if any other changes were made
             # save_secrets(secrets) # Prompts button handles prompts. Main button handles config.
             # st.success("¡Variables de entorno actualizadas!") # Removed implicit save here
@@ -294,22 +294,22 @@ with tab1:
 with tab2:
     st.header("Configuración del Colector")
     config_data = load_toml_config()
-    
+
     if config_data:
         # Collection Settings
         st.subheader("⏱️ Recolección")
         col_c1, col_c2 = st.columns(2)
-        
+
         with col_c1:
             if "collection" in config_data:
                 config_data["collection"]["collection_interval_hours"] = st.number_input(
-                    "Intervalo de Recolección (Horas)", 
-                    min_value=1, max_value=48, 
+                    "Intervalo de Recolección (Horas)",
+                    min_value=1, max_value=48,
                     value=config_data["collection"].get("collection_interval_hours", 6)
                 )
                 config_data["collection"]["max_articles_per_source"] = st.number_input(
-                    "Máx. Artículos por Fuente", 
-                    min_value=5, max_value=500, 
+                    "Máx. Artículos por Fuente",
+                    min_value=5, max_value=500,
                     value=config_data["collection"].get("max_articles_per_source", 50)
                 )
 
@@ -319,14 +319,14 @@ with tab2:
             # Read from Config
             scoring_cfg = config_data.get("scoring", {})
             current_scoring_model = scoring_cfg.get("llm_model", "llama3.2")
-            
+
             new_scoring_model = st.selectbox(
                 "Modelo para Clasificación (Rápido)",
                 ["llama3.2", "mistral", "llama3.1:8b"],
                 index=0 if "3.2" in current_scoring_model else 0,
                 help="Usar un modelo más pequeño/rápido para la fase de recolección."
             )
-            
+
             if new_scoring_model != current_scoring_model:
                 if "scoring" not in config_data: config_data["scoring"] = {}
                 config_data["scoring"]["llm_model"] = new_scoring_model
@@ -340,7 +340,7 @@ with tab2:
         st.subheader("⚖️ Pesos de Scoring (Total debe ser ~1.0)")
         if "scoring" in config_data and "weights" in config_data["scoring"]:
             weights = config_data["scoring"]["weights"]
-            
+
             w_col1, w_col2 = st.columns(2)
             with w_col1:
                 weights["source_credibility"] = st.slider("Credibilidad Fuente", 0.0, 1.0, weights.get("source_credibility", 0.25))
@@ -353,10 +353,10 @@ with tab2:
         st.subheader("🔑 Palabras Clave")
         if "text_processing" in config_data:
             tp = config_data["text_processing"]
-            
+
             boost_txt = st.text_area("Keywords para Potenciar (separadas por coma)", ", ".join(tp.get("boost_keywords", [])))
             tp["boost_keywords"] = [x.strip() for x in boost_txt.split(",") if x.strip()]
-            
+
             penalty_txt = st.text_area("Keywords Penalizadas/Clickbait (separadas por coma)", ", ".join(tp.get("penalty_keywords", [])))
             tp["penalty_keywords"] = [x.strip() for x in penalty_txt.split(",") if x.strip()]
 
@@ -368,30 +368,30 @@ with tab2:
         st.subheader("🧹 Mantenimiento del Sistema")
         with st.expander("🚨 Reinicio de Fábrica (Reset Total)", expanded=True):
             st.warning("⚠️ Esta acción borrará TODOS los datos: artículos en base de datos, caché y archivos exportados. Úsalo para empezar de cero.")
-            
+
             # Confirmation Checkbox to prevent accidental clicks
             confirm_delete = st.checkbox("Confirmo que deseo vaciar TODO el sistema (Backend + Frontend).")
-            
+
             if st.button("🧨 EJECUTAR RESET TOTAL", type="primary", disabled=not confirm_delete):
                  with st.spinner("Eliminando datos y reseteando caché..."):
                      try:
                          # Use the DatabaseManager for the persistent storage
                          db_man = DatabaseManager({"type": "sqlite", "path": REFINERY_DB_PATH})
                          count = db_man.clear_all_articles()
-                         
+
                          # Clean up export files to reflect empty state immediately
                          paths_to_clean = [
                              BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json",
                              NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
                          ]
-                         
+
                          for p in paths_to_clean:
                              if p.exists():
                                  try:
                                      p.unlink()
                                  except Exception:
                                      pass
-                         
+
                          # 2. Clear Refinery Workflow State (refinery.db)
                          # This DB tracks which files have been turned into PRs.
                          # We must wipe it so the UI allows re-processing the same content if desired.
@@ -404,11 +404,11 @@ with tab2:
                                  st.warning(f"No se pudo eliminar {refinery_db_path.name}: {e}")
 
                          # 3. Clean Job History & Source Metadata to force re-fetch
-                         # If we don't clear this, the collector will think it just ran 
+                         # If we don't clear this, the collector will think it just ran
                          # and skip everything (304 Not Modified or "Duplicate Job")
                          with sqlite3.connect(REFINERY_DB_PATH) as conn:
                              cursor = conn.cursor()
-                             
+
                              # Wipe all article data
                              tables_to_wipe = ["articles", "article_metrics", "score_logs"]
                              for table in tables_to_wipe:
@@ -417,25 +417,25 @@ with tab2:
                                      st.write(f"  - Tabla `{table}` limpiada.")
                                  except Exception:
                                      pass # Table might not exist yet
-                             
+
                              # Reset Source Metadata (Force Re-fetch)
                              try:
                                  cursor.execute("""
-                                     UPDATE sources 
-                                     SET last_checked = NULL, 
-                                         last_successful_check = NULL, 
-                                         feed_etag = NULL, 
+                                     UPDATE sources
+                                     SET last_checked = NULL,
+                                         last_successful_check = NULL,
+                                         feed_etag = NULL,
                                          feed_last_modified = NULL
                                  """)
                                  st.write("  - Metadatos de fuentes reiniciados (forzando re-colección).")
                              except Exception as e:
                                  st.warning(f"No se pudieron reiniciar fuentes: {e}")
-                                 
+
                              conn.commit()
 
                          # Clear Streamlit Cache
                          st.cache_data.clear()
-                         
+
                          st.success(f"✅ SISTEMA LIMPIO. {count} artículos eliminados. Caché purgada.")
                          import time
                          time.sleep(2) # Give user time to see success message
@@ -446,19 +446,19 @@ with tab2:
 # --- Tab 3: Operations ---
 with tab3:
     st.header("Operaciones del Pipeline")
-    
+
     st.info("ℹ️ Selecciona un artículo para refinar y publicar.")
     env_vars = dict(load_env_file())
     auth_ok = require_refinery_auth(env_vars, key="auth_ops")
-    
+
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
     with col_sync:
         # User requested to eliminate Fast Mode to ensure quality discrimination
         st.info("🧠 Modo Cognitivo Activo (Análisis Profundo)")
-        
+
         dry_run_enabled = st.checkbox("🧪 Test Connection (Dry Run)", help="Ejecutar análisis sin guardar artículos en Base de Datos.")
-        
+
         if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos)."):
             with st.spinner("Ejecutando recolección y análisis cognitivo..."):
                 if not auth_ok:
@@ -480,7 +480,7 @@ with tab3:
     # We know main.py clones into temp/source
     CLONED_PATH = BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json"
     SIBLING_PATH = NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
-    
+
     JSON_PATH = None
     if CLONED_PATH.exists() and SIBLING_PATH.exists():
         if CLONED_PATH.stat().st_mtime >= SIBLING_PATH.stat().st_mtime:
@@ -514,7 +514,7 @@ with tab3:
                             "cognitive_engagement_norm": 1.0
                         }
                     })
-                
+
                 # Write to where the app expects it (or a temp location)
                 # CLONED_PATH is .../exports/latest_articles.json
                 # We will write it there so the next check passes
@@ -522,7 +522,7 @@ with tab3:
                 import json
                 with open(CLONED_PATH, "w", encoding="utf-8") as f:
                     json.dump({"articles": temp_articles}, f, indent=2)
-                
+
                 JSON_PATH = CLONED_PATH
                 st.toast(f"ℹ️ Se generó un archivo JSON temporal desde {len(md_files)} archivos MD locales.", icon="🛠️")
             except Exception as e:
@@ -531,10 +531,10 @@ with tab3:
     if JSON_PATH and JSON_PATH.exists():
         import json
         import pandas as pd
-        
+
         try:
             refinery_db = DatabaseManager() # Initialize using global config
-            
+
             with open(JSON_PATH, "r", encoding="utf-8") as f:
                 payload = json.load(f)
             if isinstance(payload, dict):
@@ -544,13 +544,13 @@ with tab3:
             if not isinstance(articles, list):
                 st.error("Formato de exportación inválido: no es una lista de artículos.")
                 articles = []
-            
+
             # --- RE-SCORING LOGIC DISABLED ---
             # We trust the score coming from the collector (especially for Cognitive Mode).
             # The Admin Panel should not overwrite with default static weights.
             # ------------------------
             # ------------------------
-            
+
             # UX IMPROVEMENT: Allow showing processed items
             show_processed = st.sidebar.checkbox("Mostrar artículos procesados (Force Reprocess)", value=False)
             if show_processed:
@@ -559,18 +559,18 @@ with tab3:
             if articles:
                 refinery_db = DatabaseManager()
                 available_articles = []
-                
+
                 filtered_count = 0
                 for art in articles:
                     art_id = str(art.get("id", art.get("title")))
-                    
+
                     # DEBUG SPECIFIC ID
                     if art_id == "169":
                         # Only show debug if relevant or debug mode
                         if not show_processed:
                             # Keep this unobtrusive or remove it if user is tired of it
                              pass
-                    
+
                     if not show_processed:
                         try:
                             numeric_id = int(art_id)
@@ -580,10 +580,10 @@ with tab3:
                                 continue
                         except ValueError:
                              pass # If ID is not int, we can't check efficiently in main DB yet, or assume not processed
-                             
-                        # Check .md existence is handled by is_article_published? 
+
+                        # Check .md existence is handled by is_article_published?
                         # No, is_article_published checks DB status.
-                        # RefineryEngine previously checked file system. 
+                        # RefineryEngine previously checked file system.
                         # We trust DB status now.
                     available_articles.append(art)
 
@@ -598,36 +598,36 @@ with tab3:
                     st.subheader(
                         f"Artículos Disponibles ({len(available_articles)})"
                     )
-                    
+
                     # Convert to DataFrame for easier display
                     df = pd.DataFrame(available_articles)
                     # Keep relevant columns
                     display_cols = ["id", "title", "score", "published_date"]
                     # Filter strictly for existing columns
                     display_cols = [c for c in display_cols if c in df.columns]
-                    
+
                     # Sort by score descending
                     if "score" in df.columns:
                         df = df.sort_values(by="score", ascending=False)
 
                     # Display interactive table
                     # We use a selection box for simplicity as st.dataframe selection is newer
-                    
+
                     # Create a formatted list for the selectbox
                     options = {
                         f"{row['id']} - {row['title']} "
                         f"(Score: {row.get('score', 0):.2f})": row['id']
                         for i, row in df.iterrows()
                     }
-                    
+
                     selected_label = st.selectbox(
                         "Seleccionar Artículo a Procesar:",
                         options=list(options.keys()),
                     )
-                    
+
                     if selected_label:
                         selected_id = options[selected_label]
-                        
+
                         # Show details of selected
                         selected_art = next(
                             (
@@ -651,7 +651,7 @@ with tab3:
                                 caption="Imagen Extraída",
                                 width=300,
                             )
-                        
+
                         # Visual Settings
                         with st.expander("🎨 Configuración Visual", expanded=True):
                             visual_analysis_enabled = st.checkbox(
@@ -666,10 +666,10 @@ with tab3:
                             is_pub = refinery_db.is_article_published(int(selected_id))
                         except ValueError:
                             pass
-                            
+
                         if is_pub:
                             st.warning("⚠️ Artículo ya publicado/procesado.")
-                            
+
                             col_pub1, col_pub2 = st.columns(2)
                             with col_pub1:
                                 if st.button("🔄 Forzar Reprocesamiento (Sobrescribir)", key=f"reproc_{selected_id}"):
@@ -677,9 +677,9 @@ with tab3:
                                         # ... existing logic ...
                                         # This needs refactoring to avoid duplication, but for now we copy the call logic
                                         # or we assume the main button below handles force if we allow it fall through?
-                                        # No, let's keep one main action. 
-                                        pass 
-                            
+                                        # No, let's keep one main action.
+                                        pass
+
                             with col_pub2:
                                 if st.button(f"🗑️ Despublicar (Eliminar)", type="primary", key=f"del_{selected_id}"):
                                     with st.spinner(f"Solicitando eliminación de {selected_id}..."):
@@ -689,7 +689,7 @@ with tab3:
                                             import news_collector.apps.refinery.main as main_module # Dynamic? No.
                                             # We already have `run_refinery` available via importlib in admin_panel.
                                             # We need `delete_article` too.
-                                            
+
                                             if hasattr(refinery_main, 'delete_article'):
                                                 del_result = refinery_main.delete_article(str(selected_id))
                                                 if del_result.get("status") == "success":
@@ -704,7 +704,7 @@ with tab3:
                                                 st.error("Función delete_article no encontrada. Reinicia la aplicación.")
                                         except Exception as e:
                                             st.error(f"Error invocando despublicación: {e}")
-                            
+
                         # Standard Process Button (Always visible for force reprocessing or new items)
                         if st.button(
                             f"✨ Refinar y Publicar (ID: {selected_id})",
@@ -725,7 +725,7 @@ with tab3:
                                             skip_visuals=skip_flag,
                                             export_path=str(JSON_PATH),
                                         )
-                                        
+
                                         status = result.get("status")
                                         processed_count = result.get("processed_count", 0)
                                         if status == "success" and processed_count > 0:
@@ -767,26 +767,26 @@ with tab3:
 # --- Tab 4: Analytics ---
 with tab4:
     st.header("📈 Analítica del Sistema")
-    
+
     try:
         # Use simple DB manager pointing to correct path with CONFIG DICT
         # Actually, global DatabaseManager() is better
         db = DatabaseManager() # Using global config
-        
+
         # 1. KPIs
         col_k1, col_k2, col_k3 = st.columns(3)
-        
+
         # Stats
         stats = db.get_collection_stats(days=30)
         total_articles = sum(d["count"] for d in stats)
-        
+
         with col_k1:
             st.metric("Total Artículos (30d)", total_articles)
-            
+
         # Source Performance
         source_perf = db.get_source_performance()
         avg_score_overall = sum(s["avg_score"] * s["article_count"] for s in source_perf) / total_articles if total_articles else 0
-        
+
         with col_k2:
             st.metric("Score Promedio", f"{avg_score_overall:.2f}")
 
@@ -797,7 +797,7 @@ with tab4:
 
         # 2. Charts
         col_c1, col_c2 = st.columns(2)
-        
+
         with col_c1:
             st.subheader("📊 Tendencia Recolección (30 Días)")
             if stats:
@@ -814,9 +814,9 @@ with tab4:
                 st.info("No hay scores disponibles.")
 
         st.markdown("---")
-        
+
         col_c3, col_c4 = st.columns(2)
-        
+
         with col_c3:
             st.subheader("🏆 Fuentes Top")
             if source_perf:
@@ -825,7 +825,7 @@ with tab4:
                 st.bar_chart({s["source_name"]: s["avg_score"] for s in top_sources})
             else:
                 st.info("No hay datos de fuentes.")
-        
+
         with col_c4:
             st.subheader("📚 Contenido por Categoría")
             cats = db.get_category_breakdown()
@@ -841,23 +841,23 @@ with tab4:
 # --- Tab 5: Content Management ---
 with tab5:
     st.header("Gestionar Contenido Publicado")
-    
+
     st.info("⚠️ Aquí puedes eliminar artículos que ya han sido publicados en el repositorio destino.")
-    
+
     env_vars = dict(load_env_file())
     if require_refinery_auth(env_vars, key="auth_cms"):
         # reuse GitHubPublisher logic from main or init new one
         from news_collector.components.publishing import GitHubPublisher
         import git
-        
+
         TARGET_DIR = BASE_DIR / "temp" / "target"
         POSTS_DIR = TARGET_DIR / "src/content/posts"
-        
+
         # 1. Ensure we have the latest state
         if st.button("🔄 Refrescar Lista de Artículos Publicados"):
             gh_handler = GitHubPublisher(env_vars.get("GITHUB_TOKEN"))
             target_url = env_vars.get("TARGET_REPO_URL")
-            
+
             with st.spinner("Sincronizando repo destino..."):
                 try:
                     if not TARGET_DIR.exists():
@@ -879,12 +879,12 @@ with tab5:
         # 2. List Files
         if TARGET_DIR.exists() and POSTS_DIR.exists():
             files = sorted(list(POSTS_DIR.glob("*.md")), reverse=True)
-            
+
             if not files:
                 st.info("No hay artículos en src/content/posts.")
             else:
                 st.write(f"Encontrados **{len(files)}** artículos.")
-                
+
                 # Legacy Table Header
                 h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
                 h1.markdown("**Título**")
@@ -892,17 +892,17 @@ with tab5:
                 h3.markdown("**Acción 1**")
                 h4.markdown("**Acción 2**")
                 st.markdown("---")
-                
+
                 for f in files:
                     # Parse metadata (Same logic as before)
                     refinery_id = None
-                    article_title = f.name 
+                    article_title = f.name
                     try:
                         content = f.read_text(encoding="utf-8", errors="ignore")
                         import re
                         match_id = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
                         if match_id: refinery_id = match_id.group(1)
-                        
+
                         match_title = re.search(r'^title:\s*(.*)$', content, re.MULTILINE)
                         if match_title:
                             raw = match_title.group(1).strip()
@@ -911,17 +911,17 @@ with tab5:
                             article_title = raw
                     except Exception:
                         pass
-                    
+
                     # Row Layout
                     c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1.5])
-                    
+
                     with c1:
                         st.write(article_title)
                     with c2:
                         st.caption(f.name)
                         if refinery_id:
                             st.caption(f"ID: `{refinery_id}`")
-                    
+
                     with c3:
                         if st.button("🗑️ Despublicar", key=f"btn_del_{f.name}", use_container_width=True):
                             if refinery_id:
@@ -951,7 +951,7 @@ with tab5:
                                 f.unlink()
                                 repo.index.commit(f"Deleted (Reset) {f.name}")
                                 repo.remotes.origin.push()
-                                
+
                                 db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
                                 if refinery_id:
                                     db_manager.delete_record(refinery_id)
@@ -960,7 +960,7 @@ with tab5:
                                 st.rerun()
                             except Exception as e:
                                 st.error(str(e))
-                    
+
                     st.divider()
 
 
@@ -968,14 +968,14 @@ with tab5:
 with tab6:
     st.header("📡 Gestión de Fuentes RSS")
     st.info("Modifica, agrega o deshabilita fuentes sin reiniciar el servidor.")
-    
+
     # Import sources config
     import news_collector.config.sources as source_config_module
-    
+
     # Reload to ensure fresh state
     source_config_module.load_sources()
     current_sources = source_config_module.ALL_SOURCES
-    
+
     # 1. Main Table
     if not current_sources:
         st.warning("No se cargaron fuentes.")
@@ -991,38 +991,38 @@ with tab6:
                 "Categoria": cfg.get("category"),
                 "Grupo": cfg.get("_group", "Personalizado")
             })
-            
+
         st.dataframe(source_list, use_container_width=True)
-        
+
     st.divider()
-    
+
     # 2. Edit / Add Form
     st.subheader("🛠️ Editar / Agregar Fuente")
-    
+
     col_sel, col_act = st.columns([3, 1])
     with col_sel:
         # Select source to edit or New
         input_options = ["(Nueva Fuente)"] + list(current_sources.keys())
         selected_source_id = st.selectbox("Seleccionar Fuente", input_options)
-        
+
     is_new = selected_source_id == "(Nueva Fuente)"
-    
+
     # Load default data
     default_data = {}
     if not is_new:
         default_data = current_sources.get(selected_source_id, {}).copy()
-    
+
     with st.form("source_editor"):
         c1, c2 = st.columns(2)
         with c1:
             new_id = st.text_input("ID (Snake Case)", value=selected_source_id if not is_new else "", disabled=not is_new)
             name = st.text_input("Nombre Legible", value=default_data.get("name", ""))
             url = st.text_input("URL del Feed RSS", value=default_data.get("url", ""))
-            
+
         with c2:
             credibility = st.slider("Score Credibilidad", 0.0, 1.0, float(default_data.get("credibility_score", 0.8)))
             category = st.selectbox(
-                "Categoría", 
+                "Categoría",
                 ["technology", "science", "medicine", "space", "biology", "multidisciplinary", "popular_science", "artificial_intelligence"],
                 index=0  # Should try to match existing, but selectbox needs index lookup. Simplified for now.
             )
@@ -1031,7 +1031,7 @@ with tab6:
                 ["daily", "weekly", "hourly", "multiple_daily"],
                 index=0
             )
-            
+
         group_tag = st.selectbox(
              "Grupo (Organización Interna)",
              ["ELITE_JOURNALS", "SCIENCE_MEDIA", "INSTITUTIONAL_SOURCES", "AI_LABS", "CUSTOM"],
@@ -1039,7 +1039,7 @@ with tab6:
         )
 
         submit = st.form_submit_button("💾 Guardar Fuente")
-        
+
         if submit:
             if not new_id:
                 st.error("El ID es obligatorio.")
@@ -1056,10 +1056,10 @@ with tab6:
                     "typical_delay": 0,
                     "_group": group_tag
                 }
-                
+
                 # Merge checks
                 current_sources[new_id] = new_entry
-                
+
                 # Save to YAML
                 try:
                     source_config_module.save_sources(current_sources)
@@ -1075,4 +1075,3 @@ with tab6:
             source_config_module.save_sources(current_sources)
             st.success("Fuente eliminada.")
             st.rerun()
-

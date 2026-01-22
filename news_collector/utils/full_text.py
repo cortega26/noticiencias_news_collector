@@ -15,18 +15,18 @@ def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> 
     browser_headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    
+
     try:
         if session:
             # Override session headers for this request
             response = session.get(url, timeout=15, headers=browser_headers)
         else:
             response = requests.get(url, timeout=15, headers=browser_headers)
-        
+
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.content, 'html.parser')
-        
+
         # Remove unwanted elements
         for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
             script.decompose()
@@ -47,7 +47,7 @@ def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> 
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = ' '.join(chunk for chunk in chunks if chunk)
-        
+
         return text
 
     except Exception as e:

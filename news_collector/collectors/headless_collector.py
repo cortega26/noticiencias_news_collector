@@ -25,7 +25,7 @@ class HeadlessCollector(BaseCollector):
     async def _ensure_browser(self):
         if not self.playwright:
             self.playwright = await async_playwright().start()
-        
+
         if not self.browser:
             # Launch chromium headless
             self.browser = await self.playwright.chromium.launch(headless=True)
@@ -57,21 +57,21 @@ class HeadlessCollector(BaseCollector):
         try:
             url = source_config.get("url")
             selectors = source_config.get("selectors", {})
-            
+
             if not url:
                 raise ValueError(f"Source {source_id} missing 'url' config")
 
             await self._ensure_browser()
-            
+
             # Create a context with a realistic user agent
             context = await self.browser.new_context(
                 user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
-            
+
             page = await context.new_page()
-            
+
             self._emit_log("info", "collector.headless.navigating", details={"url": url})
-            
+
             # Go to page with timeout
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -112,7 +112,7 @@ class HeadlessCollector(BaseCollector):
 
                 if self._save_article(article):
                     articles_saved += 1
-            
+
             success = True
 
         except Exception as e:
@@ -123,7 +123,7 @@ class HeadlessCollector(BaseCollector):
                 await context.close()
             # We don't close the browser here to reuse it across sources if possible?
             # actually BaseCollector creates a new instance or reuses?
-            # For now, let's keep browser open if we process multiple sources, 
+            # For now, let's keep browser open if we process multiple sources,
             # but usually dispatcher might call us once per source if initialized per source.
             # If initialized once for multiple sources (dispatcher logic), we should close at end.
             # For this specific method, we just close context.
@@ -143,37 +143,37 @@ class HeadlessCollector(BaseCollector):
         item_selector = selectors.get("item", "article")
         title_selector = selectors.get("title", "h2")
         link_selector = selectors.get("link", "a")
-        
+
         # summary not always present on index, might need full text fetch
-        
+
         extracted = []
-        
+
         # Get all item elements
         items = await page.query_selector_all(item_selector)
-        
+
         for item in items:
             try:
                 # Extract title
                 title_el = await item.query_selector(title_selector)
                 title = await title_el.inner_text() if title_el else ""
-                
+
                 # Extract link
                 link_el = await item.query_selector(link_selector)
                 link_href = await link_el.get_attribute("href") if link_el else ""
-                
+
                 # Normalize URL
                 if link_href:
                     link_href = urljoin(page.url, link_href)
-                
+
                 if not title or not link_href:
                     continue
 
-                # For OpenAI research, we might want to click through? 
+                # For OpenAI research, we might want to click through?
                 # Or just save the metadata and let a separate full-text fetcher handle it (which would also need headless)
-                
+
                 # Ideally, we get summary here or fetch content.
                 # For now, simplistic approach:
-                
+
                 article_data = {
                     "source_id": source_id,
                     "source_name": source_id,  # Default to ID if name not known
@@ -189,33 +189,33 @@ class HeadlessCollector(BaseCollector):
                     "authors": [],
                     "tags": []
                 }
-                
+
                 # Validate basics
                 if len(title) < 5:
                     continue
-                    
+
                 extracted.append(article_data)
-                
+
             except Exception as e:
                 continue
-                
+
         return extracted
 
     async def _fetch_full_content(self, context: BrowserContext, url: str) -> Optional[str]:
         page = await context.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-            
+
             # Simple heuristic: grab all paragraph text
             # Or use readability? For now, simple text extraction.
             # We can improve this with configured selectors later.
-            
+
             # Try to frame it to article/main
             content_el = await page.query_selector("article") or await page.query_selector("main") or await page.query_selector("body")
-            
+
             if content_el:
                 # Extract text from p tags
-                # This needs to be robust. 
+                # This needs to be robust.
                 # using evaluate to get text content is faster
                 text = await content_el.evaluate("""(element) => {
                     return Array.from(element.querySelectorAll('p, h2, h3, li'))

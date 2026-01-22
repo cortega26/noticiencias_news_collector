@@ -129,7 +129,7 @@ class DatabaseManager:
                     },
                     pool_pre_ping=True,
                 )
-                
+
                 # Habilitar WAL mode para mejorar concurrencia
                 from sqlalchemy import event
                 @event.listens_for(self.engine, "connect")
@@ -451,12 +451,12 @@ class DatabaseManager:
             if not article:
                 logger.warning(f"Could not find article {article_id} to mark as published.")
                 return False
-            
+
             article.processing_status = "completed"
             article.published_at = datetime.now(timezone.utc)
             article.published_url = pr_url
             # We don't change 'published_date' (original source date), only 'published_at' (our publish date)
-            
+
             session.add(article)
             logger.info(f"Marked article {article_id} as published (PR: {pr_url})")
             return True
@@ -472,9 +472,9 @@ class DatabaseManager:
             article = stmt.first()
             if not article:
                 return False
-            
+
             return (
-                article.processing_status == "completed" 
+                article.processing_status == "completed"
                 or article.published_url is not None
             )
 
@@ -520,7 +520,7 @@ class DatabaseManager:
                     # HEALING LOGIC: If existing content is missing/short but we found better content, update it.
                     new_content = payload.get("content")
                     old_content = existing.content
-                    
+
                     new_len = len(new_content) if new_content else 0
                     old_len = len(old_content) if old_content else 0
                     logger.warning(f"📏 [DEBUG] Content lengths - New: {new_len}, Old: {old_len}")
@@ -1174,7 +1174,7 @@ class DatabaseManager:
     def clear_all_articles(self) -> int:
         """
         Elimina TODOS los artículos recolectados de la base de datos.
-        
+
         Esta operación es destructiva e irreversible. Equivale a un "Factory Reset"
         del contenido recolectado.
         """
@@ -1184,11 +1184,11 @@ class DatabaseManager:
                 deleted_logs = session.query(ScoreLog).delete()
                 # Eliminar artículos
                 deleted_articles = session.query(Article).delete()
-                
+
                 # Opcional: Resetear timestamps de fuentes para que vuelvan a buscar todo?
                 # Si borramos el contenido, las fuentes deberían poder volver a traerlo si el feed lo tiene.
                 # No reseteamos las métricas de fuentes (consecutive_failures etc) para mantener historia de salud.
-                
+
                 logger.info(f"🚨 CACHÉ VACIADA: {deleted_articles} artículos y {deleted_logs} logs eliminados.")
                 return deleted_articles
             except Exception as e:

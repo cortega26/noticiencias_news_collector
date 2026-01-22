@@ -99,12 +99,12 @@ class CollectorArticleModel(BaseModel):
     def ensure_valid_content(self) -> "CollectorArticleModel":
         self.article_metadata.ensure_original_url(self.original_url or str(self.url))
         self.original_url = self.article_metadata.original_url
-        
+
         # Validation: At least one of 'summary' or 'content' must meet the minimum length.
         min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
         summary_len = len(self.summary.strip()) if self.summary else 0
         content_len = len(self.content.strip()) if self.content else 0
-        
+
         if summary_len < min_len and content_len < min_len:
              raise ValueError(
                 f"Article too short. Neither summary ({summary_len}) nor content ({content_len}) "
@@ -113,9 +113,9 @@ class CollectorArticleModel(BaseModel):
 
         # Ensure word_count consistency
         # We trust the self.word_count provided by collector logic, but it should be reasonable.
-        if self.word_count < 10: 
+        if self.word_count < 10:
              # Only complain if it's ridiculously low, suggesting extraction failure.
-             pass 
+             pass
 
         return self
 
@@ -132,7 +132,7 @@ class CollectorArticleModel(BaseModel):
     def validate_authors_meaningful(cls, value: List[str]) -> List[str]:
         generic_names = {"admin", "staff", "editor", "redaction", "anonymous"}
         filtered = [
-            a for a in value 
+            a for a in value
             if a.lower().replace(".", "").strip() not in generic_names
         ]
         if not filtered and value:

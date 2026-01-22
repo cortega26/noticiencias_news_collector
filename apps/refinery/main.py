@@ -180,7 +180,7 @@ def _select_export_articles(
 def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: bool = False):
     """Runs the news collector direct via API."""
     logger.info(f"Starting News Collector (Direct API)... Dry Run: {dry_run}")
-    
+
     try:
         # 1. Configuration
         config_override = {}
@@ -190,12 +190,12 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: boo
                  "source_credibility": 0.30,
                  "recency": 0.30,
                  "content_quality": 0.40,
-                 "cognitive_engagement": 0.0 
+                 "cognitive_engagement": 0.0
             }
 
         # 2. Initialize System
         system = create_system(config_override=config_override)
-        
+
         if not system.initialize():
             logger.error("System initialization failed.")
             return
@@ -205,31 +205,31 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: boo
              try:
                  # Run Collection
                  await system.run_collection_cycle(dry_run=dry_run)
-                 
-                 # Export Logic - skip if dry_run? DB dry run generally means no persistence, 
+
+                 # Export Logic - skip if dry_run? DB dry run generally means no persistence,
                  # but we might still want to see what WOULD be exported.
                  # Usually collection cycle dry_run returns results but doesn't db save.
                  # Let's assume we proceed to export logic if we have results in mem?
                  # System.export_articles reads from DB. So dry_run probably yields nothing in DB.
-                 
+
                  if not dry_run:
                      target_export_path = project_root / "data/exports/latest_articles.json"
-                     
+
                      logger.info(f"Exporting results to {target_export_path}")
-                     
+
                      # Use unified system export
                      await asyncio.to_thread(
-                         system.export_latest_articles, 
-                         file_path=target_export_path, 
+                         system.export_latest_articles,
+                         file_path=target_export_path,
                          limit=50
                      )
                  else:
                      logger.info("Dry Run: Skipping JSON export (no DB changes).")
-                    
+
              finally:
                  if hasattr(system, 'shutdown'):
                      await system.shutdown()
-                
+
         # 4. Handle Execution Loop
         try:
              asyncio.run(_run_and_export())
@@ -253,19 +253,19 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: boo
 def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False, dry_run=False):
     """
     Main entry point for the Noticiencias Refinery.
-    
+
     Args:
         fetch_only (bool): If True, only clones/pulls the source repo.
         process_id (str): Optional ID or Title to filter processing.
         dev (bool): If True, enables development features like mock data injection.
         export_path (str): Optional path to a specific JSON export to use.
         dry_run (bool): If True, simulates collection without saving to DB.
-        
+
     Returns:
         dict: Execution capabilities summary or status.
     """
     logger.info(f"Starting Noticiencias Refinery... (Dry Run={dry_run})")
-    
+
     try:
         config = load_config()
     except Exception as e:
@@ -277,7 +277,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     git_handler = GitHubPublisher(config.github.token)
     editor_agent = EditorAgent(config.ollama.api_url, config.ollama.model)
-    
+
     # Initialize Engine
     engine = RefineryEngine(
         db_manager=db_manager,
@@ -295,7 +295,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         and preferred_export_path.exists()
         and not fetch_only
     )
-    
+
     # 1. Clone Source Repo
     if skip_clone:
         logger.info(
@@ -311,7 +311,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
             return {"status": "error", "message": f"Failed to clone source repo: {e}"}
 
         logger.info("Source data synced successfully.")
-    
+
     if fetch_only:
         logger.info("Fetch-only mode enabled. Exiting.")
         return {"status": "success", "message": "Source data synced."}
@@ -327,7 +327,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # Manual Injection for Testing
     data_dir = source_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Check if we need to inject a mock file
     # Only if dev mode is enabled
     existing_files = list(data_dir.glob("*.md")) + list(data_dir.glob("*.json"))
@@ -341,27 +341,27 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # Find candidate files (md or json)
     # Recursively find files
     articles_to_process = []
-    
+
     # Check for Collector Export (Primary Source)
     # 1. Look in Cloned Repo (Cloud Source)
     CLONED_EXPORT_PATH = source_dir / "data/exports/latest_articles.json"
-    
+
     # 2. Look in Sibling Repo (Local Source) - Fallback
     # Load env vars to check for custom path
     from dotenv import dotenv_values
     env_config = dotenv_values(".env")
-    
+
     # Default relative path
     # In monorepo: apps/refinery/main.py -> root is up 2 levels
     default_sibling_path = Path(__file__).resolve().parents[2]
     # Get from env or default
     collector_path_str = env_config.get("NEWS_COLLECTOR_PATH", str(default_sibling_path))
     collector_path = Path(collector_path_str)
-    
+
     SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
-    
+
     selected_export_path = None
-    
+
     if CLONED_EXPORT_PATH.exists() or SIBLING_EXPORT_PATH.exists():
         articles_to_process, selected_export_path = _select_export_articles(
             CLONED_EXPORT_PATH,
@@ -384,19 +384,19 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         if data_dir.exists():
             # Files to ignore (exact matches and patterns)
             IGNORED_FILES = {
-                'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 
+                'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md',
                 'AGENTS.md', 'LICENSE', 'CODE_OF_CONDUCT.md', 'requirements.txt',
                 'labels.md', 'missing.md', 'pr_plan.md', 'Makefile', 'Dockerfile'
             }
-            
+
             for ext in ['*.md', '*.json']:
                 for file_path in data_dir.rglob(ext):
                     if file_path.name in IGNORED_FILES: continue
                     if 'test' in file_path.parts: continue
-                    
+
                     # Filtering Logic
-                    # If process_id is set, we check if filename matches. 
-                    # Note: filenames might not be IDs, so this is tricky. 
+                    # If process_id is set, we check if filename matches.
+                    # Note: filenames might not be IDs, so this is tricky.
                     # We will assume process_id can match filename too.
                     if process_id and process_id not in file_path.name:
                         continue
@@ -404,12 +404,12 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                     # Check DB
                     if db_manager.is_processed(file_path.name) and not process_id:
                         continue
-                        
+
                     # Read content
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             content = f.read()
-                        
+
                         articles_to_process.append({
                             "title": file_path.name,
                             "content": content,
@@ -419,7 +419,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
                         })
                     except Exception as e:
                         logger.error(f"Error reading file {file_path}: {e}")
-    
+
     logger.info(f"Total candidate content items: {len(articles_to_process)}")
 
     if not articles_to_process:
@@ -442,7 +442,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     if not process_id and articles_to_process:
         # LIMIT FOR BULK MODE: Process only the first items to avoid infinite loops or costs
         # User requested manual selection anyway, so bulk mode might arguably just process 1 or 5.
-        limit = 5 
+        limit = 5
         articles_to_process = articles_to_process[:limit]
         logger.info(f"BULK MODE: Limiting to first {limit} item(s)")
 
@@ -452,22 +452,22 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     last_error = None
     processed_count = 0
-    
+
     # Initialize Target Repo (Clone if needed)
     target_repo_obj = None
     try:
         if TARGET_DIR.exists():
              shutil.rmtree(TARGET_DIR, ignore_errors=True)
-             
+
         logger.info(f"Cloning Target Repo: {config.github.target_repo_url}")
         git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
         target_repo_obj = git.Repo(TARGET_DIR)
-        
+
         # Configure User
         with target_repo_obj.config_writer() as git_config:
             git_config.set_value("user", "name", config.github.user_name)
             git_config.set_value("user", "email", config.github.user_email)
-            
+
     except Exception as e:
         logger.critical(f"Failed to clone/init target repo: {e}")
         return {"status": "error", "message": f"Critical Git Error: {e}", "processed_count": 0}
@@ -482,16 +482,16 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     except Exception as e:
          logger.error(f"Engine execution failed: {e}")
          return {"status": "error", "message": f"Engine failed: {e}", "processed_count": 0}
-         
+
     except KeyboardInterrupt:
         logger.warning("\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully...")
         return {"status": "cancelled", "processed_count": processed_count}
 
     logger.info("Refinery pass complete.")
-    
+
     if processed_count == 0 and last_error:
          return {"status": "error", "message": f"Error procesando artículo: {last_error}", "processed_count": 0}
-         
+
     return {"status": "success", "processed_count": processed_count}
 
 def delete_article(article_id: str) -> dict:
@@ -500,21 +500,21 @@ def delete_article(article_id: str) -> dict:
     Creates a Pull Request for the deletion.
     """
     logger.info(f"Initiating One-Click Unpublish for ID: {article_id}")
-    
+
     try:
         config = load_config()
         git_handler = GitHubPublisher(config.github.token)
-        
+
         # 1. Clone Target
         if TARGET_DIR.exists():
             shutil.rmtree(TARGET_DIR, ignore_errors=True)
         git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
         target_repo_obj = git.Repo(TARGET_DIR)
-        
+
         # 2. Search for File
         posts_dir = TARGET_DIR / "src/content/posts"
         target_file = None
-        
+
         if posts_dir.exists():
             for file_path in posts_dir.glob("*.md"):
                 try:
@@ -524,22 +524,22 @@ def delete_article(article_id: str) -> dict:
                         break
                 except Exception:
                     continue
-        
+
         if not target_file:
             logger.warning(f"Article ID {article_id} not found in published content.")
             return {"status": "error", "message": "Article not found in remote content."}
-            
+
         # 3. Create Branch
         branch_name = git_handler.create_branch(target_repo_obj, branch_prefix="delete/article")
-        
+
         # 4. Delete File
         filename = target_file.name
         target_file.unlink()
         logger.info(f"Deleted file: {filename}")
-        
+
         # 5. Commit & Push
         git_handler.commit_and_push(target_repo_obj, f"Unpublish article: {filename}", branch_name)
-        
+
         # 6. Create PR
         pr_url = git_handler.create_pull_request(
             repo_url=config.github.target_repo_url,
@@ -547,7 +547,7 @@ def delete_article(article_id: str) -> dict:
             title=f"Unpublish: {filename}",
             body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}"
         )
-        
+
         return {"status": "success", "pr_url": pr_url, "file_name": filename}
 
     except Exception as e:
@@ -558,7 +558,7 @@ def delete_article(article_id: str) -> dict:
 if __name__ == "__main__":
     import git
     import shutil # Need to ensure imports are present if we use them
-    
+
     parser = argparse.ArgumentParser(description="Noticiencias Refinery Orchestrator")
     parser.add_argument("--fetch-only", action="store_true", help="Only clone/pull source repo, do not process articles.")
     parser.add_argument("--process-id", type=str, help="Process a specific article ID (or title) only.")

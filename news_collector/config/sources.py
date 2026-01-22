@@ -62,10 +62,10 @@ ALL_SOURCES = {}
 def load_sources():
     """Carga las fuentes desde sources.yaml y popula las variables globales."""
     global ELITE_JOURNALS, SCIENCE_MEDIA, INSTITUTIONAL_SOURCES, PREPRINT_SOURCES, COMMUNITY_FEEDS, AI_LABS, ALL_SOURCES
-    
+
     current_dir = Path(__file__).parent
     yaml_path = current_dir / "sources.yaml"
-    
+
     if not yaml_path.exists():
         # Fallback or error? For now, empty or raise
         print(f"Warning: {yaml_path} not found. using empty sources.")
@@ -74,7 +74,7 @@ def load_sources():
     try:
         with open(yaml_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-            
+
         # Reset buckets
         ELITE_JOURNALS = {}
         SCIENCE_MEDIA = {}
@@ -83,15 +83,15 @@ def load_sources():
         COMMUNITY_FEEDS = {}
         AI_LABS = {}
         ALL_SOURCES = {}
-        
+
         for source_id, config in data.items():
             # Populate ALL_SOURCES
             # Ensure cache fields exist
             config.setdefault("etag", None)
             config.setdefault("last_modified", None)
-            
+
             ALL_SOURCES[source_id] = config
-            
+
             # Bucketing by group
             group = config.get("_group")
             if group == "ELITE_JOURNALS":
@@ -106,7 +106,7 @@ def load_sources():
                 COMMUNITY_FEEDS[source_id] = config
             elif group == "AI_LABS":
                 AI_LABS[source_id] = config
-                
+
     except Exception as e:
         print(f"Error loading sources.yaml: {e}")
 
@@ -118,10 +118,10 @@ def save_sources(new_sources: Dict[str, Any]):
     """Guarda el diccionario completo de fuentes en sources.yaml"""
     current_dir = Path(__file__).parent
     yaml_path = current_dir / "sources.yaml"
-    
+
     with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.dump(new_sources, f, sort_keys=False, allow_unicode=True, default_flow_style=False)
-    
+
     # Reload globals
     load_sources()
 
@@ -150,6 +150,6 @@ def validate_sources():
         for field in required_fields:
             if field not in source_config:
                 raise ValueError(f"Fuente {source_id} le falta el campo {field}")
-        
+
         # Check enabled logic? Not implemented in sources.py natively yet, assuming all active.
     print(f"✅ {len(ALL_SOURCES)} fuentes validadas correctamente")

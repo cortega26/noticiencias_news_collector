@@ -22,29 +22,29 @@ def purge():
         print(f"Connected to {DB_PATH}")
 
     cursor = conn.cursor()
-    
+
     try:
         # Check count of short or empty articles
         # usage of COALESCE logic: length(content) will be null if content is null
         query_count = f"SELECT count(*) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"
         cursor.execute(query_count)
         count = cursor.fetchone()[0]
-        
+
         if count == 0:
             print(f"No stale articles found (< {MIN_LENGTH} chars). Database is clean.")
         else:
             print(f"Found {count} stale articles (short or empty). Purging...")
-            
+
             # Show IDs of some being deleted for audit
             cursor.execute(f"SELECT id, length(content) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH} LIMIT 5")
             for row in cursor.fetchall():
                 print(f" - Deleting Article ID {row[0]} (Length: {row[1]})")
-                
+
             query_delete = f"DELETE FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"
             cursor.execute(query_delete)
             conn.commit()
             print(f"Successfully purged {count} articles.")
-            
+
     except Exception as e:
         print(f"Database error: {e}")
     finally:

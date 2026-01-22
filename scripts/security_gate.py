@@ -29,8 +29,7 @@ SECRET_SEVERITY_DEFAULT = "HIGH"
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Document the rationale and review cadence in SECURITY.md under the Suppression Policy table.
-PIP_AUDIT_ALLOWLIST: dict[str, str] = {
-}
+PIP_AUDIT_ALLOWLIST: dict[str, str] = {}
 
 
 def load_status(status_path: Path) -> Dict[str, Any]:
@@ -176,9 +175,6 @@ def _secret_is_allowlisted(
     return any(regex.search(path) for regex in path_patterns) or any(
         regex.search(secret) for regex in secret_patterns
     )
-
-
-
 
 
 def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:

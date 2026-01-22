@@ -1,4 +1,3 @@
-
 import json
 import os
 import sys
@@ -11,12 +10,13 @@ from news_collector.scoring.cognitive_scorer import CognitiveScorer
 
 JSON_PATH = "data/exports/latest_articles.json"
 
+
 class SimpleArticle:
     def __init__(self, data):
         self.id = data.get("id", 0)
         self.title = data.get("title", "")
         self.summary = data.get("summary", "")
-        self.content = data.get("content", "") or self.summary 
+        self.content = data.get("content", "") or self.summary
         self.source_id = "test_source"
         self.published_date = datetime.now(timezone.utc)
         self.source_name = data.get("source_name", "Unknown")
@@ -32,6 +32,7 @@ class SimpleArticle:
         self.journal = ""
         self.citations = 0
         self.doi = ""
+
 
 def patch():
     if not os.path.exists(JSON_PATH):
@@ -53,27 +54,32 @@ def patch():
 
     print("Initializing CognitiveScorer (llama3.2)...")
     scorer = CognitiveScorer()
-    
+
     # Patch top 3 articles
     count = 0
     for i in range(len(articles)):
-        if count >= 3: break
-        
+        if count >= 3:
+            break
+
         art_data = articles[i]
         print(f"Scoring article {i+1}: {art_data.get('title', 'No Title')[:40]}...")
-        
+
         art_obj = SimpleArticle(art_data)
-        source_config = {"credibility_score": 0.8, "name": art_obj.source_name, "category": "general"}
-        
+        source_config = {
+            "credibility_score": 0.8,
+            "name": art_obj.source_name,
+            "category": "general",
+        }
+
         try:
             result = scorer.score_article(art_obj, source_config)
-            
-            new_score = result['final_score']
-            engagement = result['components'].get('engagement', 0.0)
-            
+
+            new_score = result["final_score"]
+            engagement = result["components"].get("engagement", 0.0)
+
             print(f"  -> New Score: {new_score}")
             print(f"  -> Engagement: {engagement}")
-            
+
             if engagement > 0.0:
                 articles[i]["score"] = new_score
                 articles[i]["final_score"] = new_score
@@ -81,11 +87,12 @@ def patch():
                 # Mark as patched in title for visibility? No, user wants real data.
                 count += 1
             else:
-                 print("  -> Zero engagement returned (Still failing?)")
-                 
+                print("  -> Zero engagement returned (Still failing?)")
+
         except Exception as e:
             print(f"  -> Failed: {e}")
             import traceback
+
             traceback.print_exc()
 
     print("Saving patched JSON...")
@@ -98,6 +105,7 @@ def patch():
         else:
             json.dump(articles, f, indent=2, ensure_ascii=False)
     print("Done! Refresh Admin Panel.")
+
 
 if __name__ == "__main__":
     patch()

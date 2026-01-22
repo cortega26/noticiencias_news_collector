@@ -394,10 +394,10 @@ def load_config(
         "OLLAMA_API_URL": "ollama.api_url",
         "OLLAMA_MODEL": "ollama.model",
     }
-    
+
     # Check both raw env and .env file data for these keys
     combined_env_sources = {**env_file_data, **runtime_env}
-    
+
     for legacy_key, target_path in legacy_map.items():
         if legacy_key in combined_env_sources:
              val = combined_env_sources[legacy_key]

@@ -8,13 +8,12 @@ import ast
 import difflib
 import json
 import platform
+import tomllib
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Iterator, List, Mapping, MutableMapping, Optional
-
-import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -33,7 +32,10 @@ def _list_top_level(root: Path) -> MutableMapping[str, Optional[List[str]]]:
         if entry.name in {".git", "__pycache__", ".venv"}:
             continue
         if entry.is_dir():
-            children = [child.name for child in sorted(entry.iterdir(), key=lambda path: path.name)]
+            children = [
+                child.name
+                for child in sorted(entry.iterdir(), key=lambda path: path.name)
+            ]
             inventory[f"{entry.name}/"] = children
         else:
             inventory[entry.name] = None
@@ -68,7 +70,9 @@ def _parse_requirements(path: Path) -> List[str]:
 
 def _optional_security(pyproject: Path) -> List[str]:
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    security = data.get("project", {}).get("optional-dependencies", {}).get("security", [])
+    security = (
+        data.get("project", {}).get("optional-dependencies", {}).get("security", [])
+    )
     return list(security)
 
 
@@ -92,7 +96,9 @@ def _python_modules(root: Path, options: InventoryOptions) -> Iterator[Path]:
             yield path
 
 
-def _module_inventory(paths: Iterable[Path], sample_size: int, root: Path) -> Mapping[str, Mapping[str, List[str]]]:
+def _module_inventory(
+    paths: Iterable[Path], sample_size: int, root: Path
+) -> Mapping[str, Mapping[str, List[str]]]:
     sample: "OrderedDict[str, Mapping[str, List[str]]]" = OrderedDict()
     for path in paths:
         if len(sample) >= sample_size:
@@ -132,7 +138,9 @@ def build_inventory(root: Path, options: InventoryOptions) -> Mapping[str, objec
 
     top_level = _list_top_level(root)
     make_targets = _collect_make_targets(makefile) if makefile.exists() else []
-    requirements = _parse_requirements(requirements_txt) if requirements_txt.exists() else []
+    requirements = (
+        _parse_requirements(requirements_txt) if requirements_txt.exists() else []
+    )
     security_optional = _optional_security(pyproject) if pyproject.exists() else []
     markdown_files = _markdown_files(root)
     module_paths = _python_modules(root, options)
@@ -144,7 +152,10 @@ def build_inventory(root: Path, options: InventoryOptions) -> Mapping[str, objec
     entrypoints["main_module"] = main_module if (root / main_module).exists() else None
     cli_path = Path("run_collector.py")
     if cli_path.exists():
-        entrypoints["cli"] = {"path": cli_path.as_posix(), "help": f"python {cli_path.as_posix()} --help"}
+        entrypoints["cli"] = {
+            "path": cli_path.as_posix(),
+            "help": f"python {cli_path.as_posix()} --help",
+        }
     entrypoints["make"] = "See make_targets section"
 
     inventory: "OrderedDict[str, object]" = OrderedDict(
@@ -176,10 +187,20 @@ def _sanitize(payload: Mapping[str, object]) -> Mapping[str, object]:
     return sanitized
 
 
-def _diff_summary(previous: Mapping[str, object], current: Mapping[str, object]) -> tuple[int, List[str], str]:
-    before_dump = json.dumps(previous, indent=2, sort_keys=True, ensure_ascii=False).splitlines()
-    after_dump = json.dumps(current, indent=2, sort_keys=True, ensure_ascii=False).splitlines()
-    diff_lines = list(difflib.unified_diff(before_dump, after_dump, fromfile="baseline", tofile="current", lineterm=""))
+def _diff_summary(
+    previous: Mapping[str, object], current: Mapping[str, object]
+) -> tuple[int, List[str], str]:
+    before_dump = json.dumps(
+        previous, indent=2, sort_keys=True, ensure_ascii=False
+    ).splitlines()
+    after_dump = json.dumps(
+        current, indent=2, sort_keys=True, ensure_ascii=False
+    ).splitlines()
+    diff_lines = list(
+        difflib.unified_diff(
+            before_dump, after_dump, fromfile="baseline", tofile="current", lineterm=""
+        )
+    )
     relevant = [
         line
         for line in diff_lines
@@ -208,12 +229,34 @@ def _diff_keys(before: object, after: object, prefix: str | None = None) -> set[
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate the repository inventory snapshot.")
-    parser.add_argument("--output", type=Path, default=ROOT / "audit" / "00_inventory.json", help="Path to write the inventory JSON.")
-    parser.add_argument("--sample-size", type=int, default=10, help="Number of modules to include in the function index sample.")
-    parser.add_argument("--compare-to", type=Path, help="Existing inventory JSON to compare against.")
-    parser.add_argument("--diff-output", type=Path, help="Optional file to store a unified diff between snapshots.")
-    parser.add_argument("--summary-output", type=Path, help="Optional file to store drift metadata as JSON.")
+    parser = argparse.ArgumentParser(
+        description="Generate the repository inventory snapshot."
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=ROOT / "audit" / "00_inventory.json",
+        help="Path to write the inventory JSON.",
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=10,
+        help="Number of modules to include in the function index sample.",
+    )
+    parser.add_argument(
+        "--compare-to", type=Path, help="Existing inventory JSON to compare against."
+    )
+    parser.add_argument(
+        "--diff-output",
+        type=Path,
+        help="Optional file to store a unified diff between snapshots.",
+    )
+    parser.add_argument(
+        "--summary-output",
+        type=Path,
+        help="Optional file to store drift metadata as JSON.",
+    )
     args = parser.parse_args()
 
     options = InventoryOptions(sample_size=args.sample_size)
@@ -221,23 +264,41 @@ def main() -> None:
 
     output_path: Path = args.output
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    output_path.write_text(
+        json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
     if args.compare_to and args.compare_to.exists():
         previous = json.loads(args.compare_to.read_text(encoding="utf-8"))
-        drift_count, changed_paths, diff_text = _diff_summary(_sanitize(previous), _sanitize(inventory))
+        drift_count, changed_paths, diff_text = _diff_summary(
+            _sanitize(previous), _sanitize(inventory)
+        )
         if args.diff_output:
             diff_path = args.diff_output
             diff_path.parent.mkdir(parents=True, exist_ok=True)
-            diff_path.write_text(diff_text + ("\n" if diff_text and not diff_text.endswith("\n") else ""), encoding="utf-8")
+            diff_path.write_text(
+                diff_text
+                + ("\n" if diff_text and not diff_text.endswith("\n") else ""),
+                encoding="utf-8",
+            )
         if args.summary_output:
             summary_path = args.summary_output
             summary_path.parent.mkdir(parents=True, exist_ok=True)
             summary_path.write_text(
-                json.dumps({"drift_count": drift_count, "changed_paths": changed_paths}, indent=2, ensure_ascii=False) + "\n",
+                json.dumps(
+                    {"drift_count": drift_count, "changed_paths": changed_paths},
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                + "\n",
                 encoding="utf-8",
             )
-        print(json.dumps({"drift_count": drift_count, "changed_paths": changed_paths}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"drift_count": drift_count, "changed_paths": changed_paths},
+                ensure_ascii=False,
+            )
+        )
     else:
         print(json.dumps({"drift_count": 0, "changed_paths": []}, ensure_ascii=False))
 

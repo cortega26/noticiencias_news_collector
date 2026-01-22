@@ -76,7 +76,7 @@ class FeedDiagnoser:
     def check_feed(self, source_id: str, config: Dict[str, Any]) -> FeedStatus:
         url = config["url"]
         start_time = time.time()
-        
+
         status = FeedStatus(
             source_id=source_id,
             name=config["name"],
@@ -118,7 +118,7 @@ class FeedDiagnoser:
                 return status
 
             parsed = feedparser.parse(content)
-            
+
             # Check for bozo (parse errors)
             if parsed.bozo:
                 # Some bozo errors are acceptable, others are fatal.
@@ -130,10 +130,10 @@ class FeedDiagnoser:
                     return status
                 else:
                      status.status = "DEGRADED" # Has entries but malformed
-            
+
             entries_count = len(parsed.entries)
             status.articles_found = entries_count
-            
+
             if entries_count == 0:
                 status.status = "DEGRADED" # Technically valid but empty feed
                 status.error_category = "NO_CONTENT"
@@ -144,7 +144,7 @@ class FeedDiagnoser:
                 missing_fields = []
                 if not hasattr(first_entry, "title"): missing_fields.append("title")
                 if not hasattr(first_entry, "link"): missing_fields.append("link")
-                
+
                 # Check summary/description/content
                 has_content = any(hasattr(first_entry, f) for f in ["summary", "description", "content", "content:encoded"])
                 if not has_content: missing_fields.append("summary/content")
@@ -171,10 +171,10 @@ def main():
     print("-" * 60)
 
     results = []
-    
+
     with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_source = {
-            executor.submit(FeedDiagnoser().check_feed, sid, conf): sid 
+            executor.submit(FeedDiagnoser().check_feed, sid, conf): sid
             for sid, conf in ALL_SOURCES.items()
         }
 
@@ -182,14 +182,14 @@ def main():
             try:
                 res = future.result()
                 results.append(asdict(res))
-                
+
                 # Console Output
                 status_icon = "✅" if res.status == "OK" else "⚠️" if res.status == "DEGRADED" else "❌"
                 info = res.error_message if res.error_message else ""
-                
+
                 # Truncate ID for display
                 print(f"{res.source_id[:20]:<20} | {status_icon} {res.status:<7} | {int(res.latency_ms):>4}ms | {res.articles_found:>5} | {info}")
-                
+
             except Exception as exc:
                 print(f"Error processing future: {exc}")
 
@@ -200,7 +200,7 @@ def main():
 
     print("-" * 60)
     print(f"Summary: {pass_count} OK, {degraded_count} Degraded, {fail_count} Failed")
-    
+
     # Save Report
     output_path = "feed_health_report.json"
     with open(output_path, "w") as f:

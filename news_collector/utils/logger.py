@@ -90,7 +90,7 @@ class NewsCollectorLogger:
         En desarrollo mostramos logs coloridos y detallados.
         En producción mostramos logs más compactos y profesionales.
         """
-        
+
         def console_filter(record):
             """Filtra logs estructurados (JSON) de nivel INFO para evitar spam en consola."""
             msg = str(record["message"]).strip()

@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: noticiencias-refinery
     # Installing in editable mode inside container entrypoint for dev experience,
-    # or rely on what's installed in the image. 
+    # or rely on what's installed in the image.
     # Since we copy source in Dockerfile, we don't strictly *need* -e . unless developing.
     # For production-like consistency, we use the installed package.
     command: sh -c "python -m streamlit run apps/refinery/admin_panel.py --server.port 8501 --server.address 0.0.0.0"

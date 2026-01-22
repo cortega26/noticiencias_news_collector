@@ -11,4 +11,3 @@
 - `python run_collector.py --help`
 - `python -m noticiencias.config_manager --help`
 - `python -m scripts.healthcheck --help`
-

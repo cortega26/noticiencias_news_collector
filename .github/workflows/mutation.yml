@@ -30,4 +30,3 @@ jobs:
         run: |
           mutmut run --CI
           mutmut results
-

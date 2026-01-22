@@ -360,11 +360,11 @@ class NewsCollectorSystem:
     def export_latest_articles(self, file_path: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
         """
         Exports the latest top-scored articles to a JSON schema.
-        
+
         Args:
             file_path: Optional path to write the JSON file to.
             limit: Number of articles to export.
-            
+
         Returns:
             The export dictionary payload.
         """
@@ -375,7 +375,7 @@ class NewsCollectorSystem:
             # Get articles
             # Note: exclude_published=True allows Refinery to only see what needs work
             articles = self.db_manager.get_articles_by_score(limit=limit, exclude_published=True)
-            
+
             serialized_articles = []
             for art in articles:
                 art_dict = {
@@ -397,7 +397,7 @@ class NewsCollectorSystem:
                     "components": art.score_components or {}
                 }
                 serialized_articles.append(art_dict)
-        
+
             export_payload = {
                 "schema_version": 1,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -411,10 +411,10 @@ class NewsCollectorSystem:
                 # Ensure we handle the path correctly whether string or Path
                 path_obj = Path(file_path)
                 path_obj.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 with open(path_obj, 'w', encoding='utf-8') as f:
                     json.dump(export_payload, f, indent=2, ensure_ascii=False)
-                
+
                 if self.logger:
                     self.logger.create_module_logger("system").info(f"Exported {len(serialized_articles)} articles to {path_obj}")
 
@@ -478,10 +478,10 @@ class NewsCollectorSystem:
                  await self.collector.close()
              else:
                  self.collector.close()
-        
+
         if self.db_manager:
             self.db_manager.close()
-            
+
         if self.system_logger:
             self.system_logger.info("Sistema apagado correctamente.")
 
@@ -528,11 +528,11 @@ class NewsCollectorSystem:
         """Configura los colectores del sistema."""
         try:
             from news_collector.collectors.dispatcher import CollectorDispatcher
-            
+
             self.collector = CollectorDispatcher(logger_factory=self.logger, health_tracker=self.health_tracker)
             print(f"DEBUG: System created Dispatcher with health_tracker={self.health_tracker} id={id(self.health_tracker) if self.health_tracker else 'None'}")
             self.logger.create_module_logger("collectors").info("Dispatcher de colectores configurado")
-            
+
         except Exception as e:
             self.logger.create_module_logger("collectors").error(
                 f"Error fatal configurando colectores: {str(e)}"
@@ -666,18 +666,18 @@ class NewsCollectorSystem:
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Ejecuta la fase de recolección de artículos."""
-        
+
         # Setup dry_run mock
         original_save = None
         if dry_run:
             original_save = self.db_manager.save_article
-            
+
             class DummyArticle:
                 id = 999999
-            
+
             def mock_save(*args, **kwargs):
                 return DummyArticle()
-                
+
             self.db_manager.save_article = mock_save
 
         try:
@@ -753,39 +753,39 @@ class NewsCollectorSystem:
         if dry_run:
             # En dry_run no validamos porque no hay artículos en DB
             return {"success": True, "validated_count": 0, "rejected_count": 0}
-            
+
         pending_articles = self.db_manager.get_pending_articles()
-        
+
         # Convert to list of dicts for validator, keeping reference to object
         articles_to_validate = [article.to_dict() for article in pending_articles]
         # We need content which is sometimes not in to_dict completely or we need to ensure full fields
         # validator uses: content, summary, title. to_dict has them?
         # to_dict has summary, title. Content is missing in to_dict default?
-        # Let's check Article.to_dict in models.py. 
-        # It does NOT have 'content' in to_dict (line 216 in models.py). 
+        # Let's check Article.to_dict in models.py.
+        # It does NOT have 'content' in to_dict (line 216 in models.py).
         # So we must add it manually for validation.
-        
+
         for i, article in enumerate(pending_articles):
             articles_to_validate[i]["content"] = article.content
-            
+
         validation_results = self.validator.validate_batch(articles_to_validate)
-        
+
         rejected_count = 0
         validated_count = len(pending_articles)
-        
+
         # Process invalid articles
         if validation_results["invalid"]:
             from news_collector.storage.models import Article
-            
+
             with self.db_manager.get_session() as session:
                 for invalid_item in validation_results["invalid"]:
                     article_data = invalid_item["article"]
                     reason = invalid_item["reason"]
                     rule_name = invalid_item["rule"]
-                    
+
                     # Find and update article
                     article_id = article_data["id"]
-                    
+
                     # We accept that get_session creates a new session, so we need to fetch object again
                     # or merge. Fetching is safer.
                     article = session.query(Article).filter_by(id=article_id).first()
@@ -793,7 +793,7 @@ class NewsCollectorSystem:
                         article.processing_status = "rejected"
                         article.error_message = f"Validation failed: {rule_name} - {reason}"
                         rejected_count += 1
-        
+
         self.logger.create_module_logger("validation").info(
             {
                 "event": "validation.completed",
@@ -802,10 +802,10 @@ class NewsCollectorSystem:
                 "valid": validated_count - rejected_count
             }
         )
-            
+
         return {
-            "success": True, 
-            "validated_count": validated_count, 
+            "success": True,
+            "validated_count": validated_count,
             "rejected_count": rejected_count,
             "details": validation_results
         }
@@ -830,13 +830,13 @@ class NewsCollectorSystem:
             }
 
             total_score = 0.0
-            
+
             # Prepare tasks for async execution
             tasks = []
             max_concurrency = self.config_override.get(
                 "scoring_workers"
             ) or SCORING_CONFIG.get("workers", 4)
-            
+
             # Reset metrics if supported
             if hasattr(self.scorer, "reset_cycle_metrics"):
                 self.scorer.reset_cycle_metrics()
@@ -864,7 +864,7 @@ class NewsCollectorSystem:
                     "duplication_confidence": getattr(article, "duplication_confidence", 0.0),
                     "word_count": getattr(article, "word_count", 0),
                 }
-                
+
                 payload = {
                     "article": article_data,
                     "source_config": ALL_SOURCES.get(article.source_id)
@@ -1062,7 +1062,7 @@ class NewsCollectorSystem:
             },
             "source_details": {
                 "simulation": {
-                    "success": True, 
+                    "success": True,
                     "articles_found": len(simulated_articles),
                     "articles_saved": len(simulated_articles)
                 }

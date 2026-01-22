@@ -5,12 +5,12 @@ def sanitize_title(title_input):
     if isinstance(final_title, list):
         final_title = final_title[0] if final_title else "Untitled"
     final_title = str(final_title).replace('"', '\\"')
-    
+
     return f'title: "{final_title}"'
 
 def test():
     print("--- Testing Sanitization ---")
-    
+
     # Case 1: String
     t1 = "Normal Title"
     out1 = sanitize_title(t1)
@@ -28,7 +28,7 @@ def test():
     out3 = sanitize_title(t3)
     print(f"Input: {t3} -> Output: {out3}")
     assert out3 == 'title: "Untitled"'
-    
+
     # Case 4: Quotes
     t4 = 'Title with "quotes"'
     out4 = sanitize_title(t4)

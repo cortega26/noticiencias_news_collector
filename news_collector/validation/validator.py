@@ -26,7 +26,7 @@ class ContentValidator:
     """
     Orchestrates article validation using a configured set of rules.
     """
-    
+
     def __init__(self, rules: List[ValidationRule] = None):
         self.logger = logging.getLogger("news_collector.validation")
         self.rules = rules or self._get_default_rules()
@@ -48,13 +48,13 @@ class ContentValidator:
             result = rule.validate(article)
             if not result.is_valid:
                 return result
-        
+
         return ValidationResult(is_valid=True)
 
     def validate_batch(self, articles: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
         """
         Validates a list of articles.
-        
+
         Returns:
             Dict containing:
             - 'valid': List of valid articles
@@ -62,7 +62,7 @@ class ContentValidator:
         """
         valid_articles = []
         invalid_articles = []
-        
+
         for article in articles:
             result = self.validate_article(article)
             if result.is_valid:

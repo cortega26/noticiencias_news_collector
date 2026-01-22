@@ -8,7 +8,7 @@ sys.path.append("/home/cortega26/noticiencias_news_collector")
 try:
     from noticiencias.config_schema import Config
     print(f"Inspecting Config keys: {list(Config.model_fields.keys())}")
-    
+
     if 'github' in Config.model_fields:
         print("✅ 'github' field IS present in Config schema.")
         try:

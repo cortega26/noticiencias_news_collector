@@ -14,7 +14,7 @@ permissions:
 jobs:
   collect-and-commit:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -48,10 +48,10 @@ jobs:
       run: |
         git config --global user.name "Noticiencias Bot"
         git config --global user.email "bot@noticiencias.com"
-        
+
         # Check for changes in data/ folder
         git add data/exports/latest_articles.json
-        
+
         # Only commit if there are changes
         if git diff --staged --quiet; then
           echo "No changes to commit."
@@ -68,4 +68,3 @@ jobs:
           --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
           --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
           --assignee ${{ github.actor }}
-

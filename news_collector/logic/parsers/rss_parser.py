@@ -35,15 +35,15 @@ class RssParser:
         # We don't limit here (the collector limits *fetched* items, but parser should just parse what it's given)
         # However, to match legacy behavior, we can handle slicing in the collector.
         # But wait, looking at legacy code: for entry in parsed_feed.entries[:fetch_limit]
-        
+
         for entry in parsed_feed.entries:
             try:
                 original_url = entry.get("link", "")
                 if not original_url:
                     continue
-                    
+
                 pub_dt, pub_off_min, pub_tz_name = self._parse_timestamp(entry)
-                
+
                 candidate = {
                     "title": self._clean_title(entry.get("title", "Sin título")),
                     "url": canonicalize_url(original_url),
@@ -58,15 +58,15 @@ class RssParser:
                     "source_metadata": self._extract_source_metadata(entry, feed_info),
                     "entry_ref": entry # Kept for backward compat if needed, but risky for serialization
                 }
-                
+
                 # Basic validation
                 if len(candidate["title"]) < 5:
                     continue
-                    
+
                 candidates.append(candidate)
             except Exception:
                 continue
-                
+
         return candidates
 
     def _parse_timestamp(self, entry) -> Tuple[datetime, int, str]:
@@ -97,10 +97,10 @@ class RssParser:
                     content = content[0].get("value", "") if isinstance(content[0], dict) else str(content[0])
                 elif isinstance(content, dict):
                     content = content.get("value", "")
-                
+
                 if content and isinstance(content, str):
                     cleaned = clean_html(content)
-                    if len(cleaned) >= 50: # Min content length from settings? 
+                    if len(cleaned) >= 50: # Min content length from settings?
                         # Hardcoding 50 for now as safe default, or pass in config.
                         return cleaned
         return ""
@@ -109,7 +109,7 @@ class RssParser:
         authors = []
         if hasattr(entry, "author") and entry.author:
             authors.append(self._clean_title(entry.author)) # clean_text logic
-        
+
         if hasattr(entry, "authors") and entry.authors:
             for author in entry.authors:
                 if isinstance(author, dict):
@@ -118,13 +118,13 @@ class RssParser:
                     name = str(author)
                 if name:
                     authors.append(self._clean_title(name))
-                    
+
         # Custom tags
         if hasattr(entry, "tags"):
             for tag in entry.tags:
                 if "author" in tag.get("term", "").lower():
                     authors.append(self._clean_title(tag.get("term", "")))
-                    
+
         return list(set(authors))
 
     def _extract_image_url(self, entry) -> Optional[str]:
@@ -157,16 +157,16 @@ class RssParser:
         doi = self._extract_doi(entry)
         if doi:
             metadata["doi"] = doi
-            
+
         if hasattr(entry, "tags") and entry.tags:
             metadata["tags"] = [tag.get("term", "") for tag in entry.tags if tag.get("term")]
-            
+
         if feed_info and hasattr(feed_info, "title"):
             metadata["feed_title"] = feed_info.title
-            
+
         if hasattr(entry, "id") and entry.id:
             metadata["entry_id"] = entry.id
-            
+
         return metadata
 
     def _extract_doi(self, entry) -> Optional[str]:
@@ -178,7 +178,7 @@ class RssParser:
              for link in entry.links:
                  if link.get("href"):
                      search_fields.append(link["href"])
-                     
+
         for field in search_fields:
             if field and isinstance(field, str):
                 match = re.search(doi_pattern, field, re.IGNORECASE)

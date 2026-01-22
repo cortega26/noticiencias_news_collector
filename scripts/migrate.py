@@ -12,8 +12,8 @@ Usage:
 """
 
 import os
-import sys
 import subprocess
+import sys
 from typing import List
 
 import click
@@ -62,7 +62,7 @@ def history():
 def run_alembic(args: List[str]):
     """Run alembic command with proper environment."""
     cmd = ["python", "-m", "alembic"] + args
-    
+
     # Note: runtime schema bootstrapping uses DatabaseManager.create_all +
     # _run_schema_migrations. Alembic is only for manual/production workflows.
     # We don't need to pass DB url here because env.py reads it from app config.
