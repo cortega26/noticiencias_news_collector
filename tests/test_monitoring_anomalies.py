@@ -11,7 +11,7 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from monitoring import (
+from news_collector.monitoring import (
     AutoSuppressionManager,
     CanaryCheck,
     CanaryRunner,
@@ -25,10 +25,10 @@ from monitoring import (
     SourceWindowStats,
     default_quality_report_generator,
 )
-from monitoring.canary import build_canary_alerts
-from monitoring.common import Severity
-from monitoring.detectors import ContentShiftThresholds
-from monitoring.io import load_monitoring_dataset
+from news_collector.monitoring.canary import build_canary_alerts
+from news_collector.monitoring.common import Severity
+from news_collector.monitoring.detectors import ContentShiftThresholds
+from news_collector.monitoring.io import load_monitoring_dataset
 
 
 UTC = timezone.utc
