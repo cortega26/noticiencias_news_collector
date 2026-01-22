@@ -30,9 +30,6 @@ SECRET_SEVERITY_DEFAULT = "HIGH"
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Document the rationale and review cadence in SECURITY.md under the Suppression Policy table.
 PIP_AUDIT_ALLOWLIST: dict[str, str] = {
-    "GHSA-q2x7-8rv6-6q7h": "trufflehog3==3.0.10 pins jinja2==3.1.4",
-    "GHSA-gmj6-6f8f-6699": "trufflehog3==3.0.10 pins jinja2==3.1.4",
-    "GHSA-cpwx-vrp4-4pq7": "trufflehog3==3.0.10 pins jinja2==3.1.4",
 }
 
 
@@ -181,31 +178,7 @@ def _secret_is_allowlisted(
     )
 
 
-def trufflehog_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
-    data = _load_json(report_path, [])
-    path_patterns, secret_patterns = _build_secret_allowlist()
-    findings: List[Dict[str, Any]] = []
-    for record in data:
-        rule = record.get("rule", {})
-        severity = (rule.get("severity") or "LOW").upper()
-        path = record.get("path", "")
-        secret = record.get("secret", "")
-        if _secret_is_allowlisted(
-            path=path,
-            secret=secret,
-            path_patterns=path_patterns,
-            secret_patterns=secret_patterns,
-        ):
-            continue
-        if SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK[threshold]:
-            findings.append(
-                {
-                    "path": path,
-                    "rule_id": rule.get("id"),
-                    "severity": severity,
-                }
-            )
-    return findings
+
 
 
 def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
@@ -252,7 +225,6 @@ def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]
 FINDER_MAP = {
     "pip-audit": pip_audit_findings,
     "bandit": bandit_findings,
-    "trufflehog": trufflehog_findings,
     "gitleaks": gitleaks_findings,
 }
 

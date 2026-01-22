@@ -23,9 +23,7 @@ anyio==4.12.0 \
 attrs==20.3.0 \
     --hash=sha256:31b2eced602aa8423c2aea9c76a724617ed67cf9513173fd3a4f03e3a929c7e6 \
     --hash=sha256:832aa3cde19744e49938b91fea06d69ecb9e649c93ba974535d08ad92164f700
-    # via
-    #   jsonschema
-    #   trufflehog3
+    # via jsonschema
 bandit==1.8.6 \
     --hash=sha256:3348e934d736fcdb68b6aa4030487097e23a501adf3e7827b63658df464dddd0 \
     --hash=sha256:dbfe9c25fc6961c2078593de55fd19f2559f9e45b99f1272341f5b95dea4e56b
@@ -177,7 +175,6 @@ gitpython==3.1.41 \
     # via
     #   noticiencias-news-collector (pyproject.toml)
     #   streamlit
-    #   trufflehog3
 greenlet==3.3.0 \
     --hash=sha256:047ab3df20ede6a57c35c14bf5200fcf04039d50f908270d3f9a7a82064f543b \
     --hash=sha256:087ea5e004437321508a8d6f20efc4cfec5e3c30118e1417ea96ed1d93950527 \
@@ -253,7 +250,6 @@ jinja2==3.1.4 \
     # via
     #   altair
     #   pydeck
-    #   trufflehog3
 joblib==1.5.3 \
     --hash=sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713 \
     --hash=sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3
@@ -1157,9 +1153,7 @@ pyyaml==6.0.1 \
     --hash=sha256:fca0e3a251908a499833aa292323f32437106001d436eca0e6e7833256674585 \
     --hash=sha256:fd1592b3fdf65fff2ad0004b5e363300ef59ced41c2e6b3a99d4089fa8c5435d \
     --hash=sha256:fd66fc5d0da6d9815ba2cebeb4205f95818ff4b79c3ebe268e75d961704af52f
-    # via
-    #   bandit
-    #   trufflehog3
+    # via bandit
 regex==2025.11.3 \
     --hash=sha256:04d2765516395cf7dda331a244a3282c0f5ae96075f728629287dfa6f76ba70a \
     --hash=sha256:087511f5c8b7dfbe3a03f5d5ad0c2a33861b1fc387f21f6f60825a44865a385a \
@@ -1531,10 +1525,6 @@ tqdm==4.67.1 \
     --hash=sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2 \
     --hash=sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2
     # via nltk
-trufflehog3==3.0.10 \
-    --hash=sha256:00374b361c1ecb38f6e573bcbf39ebe55fd51f5b21aede05b685d2541feaa0a9 \
-    --hash=sha256:248a56005d4ad7693eca895ccecd14480c021a12178f01ac757e090bb1687be8
-    # via noticiencias-news-collector (pyproject.toml)
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
