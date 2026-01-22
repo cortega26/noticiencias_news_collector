@@ -177,9 +177,9 @@ def _select_export_articles(
     return articles, selected_path
 
 
-def run_collector_script(source_dir: Path, fast_mode: bool = False):
+def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: bool = False):
     """Runs the news collector direct via API."""
-    logger.info("Starting News Collector (Direct API)...")
+    logger.info(f"Starting News Collector (Direct API)... Dry Run: {dry_run}")
     
     try:
         # 1. Configuration
@@ -204,19 +204,27 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False):
         async def _run_and_export():
              try:
                  # Run Collection
-                 await system.run_collection_cycle(dry_run=False)
+                 await system.run_collection_cycle(dry_run=dry_run)
                  
-                 # Export Logic
-                 target_export_path = project_root / "data/exports/latest_articles.json"
+                 # Export Logic - skip if dry_run? DB dry run generally means no persistence, 
+                 # but we might still want to see what WOULD be exported.
+                 # Usually collection cycle dry_run returns results but doesn't db save.
+                 # Let's assume we proceed to export logic if we have results in mem?
+                 # System.export_articles reads from DB. So dry_run probably yields nothing in DB.
                  
-                 logger.info(f"Exporting results to {target_export_path}")
-                 
-                 # Use unified system export
-                 await asyncio.to_thread(
-                     system.export_latest_articles, 
-                     file_path=target_export_path, 
-                     limit=50
-                 )
+                 if not dry_run:
+                     target_export_path = project_root / "data/exports/latest_articles.json"
+                     
+                     logger.info(f"Exporting results to {target_export_path}")
+                     
+                     # Use unified system export
+                     await asyncio.to_thread(
+                         system.export_latest_articles, 
+                         file_path=target_export_path, 
+                         limit=50
+                     )
+                 else:
+                     logger.info("Dry Run: Skipping JSON export (no DB changes).")
                     
              finally:
                  if hasattr(system, 'shutdown'):
@@ -242,7 +250,7 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False):
         traceback.print_exc()
 
 
-def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False):
+def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False, dry_run=False):
     """
     Main entry point for the Noticiencias Refinery.
     
@@ -251,11 +259,12 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         process_id (str): Optional ID or Title to filter processing.
         dev (bool): If True, enables development features like mock data injection.
         export_path (str): Optional path to a specific JSON export to use.
+        dry_run (bool): If True, simulates collection without saving to DB.
         
     Returns:
         dict: Execution capabilities summary or status.
     """
-    logger.info("Starting Noticiencias Refinery...")
+    logger.info(f"Starting Noticiencias Refinery... (Dry Run={dry_run})")
     
     try:
         config = load_config()
@@ -310,7 +319,8 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
     # SKIP if process_id is set (Refine Only Mode) to separate workflows
     if not process_id:
-        run_collector_script(SOURCE_DIR, fast_mode=fast_mode)
+        # Pass dry_run
+        run_collector_script(SOURCE_DIR, fast_mode=fast_mode, dry_run=dry_run)
     else:
         logger.info(f"Skipping Collector (Refine Only Mode for ID: {process_id})")
 

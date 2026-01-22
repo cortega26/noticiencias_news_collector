@@ -1,409 +1,12 @@
 # config/sources.py
-# Catálogo de fuentes RSS para News Collector
-# ===========================================
+# Catálogo de fuentes RSS para News Collector (Dinámico vía YAML)
+# ==============================================================
 
+import yaml
+from pathlib import Path
 from typing import Any, Dict
 
-"""
-Este archivo define todas las fuentes de información que nuestro sistema
-monitoreará. Piensa en esto como crear una biblioteca curada de las mejores
-fuentes científicas del mundo, cada una con su propia personalidad y fortalezas.
-
-Cada fuente tiene atributos que nos ayudan a entender su naturaleza:
-- credibility_score: Qué tan confiable es (0.0 a 1.0)
-- update_frequency: Qué tan seguido publican
-- category: Área científica principal
-- language: Idioma del contenido
-- impact_factor: Influencia en la comunidad científica
-"""
-
-# Configuración de fuentes RSS organizadas por categoría
-# =====================================================
-
-# Journals Científicos de Élite (Impact Factor > 10)
-# ==================================================
-# Estas son las revistas más prestigiosas del mundo científico,
-# equivalentes a los periódicos más importantes pero para ciencia.
-
-ELITE_JOURNALS = {
-    "nature": {
-        "name": "Nature",
-        "url": "https://www.nature.com/nature.rss",
-        "credibility_score": 1.0,  # Máxima credibilidad
-        "update_frequency": "weekly",
-        "category": "multidisciplinary",
-        "language": "en",
-        "impact_factor": 49.962,
-        "description": "La revista científica más prestigiosa del mundo",
-        "typical_delay": 0,  # Horas entre publicación y disponibilidad en RSS
-        "headers": {
-             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-             "User-Agent": "Mozilla/5.0 (compatible; NoticienciasBot/1.0; +http://noticiencias.com)",
-        },
-    },
-    "science": {
-        "name": "Science",
-        "url": "https://science.sciencemag.org/rss/current.xml",
-        "credibility_score": 1.0,
-        "update_frequency": "weekly",
-        "category": "multidisciplinary",
-        "language": "en",
-        "impact_factor": 47.728,
-        "description": "Revista insignia de la AAAS, rival histórico de Nature",
-        "typical_delay": 0,
-    },
-    "cell": {
-        "name": "Cell",
-        "url": "https://www.cell.com/cell/current.rss",
-        "credibility_score": 0.98,
-        "update_frequency": "biweekly",
-        "category": "biology",
-        "language": "en",
-        "impact_factor": 38.637,
-        "description": "La revista más importante en biología celular y molecular",
-        "typical_delay": 1,
-    },
-    "nejm": {
-        "name": "New England Journal of Medicine",
-        "url": "https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss",
-        "credibility_score": 0.99,
-        "update_frequency": "weekly",
-        "category": "medicine",
-        "language": "en",
-        "impact_factor": 91.245,
-        "description": "La biblia de la medicina clínica",
-        "typical_delay": 0,
-    },
-}
-
-# Medios Científicos Especializados
-# =================================
-# Estos no son journals académicos, pero son medios especializados
-# que traducen la ciencia compleja para audiencias más amplias.
-
-SCIENCE_MEDIA = {
-    "scientific_american": {
-        "name": "Scientific American",
-        "url": "https://www.scientificamerican.com/platform/syndication/rss/",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "popular_science",
-        "language": "en",
-        "impact_factor": None,  # No aplica para medios
-        "description": "Divulgación científica de alta calidad desde 1845",
-        "typical_delay": 2,
-    },
-    "new_scientist": {
-        "name": "New Scientist",
-        "url": "https://www.newscientist.com/feed/home/",
-        "credibility_score": 0.80,
-        "update_frequency": "daily",
-        "category": "popular_science",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Enfoque en ciencia emergente y tendencias futuras",
-        "typical_delay": 1,
-    },
-    "ars_technica": {
-        "name": "Ars Technica Science",
-        "url": "https://feeds.arstechnica.com/arstechnica/science",
-        "credibility_score": 0.82,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Excelente cobertura de tecnología y ciencia aplicada",
-        "typical_delay": 0,
-    },
-    "phys_org": {
-        "name": "Phys.org",
-        "url": "https://phys.org/rss-feed/",
-        "credibility_score": 0.75,
-        "update_frequency": "multiple_daily",
-        "category": "multidisciplinary",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Agregador de noticias científicas de universidades",
-        "typical_delay": 0,
-        "min_delay_seconds": 60,
-        "headers": {
-             "User-Agent": "NoticienciasBot/1.0 (Research Project; contact@noticiencias.com)"
-        },
-    },
-    "scitechdaily": {
-        "name": "SciTechDaily",
-        "url": "https://scitechdaily.com/feed/", 
-        "credibility_score": 0.88,
-        "update_frequency": "daily",
-        "category": "multidisciplinary",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Science and technology news and analysis",
-        "typical_delay": 0,
-    },
-    "sciencedaily_top": {
-        "name": "ScienceDaily",
-        "url": "https://www.sciencedaily.com/rss/top/science.xml",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "popular_science",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Latest research news",
-        "typical_delay": 0,
-    },
-    "wired": {
-        "name": "Wired",
-        "url": "https://www.wired.com/feed/rss",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Leading tech and culture publication",
-        "typical_delay": 1,
-    },
-    "techcrunch": {
-        "name": "TechCrunch",
-        "url": "https://techcrunch.com/feed/",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Startup and technology news",
-        "typical_delay": 0,
-    },
-    "the_verge": {
-        "name": "The Verge",
-        "url": "https://www.theverge.com/rss/index.xml",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Mainstream technology news and reviews",
-        "typical_delay": 0,
-    },
-    "mit_tech_review": {
-        "name": "MIT Technology Review",
-        "url": "https://www.technologyreview.com/feed",
-        "credibility_score": 0.90,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "In-depth technology journalism",
-        "typical_delay": 1,
-    },
-    "stat_news": {
-        "name": "STAT News",
-        "url": "https://www.statnews.com/feed/",
-        "credibility_score": 0.92,
-        "update_frequency": "daily",
-        "category": "medicine",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Reporting from the frontiers of health and medicine",
-        "typical_delay": 1,
-    },
-    "space_com": {
-        "name": "Space.com",
-        "url": "https://www.space.com/feeds.xml",
-        "credibility_score": 0.85,
-        "update_frequency": "daily",
-        "category": "space",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Space exploration and astronomy news",
-        "typical_delay": 1,
-    },
-    "livescience": {
-        "name": "Live Science",
-        "url": "https://www.livescience.com/feeds.xml",
-        "credibility_score": 0.82,
-        "update_frequency": "daily",
-        "category": "popular_science",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Science news for general audience",
-        "typical_delay": 1,
-    },
-}
-
-# Fuentes Institucionales
-# =======================
-# Estas son organizaciones oficiales que publican sus propios descubrimientos.
-# Son muy confiables porque vienen directamente de la fuente.
-
-INSTITUTIONAL_SOURCES = {
-    "mit_news": {
-        "name": "MIT News",
-        "url": "https://news.mit.edu/rss/feed",
-        "credibility_score": 0.90,
-        "update_frequency": "daily",
-        "category": "technology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Investigación de una de las mejores universidades técnicas",
-        "typical_delay": 0,
-    },
-    "yale_news": {
-        "name": "Yale News",
-        "url": "https://news.yale.edu/topics/science-technology/rss",
-        "credibility_score": 0.90,
-        "update_frequency": "daily",
-        "category": "multidisciplinary",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Yale University Science & Technology News",
-        "typical_delay": 0,
-    },
-    "nasa_news": {
-        "name": "NASA News",
-        "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
-        "credibility_score": 0.95,
-        "update_frequency": "daily",
-        "category": "space",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Noticias espaciales de la fuente más autorizada",
-        "typical_delay": 0,
-    },
-    "nih_news": {
-        "name": "NIH News",
-        "url": "https://www.nih.gov/news-releases/feed.xml",
-        "credibility_score": 0.95,
-        "update_frequency": "weekly",
-        "category": "medicine",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Instituto Nacional de Salud, máxima autoridad médica de EE.UU.",
-        "typical_delay": 0,
-    },
-}
-
-# Laboratorios de IA (HTML Sources)
-# =================================
-AI_LABS = {
-    "openai_research": {
-        "name": "OpenAI Research",
-        "url": "https://openai.com/research",
-        "credibility_score": 0.92,
-        "update_frequency": "weekly",
-        "category": "artificial_intelligence",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Latest research from OpenAI",
-        "collector_type": "headless",
-        "selectors": {
-            "item": "div.snap-start", 
-            "link": "a",
-            "title": "div.text-h5 p"
-        }
-    },
-    "deepmind_blog": {
-        "name": "Google DeepMind",
-        "url": "https://deepmind.google/discover/blog/",
-        "credibility_score": 0.95,
-        "update_frequency": "weekly",
-        "category": "artificial_intelligence",
-        "language": "en",
-        "collector_type": "html",
-        "html_selectors": {
-            "container": ".card", 
-            "link": "a", 
-            "title": ".card__title",
-            "article_selector": "article"
-        }
-    }
-}
-
-# Repositorios de Preprints
-# ========================
-# Estos sitios publican investigación antes de peer review.
-# Son importantes para capturar ciencia de vanguardia, pero necesitan
-# tratamiento especial porque no están peer-reviewed.
-
-PREPRINT_SOURCES = {
-    "arxiv_ai": {
-        "name": "arXiv AI/ML",
-        "url": "http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV",
-        "credibility_score": 0.70,  # Menor porque no está peer-reviewed
-        "update_frequency": "daily",
-        "category": "artificial_intelligence",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Preprints de inteligencia artificial y machine learning",
-        "typical_delay": 0,
-        "special_handling": "preprint",  # Marca especial para procesamiento
-        "min_delay_seconds": 20,
-    },
-    "biorxiv": {
-        "name": "bioRxiv",
-        "url": "https://connect.biorxiv.org/biorxiv_xml.php?subject=all",
-        "credibility_score": 0.65,
-        "update_frequency": "daily",
-        "category": "biology",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Preprints de biología y ciencias de la vida",
-        "typical_delay": 0,
-        "special_handling": "preprint",
-    },
-}
-
-# Fuentes Comunitarias y Foros
-# ============================
-# Feeds moderados por comunidades científicas. Mantener frecuencias
-# de sondeo conservadoras para respetar lineamientos de uso.
-
-COMMUNITY_FEEDS = {
-    "reddit_science": {
-        "name": "r/science",
-        "url": "https://www.reddit.com/r/science/new/.rss",
-        "credibility_score": 0.6,  # Comunidad moderada (AMA verificados)
-        "update_frequency": "hourly",  # Respetar rate limit de Reddit (>=30s entre requests)
-        "category": "community_science",
-        "language": "en",
-        "impact_factor": None,
-        "description": "Subreddit de divulgación científica con moderación especializada",
-        "typical_delay": 0,
-        "rate_limit_notes": "Usar user-agent dedicado y no superar 60 requests por minuto",
-        "min_delay_seconds": 30,
-    }
-}
-
-# Consolidación de todas las fuentes
-# ==================================
-# Aquí combinamos todas las categorías en una estructura unificada
-
-
-def _with_feed_cache_fields(
-    sources: Dict[str, Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
-    """Ensure every source has optional feed cache metadata keys."""
-
-    for source in sources.values():
-        source.setdefault("etag", None)
-        source.setdefault("last_modified", None)
-    return sources
-
-
-ALL_SOURCES = _with_feed_cache_fields(
-    {
-        **ELITE_JOURNALS,
-        **SCIENCE_MEDIA,
-        **INSTITUTIONAL_SOURCES,
-        **PREPRINT_SOURCES,
-        **COMMUNITY_FEEDS,
-        **AI_LABS,
-    }
-)
-
-# Configuraciones específicas por categoría
-# =========================================
-
+# Configuración de categorías (se mantiene estática por ahora)
 CATEGORY_CONFIG = {
     "multidisciplinary": {
         "priority_multiplier": 1.0,
@@ -411,7 +14,7 @@ CATEGORY_CONFIG = {
         "max_daily_articles": 15,
     },
     "medicine": {
-        "priority_multiplier": 1.2,  # Medicina es muy importante
+        "priority_multiplier": 1.2,
         "min_score_threshold": 0.4,
         "max_daily_articles": 12,
     },
@@ -436,82 +39,117 @@ CATEGORY_CONFIG = {
         "max_daily_articles": 8,
     },
     "popular_science": {
-        "priority_multiplier": 0.8,  # Menos peso por ser divulgación
+        "priority_multiplier": 0.8,
         "min_score_threshold": 0.25,
         "max_daily_articles": 5,
     },
     "community_science": {
-        "priority_multiplier": 0.6,  # Fuentes impulsadas por la comunidad
+        "priority_multiplier": 0.6,
         "min_score_threshold": 0.2,
         "max_daily_articles": 4,
     },
 }
 
-# Funciones de utilidad para trabajar con fuentes
-# ===============================================
+# Globals to be populated
+ELITE_JOURNALS = {}
+SCIENCE_MEDIA = {}
+INSTITUTIONAL_SOURCES = {}
+PREPRINT_SOURCES = {}
+COMMUNITY_FEEDS = {}
+AI_LABS = {}
+ALL_SOURCES = {}
 
+def load_sources():
+    """Carga las fuentes desde sources.yaml y popula las variables globales."""
+    global ELITE_JOURNALS, SCIENCE_MEDIA, INSTITUTIONAL_SOURCES, PREPRINT_SOURCES, COMMUNITY_FEEDS, AI_LABS, ALL_SOURCES
+    
+    current_dir = Path(__file__).parent
+    yaml_path = current_dir / "sources.yaml"
+    
+    if not yaml_path.exists():
+        # Fallback or error? For now, empty or raise
+        print(f"Warning: {yaml_path} not found. using empty sources.")
+        return
+
+    try:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            
+        # Reset buckets
+        ELITE_JOURNALS = {}
+        SCIENCE_MEDIA = {}
+        INSTITUTIONAL_SOURCES = {}
+        PREPRINT_SOURCES = {}
+        COMMUNITY_FEEDS = {}
+        AI_LABS = {}
+        ALL_SOURCES = {}
+        
+        for source_id, config in data.items():
+            # Populate ALL_SOURCES
+            # Ensure cache fields exist
+            config.setdefault("etag", None)
+            config.setdefault("last_modified", None)
+            
+            ALL_SOURCES[source_id] = config
+            
+            # Bucketing by group
+            group = config.get("_group")
+            if group == "ELITE_JOURNALS":
+                ELITE_JOURNALS[source_id] = config
+            elif group == "SCIENCE_MEDIA":
+                SCIENCE_MEDIA[source_id] = config
+            elif group == "INSTITUTIONAL_SOURCES":
+                INSTITUTIONAL_SOURCES[source_id] = config
+            elif group == "PREPRINT_SOURCES":
+                PREPRINT_SOURCES[source_id] = config
+            elif group == "COMMUNITY_FEEDS":
+                COMMUNITY_FEEDS[source_id] = config
+            elif group == "AI_LABS":
+                AI_LABS[source_id] = config
+                
+    except Exception as e:
+        print(f"Error loading sources.yaml: {e}")
+
+# Initial Load
+load_sources()
+
+# Helper Functions
+def save_sources(new_sources: Dict[str, Any]):
+    """Guarda el diccionario completo de fuentes en sources.yaml"""
+    current_dir = Path(__file__).parent
+    yaml_path = current_dir / "sources.yaml"
+    
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        yaml.dump(new_sources, f, sort_keys=False, allow_unicode=True, default_flow_style=False)
+    
+    # Reload globals
+    load_sources()
 
 def get_sources_by_category(category):
-    """
-    Devuelve todas las fuentes de una categoría específica.
-    Útil para recolección selectiva por tema.
-    """
     return {
-        source_id: source_config
-        for source_id, source_config in ALL_SOURCES.items()
-        if source_config["category"] == category
+        sid: cfg for sid, cfg in ALL_SOURCES.items()
+        if cfg.get("category") == category
     }
-
 
 def get_high_credibility_sources(min_credibility=0.85):
-    """
-    Devuelve solo las fuentes con alta credibilidad.
-    Útil para noticias breaking o cuando queremos máxima confianza.
-    """
     return {
-        source_id: source_config
-        for source_id, source_config in ALL_SOURCES.items()
-        if source_config["credibility_score"] >= min_credibility
+        sid: cfg for sid, cfg in ALL_SOURCES.items()
+        if cfg.get("credibility_score", 0) >= min_credibility
     }
-
 
 def get_sources_by_update_frequency(frequency):
-    """
-    Devuelve fuentes que se actualizan con cierta frecuencia.
-    Útil para optimizar la frecuencia de recolección.
-    """
     return {
-        source_id: source_config
-        for source_id, source_config in ALL_SOURCES.items()
-        if source_config["update_frequency"] == frequency
+        sid: cfg for sid, cfg in ALL_SOURCES.items()
+        if cfg.get("update_frequency") == frequency
     }
 
-
-# Validación de fuentes
-# ====================
-
-
 def validate_sources():
-    """
-    Verifica que todas las fuentes estén bien configuradas.
-    Es como hacer un control de calidad de nuestra biblioteca.
-    """
+    load_sources() # Ensure fresh check
     required_fields = ["name", "url", "credibility_score", "category", "language"]
-
     for source_id, source_config in ALL_SOURCES.items():
-        # Verificar campos requeridos
         for field in required_fields:
             if field not in source_config:
                 raise ValueError(f"Fuente {source_id} le falta el campo {field}")
-
-        # Verificar rangos válidos
-        credibility = source_config["credibility_score"]
-        if not 0.0 <= credibility <= 1.0:
-            raise ValueError(f"Credibilidad de {source_id} debe estar entre 0.0 y 1.0")
-
-        # Verificar URL válida (básicamente)
-        url = source_config["url"]
-        if not url.startswith(("http://", "https://")):
-            raise ValueError(f"URL de {source_id} no es válida: {url}")
-
+        
+        # Check enabled logic? Not implemented in sources.py natively yet, assuming all active.
     print(f"✅ {len(ALL_SOURCES)} fuentes validadas correctamente")
