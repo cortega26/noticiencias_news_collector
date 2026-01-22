@@ -25,7 +25,7 @@ dependencies = [
     "loguru>=0.7.3",
     "httpx>=0.28.1",
     "scikit-learn>=1.7.2",
-    "numpy>=2.3.3",
+    "numpy>=2.3.3,!=2.4.0",
     "streamlit>=1.30.0",
     "gitpython>=3.1.41",
     "watchdog>=4.0.0",
