@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>Noticiencias Science Feed</title>
+  <link>https://www.noticiencias.com/</link>
+  <description>Latest science news</description>
+  <item>
+    <title>NASA Discovery</title>
+    <link>https://www.nasa.gov/news/discovery</link>
+    <description>New planet found.</description>
+    <pubDate>Tue, 21 Jan 2026 10:00:00 GMT</pubDate>
+    <guid>https://www.nasa.gov/news/discovery</guid>
+    <category>Astronomy</category>
+    <author>admin@nasa.gov (NASA Admin)</author>
+  </item>
+  <item>
+    <title>Quantum Leap</title>
+    <link>https://science.org/quantum</link>
+    <description><![CDATA[<h3>Big breakthrough</h3><p>Details here. This content must be sufficiently long to pass the minimum length filter of fifty characters imposed by the parser logic.</p>]]></description>
+    <pubDate>Mon, 20 Jan 2026 15:30:00 -0500</pubDate>
+    <guid isPermaLink="false">unique-id-123</guid>
+  </item>
+</channel>
+</rss>
