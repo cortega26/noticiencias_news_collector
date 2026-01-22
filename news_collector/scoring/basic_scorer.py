@@ -180,17 +180,17 @@ class BasicScorer(AsyncScorer):
     ) -> Dict[str, Any]:
         """
         Score an article asynchronously using a thread executor.
-        
+
         Args:
             article_data: Dictionary containing 'article' data and optional 'source_config'.
-            
+
         Returns:
             Dictionary with scoring results.
         """
         # Extract article data and config
         article_dict = article_data.get("article", article_data)
         source_config = article_data.get("source_config")
-        
+
         class SafeNamespace:
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
@@ -205,19 +205,19 @@ class BasicScorer(AsyncScorer):
                     article_dict[date_field] = datetime.fromisoformat(val.replace('Z', '+00:00'))
                 except (ValueError, TypeError):
                     pass
-                    
+
         # Create a lightweight object to mimic Article interface for existing methods
         # This allows reusing all the private calculation methods without modification
         article_obj = SafeNamespace(**article_dict)
-        
+
         # Explicitly ensure 'collected_date' exists as datetime
         if not article_obj.collected_date:
              article_obj.collected_date = datetime.now(timezone.utc)
-             
+
         # Ensure 'article_metadata' exists if it's missing (SafeNamespace returns None, causing problems)
         if article_obj.article_metadata is None:
             article_obj.article_metadata = {}
-            
+
         # Run the synchronous scoring logic in a separate thread to avoid blocking the event loop
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
@@ -226,7 +226,7 @@ class BasicScorer(AsyncScorer):
             article_obj,
             source_config
         )
-        
+
         return result
 
     def _calculate_source_credibility_score(
@@ -291,7 +291,7 @@ class BasicScorer(AsyncScorer):
         else:
             reference_date = article.published_date
             penalty = 1.0
-        
+
         # Ensure reference_date is timezone-aware and normalized to UTC
         if reference_date.tzinfo is None:
             reference_date = reference_date.replace(tzinfo=timezone.utc)
@@ -828,7 +828,7 @@ class BasicScorer(AsyncScorer):
                 pub_date = pub_date.replace(tzinfo=timezone.utc)
             else:
                  pub_date = pub_date.astimezone(timezone.utc)
-            
+
             age = datetime.now(timezone.utc) - pub_date
             if age.days == 0:
                 factors.append("Publicado hoy (+)")

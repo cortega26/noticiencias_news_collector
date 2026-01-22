@@ -121,4 +121,3 @@ jobs:
           path: |
             collector-image.tar.gz
             image-run.md
-

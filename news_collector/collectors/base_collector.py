@@ -90,7 +90,7 @@ class BaseCollector(ABC):
         self._domain_last_request: Dict[str, float] = {}
         # Robots cache per domain (timestamp, parser)
         self._robots_cache: Dict[str, Tuple[float, robotparser.RobotFileParser]] = {}
-        
+
         self.db_manager = get_database_manager()
 
     @abstractmethod
@@ -122,12 +122,12 @@ class BaseCollector(ABC):
         # This is a synchronous wrapper around the logic, but for backward compatibility
         # we can keep the loop here or even reuse the async logic via asyncio.run if appropriate,
         # but to avoid event loop conflicts, we keep the original sync loop logic identical.
-        
+
         self._set_runtime_context(session_id=session_id, trace_id=trace_id)
         self.start_time = datetime.now(timezone.utc)
         self._emit_initial_batch_log(len(sources_config))
         self._reset_stats()
-        
+
         source_results: Dict[str, Dict[str, Any]] = {}
 
         for source_id, source_config in sources_config.items():
@@ -152,9 +152,9 @@ class BaseCollector(ABC):
         tasks = []
         for source_id, source_config in sources_config.items():
             tasks.append(self._process_single_source_async(source_id, source_config))
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         source_results = {}
         for source_id, result in zip(sources_config.keys(), results):
             if isinstance(result, Exception):
@@ -213,7 +213,7 @@ class BaseCollector(ABC):
 
     async def _process_single_source_async(self, source_id, source_config):
         try:
-            # Note: _pre_process_source might be sync, but it's usually fast. 
+            # Note: _pre_process_source might be sync, but it's usually fast.
             # If it were heavy, we'd need to asyncify it too.
             self._pre_process_source(source_id, source_config)
             source_result = await self.collect_from_source_async(source_id, source_config)
@@ -615,7 +615,7 @@ class BaseCollector(ABC):
                 "warning",
                 "collector.article.save_validation_error",
                 source_id=source_id,
-                details={"error": str(exc).split('\n')[0], "title": title[:60]}, 
+                details={"error": str(exc).split('\n')[0], "title": title[:60]},
             )
             return False
         except Exception as exc:
@@ -661,7 +661,7 @@ class BaseCollector(ABC):
                 "collector.article.validation_failed",
                 source_id=article_data.get("source_id"),
                 details={
-                    "reason": "content_too_short", 
+                    "reason": "content_too_short",
                     "length": len(content) if content else 0,
                     "min_required": TEXT_PROCESSING_CONFIG["min_content_length"]
                 },
@@ -692,9 +692,9 @@ class BaseCollector(ABC):
         """
         saved_count = 0
         min_length = TEXT_PROCESSING_CONFIG.get("min_content_length", 1000)
-        
+
         valid_candidates = []
-        
+
         # Filter 1: Validation & Content Length (Pre-validation)
         for data in articles_data:
             try:
@@ -703,7 +703,7 @@ class BaseCollector(ABC):
                     article = CollectorArticleModel(**data)
                 else:
                     article = data
-                
+
                 # Strict length check (business rule filter)
                 if len(article.content or "") < min_length:
                      self._emit_log("info", "collector.filter.length_rejected", source_id=source_id, details={"url": str(article.url), "len": len(article.content or "")})
@@ -714,9 +714,9 @@ class BaseCollector(ABC):
                 if self.health_tracker:
                     self.health_tracker.record_success(source_id, "validate")
                     self.health_tracker.record_success(source_id, "filter") # Length passed
-                
+
                 valid_candidates.append(article)
-                
+
             except Exception as e:
                 # Validation error
                 error_msg = str(e)
@@ -724,7 +724,7 @@ class BaseCollector(ABC):
                 if self.health_tracker:
                     self.health_tracker.record_failure(source_id, "collector.validate_payload", "validation_error", {"error": error_msg})
                 continue
-                
+
         # Filter 2: Duplicate Check (Already Published)
         unique_candidates = []
         for article in valid_candidates:
@@ -733,7 +733,7 @@ class BaseCollector(ABC):
                      self.health_tracker.record_filter_rejection(source_id, "duplicate")
                 continue
             unique_candidates.append(article)
-            
+
         # Filter 3: Top-N Sorting
         # Sort by impact factor (if we had it per article) or published_date
         unique_candidates.sort(
@@ -742,19 +742,19 @@ class BaseCollector(ABC):
             or datetime.min,
             reverse=True,
         )
-        
+
         top_n = unique_candidates[:limit]
         skipped_top_n = len(unique_candidates) - len(top_n)
         if self.health_tracker and skipped_top_n > 0:
             self.health_tracker.record_filter_rejection(source_id, "top_n", skipped_top_n)
-            
+
         # Save Phase
         for article in top_n:
             if self._save_article(article):
                 saved_count += 1
                 if self.health_tracker:
                     self.health_tracker.record_success(source_id, "save")
-                
+
         return saved_count
 
     def _clean_text(self, text: str) -> str:

@@ -17,8 +17,6 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config.settings import COLLECTION_CONFIG
-
 from src.collectors.async_rss_collector import AsyncRSSCollector
 from src.collectors.rss_collector import RSSCollector
 from src.perf import (
@@ -27,6 +25,8 @@ from src.perf import (
     ReplayEvent,
     load_replay_fixture,
 )
+
+from config.settings import COLLECTION_CONFIG
 
 
 def _percentile(values: List[float], percentile: float) -> float:

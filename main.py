@@ -57,13 +57,13 @@ def main():
             if args.export_json:
                 import json
                 from pathlib import Path
-                
+
                 export_path = Path(args.export_json)
                 export_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 # En dry-run, usamos los resultados simulados
                 # Para validación, aseguramos que la estructura coincida con lo esperado
-                
+
                 with open(export_path, "w", encoding="utf-8") as f:
                     json.dump(results, f, ensure_ascii=False, indent=2, default=str)
                 print(f"\n💾 Resultados exportados a: {export_path}")

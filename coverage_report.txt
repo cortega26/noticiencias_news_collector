@@ -68,8 +68,8 @@ _______________ test_clean_html_removes_boilerplate_and_scripts ________________
 >   @settings(max_examples=60)
                    ^^^
 
-tests/property/test_normalization_properties.py:68: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/property/test_normalization_properties.py:68:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 payload = '<html><head><script></script><style>.x{color:red}</style></head><body><div>0</div><p>Read More</p></body></html>'
 
@@ -81,7 +81,7 @@ payload = '<html><head><script></script><style>.x{color:red}</style></head><body
         assert "style" not in cleaned.lower()
 >       assert "read more" not in cleaned.lower()
 E       AssertionError: assert 'read more' not in '0read more'
-E         
+E
 E         'read more' is contained here:
 E           0read more
 E       Falsifying example: test_clean_html_removes_boilerplate_and_scripts(
@@ -99,21 +99,21 @@ sample_article = <Article(id=test_1, title='Breakthrough in Quantum Computing...
             scorer = CognitiveScorer(llm_client=mock_llm)
             scorer._get_from_cache = MagicMock(return_value=None)
             scorer._save_to_cache = MagicMock()
-    
+
             payloads = [{"article": {"title": sample_article.title, "url": sample_article.url, "summary": sample_article.summary, "content": sample_article.content}}]
-    
+
             results = await scorer.score_batch_async(payloads)
-    
+
             assert len(results) == 1
             comp = results[0]["components"]
             assert comp["cognitive_engagement_raw"] == 3.6
             assert comp["engagement"] == 0.72
             assert results[0]["cognitive_details"]["reasoning"] == "Mocked Reasoning"
-    
+
 >       asyncio.run(run_test())
 
-tests/test_hybrid_scorer.py:54: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_hybrid_scorer.py:54:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/asyncio/runners.py:194: in run
     return runner.run(main)
            ^^^^^^^^^^^^^^^^
@@ -123,17 +123,17 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
     return future.result()
            ^^^^^^^^^^^^^^^
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     async def run_test():
         scorer = CognitiveScorer(llm_client=mock_llm)
         scorer._get_from_cache = MagicMock(return_value=None)
         scorer._save_to_cache = MagicMock()
-    
+
         payloads = [{"article": {"title": sample_article.title, "url": sample_article.url, "summary": sample_article.summary, "content": sample_article.content}}]
-    
+
         results = await scorer.score_batch_async(payloads)
-    
+
         assert len(results) == 1
         comp = results[0]["components"]
 >       assert comp["cognitive_engagement_raw"] == 3.6
@@ -153,7 +153,7 @@ sample_article = <Article(id=test_1, title='Breakthrough in Quantum Computing...
     def test_cache_hit_skips_llm(mock_llm, sample_article):
         async def run_test():
             scorer = CognitiveScorer(llm_client=mock_llm)
-    
+
             # Mock cache hit
             # Note: In real code, _get_from_cache appends " (Cached)" to reasoning.
             # Since we mock it, we must match expected behavior or just assert what we return.
@@ -164,22 +164,22 @@ sample_article = <Article(id=test_1, title='Breakthrough in Quantum Computing...
                 "reasoning": "Old cache (Cached)"
             }
             scorer._get_from_cache = MagicMock(return_value=cached_val)
-    
+
             payloads = [{"article": {"title": sample_article.title, "url": sample_article.url}}]
-    
+
             # Run
             results = await scorer.score_batch_async(payloads)
-    
+
             # Assert
             assert results[0]["components"]["engagement"] == 0.9
             assert "Cached" in results[0]["explanation"]["reasoning"]
             # Ensure LLM generate was NOT called
             mock_llm.generate.assert_not_called()
-    
+
 >       asyncio.run(run_test())
 
-tests/test_hybrid_scorer.py:107: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_hybrid_scorer.py:107:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/asyncio/runners.py:194: in run
     return runner.run(main)
            ^^^^^^^^^^^^^^^^
@@ -189,11 +189,11 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
     return future.result()
            ^^^^^^^^^^^^^^^
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     async def run_test():
         scorer = CognitiveScorer(llm_client=mock_llm)
-    
+
         # Mock cache hit
         # Note: In real code, _get_from_cache appends " (Cached)" to reasoning.
         # Since we mock it, we must match expected behavior or just assert what we return.
@@ -204,12 +204,12 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
             "reasoning": "Old cache (Cached)"
         }
         scorer._get_from_cache = MagicMock(return_value=cached_val)
-    
+
         payloads = [{"article": {"title": sample_article.title, "url": sample_article.url}}]
-    
+
         # Run
         results = await scorer.score_batch_async(payloads)
-    
+
         # Assert
 >       assert results[0]["components"]["engagement"] == 0.9
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

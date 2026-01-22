@@ -44,7 +44,7 @@ class EditorialCouncil:
         Returns:
             CouncilResult con la decisión y feedback, o None si falla el LLM.
         """
-        
+
         # Prepare input for the prompt
         article_text = f"TITULAR: {title}\n\nRESUMEN: {summary}\n\n"
         if content:
@@ -78,13 +78,13 @@ class EditorialCouncil:
 
     def _parse_verdict(self, data: Dict[str, Any]) -> CouncilResult:
         """Applies the Publication Rules to the JSON response."""
-        
+
         assessments = data.get("council_assessments", [])
-        
+
         total_score = 0.0
         scores_map = {}
         min_score = 5.0
-        
+
         for item in assessments:
             role = item.get("role", "Unknown")
             score = float(item.get("score", 0))
@@ -92,24 +92,24 @@ class EditorialCouncil:
             total_score += score
             if score < min_score:
                 min_score = score
-        
+
         count = len(assessments) or 1
         average = total_score / count
-        
+
         editor_approval = data.get("editor_approval", "").lower()
         is_editor_approved = "sí" in editor_approval or "si" in editor_approval
-        
+
         # Rule of Publication
         # - Promedio >= 3.5
         # - Ningún rol puntúa < 2
         # - Editor responde explícitamente "Sí..."
-        
+
         approved = (
             average >= 3.5 and
             min_score >= 2.0 and
             is_editor_approved
         )
-        
+
         return CouncilResult(
             is_approved=approved,
             average_score=average,

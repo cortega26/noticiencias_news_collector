@@ -88,7 +88,7 @@ class GitHubPublisher:
         """Clones a repository to a target directory."""
         self._cleanup_dir(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        
+
         auth_url = self._safe_repo_url(repo_url)
         env = self._auth_env()
 
@@ -98,7 +98,7 @@ class GitHubPublisher:
     def create_branch(self, repo: git.Repo, branch_prefix: str = "news/article", explicit_name: str | None = None) -> str:
         """
         Creates a new branch.
-        
+
         Args:
             repo: The git repository object.
             branch_prefix: Prefix for the branch name (e.g. 'news/article').
@@ -111,16 +111,16 @@ class GitHubPublisher:
             branch_name = f"{branch_prefix}-{safe_suffix}"
         else:
             branch_name = f"{branch_prefix}-{uuid.uuid4().hex[:8]}"
-            
-        # Check if branch exists to avoid error? 
-        # git.Repo.create_head will raise if it exists. 
+
+        # Check if branch exists to avoid error?
+        # git.Repo.create_head will raise if it exists.
         # For idempotency, we should check.
         if branch_name in repo.heads:
             logger.info(f"Branch {branch_name} already exists. Checking it out.")
             new_branch = repo.heads[branch_name]
         else:
             new_branch = repo.create_head(branch_name)
-            
+
         new_branch.checkout()
         logger.info(f"Checked out branch: {branch_name}")
         return branch_name
@@ -146,18 +146,18 @@ class GitHubPublisher:
         parts = clean_url.split("/")
         owner = parts[-2]
         repo_name = parts[-1]
-        
+
         api_url = f"https://api.github.com/repos/{owner}/{repo_name}/pulls"
-        
+
         payload = {
             "title": title,
             "body": body,
             "head": branch_name,
             "base": base_branch
         }
-        
+
         response = requests.post(api_url, json=payload, headers=self.headers)
-        
+
         if response.status_code == 201:
             pr_url = response.json().get("html_url")
             logger.info(f"Pull Request created successfully: {pr_url}")

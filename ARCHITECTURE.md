@@ -173,4 +173,3 @@ TARGET_REPO_URL=https://github.com/cortega26/noticiencias
 
 **Issue: "Ollama Connection Error"**
 *   **Fix:** Ensure Ollama is running (`ollama serve`) and the URL in `.env` or the UI settings is correct.
-

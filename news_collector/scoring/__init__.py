@@ -29,7 +29,7 @@ def create_scorer(weights=None, mode: str | None = None):
     """Factory returning the configured scorer implementation."""
     selected_mode = (mode or SCORING_CONFIG.get("mode", "advanced")).lower()
     print(f"DEBUG: create_scorer selected_mode={selected_mode} (from config: {SCORING_CONFIG.get('mode')})")
-    
+
     if selected_mode == "cognitive":
         llm_client = None
 
@@ -38,12 +38,12 @@ def create_scorer(weights=None, mode: str | None = None):
             weights=weights or SCORING_CONFIG.get("weights", COGNITIVE_SCORING_WEIGHTS),
             llm_client=llm_client
         )
-        
+
     if selected_mode == "basic":
         return BasicScorer(
             weights or SCORING_CONFIG.get("weights", DEFAULT_SCORING_WEIGHTS)
         )
-    
+
     # Default/Advanced
     return FeatureBasedScorer(SCORING_CONFIG)
 
@@ -56,11 +56,11 @@ def get_default_scorer():
 def score_multiple_articles(articles, scorer=None):
     scorer = scorer or get_default_scorer()
     if isinstance(scorer, BasicScorer):
-        # CognitiveScorer inherits from BasicScorer, so this might work, 
-        # but check if _basic_score_multiple is compatible. 
+        # CognitiveScorer inherits from BasicScorer, so this might work,
+        # but check if _basic_score_multiple is compatible.
         # _basic_score_multiple usually iterates and calls score_article.
         return _basic_score_multiple(articles, scorer)
-    
+
     results = []
     for article in articles:
         results.append(scorer.score_article(article))

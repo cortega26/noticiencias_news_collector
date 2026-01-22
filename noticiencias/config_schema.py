@@ -626,10 +626,10 @@ class LoggingConfig(StrictModel):
 
 class GitHubConfig(StrictModel):
     """GitHub integration settings."""
-    
+
     token: Optional[str] = Field(
         default=None,
-        description="Personal Access Token for GitHub API.", 
+        description="Personal Access Token for GitHub API.",
     )
     user_name: str = Field(
         default="Noticiencias Bot",
@@ -647,7 +647,7 @@ class GitHubConfig(StrictModel):
         default="https://github.com/cortega26/noticiencias",
         description="URL of the target publishing repository.",
     )
-    
+
     @field_validator("token", mode="before")
     @classmethod
     def _blank_to_none(cls, v):
@@ -664,7 +664,7 @@ class OllamaConfig(StrictModel):
     )
     model: str = Field(
         default="llama3.3",
-        description="Model tag to use for generation.", 
+        description="Model tag to use for generation.",
     )
     timeout: PositiveInt = Field(
         default=300,

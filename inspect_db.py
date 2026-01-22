@@ -10,12 +10,12 @@ try:
         print("Status Counts:")
         for status, count in counts:
             print(f"  {status}: {count}")
-            
+
         # Get recent pending articles
         pending = session.query(Article).filter(Article.processing_status == 'pending').order_by(Article.collected_date.desc()).limit(5).all()
         print("\nTop 5 Pending Articles:")
         for a in pending:
             print(f"  - [{a.processing_status}] {a.title} (ID: {a.id})")
-            
+
 except Exception as e:
     print(f"Error: {e}")

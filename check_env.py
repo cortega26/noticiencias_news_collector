@@ -22,7 +22,7 @@ def check_imports():
             print(f"❌ Missing: {pkg}")
         else:
             print(f"✅ Found: {pkg}")
-    
+
     if missing:
         print("\n⚠️  Environment Incomplete. Please run:")
         print("    pip install -r requirements.txt")

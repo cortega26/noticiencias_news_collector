@@ -70,4 +70,3 @@ jobs:
           name: security-reports
           path: reports/security
           if-no-files-found: warn
-

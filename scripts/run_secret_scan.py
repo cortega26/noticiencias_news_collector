@@ -11,7 +11,9 @@ def _severity_choice(value: str) -> str:
     valid = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
     upper_val = value.upper()
     if upper_val not in valid:
-        raise argparse.ArgumentTypeError(f"Invalid severity: {value}. Must be one of {valid}")
+        raise argparse.ArgumentTypeError(
+            f"Invalid severity: {value}. Must be one of {valid}"
+        )
     return upper_val
 
 
@@ -42,9 +44,18 @@ def build_command(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run trufflehog3 wrapper.")
-    parser.add_argument("--output", type=Path, required=True, help="Path to output JSON report.")
-    parser.add_argument("--severity", type=_severity_choice, default="HIGH", help="Minimum severity (unused in runner, kept for compat).")
-    parser.add_argument("target", type=_ensure_directory, help="Target directory to scan.")
+    parser.add_argument(
+        "--output", type=Path, required=True, help="Path to output JSON report."
+    )
+    parser.add_argument(
+        "--severity",
+        type=_severity_choice,
+        default="HIGH",
+        help="Minimum severity (unused in runner, kept for compat).",
+    )
+    parser.add_argument(
+        "target", type=_ensure_directory, help="Target directory to scan."
+    )
 
     args = parser.parse_args()
 
@@ -57,6 +68,7 @@ def main() -> int:
 
     # We import subprocess only when running, to keep top-level side-effects low
     import subprocess
+
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError as e:

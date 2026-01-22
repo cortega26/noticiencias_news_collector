@@ -179,22 +179,22 @@ class FeatureBasedScorer(AsyncScorer):
     ) -> Dict[str, Any]:
         """
         Score an article asynchronously using a thread executor.
-        
+
         Args:
             article_data: Dictionary containing 'article' data and optional 'source_config'.
-            
+
         Returns:
             Dictionary with scoring results.
         """
         # FeatureBasedScorer already supports dicts via _get_attr helper
         article = article_data.get("article", article_data)
         source_config = article_data.get("source_config")
-        
+
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
-            None, 
-            self.score_article, 
-            article, 
+            None,
+            self.score_article,
+            article,
             source_config
         )
 

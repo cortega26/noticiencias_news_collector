@@ -5,10 +5,10 @@ import sys
 try:
     with open("data/exports/latest_articles.json", "r") as f:
         data = json.load(f)
-    
+
     articles = data.get("articles", [])
     print(f"Searching {len(articles)} articles for ID 213...")
-    
+
     found = False
     for article in articles:
         aid = str(article.get("id", ""))
@@ -22,7 +22,7 @@ try:
             print(f"  Content Length: {len(content) if content else 0}")
             print(f"  Summary Length: {len(summary) if summary else 0}")
             break
-            
+
     if not found:
         print("❌ ID 213 NOT found in export.")
 

@@ -459,6 +459,7 @@ jobs:
       - audit-todos
       - build-artifacts
     if: ${{ github.event_name == 'push' && always() }}
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: write

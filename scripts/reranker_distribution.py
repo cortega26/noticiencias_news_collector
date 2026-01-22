@@ -14,9 +14,9 @@ import sys
 
 sys.path.insert(0, str(ROOT))
 
-from config import SCORING_CONFIG
-
 from src.reranker import rerank_articles
+
+from config import SCORING_CONFIG
 
 
 def summarize(counter: Counter, total: int) -> Dict[str, str]:

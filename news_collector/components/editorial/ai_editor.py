@@ -25,13 +25,13 @@ class EditorAgent:
             self.min_content_length = load_config().text_processing.min_content_length
         except Exception:
             self.min_content_length = 750 # Fallback
-            
+
         self.prompts = self._load_prompts()
-        
+
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
         self.provider = OllamaProvider(
-            api_url=self.api_url, 
+            api_url=self.api_url,
             model=self.model,
             timeout=900
         )
@@ -43,7 +43,7 @@ class EditorAgent:
         # root is 3 levels up: ../../../
         project_root = Path(__file__).resolve().parents[3]
         prompts_path = project_root / "config" / "prompts.yaml"
-        
+
         try:
             import yaml
             if prompts_path.exists():
@@ -52,7 +52,7 @@ class EditorAgent:
             logger.warning("PyYAML not installed, falling back to basic prompts.")
         except Exception as e:
             logger.error(f"Error loading prompts: {e}")
-        
+
         # Fallback prompts if file missing or parse error
         return {
             "translator": {"system": "Translate to Spanish. Keep it neutral."},
@@ -66,14 +66,14 @@ class EditorAgent:
     def _inject_frontmatter_field(self, text: str, key: str, value: str) -> str:
         if not text.startswith("---"):
             return f"---\n{key}: \"{value}\"\n---\n\n{text}"
-            
+
         lines = text.splitlines()
         end_idx = None
         for idx in range(1, len(lines)):
             if lines[idx].strip() == "---":
                 end_idx = idx
                 break
-        
+
         if end_idx is None:
              return f"---\n{key}: \"{value}\"\n---\n\n{text}"
 
@@ -83,7 +83,7 @@ class EditorAgent:
 
         lines.insert(end_idx, f'{key}: "{value}"')
         return "\n".join(lines)
-    
+
     def _extract_markdown_content(self, text: str) -> str:
         """Helper to extract clean markdown from potential LLM chatter."""
         # If LLM wraps code in ```markdown ... ```
@@ -101,12 +101,12 @@ class EditorAgent:
         logger.info(f"Sending prompt to Ollama ({self.model})...")
         sys_preview = (system or "")[:20]
         print(f"Processing ({sys_preview}...)", end="", flush=True)
-        
+
         try:
             start_time = time.time()
             # Use provider's sync iterator which handles retries
             generator = self.provider.generate_sync(prompt, system=system, stream=True)
-            
+
             full_text = []
             count = 0
             for chunk in generator:
@@ -114,13 +114,13 @@ class EditorAgent:
                 count += 1
                 if count % 20 == 0:
                     print(".", end="", flush=True)
-            
+
             print(" Done!")
             duration = time.time() - start_time
             logger.info(f"Ollama processing complete in {duration:.2f} seconds.")
-            
+
             return "".join(full_text).strip()
-            
+
         except Exception as e:
             print("")
             logger.error(f"Error communicating with Ollama: {e}")
@@ -142,7 +142,7 @@ class EditorAgent:
         """
         result = self.provider._extract_json(text)
         if not result and "{" in text:
-             # If provider returned empty but there might be JSON, raise strict error 
+             # If provider returned empty but there might be JSON, raise strict error
              # to match original behavior of raising ValueError?
              # Original raised ValueError if no JSON found.
              # Provider returns {}
@@ -155,12 +155,12 @@ class EditorAgent:
         # Prompt explicitly for JSON in the message body as well to be safe
         prompt = f"Analyze this article and generate headlines keys: direct, question, benefit.\n\n{adapted_content[:2000]}"
         response = self._send_prompt(prompt, system=system_prompt)
-        
+
         try:
             return self._extract_json(response)
         except Exception as e:
             logger.error(f"Failed to generate headlines: {e} | Response snippet: {response[:100]}...")
-            # Fallback to empty if fails, don't crash the whole pipeline, 
+            # Fallback to empty if fails, don't crash the whole pipeline,
             # OR raise if strictly required. The original code raised, so let's log and re-raise or return empty?
             # Original raised ValueError.
             raise ValueError(f"Failed to generate headlines: {e}") from e
@@ -182,12 +182,12 @@ class EditorAgent:
         image_url = None
         source_url = None
         article_id = "unknown"
-        
+
         if isinstance(raw_text, dict):
             title = raw_text.get("title", "") or ""
             summary = raw_text.get("summary", "") or ""
             content = raw_text.get("content", "") or ""
-            
+
             # Fallback for RSS feeds where "content" is often in "summary"
             if not content and summary:
                  content = summary
@@ -211,7 +211,7 @@ class EditorAgent:
             "medicine": "Salud",
             "biology": "Salud",
             "technology": "Tecnología",
-            "artificial_intelligence": "Tecnología", 
+            "artificial_intelligence": "Tecnología",
             "engineering": "Tecnología",
             "space": "Ciencia",
             "physics": "Ciencia",
@@ -219,17 +219,17 @@ class EditorAgent:
             "community_science": "Ciencia",
             "multidisciplinary": "Ciencia"
         }
-        
+
         final_category = category_map.get(raw_category, "Ciencia")
 
         input_text = f"Title: {title}\nContent: {content}"
-        
+
         # Validation: content length
         if len(content.strip()) < self.min_content_length:
              raise ValueError(f"Content too short ({len(content)} chars). Likely paywalled or empty.")
 
         # 2. Pipeline Execution
-        
+
         # --- STAGE 1: Scientific Translation ---
         print("\n--- STAGE 1: Scientific Translation ---")
         cache_s1 = self._get_cache_path(article_id, "stage1_translation")
@@ -239,7 +239,7 @@ class EditorAgent:
         else:
              translated_text = self._translate_scientific(input_text)
              cache_s1.write_text(translated_text, encoding="utf-8")
-        
+
         # --- STAGE 2: Editorial Adaptation ---
         print("\n--- STAGE 2: Editorial Adaptation ---")
         cache_s2 = self._get_cache_path(article_id, "stage2_editorial")
@@ -250,23 +250,23 @@ class EditorAgent:
              final_content = self._adapt_editorial(translated_text)
              final_content = self._extract_markdown_content(final_content) # Cleanup
              cache_s2.write_text(final_content, encoding="utf-8")
-        
+
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
         # Stage 3 is fast enough relative to others, and depends on final content structure.
         # We could cache it, but usually we want to regenerate headlines if we tweak code.
         # For now, we won't cache Stage 3 to allow easier re-runs of the final formatting.
         headlines = self._generate_headlines(final_content)
-        
+
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
         final_title = headlines.get("direct", title) # Fallback to original if fail
-        
+
         # Sanitize title: ensure it's a string and not a list representation
         if isinstance(final_title, list):
             final_title = final_title[0] if final_title else "Untitled"
         final_title = str(final_title).replace('"', '\\"')
-        
+
         # Construct Frontmatter
         metadata_block = [
             "---",
@@ -276,12 +276,12 @@ class EditorAgent:
             f"categories: [\"{final_category}\"]",
             f"tags: [\"{raw_category}\"]"
         ]
-        
+
         if image_url:
             metadata_block.append(f"image: \"{image_url}\"")
         if source_url:
             metadata_block.append(f"source_url: \"{source_url}\"")
-        
+
         if article_id != "unknown":
              metadata_block.append(f"refinery_id: \"{article_id}\"")
 
@@ -289,11 +289,11 @@ class EditorAgent:
         metadata_block.append(f"headlines_variants:")
         metadata_block.append(f"  question: \"{headlines.get('question', '')}\"")
         metadata_block.append(f"  benefit: \"{headlines.get('benefit', '')}\"")
-        
+
         metadata_block.append("---\n")
-        
+
         full_article = "\n".join(metadata_block) + "\n" + final_content
-        
+
         # Append source link footer if missing
         if source_url and "Fuente original" not in full_article:
              full_article += f"\n\nFuente original: [{source_url}]({source_url})"
@@ -303,17 +303,17 @@ class EditorAgent:
             # Regex to remove **TL;DR Visual**... up to next **Header** or end of string
             # Using DOTALL to match newlines
             full_article = re.sub(
-                r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)", 
-                "", 
-                full_article, 
+                r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)",
+                "",
+                full_article,
                 flags=re.DOTALL | re.MULTILINE
             )
-             
+
         return self._strip_emojis(full_article)
 
     def generate_social_content(self, article_content: str, url: str = "") -> str:
         """Generates social media posts (Twitter/LinkedIn) for the refined article."""
-        
+
         prompt = (
             "You are a social media manager for the science news site 'Noticiencias'. "
             "Based on the following article content (which is in Spanish), generate two social media posts:\\n\\n"
@@ -325,7 +325,7 @@ class EditorAgent:
             "### Twitter\\n[Content]\\n\\n"
             "### LinkedIn\\n[Content]"
         )
-        
+
         return self._send_prompt(prompt)
 
     def analyze_visuals(self, article_content: str) -> dict:
@@ -345,7 +345,7 @@ class EditorAgent:
         )
 
         result = self._send_prompt(prompt)
-        
+
         # Safe JSON parsing via robust extractor
         try:
             return self._extract_json(result)

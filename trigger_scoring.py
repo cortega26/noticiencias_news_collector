@@ -14,12 +14,12 @@ async def trigger_run():
         # 2. Score (will pick up 70 pending articles)
         # 3. Export
         report = await system.run_collection_cycle()
-        
+
         print("\n--- Report Summary ---")
         summary = report.get("summary", {})
         print(f"Articles Scored: {summary.get('articles_scored')}")
         print(f"Final Selection: {summary.get('final_selection_count')}")
-        
+
         if summary.get('articles_scored', 0) > 0:
             print("✅ SUCCESS: Articles were scored!")
         else:

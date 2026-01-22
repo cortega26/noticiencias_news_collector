@@ -30,8 +30,8 @@ class SmartHttpClient:
     """
 
     def __init__(
-        self, 
-        base_url: str = "", 
+        self,
+        base_url: str = "",
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[float] = None
     ):
@@ -43,10 +43,10 @@ class SmartHttpClient:
             self._base_headers.update(headers)
 
         self.timeout = timeout or COLLECTION_CONFIG.get("request_timeout", 30.0)
-        
+
         # Configure limits closer to what AsyncRSSCollector used
         limits = httpx.Limits(max_keepalive_connections=50, max_connections=50)
-        
+
         self.client = httpx.AsyncClient(
             base_url=base_url,
             headers=self._base_headers,
@@ -65,8 +65,8 @@ class SmartHttpClient:
         await self.close()
 
     async def get(
-        self, 
-        url: str, 
+        self,
+        url: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         ignore_ssrf: bool = False
@@ -76,7 +76,7 @@ class SmartHttpClient:
         """
         if not ignore_ssrf:
             await self._validate_ssrf(url)
-            
+
         return await self._get_with_retry(url, params, headers)
 
     @retry(
@@ -90,8 +90,8 @@ class SmartHttpClient:
         before_sleep=before_sleep_log(logger, logging.WARNING)
     )
     async def _get_with_retry(
-        self, 
-        url: str, 
+        self,
+        url: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None
     ) -> httpx.Response:

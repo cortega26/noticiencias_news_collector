@@ -18,7 +18,7 @@ pip==25.3 \\
     lines = content.splitlines()
     filtered_lines = []
     skipping = False
-    
+
     for line in lines:
         # Keep empty lines, but reset skipping state
         if not line.strip():
@@ -40,7 +40,7 @@ pip==25.3 \\
             else:
                 skipping = False
                 print(f"Skipping OFF: {line}")
-        
+
         if not skipping:
             filtered_lines.append(line)
         else:
@@ -49,7 +49,7 @@ pip==25.3 \\
     result = "\n".join(filtered_lines)
     print("--- RESULT ---")
     print(result)
-    
+
     if "pip==25.3" in result:
         print("FAIL: pip==25.3 still present")
     else:

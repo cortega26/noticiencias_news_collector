@@ -191,11 +191,11 @@ class ConfigurableNLPStack:
             term = str(pattern.get("pattern", "")).strip()
             if not term:
                 continue
-            
+
             # Use provided alias if truthy, else fallback to the matched term
             raw_alias = pattern.get("alias")
             alias = str(raw_alias if raw_alias else term).strip()
-            
+
             case_sensitive = bool(pattern.get("case_sensitive", False))
             haystack = combined if case_sensitive else lowered
             needle = term if case_sensitive else term.lower()

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class HtmlCollector(BaseCollector):
     """
     Colector genérico de HTML para fuentes sin RSS.
-    
+
     Capacidades:
     - Extracción basada en selectores CSS configurables.
     - Soporte para metadatos (JSON-LD, OpenGraph).
@@ -82,7 +82,7 @@ class HtmlCollector(BaseCollector):
                 stats["error_message"] = "Bloqueado por robots.txt"
                 self._send_to_dlq(source_id, url, "robots_disallowed")
                 return stats
-            
+
             # SSRF check sync wrapper
             validate_url_safety(url)
 
@@ -98,13 +98,13 @@ class HtmlCollector(BaseCollector):
                     stats["error_message"] = f"Error HTTP {response.status_code}"
                     if self.health_tracker:
                         self.health_tracker.record_failure(
-                            source_id, 
-                            "collector.fetch.http", 
-                            f"HTTP Error {response.status_code}", 
+                            source_id,
+                            "collector.fetch.http",
+                            f"HTTP Error {response.status_code}",
                             {"status_code": response.status_code, "url": url}
                         )
                     return stats
-                
+
                 html_content = response.text
 
             # 3. Parse & Extract
@@ -121,13 +121,13 @@ class HtmlCollector(BaseCollector):
                  self.health_tracker.record_success(source_id, "parse", count=len(raw_articles))
 
             stats["articles_found"] = len(raw_articles)
-            
+
             # 4. Save
             processed_candidates = []
             for raw in raw_articles:
                 # Rate limit between articles
                 self._enforce_domain_rate_limit(domain, robots_delay, source_config.get("min_delay_seconds"))
-                
+
                 # Fetch full content
                 if raw.get("url"):
                     full_text = await self._fetch_article_content(client, raw["url"], source_config)
@@ -138,7 +138,7 @@ class HtmlCollector(BaseCollector):
                 processed = self._process_article_html(raw, source_config, source_id)
                 if processed:
                     processed_candidates.append(processed)
-            
+
             # Apply strict sequential filters and save
             saved_count = self._filter_and_save_articles(source_id, processed_candidates, limit=5)
             stats["articles_saved"] = saved_count
@@ -153,13 +153,13 @@ class HtmlCollector(BaseCollector):
         finally:
              stats["processing_time"] = time.time() - start_time
              self._update_source_stats(source_id, stats)
-        
+
         return stats
 
     def _extract_articles_from_html(self, html: str, config: Dict[str, Any], source_id: str) -> List[Dict[str, Any]]:
         soup = BeautifulSoup(html, "html.parser")
         articles = []
-        
+
         # Strategy 1: JSON-LD (High Precision)
         ld_scripts = soup.find_all("script", type="application/ld+json")
         for script in ld_scripts:
@@ -173,28 +173,28 @@ class HtmlCollector(BaseCollector):
                             if art: articles.append(art)
             except Exception:
                 continue
-        
+
         if articles:
             return articles
 
         # Strategy 2: CSS Selectors (Configured)
         selectors = config.get("html_selectors", {})
-        container_sel = selectors.get("container", "article") 
+        container_sel = selectors.get("container", "article")
         link_sel = selectors.get("link", "a")
         title_sel = selectors.get("title", "h2, h3")
-        
+
         for container in soup.select(container_sel):
             try:
                 # Link
                 link_tag = container.select_one(link_sel) if link_sel != "self" else container
                 if not link_tag or not link_tag.has_attr("href"): continue
                 url = link_tag["href"]
-                
+
                 # Title
                 title_tag = container.select_one(title_sel)
                 title = title_tag.get_text(strip=True) if title_tag else ""
                 if not title and link_tag: title = link_tag.get_text(strip=True)
-                
+
                 if url and title:
                     articles.append({
                         "title": title,
@@ -204,7 +204,7 @@ class HtmlCollector(BaseCollector):
                     })
             except Exception:
                 continue
-                
+
         return articles
 
     def _parse_json_ld_article(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -219,27 +219,27 @@ class HtmlCollector(BaseCollector):
     def _process_article_html(self, raw: Dict[str, Any], config: Dict[str, Any], source_id: str) -> Optional[Dict[str, Any]]:
         # Validate and structure
         if not raw.get("url") or not raw.get("title"): return None
-        
+
         # Normalize URL
         base_url = config.get("url", "")
         article_url = raw["url"]
         if not article_url.startswith("http"):
              article_url = urljoin(base_url, article_url)
-        
+
         summary = raw.get("description", "")
         content = raw.get("content", "")
-        
+
         # Word count approximation
         # Ensure > 0 to pass validation (fallback to title)
         word_count = len((content or summary or raw["title"]).split())
-        
+
         return {
             "title": raw["title"],
             "url": article_url,
             "summary": summary,
             "content": content,
             "published_date": raw.get("date") or datetime.now(timezone.utc),
-            "source_id": source_id, 
+            "source_id": source_id,
             "source_name": config.get("name", "Unknown Source"),
             "category": config.get("category", "unknown"),
             "source_metadata": {"type": "html"},
@@ -253,23 +253,23 @@ class HtmlCollector(BaseCollector):
         try:
              response = await client.get(url)
              if response.status_code >= 400: return None
-             
+
              soup = BeautifulSoup(response.text, "html.parser")
-             
+
              # Configurable selectors
              selectors = config.get("html_selectors", {})
              article_sel = selectors.get("article_selector")
-             
+
              container = None
              if article_sel:
                  container = soup.select_one(article_sel)
-             
+
              # Fallback heuristics
              if not container:
                  container = soup.find("article") or soup.find("main") or soup.find("div", class_="content") or soup.body
-             
+
              if not container: return None
-             
+
              paragraphs = container.find_all("p")
              text = "\n\n".join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
              return text

@@ -15,12 +15,12 @@ class CollectorDispatcher:
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker
         print(f"DEBUG: Dispatcher init health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}")
-        
+
         # Initialize collectors dynamically or lazily?
         # For now, initialize known ones.
         # We check async_enabled to decide between RSSCollector and AsyncRSSCollector
         rss_type = "async_rss" if COLLECTION_CONFIG.get("async_enabled", False) else "rss"
-        
+
         try:
             self.collectors["rss"] = create_collector(rss_type)
         except Exception as e:
@@ -41,7 +41,7 @@ class CollectorDispatcher:
             for c in self.collectors.values():
                  if hasattr(c, "set_logger_factory"):
                      c.set_logger_factory(self.logger_factory)
-        
+
         if self.health_tracker:
             for name, c in self.collectors.items():
                 if hasattr(c, "health_tracker"):
@@ -87,7 +87,7 @@ class CollectorDispatcher:
         session_id: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        
+
         # Group sources by type
         grouped_sources: Dict[str, Dict[str, Any]] = {}
         for source_id, config in sources_config.items():
@@ -96,7 +96,7 @@ class CollectorDispatcher:
                 # Fallback to RSS if not specified? Or error?
                 # Default to rss for backward compatibility
                 ctype = "rss"
-            
+
             if ctype not in grouped_sources:
                  grouped_sources[ctype] = {}
             grouped_sources[ctype][source_id] = config
@@ -123,9 +123,9 @@ class CollectorDispatcher:
                             trace_id=trace_id
                         )
                      )
-        
+
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Merge results
         final_results = {
             "source_details": {},
@@ -136,17 +136,17 @@ class CollectorDispatcher:
                 "errors_encountered": 0,
             }
         }
-        
+
         for res in results_list:
             if isinstance(res, Exception):
                 # Log error
                 continue
             if not isinstance(res, dict): continue
-            
+
             # Merge source details
             if "source_details" in res:
                 final_results["source_details"].update(res["source_details"])
-            
+
             # Merge summary stats
             if "collection_summary" in res:
                 summ = res["collection_summary"]
@@ -161,7 +161,7 @@ class CollectorDispatcher:
         if s_proc > 0:
             success_count = sum(1 for r in final_results["source_details"].values() if r.get("success"))
             final_results["collection_summary"]["success_rate_percent"] = round((success_count / s_proc) * 100, 2)
-        
+
         return final_results
 
     def is_healthy(self) -> bool:

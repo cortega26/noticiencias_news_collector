@@ -7,18 +7,18 @@ def inspect_page():
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    
+
     try:
         resp = httpx.get(url, headers=headers, follow_redirects=True, timeout=10)
         print(f"Status: {resp.status_code}")
-        
+
         soup = BeautifulSoup(resp.text, "html.parser")
-        
+
         # Check standard containers
         article = soup.find("article")
         main = soup.find("main")
         content_div = soup.find("div", class_="content")
-        
+
         print(f"Has <article>: {headers}") # Typo in print, but reusing var
         print(f"Has <article>: {bool(article)}")
         if article:

@@ -39,4 +39,3 @@ ncalls  tottime  percall  cumtime  percall filename:lineno(function)
 ```
 
 _Top cumulative cost centres from `python -m cProfile -s cumtime tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_latency.jsonl --concurrency 4`.【eda5ea†L1-L24】_
-

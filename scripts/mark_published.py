@@ -10,7 +10,6 @@ from typing import Iterable, Optional
 
 from news_collector.storage.database import DatabaseManager
 
-
 SOURCE_KEYS = ("source_url", "source", "original_url")
 
 

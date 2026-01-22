@@ -250,7 +250,7 @@ class RSSCollector(BaseCollector):
                 )
                 stats["success"] = True
                 return stats
-            
+
             if self.health_tracker:
                 self.health_tracker.record_success(source_id, "fetch")
                 self.health_tracker.record_success(source_id, "parse")
@@ -358,7 +358,7 @@ class RSSCollector(BaseCollector):
                     source_id=source_id,
                     details={"error": str(metadata_error)},
                 )
-            
+
             # SSRF Check
             try:
                 validate_url_safety(feed_url)
@@ -572,52 +572,52 @@ class RSSCollector(BaseCollector):
         """
         # Fetch multiplier logic is now implicit since parser returns all valid items,
         # but we effectively just get candidates.
-        
+
         candidates = self.parser.extract_items(parsed_feed, source_config)
-        
+
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
         recent_threshold = datetime.now(timezone.utc) - timedelta(
             days=COLLECTION_CONFIG["recent_days_threshold"]
         )
-        
+
         max_articles = COLLECTION_CONFIG["max_articles_per_source"]
         candidate_multiplier = 4
         fetch_limit = max_articles * candidate_multiplier
-        
+
         count = 0
         for cand in candidates:
             if count >= fetch_limit:
                 break
-                
+
             # Date filter
             if cand.get("published_date") and cand["published_date"] < recent_threshold:
                 continue
-                
+
             # Duplicate filter
             if self.db_manager.article_exists(cand["url"]):
                  continue
-                 
+
             filtered_candidates.append(cand)
             count += 1
-            
+
         # The rest of the logic (PreScorer, Full Text) remains in collect_from_source loop
         # Wait, collect_from_source calls this method to get 'raw_articles'.
         # And then it iterates 'raw_articles', calls _process_article.
         # But _process_article duplicates some logic?
-        
+
         # Let's return the candidates. The original method also did PreScoring?
         # Yes, original method at lines 656+ called PreScorer internally!
         # I must preserve that logic.
-        
+
         candidates = filtered_candidates
-            
+
         if len(candidates) > max_articles:
             self._emit_log("warning", "collector.prescorer.ranking_start", details={"candidates": len(candidates), "limit": max_articles})
-            
+
             selected_candidates = self.pre_scorer.select_top_candidates(
-                candidates, 
-                limit=max_articles, 
+                candidates,
+                limit=max_articles,
                 source_context=source_config.get("name", source_id)
             )
         else:
@@ -626,36 +626,36 @@ class RSSCollector(BaseCollector):
         # 3. PHASE THREE: Deep Processing (Full Text)
         articles = []
         from news_collector.utils.full_text import fetch_full_article
-        
+
         for cand in selected_candidates:
             try:
                 self._emit_log("info", "collector.article.fetching_full_text", details={"url": cand["url"]})
-                
+
                 full_text = fetch_full_article(cand["url"], self.session)
                 if full_text:
                     cand["content"] = full_text
-                
+
                 # Create final dict (cleanup helper props if any)
                 if "entry_ref" in cand: del cand["entry_ref"]
-                
+
                 # _validate_article_data was called? No, it was called in loop.
                 # Actually, the original method returned 'articles'.
                 # And 'collect_from_source' gets 'raw_articles' and THEN calls '_process_article'.
                 # Wait. In original code:
                 # line 232: raw_articles = self._extract_articles_from_feed(...)
                 # line 260: processed_article = self._process_article(raw_article...)
-                
+
                 # BUT, inside `_extract_articles_from_feed` (lines 579-690):
                 # It DID fetch full text (lines 669-688).
                 # It DID return a list of dicts.
                 # It DID call _validate_article_data (line 683).
-                
+
                 # So I DO need to include the PreScorer and FullText fetching here.
                 # The extracted RssParser only does the "PHASE ONE" extraction.
-                
+
                 if self._validate_article_data(cand):
                     articles.append(cand)
-                    
+
             except Exception as e:
                 self._emit_log("warning", "collector.article.process_failed", details={"error": str(e)})
                 continue

@@ -38,4 +38,3 @@ jobs:
         run: |
           echo "### Placeholder Audit Summary" >> "$GITHUB_STEP_SUMMARY"
           cat placeholder-report.md >> "$GITHUB_STEP_SUMMARY"
-

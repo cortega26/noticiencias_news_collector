@@ -27,14 +27,14 @@ class OllamaProvider:
     - Streaming support
     - Configurable timeouts & retries
     """
-    
+
     def __init__(self, api_url: str = None, model: str = "llama3.2:1b", timeout: int = 120):
         self.api_url = api_url or "http://localhost:11434/api/generate"
         self.model = model
         self.timeout = timeout
-        
+
         # Async client reused from infrastructure
-        self.async_client = httpx.AsyncClient(timeout=timeout) 
+        self.async_client = httpx.AsyncClient(timeout=timeout)
 
     async def close(self):
         await self.async_client.aclose()
@@ -58,7 +58,7 @@ class OllamaProvider:
         Async generation. Returns text or dict if json_mode is True.
         """
         payload = self._prepare_payload(prompt, system, stream=False, json_mode=json_mode)
-        
+
         try:
             logger.debug(f"Sending async prompt to Ollama ({self.model})...")
             start = time.time()
@@ -66,19 +66,19 @@ class OllamaProvider:
             response.raise_for_status()
             data = response.json()
             text = data.get("response", "")
-            
+
             logger.debug(f"Async LLM complete in {time.time() - start:.2f}s")
-            
+
             if json_mode:
                 return self._extract_json(text)
             return text
-            
+
         except httpx.RequestError as e:
             logger.error(f"Async LLM Request Error: {e}")
             raise
 
     # --- SYNC API (Legacy/Compat) ---
-    
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -91,20 +91,20 @@ class OllamaProvider:
         Supports streaming generator if stream=True and json_mode=False.
         """
         payload = self._prepare_payload(prompt, system, stream=stream, json_mode=json_mode)
-        
+
         try:
             # We use direct requests for sync to avoid async loop issues in strict sync contexts
             logger.debug(f"Sending sync prompt to Ollama ({self.model})...")
             response = requests.post(self.api_url, json=payload, stream=stream, timeout=self.timeout)
             response.raise_for_status()
-            
+
             if stream:
                 return self._stream_generator(response)
-            
+
             # Non-streaming
             data = response.json()
             text = data.get("response", "")
-            
+
             if json_mode:
                 return self._extract_json(text)
             return text
@@ -133,7 +133,7 @@ class OllamaProvider:
             return json.loads(text)
         except json.JSONDecodeError:
             pass
-            
+
         # Try finding outer braces
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
@@ -141,7 +141,7 @@ class OllamaProvider:
                 return json.loads(match.group(0))
             except json.JSONDecodeError:
                 pass
-                
+
         # Try bracket counting (from ai_editor.py)
         start_idx = text.find('{')
         if start_idx != -1:
@@ -154,6 +154,6 @@ class OllamaProvider:
                         return json.loads(text[start_idx : i + 1])
                     except (json.JSONDecodeError, ValueError):
                         pass
-                        
+
         logger.warning(f"Failed to extract JSON from: {text[:100]}...")
         return {}

@@ -56,4 +56,3 @@ jobs:
       - name: No changes summary
         if: steps.diff.outputs.changed != 'true'
         run: echo "No indentation updates were necessary." >> "$GITHUB_STEP_SUMMARY"
-

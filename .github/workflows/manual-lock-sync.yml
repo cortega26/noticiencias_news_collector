@@ -64,4 +64,3 @@ jobs:
             echo ""
             echo "GitHub Actions cannot open the PR automatically due to organization policy."
           } >> "${GITHUB_STEP_SUMMARY}"
-

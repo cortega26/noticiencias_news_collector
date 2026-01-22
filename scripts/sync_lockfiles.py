@@ -102,7 +102,7 @@ def sync_lockfiles() -> None:
     for lockfile, args in LOCK_TARGETS:
         command = (sys.executable, *args)
         run_command(command, description=f"Regenerating {lockfile}")
-        
+
         # Post-process: Strip 'pip' package lines to prevent CI instability due to version mismatches
         path = ROOT_DIR / lockfile
         if path.exists():
@@ -132,12 +132,11 @@ def sync_lockfiles() -> None:
                         skipping = True
                     else:
                         skipping = False
-                
+
                 if not skipping:
                     filtered_lines.append(line)
 
             path.write_text("\n".join(filtered_lines) + "\n")
-
 
 
 def ensure_lockfiles_clean() -> None:

@@ -17,14 +17,14 @@ class PreScorer:
         self.model_name = self.llm.model
 
     def select_top_candidates(
-        self, 
-        candidates: List[Dict[str, Any]], 
+        self,
+        candidates: List[Dict[str, Any]],
         limit: int = 5,
         source_context: str = ""
     ) -> List[Dict[str, Any]]:
         """
         Analiza una lista de candidatos y retorna el subset top-ranked.
-        
+
         Args:
             candidates: Lista de dicts con keys 'title', 'summary', 'url'.
             limit: Número de artículos a seleccionar.
@@ -32,7 +32,7 @@ class PreScorer:
         """
         if not candidates:
             return []
-            
+
         if len(candidates) <= limit:
             logger.info(f"PreScorer: Solicitados {limit}, disponibles {len(candidates)}. Retornando todos.")
             return candidates
@@ -58,7 +58,7 @@ class PreScorer:
 
         try:
             response = self.llm.generate_sync(
-                prompt=prompt, 
+                prompt=prompt,
                 json_mode=True,
                 system="You are an expert Science Editor selecting the most important stories for publication. You output JSON only."
             )
@@ -75,7 +75,7 @@ class PreScorer:
                 if isinstance(idx, int) and 0 <= idx < len(candidates):
                     if idx not in valid_indices:
                         valid_indices.append(idx)
-            
+
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
                 logger.warning(f"PreScorer: LLM retornó {len(valid_indices)} válidos. Rellenando con FIFO.")
@@ -84,13 +84,13 @@ class PreScorer:
                         break
                     if i not in valid_indices:
                         valid_indices.append(i)
-            
+
             # Recortar si devolvió de más
             valid_indices = valid_indices[:limit]
 
             # Construir resultado
             selected_candidates = [candidates[i] for i in valid_indices]
-            
+
             logger.info(f"✅ PreScorer: Selección completada. Indices: {valid_indices}")
             return selected_candidates
 
