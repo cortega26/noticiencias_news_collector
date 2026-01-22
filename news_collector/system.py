@@ -8,6 +8,8 @@ Este módulo define la clase central `NewsCollectorSystem` y sus utilidades.
 import asyncio
 import time
 import uuid
+import json
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 

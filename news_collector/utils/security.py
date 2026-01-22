@@ -43,7 +43,7 @@ def validate_url_safety(url: str) -> None:
                 raise ValueError(f"SSRF Protection: Blocked access to private IP {ip_str} for {hostname}")
                 
     except Exception as e:
-        if "SSRF" in str(e):
+        if "SSRF" in str(e) or "missing hostname" in str(e):
             raise
         # Log or re-raise? For safety, if we can't validate, we should arguably block.
         # But let's assume validation failure is blocked.
