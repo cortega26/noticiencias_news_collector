@@ -123,6 +123,10 @@ def sync_lockfiles() -> None:
                     if (
                         line.startswith("pip==")
                         or line.startswith("# pip==")
+                        or line.startswith("setuptools==")
+                        or line.startswith("# setuptools==")
+                        or line.startswith("wheel==")
+                        or line.startswith("# wheel==")
                         or "The following packages are considered to be unsafe" in line
                     ):
                         skipping = True
