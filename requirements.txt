@@ -1,5 +1,6 @@
 # Direct dependencies (sync with requirements.lock)
 beautifulsoup4>=4.12.0
+bleach>=6.0.0
 fastapi>=0.100.0
 feedparser>=6.0.0
 httpx>=0.25.0
