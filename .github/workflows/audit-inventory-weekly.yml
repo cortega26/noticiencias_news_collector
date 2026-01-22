@@ -2,7 +2,7 @@ name: audit inventory weekly
 
 on:
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Generate inventory snapshot
         run: |
@@ -41,19 +41,19 @@ jobs:
         run: |
           python - <<'PY'
           import json
-import os
-from pathlib import Path
+          import os
+          from pathlib import Path
 
-summary_path = Path('reports/audit/00_inventory.summary.json')
-summary = {"drift_count": 0, "changed_paths": []}
-if summary_path.exists():
-    summary = json.loads(summary_path.read_text(encoding='utf-8'))
-output_path = Path(os.environ['GITHUB_OUTPUT'])
-output_path.write_text(
-    f"drift_count={summary['drift_count']}\nchanged_paths={'|'.join(summary['changed_paths'])}\n",
-    encoding='utf-8',
-)
-PY
+          summary_path = Path('reports/audit/00_inventory.summary.json')
+          summary = {"drift_count": 0, "changed_paths": []}
+          if summary_path.exists():
+              summary = json.loads(summary_path.read_text(encoding='utf-8'))
+          output_path = Path(os.environ['GITHUB_OUTPUT'])
+          output_path.write_text(
+              f"drift_count={summary['drift_count']}\nchanged_paths={'|'.join(summary['changed_paths'])}\n",
+              encoding='utf-8',
+          )
+          PY
 
       - name: Upload inventory artifacts
         if: steps.summary.outputs.drift_count != '0'
