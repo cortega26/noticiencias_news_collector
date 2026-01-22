@@ -153,17 +153,32 @@ def sync_lockfiles() -> None:
 
 def ensure_lockfiles_clean() -> None:
     """Verify that lockfiles did not change after syncing."""
-    run_command(
-        (
-            "git",
-            "diff",
-            "--quiet",
-            "--",
-            "requirements.lock",
-            "requirements-security.lock",
-        ),
-        description="Verifying lockfiles are up to date",
-    )
+    try:
+        run_command(
+            (
+                "git",
+                "diff",
+                "--quiet",
+                "--",
+                "requirements.lock",
+                "requirements-security.lock",
+            ),
+            description="Verifying lockfiles are up to date",
+        )
+    except subprocess.CalledProcessError:
+        LOGGER.error("Lockfiles have changed! Printing diff:")
+        subprocess.run(
+            (
+                "git",
+                "diff",
+                "--",
+                "requirements.lock",
+                "requirements-security.lock",
+            ),
+            cwd=ROOT_DIR,
+            check=False,
+        )
+        sys.exit(1)
 
 
 def main() -> None:
