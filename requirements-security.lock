@@ -1938,4 +1938,3 @@ watchdog==6.0.0 \
     #   noticiencias-news-collector (pyproject.toml)
     #   streamlit
 
-# The following packages are considered to be unsafe in a requirements file:
