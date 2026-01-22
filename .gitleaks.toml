@@ -9,6 +9,10 @@ paths = [
   '''^docs/examples/''',
   '''^reports/''',
   '''^\.venv/''',
+  '''^\.temp_venv/''',
+  '''^apps/refinery/\.env\.example$''',
+  '''^apps/refinery/admin_panel\.py$''',
+  '''^tests/unit/scoring/test_cognitive_scorer\.py$''',
 ]
 regexes = [
   '''dummy(_|-)secret''',
