@@ -162,7 +162,7 @@ def save_toml_config(config_data):
         toml.dump(config_data, f)
 
 # --- Tabs ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "💼 Gestión", "📈 Analítica", "🚀 Publicados"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "💼 Gestión", "📈 Analítica", "🚀 Publicados", "📡 Fuentes"])
 
 # --- Tab 1: AI Settings ---
 with tab1:
@@ -456,6 +456,9 @@ with tab3:
     with col_sync:
         # User requested to eliminate Fast Mode to ensure quality discrimination
         st.info("🧠 Modo Cognitivo Activo (Análisis Profundo)")
+        
+        dry_run_enabled = st.checkbox("🧪 Test Connection (Dry Run)", help="Ejecutar análisis sin guardar artículos en Base de Datos.")
+        
         if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos)."):
             with st.spinner("Ejecutando recolección y análisis cognitivo..."):
                 if not auth_ok:
@@ -463,7 +466,7 @@ with tab3:
                 else:
                     try:
                         # Direct call to main module instead of subprocess
-                        result = run_refinery(fetch_only=False, fast_mode=False)
+                        result = run_refinery(fetch_only=False, fast_mode=False, dry_run=dry_run_enabled)
                         if result.get("status") == "success":
                             st.success("¡Recolección Completa!")
                         else:
@@ -960,5 +963,116 @@ with tab5:
                     
                     st.divider()
 
-        else:
-             st.warning("No se encuentra el directorio de posts. Ejecuta una sincronización primero para clonar el repo.")
+
+# --- Tab 6: Source Manager ---
+with tab6:
+    st.header("📡 Gestión de Fuentes RSS")
+    st.info("Modifica, agrega o deshabilita fuentes sin reiniciar el servidor.")
+    
+    # Import sources config
+    import news_collector.config.sources as source_config_module
+    
+    # Reload to ensure fresh state
+    source_config_module.load_sources()
+    current_sources = source_config_module.ALL_SOURCES
+    
+    # 1. Main Table
+    if not current_sources:
+        st.warning("No se cargaron fuentes.")
+    else:
+        # Convert to list for dataframe
+        source_list = []
+        for sid, cfg in current_sources.items():
+            source_list.append({
+                "ID": sid,
+                "Nombre": cfg.get("name"),
+                "URL": cfg.get("url"),
+                "Credibilidad": cfg.get("credibility_score"),
+                "Categoria": cfg.get("category"),
+                "Grupo": cfg.get("_group", "Personalizado")
+            })
+            
+        st.dataframe(source_list, use_container_width=True)
+        
+    st.divider()
+    
+    # 2. Edit / Add Form
+    st.subheader("🛠️ Editar / Agregar Fuente")
+    
+    col_sel, col_act = st.columns([3, 1])
+    with col_sel:
+        # Select source to edit or New
+        input_options = ["(Nueva Fuente)"] + list(current_sources.keys())
+        selected_source_id = st.selectbox("Seleccionar Fuente", input_options)
+        
+    is_new = selected_source_id == "(Nueva Fuente)"
+    
+    # Load default data
+    default_data = {}
+    if not is_new:
+        default_data = current_sources.get(selected_source_id, {}).copy()
+    
+    with st.form("source_editor"):
+        c1, c2 = st.columns(2)
+        with c1:
+            new_id = st.text_input("ID (Snake Case)", value=selected_source_id if not is_new else "", disabled=not is_new)
+            name = st.text_input("Nombre Legible", value=default_data.get("name", ""))
+            url = st.text_input("URL del Feed RSS", value=default_data.get("url", ""))
+            
+        with c2:
+            credibility = st.slider("Score Credibilidad", 0.0, 1.0, float(default_data.get("credibility_score", 0.8)))
+            category = st.selectbox(
+                "Categoría", 
+                ["technology", "science", "medicine", "space", "biology", "multidisciplinary", "popular_science", "artificial_intelligence"],
+                index=0  # Should try to match existing, but selectbox needs index lookup. Simplified for now.
+            )
+            update_freq = st.selectbox(
+                "Frecuencia Actualización",
+                ["daily", "weekly", "hourly", "multiple_daily"],
+                index=0
+            )
+            
+        group_tag = st.selectbox(
+             "Grupo (Organización Interna)",
+             ["ELITE_JOURNALS", "SCIENCE_MEDIA", "INSTITUTIONAL_SOURCES", "AI_LABS", "CUSTOM"],
+             index=1
+        )
+
+        submit = st.form_submit_button("💾 Guardar Fuente")
+        
+        if submit:
+            if not new_id:
+                st.error("El ID es obligatorio.")
+            else:
+                # Update Dictionary
+                new_entry = {
+                    "name": name,
+                    "url": url,
+                    "credibility_score": credibility,
+                    "category": category,
+                    "update_frequency": update_freq,
+                    "language": "en", # Default
+                    "description": "Added via UI",
+                    "typical_delay": 0,
+                    "_group": group_tag
+                }
+                
+                # Merge checks
+                current_sources[new_id] = new_entry
+                
+                # Save to YAML
+                try:
+                    source_config_module.save_sources(current_sources)
+                    st.success(f"Fuente '{new_id}' guardada correctamente.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error guardando: {e}")
+
+    # Delete Action
+    if not is_new:
+        if st.button("🗑️ Eliminar Fuente Seleccionada", type="primary"):
+            del current_sources[selected_source_id]
+            source_config_module.save_sources(current_sources)
+            st.success("Fuente eliminada.")
+            st.rerun()
+

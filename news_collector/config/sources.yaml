@@ -1,0 +1,356 @@
+nature:
+  name: Nature
+  url: https://www.nature.com/nature.rss
+  credibility_score: 1.0
+  update_frequency: weekly
+  category: multidisciplinary
+  language: en
+  impact_factor: 49.962
+  description: La revista científica más prestigiosa del mundo
+  typical_delay: 0
+  headers:
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (compatible; NoticienciasBot/1.0; +http://noticiencias.com)
+  etag: null
+  last_modified: null
+  _group: ELITE_JOURNALS
+science:
+  name: Science
+  url: https://science.sciencemag.org/rss/current.xml
+  credibility_score: 1.0
+  update_frequency: weekly
+  category: multidisciplinary
+  language: en
+  impact_factor: 47.728
+  description: Revista insignia de la AAAS, rival histórico de Nature
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: ELITE_JOURNALS
+cell:
+  name: Cell
+  url: https://www.cell.com/cell/current.rss
+  credibility_score: 0.98
+  update_frequency: biweekly
+  category: biology
+  language: en
+  impact_factor: 38.637
+  description: La revista más importante en biología celular y molecular
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: ELITE_JOURNALS
+nejm:
+  name: New England Journal of Medicine
+  url: https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss
+  credibility_score: 0.99
+  update_frequency: weekly
+  category: medicine
+  language: en
+  impact_factor: 91.245
+  description: La biblia de la medicina clínica
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: ELITE_JOURNALS
+scientific_american:
+  name: Scientific American
+  url: https://www.scientificamerican.com/platform/syndication/rss/
+  credibility_score: 0.85
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Divulgación científica de alta calidad desde 1845
+  typical_delay: 2
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+new_scientist:
+  name: New Scientist
+  url: https://www.newscientist.com/feed/home/
+  credibility_score: 0.8
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Enfoque en ciencia emergente y tendencias futuras
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+ars_technica:
+  name: Ars Technica Science
+  url: https://feeds.arstechnica.com/arstechnica/science
+  credibility_score: 0.82
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Excelente cobertura de tecnología y ciencia aplicada
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+phys_org:
+  name: Phys.org
+  url: https://phys.org/rss-feed/
+  credibility_score: 0.75
+  update_frequency: multiple_daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: Agregador de noticias científicas de universidades
+  typical_delay: 0
+  min_delay_seconds: 60
+  headers:
+    User-Agent: NoticienciasBot/1.0 (Research Project; contact@noticiencias.com)
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+scitechdaily:
+  name: SciTechDaily
+  url: https://scitechdaily.com/feed/
+  credibility_score: 0.88
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: Science and technology news and analysis
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+sciencedaily_top:
+  name: ScienceDaily
+  url: https://www.sciencedaily.com/rss/top/science.xml
+  credibility_score: 0.85
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Latest research news
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+wired:
+  name: Wired
+  url: https://www.wired.com/feed/rss
+  credibility_score: 0.85
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Leading tech and culture publication
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+techcrunch:
+  name: TechCrunch
+  url: https://techcrunch.com/feed/
+  credibility_score: 0.85
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Startup and technology news
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+the_verge:
+  name: The Verge
+  url: https://www.theverge.com/rss/index.xml
+  credibility_score: 0.85
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Mainstream technology news and reviews
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+mit_tech_review:
+  name: MIT Technology Review
+  url: https://www.technologyreview.com/feed
+  credibility_score: 0.9
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: In-depth technology journalism
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+stat_news:
+  name: STAT News
+  url: https://www.statnews.com/feed/
+  credibility_score: 0.92
+  update_frequency: daily
+  category: medicine
+  language: en
+  impact_factor: null
+  description: Reporting from the frontiers of health and medicine
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+space_com:
+  name: Space.com
+  url: https://www.space.com/feeds.xml
+  credibility_score: 0.85
+  update_frequency: daily
+  category: space
+  language: en
+  impact_factor: null
+  description: Space exploration and astronomy news
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+livescience:
+  name: Live Science
+  url: https://www.livescience.com/feeds.xml
+  credibility_score: 0.82
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Science news for general audience
+  typical_delay: 1
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+mit_news:
+  name: MIT News
+  url: https://news.mit.edu/rss/feed
+  credibility_score: 0.9
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Investigación de una de las mejores universidades técnicas
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+yale_news:
+  name: Yale News
+  url: https://news.yale.edu/topics/science-technology/rss
+  credibility_score: 0.9
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: Yale University Science & Technology News
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+nasa_news:
+  name: NASA News
+  url: https://www.nasa.gov/rss/dyn/breaking_news.rss
+  credibility_score: 0.95
+  update_frequency: daily
+  category: space
+  language: en
+  impact_factor: null
+  description: Noticias espaciales de la fuente más autorizada
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+nih_news:
+  name: NIH News
+  url: https://www.nih.gov/news-releases/feed.xml
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: medicine
+  language: en
+  impact_factor: null
+  description: Instituto Nacional de Salud, máxima autoridad médica de EE.UU.
+  typical_delay: 0
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+arxiv_ai:
+  name: arXiv AI/ML
+  url: http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV
+  credibility_score: 0.7
+  update_frequency: daily
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Preprints de inteligencia artificial y machine learning
+  typical_delay: 0
+  special_handling: preprint
+  min_delay_seconds: 20
+  etag: null
+  last_modified: null
+  _group: PREPRINT_SOURCES
+biorxiv:
+  name: bioRxiv
+  url: https://connect.biorxiv.org/biorxiv_xml.php?subject=all
+  credibility_score: 0.65
+  update_frequency: daily
+  category: biology
+  language: en
+  impact_factor: null
+  description: Preprints de biología y ciencias de la vida
+  typical_delay: 0
+  special_handling: preprint
+  etag: null
+  last_modified: null
+  _group: PREPRINT_SOURCES
+reddit_science:
+  name: r/science
+  url: https://www.reddit.com/r/science/new/.rss
+  credibility_score: 0.6
+  update_frequency: hourly
+  category: community_science
+  language: en
+  impact_factor: null
+  description: Subreddit de divulgación científica con moderación especializada
+  typical_delay: 0
+  rate_limit_notes: Usar user-agent dedicado y no superar 60 requests por minuto
+  min_delay_seconds: 30
+  etag: null
+  last_modified: null
+  _group: COMMUNITY_FEEDS
+openai_research:
+  name: OpenAI Research
+  url: https://openai.com/research
+  credibility_score: 0.92
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Latest research from OpenAI
+  collector_type: headless
+  selectors:
+    item: div.snap-start
+    link: a
+    title: div.text-h5 p
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+deepmind_blog:
+  name: Google DeepMind
+  url: https://deepmind.google/discover/blog/
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  collector_type: html
+  html_selectors:
+    container: .card
+    link: a
+    title: .card__title
+    article_selector: article
+  etag: null
+  last_modified: null
+  _group: AI_LABS
