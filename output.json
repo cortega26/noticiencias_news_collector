@@ -1,0 +1,185 @@
+{
+  "session_info": {
+    "session_id": "73911460-20260122-165431",
+    "system_id": "73911460",
+    "start_time": "2026-01-22T16:54:31.514465+00:00",
+    "end_time": "2026-01-22T16:54:31.702109+00:00",
+    "duration_seconds": 0.187644
+  },
+  "collection_results": {
+    "source_details": {},
+    "collection_summary": {
+      "sources_processed": 0,
+      "articles_found": 0,
+      "articles_saved": 0,
+      "errors_encountered": 0
+    }
+  },
+  "scoring_results": {
+    "success": true,
+    "statistics": {
+      "articles_scored": 0,
+      "articles_included": 0,
+      "articles_excluded": 0,
+      "average_score": 0.40719821767049547
+    }
+  },
+  "selection_results": {
+    "success": true,
+    "selected_count": 5,
+    "articles": [
+      {
+        "id": 58,
+        "title": "Locus coeruleus noradrenaline elicits response profiles distinct from natural arousal in hippocampal neurons and astrocytes",
+        "url": "https://biorxiv.org/content/10.64898/2026.01.16.699885v1?rss=1",
+        "summary": "During arousal and stress, the locus coeruleus (LC) releases noradrenaline (NA) throughout the brain, including hippocampus. It remains, however, unclear how LC activity contributes to the cellular response profiles observed during natural arousal. Here we directly compared effects of natural arousal and isolated LC activation in mouse CA1 using physiologically titrated optogenetics, combined with fiber photometry of NA and calcium signals, chronic two-photon imaging, and behavioral monitoring. We found that natural arousal robustly activated all three major cell types - astrocytes, pyramidal cells, and inhibitory interneurons - on a population level. In contrast, stimulation of the LC alone exerted a slow inhibitory influence on pyramidal cells and interneurons, with only a subset of interneurons exhibiting a transient activation by LC stimulation. Interneurons, but not pyramidal cells, segregated into functionally consistent LC-responsive subpopulations (activated vs inhibited) with distinct laminar positions in CA1. However, these LC-responsive subpopulations of interneurons did not reliably map onto response subpopulations defined by activity patterns during natural arousal. Astrocytes were strongly activated by both natural arousal and LC stimulation. However, single-cell responses of astrocytes to LC stimulation only partially aligned with their activity during natural arousal responses, indicating distinct driving forces across the two conditions. Together, these results show that LC-driven NA release produces distinct, cell-specific effects that do not align with hippocampal dynamics during natural arousal. Thus, our findings highlight the need to rethink how the locus coeruleus influences the main hippocampal cell types in vivo.",
+        "source_id": "biorxiv",
+        "source_name": "bioRxiv",
+        "category": "biology",
+        "published_date": "2026-01-18T04:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.7901,
+        "is_preprint": true,
+        "doi": "10.64898/2026.01.16.699885v1?",
+        "journal": "bioRxiv Subject Collection: All",
+        "components": {
+          "source_credibility": 0.7,
+          "recency": 0.8581,
+          "content_quality": 0.79,
+          "engagement": null,
+          "engagement_potential": 0.79,
+          "nqi_substance": 0.79,
+          "nqi_narrative": 0.79,
+          "nqi_relevance": 0.79,
+          "nqi_credibility": 0.79
+        }
+      },
+      {
+        "id": 52,
+        "title": "Feeling the music: Audiotactile encoding of temporal structure in the human brain",
+        "url": "https://biorxiv.org/content/10.64898/2026.01.17.700057v1?rss=1",
+        "summary": "In everyday situations, like a rock party or an organ concert, we feel music vibrating through our bodies. How do these vibrotactile signals influence music processing? How do they aid auditory scene analysis? Combining psychophysics, fMRI and time-resolved EEG decoding, this work reveals how the brain encodes the temporal structure of music (beat and envelope) across audition and touch and uses this information to guide multisensory integration and segregation in simple and more complex perceptual scenes. Participants experienced monophonic and polyphonic piano pieces through auditory, vibrotactile and audiotactile stimulation. Vibrotactile signals improved the detection of a brief target embedded in music, establishing the functional relevance of audiotactile integration in naturalistic settings. fMRI and EEG multivariate decoding revealed that auditory and tactile beat information converged in planum temporale and parietal operculum, albeit through distinct neural dynamics and representations. Superior temporal cortices reliably encoded envelope information from audition, but only weakly from touch. Nevertheless, vibrotactile signals significantly enhanced neural encoding of auditory beat as early as 100 ms, and envelope representations from 250 ms onward. These encoding benefits were associated with superadditive interactions in primary auditory cortex, where tactile signals sharpen and amplify auditory envelope representations. In complex polyphonic music, touch further amplified the segregation and encoding of temporally coherent auditory streams. Our findings highlight the important, yet largely unexplored influence of touch on auditory processing, enriching music perception and supporting auditory scene analysis in real-world environments.",
+        "source_id": "biorxiv",
+        "source_name": "bioRxiv",
+        "category": "biology",
+        "published_date": "2026-01-18T04:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.7901,
+        "is_preprint": true,
+        "doi": "10.64898/2026.01.17.700057v1?",
+        "journal": "bioRxiv Subject Collection: All",
+        "components": {
+          "source_credibility": 0.7,
+          "recency": 0.8581,
+          "content_quality": 0.79,
+          "engagement": null,
+          "engagement_potential": 0.79,
+          "nqi_substance": 0.79,
+          "nqi_narrative": 0.79,
+          "nqi_relevance": 0.79,
+          "nqi_credibility": 0.79
+        }
+      },
+      {
+        "id": 21,
+        "title": "A Hallmark-Integrated, Agent-Based Framework for Intratumor Heterogeneity in Melanoma Evolution",
+        "url": "https://biorxiv.org/content/10.64898/2026.01.16.699757v1?rss=1",
+        "summary": "Advances in multiregion sequencing have revealed extensive intratumor heterogeneity (ITH) - the presence of genetically distinct subclones within a single tumor. ITH profoundly influences tumor behavior, including well-accepted hallmarks of cancer such as sustained proliferation, resistance to apoptosis, and immune evasion, and the emergence of therapeutic resistance. In this work, we introduce a hallmark-integrated branching evolution process agent-based model (BEP-HI) to study the emergence of intratumor heterogeneity (ITH) in melanoma under coupled genetic, immune, and spatial selection pressures. Using this model, we identify three distinct evolutionary ITH modes and demonstrate a mechanistic decoupling between tumor growth kinetics and heterogeneity. We further show that immune recruitment exerts the strongest influence on ITH through nonlinear immune-editing feedback, while motility of melanoma cells shapes complex morphologies in different ITH modes as observed in clinical SSM tumors. This work provides a biologically grounded and adaptable computational framework for exploring how hallmark interactions shape ITH evolution and for generating virtual tumor cohorts that link genetic diversity with tumor behavior, morphology, and treatment resistance.",
+        "source_id": "biorxiv",
+        "source_name": "bioRxiv",
+        "category": "biology",
+        "published_date": "2026-01-18T04:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.7901,
+        "is_preprint": true,
+        "doi": "10.64898/2026.01.16.699757v1?",
+        "journal": "bioRxiv Subject Collection: All",
+        "components": {
+          "source_credibility": 0.7,
+          "recency": 0.8581,
+          "content_quality": 0.79,
+          "engagement": null,
+          "engagement_potential": 0.79,
+          "nqi_substance": 0.79,
+          "nqi_narrative": 0.79,
+          "nqi_relevance": 0.79,
+          "nqi_credibility": 0.79
+        }
+      },
+      {
+        "id": 12,
+        "title": "Long-term Musculoskeletal and Marrow Sparing with Proton FLASH in Juvenile Mice: Implications for Pediatric Osteosarcoma",
+        "url": "https://biorxiv.org/content/10.64898/2026.01.16.699970v1?rss=1",
+        "summary": "Purpose: Osteosarcoma is the most common primary bone malignancy in children and adolescents. Radiotherapy is limited by intrinsic radioresistance and the risk of severe long-term musculoskeletal toxicities. FLASH radiotherapy, delivered at ultra-high dose rates (>40 Gy/s), has demonstrated normal tissue sparing in preclinical models, but its effects on the developing skeleton and marrow remain poorly defined. This study evaluated the chronic normal tissue effects of proton FLASH in juvenile mice, modeling the pediatric context. Methods and Materials: Juvenile C57BL/6 mice (3-4 weeks old) were randomized to receive 11 Gy FLASH ({approx}200 Gy/s) or conventional proton irradiation (0.2 Gy/s average), or sham treatment to the left hind leg using a synchrotron-based proton beamline. Mice were followed for 10 weeks post-treatment. Bone toxicity was assessed with microCT (bone mineral density, bone volume fractions, trabecular indices) and histology. Bone marrow cellularity was quantified on H&E-stained sections, and muscle fibrosis was assessed using Masson's trichrome. Results: FLASH-treated mice exhibited significant preservation of bone microarchitecture compared with conventional treated mice, with higher bone mineral density and bone volume fractions (p < 0.05). Trabecular numbers were maintained, while structure model index indicates a mechanically favorable trabecular structures in the FLASH group. Bone marrow cellularity was preserved in FLASH mice (5.3% reduction vs. sham) compared with conventional (11.3 % reduction, p < 0.05). Muscle fibrosis was significantly lower in FLASH group (fibrosis positivity 2.6 % vs. 3.0% for FLASH vs. conventional CONV, p < 0.05). No severe immobility or weight loss was observed across groups. Conclusions: Proton FLASH significantly reduces long-term bone, marrow, and muscle toxicities in juvenile mice. These findings provide the first demonstration of musculoskeletal sparing in a synchrotron proton FLASH platform and highlight it",
+        "source_id": "biorxiv",
+        "source_name": "bioRxiv",
+        "category": "biology",
+        "published_date": "2026-01-18T04:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.7901,
+        "is_preprint": true,
+        "doi": "10.64898/2026.01.16.699970v1?",
+        "journal": "bioRxiv Subject Collection: All",
+        "components": {
+          "source_credibility": 0.7,
+          "recency": 0.8581,
+          "content_quality": 0.79,
+          "engagement": null,
+          "engagement_potential": 0.79,
+          "nqi_substance": 0.79,
+          "nqi_narrative": 0.79,
+          "nqi_relevance": 0.79,
+          "nqi_credibility": 0.79
+        }
+      },
+      {
+        "id": 37,
+        "title": "Targeting PI3Kβ-dependent cancer with a novel small molecule inhibitor, GT220",
+        "url": "https://biorxiv.org/content/10.64898/2026.01.16.699992v1?rss=1",
+        "summary": "PI3K{beta} is a critical oncogenic driver in cancers harboring PTEN loss or activating PIK3CB alterations, yet effective and selective PI3K{beta}-targeted therapies remain lacking. Here, we report the development and preclinical characterization of GT220, a highly selective and potent small-molecule PI3K{beta} inhibitor developed through an integrated artificial-intelligence-driven design, medicinal chemistry, and pharmacologic optimization pipeline. GT220 exhibits exceptional biochemical selectivity for PI3K{beta}, binding with sub-nanomolar affinity and showing minimal activity against other class I PI3K isoforms or the broader protein kinome. In cellular models, GT220 potently suppresses AKT phosphorylation and selectively inhibits viability of PTEN-deficient cancer cells, while sparing PTEN- and PIK3CB-wild-type, PI3K-dependent cells. In vivo, GT220 achieves favorable tumor exposure with sustained PI3K{beta} pathway inhibition and demonstrates robust antitumor efficacy and good tolerability in PTEN-deficient breast cancer xenograft models. In contrast, GT220 shows no antitumor activity or pathway inhibition in PTEN-wild-type, PI3K-dependent tumors, underscoring its context-dependent mechanism of action. Collectively, these findings establish GT220 as a next-generation PI3K{beta} inhibitor with a clear therapeutic window and provide strong preclinical rationale for precision targeting of PI3K{beta}-dependent cancers.",
+        "source_id": "biorxiv",
+        "source_name": "bioRxiv",
+        "category": "biology",
+        "published_date": "2026-01-18T04:00:00",
+        "published_at": null,
+        "published_url": null,
+        "final_score": 0.7159,
+        "is_preprint": true,
+        "doi": "10.64898/2026.01.16.699992v1?",
+        "journal": "bioRxiv Subject Collection: All",
+        "components": {
+          "source_credibility": 0.655,
+          "recency": 0.8131,
+          "content_quality": 0.7,
+          "engagement": null,
+          "engagement_potential": 0.7,
+          "nqi_substance": 0.7,
+          "nqi_narrative": 0.7,
+          "nqi_relevance": 0.7,
+          "nqi_credibility": 0.7
+        }
+      }
+    ],
+    "selection_criteria": {
+      "minimum_score": 0.3,
+      "target_count": 10
+    }
+  },
+  "performance_metrics": {
+    "total_duration_seconds": 0.187644,
+    "articles_per_second": 0.0,
+    "sources_per_minute": 0.0,
+    "success_rate_percent": 0
+  },
+  "summary": {
+    "sources_processed": 0,
+    "articles_found": 0,
+    "articles_saved": 0,
+    "articles_scored": 0,
+    "final_selection_count": 5
+  }
+}
