@@ -69,7 +69,13 @@ def test_gitleaks_findings_enforces_allowlist_and_severity(
     ]
 
 
-def test_pip_audit_findings_honors_allowlist(tmp_path: Path) -> None:
+def test_pip_audit_findings_honors_allowlist(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(
+        security_gate.PIP_AUDIT_ALLOWLIST, "GHSA-q2x7-8rv6-6q7h", "Test suppression"
+    )
+
     report = tmp_path / "pip-audit.json"
     report.write_text(
         json.dumps(
