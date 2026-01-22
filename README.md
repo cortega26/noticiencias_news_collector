@@ -1,6 +1,8 @@
 # Noticiencias News Collector
 
-Scientific news aggregation pipeline for the Noticiencias project.
+![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)
+
+Scientific news aggregation pipeline for the Noticiencias project. Requires Python 3.13 o superior.
 
 ## Overview
 
