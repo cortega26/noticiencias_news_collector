@@ -40,7 +40,7 @@ jobs:
         id: summary
         run: |
           python - <<'PY'
-import json
+          import json
 import os
 from pathlib import Path
 
