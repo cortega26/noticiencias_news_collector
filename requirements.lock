@@ -2,6 +2,10 @@ altair==6.0.0 \
     --hash=sha256:09ae95b53d5fe5b16987dccc785a7af8588f2dca50de1e7a156efa8a461515f8 \
     --hash=sha256:614bf5ecbe2337347b590afb111929aa9c16c9527c4887d96c9bc7f6640756b4
     # via streamlit
+annotated-doc==0.0.4 \
+    --hash=sha256:571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320 \
+    --hash=sha256:fbcda96e87e9c92ad167c2e53839e57503ecfda18804ea28102353485033faa4
+    # via fastapi
 annotated-types==0.7.0 \
     --hash=sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53 \
     --hash=sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89
@@ -235,9 +239,9 @@ coverage[toml]==7.10.7 \
     --hash=sha256:fc04cc7a3db33664e0c2d10eb8990ff6b3536f6842c9590ae8da4c614b9ed05a \
     --hash=sha256:fff7b9c3f19957020cac546c70025331113d2e61537f6e2441bc7657913de7d3
     # via pytest-cov
-fastapi==0.118.0 \
-    --hash=sha256:5e81654d98c4d2f53790a7d32d25a7353b30c81441be7d0958a26b5d761fa1c8 \
-    --hash=sha256:705137a61e2ef71019d2445b123aa8845bd97273c395b744d5a7dfe559056855
+fastapi==0.128.0 \
+    --hash=sha256:1cc179e1cef10a6be60ffe429f79b829dce99d8de32d7acb7e6c8dfdf7f2645a \
+    --hash=sha256:aebd93f9716ee3b4f4fcfe13ffb7cf308d99c9f3ab5622d8877441072561582d
     # via -r requirements.txt
 feedparser==6.0.12 \
     --hash=sha256:64f76ce90ae3e8ef5d1ede0f8d3b50ce26bcce71dd8ae5e82b1cd2d4a5f94228 \
@@ -1629,10 +1633,12 @@ sqlalchemy==2.0.43 \
     --hash=sha256:f42f23e152e4545157fa367b2435a1ace7571cab016ca26038867eb7df2c3631 \
     --hash=sha256:fe2b3b4927d0bc03d02ad883f402d5de201dbc8894ac87d2e981e7d87430e60d
     # via -r requirements.txt
-starlette==0.48.0 \
-    --hash=sha256:0764ca97b097582558ecb498132ed0c7d942f233f365b86ba37770e026510659 \
-    --hash=sha256:7e8cee469a8ab2352911528110ce9088fdc6a37d9876926e73da7ce4aa4c7a46
-    # via fastapi
+starlette==0.50.0 \
+    --hash=sha256:9e5391843ec9b6e472eed1365a78c8098cfceb7a74bfd4d6b1c0c0095efb3bca \
+    --hash=sha256:a2a17b22203254bcbc2e1f926d2d55f3f9497f769416b3190768befe598fa3ca
+    # via
+    #   -r requirements.txt
+    #   fastapi
 streamlit==1.53.0 \
     --hash=sha256:0114116d34589f2e652bf4ac735a3aca69807e659f92f99c98e7b620d000838f \
     --hash=sha256:e8b65210bd1a785d121340b794a47c7c912d8da401af9e4403e16c84e3bc4410
@@ -1700,10 +1706,12 @@ tzdata==2025.3 \
     --hash=sha256:06a47e5700f3081aab02b2e513160914ff0694bce9947d6b76ebd6bf57cfc5d1 \
     --hash=sha256:de39c2ca5dc7b0344f2eba86f49d614019d29f060fc4ebc8a417896a620b56a7
     # via pandas
-urllib3==2.5.0 \
-    --hash=sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760 \
-    --hash=sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc
-    # via requests
+urllib3==2.6.3 \
+    --hash=sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed \
+    --hash=sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4
+    # via
+    #   -r requirements.txt
+    #   requests
 watchdog==6.0.0 \
     --hash=sha256:07df1fdd701c5d4c8e55ef6cf55b8f0120fe1aef7ef39a1c6fc6bc2e606d517a \
     --hash=sha256:20ffe5b202af80ab4266dcd3e91aae72bf2da48c0d33bdb15c66658e685e94e2 \
