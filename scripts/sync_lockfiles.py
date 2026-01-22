@@ -136,7 +136,19 @@ def sync_lockfiles() -> None:
                 if not skipping:
                     filtered_lines.append(line)
 
-            path.write_text("\n".join(filtered_lines) + "\n")
+            path.write_text("\n".join(filtered_lines).rstrip() + "\n")
+
+            # Post-write verification
+            final_content = path.read_text()
+            if "The following packages are considered to be unsafe" in final_content:
+                print(f"❌ Error: Unsafe header found in {lockfile} after stripping!")
+                for i, ln in enumerate(final_content.splitlines()):
+                    if "unsafe" in ln:
+                        print(f"Line {i+1}: {ln}")
+                sys.exit(1)
+            
+            if "pip==" in final_content and "# pip==" not in final_content:
+                 pass # We trust the line-by-line logic generally, but header check is critical.
 
 
 def ensure_lockfiles_clean() -> None:
