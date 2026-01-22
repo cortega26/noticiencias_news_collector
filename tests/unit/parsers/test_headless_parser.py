@@ -1,6 +1,12 @@
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+
+# Mock playwright and its submodules before importing the collector
+mock_playwright = MagicMock()
+sys.modules["playwright"] = mock_playwright
+sys.modules["playwright.async_api"] = mock_playwright
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from news_collector.collectors.headless_collector import HeadlessCollector
 
 @pytest.fixture

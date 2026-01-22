@@ -1,0 +1,303 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0
+rootdir: /home/cortega26/noticiencias_news_collector
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.12.0, cov-7.0.0, hypothesis-6.104.1, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 185 items / 2 skipped
+
+tests/collectors/test_http_cache_behavior.py .......                     [  3%]
+tests/contracts/test_article_model.py ...                                [  5%]
+tests/editorial/test_council.py .                                        [  5%]
+tests/integration/test_pipeline_flow.py ..                               [  7%]
+tests/mutation_smoke/test_mutation_smoke.py ..                           [  8%]
+tests/perf/test_async_rate_limit.py .                                    [  8%]
+tests/placeholder_audit/test_placeholder_audit.py ...........            [ 14%]
+tests/property/test_normalization_properties.py ..F..                    [ 17%]
+tests/security/test_ssrf_protection.py .                                 [ 17%]
+tests/security/test_ssrf_repro.py .                                      [ 18%]
+tests/security/test_xss_prevention.py ....                               [ 20%]
+tests/test_async_scoring.py .                                            [ 21%]
+tests/test_cli_config.py ....                                            [ 23%]
+tests/test_collector_logging.py ..                                       [ 24%]
+tests/test_config_manager.py ................                            [ 32%]
+tests/test_contracts_validation.py ...                                   [ 34%]
+tests/test_database_migrations.py ...                                    [ 36%]
+tests/test_database_pending_articles.py ..                               [ 37%]
+tests/test_database_publication.py ..                                    [ 38%]
+tests/test_database_simhash_behavior.py ..                               [ 39%]
+tests/test_datetime_utils.py ..                                          [ 40%]
+tests/test_dedupe_utils.py ...                                           [ 42%]
+tests/test_editor_agent.py ..                                            [ 43%]
+tests/test_enrichment_pipeline.py ......                                 [ 46%]
+tests/test_feature_scorer_config.py ....                                 [ 48%]
+tests/test_fix_makefile_tabs.py ..                                       [ 49%]
+tests/test_healthcheck.py ..                                             [ 50%]
+tests/test_hybrid_scorer.py F.F                                          [ 52%]
+tests/test_main_initialization.py .                                      [ 52%]
+tests/test_monitoring_anomalies.py ......                                [ 56%]
+tests/test_python_version_requirement.py .                               [ 56%]
+tests/test_quality_rules.py ....                                         [ 58%]
+tests/test_rate_limit_and_backoff.py .....                               [ 61%]
+tests/test_regression_fixes_v3.py ...                                    [ 63%]
+tests/test_reranker.py .....                                             [ 65%]
+tests/test_run_secret_scan.py ...                                        [ 67%]
+tests/test_scan_placeholders.py .........                                [ 72%]
+tests/test_security_gate.py ...                                          [ 74%]
+tests/test_security_redirects.py ..                                      [ 75%]
+tests/test_serving_api.py ...                                            [ 76%]
+tests/test_text_cleaner.py .....                                         [ 79%]
+tests/test_url_canonicalizer.py ..............                           [ 87%]
+tests/tools/test_check_makefile_tabs.py ..                               [ 88%]
+tests/unit/infrastructure/llm/test_provider.py ...                       [ 89%]
+tests/unit/infrastructure/test_http_client.py ....                       [ 91%]
+tests/unit/logic/workflows/test_refinery_engine.py ...                   [ 93%]
+tests/unit/parsers/test_headless_parser.py .                             [ 94%]
+tests/unit/parsers/test_html_parser.py ..                                [ 95%]
+tests/unit/parsers/test_rss_parser.py ..                                 [ 96%]
+tests/unit/security/test_ssrf_strict.py ..                               [ 97%]
+tests/validation/test_validator.py .....
+ERROR: Coverage failure: total of 59.26 is less than fail-under=80.00
+                                                                         [100%]
+
+=================================== FAILURES ===================================
+_______________ test_clean_html_removes_boilerplate_and_scripts ________________
+
+    @given(html_fragments())
+>   @settings(max_examples=60)
+                   ^^^
+
+tests/property/test_normalization_properties.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+payload = '<html><head><script></script><style>.x{color:red}</style></head><body><div>0</div><p>Read More</p></body></html>'
+
+    @given(html_fragments())
+    @settings(max_examples=60)
+    def test_clean_html_removes_boilerplate_and_scripts(payload: str) -> None:
+        cleaned = clean_html(payload)
+        assert "script" not in cleaned.lower()
+        assert "style" not in cleaned.lower()
+>       assert "read more" not in cleaned.lower()
+E       AssertionError: assert 'read more' not in '0read more'
+E         
+E         'read more' is contained here:
+E           0read more
+E       Falsifying example: test_clean_html_removes_boilerplate_and_scripts(
+E           payload='<html><head><script></script><style>.x{color:red}</style></head><body><div>0</div><p>Read More</p></body></html>',
+E       )
+
+tests/property/test_normalization_properties.py:73: AssertionError
+________________________ test_batch_scoring_happy_path _________________________
+
+mock_llm = <MagicMock id='126874632539264'>
+sample_article = <Article(id=test_1, title='Breakthrough in Quantum Computing...', source='test_source')>
+
+    def test_batch_scoring_happy_path(mock_llm, sample_article):
+        async def run_test():
+            scorer = CognitiveScorer(llm_client=mock_llm)
+            scorer._get_from_cache = MagicMock(return_value=None)
+            scorer._save_to_cache = MagicMock()
+    
+            payloads = [{"article": {"title": sample_article.title, "url": sample_article.url, "summary": sample_article.summary, "content": sample_article.content}}]
+    
+            results = await scorer.score_batch_async(payloads)
+    
+            assert len(results) == 1
+            comp = results[0]["components"]
+            assert comp["cognitive_engagement_raw"] == 3.6
+            assert comp["engagement"] == 0.72
+            assert results[0]["cognitive_details"]["reasoning"] == "Mocked Reasoning"
+    
+>       asyncio.run(run_test())
+
+tests/test_hybrid_scorer.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run_test():
+        scorer = CognitiveScorer(llm_client=mock_llm)
+        scorer._get_from_cache = MagicMock(return_value=None)
+        scorer._save_to_cache = MagicMock()
+    
+        payloads = [{"article": {"title": sample_article.title, "url": sample_article.url, "summary": sample_article.summary, "content": sample_article.content}}]
+    
+        results = await scorer.score_batch_async(payloads)
+    
+        assert len(results) == 1
+        comp = results[0]["components"]
+>       assert comp["cognitive_engagement_raw"] == 3.6
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'cognitive_engagement_raw'
+
+tests/test_hybrid_scorer.py:50: KeyError
+----------------------------- Captured stdout call -----------------------------
+19:32:14 | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)
+------------------------------ Captured log call -------------------------------
+WARNING  news_collector.scoring.cognitive_scorer:cognitive_scorer.py:300 Batch LLM failed: object MagicMock can't be used in 'await' expression
+___________________________ test_cache_hit_skips_llm ___________________________
+
+mock_llm = <MagicMock id='126874613633712'>
+sample_article = <Article(id=test_1, title='Breakthrough in Quantum Computing...', source='test_source')>
+
+    def test_cache_hit_skips_llm(mock_llm, sample_article):
+        async def run_test():
+            scorer = CognitiveScorer(llm_client=mock_llm)
+    
+            # Mock cache hit
+            # Note: In real code, _get_from_cache appends " (Cached)" to reasoning.
+            # Since we mock it, we must match expected behavior or just assert what we return.
+            # Also, reasoning is expected inside 'details' for explanation generation.
+            cached_val = {
+                "score": 0.9,
+                "details": {"cached": True, "reasoning": "Old cache (Cached)"},
+                "reasoning": "Old cache (Cached)"
+            }
+            scorer._get_from_cache = MagicMock(return_value=cached_val)
+    
+            payloads = [{"article": {"title": sample_article.title, "url": sample_article.url}}]
+    
+            # Run
+            results = await scorer.score_batch_async(payloads)
+    
+            # Assert
+            assert results[0]["components"]["engagement"] == 0.9
+            assert "Cached" in results[0]["explanation"]["reasoning"]
+            # Ensure LLM generate was NOT called
+            mock_llm.generate.assert_not_called()
+    
+>       asyncio.run(run_test())
+
+tests/test_hybrid_scorer.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run_test():
+        scorer = CognitiveScorer(llm_client=mock_llm)
+    
+        # Mock cache hit
+        # Note: In real code, _get_from_cache appends " (Cached)" to reasoning.
+        # Since we mock it, we must match expected behavior or just assert what we return.
+        # Also, reasoning is expected inside 'details' for explanation generation.
+        cached_val = {
+            "score": 0.9,
+            "details": {"cached": True, "reasoning": "Old cache (Cached)"},
+            "reasoning": "Old cache (Cached)"
+        }
+        scorer._get_from_cache = MagicMock(return_value=cached_val)
+    
+        payloads = [{"article": {"title": sample_article.title, "url": sample_article.url}}]
+    
+        # Run
+        results = await scorer.score_batch_async(payloads)
+    
+        # Assert
+>       assert results[0]["components"]["engagement"] == 0.9
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'engagement'
+
+tests/test_hybrid_scorer.py:102: KeyError
+----------------------------- Captured stdout call -----------------------------
+19:32:14 | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.3-final-0 ________________
+
+Name                                                       Stmts   Miss Branch BrPart   Cover   Missing
+-------------------------------------------------------------------------------------------------------
+news_collector/__init__.py                                    16      1      2      0  94.44%   71
+news_collector/collectors/__init__.py                         10      4      2      0  50.00%   17, 22-24
+news_collector/collectors/async_rss_collector.py             207     69     78     11  62.81%   102-105, 119->118, 126->130, 131-133, 148-149, 155-156, 185-251, 257, 305, 313-327, 346-347, 351, 358-359, 366, 395
+news_collector/collectors/base_collector.py                  352    166     88     12  47.27%   103, 112, 147-168, 211-212, 215-225, 247-255, 314->317, 373, 386->392, 467-490, 493-512, 528->530, 548-573, 582-584, 605-628, 636-637, 649-684, 693-758, 764-769, 796, 807, 813, 855, 867-868, 876-879, 911-912, 923, 933-935
+news_collector/collectors/dispatcher.py                       94     64     52      3  23.97%   26-27, 31-32, 36-38, 40->45, 42->41, 46-51, 54-57, 60-63, 77, 92-165, 172-177, 180-183
+news_collector/collectors/headless_collector.py              115     42     32      9  58.50%   26-31, 34-39, 43, 62, 82-89, 96-99, 103->113, 106->113, 110-111, 113->101, 118-120, 122->130, 165->168, 169, 195, 199-200, 205-231, 235
+news_collector/collectors/html_collector.py                  144    106     52      2  22.45%   50, 55-157, 160-208, 212, 221-236, 255->exit, 271->exit, 276-277
+news_collector/collectors/rate_limit_utils.py                 31      4     12      5  79.07%   13, 20, 23, 43->42, 45
+news_collector/collectors/rss_collector.py                   269    134     74     11  47.23%   156-163, 178-186, 219-318, 327, 348-355, 395-404, 407->427, 417-418, 446-452, 465-466, 501-518, 529-559, 562, 576-663, 667-669, 685, 715, 720, 743-744, 773-801, 811-814
+news_collector/components/editorial/__init__.py                1      0      0      0 100.00%
+news_collector/components/editorial/ai_editor.py             181     80     46     11  51.10%   26-27, 51-57, 67-85, 90-96, 101-127, 131-132, 136-137, 149, 161-166, 193, 204-207, 229, 240-241, 250-252, 267, 282->285, 286, 298->302, 317-329, 336-354
+news_collector/components/publishing/__init__.py               1      0      0      0 100.00%
+news_collector/components/publishing/github_publisher.py     106     86     28      0  14.93%   18-20, 27-31, 35-43, 47-64, 68-76, 80-85, 89-96, 108-126, 130-140, 145-167
+news_collector/config/__init__.py                             15      1      4      1  89.47%   88
+news_collector/config/perf_thresholds.py                       3      3      0      0   0.00%   3-24
+news_collector/config/prompts.py                               1      0      0      0 100.00%
+news_collector/config/settings.py                             73      6     22      5  86.32%   27->32, 120, 131, 133, 135-141
+news_collector/config/sources.py                              34      6     12      3  80.43%   459, 471, 483, 505, 510, 515
+news_collector/config/version.py                              24      2      4      1  89.29%   25, 42
+news_collector/contracts/__init__.py                           5      0      0      0 100.00%
+news_collector/contracts/collector.py                        106      6     22      7  89.84%   75, 81, 84, 90, 93, 118, 146->148
+news_collector/contracts/common.py                            38      1     10      3  91.67%   40, 55->57, 57->59
+news_collector/contracts/enrichment.py                        50      3      6      3  89.29%   46, 69, 74
+news_collector/contracts/scoring.py                           64      4     18      5  89.02%   45, 49, 95->105, 99, 104
+news_collector/diagnostics.py                                 88     88     30      0   0.00%   5-127
+news_collector/editorial/__init__.py                           0      0      0      0 100.00%
+news_collector/editorial/council.py                           55     11     10      3  78.46%   52, 62-63, 67-71, 75-77
+news_collector/enrichment/__init__.py                          3      0      0      0 100.00%
+news_collector/enrichment/nlp_stack.py                       235     53    112     36  68.59%   41, 44, 49, 53, 63, 67, 70, 74, 81, 88, 103, 110, 122, 129, 144-146, 152-163, 166-179, 186, 193, 208->207, 215, 218, 221->223, 224->226, 236-237, 246, 250, 253, 256->258, 259->261, 275, 278, 282->284, 285->287, 288->295, 290->292, 293->295, 313
+news_collector/enrichment/pipeline.py                         34      1      2      1  94.44%   58
+news_collector/infrastructure/http_client.py                  49     10      6      2  74.55%   43, 77->80, 104-106, 123-128
+news_collector/infrastructure/llm/provider.py                 94     31     26      6  59.17%   49, 51, 73, 76-78, 102, 109, 112-114, 117-125, 142-143, 148-156
+news_collector/logic/parsers/rss_parser.py                   123    105     86      0   8.61%   18, 22-26, 32-70, 73-82, 86-88, 91-106, 109-128, 132-153, 156-170, 173-187
+news_collector/logic/workflows/refinery_engine.py             63      4     10      2  91.78%   136-138, 142-143, 150->152
+news_collector/monitoring/__init__.py                          5      0      0      0 100.00%
+news_collector/monitoring/canary.py                           78      4     26      7  87.50%   38, 62, 64->66, 69-70, 105->107, 114->118, 118->108, 136->135
+news_collector/monitoring/common.py                          102     14     36     11  74.64%   13-14, 44, 68->70, 90->92, 92->94, 94->96, 145-162, 168->170, 170->172, 172->174, 174->176, 182
+news_collector/monitoring/detectors.py                       197     31     88     18  77.89%   42-45, 48-51, 82, 105-113, 115->138, 126->138, 132-133, 138->79, 177, 194, 197-198, 230, 274, 285->279, 318-319, 344-345, 370, 378, 381, 398
+news_collector/monitoring/io.py                               19      0      4      0 100.00%
+news_collector/monitoring/reporting.py                        45      0      2      0 100.00%
+news_collector/perf/__init__.py                                2      0      0      0 100.00%
+news_collector/perf/load_replay.py                           212    130     44      2  33.59%   34, 63-67, 88-93, 123->125, 125->127, 132, 135-136, 143-153, 159-167, 170-178, 181-183, 186-189, 193-205, 208-225, 230-254, 259-289, 294-349, 352, 366-377, 383-389, 396-405, 409, 413, 417, 423
+news_collector/reranker/__init__.py                            2      0      0      0 100.00%
+news_collector/reranker/reranker.py                           33      0     12      0 100.00%
+news_collector/scoring/__init__.py                            28     16      8      0  33.33%   30-48, 53, 57-67
+news_collector/scoring/basic_scorer.py                       352    110    154     45  61.86%   64-68, 146-148, 154-176, 198, 204-207, 215, 219, 263, 292-293, 297, 306-310, 316-324, 396, 434, 438, 442, 448, 460-467, 477, 495, 511, 515, 518, 522, 524, 536, 542->548, 599, 620, 624, 628, 795, 797, 809-810, 812->815, 815->818, 826-840, 852, 857->860, 869, 871->874, 881->883, 883->885, 885->887, 887->890, 898, 900, 902, 904, 921-979
+news_collector/scoring/cognitive_scorer.py                   196     62     58      9  66.54%   43->46, 79-80, 91-97, 107-119, 122-129, 153-156, 158->161, 190-199, 205->220, 208->207, 225-227, 241->exit, 263-297, 381->384, 420-433
+news_collector/scoring/feature_scorer.py                     185     39     60     23  73.88%   32, 169-171, 190-194, 207, 212, 214, 220, 222-225, 227, 229, 233, 236-237, 244-246, 278-280, 290, 322, 326, 332, 337, 341, 346, 350, 354, 358, 362, 365
+news_collector/scoring/heuristic_scorer.py                    46      1      6      3  92.31%   61->exit, 76->exit, 100
+news_collector/scoring/interfaces.py                           4      0      0      0 100.00%
+news_collector/scoring/pre_scorer.py                          48     38     24      0  13.89%   33-99
+news_collector/serving/__init__.py                             2      0      0      0 100.00%
+news_collector/serving/api.py                                185     33     54     10  75.31%   44, 47, 57, 61-62, 64, 70-71, 110->112, 130-131, 140-169, 290
+news_collector/storage/__init__.py                             9      4      0      0  55.56%   22-23, 28-29
+news_collector/storage/analytics.py                           43     31      6      0  24.49%   18-32, 39-52, 65-74, 79-93, 98-137, 151-179
+news_collector/storage/database.py                           508    199    178     45  57.73%   142-180, 202-204, 237->315, 315->361, 323, 331, 339-340, 353, 391-394, 402-403, 409-410, 419-428, 439-440, 449-462, 468-476, 502, 506-507, 511->514, 519-542, 556-559, 609->612, 615-621, 626, 633, 641, 647, 656, 659, 666, 670, 673->675, 675->678, 705, 707->726, 729-776, 781, 785, 790, 799-815, 835->838, 852-855, 873, 891->897, 893->891, 898-899, 934, 950-953, 982-984, 1003-1015, 1057-1058, 1062-1063, 1067-1068, 1072-1073, 1086, 1091, 1092->1094, 1094->1096, 1115-1116, 1119-1120, 1124-1128, 1141-1142, 1151-1152, 1165-1172, 1181-1196
+news_collector/storage/maintenance.py                         18      4      0      0  77.78%   16-31
+news_collector/storage/models.py                             147     12      2      0  90.60%   197, 288, 354, 398, 433, 446-447, 455-471
+news_collector/system.py                                     340    208     94     15  34.79%   115, 117->129, 154-165, 186-313, 328-356, 369-423, 432-470, 474-484, 499->exit, 512, 534-538, 547-553, 571->603, 587-591, 604-607, 620-623, 648-657, 669-697, 704-742, 751-804, 818, 840, 874->888, 877-882, 888->914, 893-896, 907-910, 914->919, 929-965, 980-1030, 1036-1082, 1086-1105, 1126, 1142-1147
+news_collector/utils/__init__.py                               3      0      0      0 100.00%
+news_collector/utils/dedupe.py                                37      2     12      2  91.84%   29, 32
+news_collector/utils/full_text.py                             29     29      8      0   0.00%   2-55
+news_collector/utils/pydantic_compat.py                       18      3      2      1  80.00%   40-48
+news_collector/utils/security.py                              22      4      8      2  80.00%   24, 30-34, 50
+news_collector/utils/text_cleaner.py                          47      5     12      1  89.83%   63-68, 76
+news_collector/utils/url_canonicalizer.py                    103      4     52      4  94.84%   80, 95, 97, 139
+news_collector/validation/rules.py                            74      4     16      2  93.33%   27, 40, 87, 91
+news_collector/validation/validator.py                        26      0      8      0 100.00%
+-------------------------------------------------------------------------------------------------------
+TOTAL                                                       5849   2078   1820    342  59.26%
+FAIL Required test coverage of 80% not reached. Total coverage: 59.26%
+=========================== short test summary info ============================
+SKIPPED [1] tests/gui/test_gui_config_persistence.py:11: could not import 'tkinter': No module named 'tkinter'
+SKIPPED [1] tests/test_gui_config.py:6: could not import 'tkinter': No module named 'tkinter'
+FAILED tests/property/test_normalization_properties.py::test_clean_html_removes_boilerplate_and_scripts
+FAILED tests/test_hybrid_scorer.py::test_batch_scoring_happy_path - KeyError:...
+FAILED tests/test_hybrid_scorer.py::test_cache_hit_skips_llm - KeyError: 'eng...
+================== 3 failed, 182 passed, 2 skipped in 14.93s ===================
