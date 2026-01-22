@@ -33,6 +33,7 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "compile",
             "--no-header",
             "--generate-hashes",
+            "--allow-unsafe",
             "--extra",
             "security",
             "--output-file",
@@ -101,14 +102,30 @@ def sync_lockfiles() -> None:
         run_command(command, description=f"Regenerating {lockfile}")
         
         # Post-process: Strip 'pip' package lines to prevent CI instability due to version mismatches
-        # pip-tools usually comments it out (unsafe) or includes it (allow-unsafe), but versions vary by env.
         path = ROOT_DIR / lockfile
         if path.exists():
             lines = path.read_text().splitlines()
-            filtered_lines = [
-                line for line in lines 
-                if not line.strip().startswith("pip==") and not line.strip().startswith("# pip==")
-            ]
+            filtered_lines = []
+            skipping = False
+            for line in lines:
+                # Keep empty lines, but reset skipping state
+                if not line.strip():
+                    if skipping:
+                        skipping = False
+                        continue
+                    filtered_lines.append(line)
+                    continue
+
+                # Check for start of a new package block (non-indented)
+                if line and not line[0].isspace():
+                    if line.startswith("pip==") or line.startswith("# pip=="):
+                        skipping = True
+                    else:
+                        skipping = False
+                
+                if not skipping:
+                    filtered_lines.append(line)
+
             path.write_text("\n".join(filtered_lines) + "\n")
 
 

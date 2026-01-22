@@ -1,13 +1,4 @@
 Run python scripts/sync_lockfiles.py --check --install-pip-tools
-  python scripts/sync_lockfiles.py --check --install-pip-tools
-  shell: /usr/bin/bash -e {0}
-  env:
-    pythonLocation: /opt/hostedtoolcache/Python/3.13.11/x64
-    PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.11/x64/lib/pkgconfig
-    Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.11/x64
-    Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.11/x64
-    Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.11/x64
-    LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.11/x64/lib
 Reinstalling pip-tools as requested.
 Collecting pip-tools
   Downloading pip_tools-7.5.2-py3-none-any.whl.metadata (26 kB)
@@ -30,7 +21,7 @@ Downloading click-8.3.1-py3-none-any.whl (108 kB)
 Downloading packaging-26.0-py3-none-any.whl (74 kB)
 Downloading pyproject_hooks-1.2.0-py3-none-any.whl (10 kB)
 Downloading setuptools-80.10.1-py3-none-any.whl (1.1 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 58.5 MB/s  0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 66.8 MB/s  0:00:00
 Downloading wheel-0.46.3-py3-none-any.whl (30 kB)
 Installing collected packages: setuptools, pyproject_hooks, packaging, click, wheel, build, pip-tools
 
@@ -1748,9 +1739,7 @@ anyio==4.12.0 \
 attrs==20.3.0 \
     --hash=sha256:31b2eced602aa8423c2aea9c76a724617ed67cf9513173fd3a4f03e3a929c7e6 \
     --hash=sha256:832aa3cde19744e49938b91fea06d69ecb9e649c93ba974535d08ad92164f700
-    # via
-    #   jsonschema
-    #   trufflehog3
+    # via jsonschema
 bandit==1.8.6 \
     --hash=sha256:3348e934d736fcdb68b6aa4030487097e23a501adf3e7827b63658df464dddd0 \
     --hash=sha256:dbfe9c25fc6961c2078593de55fd19f2559f9e45b99f1272341f5b95dea4e56b
@@ -1902,7 +1891,6 @@ gitpython==3.1.41 \
     # via
     #   noticiencias-news-collector (pyproject.toml)
     #   streamlit
-    #   trufflehog3
 greenlet==3.3.0 \
     --hash=sha256:047ab3df20ede6a57c35c14bf5200fcf04039d50f908270d3f9a7a82064f543b \
     --hash=sha256:087ea5e004437321508a8d6f20efc4cfec5e3c30118e1417ea96ed1d93950527 \
@@ -1978,7 +1966,6 @@ jinja2==3.1.4 \
     # via
     #   altair
     #   pydeck
-    #   trufflehog3
 joblib==1.5.3 \
     --hash=sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713 \
     --hash=sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3
@@ -2882,9 +2869,7 @@ pyyaml==6.0.1 \
     --hash=sha256:fca0e3a251908a499833aa292323f32437106001d436eca0e6e7833256674585 \
     --hash=sha256:fd1592b3fdf65fff2ad0004b5e363300ef59ced41c2e6b3a99d4089fa8c5435d \
     --hash=sha256:fd66fc5d0da6d9815ba2cebeb4205f95818ff4b79c3ebe268e75d961704af52f
-    # via
-    #   bandit
-    #   trufflehog3
+    # via bandit
 regex==2025.11.3 \
     --hash=sha256:04d2765516395cf7dda331a244a3282c0f5ae96075f728629287dfa6f76ba70a \
     --hash=sha256:087511f5c8b7dfbe3a03f5d5ad0c2a33861b1fc387f21f6f60825a44865a385a \
@@ -3256,10 +3241,6 @@ tqdm==4.67.1 \
     --hash=sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2 \
     --hash=sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2
     # via nltk
-trufflehog3==3.0.10 \
-    --hash=sha256:00374b361c1ecb38f6e573bcbf39ebe55fd51f5b21aede05b685d2541feaa0a9 \
-    --hash=sha256:248a56005d4ad7693eca895ccecd14480c021a12178f01ac757e090bb1687be8
-    # via noticiencias-news-collector (pyproject.toml)
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
@@ -3322,20 +3303,20 @@ watchdog==6.0.0 \
     #   noticiencias-news-collector (pyproject.toml)
     #   streamlit
 
-# The following packages are considered to be unsafe in a requirements file:
-pip==25.2 \
-    --hash=sha256:578283f006390f85bb6282dffb876454593d637f5d1be494b5202ce4877e71f2 \
-    --hash=sha256:6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717
-    # via pip-api
+# WARNING: The following packages were not pinned, but pip requires them to be
+# pinned when the requirements file includes hashes and the requirement is not
+# satisfied by a package already installed. Consider using the --allow-unsafe flag.
+# pip
+The generated requirements file may be rejected by pip install. See # WARNING lines for details.
 Verifying lockfiles are up to date
 Traceback (most recent call last):
-  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 131, in <module>
+  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 142, in <module>
     main()
     ~~~~^^
-  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 127, in main
+  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 138, in main
     ensure_lockfiles_clean()
     ~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 107, in ensure_lockfiles_clean
+  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 118, in ensure_lockfiles_clean
     run_command(
     ~~~~~~~~~~~^
         (
@@ -3345,7 +3326,7 @@ Traceback (most recent call last):
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     )
     ^
-  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 95, in run_command
+  File "/home/runner/work/noticiencias_news_collector/noticiencias_news_collector/scripts/sync_lockfiles.py", line 94, in run_command
     subprocess.run(command, cwd=ROOT_DIR, check=True)
     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/opt/hostedtoolcache/Python/3.13.11/x64/lib/python3.13/subprocess.py", line 577, in run
