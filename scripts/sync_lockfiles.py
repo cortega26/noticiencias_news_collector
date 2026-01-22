@@ -34,6 +34,8 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--no-header",
             "--generate-hashes",
             "--allow-unsafe",
+            "-c",
+            "requirements.lock",
             "--extra",
             "security",
             "--output-file",
