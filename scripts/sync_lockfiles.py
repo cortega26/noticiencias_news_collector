@@ -119,12 +119,11 @@ def sync_lockfiles() -> None:
                     continue
 
                 # Check for start of a new package block (non-indented) or a warning block
-                if line and (not line[0].isspace() or line.startswith("# ")):
+                if line and not line[0].isspace():
                     if (
                         line.startswith("pip==")
                         or line.startswith("# pip==")
-                        or line.startswith("# WARNING: The following packages")
-                        or line.startswith("# The following packages")
+                        or "The following packages are considered to be unsafe" in line
                     ):
                         skipping = True
                     else:
