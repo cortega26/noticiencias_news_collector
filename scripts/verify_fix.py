@@ -29,7 +29,7 @@ def factory_reset():
         tables = ["articles", "article_metrics", "score_logs"]
         for t in tables:
             try:
-                cursor.execute(f"DELETE FROM {t}")
+                cursor.execute(f"DELETE FROM {t}")  # nosec
             except Exception:
                 pass
         
