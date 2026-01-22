@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260122T022032Z",
+  "collector": "RSSCollector",
+  "source_id": "s1",
+  "url": "http://test.com",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}
