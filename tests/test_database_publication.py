@@ -33,10 +33,15 @@ def test_mark_article_published_excludes_from_scores(tmp_path: Path) -> None:
         _create_article(manager, url="https://example.com/article")
 
         assert manager.get_articles_by_score(exclude_published=True)
+        
+        # Get ID first
+        with manager.get_session() as session:
+             article = session.query(Article).filter_by(url="https://example.com/article").one()
+             article_id = article.id
 
         updated = manager.mark_article_published(
-            "https://example.com/article",
-            published_url="https://noticiencias.com/demo",
+            article_id,
+            pr_url="https://noticiencias.com/demo",
         )
 
         assert updated is True
@@ -56,7 +61,12 @@ def test_mark_article_published_uses_original_url(tmp_path: Path) -> None:
             metadata={"original_url": "https://example.com/original"},
         )
 
-        updated = manager.mark_article_published("https://example.com/original")
+        # Get ID first
+        with manager.get_session() as session:
+             article = session.query(Article).filter_by(url="https://example.com/canonical").one()
+             article_id = article.id
+
+        updated = manager.mark_article_published(article_id, pr_url="https://github.com/org/repo/pull/1")
 
         assert updated is True
     finally:

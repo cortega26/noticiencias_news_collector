@@ -35,10 +35,10 @@ class DummyResponse:
 def _setup_collector(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     db_manager = DatabaseManager({"type": "sqlite", "path": db_path})
-    monkeypatch.setattr(
-        "news_collector.collectors.rss_collector.get_database_manager",
-        lambda: db_manager,
-    )
+    # monkeypatch.setattr(
+    #     "news_collector.collectors.rss_collector.get_database_manager",
+    #     lambda: db_manager,
+    # )
     collector = RSSCollector()
     source_config = {
         "name": "Test Feed",

@@ -94,8 +94,8 @@ class OllamaProvider:
             logger.debug(f"Async LLM complete in {time.time() - start:.2f}s")
 
             if json_mode:
-                return self._extract_json(text)
-            return text
+                return self._extract_json(str(text))
+            return str(text)
 
         except httpx.RequestError as e:
             logger.error(f"Async LLM Request Error: {e}")
@@ -140,8 +140,8 @@ class OllamaProvider:
             text = data.get("response", "")
 
             if json_mode:
-                return self._extract_json(text)
-            return text
+                return self._extract_json(str(text))
+            return str(text)
 
         except requests.RequestException as e:
             logger.error(f"Sync LLM Request Error: {e}")
@@ -174,7 +174,7 @@ class OllamaProvider:
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             try:
-                return json.loads(match.group(0))
+                return cast(Dict[str, Any], json.loads(match.group(0)))
             except json.JSONDecodeError:
                 pass
 
@@ -189,7 +189,7 @@ class OllamaProvider:
                     nesting -= 1
                 if nesting == 0:
                     try:
-                        return json.loads(text[start_idx : i + 1])
+                        return cast(Dict[str, Any], json.loads(text[start_idx : i + 1]))
                     except (json.JSONDecodeError, ValueError):
                         pass
 

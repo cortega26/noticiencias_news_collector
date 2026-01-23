@@ -7,10 +7,7 @@ from news_collector.collectors.rss_collector import RSSCollector
 
 @pytest.fixture
 def rss_collector():
-    with (
-        patch("news_collector.collectors.base_collector.get_database_manager"),
-        patch("news_collector.collectors.rss_collector.get_database_manager"),
-    ):
+    with patch("news_collector.collectors.base_collector.get_database_manager"):
         logger_mock = MagicMock()
         return RSSCollector(logger_factory=logger_mock)
 
