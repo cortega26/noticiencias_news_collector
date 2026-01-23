@@ -121,7 +121,6 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
     monkeypatch.setattr(
         news_collector.system, "get_database_manager", lambda: mock_db_manager
     )
-    monkeypatch.setattr(news_collector.system, "RSSCollector", lambda: MockCollector())
 
     def fake_setup_scoring(self):
         self.scorer = object()

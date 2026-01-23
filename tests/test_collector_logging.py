@@ -82,10 +82,10 @@ def test_save_article_logs_article_id(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     stub_db = SimpleNamespace(save_article=lambda _payload: saved_article)
 
-    monkeypatch.setattr(
-        "news_collector.collectors.rss_collector.get_database_manager",
-        lambda: stub_db,
-    )
+    # monkeypatch.setattr(
+    #     "news_collector.collectors.rss_collector.get_database_manager",
+    #     lambda: stub_db,
+    # )
 
     collector = RSSCollector()
     stub_logger = StubModuleLogger()
