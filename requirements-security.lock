@@ -1872,15 +1872,11 @@ typing-extensions==4.15.0 \
     #   -c requirements.lock
     #   alembic
     #   altair
-    #   anyio
     #   beautifulsoup4
-    #   cyclonedx-python-lib
     #   fastapi
     #   pydantic
     #   pydantic-core
-    #   referencing
     #   sqlalchemy
-    #   starlette
     #   streamlit
     #   typing-inspection
 typing-inspection==0.4.2 \
