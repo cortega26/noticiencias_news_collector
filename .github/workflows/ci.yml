@@ -458,7 +458,7 @@ jobs:
       - healthcheck
       - audit-todos
       - build-artifacts
-    if: ${{ github.event_name == 'push' && always() }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always() }}
     continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
