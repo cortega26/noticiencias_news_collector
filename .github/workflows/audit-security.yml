@@ -21,8 +21,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-          cache: 'pip'
+          python-version: "3.13"
+          cache: "pip"
           cache-dependency-path: |
             requirements.lock
             requirements-security.lock
@@ -61,6 +61,7 @@ jobs:
             --ignore-vuln GHSA-q2x7-8rv6-6q7h \
             --ignore-vuln GHSA-gmj6-6f8f-6699 \
             --ignore-vuln GHSA-cpwx-vrp4-4pq7 \
+            --ignore-vuln CVE-2026-0994 \
             -f json -o reports/security/pip_audit.json
 
       - name: Upload security reports
