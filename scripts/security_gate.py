@@ -29,7 +29,9 @@ SECRET_SEVERITY_DEFAULT = "HIGH"
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Document the rationale and review cadence in SECURITY.md under the Suppression Policy table.
-PIP_AUDIT_ALLOWLIST: dict[str, str] = {}
+PIP_AUDIT_ALLOWLIST: dict[str, str] = {
+    "CVE-2026-0994": "Protobuf vulnerability with no fix available (version 6.33.4)",
+}
 
 
 def load_status(status_path: Path) -> Dict[str, Any]:
