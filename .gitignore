@@ -136,3 +136,4 @@ reports/*
 # Config editor runtime artifacts
 backups/
 logs/config_editor.log
+final_lint_log.txt
