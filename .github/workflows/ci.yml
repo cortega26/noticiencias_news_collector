@@ -651,9 +651,9 @@ jobs:
             "https://api.github.com/gists/${CI_BADGE_GIST_ID}")
 
           if [ "${http_status}" -ge 400 ]; then
-            echo "Failed to update gist badge (status: ${http_status})."
+            echo "::warning::Failed to update gist badge (status: ${http_status}). Check if CI_BADGE_PAT is valid and has 'gist' scope."
             cat "${response_body}" || true
-            exit 1
+            exit 0
           fi
 
           echo "Updated gist badge (status: ${http_status})."
