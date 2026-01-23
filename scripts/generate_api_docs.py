@@ -12,7 +12,7 @@ from typing import Sequence
 LOGGER = logging.getLogger("docs.api")
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "docs" / "api"
-SOURCE_PATH = ROOT / "src"
+SOURCE_PATH = ROOT / "news_collector"
 
 
 def _preferred_python() -> str:

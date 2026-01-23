@@ -184,7 +184,11 @@ exclude_dirs = [
 skips = [
     "B101", # assert used in tests
     "B110", # insecure temp usage in controlled contexts
+    "B112", # try-except-continue
+    "B113", # requests without timeout
+    "B311", # random used for simulation/jitter
     "B324", # hashlib.md5 used for non-cryptographic hashing in dedupe utilities
+    "B410", # lxml usage
     "B411",
     "B603"
 ]

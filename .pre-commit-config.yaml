@@ -5,9 +5,9 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: end-of-file-fixer
-        exclude: ^(reports/|audit/|tests/)
+        exclude: ^(reports/|audit/|tests/|docs/)
       - id: trailing-whitespace
-        exclude: ^(reports/|audit/|tests/)
+        exclude: ^(reports/|audit/|tests/|docs/)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.14
     hooks:
@@ -20,7 +20,6 @@ repos:
         args: [--config=pyproject.toml]
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
-    hooks:
     hooks:
       - id: isort
         args: [--settings-path=pyproject.toml]
