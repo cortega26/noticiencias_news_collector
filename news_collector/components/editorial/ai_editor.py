@@ -1,15 +1,14 @@
-import requests
-import json
-import time
-import os
 import re
+import time
 from pathlib import Path
-from news_collector.utils.logger import get_logger
+
 from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 from noticiencias.config_manager import load_config
+
 
 class EditorAgent:
     def __init__(self, api_url: str, model: str):
@@ -24,16 +23,14 @@ class EditorAgent:
         try:
             self.min_content_length = load_config().text_processing.min_content_length
         except Exception:
-            self.min_content_length = 750 # Fallback
+            self.min_content_length = 750  # Fallback
 
         self.prompts = self._load_prompts()
 
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
         self.provider = OllamaProvider(
-            api_url=self.api_url,
-            model=self.model,
-            timeout=900
+            api_url=self.api_url, model=self.model, timeout=900
         )
 
     def _load_prompts(self) -> dict:
@@ -46,6 +43,7 @@ class EditorAgent:
 
         try:
             import yaml
+
             if prompts_path.exists():
                 return yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
         except ImportError:
@@ -57,7 +55,7 @@ class EditorAgent:
         return {
             "translator": {"system": "Translate to Spanish. Keep it neutral."},
             "editor": {"system": "Rewrite as a science journalist for LatAm. No hype."},
-            "headline": {"system": "Generate 3 headlines (json)."}
+            "headline": {"system": "Generate 3 headlines (json)."},
         }
 
     def _strip_emojis(self, text: str) -> str:
@@ -65,7 +63,7 @@ class EditorAgent:
 
     def _inject_frontmatter_field(self, text: str, key: str, value: str) -> str:
         if not text.startswith("---"):
-            return f"---\n{key}: \"{value}\"\n---\n\n{text}"
+            return f'---\n{key}: "{value}"\n---\n\n{text}'
 
         lines = text.splitlines()
         end_idx = None
@@ -75,7 +73,7 @@ class EditorAgent:
                 break
 
         if end_idx is None:
-             return f"---\n{key}: \"{value}\"\n---\n\n{text}"
+            return f'---\n{key}: "{value}"\n---\n\n{text}'
 
         for line in lines[1:end_idx]:
             if line.strip().lower().startswith(f"{key.lower()}:"):
@@ -94,7 +92,6 @@ class EditorAgent:
         if match:
             return match.group(1)
         return text
-
 
     def _send_prompt(self, prompt: str, system: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
@@ -142,11 +139,11 @@ class EditorAgent:
         """
         result = self.provider._extract_json(text)
         if not result and "{" in text:
-             # If provider returned empty but there might be JSON, raise strict error
-             # to match original behavior of raising ValueError?
-             # Original raised ValueError if no JSON found.
-             # Provider returns {}
-             raise ValueError("No parsing valid JSON object found")
+            # If provider returned empty but there might be JSON, raise strict error
+            # to match original behavior of raising ValueError?
+            # Original raised ValueError if no JSON found.
+            # Provider returns {}
+            raise ValueError("No parsing valid JSON object found")
         return result
 
     def _generate_headlines(self, adapted_content: str) -> dict:
@@ -159,7 +156,9 @@ class EditorAgent:
         try:
             return self._extract_json(response)
         except Exception as e:
-            logger.error(f"Failed to generate headlines: {e} | Response snippet: {response[:100]}...")
+            logger.error(
+                f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
+            )
             # Fallback to empty if fails, don't crash the whole pipeline,
             # OR raise if strictly required. The original code raised, so let's log and re-raise or return empty?
             # Original raised ValueError.
@@ -167,7 +166,7 @@ class EditorAgent:
 
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
         """Returns the path for a cached stage artifact."""
-        safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', str(article_id))
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(article_id))
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
     def process_article(self, raw_text: str | dict) -> str:
@@ -190,19 +189,22 @@ class EditorAgent:
 
             # Fallback for RSS feeds where "content" is often in "summary"
             if not content and summary:
-                 content = summary
+                content = summary
 
             image_url = raw_text.get("image_url")
             source_url = (
                 raw_text.get("url")
                 or (raw_text.get("metadata") or {}).get("original_url")
-                or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get("entry_id")
+                or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get(
+                    "entry_id"
+                )
             )
             raw_category = (raw_text.get("metadata") or {}).get("category", "other")
             article_id = str(raw_text.get("id") or "unknown")
         else:
             content = raw_text
             import hashlib
+
             article_id = hashlib.md5(content.encode()).hexdigest()[:8]
             raw_category = "other"
 
@@ -217,7 +219,7 @@ class EditorAgent:
             "physics": "Ciencia",
             "popular_science": "Ciencia",
             "community_science": "Ciencia",
-            "multidisciplinary": "Ciencia"
+            "multidisciplinary": "Ciencia",
         }
 
         final_category = category_map.get(raw_category, "Ciencia")
@@ -226,7 +228,9 @@ class EditorAgent:
 
         # Validation: content length
         if len(content.strip()) < self.min_content_length:
-             raise ValueError(f"Content too short ({len(content)} chars). Likely paywalled or empty.")
+            raise ValueError(
+                f"Content too short ({len(content)} chars). Likely paywalled or empty."
+            )
 
         # 2. Pipeline Execution
 
@@ -234,22 +238,22 @@ class EditorAgent:
         print("\n--- STAGE 1: Scientific Translation ---")
         cache_s1 = self._get_cache_path(article_id, "stage1_translation")
         if cache_s1.exists():
-             print(f"(Loaded from cache: {cache_s1})")
-             translated_text = cache_s1.read_text(encoding="utf-8")
+            print(f"(Loaded from cache: {cache_s1})")
+            translated_text = cache_s1.read_text(encoding="utf-8")
         else:
-             translated_text = self._translate_scientific(input_text)
-             cache_s1.write_text(translated_text, encoding="utf-8")
+            translated_text = self._translate_scientific(input_text)
+            cache_s1.write_text(translated_text, encoding="utf-8")
 
         # --- STAGE 2: Editorial Adaptation ---
         print("\n--- STAGE 2: Editorial Adaptation ---")
         cache_s2 = self._get_cache_path(article_id, "stage2_editorial")
         if cache_s2.exists():
-             print(f"(Loaded from cache: {cache_s2})")
-             final_content = cache_s2.read_text(encoding="utf-8")
+            print(f"(Loaded from cache: {cache_s2})")
+            final_content = cache_s2.read_text(encoding="utf-8")
         else:
-             final_content = self._adapt_editorial(translated_text)
-             final_content = self._extract_markdown_content(final_content) # Cleanup
-             cache_s2.write_text(final_content, encoding="utf-8")
+            final_content = self._adapt_editorial(translated_text)
+            final_content = self._extract_markdown_content(final_content)  # Cleanup
+            cache_s2.write_text(final_content, encoding="utf-8")
 
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
@@ -260,7 +264,7 @@ class EditorAgent:
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
-        final_title = headlines.get("direct", title) # Fallback to original if fail
+        final_title = headlines.get("direct", title)  # Fallback to original if fail
 
         # Sanitize title: ensure it's a string and not a list representation
         if isinstance(final_title, list):
@@ -270,23 +274,23 @@ class EditorAgent:
         # Construct Frontmatter
         metadata_block = [
             "---",
-            f"title: \"{final_title}\"",
+            f'title: "{final_title}"',
             f"date: {time.strftime('%Y-%m-%d')}",
-            "author: \"Noticiencias AI\"",
-            f"categories: [\"{final_category}\"]",
-            f"tags: [\"{raw_category}\"]"
+            'author: "Noticiencias AI"',
+            f'categories: ["{final_category}"]',
+            f'tags: ["{raw_category}"]',
         ]
 
         if image_url:
-            metadata_block.append(f"image: \"{image_url}\"")
+            metadata_block.append(f'image: "{image_url}"')
         if source_url:
-            metadata_block.append(f"source_url: \"{source_url}\"")
+            metadata_block.append(f'source_url: "{source_url}"')
 
         if article_id != "unknown":
-             metadata_block.append(f"refinery_id: \"{article_id}\"")
+            metadata_block.append(f'refinery_id: "{article_id}"')
 
         # Add generated headlines as hidden metadata for A/B testing potential
-        metadata_block.append(f"headlines_variants:")
+        metadata_block.append("headlines_variants:")
         metadata_block.append(f"  question: \"{headlines.get('question', '')}\"")
         metadata_block.append(f"  benefit: \"{headlines.get('benefit', '')}\"")
 
@@ -296,7 +300,7 @@ class EditorAgent:
 
         # Append source link footer if missing
         if source_url and "Fuente original" not in full_article:
-             full_article += f"\n\nFuente original: [{source_url}]({source_url})"
+            full_article += f"\n\nFuente original: [{source_url}]({source_url})"
 
         # Logic to strip Visual planning section if no image is present (Rule from tests)
         if not image_url:
@@ -306,7 +310,7 @@ class EditorAgent:
                 r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)",
                 "",
                 full_article,
-                flags=re.DOTALL | re.MULTILINE
+                flags=re.DOTALL | re.MULTILINE,
             )
 
         return self._strip_emojis(full_article)
@@ -336,7 +340,7 @@ class EditorAgent:
         prompt = (
             "Eres el Director de Arte de 'Noticiencias'. Tu tarea es analizar el siguiente artículo y definir su estrategia visual.\n"
             "Output ONLY a valid JSON object with the following keys:\n"
-            "- \"visual_category\": Choose exactly one from [\"ENERGY\", \"TECH\", \"BIO\", \"SPACE\", \"PHYSICS\", \"OTHER\"].\n"
+            '- "visual_category": Choose exactly one from ["ENERGY", "TECH", "BIO", "SPACE", "PHYSICS", "OTHER"].\n'
             "- \"visual_keywords\": A list of 3 English keywords for finding stock images (e.g. ['laser', 'lab', 'startups']).\n"
             "- \"visual_prompt\": A high-quality GenAI prompt to generate an image (e.g. 'Cinematic shot of a fusion reactor core, blue plasma, dark sci-fi aesthetic, 8k').\n\n"
             "Article Content (Snippet):\n"
@@ -350,9 +354,11 @@ class EditorAgent:
         try:
             return self._extract_json(result)
         except Exception as e:
-            logger.error(f"Failed to parse visual analysis JSON: {e} | Response snippet: {result[:100]}...")
+            logger.error(
+                f"Failed to parse visual analysis JSON: {e} | Response snippet: {result[:100]}..."
+            )
             return {
                 "visual_category": "OTHER",
                 "visual_keywords": [],
-                "visual_prompt": ""
+                "visual_prompt": "",
             }

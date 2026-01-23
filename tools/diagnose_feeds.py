@@ -15,31 +15,35 @@ Output:
 - JSON report for programmatic use
 """
 
-import sys
-import time
 import json
 import logging
-import requests
-import feedparser
-from urllib.parse import urlparse
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass
 
 # Add project root to path to import config
 from pathlib import Path
+from typing import Any, Dict, Optional
+
+import feedparser
+import requests
+
 project_root = Path(__file__).resolve().parents[1]
 sys.path.append(str(project_root))
 
 try:
     from news_collector.config.sources import ALL_SOURCES
 except ImportError:
-    print("Error: Could not import ALL_SOURCES. Run this script from the project root or ensure python path is correct.")
+    print(
+        "Error: Could not import ALL_SOURCES. Run this script from the project root or ensure python path is correct."
+    )
     sys.exit(1)
 
 # Configure Logging
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger("FeedDiagnostics")
+
 
 @dataclass
 class FeedStatus:
@@ -50,9 +54,12 @@ class FeedStatus:
     latency_ms: float
     status_code: Optional[int]
     articles_found: int
-    error_category: Optional[str] # "NETWORK", "AUTH", "TIMEOUT", "SCHEMA", "EMPTY", "PARSE"
+    error_category: Optional[
+        str
+    ]  # "NETWORK", "AUTH", "TIMEOUT", "SCHEMA", "EMPTY", "PARSE"
     error_message: Optional[str]
     last_checked: str
+
 
 class FeedDiagnoser:
     def __init__(self, timeout: int = 20):
@@ -60,7 +67,7 @@ class FeedDiagnoser:
         self.headers = {
             "User-Agent": "NoticienciasBot/1.0 (+https://noticiencias.com)",
             "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
         }
 
     def classify_error(self, exc: Exception) -> str:
@@ -87,7 +94,7 @@ class FeedDiagnoser:
             articles_found=0,
             error_category=None,
             error_message=None,
-            last_checked=time.strftime("%Y-%m-%d %H:%M:%S")
+            last_checked=time.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         try:
@@ -129,31 +136,39 @@ class FeedDiagnoser:
                     status.error_message = str(parsed.bozo_exception)
                     return status
                 else:
-                     status.status = "DEGRADED" # Has entries but malformed
+                    status.status = "DEGRADED"  # Has entries but malformed
 
             entries_count = len(parsed.entries)
             status.articles_found = entries_count
 
             if entries_count == 0:
-                status.status = "DEGRADED" # Technically valid but empty feed
+                status.status = "DEGRADED"  # Technically valid but empty feed
                 status.error_category = "NO_CONTENT"
                 status.error_message = "No entries found in feed"
             else:
                 # 3. Schema Validation on first entry
                 first_entry = parsed.entries[0]
                 missing_fields = []
-                if not hasattr(first_entry, "title"): missing_fields.append("title")
-                if not hasattr(first_entry, "link"): missing_fields.append("link")
+                if not hasattr(first_entry, "title"):
+                    missing_fields.append("title")
+                if not hasattr(first_entry, "link"):
+                    missing_fields.append("link")
 
                 # Check summary/description/content
-                has_content = any(hasattr(first_entry, f) for f in ["summary", "description", "content", "content:encoded"])
-                if not has_content: missing_fields.append("summary/content")
+                has_content = any(
+                    hasattr(first_entry, f)
+                    for f in ["summary", "description", "content", "content:encoded"]
+                )
+                if not has_content:
+                    missing_fields.append("summary/content")
 
                 if missing_fields:
                     status.status = "DEGRADED"
                     status.error_category = "SCHEMA"
-                    status.error_message = f"Missing fields: {', '.join(missing_fields)}"
-                elif status.status != "DEGRADED": # Don't overwrite if already degraded
+                    status.error_message = (
+                        f"Missing fields: {', '.join(missing_fields)}"
+                    )
+                elif status.status != "DEGRADED":  # Don't overwrite if already degraded
                     status.status = "OK"
 
         except Exception as e:
@@ -163,6 +178,7 @@ class FeedDiagnoser:
             status.error_message = str(e)
 
         return status
+
 
 def main():
     print(f"🔍 Diagnosing {len(ALL_SOURCES)} feeds...")
@@ -184,19 +200,25 @@ def main():
                 results.append(asdict(res))
 
                 # Console Output
-                status_icon = "✅" if res.status == "OK" else "⚠️" if res.status == "DEGRADED" else "❌"
+                status_icon = (
+                    "✅"
+                    if res.status == "OK"
+                    else "⚠️" if res.status == "DEGRADED" else "❌"
+                )
                 info = res.error_message if res.error_message else ""
 
                 # Truncate ID for display
-                print(f"{res.source_id[:20]:<20} | {status_icon} {res.status:<7} | {int(res.latency_ms):>4}ms | {res.articles_found:>5} | {info}")
+                print(
+                    f"{res.source_id[:20]:<20} | {status_icon} {res.status:<7} | {int(res.latency_ms):>4}ms | {res.articles_found:>5} | {info}"
+                )
 
             except Exception as exc:
                 print(f"Error processing future: {exc}")
 
     # Summary
-    pass_count = sum(1 for r in results if r['status'] == 'OK')
-    degraded_count = sum(1 for r in results if r['status'] == 'DEGRADED')
-    fail_count = sum(1 for r in results if r['status'] == 'FAIL')
+    pass_count = sum(1 for r in results if r["status"] == "OK")
+    degraded_count = sum(1 for r in results if r["status"] == "DEGRADED")
+    fail_count = sum(1 for r in results if r["status"] == "FAIL")
 
     print("-" * 60)
     print(f"Summary: {pass_count} OK, {degraded_count} Degraded, {fail_count} Failed")
@@ -204,17 +226,22 @@ def main():
     # Save Report
     output_path = "feed_health_report.json"
     with open(output_path, "w") as f:
-        json.dump({
-            "timestamp": time.time(),
-            "summary": {
-                "total": len(results),
-                "ok": pass_count,
-                "degraded": degraded_count,
-                "failed": fail_count
+        json.dump(
+            {
+                "timestamp": time.time(),
+                "summary": {
+                    "total": len(results),
+                    "ok": pass_count,
+                    "degraded": degraded_count,
+                    "failed": fail_count,
+                },
+                "feeds": results,
             },
-            "feeds": results
-        }, f, indent=2)
+            f,
+            indent=2,
+        )
     print(f"📄 Detailed report saved to {output_path}")
+
 
 if __name__ == "__main__":
     main()

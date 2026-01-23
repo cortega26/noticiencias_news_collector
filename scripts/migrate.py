@@ -22,8 +22,6 @@ import click
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
-from news_collector.config import DATABASE_CONFIG
-
 
 @click.group()
 def cli():

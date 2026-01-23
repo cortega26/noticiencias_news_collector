@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     tomli_w = None  # type: ignore[assignment]
 
-from noticiencias.config_schema import Config, DEFAULT_CONFIG, iter_field_docs
+from noticiencias.config_schema import DEFAULT_CONFIG, Config, iter_field_docs
 
 DEFAULT_ENV_PREFIX = "NOTICIENCIAS"
 DEFAULT_CONFIG_FILENAME = "config.toml"
@@ -400,14 +400,14 @@ def load_config(
 
     for legacy_key, target_path in legacy_map.items():
         if legacy_key in combined_env_sources:
-             val = combined_env_sources[legacy_key]
-             if val: # Only apply if not empty
-                 _assign_path(merged, target_path, val)
-                 provenance[target_path] = ConfigValueOrigin(
+            val = combined_env_sources[legacy_key]
+            if val:  # Only apply if not empty
+                _assign_path(merged, target_path, val)
+                provenance[target_path] = ConfigValueOrigin(
                     layer="legacy_env",
                     source="compatibility_mapping",
-                    env_var=legacy_key
-                 )
+                    env_var=legacy_key,
+                )
 
     try:
         config = Config.model_validate(merged)

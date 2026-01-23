@@ -1,16 +1,16 @@
-
 import importlib.util
 import sys
 
 REQUIRED_PACKAGES = [
     "streamlit",
     "pandas",
-    "git",      # GitPython
-    "yaml",     # PyYAML
+    "git",  # GitPython
+    "yaml",  # PyYAML
     "toml",
-    "requests", # Standard
-    "dotenv"    # python-dotenv
+    "requests",  # Standard
+    "dotenv",  # python-dotenv
 ]
+
 
 def check_imports():
     print("🔍 Checking environment dependencies...")
@@ -30,6 +30,7 @@ def check_imports():
     else:
         print("\n✅ Environment looks good!")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     check_imports()

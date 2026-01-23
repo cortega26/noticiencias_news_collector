@@ -1,6 +1,4 @@
 import logging
-import os
-import sys
 import time
 
 # Configure logging
@@ -29,7 +27,7 @@ try:
         )
         duration = time.time() - start
 
-        print(f"✅ Success!")
+        print("✅ Success!")
         print(f"⏱️ Duration: {duration:.2f} seconds")
         print(f"Response: {str(response)[:100]}...")
 

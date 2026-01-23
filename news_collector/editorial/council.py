@@ -7,13 +7,14 @@ Implements the AI Editorial Council for evaluating and improving news articles.
 
 import json
 import logging
-from typing import Any, Dict, Optional, List
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
-from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.config.prompts import EDITORIAL_COUNCIL_SYSTEM_PROMPT
+from news_collector.infrastructure.llm.provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class CouncilResult:
@@ -24,6 +25,7 @@ class CouncilResult:
     synthesis: Dict[str, str]
     raw_response: Dict[str, Any]
 
+
 class EditorialCouncil:
     """
     Agente que coordina la evaluación de artículos por el Consejo Editorial IA.
@@ -32,7 +34,9 @@ class EditorialCouncil:
     def __init__(self, llm_client: Optional[OllamaProvider] = None):
         self.llm = llm_client or OllamaProvider()
 
-    def evaluate_article(self, title: str, summary: str, content: str = "") -> Optional[CouncilResult]:
+    def evaluate_article(
+        self, title: str, summary: str, content: str = ""
+    ) -> Optional[CouncilResult]:
         """
         Envía un artículo al consejo para su evaluación.
 
@@ -55,7 +59,7 @@ class EditorialCouncil:
             response = self.llm.generate_sync(
                 prompt=article_text,
                 system=EDITORIAL_COUNCIL_SYSTEM_PROMPT,
-                json_mode=True
+                json_mode=True,
             )
 
             if not response or "error" in response:
@@ -104,11 +108,7 @@ class EditorialCouncil:
         # - Ningún rol puntúa < 2
         # - Editor responde explícitamente "Sí..."
 
-        approved = (
-            average >= 3.5 and
-            min_score >= 2.0 and
-            is_editor_approved
-        )
+        approved = average >= 3.5 and min_score >= 2.0 and is_editor_approved
 
         return CouncilResult(
             is_approved=approved,
@@ -116,5 +116,5 @@ class EditorialCouncil:
             scores=scores_map,
             feedback=assessments,
             synthesis=data.get("editorial_synthesis", {}),
-            raw_response=data
+            raw_response=data,
         )

@@ -5,7 +5,9 @@
 import argparse
 import asyncio
 import sys
+
 from news_collector.system import create_system
+
 
 def main():
     """
@@ -52,7 +54,9 @@ def main():
 
         else:
             print("\n🚀 Ejecutando ciclo de recolección...")
-            results = asyncio.run(system.run_collection_cycle(args.sources, args.dry_run))
+            results = asyncio.run(
+                system.run_collection_cycle(args.sources, args.dry_run)
+            )
 
             if args.export_json:
                 import json

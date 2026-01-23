@@ -1,6 +1,6 @@
-
 import httpx
 from bs4 import BeautifulSoup
+
 
 def inspect_page():
     url = "https://blog.google/products/gemini/gemini-3/"
@@ -16,10 +16,10 @@ def inspect_page():
 
         # Check standard containers
         article = soup.find("article")
-        main = soup.find("main")
-        content_div = soup.find("div", class_="content")
+        soup.find("main")
+        soup.find("div", class_="content")
 
-        print(f"Has <article>: {headers}") # Typo in print, but reusing var
+        print(f"Has <article>: {headers}")  # Typo in print, but reusing var
         print(f"Has <article>: {bool(article)}")
         if article:
             print(f"Article classes: {article.get('class')}")
@@ -28,9 +28,9 @@ def inspect_page():
             for i, p in enumerate(ps[:5]):
                 print(f"P[{i}]: {p.get_text(strip=True)[:50]}...")
 
-
     except Exception as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     inspect_page()

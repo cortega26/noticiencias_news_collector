@@ -1,6 +1,4 @@
-
 import json
-import sys
 
 try:
     with open("data/exports/latest_articles.json", "r") as f:

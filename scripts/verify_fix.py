@@ -3,12 +3,10 @@ import logging
 import os
 import sqlite3
 import sys
-from pathlib import Path
 
 # Add project root to path
 sys.path.append(os.getcwd())
 
-from news_collector.collectors.html_collector import HtmlCollector
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.config.settings import DATABASE_CONFIG, TEXT_PROCESSING_CONFIG
 
@@ -34,15 +32,13 @@ def factory_reset():
                 pass
 
         # 2. Reset Source Metadata
-        cursor.execute(
-            """
+        cursor.execute("""
             UPDATE sources
             SET last_checked = NULL,
                 last_successful_check = NULL,
                 feed_etag = NULL,
                 feed_last_modified = NULL
-        """
-        )
+        """)
         conn.commit()
     print("✅ Factory Reset Complete.")
 

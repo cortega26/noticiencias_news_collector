@@ -29,9 +29,7 @@ def collection_stats(
         .all()
     )
 
-    return [
-        {"date": str(stat.collection_date), "count": stat.count} for stat in stats
-    ]
+    return [{"date": str(stat.collection_date), "count": stat.count} for stat in stats]
 
 
 def source_performance(session: Session) -> List[Dict[str, Any]]:
@@ -76,11 +74,7 @@ def category_breakdown(session: Session) -> List[Dict[str, Any]]:
 
 def score_distribution(session: Session, buckets: int = 10) -> Dict[str, int]:
     """Return score histogram buckets for analytics charts."""
-    scores = (
-        session.query(Article.final_score)
-        .filter(Article.final_score > 0)
-        .all()
-    )
+    scores = session.query(Article.final_score).filter(Article.final_score > 0).all()
     values = [score[0] for score in scores if score[0] is not None]
     if not values:
         return {}

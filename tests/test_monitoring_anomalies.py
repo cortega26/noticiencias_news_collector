@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import json
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import sys
-
-import json
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT / "src"
@@ -29,7 +28,6 @@ from news_collector.monitoring.canary import build_canary_alerts
 from news_collector.monitoring.common import Severity
 from news_collector.monitoring.detectors import ContentShiftThresholds
 from news_collector.monitoring.io import load_monitoring_dataset
-
 
 UTC = timezone.utc
 

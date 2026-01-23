@@ -1,7 +1,8 @@
 import asyncio
-from news_collector.scoring.cognitive_scorer import CognitiveScorer
-from news_collector.storage.models import Article
 from datetime import datetime, timezone
+
+from news_collector.scoring.cognitive_scorer import CognitiveScorer
+
 
 async def test_cognitive_fix():
     print("--- Testing CognitiveScorer Fix ---")
@@ -9,7 +10,9 @@ async def test_cognitive_fix():
     # 1. Initialize
     try:
         scorer = CognitiveScorer()
-        print(f"✅ CognitiveScorer initialized. Weights keys: {list(scorer.weights.keys())}")
+        print(
+            f"✅ CognitiveScorer initialized. Weights keys: {list(scorer.weights.keys())}"
+        )
 
         if "engagement_potential" not in scorer.weights:
             print("❌ FAIL: 'engagement_potential' missing from weights!")
@@ -28,7 +31,7 @@ async def test_cognitive_fix():
         "content": "Data 2026. p-value < 0.05. Significant results found in LatAm study.",
         "url": "http://test.com/1",
         "source_id": "test_source",
-        "published_date": datetime.now(timezone.utc).isoformat()
+        "published_date": datetime.now(timezone.utc).isoformat(),
     }
 
     payloads = [{"article": article, "source_config": {"name": "Test Source"}}]
@@ -45,10 +48,11 @@ async def test_cognitive_fix():
             print(f"   Components: {res.get('components')}")
 
             if res.get("decision_label") == "error":
-                 print("⚠️ Result indicates error/fallback used.")
+                print("⚠️ Result indicates error/fallback used.")
 
     except Exception as e:
         print(f"❌ FAIL: score_batch_async crashed: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(test_cognitive_fix())

@@ -1,6 +1,3 @@
-
-from pathlib import Path
-
 def test_stripping():
     content = """
 watchdog==6.0.0 \\
@@ -54,6 +51,7 @@ pip==25.3 \\
         print("FAIL: pip==25.3 still present")
     else:
         print("SUCCESS: pip==25.3 removed")
+
 
 if __name__ == "__main__":
     test_stripping()

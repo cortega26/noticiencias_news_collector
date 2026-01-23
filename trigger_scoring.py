@@ -1,9 +1,11 @@
 import asyncio
 import logging
+
 from news_collector.system import create_system
 
 # Configure logging to see output
 logging.basicConfig(level=logging.INFO)
+
 
 async def trigger_run():
     print("--- Triggering Collection Cycle (Scoring Pending Articles) ---")
@@ -20,12 +22,13 @@ async def trigger_run():
         print(f"Articles Scored: {summary.get('articles_scored')}")
         print(f"Final Selection: {summary.get('final_selection_count')}")
 
-        if summary.get('articles_scored', 0) > 0:
+        if summary.get("articles_scored", 0) > 0:
             print("✅ SUCCESS: Articles were scored!")
         else:
             print("❌ FAILURE: No articles scored.")
     else:
         print("❌ Failed to initialize system.")
+
 
 if __name__ == "__main__":
     asyncio.run(trigger_run())

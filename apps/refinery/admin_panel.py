@@ -1,11 +1,12 @@
+import importlib.util
+import os
+import sqlite3
+import sys
+from pathlib import Path
+
+import dotenv
 import streamlit as st
 import toml
-import os
-import dotenv
-from pathlib import Path
-import sys
-import sqlite3
-import importlib.util
 
 # Import refinery main explicitly to avoid ambiguous module resolution.
 # Import refinery main explicitly to avoid ambiguous module resolution.
@@ -39,21 +40,27 @@ if spec is None or spec.loader is None:
 refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
-from news_collector.storage.database import DatabaseManager
+import logging
+
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from news_collector.config.settings import DATABASE_CONFIG
+from news_collector.storage.database import DatabaseManager
 
-import logging
+# Alias for compatibility if legacy code relies on this name
+RefineryDatabaseManager = DatabaseManager
+
 # Configure logging with timestamps for console output
 logging.basicConfig(
-    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
     level=logging.INFO,
-    datefmt='%H:%M:%S',
-    force=True
+    datefmt="%H:%M:%S",
+    force=True,
 )
 
 # Page Config
-st.set_page_config(page_title="Panel de Control Noticiencias", page_icon="🎛️", layout="wide")
+st.set_page_config(
+    page_title="Panel de Control Noticiencias", page_icon="🎛️", layout="wide"
+)
 
 st.title("🎛️ Panel de Control Unificado Noticiencias")
 
@@ -68,6 +75,7 @@ REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 
 # Paths continued below after NEWS_COLLECTOR_PATH logic...
 
+
 # --- Helper Functions ---
 def load_secrets():
     if not ENV_FILE.exists():
@@ -76,6 +84,7 @@ def load_secrets():
     all_env = dotenv.dotenv_values(ENV_FILE)
     # Filter for known secrets or return all (simplest is return all for now, but UI will separate)
     return all_env
+
 
 def save_secrets(secrets_dict):
     # Load existing to preserve other keys if needed, or just write what we have
@@ -90,10 +99,11 @@ def save_secrets(secrets_dict):
             # But for safety, we just allow writing the passed dict + updates.
 
             # Simple approach: Write atomic
-             if " " in str(value) and not str(value).startswith('"'):
+            if " " in str(value) and not str(value).startswith('"'):
                 f.write(f'{key}="{value}"\n')
-             else:
+            else:
                 f.write(f"{key}={value}\n")
+
 
 def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> bool:
     """Require a UI access token unless an explicit unsafe bypass is enabled."""
@@ -121,7 +131,7 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
             "Token de acceso",
             type="password",
             help="Ingresa REFINERY_UI_TOKEN para habilitar acciones de escritura.",
-            key=key
+            key=key,
         )
         if entered:
             if entered == token:
@@ -130,6 +140,7 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
                 return True
             st.error("Token inválido.")
     return False
+
 
 # Load Secrets for Auth
 secrets = load_secrets()
@@ -148,21 +159,37 @@ COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
 configured_db_path = DATABASE_CONFIG.get("path", "refinery.db")
 REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / configured_db_path
 
+
 def load_toml_config():
     if not COLLECTOR_CONFIG_PATH.exists():
-        st.error(f"❌ Archivo de configuración no encontrado en: `{COLLECTOR_CONFIG_PATH}`")
-        st.caption(f"Ruta revisada: `{NEWS_COLLECTOR_PATH}`. Configura `NEWS_COLLECTOR_PATH` en la pestaña de ajustes.")
+        st.error(
+            f"❌ Archivo de configuración no encontrado en: `{COLLECTOR_CONFIG_PATH}`"
+        )
+        st.caption(
+            f"Ruta revisada: `{NEWS_COLLECTOR_PATH}`. Configura `NEWS_COLLECTOR_PATH` en la pestaña de ajustes."
+        )
         st.info(f"Directorio de Trabajo Actual: `{os.getcwd()}`")
         return None
     with open(COLLECTOR_CONFIG_PATH, "r") as f:
         return toml.load(f)
 
+
 def save_toml_config(config_data):
     with open(COLLECTOR_CONFIG_PATH, "w") as f:
         toml.dump(config_data, f)
 
+
 # --- Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🧠 IA & Refinería", "📊 Scraper & Scoring", "💼 Gestión", "📈 Analítica", "🚀 Publicados", "📡 Fuentes"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    [
+        "🧠 IA & Refinería",
+        "📊 Scraper & Scoring",
+        "💼 Gestión",
+        "📈 Analítica",
+        "🚀 Publicados",
+        "📡 Fuentes",
+    ]
+)
 
 # --- Tab 1: AI Settings ---
 with tab1:
@@ -186,33 +213,42 @@ with tab1:
         new_model = st.selectbox(
             "Seleccionar Modelo Ollama",
             ["llama3.2", "llama3.3", "llama3.1:70b", "mistral"],
-            index=0 if "3.2" in current_model else 1
+            index=0 if "3.2" in current_model else 1,
         )
 
         # Update TOML dict
-        if "ollama" not in config_data: config_data["ollama"] = {}
+        if "ollama" not in config_data:
+            config_data["ollama"] = {}
         config_data["ollama"]["model"] = new_model
 
         st.subheader("🔗 URL de API")
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
-        config_data["ollama"]["api_url"] = st.text_input("Endpoint de Ollama", current_api)
+        config_data["ollama"]["api_url"] = st.text_input(
+            "Endpoint de Ollama", current_api
+        )
 
     with col2:
         st.subheader("📂 Repositorios")
         github_cfg = config_data.get("github", {})
 
-        config_data["github"]["source_repo_url"] = st.text_input("Repo Origen", github_cfg.get("source_repo_url", ""))
-        config_data["github"]["target_repo_url"] = st.text_input("Repo Destino", github_cfg.get("target_repo_url", ""))
+        config_data["github"]["source_repo_url"] = st.text_input(
+            "Repo Origen", github_cfg.get("source_repo_url", "")
+        )
+        config_data["github"]["target_repo_url"] = st.text_input(
+            "Repo Destino", github_cfg.get("target_repo_url", "")
+        )
 
         # --- PATH remains in Secrets/Env ---
         secrets["NEWS_COLLECTOR_PATH"] = st.text_input(
             "Ruta News Collector (Local)",
-            secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
+            secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH)),
         )
         # ------------------------------
 
         st.markdown("##### 🔐 Secretos (.env)")
-        secrets["GITHUB_TOKEN"] = st.text_input("Token de GitHub", secrets.get("GITHUB_TOKEN", ""), type="password")
+        secrets["GITHUB_TOKEN"] = st.text_input(
+            "Token de GitHub", secrets.get("GITHUB_TOKEN", ""), type="password"
+        )
         secrets[REFINERY_UI_TOKEN_KEY] = st.text_input(
             "Token UI Refinery",
             secrets.get(REFINERY_UI_TOKEN_KEY, ""),
@@ -251,28 +287,39 @@ with tab1:
             except Exception as e:
                 st.error(f"Error leyendo prompts.yaml: {e}")
         else:
-            st.warning("⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar.")
+            st.warning(
+                "⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar."
+            )
 
         # Translator Prompt
         st.markdown("##### 1. Traductor (Fase 1)")
         trans_sys = current_prompts.get("translator", {}).get("system", "")
-        new_trans_sys = st.text_area("Prompt Traductor", value=trans_sys, height=150, key="prompt_trans")
+        new_trans_sys = st.text_area(
+            "Prompt Traductor", value=trans_sys, height=150, key="prompt_trans"
+        )
 
         # Editor Prompt
         st.markdown("##### 2. Editor (Fase 2)")
         edit_sys = current_prompts.get("editor", {}).get("system", "")
-        new_edit_sys = st.text_area("Prompt Editor", value=edit_sys, height=200, key="prompt_edit")
+        new_edit_sys = st.text_area(
+            "Prompt Editor", value=edit_sys, height=200, key="prompt_edit"
+        )
 
         # Headline Prompt
         st.markdown("##### 3. Titulares (Fase 3)")
         head_sys = current_prompts.get("headline", {}).get("system", "")
-        new_head_sys = st.text_area("Prompt Titulares", value=head_sys, height=100, key="prompt_head")
+        new_head_sys = st.text_area(
+            "Prompt Titulares", value=head_sys, height=100, key="prompt_head"
+        )
 
         if st.button("💾 Guardar Prompts (YAML)"):
             updated_prompts = current_prompts.copy()
-            if "translator" not in updated_prompts: updated_prompts["translator"] = {}
-            if "editor" not in updated_prompts: updated_prompts["editor"] = {}
-            if "headline" not in updated_prompts: updated_prompts["headline"] = {}
+            if "translator" not in updated_prompts:
+                updated_prompts["translator"] = {}
+            if "editor" not in updated_prompts:
+                updated_prompts["editor"] = {}
+            if "headline" not in updated_prompts:
+                updated_prompts["headline"] = {}
 
             updated_prompts["translator"]["system"] = new_trans_sys
             updated_prompts["editor"]["system"] = new_edit_sys
@@ -280,7 +327,9 @@ with tab1:
 
             try:
                 with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
-                    yaml.dump(updated_prompts, f, allow_unicode=True, default_flow_style=False)
+                    yaml.dump(
+                        updated_prompts, f, allow_unicode=True, default_flow_style=False
+                    )
                 st.success("¡Prompts actualizados en config/prompts.yaml!")
             except Exception as e:
                 st.error(f"Error guardando prompts: {e}")
@@ -302,15 +351,21 @@ with tab2:
 
         with col_c1:
             if "collection" in config_data:
-                config_data["collection"]["collection_interval_hours"] = st.number_input(
-                    "Intervalo de Recolección (Horas)",
-                    min_value=1, max_value=48,
-                    value=config_data["collection"].get("collection_interval_hours", 6)
+                config_data["collection"]["collection_interval_hours"] = (
+                    st.number_input(
+                        "Intervalo de Recolección (Horas)",
+                        min_value=1,
+                        max_value=48,
+                        value=config_data["collection"].get(
+                            "collection_interval_hours", 6
+                        ),
+                    )
                 )
                 config_data["collection"]["max_articles_per_source"] = st.number_input(
                     "Máx. Artículos por Fuente",
-                    min_value=5, max_value=500,
-                    value=config_data["collection"].get("max_articles_per_source", 50)
+                    min_value=5,
+                    max_value=500,
+                    value=config_data["collection"].get("max_articles_per_source", 50),
                 )
 
         # New Column for Scoring Model
@@ -324,17 +379,19 @@ with tab2:
                 "Modelo para Clasificación (Rápido)",
                 ["llama3.2", "mistral", "llama3.1:8b"],
                 index=0 if "3.2" in current_scoring_model else 0,
-                help="Usar un modelo más pequeño/rápido para la fase de recolección."
+                help="Usar un modelo más pequeño/rápido para la fase de recolección.",
             )
 
             if new_scoring_model != current_scoring_model:
-                if "scoring" not in config_data: config_data["scoring"] = {}
+                if "scoring" not in config_data:
+                    config_data["scoring"] = {}
                 config_data["scoring"]["llm_model"] = new_scoring_model
                 # We defer save to the main button below or add a specific one?
                 # The code structure below has a "Guardar Config Colector" button.
                 # Use st.warning to remind user to save
-                st.info(f"Modelo seleccionado: {new_scoring_model}. Recuerda guardar cambios.")
-
+                st.info(
+                    f"Modelo seleccionado: {new_scoring_model}. Recuerda guardar cambios."
+                )
 
         # Scoring Weights
         st.subheader("⚖️ Pesos de Scoring (Total debe ser ~1.0)")
@@ -343,22 +400,46 @@ with tab2:
 
             w_col1, w_col2 = st.columns(2)
             with w_col1:
-                weights["source_credibility"] = st.slider("Credibilidad Fuente", 0.0, 1.0, weights.get("source_credibility", 0.25))
-                weights["recency"] = st.slider("Recencia / Frescura", 0.0, 1.0, weights.get("recency", 0.2))
+                weights["source_credibility"] = st.slider(
+                    "Credibilidad Fuente",
+                    0.0,
+                    1.0,
+                    weights.get("source_credibility", 0.25),
+                )
+                weights["recency"] = st.slider(
+                    "Recencia / Frescura", 0.0, 1.0, weights.get("recency", 0.2)
+                )
             with w_col2:
-                weights["content_quality"] = st.slider("Calidad Contenido", 0.0, 1.0, weights.get("content_quality", 0.25))
-                weights["engagement_potential"] = st.slider("Potencial Engagement (Cognitivo)", 0.0, 1.0, weights.get("engagement_potential", 0.3))
+                weights["content_quality"] = st.slider(
+                    "Calidad Contenido", 0.0, 1.0, weights.get("content_quality", 0.25)
+                )
+                weights["engagement_potential"] = st.slider(
+                    "Potencial Engagement (Cognitivo)",
+                    0.0,
+                    1.0,
+                    weights.get("engagement_potential", 0.3),
+                )
 
         # Keywords
         st.subheader("🔑 Palabras Clave")
         if "text_processing" in config_data:
             tp = config_data["text_processing"]
 
-            boost_txt = st.text_area("Keywords para Potenciar (separadas por coma)", ", ".join(tp.get("boost_keywords", [])))
-            tp["boost_keywords"] = [x.strip() for x in boost_txt.split(",") if x.strip()]
+            boost_txt = st.text_area(
+                "Keywords para Potenciar (separadas por coma)",
+                ", ".join(tp.get("boost_keywords", [])),
+            )
+            tp["boost_keywords"] = [
+                x.strip() for x in boost_txt.split(",") if x.strip()
+            ]
 
-            penalty_txt = st.text_area("Keywords Penalizadas/Clickbait (separadas por coma)", ", ".join(tp.get("penalty_keywords", [])))
-            tp["penalty_keywords"] = [x.strip() for x in penalty_txt.split(",") if x.strip()]
+            penalty_txt = st.text_area(
+                "Keywords Penalizadas/Clickbait (separadas por coma)",
+                ", ".join(tp.get("penalty_keywords", [])),
+            )
+            tp["penalty_keywords"] = [
+                x.strip() for x in penalty_txt.split(",") if x.strip()
+            ]
 
         if st.button("💾 Guardar Config Colector"):
             save_toml_config(config_data)
@@ -367,88 +448,117 @@ with tab2:
         st.markdown("---")
         st.subheader("🧹 Mantenimiento del Sistema")
         with st.expander("🚨 Reinicio de Fábrica (Reset Total)", expanded=True):
-            st.warning("⚠️ Esta acción borrará TODOS los datos: artículos en base de datos, caché y archivos exportados. Úsalo para empezar de cero.")
+            st.warning(
+                "⚠️ Esta acción borrará TODOS los datos: artículos en base de datos, caché y archivos exportados. Úsalo para empezar de cero."
+            )
 
             # Confirmation Checkbox to prevent accidental clicks
-            confirm_delete = st.checkbox("Confirmo que deseo vaciar TODO el sistema (Backend + Frontend).")
+            confirm_delete = st.checkbox(
+                "Confirmo que deseo vaciar TODO el sistema (Backend + Frontend)."
+            )
 
-            if st.button("🧨 EJECUTAR RESET TOTAL", type="primary", disabled=not confirm_delete):
-                 with st.spinner("Eliminando datos y reseteando caché..."):
-                     try:
-                         # Use the DatabaseManager for the persistent storage
-                         db_man = DatabaseManager({"type": "sqlite", "path": REFINERY_DB_PATH})
-                         count = db_man.clear_all_articles()
+            if st.button(
+                "🧨 EJECUTAR RESET TOTAL", type="primary", disabled=not confirm_delete
+            ):
+                with st.spinner("Eliminando datos y reseteando caché..."):
+                    try:
+                        # Use the DatabaseManager for the persistent storage
+                        db_man = DatabaseManager(
+                            {"type": "sqlite", "path": REFINERY_DB_PATH}
+                        )
+                        count = db_man.clear_all_articles()
 
-                         # Clean up export files to reflect empty state immediately
-                         paths_to_clean = [
-                             BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json",
-                             NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
-                         ]
+                        # Clean up export files to reflect empty state immediately
+                        paths_to_clean = [
+                            BASE_DIR
+                            / "temp"
+                            / "source"
+                            / "data"
+                            / "exports"
+                            / "latest_articles.json",
+                            NEWS_COLLECTOR_PATH
+                            / "data"
+                            / "exports"
+                            / "latest_articles.json",
+                        ]
 
-                         for p in paths_to_clean:
-                             if p.exists():
-                                 try:
-                                     p.unlink()
-                                 except Exception:
-                                     pass
+                        for p in paths_to_clean:
+                            if p.exists():
+                                try:
+                                    p.unlink()
+                                except Exception:
+                                    pass
 
-                         # 2. Clear Refinery Workflow State (refinery.db)
-                         # This DB tracks which files have been turned into PRs.
-                         # We must wipe it so the UI allows re-processing the same content if desired.
-                         refinery_db_path = NEWS_COLLECTOR_PATH / "refinery.db"
-                         if refinery_db_path.exists():
-                             try:
-                                 refinery_db_path.unlink()
-                                 st.success(f"✅ Estado del flujo de trabajo reiniciado ({refinery_db_path.name} eliminado).")
-                             except Exception as e:
-                                 st.warning(f"No se pudo eliminar {refinery_db_path.name}: {e}")
+                        # 2. Clear Refinery Workflow State (refinery.db)
+                        # This DB tracks which files have been turned into PRs.
+                        # We must wipe it so the UI allows re-processing the same content if desired.
+                        refinery_db_path = NEWS_COLLECTOR_PATH / "refinery.db"
+                        if refinery_db_path.exists():
+                            try:
+                                refinery_db_path.unlink()
+                                st.success(
+                                    f"✅ Estado del flujo de trabajo reiniciado ({refinery_db_path.name} eliminado)."
+                                )
+                            except Exception as e:
+                                st.warning(
+                                    f"No se pudo eliminar {refinery_db_path.name}: {e}"
+                                )
 
-                         # 3. Clean Job History & Source Metadata to force re-fetch
-                         # If we don't clear this, the collector will think it just ran
-                         # and skip everything (304 Not Modified or "Duplicate Job")
-                         with sqlite3.connect(REFINERY_DB_PATH) as conn:
-                             cursor = conn.cursor()
+                        # 3. Clean Job History & Source Metadata to force re-fetch
+                        # If we don't clear this, the collector will think it just ran
+                        # and skip everything (304 Not Modified or "Duplicate Job")
+                        with sqlite3.connect(REFINERY_DB_PATH) as conn:
+                            cursor = conn.cursor()
 
-                             # Wipe all article data
-                             tables_to_wipe = ["articles", "article_metrics", "score_logs"]
-                             for table in tables_to_wipe:
-                                 try:
-                                     cursor.execute(f"DELETE FROM {table}")
-                                     st.write(f"  - Tabla `{table}` limpiada.")
-                                 except Exception:
-                                     pass # Table might not exist yet
+                            # Wipe all article data
+                            tables_to_wipe = [
+                                "articles",
+                                "article_metrics",
+                                "score_logs",
+                            ]
+                            for table in tables_to_wipe:
+                                try:
+                                    cursor.execute(f"DELETE FROM {table}")
+                                    st.write(f"  - Tabla `{table}` limpiada.")
+                                except Exception:
+                                    pass  # Table might not exist yet
 
-                             # Reset Source Metadata (Force Re-fetch)
-                             try:
-                                 cursor.execute("""
+                            # Reset Source Metadata (Force Re-fetch)
+                            try:
+                                cursor.execute("""
                                      UPDATE sources
                                      SET last_checked = NULL,
                                          last_successful_check = NULL,
                                          feed_etag = NULL,
                                          feed_last_modified = NULL
                                  """)
-                                 st.write("  - Metadatos de fuentes reiniciados (forzando re-colección).")
-                             except Exception as e:
-                                 st.warning(f"No se pudieron reiniciar fuentes: {e}")
+                                st.write(
+                                    "  - Metadatos de fuentes reiniciados (forzando re-colección)."
+                                )
+                            except Exception as e:
+                                st.warning(f"No se pudieron reiniciar fuentes: {e}")
 
-                             conn.commit()
+                            conn.commit()
 
-                         # Clear Streamlit Cache
-                         st.cache_data.clear()
+                        # Clear Streamlit Cache
+                        st.cache_data.clear()
 
-                         st.success(f"✅ SISTEMA LIMPIO. {count} artículos eliminados. Caché purgada.")
-                         import time
-                         time.sleep(2) # Give user time to see success message
-                         st.rerun()
-                     except Exception as e:
-                         st.error(f"Error durante limpieza: {e}")
+                        st.success(
+                            f"✅ SISTEMA LIMPIO. {count} artículos eliminados. Caché purgada."
+                        )
+                        import time
+
+                        time.sleep(2)  # Give user time to see success message
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error durante limpieza: {e}")
 
 # --- Tab 3: Operations ---
 with tab3:
     st.header("Operaciones del Pipeline")
 
     st.info("ℹ️ Selecciona un artículo para refinar y publicar.")
-    env_vars = dict(load_env_file())
+    env_vars = dict(load_secrets())
     auth_ok = require_refinery_auth(env_vars, key="auth_ops")
 
     # Section 1: Sync
@@ -457,28 +567,40 @@ with tab3:
         # User requested to eliminate Fast Mode to ensure quality discrimination
         st.info("🧠 Modo Cognitivo Activo (Análisis Profundo)")
 
-        dry_run_enabled = st.checkbox("🧪 Test Connection (Dry Run)", help="Ejecutar análisis sin guardar artículos en Base de Datos.")
+        dry_run_enabled = st.checkbox(
+            "🧪 Test Connection (Dry Run)",
+            help="Ejecutar análisis sin guardar artículos en Base de Datos.",
+        )
 
-        if st.button("🔄 Sincronizar y Recolectar", help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos)."):
+        if st.button(
+            "🔄 Sincronizar y Recolectar",
+            help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos).",
+        ):
             with st.spinner("Ejecutando recolección y análisis cognitivo..."):
                 if not auth_ok:
                     st.warning("Autenticación requerida para sincronizar.")
                 else:
                     try:
                         # Direct call to main module instead of subprocess
-                        result = run_refinery(fetch_only=False, fast_mode=False, dry_run=dry_run_enabled)
+                        result = run_refinery(
+                            fetch_only=False, fast_mode=False, dry_run=dry_run_enabled
+                        )
                         if result.get("status") == "success":
                             st.success("¡Recolección Completa!")
                         else:
                             st.error("Fallo en Sincronización")
-                            st.expander("Detalles del Error").write(result.get("message"))
+                            st.expander("Detalles del Error").write(
+                                result.get("message")
+                            )
                     except Exception as e:
                         st.error(f"Error: {e}")
 
     # Section 2: List Candidates
     # Look for the JSON file
     # We know main.py clones into temp/source
-    CLONED_PATH = BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json"
+    CLONED_PATH = (
+        BASE_DIR / "temp" / "source" / "data" / "exports" / "latest_articles.json"
+    )
     SIBLING_PATH = NEWS_COLLECTOR_PATH / "data" / "exports" / "latest_articles.json"
 
     JSON_PATH = None
@@ -493,47 +615,54 @@ with tab3:
         JSON_PATH = SIBLING_PATH
     # If JSON is missing, try to generate it from local MD files (Mock/Test Data)
     if not (JSON_PATH and JSON_PATH.exists()):
-        data_dir = CLONED_PATH.parent.parent # temp/source/data
+        data_dir = CLONED_PATH.parent.parent  # temp/source/data
         md_files = list(data_dir.glob("*.md"))
         if md_files:
             try:
                 # Generate a temporary JSON for the UI to consume
                 temp_articles = []
                 for mf in md_files:
-                    temp_articles.append({
-                        "id": mf.name,
-                        "title": mf.stem.replace("_", " ").title(),
-                        "summary": "Local Markdown File (Mock/Test Data)",
-                        "score": 0.99,
-                        "published_date": "2025-01-01",
-                        "file_path": str(mf),
-                        "components": {
-                            "source_credibility": 1.0,
-                            "recency": 1.0,
-                            "content_quality": 1.0,
-                            "cognitive_engagement_norm": 1.0
+                    temp_articles.append(
+                        {
+                            "id": mf.name,
+                            "title": mf.stem.replace("_", " ").title(),
+                            "summary": "Local Markdown File (Mock/Test Data)",
+                            "score": 0.99,
+                            "published_date": "2025-01-01",
+                            "file_path": str(mf),
+                            "components": {
+                                "source_credibility": 1.0,
+                                "recency": 1.0,
+                                "content_quality": 1.0,
+                                "cognitive_engagement_norm": 1.0,
+                            },
                         }
-                    })
+                    )
 
                 # Write to where the app expects it (or a temp location)
                 # CLONED_PATH is .../exports/latest_articles.json
                 # We will write it there so the next check passes
                 CLONED_PATH.parent.mkdir(parents=True, exist_ok=True)
                 import json
+
                 with open(CLONED_PATH, "w", encoding="utf-8") as f:
                     json.dump({"articles": temp_articles}, f, indent=2)
 
                 JSON_PATH = CLONED_PATH
-                st.toast(f"ℹ️ Se generó un archivo JSON temporal desde {len(md_files)} archivos MD locales.", icon="🛠️")
+                st.toast(
+                    f"ℹ️ Se generó un archivo JSON temporal desde {len(md_files)} archivos MD locales.",
+                    icon="🛠️",
+                )
             except Exception as e:
                 st.error(f"Error generando datos mock: {e}")
 
     if JSON_PATH and JSON_PATH.exists():
         import json
+
         import pandas as pd
 
         try:
-            refinery_db = DatabaseManager() # Initialize using global config
+            refinery_db = DatabaseManager()  # Initialize using global config
 
             with open(JSON_PATH, "r", encoding="utf-8") as f:
                 payload = json.load(f)
@@ -542,7 +671,9 @@ with tab3:
             else:
                 articles = payload
             if not isinstance(articles, list):
-                st.error("Formato de exportación inválido: no es una lista de artículos.")
+                st.error(
+                    "Formato de exportación inválido: no es una lista de artículos."
+                )
                 articles = []
 
             # --- RE-SCORING LOGIC DISABLED ---
@@ -552,9 +683,13 @@ with tab3:
             # ------------------------
 
             # UX IMPROVEMENT: Allow showing processed items
-            show_processed = st.sidebar.checkbox("Mostrar artículos procesados (Force Reprocess)", value=False)
+            show_processed = st.sidebar.checkbox(
+                "Mostrar artículos procesados (Force Reprocess)", value=False
+            )
             if show_processed:
-                st.sidebar.info("Modo 'Force Reprocess' activo: Se muestran todos los artículos.")
+                st.sidebar.info(
+                    "Modo 'Force Reprocess' activo: Se muestran todos los artículos."
+                )
 
             if articles:
                 refinery_db = DatabaseManager()
@@ -569,7 +704,7 @@ with tab3:
                         # Only show debug if relevant or debug mode
                         if not show_processed:
                             # Keep this unobtrusive or remove it if user is tired of it
-                             pass
+                            pass
 
                     if not show_processed:
                         try:
@@ -579,7 +714,7 @@ with tab3:
                                 filtered_count += 1
                                 continue
                         except ValueError:
-                             pass # If ID is not int, we can't check efficiently in main DB yet, or assume not processed
+                            pass  # If ID is not int, we can't check efficiently in main DB yet, or assume not processed
 
                         # Check .md existence is handled by is_article_published?
                         # No, is_article_published checks DB status.
@@ -595,9 +730,7 @@ with tab3:
                 if not available_articles:
                     st.info("No hay artículos disponibles para procesar.")
                 else:
-                    st.subheader(
-                        f"Artículos Disponibles ({len(available_articles)})"
-                    )
+                    st.subheader(f"Artículos Disponibles ({len(available_articles)})")
 
                     # Convert to DataFrame for easier display
                     df = pd.DataFrame(available_articles)
@@ -616,7 +749,7 @@ with tab3:
                     # Create a formatted list for the selectbox
                     options = {
                         f"{row['id']} - {row['title']} "
-                        f"(Score: {row.get('score', 0):.2f})": row['id']
+                        f"(Score: {row.get('score', 0):.2f})": row["id"]
                         for i, row in df.iterrows()
                     }
 
@@ -642,9 +775,7 @@ with tab3:
                                 "📄 Revisar Resumen del Artículo", expanded=False
                             ):
                                 st.write(f"**Título:** {selected_art.get('title')}")
-                                st.write(
-                                    f"**Resumen:** {selected_art.get('summary')}"
-                                )
+                                st.write(f"**Resumen:** {selected_art.get('summary')}")
                         if selected_art.get("image_url"):
                             st.image(
                                 selected_art.get("image_url"),
@@ -672,8 +803,13 @@ with tab3:
 
                             col_pub1, col_pub2 = st.columns(2)
                             with col_pub1:
-                                if st.button("🔄 Forzar Reprocesamiento (Sobrescribir)", key=f"reproc_{selected_id}"):
-                                    with st.spinner(f"Reprocesando ID {selected_id}..."):
+                                if st.button(
+                                    "🔄 Forzar Reprocesamiento (Sobrescribir)",
+                                    key=f"reproc_{selected_id}",
+                                ):
+                                    with st.spinner(
+                                        f"Reprocesando ID {selected_id}..."
+                                    ):
                                         # ... existing logic ...
                                         # This needs refactoring to avoid duplication, but for now we copy the call logic
                                         # or we assume the main button below handles force if we allow it fall through?
@@ -681,29 +817,53 @@ with tab3:
                                         pass
 
                             with col_pub2:
-                                if st.button(f"🗑️ Despublicar (Eliminar)", type="primary", key=f"del_{selected_id}"):
-                                    with st.spinner(f"Solicitando eliminación de {selected_id}..."):
+                                if st.button(
+                                    "🗑️ Despublicar (Eliminar)",
+                                    type="primary",
+                                    key=f"del_{selected_id}",
+                                ):
+                                    with st.spinner(
+                                        f"Solicitando eliminación de {selected_id}..."
+                                    ):
                                         try:
                                             # Call delete_article via import
                                             # We need to import it first or use module access
-                                            import news_collector.apps.refinery.main as main_module # Dynamic? No.
                                             # We already have `run_refinery` available via importlib in admin_panel.
                                             # We need `delete_article` too.
 
-                                            if hasattr(refinery_main, 'delete_article'):
-                                                del_result = refinery_main.delete_article(str(selected_id))
-                                                if del_result.get("status") == "success":
-                                                    st.success("✅ Solicitud de eliminación creada.")
-                                                    st.markdown(f"[Ver Pull Request de Eliminación]({del_result.get('pr_url')})")
+                                            if hasattr(refinery_main, "delete_article"):
+                                                del_result = (
+                                                    refinery_main.delete_article(
+                                                        str(selected_id)
+                                                    )
+                                                )
+                                                if (
+                                                    del_result.get("status")
+                                                    == "success"
+                                                ):
+                                                    st.success(
+                                                        "✅ Solicitud de eliminación creada."
+                                                    )
+                                                    st.markdown(
+                                                        f"[Ver Pull Request de Eliminación]({del_result.get('pr_url')})"
+                                                    )
                                                     # Update DB to un-processed?
                                                     # refinery_db.mark_processed(str(selected_id)) # No method to unmark
-                                                    st.info("Nota: La base de datos local seguirá marcándolo como procesado hasta recibir confirmación de limpieza.")
+                                                    st.info(
+                                                        "Nota: La base de datos local seguirá marcándolo como procesado hasta recibir confirmación de limpieza."
+                                                    )
                                                 else:
-                                                    st.error(f"Error: {del_result.get('message')}")
+                                                    st.error(
+                                                        f"Error: {del_result.get('message')}"
+                                                    )
                                             else:
-                                                st.error("Función delete_article no encontrada. Reinicia la aplicación.")
+                                                st.error(
+                                                    "Función delete_article no encontrada. Reinicia la aplicación."
+                                                )
                                         except Exception as e:
-                                            st.error(f"Error invocando despublicación: {e}")
+                                            st.error(
+                                                f"Error invocando despublicación: {e}"
+                                            )
 
                         # Standard Process Button (Always visible for force reprocessing or new items)
                         if st.button(
@@ -727,13 +887,19 @@ with tab3:
                                         )
 
                                         status = result.get("status")
-                                        processed_count = result.get("processed_count", 0)
+                                        processed_count = result.get(
+                                            "processed_count", 0
+                                        )
                                         if status == "success" and processed_count > 0:
-                                            st.success("¡Procesamiento Completo! Revisa el repo de tu web.")
+                                            st.success(
+                                                "¡Procesamiento Completo! Revisa el repo de tu web."
+                                            )
                                             st.balloons()
                                         elif status == "error":
                                             st.error("Procesamiento Fallido.")
-                                            st.expander("Detalles del Error").write(result.get("message"))
+                                            st.expander("Detalles del Error").write(
+                                                result.get("message")
+                                            )
                                         elif status == "noop" or processed_count == 0:
                                             message = result.get(
                                                 "message",
@@ -742,7 +908,9 @@ with tab3:
                                             st.warning(f"Sin resultados: {message}")
                                         else:
                                             st.error("Procesamiento Fallido.")
-                                            st.expander("Detalles del Error").write(result.get("message"))
+                                            st.expander("Detalles del Error").write(
+                                                result.get("message")
+                                            )
                                     except Exception as e:
                                         st.error(f"Error crítico de ejecución: {e}")
 
@@ -758,7 +926,7 @@ with tab3:
     log_file = BASE_DIR / "refinery.log"  # Assuming standard log file
     if log_file.exists():
         with open(log_file, "r") as f:
-            logs = f.readlines()[-20:] # Last 20 lines
+            logs = f.readlines()[-20:]  # Last 20 lines
             st.code("".join(logs))
     else:
         st.text("Aún no hay registros.")
@@ -771,7 +939,7 @@ with tab4:
     try:
         # Use simple DB manager pointing to correct path with CONFIG DICT
         # Actually, global DatabaseManager() is better
-        db = DatabaseManager() # Using global config
+        db = DatabaseManager()  # Using global config
 
         # 1. KPIs
         col_k1, col_k2, col_k3 = st.columns(3)
@@ -785,7 +953,12 @@ with tab4:
 
         # Source Performance
         source_perf = db.get_source_performance()
-        avg_score_overall = sum(s["avg_score"] * s["article_count"] for s in source_perf) / total_articles if total_articles else 0
+        avg_score_overall = (
+            sum(s["avg_score"] * s["article_count"] for s in source_perf)
+            / total_articles
+            if total_articles
+            else 0
+        )
 
         with col_k2:
             st.metric("Score Promedio", f"{avg_score_overall:.2f}")
@@ -821,7 +994,9 @@ with tab4:
             st.subheader("🏆 Fuentes Top")
             if source_perf:
                 # Top 5 by avg score
-                top_sources = sorted(source_perf, key=lambda x: x["avg_score"], reverse=True)[:5]
+                top_sources = sorted(
+                    source_perf, key=lambda x: x["avg_score"], reverse=True
+                )[:5]
                 st.bar_chart({s["source_name"]: s["avg_score"] for s in top_sources})
             else:
                 st.info("No hay datos de fuentes.")
@@ -842,13 +1017,16 @@ with tab4:
 with tab5:
     st.header("Gestionar Contenido Publicado")
 
-    st.info("⚠️ Aquí puedes eliminar artículos que ya han sido publicados en el repositorio destino.")
+    st.info(
+        "⚠️ Aquí puedes eliminar artículos que ya han sido publicados en el repositorio destino."
+    )
 
-    env_vars = dict(load_env_file())
+    env_vars = dict(load_secrets())
     if require_refinery_auth(env_vars, key="auth_cms"):
         # reuse GitHubPublisher logic from main or init new one
-        from news_collector.components.publishing import GitHubPublisher
         import git
+
+        from news_collector.components.publishing import GitHubPublisher
 
         TARGET_DIR = BASE_DIR / "temp" / "target"
         POSTS_DIR = TARGET_DIR / "src/content/posts"
@@ -868,8 +1046,11 @@ with tab5:
                             repo = git.Repo(TARGET_DIR)
                             repo.remotes.origin.pull()
                         except Exception as e:
-                            st.warning(f"Error sincronizando (intentando reclonar): {e}")
+                            st.warning(
+                                f"Error sincronizando (intentando reclonar): {e}"
+                            )
                             import shutil
+
                             shutil.rmtree(TARGET_DIR, ignore_errors=True)
                             gh_handler.clone_repo(target_url, TARGET_DIR)
                     st.success("Repositorio actualizado y sincronizado.")
@@ -900,13 +1081,23 @@ with tab5:
                     try:
                         content = f.read_text(encoding="utf-8", errors="ignore")
                         import re
-                        match_id = re.search(r'^refinery_id:\s*["\']?([^"\']+)["\']?', content, re.MULTILINE)
-                        if match_id: refinery_id = match_id.group(1)
 
-                        match_title = re.search(r'^title:\s*(.*)$', content, re.MULTILINE)
+                        match_id = re.search(
+                            r'^refinery_id:\s*["\']?([^"\']+)["\']?',
+                            content,
+                            re.MULTILINE,
+                        )
+                        if match_id:
+                            refinery_id = match_id.group(1)
+
+                        match_title = re.search(
+                            r"^title:\s*(.*)$", content, re.MULTILINE
+                        )
                         if match_title:
                             raw = match_title.group(1).strip()
-                            if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+                            if (raw.startswith('"') and raw.endswith('"')) or (
+                                raw.startswith("'") and raw.endswith("'")
+                            ):
                                 raw = raw[1:-1]
                             article_title = raw
                     except Exception:
@@ -923,16 +1114,24 @@ with tab5:
                             st.caption(f"ID: `{refinery_id}`")
 
                     with c3:
-                        if st.button("🗑️ Despublicar", key=f"btn_del_{f.name}", use_container_width=True):
+                        if st.button(
+                            "🗑️ Despublicar",
+                            key=f"btn_del_{f.name}",
+                            use_container_width=True,
+                        ):
                             if refinery_id:
                                 # Copy-paste of delete logic
                                 with st.spinner("Solicitando eliminación..."):
                                     try:
-                                        if hasattr(refinery_main, 'delete_article'):
-                                            res = refinery_main.delete_article(str(refinery_id))
+                                        if hasattr(refinery_main, "delete_article"):
+                                            res = refinery_main.delete_article(
+                                                str(refinery_id)
+                                            )
                                             if res.get("status") == "success":
                                                 st.toast("✅ PR Creado", icon="🗑️")
-                                                st.markdown(f"[Ver PR]({res.get('pr_url')})")
+                                                st.markdown(
+                                                    f"[Ver PR]({res.get('pr_url')})"
+                                                )
                                             else:
                                                 st.error(res.get("message"))
                                         else:
@@ -943,7 +1142,11 @@ with tab5:
                                 st.error("Sin ID")
 
                     with c4:
-                        if st.button("♻️ Reset", key=f"btn_rst_{f.name}", use_container_width=True):
+                        if st.button(
+                            "♻️ Reset",
+                            key=f"btn_rst_{f.name}",
+                            use_container_width=True,
+                        ):
                             # Copy-paste of reset logic
                             try:
                                 repo = git.Repo(TARGET_DIR)
@@ -952,7 +1155,9 @@ with tab5:
                                 repo.index.commit(f"Deleted (Reset) {f.name}")
                                 repo.remotes.origin.push()
 
-                                db_manager = RefineryDatabaseManager(str(REFINERY_DB_PATH))
+                                db_manager = RefineryDatabaseManager(
+                                    str(REFINERY_DB_PATH)
+                                )
                                 if refinery_id:
                                     db_manager.delete_record(refinery_id)
                                     db_manager.delete_record(f"{refinery_id}.md")
@@ -983,14 +1188,16 @@ with tab6:
         # Convert to list for dataframe
         source_list = []
         for sid, cfg in current_sources.items():
-            source_list.append({
-                "ID": sid,
-                "Nombre": cfg.get("name"),
-                "URL": cfg.get("url"),
-                "Credibilidad": cfg.get("credibility_score"),
-                "Categoria": cfg.get("category"),
-                "Grupo": cfg.get("_group", "Personalizado")
-            })
+            source_list.append(
+                {
+                    "ID": sid,
+                    "Nombre": cfg.get("name"),
+                    "URL": cfg.get("url"),
+                    "Credibilidad": cfg.get("credibility_score"),
+                    "Categoria": cfg.get("category"),
+                    "Grupo": cfg.get("_group", "Personalizado"),
+                }
+            )
 
         st.dataframe(source_list, use_container_width=True)
 
@@ -1015,27 +1222,51 @@ with tab6:
     with st.form("source_editor"):
         c1, c2 = st.columns(2)
         with c1:
-            new_id = st.text_input("ID (Snake Case)", value=selected_source_id if not is_new else "", disabled=not is_new)
+            new_id = st.text_input(
+                "ID (Snake Case)",
+                value=selected_source_id if not is_new else "",
+                disabled=not is_new,
+            )
             name = st.text_input("Nombre Legible", value=default_data.get("name", ""))
             url = st.text_input("URL del Feed RSS", value=default_data.get("url", ""))
 
         with c2:
-            credibility = st.slider("Score Credibilidad", 0.0, 1.0, float(default_data.get("credibility_score", 0.8)))
+            credibility = st.slider(
+                "Score Credibilidad",
+                0.0,
+                1.0,
+                float(default_data.get("credibility_score", 0.8)),
+            )
             category = st.selectbox(
                 "Categoría",
-                ["technology", "science", "medicine", "space", "biology", "multidisciplinary", "popular_science", "artificial_intelligence"],
-                index=0  # Should try to match existing, but selectbox needs index lookup. Simplified for now.
+                [
+                    "technology",
+                    "science",
+                    "medicine",
+                    "space",
+                    "biology",
+                    "multidisciplinary",
+                    "popular_science",
+                    "artificial_intelligence",
+                ],
+                index=0,  # Should try to match existing, but selectbox needs index lookup. Simplified for now.
             )
             update_freq = st.selectbox(
                 "Frecuencia Actualización",
                 ["daily", "weekly", "hourly", "multiple_daily"],
-                index=0
+                index=0,
             )
 
         group_tag = st.selectbox(
-             "Grupo (Organización Interna)",
-             ["ELITE_JOURNALS", "SCIENCE_MEDIA", "INSTITUTIONAL_SOURCES", "AI_LABS", "CUSTOM"],
-             index=1
+            "Grupo (Organización Interna)",
+            [
+                "ELITE_JOURNALS",
+                "SCIENCE_MEDIA",
+                "INSTITUTIONAL_SOURCES",
+                "AI_LABS",
+                "CUSTOM",
+            ],
+            index=1,
         )
 
         submit = st.form_submit_button("💾 Guardar Fuente")
@@ -1051,10 +1282,10 @@ with tab6:
                     "credibility_score": credibility,
                     "category": category,
                     "update_frequency": update_freq,
-                    "language": "en", # Default
+                    "language": "en",  # Default
                     "description": "Added via UI",
                     "typical_delay": 0,
-                    "_group": group_tag
+                    "_group": group_tag,
                 }
 
                 # Merge checks

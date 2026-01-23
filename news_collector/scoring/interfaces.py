@@ -1,5 +1,6 @@
 from typing import Any, Dict, Protocol, runtime_checkable
 
+
 @runtime_checkable
 class AsyncScorer(Protocol):
     """Protocol for asynchronous article scorers."""

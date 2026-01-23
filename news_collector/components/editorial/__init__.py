@@ -1,1 +1,1 @@
-from .ai_editor import EditorAgent
+from .ai_editor import EditorAgent as EditorAgent

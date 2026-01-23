@@ -1,7 +1,7 @@
-
-import sys
 import os
+import sys
 from pathlib import Path
+
 import yaml
 
 # Add project root to path
@@ -9,12 +9,15 @@ sys.path.append(os.getcwd())
 
 from news_collector.config import sources
 
+
 def text_representer(dumper, data):
     if len(data.splitlines()) > 1:  # check for multiline string
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
 
 yaml.add_representer(str, text_representer)
+
 
 def migrate():
     output_path = Path("news_collector/config/sources.yaml")
@@ -26,7 +29,7 @@ def migrate():
         "INSTITUTIONAL_SOURCES": sources.INSTITUTIONAL_SOURCES,
         "PREPRINT_SOURCES": sources.PREPRINT_SOURCES,
         "COMMUNITY_FEEDS": sources.COMMUNITY_FEEDS,
-        "AI_LABS": sources.AI_LABS
+        "AI_LABS": sources.AI_LABS,
     }
 
     # Check for implicit sources in ALL_SOURCES that might not be in a group (though sources.py defines ALL_SOURCES as a composition)
@@ -42,9 +45,16 @@ def migrate():
 
     # Dump
     with open(output_path, "w", encoding="utf-8") as f:
-        yaml.dump(final_yaml_data, f, sort_keys=False, allow_unicode=True, default_flow_style=False)
+        yaml.dump(
+            final_yaml_data,
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+        )
 
     print(f"Successfully migrated {len(final_yaml_data)} sources to {output_path}")
+
 
 if __name__ == "__main__":
     migrate()

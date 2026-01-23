@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 
 import pytest
+
 from news_collector.utils.datetime_utils import (
+    format_display,
     parse_to_utc_with_tzinfo,
     to_display_tz,
-    format_display,
 )
 
 

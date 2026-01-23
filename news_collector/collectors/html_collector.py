@@ -1,25 +1,20 @@
-
 import asyncio
 import json
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
-from urllib.parse import urlparse, urljoin
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
 from news_collector.collectors.base_collector import BaseCollector
-from news_collector.config.settings import (
-    COLLECTION_CONFIG,
-    RATE_LIMITING_CONFIG,
-)
-from news_collector.utils.url_canonicalizer import canonicalize_url
-from news_collector.contracts import CollectorArticleModel
+from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.utils.security import validate_url_safety
 
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
+
 
 class HtmlCollector(BaseCollector):
     """
@@ -31,7 +26,11 @@ class HtmlCollector(BaseCollector):
     - Navegación optimizada con robots.txt compliance.
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+    def __init__(
+        self,
+        logger_factory: Optional["NewsCollectorLogger"] = None,
+        health_tracker: Optional[Any] = None,
+    ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         self.headers = {
             "User-Agent": COLLECTION_CONFIG["user_agent"],
@@ -62,7 +61,7 @@ class HtmlCollector(BaseCollector):
             "processing_time": 0,
         }
         if self.health_tracker:
-             self.health_tracker.record_attempt(source_id)
+            self.health_tracker.record_attempt(source_id)
 
         url = source_config.get("url")
         if not url:
@@ -71,12 +70,12 @@ class HtmlCollector(BaseCollector):
 
         job_key = self._make_job_key(source_id, url)
         if self._is_duplicate_job(job_key):
-             stats["success"] = True
-             return stats
+            stats["success"] = True
+            return stats
         self._register_job(job_key)
 
         try:
-             # 1. Robots & Safety
+            # 1. Robots & Safety
             allowed, robots_delay = self._respect_robots(url)
             if not allowed:
                 stats["error_message"] = "Bloqueado por robots.txt"
@@ -92,7 +91,11 @@ class HtmlCollector(BaseCollector):
             )
 
             # 2. Fetch HTML
-            async with httpx.AsyncClient(follow_redirects=True, headers=self.headers, timeout=COLLECTION_CONFIG["request_timeout"]) as client:
+            async with httpx.AsyncClient(
+                follow_redirects=True,
+                headers=self.headers,
+                timeout=COLLECTION_CONFIG["request_timeout"],
+            ) as client:
                 response = await client.get(url)
                 if response.status_code >= 400:
                     stats["error_message"] = f"Error HTTP {response.status_code}"
@@ -101,7 +104,7 @@ class HtmlCollector(BaseCollector):
                             source_id,
                             "collector.fetch.http",
                             f"HTTP Error {response.status_code}",
-                            {"status_code": response.status_code, "url": url}
+                            {"status_code": response.status_code, "url": url},
                         )
                     return stats
 
@@ -110,15 +113,20 @@ class HtmlCollector(BaseCollector):
             # 3. Parse & Extract
             try:
                 raw_articles = await asyncio.to_thread(
-                    self._extract_articles_from_html, html_content, source_config, source_id
+                    self._extract_articles_from_html,
+                    html_content,
+                    source_config,
+                    source_id,
                 )
             except Exception as e:
                 stats["error_message"] = f"Error de parsing: {str(e)}"
                 return stats
 
             if self.health_tracker:
-                 self.health_tracker.record_success(source_id, "fetch")
-                 self.health_tracker.record_success(source_id, "parse", count=len(raw_articles))
+                self.health_tracker.record_success(source_id, "fetch")
+                self.health_tracker.record_success(
+                    source_id, "parse", count=len(raw_articles)
+                )
 
             stats["articles_found"] = len(raw_articles)
 
@@ -126,11 +134,15 @@ class HtmlCollector(BaseCollector):
             processed_candidates = []
             for raw in raw_articles:
                 # Rate limit between articles
-                self._enforce_domain_rate_limit(domain, robots_delay, source_config.get("min_delay_seconds"))
+                self._enforce_domain_rate_limit(
+                    domain, robots_delay, source_config.get("min_delay_seconds")
+                )
 
                 # Fetch full content
                 if raw.get("url"):
-                    full_text = await self._fetch_article_content(client, raw["url"], source_config)
+                    full_text = await self._fetch_article_content(
+                        client, raw["url"], source_config
+                    )
                     if full_text:
                         raw["content"] = full_text
 
@@ -140,23 +152,34 @@ class HtmlCollector(BaseCollector):
                     processed_candidates.append(processed)
 
             # Apply strict sequential filters and save
-            saved_count = self._filter_and_save_articles(source_id, processed_candidates, limit=5)
+            saved_count = self._filter_and_save_articles(
+                source_id, processed_candidates, limit=5
+            )
             stats["articles_saved"] = saved_count
             stats["success"] = True
 
         except Exception as e:
             stats["error_message"] = f"Excepción inesperada: {str(e)}"
-            self._emit_log("error", "collector.html.exception", source_id=source_id, details={"error": str(e)})
+            self._emit_log(
+                "error",
+                "collector.html.exception",
+                source_id=source_id,
+                details={"error": str(e)},
+            )
             if self.health_tracker:
-                 self.health_tracker.record_failure(source_id, "collector.fetch", "exception", {"error": str(e)})
+                self.health_tracker.record_failure(
+                    source_id, "collector.fetch", "exception", {"error": str(e)}
+                )
 
         finally:
-             stats["processing_time"] = time.time() - start_time
-             self._update_source_stats(source_id, stats)
+            stats["processing_time"] = time.time() - start_time
+            self._update_source_stats(source_id, stats)
 
         return stats
 
-    def _extract_articles_from_html(self, html: str, config: Dict[str, Any], source_id: str) -> List[Dict[str, Any]]:
+    def _extract_articles_from_html(
+        self, html: str, config: Dict[str, Any], source_id: str
+    ) -> List[Dict[str, Any]]:
         soup = BeautifulSoup(html, "html.parser")
         articles = []
 
@@ -165,12 +188,17 @@ class HtmlCollector(BaseCollector):
         for script in ld_scripts:
             try:
                 data = json.loads(script.string)
-                if "@type" in data and data["@type"] in ["ItemList", "Blog", "NewsMediaOrganization"]:
+                if "@type" in data and data["@type"] in [
+                    "ItemList",
+                    "Blog",
+                    "NewsMediaOrganization",
+                ]:
                     items = data.get("itemListElement", []) or data.get("blogPost", [])
                     for item in items:
                         if isinstance(item, dict):
                             art = self._parse_json_ld_article(item)
-                            if art: articles.append(art)
+                            if art:
+                                articles.append(art)
             except Exception:
                 continue
 
@@ -186,22 +214,28 @@ class HtmlCollector(BaseCollector):
         for container in soup.select(container_sel):
             try:
                 # Link
-                link_tag = container.select_one(link_sel) if link_sel != "self" else container
-                if not link_tag or not link_tag.has_attr("href"): continue
+                link_tag = (
+                    container.select_one(link_sel) if link_sel != "self" else container
+                )
+                if not link_tag or not link_tag.has_attr("href"):
+                    continue
                 url = link_tag["href"]
 
                 # Title
                 title_tag = container.select_one(title_sel)
                 title = title_tag.get_text(strip=True) if title_tag else ""
-                if not title and link_tag: title = link_tag.get_text(strip=True)
+                if not title and link_tag:
+                    title = link_tag.get_text(strip=True)
 
                 if url and title:
-                    articles.append({
-                        "title": title,
-                        "url": url, # Needs normalization
-                        "description": "",
-                        "date": None
-                    })
+                    articles.append(
+                        {
+                            "title": title,
+                            "url": url,  # Needs normalization
+                            "description": "",
+                            "date": None,
+                        }
+                    )
             except Exception:
                 continue
 
@@ -213,18 +247,21 @@ class HtmlCollector(BaseCollector):
             "title": item.get("headline", "") or item.get("name", ""),
             "url": item.get("url", ""),
             "description": item.get("description", ""),
-            "date": item.get("datePublished", "")
+            "date": item.get("datePublished", ""),
         }
 
-    def _process_article_html(self, raw: Dict[str, Any], config: Dict[str, Any], source_id: str) -> Optional[Dict[str, Any]]:
+    def _process_article_html(
+        self, raw: Dict[str, Any], config: Dict[str, Any], source_id: str
+    ) -> Optional[Dict[str, Any]]:
         # Validate and structure
-        if not raw.get("url") or not raw.get("title"): return None
+        if not raw.get("url") or not raw.get("title"):
+            return None
 
         # Normalize URL
         base_url = config.get("url", "")
         article_url = raw["url"]
         if not article_url.startswith("http"):
-             article_url = urljoin(base_url, article_url)
+            article_url = urljoin(base_url, article_url)
 
         summary = raw.get("description", "")
         content = raw.get("content", "")
@@ -246,32 +283,47 @@ class HtmlCollector(BaseCollector):
             "word_count": word_count,
             "reading_time_minutes": max(1, word_count // 200),
             "authors": [],
-            "tags": []
+            "tags": [],
         }
 
-    async def _fetch_article_content(self, client: httpx.AsyncClient, url: str, config: Dict[str, Any]) -> Optional[str]:
+    async def _fetch_article_content(
+        self, client: httpx.AsyncClient, url: str, config: Dict[str, Any]
+    ) -> Optional[str]:
         try:
-             response = await client.get(url)
-             if response.status_code >= 400: return None
+            response = await client.get(url)
+            if response.status_code >= 400:
+                return None
 
-             soup = BeautifulSoup(response.text, "html.parser")
+            soup = BeautifulSoup(response.text, "html.parser")
 
-             # Configurable selectors
-             selectors = config.get("html_selectors", {})
-             article_sel = selectors.get("article_selector")
+            # Configurable selectors
+            selectors = config.get("html_selectors", {})
+            article_sel = selectors.get("article_selector")
 
-             container = None
-             if article_sel:
-                 container = soup.select_one(article_sel)
+            container = None
+            if article_sel:
+                container = soup.select_one(article_sel)
 
-             # Fallback heuristics
-             if not container:
-                 container = soup.find("article") or soup.find("main") or soup.find("div", class_="content") or soup.body
+            # Fallback heuristics
+            if not container:
+                container = (
+                    soup.find("article")
+                    or soup.find("main")
+                    or soup.find("div", class_="content")
+                    or soup.body
+                )
 
-             if not container: return None
+            if not container:
+                return None
 
-             paragraphs = container.find_all("p")
-             text = "\n\n".join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
-             return text
+            paragraphs = container.find_all("p")
+            text = "\n\n".join(
+                [
+                    p.get_text(strip=True)
+                    for p in paragraphs
+                    if len(p.get_text(strip=True)) > 20
+                ]
+            )
+            return text
         except Exception:
             return None

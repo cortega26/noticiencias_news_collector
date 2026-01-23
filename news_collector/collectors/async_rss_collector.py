@@ -1,19 +1,23 @@
-
 import asyncio
-import time
-import httpx
-import feedparser
 import hashlib
 import random
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
-from news_collector.utils.security import validate_url_safety as validate_url_safety_sync
+import time
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from urllib.parse import urlparse
+
+import feedparser
+import httpx
+
+from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.utils.security import (
+    validate_url_safety as validate_url_safety_sync,
+)
 
 from .rss_collector import RSSCollector
-from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
-from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
+
 
 class AsyncRSSCollector(RSSCollector):
     """
@@ -22,8 +26,11 @@ class AsyncRSSCollector(RSSCollector):
     pero reimplementa la fase de I/O (fetching) usando httpx.
     """
 
-
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+    def __init__(
+        self,
+        logger_factory: Optional["NewsCollectorLogger"] = None,
+        health_tracker: Optional[Any] = None,
+    ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
 
     async def collect_from_multiple_sources_async(
@@ -38,6 +45,7 @@ class AsyncRSSCollector(RSSCollector):
         """
         self._set_runtime_context(session_id=session_id, trace_id=trace_id)
         from datetime import datetime, timezone
+
         self.start_time = datetime.now(timezone.utc)
         self._emit_initial_batch_log(len(sources_config))
         self._reset_stats()
@@ -51,9 +59,14 @@ class AsyncRSSCollector(RSSCollector):
 
         limits = httpx.Limits(max_keepalive_connections=50, max_connections=50)
 
-        from news_collector.collectors.rate_limit_utils import _normalize_domain, calculate_effective_delay
+        from news_collector.collectors.rate_limit_utils import (
+            _normalize_domain,
+            calculate_effective_delay,
+        )
 
-        async with httpx.AsyncClient(limits=limits, headers=headers, timeout=timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(
+            limits=limits, headers=headers, timeout=timeout, follow_redirects=True
+        ) as client:
             # Group sources by domain
             sources_by_domain = {}
             for source_id, source_config in sources_config.items():
@@ -66,7 +79,9 @@ class AsyncRSSCollector(RSSCollector):
                 group_results = []
                 for idx, (sid, sconfig) in enumerate(sources_list):
                     # Process source
-                    result = await self._process_single_source_async_with_client(sid, sconfig, client)
+                    result = await self._process_single_source_async_with_client(
+                        sid, sconfig, client
+                    )
                     group_results.append(result)
 
                     # Sleep between requests to same domain if not last
@@ -85,7 +100,9 @@ class AsyncRSSCollector(RSSCollector):
                 domain_tasks.append(process_domain_group(domain, sources_list))
 
             # Execute all domain groups in parallel
-            domain_results_nested = await asyncio.gather(*domain_tasks, return_exceptions=True)
+            domain_results_nested = await asyncio.gather(
+                *domain_tasks, return_exceptions=True
+            )
 
             # Flatten results
             results = []
@@ -100,9 +117,13 @@ class AsyncRSSCollector(RSSCollector):
                     # but _process_single_source_async_with_client DOES.
                     # So group_res should be a list unless system error.
                     if isinstance(group_res, Exception):
-                         # Log fatal error for domain
-                         self._emit_log("error", "collector.domain_group_failed", details={"error": str(group_res)})
-                         pass
+                        # Log fatal error for domain
+                        self._emit_log(
+                            "error",
+                            "collector.domain_group_failed",
+                            details={"error": str(group_res)},
+                        )
+                        pass
 
         # Re-map results to source_id (order is scrambled now)
         # results is list of dicts. each dict has 'source_id'.
@@ -125,22 +146,28 @@ class AsyncRSSCollector(RSSCollector):
             result = results_map.get(source_id)
             if not result:
                 # Should not happen if all executed, unless Exception in gather
-                result = self._create_error_result(source_id, Exception("Result missing from execution"))
+                result = self._create_error_result(
+                    source_id, Exception("Result missing from execution")
+                )
 
-            if isinstance(result, Exception): # From gather exception?
-                 error_res = self._create_error_result(source_id, result)
-                 source_results[source_id] = error_res
-                 self.stats["total_errors"] += 1
+            if isinstance(result, Exception):  # From gather exception?
+                error_res = self._create_error_result(source_id, result)
+                source_results[source_id] = error_res
+                self.stats["total_errors"] += 1
             else:
-                 source_results[source_id] = result
+                source_results[source_id] = result
 
         return self._finalize_collection_cycle(source_results)
 
-    async def _process_single_source_async_with_client(self, source_id, source_config, client):
+    async def _process_single_source_async_with_client(
+        self, source_id, source_config, client
+    ):
         try:
             self._pre_process_source(source_id, source_config)
             # Call our specific internal method that takes a client
-            source_result = await self._collect_from_source_async_internal(source_id, source_config, client)
+            source_result = await self._collect_from_source_async_internal(
+                source_id, source_config, client
+            )
             self._update_global_stats(source_result)
             self._post_process_source(source_id, source_config, source_result)
             self._emit_source_log(source_id, source_result)
@@ -152,8 +179,10 @@ class AsyncRSSCollector(RSSCollector):
     async def collect_from_source_async(
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
-         async with httpx.AsyncClient(follow_redirects=True) as client:
-             return await self._collect_from_source_async_internal(source_id, source_config, client)
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            return await self._collect_from_source_async_internal(
+                source_id, source_config, client
+            )
 
     async def _collect_from_source_async_internal(
         self, source_id: str, source_config: Dict[str, Any], client: httpx.AsyncClient
@@ -170,7 +199,9 @@ class AsyncRSSCollector(RSSCollector):
             "error_message": None,
             "processing_time": 0,
         }
-        print(f"DEBUG: AsyncRSSCollector internal processing {source_id}. health_tracker is {self.health_tracker} (id={id(self.health_tracker) if self.health_tracker else 'None'})")
+        print(
+            f"DEBUG: AsyncRSSCollector internal processing {source_id}. health_tracker is {self.health_tracker} (id={id(self.health_tracker) if self.health_tracker else 'None'})"
+        )
 
         try:
             url = source_config["url"]
@@ -196,12 +227,14 @@ class AsyncRSSCollector(RSSCollector):
                 return stats
 
             # 3. Fetch Feed
-            feed_content, status_code = await self._fetch_feed_async(source_id, url, client, source_config)
+            feed_content, status_code = await self._fetch_feed_async(
+                source_id, url, client, source_config
+            )
 
             if status_code == 304:
                 stats["success"] = True
                 if self.health_tracker:
-                     self.health_tracker.record_success(source_id, "fetch")
+                    self.health_tracker.record_success(source_id, "fetch")
                 return stats
 
             if not feed_content:
@@ -218,12 +251,14 @@ class AsyncRSSCollector(RSSCollector):
                 self.health_tracker.record_success(source_id, "parse")
 
             if parsed_feed.bozo and not self._is_acceptable_bozo(parsed_feed):
-                stats["error_message"] = f"Feed malformado: {parsed_feed.bozo_exception}"
+                stats["error_message"] = (
+                    f"Feed malformado: {parsed_feed.bozo_exception}"
+                )
                 return stats
 
             # 5. Extract Articles
             raw_articles = await asyncio.to_thread(
-                    self._extract_articles_from_feed, parsed_feed, source_config, source_id
+                self._extract_articles_from_feed, parsed_feed, source_config, source_id
             )
 
             stats["articles_found"] = len(raw_articles)
@@ -239,11 +274,13 @@ class AsyncRSSCollector(RSSCollector):
                         processed = self._process_article(raw, source_id, source_config)
                         if processed:
                             processed_candidates.append(processed)
-                    except Exception as e:
-                        pass # Logged inside
+                    except Exception:
+                        pass  # Logged inside
 
                 # Apply strict sequential filters and save
-                return self._filter_and_save_articles(source_id, processed_candidates, limit=5)
+                return self._filter_and_save_articles(
+                    source_id, processed_candidates, limit=5
+                )
 
             saved_count = await asyncio.to_thread(process_batch)
 
@@ -254,7 +291,9 @@ class AsyncRSSCollector(RSSCollector):
             # Catch validation errors too
             stats["error_message"] = str(exc)
             if self.health_tracker:
-                 self.health_tracker.record_failure(source_id, "collector.fetch", "exception", {"error": str(exc)})
+                self.health_tracker.record_failure(
+                    source_id, "collector.fetch", "exception", {"error": str(exc)}
+                )
 
         finally:
             stats["processing_time"] = time.time() - start_time
@@ -272,128 +311,162 @@ class AsyncRSSCollector(RSSCollector):
         await asyncio.sleep(delay)
 
     async def _fetch_feed_async(
-        self, source_id: str, feed_url: str, client: httpx.AsyncClient, source_config: Dict[str, Any] = None
+        self,
+        source_id: str,
+        feed_url: str,
+        client: httpx.AsyncClient,
+        source_config: Dict[str, Any] = None,
     ) -> Tuple[Optional[str], Optional[int]]:
         max_retries = RATE_LIMITING_CONFIG["max_retries"]
         try:
-             # DB Access: Sync -> Thread
-             cached_headers = await asyncio.to_thread(
-                 self.db_manager.get_source_feed_metadata, source_id
-             )
+            # DB Access: Sync -> Thread
+            cached_headers = await asyncio.to_thread(
+                self.db_manager.get_source_feed_metadata, source_id
+            )
 
-             req_headers = {}
-             if cached_headers.get("etag"):
-                 req_headers["If-None-Match"] = cached_headers["etag"]
-             if cached_headers.get("last_modified"):
-                 req_headers["If-Modified-Since"] = cached_headers["last_modified"]
+            req_headers = {}
+            if cached_headers.get("etag"):
+                req_headers["If-None-Match"] = cached_headers["etag"]
+            if cached_headers.get("last_modified"):
+                req_headers["If-Modified-Since"] = cached_headers["last_modified"]
 
-             # SSRF-SAFE FETCH WITH REDIRECT VALIDATION
-             current_url = feed_url
-             redirect_count = 0
-             max_redirects = 5
+            # SSRF-SAFE FETCH WITH REDIRECT VALIDATION
+            current_url = feed_url
+            redirect_count = 0
+            max_redirects = 5
 
-             for attempt in range(max_retries + 1):
-                 while redirect_count <= max_redirects:
-                     # Validate URL safety before request
-                     await asyncio.to_thread(validate_url_safety_sync, current_url)
+            for attempt in range(max_retries + 1):
+                while redirect_count <= max_redirects:
+                    # Validate URL safety before request
+                    await asyncio.to_thread(validate_url_safety_sync, current_url)
 
-                     # Manual request execution (no auto-follow)
+                    # Manual request execution (no auto-follow)
 
-                     # Merge source-specific headers (e.g. custom Accept or Auth)
-                     final_headers = req_headers.copy()
-                     if source_config and "headers" in source_config:
-                         final_headers.update(source_config["headers"])
+                    # Merge source-specific headers (e.g. custom Accept or Auth)
+                    final_headers = req_headers.copy()
+                    if source_config and "headers" in source_config:
+                        final_headers.update(source_config["headers"])
 
-                     try:
-                         response = await client.get(
-                             current_url,
-                             headers=final_headers,
-                             follow_redirects=False
-                         )
-                     except (httpx.RequestError, httpx.TimeoutException) as req_err:
-                         # Network level errors are also candidates for retry
-                         if attempt < max_retries:
-                             await self._backoff_sleep_async(attempt)
-                             break # Break inner while to continue outer for loop? No.
-                             # We need to restart the request.
-                             # If we break here, we go to next attempt?
-                             # Logic structure:
-                             # for attempt:
-                             #    try:
-                             #       do_request
-                             #    except:
-                             #       retry
-                         self._emit_log("warning", "collector.feed.network_error", source_id=source_id, details={"error": str(req_err)})
-                         return (None, None)
+                    try:
+                        response = await client.get(
+                            current_url, headers=final_headers, follow_redirects=False
+                        )
+                    except (httpx.RequestError, httpx.TimeoutException) as req_err:
+                        # Network level errors are also candidates for retry
+                        if attempt < max_retries:
+                            await self._backoff_sleep_async(attempt)
+                            break  # Break inner while to continue outer for loop? No.
+                            # We need to restart the request.
+                            # If we break here, we go to next attempt?
+                            # Logic structure:
+                            # for attempt:
+                            #    try:
+                            #       do_request
+                            #    except:
+                            #       retry
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.network_error",
+                            source_id=source_id,
+                            details={"error": str(req_err)},
+                        )
+                        return (None, None)
 
-                     status = response.status_code
+                    status = response.status_code
 
-                     # Check for Retryable Status Codes
-                     if status in (429, 500, 502, 503, 504):
-                         if attempt < max_retries:
-                             await self._backoff_sleep_async(attempt)
-                             # Break from redirects loop to retry the request from scratch (outer loop)
-                             # Wait, current_url might have changed!
-                             # Should we reset redirect_count?
-                             # If 429 happens after 2 redirects, we should probably just retry the CURRENT url.
-                             # But my loop stricture is: outer attempt -> inner redirects.
-                             # If inner fails with 429, we want to retry.
-                             # Cleaner: Move status check OUTSIDE redirect loop?
-                             # Or use recursion?
-                             # Or just handle it.
-                             break
+                    # Check for Retryable Status Codes
+                    if status in (429, 500, 502, 503, 504):
+                        if attempt < max_retries:
+                            await self._backoff_sleep_async(attempt)
+                            # Break from redirects loop to retry the request from scratch (outer loop)
+                            # Wait, current_url might have changed!
+                            # Should we reset redirect_count?
+                            # If 429 happens after 2 redirects, we should probably just retry the CURRENT url.
+                            # But my loop stricture is: outer attempt -> inner redirects.
+                            # If inner fails with 429, we want to retry.
+                            # Cleaner: Move status check OUTSIDE redirect loop?
+                            # Or use recursion?
+                            # Or just handle it.
+                            break
 
-                         self._emit_log("warning", "collector.feed.status_retry_exhausted", source_id=source_id, details={"status": status})
-                         return (None, status)
+                        self._emit_log(
+                            "warning",
+                            "collector.feed.status_retry_exhausted",
+                            source_id=source_id,
+                            details={"status": status},
+                        )
+                        return (None, status)
 
-                     # Handle Not Modified (304)
-                     if status == 304:
-                         return (None, 304)
+                    # Handle Not Modified (304)
+                    if status == 304:
+                        return (None, 304)
 
-                     # Handle Redirects
-                     if 300 <= status < 400 and status != 304:
-                         redirect_count += 1
-                         location = response.headers.get("Location")
-                         if not location:
-                             self._emit_log("error", "collector.feed.redirect_error", source_id=source_id, details={"error": "Redirect without Location header"})
-                             return (None, None)
+                    # Handle Redirects
+                    if 300 <= status < 400 and status != 304:
+                        redirect_count += 1
+                        location = response.headers.get("Location")
+                        if not location:
+                            self._emit_log(
+                                "error",
+                                "collector.feed.redirect_error",
+                                source_id=source_id,
+                                details={"error": "Redirect without Location header"},
+                            )
+                            return (None, None)
 
-                         from urllib.parse import urljoin
-                         current_url = urljoin(current_url, location)
-                         continue
+                        from urllib.parse import urljoin
 
-                     if status >= 400:
-                         return (None, status)
+                        current_url = urljoin(current_url, location)
+                        continue
 
-                     # Valid response found
-                     content = response.content # bytes
-                     text = response.text    # str
+                    if status >= 400:
+                        return (None, status)
 
-                     etag = response.headers.get("ETag")
-                     lm = response.headers.get("Last-Modified")
-                     ch = hashlib.sha256(content).hexdigest()
+                    # Valid response found
+                    content = response.content  # bytes
+                    text = response.text  # str
 
-                     if cached_headers.get("content_hash") == ch:
-                         await asyncio.to_thread(
-                             self.db_manager.update_source_feed_metadata,
-                             source_id, etag=etag, last_modified=lm, content_hash=ch
-                         )
-                         return (None, 304)
+                    etag = response.headers.get("ETag")
+                    lm = response.headers.get("Last-Modified")
+                    ch = hashlib.sha256(content).hexdigest()
 
-                     await asyncio.to_thread(
-                         self.db_manager.update_source_feed_metadata,
-                         source_id, etag=etag, last_modified=lm, content_hash=ch
-                     )
+                    if cached_headers.get("content_hash") == ch:
+                        await asyncio.to_thread(
+                            self.db_manager.update_source_feed_metadata,
+                            source_id,
+                            etag=etag,
+                            last_modified=lm,
+                            content_hash=ch,
+                        )
+                        return (None, 304)
 
-                     return (text, status)
+                    await asyncio.to_thread(
+                        self.db_manager.update_source_feed_metadata,
+                        source_id,
+                        etag=etag,
+                        last_modified=lm,
+                        content_hash=ch,
+                    )
 
-                 # End of while loop (redirects exhausted or broken for retry)
-                 if redirect_count > max_redirects:
-                     self._emit_log("error", "collector.feed.too_many_redirects", source_id=source_id, details={"max": max_redirects})
-                     return (None, None)
+                    return (text, status)
 
-             return (None, None)
+                # End of while loop (redirects exhausted or broken for retry)
+                if redirect_count > max_redirects:
+                    self._emit_log(
+                        "error",
+                        "collector.feed.too_many_redirects",
+                        source_id=source_id,
+                        details={"max": max_redirects},
+                    )
+                    return (None, None)
+
+            return (None, None)
 
         except Exception as e:
-            self._emit_log("error", "collector.feed.fetch_async_error", source_id=source_id, details={"error": str(e)})
+            self._emit_log(
+                "error",
+                "collector.feed.fetch_async_error",
+                source_id=source_id,
+                details={"error": str(e)},
+            )
             return (None, None)

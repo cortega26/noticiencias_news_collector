@@ -17,7 +17,9 @@ def test_load_json_lines_handles_json_lines(tmp_path: Path) -> None:
         "secret": "abcd1234abcd1234",
         "ruleID": "generic-api-key",
     }
-    report.write_text("\n".join(json.dumps(payload) for _ in range(2)), encoding="utf-8")
+    report.write_text(
+        "\n".join(json.dumps(payload) for _ in range(2)), encoding="utf-8"
+    )
 
     records = security_gate._load_json_lines(report)  # type: ignore[attr-defined]
 
@@ -56,7 +58,9 @@ def test_gitleaks_findings_enforces_allowlist_and_severity(
             "severity": "LOW",
         },
     ]
-    report.write_text("\n".join(json.dumps(item) for item in findings), encoding="utf-8")
+    report.write_text(
+        "\n".join(json.dumps(item) for item in findings), encoding="utf-8"
+    )
 
     gated = security_gate.gitleaks_findings(report, "HIGH")
 

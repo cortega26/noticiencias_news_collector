@@ -1,10 +1,10 @@
 import logging
-import json
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from news_collector.infrastructure.llm.provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
+
 
 class PreScorer:
     """
@@ -17,10 +17,7 @@ class PreScorer:
         self.model_name = self.llm.model
 
     def select_top_candidates(
-        self,
-        candidates: List[Dict[str, Any]],
-        limit: int = 5,
-        source_context: str = ""
+        self, candidates: List[Dict[str, Any]], limit: int = 5, source_context: str = ""
     ) -> List[Dict[str, Any]]:
         """
         Analiza una lista de candidatos y retorna el subset top-ranked.
@@ -34,16 +31,22 @@ class PreScorer:
             return []
 
         if len(candidates) <= limit:
-            logger.info(f"PreScorer: Solicitados {limit}, disponibles {len(candidates)}. Retornando todos.")
+            logger.info(
+                f"PreScorer: Solicitados {limit}, disponibles {len(candidates)}. Retornando todos."
+            )
             return candidates
 
-        logger.info(f"🤖 PreScorer: Analizando {len(candidates)} candidatos para seleccionar Top {limit}...")
+        logger.info(
+            f"🤖 PreScorer: Analizando {len(candidates)} candidatos para seleccionar Top {limit}..."
+        )
 
         # Construir prompt batch
         candidates_text = ""
         for idx, item in enumerate(candidates):
             title = item.get("title", "Sin título")
-            summary = (item.get("summary") or "")[:200].replace("\n", " ") # Truncar resumen
+            summary = (item.get("summary") or "")[:200].replace(
+                "\n", " "
+            )  # Truncar resumen
             candidates_text += f"[{idx}] TITLE: {title} | SUMMARY: {summary}\n"
 
         prompt = (
@@ -53,20 +56,20 @@ class PreScorer:
             "Ignore generic updates, simple announcements, or minor news.\n"
             "Prioritize: Breakthroughs, Research, Deep Analysis, High Impact.\n\n"
             f"RESPONSE FORMAT: Return valid JSON containing ONLY a list of the integers corresponding to the top {limit} indices, ordered by relevance.\n"
-            "Example: {\"selected_indices\": [3, 0, 7, 1, 4]}"
+            'Example: {"selected_indices": [3, 0, 7, 1, 4]}'
         )
 
         try:
             response = self.llm.generate_sync(
                 prompt=prompt,
                 json_mode=True,
-                system="You are an expert Science Editor selecting the most important stories for publication. You output JSON only."
+                system="You are an expert Science Editor selecting the most important stories for publication. You output JSON only.",
             )
 
             selected_indices = []
             if isinstance(response, dict) and "selected_indices" in response:
                 selected_indices = response["selected_indices"]
-            elif isinstance(response, list): # Fallback if LLM returns list directly
+            elif isinstance(response, list):  # Fallback if LLM returns list directly
                 selected_indices = response
 
             # Validar índices
@@ -78,7 +81,9 @@ class PreScorer:
 
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
-                logger.warning(f"PreScorer: LLM retornó {len(valid_indices)} válidos. Rellenando con FIFO.")
+                logger.warning(
+                    f"PreScorer: LLM retornó {len(valid_indices)} válidos. Rellenando con FIFO."
+                )
                 for i in range(len(candidates)):
                     if len(valid_indices) >= limit:
                         break

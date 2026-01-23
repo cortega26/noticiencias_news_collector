@@ -6,10 +6,11 @@ This module defines the interface and concrete implementations for validation ru
 used to filter articles before they enter the scoring phase.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
 import re
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class ValidationResult:
@@ -59,7 +60,7 @@ class MinContentLengthRule(ValidationRule):
             return ValidationResult(
                 is_valid=False,
                 reason=f"Content too short ({word_count} words < {self.min_words})",
-                rule_name=self.name
+                rule_name=self.name,
             )
         return ValidationResult(is_valid=True, rule_name=self.name)
 
@@ -86,7 +87,7 @@ class TitleBodyRelevanceRule(ValidationRule):
             # or aggressive? Let's be permissive and rely on other rules.
             return ValidationResult(is_valid=True, rule_name=self.name)
 
-        title_words = [w for w in re.split(r'\W+', title) if len(w) > 3]
+        title_words = [w for w in re.split(r"\W+", title) if len(w) > 3]
         if not title_words:
             return ValidationResult(is_valid=True, rule_name=self.name)
 
@@ -97,7 +98,7 @@ class TitleBodyRelevanceRule(ValidationRule):
             return ValidationResult(
                 is_valid=False,
                 reason=f"Title relevance too low ({ratio:.2f} < {self.min_match_ratio}). Content might be unrelated.",
-                rule_name=self.name
+                rule_name=self.name,
             )
 
         return ValidationResult(is_valid=True, rule_name=self.name)
@@ -124,7 +125,7 @@ class BlocklistPatternRule(ValidationRule):
                 return ValidationResult(
                     is_valid=False,
                     reason=f"Title matches blocklist pattern: '{self.patterns[i]}'",
-                    rule_name=self.name
+                    rule_name=self.name,
                 )
 
         return ValidationResult(is_valid=True, rule_name=self.name)
@@ -140,7 +141,7 @@ class NewsletterContentRule(ValidationRule):
         r"today's edition of",
         r"weekday newsletter",
         r"daily dose of",
-        r"top stories"
+        r"top stories",
     ]
 
     def __init__(self):
@@ -151,13 +152,15 @@ class NewsletterContentRule(ValidationRule):
         return "newsletter_content_detection"
 
     def validate(self, article: Dict[str, Any]) -> ValidationResult:
-        content = (article.get("content") or article.get("summary") or "").lower()[:1000] # Check first 1000 chars
+        content = (article.get("content") or article.get("summary") or "").lower()[
+            :1000
+        ]  # Check first 1000 chars
 
         for pattern in self._compiled:
             if pattern.search(content):
                 return ValidationResult(
                     is_valid=False,
                     reason=f"Content appears to be a newsletter (matched '{pattern.pattern}').",
-                    rule_name=self.name
+                    rule_name=self.name,
                 )
         return ValidationResult(is_valid=True, rule_name=self.name)

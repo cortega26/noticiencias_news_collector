@@ -12,12 +12,12 @@ La filosofía aquí es crear una capa de abstracción que nos permita cambiar
 de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 """
 
-from contextlib import contextmanager
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import create_engine, desc, func, inspect, text
+from sqlalchemy import create_engine, desc, inspect, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, close_all_sessions, load_only, sessionmaker
@@ -30,10 +30,8 @@ ValidationError = get_pydantic_module().ValidationError
 import logging
 
 from news_collector.config.settings import DATABASE_CONFIG, DEDUP_CONFIG
-
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 
-from ..storage.models import PENDING_STATUS, Article, Base, ScoreLog, Source
 from ..storage.analytics import (
     category_breakdown,
     collection_stats,
@@ -43,6 +41,7 @@ from ..storage.analytics import (
     top_sources_performance,
 )
 from ..storage.maintenance import cleanup_old_data, health_status
+from ..storage.models import PENDING_STATUS, Article, Base, ScoreLog, Source
 from ..utils.dedupe import (
     duplication_confidence,
     generate_cluster_id,
@@ -132,6 +131,7 @@ class DatabaseManager:
 
                 # Habilitar WAL mode para mejorar concurrencia
                 from sqlalchemy import event
+
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):
                     cursor = dbapi_connection.cursor()
@@ -223,9 +223,7 @@ class DatabaseManager:
 
         return
 
-    def _apply_schema_migrations(
-        self, inspector: Any, tables: List[str]
-    ) -> None:
+    def _apply_schema_migrations(self, inspector: Any, tables: List[str]) -> None:
         db_type = self.config.get("type", "sqlite")
         timestamp_type = (
             "TIMESTAMP WITH TIME ZONE" if db_type == "postgresql" else "TIMESTAMP"
@@ -235,9 +233,7 @@ class DatabaseManager:
         migrations: List[Tuple[str, str, str]] = []
 
         if "sources" in tables:
-            existing_columns = {
-                col["name"] for col in inspector.get_columns("sources")
-            }
+            existing_columns = {col["name"] for col in inspector.get_columns("sources")}
 
             if "suppressed_until" not in existing_columns:
                 migrations.append(
@@ -449,7 +445,9 @@ class DatabaseManager:
         with self.get_session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article:
-                logger.warning(f"Could not find article {article_id} to mark as published.")
+                logger.warning(
+                    f"Could not find article {article_id} to mark as published."
+                )
                 return False
 
             article.processing_status = "completed"
@@ -516,27 +514,39 @@ class DatabaseManager:
                 # Verificar si ya existe por URL
                 existing = session.query(Article).filter_by(url=payload["url"]).first()
                 if existing:
-                    logger.warning(f"🔍 [DEBUG] Found existing article by URL: {payload['url']} (ID: {existing.id})")
+                    logger.warning(
+                        f"🔍 [DEBUG] Found existing article by URL: {payload['url']} (ID: {existing.id})"
+                    )
                     # HEALING LOGIC: If existing content is missing/short but we found better content, update it.
                     new_content = payload.get("content")
                     old_content = existing.content
 
                     new_len = len(new_content) if new_content else 0
                     old_len = len(old_content) if old_content else 0
-                    logger.warning(f"📏 [DEBUG] Content lengths - New: {new_len}, Old: {old_len}")
+                    logger.warning(
+                        f"📏 [DEBUG] Content lengths - New: {new_len}, Old: {old_len}"
+                    )
 
                     if new_content and len(new_content) > 1000:
                         if not old_content or len(old_content) < 1000:
-                            logger.warning(f"✨ [HEALING] Upgrading article {existing.id} content ({old_len} -> {new_len})")
+                            logger.warning(
+                                f"✨ [HEALING] Upgrading article {existing.id} content ({old_len} -> {new_len})"
+                            )
                             existing.content = new_content
-                            existing.summary = payload.get("summary") # Update summary too if needed
+                            existing.summary = payload.get(
+                                "summary"
+                            )  # Update summary too if needed
                             session.add(existing)
                             session.flush()
                             return existing
                         else:
-                            logger.warning(f"🚫 [DEBUG] Old content sufficient ({old_len} >= 1000)")
+                            logger.warning(
+                                f"🚫 [DEBUG] Old content sufficient ({old_len} >= 1000)"
+                            )
                     else:
-                        logger.warning(f"🚫 [DEBUG] New content too short ({new_len} <= 1000)")
+                        logger.warning(
+                            f"🚫 [DEBUG] New content too short ({new_len} <= 1000)"
+                        )
 
                     logger.debug(f"Artículo ya existe: {payload['url']}")
                     return None
@@ -861,49 +871,6 @@ class DatabaseManager:
                 .all()
             )
 
-    def mark_article_published(
-        self,
-        source_url: str,
-        *,
-        published_url: Optional[str] = None,
-        published_at: Optional[datetime] = None,
-    ) -> bool:
-        """Marca un artículo como publicado en Noticiencias."""
-        if not source_url:
-            return False
-        published_at = self._ensure_timezone(
-            published_at or datetime.now(timezone.utc)
-        )
-
-        with self.get_session() as session:
-            article = (
-                session.query(Article)
-                .filter(Article.url == source_url)
-                .first()
-            )
-            if not article:
-                # Fallback: buscar por original_url en metadata (filtrado en Python)
-                candidates = (
-                    session.query(Article)
-                    .filter(Article.article_metadata.isnot(None))
-                    .all()
-                )
-                for candidate in candidates:
-                    metadata = candidate.article_metadata or {}
-                    if metadata.get("original_url") == source_url:
-                        article = candidate
-                        break
-
-            if not article:
-                logger.warning("Artículo no encontrado para publicar: %s", source_url)
-                return False
-
-            article.published_at = published_at
-            if published_url:
-                article.published_url = published_url
-            logger.info("✅ Artículo marcado como publicado: %s", article.id)
-            return True
-
     def get_pending_articles(self) -> List[Article]:
         """
         Obtiene artículos pendientes de procesamiento.
@@ -1189,7 +1156,9 @@ class DatabaseManager:
                 # Si borramos el contenido, las fuentes deberían poder volver a traerlo si el feed lo tiene.
                 # No reseteamos las métricas de fuentes (consecutive_failures etc) para mantener historia de salud.
 
-                logger.info(f"🚨 CACHÉ VACIADA: {deleted_articles} artículos y {deleted_logs} logs eliminados.")
+                logger.info(
+                    f"🚨 CACHÉ VACIADA: {deleted_articles} artículos y {deleted_logs} logs eliminados."
+                )
                 return deleted_articles
             except Exception as e:
                 logger.error(f"Error vaciando caché: {e}")

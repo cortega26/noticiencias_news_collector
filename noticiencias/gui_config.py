@@ -16,8 +16,8 @@ from .config_manager import (
     Config,
     ConfigError,
     _diff_configs,
-    _is_secret,
     _format_validation_error,
+    _is_secret,
     load_config,
     save_config,
 )

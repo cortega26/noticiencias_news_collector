@@ -1,10 +1,11 @@
-
-import requests
-from bs4 import BeautifulSoup
 import logging
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
+
 logger = logging.getLogger(__name__)
+
 
 def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> str:
     """
@@ -25,28 +26,32 @@ def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> 
 
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, "html.parser")
 
         # Remove unwanted elements
-        for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+        for script in soup(
+            ["script", "style", "nav", "footer", "header", "aside", "noscript"]
+        ):
             script.decompose()
 
         # Try to find the main article container
-        article = soup.find('article')
+        article = soup.find("article")
         if article:
-            text = article.get_text(separator=' ', strip=True)
+            text = article.get_text(separator=" ", strip=True)
         else:
             # Fallback to main content or body
-            main = soup.find('main')
+            main = soup.find("main")
             if main:
-                text = main.get_text(separator=' ', strip=True)
+                text = main.get_text(separator=" ", strip=True)
             else:
-                text = soup.body.get_text(separator=' ', strip=True) if soup.body else ""
+                text = (
+                    soup.body.get_text(separator=" ", strip=True) if soup.body else ""
+                )
 
         # Basic cleanup
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = ' '.join(chunk for chunk in chunks if chunk)
+        text = " ".join(chunk for chunk in chunks if chunk)
 
         return text
 

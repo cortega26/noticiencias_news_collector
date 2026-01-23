@@ -43,7 +43,6 @@ def test_prompt_generation():
 
     # We want to see the prompt, but _send_prompt interacts with network.
     # We will override _send_prompt temporarily for this test
-    original_send = agent._send_prompt
 
     def mock_send(prompt):
         print("✅ PROMPT GENERATED SUCCESSFULLY:")

@@ -6,7 +6,7 @@ BIN_DIR := Scripts
 PYTHON ?= python
 else
 BIN_DIR := bin
-PYTHON ?= python
+PYTHON ?= python3
 endif
 
 PIP := $(VENV)/$(BIN_DIR)/pip
@@ -76,9 +76,9 @@ fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
 	@$(PYTHON) -m tools.fix_makefile_tabs
 
 lint-fix: bootstrap ## Auto-format using Black/isort and fix Ruff findings
-	@$(BLACK) src tests scripts
-	@$(ISORT) src tests scripts
-	@$(RUFF) check src tests scripts --fix
+	@$(BLACK) .
+	@$(ISORT) .
+	@$(RUFF) check . --fix
 
 docs-api: bootstrap ## Generate API reference documentation with pdoc
 	@$(PYTHON_BIN) scripts/generate_api_docs.py

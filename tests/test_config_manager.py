@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from noticiencias.config_manager import Config, ConfigError, load_config, save_config
 from noticiencias.config_schema import DEFAULT_CONFIG, iter_field_docs
 

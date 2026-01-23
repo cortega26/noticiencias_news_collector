@@ -5,22 +5,23 @@ Content Validator Module
 Orchestrates the validation phase by applying a set of rules to collected articles.
 """
 
-from typing import Any, Dict, List
 import logging
+from typing import Any, Dict, List
 
 from news_collector.validation.rules import (
-    ValidationRule,
-    ValidationResult,
-    MinContentLengthRule,
-    TitleBodyRelevanceRule,
     BlocklistPatternRule,
-    NewsletterContentRule
+    MinContentLengthRule,
+    NewsletterContentRule,
+    TitleBodyRelevanceRule,
+    ValidationResult,
+    ValidationRule,
 )
 
 # Default patterns to block based on user feedback
 DEFAULT_BLOCKLIST = [
     r"The Download:.*",  # Matches "The Download: cut through AI coding hype..."
 ]
+
 
 class ContentValidator:
     """
@@ -34,9 +35,9 @@ class ContentValidator:
     def _get_default_rules(self) -> List[ValidationRule]:
         return [
             MinContentLengthRule(min_words=50),
-            TitleBodyRelevanceRule(min_match_ratio=0.05), # Very lenient default
+            TitleBodyRelevanceRule(min_match_ratio=0.05),  # Very lenient default
             BlocklistPatternRule(patterns=DEFAULT_BLOCKLIST),
-            NewsletterContentRule()
+            NewsletterContentRule(),
         ]
 
     def validate_article(self, article: Dict[str, Any]) -> ValidationResult:
@@ -68,14 +69,15 @@ class ContentValidator:
             if result.is_valid:
                 valid_articles.append(article)
             else:
-                invalid_articles.append({
-                    "article": article,
-                    "reason": result.reason,
-                    "rule": result.rule_name
-                })
-                self.logger.info(f"Article rejected: {article.get('title', 'No Title')} - {result.reason}")
+                invalid_articles.append(
+                    {
+                        "article": article,
+                        "reason": result.reason,
+                        "rule": result.rule_name,
+                    }
+                )
+                self.logger.info(
+                    f"Article rejected: {article.get('title', 'No Title')} - {result.reason}"
+                )
 
-        return {
-            "valid": valid_articles,
-            "invalid": invalid_articles
-        }
+        return {"valid": valid_articles, "invalid": invalid_articles}

@@ -1,4 +1,3 @@
-
 def sanitize_title(title_input):
     final_title = title_input
     # Sanitize title: ensure it's a string and not a list representation
@@ -7,6 +6,7 @@ def sanitize_title(title_input):
     final_title = str(final_title).replace('"', '\\"')
 
     return f'title: "{final_title}"'
+
 
 def test():
     print("--- Testing Sanitization ---")
@@ -36,6 +36,7 @@ def test():
     assert out4 == 'title: "Title with \\"quotes\\""'
 
     print("\n✅ Verification Passed!")
+
 
 if __name__ == "__main__":
     test()

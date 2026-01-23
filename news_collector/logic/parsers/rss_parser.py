@@ -1,11 +1,13 @@
 import re
-import feedparser
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from news_collector.utils.text_cleaner import clean_html
+import feedparser
+
 from news_collector.utils.datetime_utils import parse_to_utc_with_tzinfo
+from news_collector.utils.text_cleaner import clean_html
 from news_collector.utils.url_canonicalizer import canonicalize_url
+
 
 class RssParser:
     """
@@ -25,7 +27,9 @@ class RssParser:
         exception_name = parsed_feed.bozo_exception.__class__.__name__
         return exception_name in acceptable_exceptions
 
-    def extract_items(self, parsed_feed, source_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def extract_items(
+        self, parsed_feed, source_config: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """
         Extracts and normalizes items from a parsed feed.
         """
@@ -56,7 +60,7 @@ class RssParser:
                     "category": source_config.get("category", "general"),
                     "image_url": self._extract_image_url(entry),
                     "source_metadata": self._extract_source_metadata(entry, feed_info),
-                    "entry_ref": entry # Kept for backward compat if needed, but risky for serialization
+                    "entry_ref": entry,  # Kept for backward compat if needed, but risky for serialization
                 }
 
                 # Basic validation
@@ -83,7 +87,7 @@ class RssParser:
 
     def _clean_title(self, title: str) -> str:
         # Simple cleanup
-        import re
+
         # Remove multiple spaces
         return " ".join(title.split())
 
@@ -94,13 +98,17 @@ class RssParser:
                 content = getattr(entry, field)
                 # Handle list/dict variants in feedparser
                 if isinstance(content, list) and content:
-                    content = content[0].get("value", "") if isinstance(content[0], dict) else str(content[0])
+                    content = (
+                        content[0].get("value", "")
+                        if isinstance(content[0], dict)
+                        else str(content[0])
+                    )
                 elif isinstance(content, dict):
                     content = content.get("value", "")
 
                 if content and isinstance(content, str):
                     cleaned = clean_html(content)
-                    if len(cleaned) >= 50: # Min content length from settings?
+                    if len(cleaned) >= 50:  # Min content length from settings?
                         # Hardcoding 50 for now as safe default, or pass in config.
                         return cleaned
         return ""
@@ -108,7 +116,7 @@ class RssParser:
     def _extract_authors(self, entry) -> List[str]:
         authors = []
         if hasattr(entry, "author") and entry.author:
-            authors.append(self._clean_title(entry.author)) # clean_text logic
+            authors.append(self._clean_title(entry.author))  # clean_text logic
 
         if hasattr(entry, "authors") and entry.authors:
             for author in entry.authors:
@@ -159,7 +167,9 @@ class RssParser:
             metadata["doi"] = doi
 
         if hasattr(entry, "tags") and entry.tags:
-            metadata["tags"] = [tag.get("term", "") for tag in entry.tags if tag.get("term")]
+            metadata["tags"] = [
+                tag.get("term", "") for tag in entry.tags if tag.get("term")
+            ]
 
         if feed_info and hasattr(feed_info, "title"):
             metadata["feed_title"] = feed_info.title
@@ -172,12 +182,14 @@ class RssParser:
     def _extract_doi(self, entry) -> Optional[str]:
         doi_pattern = r"10\.\d{4,}/[-._;()/:\w\[\]]+[^.\s]"
         search_fields = []
-        if hasattr(entry, "id"): search_fields.append(entry.id)
-        if hasattr(entry, "summary"): search_fields.append(entry.summary)
+        if hasattr(entry, "id"):
+            search_fields.append(entry.id)
+        if hasattr(entry, "summary"):
+            search_fields.append(entry.summary)
         if hasattr(entry, "links"):
-             for link in entry.links:
-                 if link.get("href"):
-                     search_fields.append(link["href"])
+            for link in entry.links:
+                if link.get("href"):
+                    search_fields.append(link["href"])
 
         for field in search_fields:
             if field and isinstance(field, str):

@@ -1,18 +1,21 @@
-import pytest
 import asyncio
-import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from news_collector.scoring.cognitive_scorer import CognitiveScorer
 from news_collector.storage.models import Article
+
 
 @pytest.fixture
 def mock_llm():
     llm = MagicMock()
     llm.generate_async = AsyncMock()
     return llm
+
 
 @pytest.fixture
 def temp_db_path():
@@ -22,12 +25,14 @@ def temp_db_path():
     if path.exists():
         path.unlink()
 
+
 @pytest.fixture
 def cognitive_scorer(mock_llm, temp_db_path):
     # Patch the CACHE_DB_PATH in the module
     with patch("news_collector.scoring.cognitive_scorer.CACHE_DB_PATH", temp_db_path):
         scorer = CognitiveScorer(llm_client=mock_llm)
         yield scorer
+
 
 @pytest.fixture
 def sample_article():
@@ -39,11 +44,12 @@ def sample_article():
         content="Content for LLM evaluation.",
         source_id="s1",
         published_date=datetime.now(timezone.utc),
-        article_metadata={}
+        article_metadata={},
     )
 
+
 def test_score_batch_llm_success(cognitive_scorer, mock_llm, sample_article):
-    import asyncio
+
     # Setup LLM response
     llm_response = {
         "results": [
@@ -53,9 +59,9 @@ def test_score_batch_llm_success(cognitive_scorer, mock_llm, sample_article):
                     "substance": 4.0,
                     "narrative": 3.0,
                     "relevance": 5.0,
-                    "credibility": 4.5
+                    "credibility": 4.5,
                 },
-                "reasoning": "Good article."
+                "reasoning": "Good article.",
             }
         ]
     }
@@ -68,16 +74,17 @@ def test_score_batch_llm_success(cognitive_scorer, mock_llm, sample_article):
     res = results[0]
     assert res["decision_label"] in ["priority", "publishable", "discard"]
     assert res["cognitive_details"]["substance"] == 4.0
-    
+
     # Verify cache write
-    key = cognitive_scorer._get_cache_key(sample_article)
+    cognitive_scorer._get_cache_key(sample_article)
     # 0.72 is approximately the result (weighted average)
     assert res["final_score"] == pytest.approx(0.72, abs=0.01)
 
+
 def test_score_batch_cache_hit(cognitive_scorer, mock_llm, sample_article):
-    import asyncio
+
     # Seed cache
-    key = cognitive_scorer._get_cache_key(sample_article)
+    cognitive_scorer._get_cache_key(sample_article)
     # Cache should store the LLM result structure
     cached_data = {
         "item_index": 1,
@@ -85,10 +92,10 @@ def test_score_batch_cache_hit(cognitive_scorer, mock_llm, sample_article):
             "substance": 5.0,
             "narrative": 4.0,
             "relevance": 5.0,
-            "credibility": 5.0
+            "credibility": 5.0,
         },
         "details": {"substance": 5.0},
-        "reasoning": "Cached reason"
+        "reasoning": "Cached reason",
     }
     # Force cache hit by mocking
     cognitive_scorer._get_from_cache = MagicMock(return_value=cached_data)
@@ -104,8 +111,9 @@ def test_score_batch_cache_hit(cognitive_scorer, mock_llm, sample_article):
     assert results[0]["cognitive_details"]["substance"] == 5.0
     mock_llm.generate_async.assert_not_called()
 
+
 def test_score_batch_llm_failure_fallback(cognitive_scorer, mock_llm, sample_article):
-    import asyncio
+
     # LLM returns None or errors
     mock_llm.generate_async.return_value = None
 
@@ -117,11 +125,12 @@ def test_score_batch_llm_failure_fallback(cognitive_scorer, mock_llm, sample_art
     assert results[0]["cognitive_details"].get("heuristic") is True
     assert cognitive_scorer.is_llm_healthy is False
 
+
 def test_score_batch_budget_exhausted(cognitive_scorer, mock_llm, sample_article):
-    import asyncio
+
     # Simulate exhausted budget
     cognitive_scorer.max_cycle_budget_sec = 0.0
-    
+
     payload = [{"article": sample_article.to_dict()}]
     results = asyncio.run(cognitive_scorer.score_batch_async(payload))
 
@@ -129,9 +138,10 @@ def test_score_batch_budget_exhausted(cognitive_scorer, mock_llm, sample_article
     assert results[0]["cognitive_details"].get("heuristic") is True
     mock_llm.generate_async.assert_not_called()
 
+
 def test_score_single_article_fallback(cognitive_scorer, sample_article, mock_llm):
-    mock_llm.generate_async.return_value = None 
-    
+    mock_llm.generate_async.return_value = None
+
     cognitive_scorer.heuristic.calculate_score = MagicMock(return_value=0.5)
 
     res = cognitive_scorer.score_article(sample_article)
@@ -140,4 +150,3 @@ def test_score_single_article_fallback(cognitive_scorer, sample_article, mock_ll
     # We just check the structure and that it ran.
     assert res["final_score"] > 0.0
     assert res["cognitive_details"]["heuristic"] is True
-

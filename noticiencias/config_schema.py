@@ -292,7 +292,8 @@ class RobotsConfig(StrictModel):
 
     respect_robots: bool = Field(
         # Set to False to bypass robots.txt blocks on Reddit/Arxiv per user request
-        default=False, description="Honor robots.txt directives when collecting."
+        default=False,
+        description="Honor robots.txt directives when collecting.",
     )
     cache_ttl_seconds: PositiveInt = Field(
         default=3_600,
@@ -623,7 +624,6 @@ class LoggingConfig(StrictModel):
         return self
 
 
-
 class GitHubConfig(StrictModel):
     """GitHub integration settings."""
 
@@ -651,13 +651,14 @@ class GitHubConfig(StrictModel):
     @field_validator("token", mode="before")
     @classmethod
     def _blank_to_none(cls, v):
-        if v == "": return None
+        if v == "":
+            return None
         return v
-
 
 
 class OllamaConfig(StrictModel):
     """Ollama LLM settings."""
+
     api_url: str = Field(
         default="http://localhost:11434",
         description="Base URL for the Ollama API.",

@@ -13,6 +13,7 @@ colectores se comporten de manera predecible y consistente, facilitando
 el mantenimiento y la extensión del sistema.
 """
 
+import asyncio
 import hashlib
 import json
 import random
@@ -23,10 +24,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
-import asyncio
+
 import httpx
 
-from news_collector.contracts import CollectorArticleModel
+from news_collector.collectors.rate_limit_utils import calculate_effective_delay
 from news_collector.config.settings import (
     COLLECTION_CONFIG,
     DLQ_DIR,
@@ -34,13 +35,13 @@ from news_collector.config.settings import (
     ROBOTS_CONFIG,
     TEXT_PROCESSING_CONFIG,
 )
-from news_collector.collectors.rate_limit_utils import calculate_effective_delay
+from news_collector.contracts import CollectorArticleModel
 from news_collector.storage.database import get_database_manager
 from news_collector.utils.logger import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from news_collector.utils.logger import NewsCollectorLogger
     from news_collector.diagnostics import SourceHealthTracker
+    from news_collector.utils.logger import NewsCollectorLogger
 
 
 class BaseCollector(ABC):
@@ -56,7 +57,11 @@ class BaseCollector(ABC):
     mientras permitimos customización específica por tipo de colector.
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional["SourceHealthTracker"] = None) -> None:
+    def __init__(
+        self,
+        logger_factory: Optional["NewsCollectorLogger"] = None,
+        health_tracker: Optional["SourceHealthTracker"] = None,
+    ) -> None:
         """Inicialización común para todos los colectores."""
 
         self.collector_type = self.__class__.__name__
@@ -109,7 +114,9 @@ class BaseCollector(ABC):
         Versión asíncrona de collect_from_source.
         Por defecto, delega a la versión síncrona usando un hilo.
         """
-        return await asyncio.to_thread(self.collect_from_source, source_id, source_config)
+        return await asyncio.to_thread(
+            self.collect_from_source, source_id, source_config
+        )
 
     def collect_from_multiple_sources(
         self,
@@ -156,14 +163,14 @@ class BaseCollector(ABC):
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         source_results = {}
-        for source_id, result in zip(sources_config.keys(), results):
+        for source_id, result in zip(sources_config.keys(), results, strict=False):
             if isinstance(result, Exception):
                 # Fallback for unexpected task failures
                 error_res = self._create_error_result(source_id, result)
                 source_results[source_id] = error_res
                 self.stats["total_errors"] += 1
             else:
-                 source_results[source_id] = result
+                source_results[source_id] = result
 
         return self._finalize_collection_cycle(source_results)
 
@@ -216,7 +223,9 @@ class BaseCollector(ABC):
             # Note: _pre_process_source might be sync, but it's usually fast.
             # If it were heavy, we'd need to asyncify it too.
             self._pre_process_source(source_id, source_config)
-            source_result = await self.collect_from_source_async(source_id, source_config)
+            source_result = await self.collect_from_source_async(
+                source_id, source_config
+            )
             self._update_global_stats(source_result)
             self._post_process_source(source_id, source_config, source_result)
             self._emit_source_log(source_id, source_result)
@@ -615,7 +624,7 @@ class BaseCollector(ABC):
                 "warning",
                 "collector.article.save_validation_error",
                 source_id=source_id,
-                details={"error": str(exc).split('\n')[0], "title": title[:60]},
+                details={"error": str(exc).split("\n")[0], "title": title[:60]},
             )
             return False
         except Exception as exc:
@@ -663,7 +672,7 @@ class BaseCollector(ABC):
                 details={
                     "reason": "content_too_short",
                     "length": len(content) if content else 0,
-                    "min_required": TEXT_PROCESSING_CONFIG["min_content_length"]
+                    "min_required": TEXT_PROCESSING_CONFIG["min_content_length"],
                 },
             )
             return False
@@ -683,7 +692,9 @@ class BaseCollector(ABC):
 
         return True
 
-    def _filter_and_save_articles(self, source_id: str, articles_data: List[Dict[str, Any]], limit: int = 5) -> int:
+    def _filter_and_save_articles(
+        self, source_id: str, articles_data: List[Dict[str, Any]], limit: int = 5
+    ) -> int:
         """
         Apply strict sequential filters:
         1. Min Content Length (already done partially in validation, but double checking)
@@ -706,23 +717,45 @@ class BaseCollector(ABC):
 
                 # Strict length check (business rule filter)
                 if len(article.content or "") < min_length:
-                     self._emit_log("info", "collector.filter.length_rejected", source_id=source_id, details={"url": str(article.url), "len": len(article.content or "")})
-                     if self.health_tracker:
-                         self.health_tracker.record_filter_rejection(source_id, "min_length")
-                     continue
+                    self._emit_log(
+                        "info",
+                        "collector.filter.length_rejected",
+                        source_id=source_id,
+                        details={
+                            "url": str(article.url),
+                            "len": len(article.content or ""),
+                        },
+                    )
+                    if self.health_tracker:
+                        self.health_tracker.record_filter_rejection(
+                            source_id, "min_length"
+                        )
+                    continue
 
                 if self.health_tracker:
                     self.health_tracker.record_success(source_id, "validate")
-                    self.health_tracker.record_success(source_id, "filter") # Length passed
+                    self.health_tracker.record_success(
+                        source_id, "filter"
+                    )  # Length passed
 
                 valid_candidates.append(article)
 
             except Exception as e:
                 # Validation error
                 error_msg = str(e)
-                self._emit_log("error", "collector.validate.error", source_id=source_id, details={"error": error_msg})
+                self._emit_log(
+                    "error",
+                    "collector.validate.error",
+                    source_id=source_id,
+                    details={"error": error_msg},
+                )
                 if self.health_tracker:
-                    self.health_tracker.record_failure(source_id, "collector.validate_payload", "validation_error", {"error": error_msg})
+                    self.health_tracker.record_failure(
+                        source_id,
+                        "collector.validate_payload",
+                        "validation_error",
+                        {"error": error_msg},
+                    )
                 continue
 
         # Filter 2: Duplicate Check (Already Published)
@@ -730,7 +763,7 @@ class BaseCollector(ABC):
         for article in valid_candidates:
             if self.db_manager.article_exists(str(article.url)):
                 if self.health_tracker:
-                     self.health_tracker.record_filter_rejection(source_id, "duplicate")
+                    self.health_tracker.record_filter_rejection(source_id, "duplicate")
                 continue
             unique_candidates.append(article)
 
@@ -746,7 +779,9 @@ class BaseCollector(ABC):
         top_n = unique_candidates[:limit]
         skipped_top_n = len(unique_candidates) - len(top_n)
         if self.health_tracker and skipped_top_n > 0:
-            self.health_tracker.record_filter_rejection(source_id, "top_n", skipped_top_n)
+            self.health_tracker.record_filter_rejection(
+                source_id, "top_n", skipped_top_n
+            )
 
         # Save Phase
         for article in top_n:
@@ -909,15 +944,19 @@ def create_collector(collector_type: str) -> BaseCollector:
     """
     if collector_type.lower() == "rss":
         from .rss_collector import RSSCollector
+
         return RSSCollector()
     elif collector_type.lower() == "html":
         from .html_collector import HtmlCollector
+
         return HtmlCollector()
     elif collector_type.lower() == "async_rss":
         from .async_rss_collector import AsyncRSSCollector
+
         return AsyncRSSCollector()
     elif collector_type.lower() == "headless":
         from .headless_collector import HeadlessCollector
+
         return HeadlessCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")

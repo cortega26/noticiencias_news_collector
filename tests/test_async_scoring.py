@@ -18,14 +18,16 @@ pytestmark = pytest.mark.anyio
 def anyio_backend():
     return "asyncio"
 
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
+
 async def test_async_scoring():
     print("🧪 Testing Async Scoring...")
-    
+
     scorer = BasicScorer()
-    
+
     # Dummy article data simulating what we pass in main.py
     article_data = {
         "article": {
@@ -41,20 +43,21 @@ async def test_async_scoring():
             "doi": "10.1234/async",
             "journal": "Journal of Async",
         },
-        "source_config": {"credibility_score": 0.9}
+        "source_config": {"credibility_score": 0.9},
     }
-    
+
     print("  • Starting score_article_async...")
     result = await scorer.score_article_async(article_data)
-    
+
     print(f"  • Result keys: {list(result.keys())}")
     print(f"  • Final Score: {result.get('final_score')}")
-    
+
     if result.get("final_score") is not None and result.get("success") is not False:
         print("✅ Async scoring successful!")
     else:
         print("❌ Async scoring failed or returned unexpected structure.")
         print(result)
+
 
 if __name__ == "__main__":
     asyncio.run(test_async_scoring())

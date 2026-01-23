@@ -8,7 +8,7 @@ from typing import Any, Dict
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from news_collector.storage.models import Article, PENDING_STATUS, ScoreLog, Source
+from news_collector.storage.models import PENDING_STATUS, Article, ScoreLog, Source
 
 
 def cleanup_old_data(session: Session, days_to_keep: int = 90) -> Dict[str, Any]:
@@ -23,9 +23,7 @@ def cleanup_old_data(session: Session, days_to_keep: int = 90) -> Dict[str, Any]
     )
 
     deleted_logs = (
-        session.query(ScoreLog)
-        .filter(ScoreLog.calculated_at < cutoff_date)
-        .delete()
+        session.query(ScoreLog).filter(ScoreLog.calculated_at < cutoff_date).delete()
     )
 
     return {
@@ -53,9 +51,7 @@ def health_status(session: Session, db_type: str) -> Dict[str, Any]:
     )
 
     active_sources = (
-        session.query(func.count(Source.id))
-        .filter(Source.is_active.is_(True))
-        .scalar()
+        session.query(func.count(Source.id)).filter(Source.is_active.is_(True)).scalar()
     )
 
     failed_sources = (
@@ -72,8 +68,6 @@ def health_status(session: Session, db_type: str) -> Dict[str, Any]:
         "failed_sources": failed_sources,
         "database_type": db_type,
         "status": (
-            "healthy"
-            if failed_sources == 0 and pending_articles < 100
-            else "warning"
+            "healthy" if failed_sources == 0 and pending_articles < 100 else "warning"
         ),
     }

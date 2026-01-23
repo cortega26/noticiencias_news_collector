@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, TypedDict
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 
@@ -106,7 +113,7 @@ class CollectorArticleModel(BaseModel):
         content_len = len(self.content.strip()) if self.content else 0
 
         if summary_len < min_len and content_len < min_len:
-             raise ValueError(
+            raise ValueError(
                 f"Article too short. Neither summary ({summary_len}) nor content ({content_len}) "
                 f"meets minimum length of {min_len} chars."
             )
@@ -114,8 +121,8 @@ class CollectorArticleModel(BaseModel):
         # Ensure word_count consistency
         # We trust the self.word_count provided by collector logic, but it should be reasonable.
         if self.word_count < 10:
-             # Only complain if it's ridiculously low, suggesting extraction failure.
-             pass
+            # Only complain if it's ridiculously low, suggesting extraction failure.
+            pass
 
         return self
 
@@ -132,8 +139,7 @@ class CollectorArticleModel(BaseModel):
     def validate_authors_meaningful(cls, value: List[str]) -> List[str]:
         generic_names = {"admin", "staff", "editor", "redaction", "anonymous"}
         filtered = [
-            a for a in value
-            if a.lower().replace(".", "").strip() not in generic_names
+            a for a in value if a.lower().replace(".", "").strip() not in generic_names
         ]
         if not filtered and value:
             return []

@@ -36,9 +36,10 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from news_collector.config import ALL_SOURCES
     from main import create_system
+
     from news_collector import setup_logging
+    from news_collector.config import ALL_SOURCES
     from news_collector.diagnostics import SourceHealthTracker
 except ImportError as e:
     print(f"❌ Error importando módulos: {e}")
@@ -98,16 +99,16 @@ def run_simple_collection(args):
         # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
 
         # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
-        
+
         config_override = {}
         if args.fast:
             print("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
             # Correctly map to what main.py expectes: flat keys, full weight dict
             config_override["scoring_weights"] = {
-                 "source_credibility": 0.30,
-                 "recency": 0.30,
-                 "content_quality": 0.40,
-                 "cognitive_engagement": 0.0  # Explicitly 0 to trigger skip
+                "source_credibility": 0.30,
+                "recency": 0.30,
+                "content_quality": 0.40,
+                "cognitive_engagement": 0.0,  # Explicitly 0 to trigger skip
             }
 
         print("🔧 Inicializando sistema...")
@@ -131,8 +132,6 @@ def run_simple_collection(args):
                 }
             )
             return False
-            
-
 
         print("✅ Sistema inicializado correctamente")
 
@@ -194,11 +193,13 @@ def run_simple_collection(args):
         # Ejecutar recolección
         print("\n🚀 Iniciando recolección...")
         run_start = time.perf_counter()
-        results = asyncio.run(system.run_collection_cycle(
-            sources_filter=selected_sources,
-            dry_run=args.dry_run,
-            trace_id=trace_id,
-        ))
+        results = asyncio.run(
+            system.run_collection_cycle(
+                sources_filter=selected_sources,
+                dry_run=args.dry_run,
+                trace_id=trace_id,
+            )
+        )
 
         session_id = (
             results.get("session_info", {}).get("session_id")
@@ -467,15 +468,15 @@ Ejemplos de uso:
                 # Asegurar que el directorio existe
                 export_path = Path(args.export_json)
                 export_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 # Obtener artículos
                 articles = system.db_manager.get_articles_by_score(
                     limit=50, exclude_published=True
                 )
-                
+
                 # Serializar
                 import json
-                
+
                 serialized_articles = []
                 for art in articles:
                     art_dict = {
@@ -485,19 +486,35 @@ Ejemplos de uso:
                         "summary": art.summary,
                         "content": art.content,
                         "source_name": art.source_name,
-                        "published_date": art.published_date.isoformat() if art.published_date else None,
-                        "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                        "published_date": (
+                            art.published_date.isoformat()
+                            if art.published_date
+                            else None
+                        ),
+                        "published_at": (
+                            art.published_at.isoformat()
+                            if getattr(art, "published_at", None)
+                            else None
+                        ),
                         "published_url": getattr(art, "published_url", None),
-                        "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                        "collected_date": (
+                            art.collected_date.isoformat()
+                            if art.collected_date
+                            else None
+                        ),
                         "score": art.final_score,
-                        "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                        "image_url": (
+                            art.article_metadata.get("image_url")
+                            if art.article_metadata
+                            else None
+                        ),
                         "metadata": art.article_metadata,
                         "authors": art.authors,
                         "category": art.category,
-                        "components": art.score_components or {}
+                        "components": art.score_components or {},
                     }
                     serialized_articles.append(art_dict)
-                
+
                 export_payload = {
                     "schema_version": 1,
                     "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -506,12 +523,14 @@ Ejemplos de uso:
                     "articles": serialized_articles,
                 }
 
-                with open(export_path, 'w', encoding='utf-8') as f:
+                with open(export_path, "w", encoding="utf-8") as f:
                     json.dump(export_payload, f, indent=2, ensure_ascii=False)
-                    
-                print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
+
+                print(
+                    f"✅ Exportación completada: {len(serialized_articles)} artículos"
+                )
             else:
-                 print("❌ Error inicializando sistema para exportación")
+                print("❌ Error inicializando sistema para exportación")
         except Exception as e:
             print(f"❌ Error durante exportación: {e}")
 

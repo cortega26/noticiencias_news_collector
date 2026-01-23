@@ -85,7 +85,7 @@ target-version = ["py313"]
 [tool.isort]
 profile = "black"
 line_length = 88
-src_paths = ["news_collector", "tests", "scripts"]
+src_paths = ["news_collector", "tests", "scripts", "apps", "tools"]
 
 [tool.mypy]
 python_version = "3.13"

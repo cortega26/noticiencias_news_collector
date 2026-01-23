@@ -1,34 +1,31 @@
-import json
 import argparse
-import shutil
-import os
-import glob
-import uuid
-import sys
-import subprocess
-from pathlib import Path
-import git
+import json
 import re
-from datetime import datetime
+import shutil
+import sys
+import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+import git
 
 # Add project root to sys.path to allow imports if running standalone or via streamlit
 project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+import asyncio
+
 from noticiencias.config_manager import load_config
 from src.utils.logger import setup_logger
-from news_collector.components.publishing import GitHubPublisher
-from news_collector.components.editorial import EditorAgent
-# from news_collector.components.editorial import EditorAgent # Removed duplicate
-from news_collector.storage.database import DatabaseManager
 
-from news_collector.system import create_system
-import asyncio
-from datetime import timezone
+from news_collector.components.editorial import EditorAgent
+from news_collector.components.publishing import GitHubPublisher
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
+# from news_collector.components.editorial import EditorAgent # Removed duplicate
+from news_collector.storage.database import DatabaseManager
+from news_collector.system import create_system
 
 logger = setup_logger("Orchestrator")
 
@@ -38,12 +35,16 @@ SOURCE_DIR = TEMP_DIR / "source"
 TARGET_DIR = TEMP_DIR / "target"
 # DB_PATH = Path("refinery.db") # Deprecated
 
+
 def _is_file_lock_error(exc: Exception) -> bool:
     winerror = getattr(exc, "winerror", None)
     if winerror == 32:
         return True
     message = str(exc).lower()
-    return "being used by another process" in message or "utilizado por otro proceso" in message
+    return (
+        "being used by another process" in message
+        or "utilizado por otro proceso" in message
+    )
 
 
 def _unique_post_slug(
@@ -94,6 +95,7 @@ def _safe_clone_source_repo(
             )
             return source_dir
         raise
+
 
 def _load_export_articles(
     export_path: Path,
@@ -167,9 +169,7 @@ def _select_export_articles(
 
     if (not articles) and sibling_path.exists() and sibling_path != cloned_path:
         logger.info(f"Found Local Sibling export at {sibling_path}")
-        fallback_articles = _load_export_articles(
-            sibling_path, db_manager, process_id
-        )
+        fallback_articles = _load_export_articles(sibling_path, db_manager, process_id)
         if fallback_articles:
             articles = fallback_articles
             selected_path = sibling_path
@@ -177,7 +177,9 @@ def _select_export_articles(
     return articles, selected_path
 
 
-def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: bool = False):
+def run_collector_script(
+    source_dir: Path, fast_mode: bool = False, dry_run: bool = False
+):
     """Runs the news collector direct via API."""
     logger.info(f"Starting News Collector (Direct API)... Dry Run: {dry_run}")
 
@@ -185,12 +187,12 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: boo
         # 1. Configuration
         config_override = {}
         if fast_mode:
-             logger.info("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
-             config_override["scoring_weights"] = {
-                 "source_credibility": 0.30,
-                 "recency": 0.30,
-                 "content_quality": 0.40,
-                 "cognitive_engagement": 0.0
+            logger.info("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
+            config_override["scoring_weights"] = {
+                "source_credibility": 0.30,
+                "recency": 0.30,
+                "content_quality": 0.40,
+                "cognitive_engagement": 0.0,
             }
 
         # 2. Initialize System
@@ -202,55 +204,67 @@ def run_collector_script(source_dir: Path, fast_mode: bool = False, dry_run: boo
 
         # 3. Run Method Wrapper (Async to Sync)
         async def _run_and_export():
-             try:
-                 # Run Collection
-                 await system.run_collection_cycle(dry_run=dry_run)
+            try:
+                # Run Collection
+                await system.run_collection_cycle(dry_run=dry_run)
 
-                 # Export Logic - skip if dry_run? DB dry run generally means no persistence,
-                 # but we might still want to see what WOULD be exported.
-                 # Usually collection cycle dry_run returns results but doesn't db save.
-                 # Let's assume we proceed to export logic if we have results in mem?
-                 # System.export_articles reads from DB. So dry_run probably yields nothing in DB.
+                # Export Logic - skip if dry_run? DB dry run generally means no persistence,
+                # but we might still want to see what WOULD be exported.
+                # Usually collection cycle dry_run returns results but doesn't db save.
+                # Let's assume we proceed to export logic if we have results in mem?
+                # System.export_articles reads from DB. So dry_run probably yields nothing in DB.
 
-                 if not dry_run:
-                     target_export_path = project_root / "data/exports/latest_articles.json"
+                if not dry_run:
+                    target_export_path = (
+                        project_root / "data/exports/latest_articles.json"
+                    )
 
-                     logger.info(f"Exporting results to {target_export_path}")
+                    logger.info(f"Exporting results to {target_export_path}")
 
-                     # Use unified system export
-                     await asyncio.to_thread(
-                         system.export_latest_articles,
-                         file_path=target_export_path,
-                         limit=50
-                     )
-                 else:
-                     logger.info("Dry Run: Skipping JSON export (no DB changes).")
+                    # Use unified system export
+                    await asyncio.to_thread(
+                        system.export_latest_articles,
+                        file_path=target_export_path,
+                        limit=50,
+                    )
+                else:
+                    logger.info("Dry Run: Skipping JSON export (no DB changes).")
 
-             finally:
-                 if hasattr(system, 'shutdown'):
-                     await system.shutdown()
+            finally:
+                if hasattr(system, "shutdown"):
+                    await system.shutdown()
 
         # 4. Handle Execution Loop
         try:
-             asyncio.run(_run_and_export())
-             logger.info("News Collector finished successfully.")
+            asyncio.run(_run_and_export())
+            logger.info("News Collector finished successfully.")
         except RuntimeError as e:
-             if "loop" in str(e).lower():
-                  # If loop exists (e.g. Streamlit), try to schedule it?
-                  # Or use run_until_complete if we can access the loop?
-                  # For now, let's assume standard script execution or thread.
-                  # If we fail here, we might need nest_asyncio
-                  logger.error(f"Async loop conflict: {e}")
-                  raise
-             raise
+            if "loop" in str(e).lower():
+                # If loop exists (e.g. Streamlit), try to schedule it?
+                # Or use run_until_complete if we can access the loop?
+                # For now, let's assume standard script execution or thread.
+                # If we fail here, we might need nest_asyncio
+                logger.error(f"Async loop conflict: {e}")
+                raise
+            raise
 
     except Exception as e:
         logger.error(f"Error running collector: {e}")
         import traceback
+
         traceback.print_exc()
 
 
-def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, export_path=None, fast_mode=False, process_new_content=False, dry_run=False):
+def main(
+    fetch_only=False,
+    process_id=None,
+    dev=False,
+    skip_visuals=False,
+    export_path=None,
+    fast_mode=False,
+    process_new_content=False,
+    dry_run=False,
+):
     """
     Main entry point for the Noticiencias Refinery.
 
@@ -283,7 +297,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         db_manager=db_manager,
         git_handler=git_handler,
         editor_agent=editor_agent,
-        config=config.github
+        config=config.github,
     )
 
     source_dir = SOURCE_DIR
@@ -335,7 +349,9 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         logger.info("Injecting MOCK article for testing (Dev Mode)...")
         mock_file = data_dir / "mock_article.md"
         with open(mock_file, "w", encoding="utf-8") as f:
-            f.write("# Breakthrough in Fusion Energy\\n\\nScientists at the National Ignition Facility have achieved net energy gain in a fusion reaction for the second time, proving the viability of this localized star power. The experiment produced 3.15 megajoules of energy from 2.05 megajoules of laser energy delivered to the target.")
+            f.write(
+                "# Breakthrough in Fusion Energy\\n\\nScientists at the National Ignition Facility have achieved net energy gain in a fusion reaction for the second time, proving the viability of this localized star power. The experiment produced 3.15 megajoules of energy from 2.05 megajoules of laser energy delivered to the target."
+            )
         logger.info(f"Created mock file: {mock_file}")
 
     # Find candidate files (md or json)
@@ -349,13 +365,16 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     # 2. Look in Sibling Repo (Local Source) - Fallback
     # Load env vars to check for custom path
     from dotenv import dotenv_values
+
     env_config = dotenv_values(".env")
 
     # Default relative path
     # In monorepo: apps/refinery/main.py -> root is up 2 levels
     default_sibling_path = Path(__file__).resolve().parents[2]
     # Get from env or default
-    collector_path_str = env_config.get("NEWS_COLLECTOR_PATH", str(default_sibling_path))
+    collector_path_str = env_config.get(
+        "NEWS_COLLECTOR_PATH", str(default_sibling_path)
+    )
     collector_path = Path(collector_path_str)
 
     SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
@@ -372,9 +391,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         )
         if selected_export_path:
             logger.info(f"Using export at {selected_export_path}")
-        logger.info(
-            f"Loaded {len(articles_to_process)} new articles from JSON export."
-        )
+        logger.info(f"Loaded {len(articles_to_process)} new articles from JSON export.")
 
     # Fallback / Supplemental: Source Repo Files
     # Priority: Search ONLY in 'data' directory (standard output location)
@@ -384,15 +401,27 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
         if data_dir.exists():
             # Files to ignore (exact matches and patterns)
             IGNORED_FILES = {
-                'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md',
-                'AGENTS.md', 'LICENSE', 'CODE_OF_CONDUCT.md', 'requirements.txt',
-                'labels.md', 'missing.md', 'pr_plan.md', 'Makefile', 'Dockerfile'
+                "README.md",
+                "CHANGELOG.md",
+                "CONTRIBUTING.md",
+                "SECURITY.md",
+                "AGENTS.md",
+                "LICENSE",
+                "CODE_OF_CONDUCT.md",
+                "requirements.txt",
+                "labels.md",
+                "missing.md",
+                "pr_plan.md",
+                "Makefile",
+                "Dockerfile",
             }
 
-            for ext in ['*.md', '*.json']:
+            for ext in ["*.md", "*.json"]:
                 for file_path in data_dir.rglob(ext):
-                    if file_path.name in IGNORED_FILES: continue
-                    if 'test' in file_path.parts: continue
+                    if file_path.name in IGNORED_FILES:
+                        continue
+                    if "test" in file_path.parts:
+                        continue
 
                     # Filtering Logic
                     # If process_id is set, we check if filename matches.
@@ -407,16 +436,18 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
                     # Read content
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
 
-                        articles_to_process.append({
-                            "title": file_path.name,
-                            "content": content,
-                            "source_name": "File System",
-                             # Use filename as ID for tracking
-                            "id": file_path.name
-                        })
+                        articles_to_process.append(
+                            {
+                                "title": file_path.name,
+                                "content": content,
+                                "source_name": "File System",
+                                # Use filename as ID for tracking
+                                "id": file_path.name,
+                            }
+                        )
                     except Exception as e:
                         logger.error(f"Error reading file {file_path}: {e}")
 
@@ -424,7 +455,9 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     if not articles_to_process:
         if process_id:
-            message = f"No se encontraron artículos para el ID solicitado ({process_id})."
+            message = (
+                f"No se encontraron artículos para el ID solicitado ({process_id})."
+            )
         else:
             message = "No se encontraron artículos para procesar."
         if selected_export_path:
@@ -448,7 +481,11 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     if not process_new_content and not process_id:
         logger.info("Auto-processing disabled. New articles saved to inbox.")
-        return {"status": "success", "message": f"{len(articles_to_process)} articles collected. Ready for review.", "processed_count": 0}
+        return {
+            "status": "success",
+            "message": f"{len(articles_to_process)} articles collected. Ready for review.",
+            "processed_count": 0,
+        }
 
     last_error = None
     processed_count = 0
@@ -457,7 +494,7 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     target_repo_obj = None
     try:
         if TARGET_DIR.exists():
-             shutil.rmtree(TARGET_DIR, ignore_errors=True)
+            shutil.rmtree(TARGET_DIR, ignore_errors=True)
 
         logger.info(f"Cloning Target Repo: {config.github.target_repo_url}")
         git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
@@ -470,18 +507,28 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
 
     except Exception as e:
         logger.critical(f"Failed to clone/init target repo: {e}")
-        return {"status": "error", "message": f"Critical Git Error: {e}", "processed_count": 0}
+        return {
+            "status": "error",
+            "message": f"Critical Git Error: {e}",
+            "processed_count": 0,
+        }
 
     try:
         if articles_to_process:
-            summary = engine.process_articles(articles_to_process, target_repo_obj, TARGET_DIR)
+            summary = engine.process_articles(
+                articles_to_process, target_repo_obj, TARGET_DIR
+            )
             processed_count = summary["processed_count"]
             if summary["errors"]:
-                 last_error = str(summary["errors"][-1])
-                 logger.warning(f"Engine reported {len(summary['errors'])} errors.")
+                last_error = str(summary["errors"][-1])
+                logger.warning(f"Engine reported {len(summary['errors'])} errors.")
     except Exception as e:
-         logger.error(f"Engine execution failed: {e}")
-         return {"status": "error", "message": f"Engine failed: {e}", "processed_count": 0}
+        logger.error(f"Engine execution failed: {e}")
+        return {
+            "status": "error",
+            "message": f"Engine failed: {e}",
+            "processed_count": 0,
+        }
 
     except KeyboardInterrupt:
         logger.warning("\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully...")
@@ -490,9 +537,14 @@ def main(fetch_only=False, process_id=None, dev=False, skip_visuals=False, expor
     logger.info("Refinery pass complete.")
 
     if processed_count == 0 and last_error:
-         return {"status": "error", "message": f"Error procesando artículo: {last_error}", "processed_count": 0}
+        return {
+            "status": "error",
+            "message": f"Error procesando artículo: {last_error}",
+            "processed_count": 0,
+        }
 
     return {"status": "success", "processed_count": processed_count}
+
 
 def delete_article(article_id: str) -> dict:
     """
@@ -527,10 +579,15 @@ def delete_article(article_id: str) -> dict:
 
         if not target_file:
             logger.warning(f"Article ID {article_id} not found in published content.")
-            return {"status": "error", "message": "Article not found in remote content."}
+            return {
+                "status": "error",
+                "message": "Article not found in remote content.",
+            }
 
         # 3. Create Branch
-        branch_name = git_handler.create_branch(target_repo_obj, branch_prefix="delete/article")
+        branch_name = git_handler.create_branch(
+            target_repo_obj, branch_prefix="delete/article"
+        )
 
         # 4. Delete File
         filename = target_file.name
@@ -538,14 +595,16 @@ def delete_article(article_id: str) -> dict:
         logger.info(f"Deleted file: {filename}")
 
         # 5. Commit & Push
-        git_handler.commit_and_push(target_repo_obj, f"Unpublish article: {filename}", branch_name)
+        git_handler.commit_and_push(
+            target_repo_obj, f"Unpublish article: {filename}", branch_name
+        )
 
         # 6. Create PR
         pr_url = git_handler.create_pull_request(
             repo_url=config.github.target_repo_url,
             branch_name=branch_name,
             title=f"Unpublish: {filename}",
-            body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}"
+            body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}",
         )
 
         return {"status": "success", "pr_url": pr_url, "file_name": filename}
@@ -556,20 +615,37 @@ def delete_article(article_id: str) -> dict:
 
 
 if __name__ == "__main__":
+    import shutil  # Need to ensure imports are present if we use them
+
     import git
-    import shutil # Need to ensure imports are present if we use them
 
     parser = argparse.ArgumentParser(description="Noticiencias Refinery Orchestrator")
-    parser.add_argument("--fetch-only", action="store_true", help="Only clone/pull source repo, do not process articles.")
-    parser.add_argument("--process-id", type=str, help="Process a specific article ID (or title) only.")
-    parser.add_argument("--dev", action="store_true", help="Enable development features (like mock generation).")
-    parser.add_argument("--skip-visuals", action="store_true", help="Skip the visual analysis step (faster).")
-    parser.add_argument("--delete-id", type=str, help="Unpublish/Delete a specific article ID.")
+    parser.add_argument(
+        "--fetch-only",
+        action="store_true",
+        help="Only clone/pull source repo, do not process articles.",
+    )
+    parser.add_argument(
+        "--process-id", type=str, help="Process a specific article ID (or title) only."
+    )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Enable development features (like mock generation).",
+    )
+    parser.add_argument(
+        "--skip-visuals",
+        action="store_true",
+        help="Skip the visual analysis step (faster).",
+    )
+    parser.add_argument(
+        "--delete-id", type=str, help="Unpublish/Delete a specific article ID."
+    )
     args = parser.parse_args()
 
     if args.delete_id:
         result = delete_article(args.delete_id)
-        print(json.dumps(result)) # Output for caller
+        print(json.dumps(result))  # Output for caller
         sys.exit(0 if result["status"] == "success" else 1)
 
     main(

@@ -9,8 +9,9 @@ import pytest
 from news_collector.reranker import rerank_articles
 from news_collector.utils.text_cleaner import normalize_text
 
-
-if os.environ.get("MUTANT_UNDER_TEST") == "fail":  # pragma: no cover - mutmut instrumentation
+if (
+    os.environ.get("MUTANT_UNDER_TEST") == "fail"
+):  # pragma: no cover - mutmut instrumentation
     pytest.fail("mutmut forced-fail probe reached the test suite")
 
 
@@ -18,7 +19,9 @@ if os.environ.get("MUTANT_UNDER_TEST") == "fail":  # pragma: no cover - mutmut i
 def _fail_when_mutmut_requests() -> None:
     """Guarantee mutmut's forced-fail stage observes a failure."""
 
-    if os.environ.get("MUTANT_UNDER_TEST") == "fail":  # pragma: no cover - mutmut instrumentation
+    if (
+        os.environ.get("MUTANT_UNDER_TEST") == "fail"
+    ):  # pragma: no cover - mutmut instrumentation
         pytest.fail("mutmut forced-fail probe reached the test suite")
 
 

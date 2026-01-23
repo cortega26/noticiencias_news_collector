@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import math
 import asyncio
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from news_collector.config import SCORING_CONFIG
 from pydantic import ValidationError
 
-from news_collector.contracts import ScoringRequestModel
+from news_collector.config import SCORING_CONFIG
 from news_collector.contracts import ScoringRequestModel
 from news_collector.utils.dedupe import normalize_article_text
+
 from .interfaces import AsyncScorer
 
 
@@ -174,9 +174,7 @@ class FeatureBasedScorer(AsyncScorer):
 
         return validated.model_dump()
 
-    async def score_article_async(
-        self, article_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def score_article_async(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Score an article asynchronously using a thread executor.
 
@@ -192,10 +190,7 @@ class FeatureBasedScorer(AsyncScorer):
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
-            None,
-            self.score_article,
-            article,
-            source_config
+            None, self.score_article, article, source_config
         )
 
     # Feature calculators -------------------------------------------------

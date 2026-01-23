@@ -14,44 +14,29 @@ encontramos (o al menos no peor).
 """
 
 import hashlib
-import random
 import time
-import urllib.robotparser as robotparser
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import feedparser
-import httpx
 import requests
 
 from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-from news_collector.config.settings import (
-    COLLECTION_CONFIG,
-    RATE_LIMITING_CONFIG,
-    ROBOTS_CONFIG,
-    TEXT_PROCESSING_CONFIG,
-)
-
+from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
-from news_collector.utils.url_canonicalizer import (
-    canonicalize_url,
-    configure_canonicalization_cache,
-)
-
-from news_collector.storage.database import get_database_manager
-from .base_collector import BaseCollector
-from .rate_limit_utils import calculate_effective_delay
-from news_collector.scoring.pre_scorer import PreScorer
 from news_collector.logic.parsers.rss_parser import RssParser
+from news_collector.scoring.pre_scorer import PreScorer
+from news_collector.utils.url_canonicalizer import configure_canonicalization_cache
+
+from .base_collector import BaseCollector
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from news_collector.utils.logger import NewsCollectorLogger
-
 
 
 configure_canonicalization_cache(
@@ -59,7 +44,6 @@ configure_canonicalization_cache(
 )
 
 from news_collector.utils.security import validate_url_safety
-
 
 
 class RSSCollector(BaseCollector):
@@ -74,7 +58,11 @@ class RSSCollector(BaseCollector):
     colectores que podríamos agregar en el futuro (APIs, web scraping, etc.).
     """
 
-    def __init__(self, logger_factory: Optional["NewsCollectorLogger"] = None, health_tracker: Optional[Any] = None) -> None:
+    def __init__(
+        self,
+        logger_factory: Optional["NewsCollectorLogger"] = None,
+        health_tracker: Optional[Any] = None,
+    ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         self.session = self._create_session()
         self.pre_scorer = PreScorer()
@@ -120,8 +108,6 @@ class RSSCollector(BaseCollector):
         session.mount("https://", adapter)
 
         return session
-
-
 
     def collect_from_source(
         self, source_id: str, source_config: Dict[str, Any]
@@ -240,7 +226,6 @@ class RSSCollector(BaseCollector):
                 )
             stats["articles_found"] = len(raw_articles)
 
-
             if not raw_articles:
                 self._emit_log(
                     "info",
@@ -279,7 +264,9 @@ class RSSCollector(BaseCollector):
                     self.session_stats["errors_encountered"] += 1
 
             # Apply strict sequential filters and save
-            saved_count = self._filter_and_save_articles(source_id, processed_candidates, limit=5)
+            saved_count = self._filter_and_save_articles(
+                source_id, processed_candidates, limit=5
+            )
             stats["articles_saved"] = saved_count
             stats["success"] = True
 
@@ -304,7 +291,9 @@ class RSSCollector(BaseCollector):
                 details={"error": str(exc), "url": source_config.get("url")},
             )
             if self.health_tracker:
-                self.health_tracker.record_failure(source_id, "collector.fetch", "network_error", {"error": str(exc)})
+                self.health_tracker.record_failure(
+                    source_id, "collector.fetch", "network_error", {"error": str(exc)}
+                )
 
         except Exception as exc:
             stats["error_message"] = f"Error inesperado: {exc}"
@@ -315,7 +304,12 @@ class RSSCollector(BaseCollector):
                 details={"error": str(exc)},
             )
             if self.health_tracker:
-                 self.health_tracker.record_failure(source_id, "collector.fetch", "unexpected_error", {"error": str(exc)})
+                self.health_tracker.record_failure(
+                    source_id,
+                    "collector.fetch",
+                    "unexpected_error",
+                    {"error": str(exc)},
+                )
 
         finally:
             stats["processing_time"] = time.time() - start_time
@@ -367,9 +361,9 @@ class RSSCollector(BaseCollector):
                     "critical",
                     "collector.security.ssrf_blocked",
                     source_id=source_id,
-                    details={"url": feed_url, "error": str(ssrf_error)}
+                    details={"url": feed_url, "error": str(ssrf_error)},
                 )
-                return (None, 403) # Forbidden
+                return (None, 403)  # Forbidden
 
             for attempt in range(0, max_retries + 1):
                 try:
@@ -596,7 +590,7 @@ class RSSCollector(BaseCollector):
 
             # Duplicate filter
             if self.db_manager.article_exists(cand["url"]):
-                 continue
+                continue
 
             filtered_candidates.append(cand)
             count += 1
@@ -613,12 +607,16 @@ class RSSCollector(BaseCollector):
         candidates = filtered_candidates
 
         if len(candidates) > max_articles:
-            self._emit_log("warning", "collector.prescorer.ranking_start", details={"candidates": len(candidates), "limit": max_articles})
+            self._emit_log(
+                "warning",
+                "collector.prescorer.ranking_start",
+                details={"candidates": len(candidates), "limit": max_articles},
+            )
 
             selected_candidates = self.pre_scorer.select_top_candidates(
                 candidates,
                 limit=max_articles,
-                source_context=source_config.get("name", source_id)
+                source_context=source_config.get("name", source_id),
             )
         else:
             selected_candidates = candidates
@@ -629,14 +627,19 @@ class RSSCollector(BaseCollector):
 
         for cand in selected_candidates:
             try:
-                self._emit_log("info", "collector.article.fetching_full_text", details={"url": cand["url"]})
+                self._emit_log(
+                    "info",
+                    "collector.article.fetching_full_text",
+                    details={"url": cand["url"]},
+                )
 
                 full_text = fetch_full_article(cand["url"], self.session)
                 if full_text:
                     cand["content"] = full_text
 
                 # Create final dict (cleanup helper props if any)
-                if "entry_ref" in cand: del cand["entry_ref"]
+                if "entry_ref" in cand:
+                    del cand["entry_ref"]
 
                 # _validate_article_data was called? No, it was called in loop.
                 # Actually, the original method returned 'articles'.
@@ -657,17 +660,22 @@ class RSSCollector(BaseCollector):
                     articles.append(cand)
 
             except Exception as e:
-                self._emit_log("warning", "collector.article.process_failed", details={"error": str(e)})
+                self._emit_log(
+                    "warning",
+                    "collector.article.process_failed",
+                    details={"error": str(e)},
+                )
                 continue
 
         return articles
 
     def _validate_article_data(self, article: Dict[str, Any]) -> bool:
         """Helper to validate minimal requirements before returning from extract."""
-        if not article.get("url"): return False
-        if not article.get("title"): return False
+        if not article.get("url"):
+            return False
+        if not article.get("title"):
+            return False
         return True
-
 
     def _process_article(
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]
@@ -721,9 +729,7 @@ class RSSCollector(BaseCollector):
 
             # Calcular estadísticas básicas del texto
             content_text = processed_article.get("content") or ""
-            content_for_stats = (
-                f"{processed_article['title']} {processed_article['summary']} {content_text}"
-            )
+            content_for_stats = f"{processed_article['title']} {processed_article['summary']} {content_text}"
             processed_article["word_count"] = len(content_for_stats.split())
             processed_article["reading_time_minutes"] = max(
                 1, processed_article["word_count"] // 200
@@ -799,7 +805,6 @@ class RSSCollector(BaseCollector):
                 },
             )
             return None
-
 
     def get_session_stats(self) -> Dict[str, Any]:
         """

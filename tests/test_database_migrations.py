@@ -19,8 +19,7 @@ def _create_legacy_sources_table(db_path: Path) -> None:
     try:
         cursor = conn.cursor()
         try:
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE TABLE sources (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -42,8 +41,7 @@ def _create_legacy_sources_table(db_path: Path) -> None:
                     error_message TEXT,
                     custom_config TEXT
                 );
-                """
-            )
+                """)
             conn.commit()
         finally:
             cursor.close()
