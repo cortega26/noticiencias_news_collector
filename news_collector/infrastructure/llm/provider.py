@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, Generator, Optional, Union
+from typing import Any, Dict, Generator, Optional, Union, cast
 
 import httpx
 import requests
@@ -36,7 +36,10 @@ class OllamaProvider:
     """
 
     def __init__(
-        self, api_url: str = None, model: str = "llama3.2:1b", timeout: int = 120
+        self,
+        api_url: Optional[str] = None,
+        model: str = "llama3.2:1b",
+        timeout: int = 120,
     ):
         self.api_url = api_url or "http://localhost:11434/api/generate"
         self.model = model
@@ -163,7 +166,7 @@ class OllamaProvider:
         """Robust JSON extraction from mixed text."""
         text = text.strip()
         try:
-            return json.loads(text)
+            return cast(Dict[str, Any], json.loads(text))
         except json.JSONDecodeError:
             pass
 

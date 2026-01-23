@@ -140,28 +140,28 @@ class RssParser:
         if hasattr(entry, "media_content"):
             for media in entry.media_content:
                 if media.get("medium") == "image" and media.get("url"):
-                    return media["url"]
+                    return str(media["url"])
         # 2. Enclosures
         if hasattr(entry, "enclosures"):
             for enc in entry.enclosures:
                 if enc.get("type", "").startswith("image/") and enc.get("href"):
-                    return enc["href"]
+                    return str(enc["href"])
         # 3. Media Thumbnail
         if hasattr(entry, "media_thumbnail"):
             thumbs = entry.media_thumbnail
             if isinstance(thumbs, list) and thumbs:
-                return thumbs[0].get("url")
+                return str(thumbs[0].get("url"))
             elif isinstance(thumbs, dict):
-                return thumbs.get("url")
+                return str(thumbs.get("url"))
         # 4. Links
         if hasattr(entry, "links"):
             for link in entry.links:
                 if link.get("type", "").startswith("image/") and link.get("href"):
-                    return link["href"]
+                    return str(link["href"])
         return None
 
     def _extract_source_metadata(self, entry, feed_info) -> Dict[str, Any]:
-        metadata = {}
+        metadata: Dict[str, Any] = {}
         doi = self._extract_doi(entry)
         if doi:
             metadata["doi"] = doi

@@ -56,7 +56,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy black isort pre-commit pdoc
+	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests
 	@touch $(BOOTSTRAP_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
