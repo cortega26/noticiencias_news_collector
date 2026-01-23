@@ -1,8 +1,8 @@
 """Tests for NewsCollectorSystem initialization behavior."""
 
+import importlib.util
 import sys
 import types
-import importlib.util
 from pathlib import Path
 
 import pytest
@@ -118,7 +118,9 @@ def test_initialize_with_failed_sources_warning(monkeypatch):
 
     monkeypatch.setattr(news_collector.system, "setup_logging", lambda: test_logger)
     mock_db_manager = MockDatabaseManager()
-    monkeypatch.setattr(news_collector.system, "get_database_manager", lambda: mock_db_manager)
+    monkeypatch.setattr(
+        news_collector.system, "get_database_manager", lambda: mock_db_manager
+    )
     monkeypatch.setattr(news_collector.system, "RSSCollector", lambda: MockCollector())
 
     def fake_setup_scoring(self):

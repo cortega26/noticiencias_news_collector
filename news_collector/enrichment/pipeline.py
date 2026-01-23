@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Mapping, MutableMapping
 
 from news_collector.config.settings import ENRICHMENT_CONFIG
-
 from news_collector.contracts import ArticleEnrichmentModel, ArticleForEnrichmentModel
 from news_collector.enrichment.nlp_stack import ConfigurableNLPStack, LRUCache
 from news_collector.utils.dedupe import normalize_article_text, sha256_hex

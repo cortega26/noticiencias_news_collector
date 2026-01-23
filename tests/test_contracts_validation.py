@@ -14,10 +14,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from news_collector.config import ALL_SOURCES
-from news_collector.contracts import (
-    CollectorArticleModel,
-    ScoringRequestModel,
-)
+from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 
 
 def _valid_collector_payload() -> dict[str, object]:

@@ -30,8 +30,7 @@ def drop_indexes(conn: sqlite3.Connection, names: Iterable[str]) -> None:
 
 
 def create_indexes(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
+    conn.executescript("""
         CREATE INDEX IF NOT EXISTS idx_articles_completed_category_score_date
             ON articles(category, processing_status, final_score, collected_date);
 
@@ -48,8 +47,7 @@ def create_indexes(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_articles_cleanup_low_score
             ON articles(collected_date)
             WHERE final_score < 0.3;
-        """
-    )
+        """)
 
 
 def ensure_simhash_prefix(conn: sqlite3.Connection) -> None:

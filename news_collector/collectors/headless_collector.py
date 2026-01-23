@@ -1,15 +1,14 @@
-
 import asyncio
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
-
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
-
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+
 from news_collector.collectors.base_collector import BaseCollector
-from news_collector.contracts import CollectorArticleModel
+
 # from news_collector.utils.url_utils import normalize_url # Removed invalid import
+
 
 class HeadlessCollector(BaseCollector):
     """
@@ -70,7 +69,9 @@ class HeadlessCollector(BaseCollector):
 
             page = await context.new_page()
 
-            self._emit_log("info", "collector.headless.navigating", details={"url": url})
+            self._emit_log(
+                "info", "collector.headless.navigating", details={"url": url}
+            )
 
             # Go to page with timeout
             try:
@@ -80,10 +81,18 @@ class HeadlessCollector(BaseCollector):
                 try:
                     await page.wait_for_selector(item_selector, timeout=5000)
                 except Exception:
-                    self._emit_log("warning", "collector.headless.selector_timeout", details={"selector": item_selector})
+                    self._emit_log(
+                        "warning",
+                        "collector.headless.selector_timeout",
+                        details={"selector": item_selector},
+                    )
 
             except Exception as e:
-                self._emit_log("error", "collector.headless.navigation_failed", details={"error": str(e), "url": url})
+                self._emit_log(
+                    "error",
+                    "collector.headless.navigation_failed",
+                    details={"error": str(e), "url": url},
+                )
                 # Capture screenshot on failure if debugging?
                 # await page.screenshot(path="debug_fail.png")
                 raise e
@@ -96,19 +105,29 @@ class HeadlessCollector(BaseCollector):
                 content = await page.content()
                 with open("debug_headless.html", "w") as f:
                     f.write(content)
-                self._emit_log("warning", "collector.headless.empty_result", details={"dump_saved": "debug_headless.html"})
+                self._emit_log(
+                    "warning",
+                    "collector.headless.empty_result",
+                    details={"dump_saved": "debug_headless.html"},
+                )
 
             for article in articles_data:
                 # If content/summary is missing, try to fetch it
                 if not article.get("content") and article.get("url"):
                     try:
-                        full_text = await self._fetch_full_content(context, article["url"])
+                        full_text = await self._fetch_full_content(
+                            context, article["url"]
+                        )
                         if full_text:
                             article["content"] = full_text
                             # Update word count
                             article["word_count"] = len(full_text.split())
                     except Exception as e:
-                        self._emit_log("warning", "collector.headless.content_fetch_failed", details={"url": article["url"], "error": str(e)})
+                        self._emit_log(
+                            "warning",
+                            "collector.headless.content_fetch_failed",
+                            details={"url": article["url"], "error": str(e)},
+                        )
 
                 if self._save_article(article):
                     articles_saved += 1
@@ -117,9 +136,11 @@ class HeadlessCollector(BaseCollector):
 
         except Exception as e:
             error_message = str(e)
-            self._emit_log("error", "collector.headless.failed", details={"error": str(e)})
+            self._emit_log(
+                "error", "collector.headless.failed", details={"error": str(e)}
+            )
         finally:
-            if 'context' in locals():
+            if "context" in locals():
                 await context.close()
             # We don't close the browser here to reuse it across sources if possible?
             # actually BaseCollector creates a new instance or reuses?
@@ -135,10 +156,14 @@ class HeadlessCollector(BaseCollector):
             "articles_found": articles_found,
             "articles_saved": articles_saved,
             "error_message": error_message,
-            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds(),
+            "processing_time": (
+                datetime.now(timezone.utc) - start_time
+            ).total_seconds(),
         }
 
-    async def _extract_articles(self, page: Page, source_id: str, source_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _extract_articles(
+        self, page: Page, source_id: str, source_config: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         selectors = source_config.get("selectors", {})
         item_selector = selectors.get("item", "article")
         title_selector = selectors.get("title", "h2")
@@ -180,14 +205,14 @@ class HeadlessCollector(BaseCollector):
                     "category": source_config.get("category", "General"),
                     "title": title.strip(),
                     "url": link_href,
-                    "published_at": datetime.now(timezone.utc), # simplified
-                    "published_date": datetime.now(timezone.utc), # Alias for model
-                    "content": "", # Needs full text step
+                    "published_at": datetime.now(timezone.utc),  # simplified
+                    "published_date": datetime.now(timezone.utc),  # Alias for model
+                    "content": "",  # Needs full text step
                     "summary": "",
                     "word_count": 0,
                     "reading_time_minutes": 0,
                     "authors": [],
-                    "tags": []
+                    "tags": [],
                 }
 
                 # Validate basics
@@ -196,12 +221,14 @@ class HeadlessCollector(BaseCollector):
 
                 extracted.append(article_data)
 
-            except Exception as e:
+            except Exception:
                 continue
 
         return extracted
 
-    async def _fetch_full_content(self, context: BrowserContext, url: str) -> Optional[str]:
+    async def _fetch_full_content(
+        self, context: BrowserContext, url: str
+    ) -> Optional[str]:
         page = await context.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=15000)
@@ -211,7 +238,11 @@ class HeadlessCollector(BaseCollector):
             # We can improve this with configured selectors later.
 
             # Try to frame it to article/main
-            content_el = await page.query_selector("article") or await page.query_selector("main") or await page.query_selector("body")
+            content_el = (
+                await page.query_selector("article")
+                or await page.query_selector("main")
+                or await page.query_selector("body")
+            )
 
             if content_el:
                 # Extract text from p tags
@@ -231,5 +262,7 @@ class HeadlessCollector(BaseCollector):
             await page.close()
 
     # Synchronous shim (though we recommend async usage)
-    def collect_from_source(self, source_id: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
+    def collect_from_source(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         return asyncio.run(self.collect_from_source_async(source_id, source_config))

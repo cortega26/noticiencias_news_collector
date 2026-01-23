@@ -1,7 +1,7 @@
-
-import socket
 import ipaddress
+import socket
 from urllib.parse import urlparse
+
 
 def validate_url_safety(url: str) -> None:
     """
@@ -39,8 +39,15 @@ def validate_url_safety(url: str) -> None:
             ip_str = item[4][0]
             ip_obj = ipaddress.ip_address(ip_str)
 
-            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
-                raise ValueError(f"SSRF Protection: Blocked access to private IP {ip_str} for {hostname}")
+            if (
+                ip_obj.is_private
+                or ip_obj.is_loopback
+                or ip_obj.is_link_local
+                or ip_obj.is_reserved
+            ):
+                raise ValueError(
+                    f"SSRF Protection: Blocked access to private IP {ip_str} for {hostname}"
+                )
 
     except Exception as e:
         if "SSRF" in str(e) or "missing hostname" in str(e):

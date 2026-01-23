@@ -12,7 +12,6 @@ from hypothesis import strategies as st  # type: ignore[import-not-found]
 from news_collector.utils.text_cleaner import clean_html, normalize_text
 from news_collector.utils.url_canonicalizer import canonicalize_url
 
-
 TEXT_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",)))
 
 
@@ -50,11 +49,15 @@ def test_normalize_text_collapses_whitespace(parts: list[str], spacer: str) -> N
 @st.composite
 def html_fragments(draw) -> str:
     words = draw(st.lists(st.text(min_size=1, max_size=10), min_size=1, max_size=5))
-    boilerplate = draw(st.sampled_from([
-        "Read More",
-        "Continue Reading",
-        "The post Foo appeared first on Bar",
-    ]))
+    boilerplate = draw(
+        st.sampled_from(
+            [
+                "Read More",
+                "Continue Reading",
+                "The post Foo appeared first on Bar",
+            ]
+        )
+    )
     script_body = draw(st.text(min_size=0, max_size=20))
     wrapper = draw(st.sampled_from(["div", "span", "article", "section"]))
     body = " ".join(words)
@@ -126,9 +129,7 @@ def messy_urls(draw) -> str:
             max_size=5,
         )
     )
-    query_parts = [
-        f"{key}={value}" if value else key for key, value in query_pairs
-    ]
+    query_parts = [f"{key}={value}" if value else key for key, value in query_pairs]
     if draw(st.booleans()):
         query_parts.append("amp")
     base = f"{host}{port}{path}"

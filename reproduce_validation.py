@@ -1,6 +1,7 @@
+from datetime import datetime
+
 from news_collector.contracts.collector import CollectorArticleModel
 from news_collector.contracts.common import ArticleMetadataModel
-from datetime import datetime, timezone
 
 try:
     naive = datetime(2023, 1, 1, 12, 0, 0)
@@ -18,10 +19,10 @@ try:
         authors=["Test Author"],
         language="en",
         article_metadata=ArticleMetadataModel(
-             credibility_score=0.8,
-             original_url="https://example.com/naive",
-             source_metadata={"foo": "bar"}
-        )
+            credibility_score=0.8,
+            original_url="https://example.com/naive",
+            source_metadata={"foo": "bar"},
+        ),
     )
     print("Success")
 except Exception as e:

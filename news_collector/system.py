@@ -6,21 +6,21 @@ Este módulo define la clase central `NewsCollectorSystem` y sus utilidades.
 """
 
 import asyncio
+import json
 import time
 import uuid
-import json
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from news_collector import get_database_manager, get_metrics_reporter, setup_logging
 from news_collector.config import (
     ALL_SOURCES,
-    validate_config,
-    validate_sources,
     COLLECTION_CONFIG,
     SCORING_CONFIG,
+    validate_config,
+    validate_sources,
 )
-from news_collector import RSSCollector, get_database_manager, setup_logging, get_metrics_reporter
 from news_collector.validation.validator import ContentValidator
 
 
@@ -32,7 +32,11 @@ class NewsCollectorSystem:
     y puede dirigir la operación completa de manera eficiente y coordinada.
     """
 
-    def __init__(self, config_override: Optional[Dict[str, Any]] = None, health_tracker: Optional[Any] = None):
+    def __init__(
+        self,
+        config_override: Optional[Dict[str, Any]] = None,
+        health_tracker: Optional[Any] = None,
+    ):
         """
         Inicializa el sistema completo.
 
@@ -247,7 +251,7 @@ class NewsCollectorSystem:
                     "latency": 0.0,
                     "details": {
                         "validated": validation_results.get("validated_count", 0),
-                        "rejected": validation_results.get("rejected_count", 0)
+                        "rejected": validation_results.get("rejected_count", 0),
                     },
                 }
             )
@@ -264,7 +268,9 @@ class NewsCollectorSystem:
                 }
             )
 
-            final_selection = self._execute_final_selection(scoring_results, collection_results)
+            final_selection = self._execute_final_selection(
+                scoring_results, collection_results
+            )
             final_report = self._generate_session_report(
                 collection_results, scoring_results, final_selection, session_id
             )
@@ -276,9 +282,13 @@ class NewsCollectorSystem:
             # Log informativo solicitado por usuario
             source_details = collection_results.get("source_details", {})
             total_sources = len(source_details)
-            sources_with_data = sum(1 for res in source_details.values() if res.get("articles_saved", 0) > 0)
+            sources_with_data = sum(
+                1 for res in source_details.values() if res.get("articles_saved", 0) > 0
+            )
             if self.system_logger:
-                self.system_logger.info(f"📊 Reporte de Recolección: {sources_with_data}/{total_sources} fuentes produjeron información con éxito (artículos guardados).")
+                self.system_logger.info(
+                    f"📊 Reporte de Recolección: {sources_with_data}/{total_sources} fuentes produjeron información con éxito (artículos guardados)."
+                )
 
             session_logger.info(
                 {
@@ -357,7 +367,9 @@ class NewsCollectorSystem:
             )
             raise
 
-    def export_latest_articles(self, file_path: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+    def export_latest_articles(
+        self, file_path: Optional[str] = None, limit: int = 50
+    ) -> Dict[str, Any]:
         """
         Exports the latest top-scored articles to a JSON schema.
 
@@ -374,7 +386,9 @@ class NewsCollectorSystem:
         try:
             # Get articles
             # Note: exclude_published=True allows Refinery to only see what needs work
-            articles = self.db_manager.get_articles_by_score(limit=limit, exclude_published=True)
+            articles = self.db_manager.get_articles_by_score(
+                limit=limit, exclude_published=True
+            )
 
             serialized_articles = []
             for art in articles:
@@ -385,16 +399,28 @@ class NewsCollectorSystem:
                     "summary": art.summary,
                     "content": art.content,
                     "source_name": art.source_name,
-                    "published_date": art.published_date.isoformat() if art.published_date else None,
-                    "published_at": art.published_at.isoformat() if getattr(art, "published_at", None) else None,
+                    "published_date": (
+                        art.published_date.isoformat() if art.published_date else None
+                    ),
+                    "published_at": (
+                        art.published_at.isoformat()
+                        if getattr(art, "published_at", None)
+                        else None
+                    ),
                     "published_url": getattr(art, "published_url", None),
-                    "collected_date": art.collected_date.isoformat() if art.collected_date else None,
+                    "collected_date": (
+                        art.collected_date.isoformat() if art.collected_date else None
+                    ),
                     "score": art.final_score,
-                    "image_url": art.article_metadata.get("image_url") if art.article_metadata else None,
+                    "image_url": (
+                        art.article_metadata.get("image_url")
+                        if art.article_metadata
+                        else None
+                    ),
                     "metadata": art.article_metadata,
                     "authors": art.authors,
                     "category": art.category,
-                    "components": art.score_components or {}
+                    "components": art.score_components or {},
                 }
                 serialized_articles.append(art_dict)
 
@@ -407,21 +433,29 @@ class NewsCollectorSystem:
             }
 
             if file_path:
-                path_obj = Path(json.dumps(file_path).strip('"')) if not isinstance(file_path, Path) else file_path
+                path_obj = (
+                    Path(json.dumps(file_path).strip('"'))
+                    if not isinstance(file_path, Path)
+                    else file_path
+                )
                 # Ensure we handle the path correctly whether string or Path
                 path_obj = Path(file_path)
                 path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-                with open(path_obj, 'w', encoding='utf-8') as f:
+                with open(path_obj, "w", encoding="utf-8") as f:
                     json.dump(export_payload, f, indent=2, ensure_ascii=False)
 
                 if self.logger:
-                    self.logger.create_module_logger("system").info(f"Exported {len(serialized_articles)} articles to {path_obj}")
+                    self.logger.create_module_logger("system").info(
+                        f"Exported {len(serialized_articles)} articles to {path_obj}"
+                    )
 
             return export_payload
 
         except Exception as e:
-            self.logger.log_error_with_context(e, {"operation": "export_latest_articles"})
+            self.logger.log_error_with_context(
+                e, {"operation": "export_latest_articles"}
+            )
             raise
 
     def get_system_statistics(self) -> Dict[str, Any]:
@@ -474,10 +508,10 @@ class NewsCollectorSystem:
     async def shutdown(self):
         """Cierra ordenadamente los componentes del sistema."""
         if self.collector and hasattr(self.collector, "close"):
-             if asyncio.iscoroutinefunction(self.collector.close):
-                 await self.collector.close()
-             else:
-                 self.collector.close()
+            if asyncio.iscoroutinefunction(self.collector.close):
+                await self.collector.close()
+            else:
+                self.collector.close()
 
         if self.db_manager:
             self.db_manager.close()
@@ -529,9 +563,15 @@ class NewsCollectorSystem:
         try:
             from news_collector.collectors.dispatcher import CollectorDispatcher
 
-            self.collector = CollectorDispatcher(logger_factory=self.logger, health_tracker=self.health_tracker)
-            print(f"DEBUG: System created Dispatcher with health_tracker={self.health_tracker} id={id(self.health_tracker) if self.health_tracker else 'None'}")
-            self.logger.create_module_logger("collectors").info("Dispatcher de colectores configurado")
+            self.collector = CollectorDispatcher(
+                logger_factory=self.logger, health_tracker=self.health_tracker
+            )
+            print(
+                f"DEBUG: System created Dispatcher with health_tracker={self.health_tracker} id={id(self.health_tracker) if self.health_tracker else 'None'}"
+            )
+            self.logger.create_module_logger("collectors").info(
+                "Dispatcher de colectores configurado"
+            )
 
         except Exception as e:
             self.logger.create_module_logger("collectors").error(
@@ -542,7 +582,9 @@ class NewsCollectorSystem:
     def _setup_validation(self):
         """Configura el sistema de validación."""
         self.validator = ContentValidator()
-        self.logger.create_module_logger("validation").info("Sistema de validación configurado")
+        self.logger.create_module_logger("validation").info(
+            "Sistema de validación configurado"
+        )
 
     def _setup_scoring(self):
         """Configura el sistema de scoring."""
@@ -748,7 +790,9 @@ class NewsCollectorSystem:
                         session_id=session_id,
                     )
 
-    def _execute_validation(self, collection_results: Dict[str, Any], dry_run: bool) -> Dict[str, Any]:
+    def _execute_validation(
+        self, collection_results: Dict[str, Any], dry_run: bool
+    ) -> Dict[str, Any]:
         """Ejecuta la fase de validación de artículos recolectados."""
         if dry_run:
             # En dry_run no validamos porque no hay artículos en DB
@@ -791,7 +835,9 @@ class NewsCollectorSystem:
                     article = session.query(Article).filter_by(id=article_id).first()
                     if article:
                         article.processing_status = "rejected"
-                        article.error_message = f"Validation failed: {rule_name} - {reason}"
+                        article.error_message = (
+                            f"Validation failed: {rule_name} - {reason}"
+                        )
                         rejected_count += 1
 
         self.logger.create_module_logger("validation").info(
@@ -799,7 +845,7 @@ class NewsCollectorSystem:
                 "event": "validation.completed",
                 "total": validated_count,
                 "rejected": rejected_count,
-                "valid": validated_count - rejected_count
+                "valid": validated_count - rejected_count,
             }
         )
 
@@ -807,7 +853,7 @@ class NewsCollectorSystem:
             "success": True,
             "validated_count": validated_count,
             "rejected_count": rejected_count,
-            "details": validation_results
+            "details": validation_results,
         }
 
     async def _execute_scoring(
@@ -833,9 +879,9 @@ class NewsCollectorSystem:
 
             # Prepare tasks for async execution
             tasks = []
-            max_concurrency = self.config_override.get(
-                "scoring_workers"
-            ) or SCORING_CONFIG.get("workers", 4)
+            self.config_override.get("scoring_workers") or SCORING_CONFIG.get(
+                "workers", 4
+            )
 
             # Reset metrics if supported
             if hasattr(self.scorer, "reset_cycle_metrics"):
@@ -861,13 +907,15 @@ class NewsCollectorSystem:
                     # Content fields
                     "content": article.content,
                     # Fields for feature scorer
-                    "duplication_confidence": getattr(article, "duplication_confidence", 0.0),
+                    "duplication_confidence": getattr(
+                        article, "duplication_confidence", 0.0
+                    ),
                     "word_count": getattr(article, "word_count", 0),
                 }
 
                 payload = {
                     "article": article_data,
-                    "source_config": ALL_SOURCES.get(article.source_id)
+                    "source_config": ALL_SOURCES.get(article.source_id),
                 }
                 payloads.append(payload)
 
@@ -879,7 +927,9 @@ class NewsCollectorSystem:
                     try:
                         results = await self.scorer.score_batch_async(payloads)
                     except Exception as e:
-                        self.logger.create_module_logger("scoring").error(f"Batch scoring failed: {e}")
+                        self.logger.create_module_logger("scoring").error(
+                            f"Batch scoring failed: {e}"
+                        )
                         # Fallback to empty results -> error handling loop below will catch checks
                         results = [e] * len(payloads)
                 else:
@@ -890,7 +940,9 @@ class NewsCollectorSystem:
             if results:
                 # results populated above by batch or legacy gathering
 
-                for article, score_result in zip(pending_articles, results):
+                for article, score_result in zip(
+                    pending_articles, results, strict=False
+                ):
                     if isinstance(score_result, Exception):
                         self.logger.create_module_logger("scoring").error(
                             f"Error scoring artículo {article.id}: {str(score_result)}"
@@ -925,21 +977,21 @@ class NewsCollectorSystem:
             }
 
     def _execute_final_selection(
-        self, scoring_results: Dict[str, Any], collection_results: Optional[Dict[str, Any]] = None
+        self,
+        scoring_results: Dict[str, Any],
+        collection_results: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Ejecuta la selección final de mejores artículos."""
         try:
             # Check for simulated articles in dry-run
             if collection_results and "articles" in collection_results:
-                 # Dry-run simulation mode
-                 selected_articles = collection_results["articles"]
-                 return {
+                # Dry-run simulation mode
+                selected_articles = collection_results["articles"]
+                return {
                     "success": True,
                     "selected_count": len(selected_articles),
                     "articles": selected_articles,
-                    "selection_criteria": {
-                        "mode": "dry_run_simulation"
-                    },
+                    "selection_criteria": {"mode": "dry_run_simulation"},
                 }
 
             # Normal path (Database)
@@ -1040,34 +1092,38 @@ class NewsCollectorSystem:
         # Generar artículos simulados para validar contrato
         simulated_articles = []
         for i in range(random.randint(5, 15)):
-            simulated_articles.append({
-                "title": f"Artículo Simulado {i+1}",
-                "url": f"https://example.com/article/{i+1}",
-                "source_id": "simulation", # Required by Contract
-                "published_date": datetime.now(timezone.utc).isoformat(),
-                "summary": f"Resumen del artículo simulado {i+1} para pruebas de contrato.",
-                "content": "Contenido completo simulado...",
-                "author": "Simulador",
-                "categories": ["test", "simulation"],
-                "tags": ["e2e", "contract"],
-                "editorial_score": random.uniform(0.5, 0.9)
-            })
+            simulated_articles.append(
+                {
+                    "title": f"Artículo Simulado {i+1}",
+                    "url": f"https://example.com/article/{i+1}",
+                    "source_id": "simulation",  # Required by Contract
+                    "published_date": datetime.now(timezone.utc).isoformat(),
+                    "summary": f"Resumen del artículo simulado {i+1} para pruebas de contrato.",
+                    "content": "Contenido completo simulado...",
+                    "author": "Simulador",
+                    "categories": ["test", "simulation"],
+                    "tags": ["e2e", "contract"],
+                    "editorial_score": random.uniform(0.5, 0.9),
+                }
+            )
 
         simulated_results = {
             "collection_summary": {
                 "sources_processed": len(sources),
                 "articles_found": len(simulated_articles),
-                "articles_saved": len(simulated_articles), # En simulación asumimos guardado
+                "articles_saved": len(
+                    simulated_articles
+                ),  # En simulación asumimos guardado
                 "success_rate_percent": random.uniform(80, 95),
             },
             "source_details": {
                 "simulation": {
                     "success": True,
                     "articles_found": len(simulated_articles),
-                    "articles_saved": len(simulated_articles)
+                    "articles_saved": len(simulated_articles),
                 }
             },
-            "articles": simulated_articles # Para acceso directo en dry-run
+            "articles": simulated_articles,  # Para acceso directo en dry-run
         }
 
         self.logger.create_module_logger("simulation").info(

@@ -4,11 +4,9 @@ from news_collector.config import SCORING_CONFIG
 
 from .basic_scorer import BasicScorer
 from .basic_scorer import score_multiple_articles as _basic_score_multiple
-from .feature_scorer import FeatureBasedScorer
 from .cognitive_scorer import CognitiveScorer
+from .feature_scorer import FeatureBasedScorer
 from .interfaces import AsyncScorer
-
-
 
 DEFAULT_SCORING_WEIGHTS = {
     "source_credibility": 0.25,
@@ -21,14 +19,16 @@ COGNITIVE_SCORING_WEIGHTS = {
     "source_credibility": 0.20,
     "recency": 0.20,
     "content_quality": 0.20,
-    "cognitive_engagement": 0.40
+    "cognitive_engagement": 0.40,
 }
 
 
 def create_scorer(weights=None, mode: str | None = None):
     """Factory returning the configured scorer implementation."""
     selected_mode = (mode or SCORING_CONFIG.get("mode", "advanced")).lower()
-    print(f"DEBUG: create_scorer selected_mode={selected_mode} (from config: {SCORING_CONFIG.get('mode')})")
+    print(
+        f"DEBUG: create_scorer selected_mode={selected_mode} (from config: {SCORING_CONFIG.get('mode')})"
+    )
 
     if selected_mode == "cognitive":
         llm_client = None
@@ -36,7 +36,7 @@ def create_scorer(weights=None, mode: str | None = None):
         # Supports dynamic weight adjustment from UI
         return CognitiveScorer(
             weights=weights or SCORING_CONFIG.get("weights", COGNITIVE_SCORING_WEIGHTS),
-            llm_client=llm_client
+            llm_client=llm_client,
         )
 
     if selected_mode == "basic":

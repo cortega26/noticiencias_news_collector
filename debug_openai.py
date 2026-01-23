@@ -1,11 +1,14 @@
-
 import asyncio
+
 from playwright.async_api import async_playwright
+
 
 async def debug_openai():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page(user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        page = await browser.new_page(
+            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
 
         url = "https://openai.com/research"
         print(f"Navigating to {url}...")
@@ -14,7 +17,7 @@ async def debug_openai():
             print("Page loaded.")
 
             # Check for item selectors
-            items = await page.query_selector_all("div.snap-start") # Old selector
+            items = await page.query_selector_all("div.snap-start")  # Old selector
             print(f"Items found with 'div.snap-start': {len(items)}")
 
             if len(items) > 0:
@@ -35,6 +38,7 @@ async def debug_openai():
             print(f"Error: {e}")
         finally:
             await browser.close()
+
 
 if __name__ == "__main__":
     asyncio.run(debug_openai())

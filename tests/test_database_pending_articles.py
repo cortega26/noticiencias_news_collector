@@ -17,10 +17,10 @@ from news_collector.config import ALL_SOURCES, ENRICHMENT_CONFIG
 
 pytestmark = pytest.mark.e2e
 
-from news_collector.system import NewsCollectorSystem
 from news_collector.contracts import CollectorArticleModel
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
+from news_collector.system import NewsCollectorSystem
 
 
 def _enrichment_model_version() -> str:

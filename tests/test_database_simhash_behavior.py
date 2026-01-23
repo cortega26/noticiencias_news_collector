@@ -1,6 +1,6 @@
 import sys
 import types
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -83,7 +83,9 @@ def test_save_article_persists_signed_simhash(
     manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
 
     high_value = (1 << 63) | 0x12345
-    monkeypatch.setattr("news_collector.storage.database.simhash64", lambda _: high_value)
+    monkeypatch.setattr(
+        "news_collector.storage.database.simhash64", lambda _: high_value
+    )
 
     payload = _article_payload(
         "https://example.com/high-simhash", published_date=datetime(2024, 1, 2, 12, 30)

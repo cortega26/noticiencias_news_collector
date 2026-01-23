@@ -1,6 +1,3 @@
-import os
-import sys
-
 try:
     import noticiencias.config_manager
 

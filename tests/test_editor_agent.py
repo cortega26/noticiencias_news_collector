@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
 from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
 
 

@@ -1,8 +1,9 @@
-
-from typing import Any, Dict, List, Optional
 import asyncio
+from typing import Any, Dict, Optional
+
 from news_collector.collectors.base_collector import BaseCollector, create_collector
 from news_collector.config.settings import COLLECTION_CONFIG
+
 
 class CollectorDispatcher:
     """
@@ -14,12 +15,16 @@ class CollectorDispatcher:
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker
-        print(f"DEBUG: Dispatcher init health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}")
+        print(
+            f"DEBUG: Dispatcher init health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}"
+        )
 
         # Initialize collectors dynamically or lazily?
         # For now, initialize known ones.
         # We check async_enabled to decide between RSSCollector and AsyncRSSCollector
-        rss_type = "async_rss" if COLLECTION_CONFIG.get("async_enabled", False) else "rss"
+        rss_type = (
+            "async_rss" if COLLECTION_CONFIG.get("async_enabled", False) else "rss"
+        )
 
         try:
             self.collectors["rss"] = create_collector(rss_type)
@@ -35,12 +40,14 @@ class CollectorDispatcher:
             self.collectors["headless"] = create_collector("headless")
         except Exception as e:
             # Headless might fail if browsers not installed, that's okay, we log it
-            print(f"Error initializing Headless collector (check playwright install): {e}")
+            print(
+                f"Error initializing Headless collector (check playwright install): {e}"
+            )
 
         if self.logger_factory:
             for c in self.collectors.values():
-                 if hasattr(c, "set_logger_factory"):
-                     c.set_logger_factory(self.logger_factory)
+                if hasattr(c, "set_logger_factory"):
+                    c.set_logger_factory(self.logger_factory)
 
         if self.health_tracker:
             for name, c in self.collectors.items():
@@ -48,13 +55,15 @@ class CollectorDispatcher:
                     c.health_tracker = self.health_tracker
                     print(f"DEBUG: Dispatcher set tracker on {name} ({type(c)})")
                 else:
-                    print(f"DEBUG: Collector {name} ({type(c)}) bas NO health_tracker attr")
+                    print(
+                        f"DEBUG: Collector {name} ({type(c)}) bas NO health_tracker attr"
+                    )
 
     def set_logger_factory(self, logger_factory):
         self.logger_factory = logger_factory
         for c in self.collectors.values():
-             if hasattr(c, "set_logger_factory"):
-                 c.set_logger_factory(logger_factory)
+            if hasattr(c, "set_logger_factory"):
+                c.set_logger_factory(logger_factory)
 
     def set_health_tracker(self, health_tracker):
         self.health_tracker = health_tracker
@@ -98,7 +107,7 @@ class CollectorDispatcher:
                 ctype = "rss"
 
             if ctype not in grouped_sources:
-                 grouped_sources[ctype] = {}
+                grouped_sources[ctype] = {}
             grouped_sources[ctype][source_id] = config
 
         # Dispatch async
@@ -106,23 +115,23 @@ class CollectorDispatcher:
         for ctype, sources in grouped_sources.items():
             collector = self.collectors.get(ctype)
             if collector:
-                 # Check if collector supports async batch
-                 if hasattr(collector, "collect_from_multiple_sources_async"):
-                     tasks.append(
-                         collector.collect_from_multiple_sources_async(
-                             sources, session_id=session_id, trace_id=trace_id
-                         )
-                     )
-                 else:
-                     # Wrap sync in thread
-                     tasks.append(
+                # Check if collector supports async batch
+                if hasattr(collector, "collect_from_multiple_sources_async"):
+                    tasks.append(
+                        collector.collect_from_multiple_sources_async(
+                            sources, session_id=session_id, trace_id=trace_id
+                        )
+                    )
+                else:
+                    # Wrap sync in thread
+                    tasks.append(
                         asyncio.to_thread(
                             collector.collect_from_multiple_sources,
                             sources,
                             session_id=session_id,
-                            trace_id=trace_id
+                            trace_id=trace_id,
                         )
-                     )
+                    )
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -134,14 +143,15 @@ class CollectorDispatcher:
                 "articles_found": 0,
                 "articles_saved": 0,
                 "errors_encountered": 0,
-            }
+            },
         }
 
         for res in results_list:
             if isinstance(res, Exception):
                 # Log error
                 continue
-            if not isinstance(res, dict): continue
+            if not isinstance(res, dict):
+                continue
 
             # Merge source details
             if "source_details" in res:
@@ -159,8 +169,12 @@ class CollectorDispatcher:
         # Recalculate rates
         s_proc = final_results["collection_summary"]["sources_processed"]
         if s_proc > 0:
-            success_count = sum(1 for r in final_results["source_details"].values() if r.get("success"))
-            final_results["collection_summary"]["success_rate_percent"] = round((success_count / s_proc) * 100, 2)
+            success_count = sum(
+                1 for r in final_results["source_details"].values() if r.get("success")
+            )
+            final_results["collection_summary"]["success_rate_percent"] = round(
+                (success_count / s_proc) * 100, 2
+            )
 
         return final_results
 

@@ -8,7 +8,11 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency
     settings = None
     st = None
 
-from news_collector.utils.text_cleaner import clean_html, normalize_text, detect_language_simple
+from news_collector.utils.text_cleaner import (
+    clean_html,
+    detect_language_simple,
+    normalize_text,
+)
 
 
 def test_clean_html_removes_boilerplate_and_scripts():
@@ -41,13 +45,13 @@ def test_language_detection_simple():
 
 
 if given is not None:
+
     @given(text=st.text())
     @settings(max_examples=75)
     def test_normalize_text_idempotent_property(text: str) -> None:
         once = normalize_text(text)
         twice = normalize_text(once)
         assert once == twice
-
 
     @given(
         leading=st.text(),
@@ -69,7 +73,9 @@ if given is not None:
         assert "<script" not in cleaned.lower()
         assert "\n" not in cleaned
         assert cleaned == normalize_text(cleaned)
+
 else:
+
     @pytest.mark.skip(reason="hypothesis not installed")
     def test_normalize_text_idempotent_property() -> None:
         pass

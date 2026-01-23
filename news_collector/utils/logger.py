@@ -18,8 +18,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from news_collector.config.settings import DEBUG, LOGGING_CONFIG
 from loguru import logger
+
+from news_collector.config.settings import DEBUG, LOGGING_CONFIG
 
 
 class NewsCollectorLogger:
@@ -54,6 +55,7 @@ class NewsCollectorLogger:
 
         # Override level from environment variable to support runtime changes (e.g. CLI args)
         import os
+
         env_level = os.environ.get("LOG_LEVEL")
         if env_level:
             # Create a copy to avoid mutating the global configuration
@@ -95,9 +97,9 @@ class NewsCollectorLogger:
             """Filtra logs estructurados (JSON) de nivel INFO para evitar spam en consola."""
             msg = str(record["message"]).strip()
             # Si parece un log estructurado (empieza con llaves y tiene 'event')
-            if (msg.startswith("{'event'") or msg.startswith('{"event"')):
+            if msg.startswith("{'event'") or msg.startswith('{"event"'):
                 # Permitir solo si es WARNING o ERROR, ocultar INFO/DEBUG
-                if record["level"].no >= 30: # WARNING=30
+                if record["level"].no >= 30:  # WARNING=30
                     return True
                 return False
             return True
@@ -121,7 +123,7 @@ class NewsCollectorLogger:
             format=console_format,
             level=console_level,
             colorize=True,
-            filter=console_filter, # Aplicar filtro anti-spam
+            filter=console_filter,  # Aplicar filtro anti-spam
             backtrace=DEBUG,  # Stack traces detallados solo en desarrollo
             diagnose=DEBUG,  # Variables locales solo en desarrollo
         )
@@ -155,7 +157,7 @@ class NewsCollectorLogger:
             retention=config.get("retention", "30 days"),
             compression="gz",  # Comprimir logs antiguos
             enqueue=True,  # Threading seguro
-            serialize=True, # SRE Requirement: Structured JSON logs
+            serialize=True,  # SRE Requirement: Structured JSON logs
             backtrace=True,  # Stack traces completos en archivo
             diagnose=True,  # Variables locales en archivo
         )

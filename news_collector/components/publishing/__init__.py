@@ -1,1 +1,1 @@
-from .github_publisher import GitHubPublisher
+from .github_publisher import GitHubPublisher as GitHubPublisher

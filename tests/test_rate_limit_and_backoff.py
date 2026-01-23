@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
-from news_collector.config.settings import RATE_LIMITING_CONFIG
 from news_collector.collectors.rss_collector import RSSCollector
+from news_collector.config.settings import RATE_LIMITING_CONFIG
 from news_collector.storage.database import DatabaseManager
 
 
@@ -36,7 +36,8 @@ def _setup_collector(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     db_manager = DatabaseManager({"type": "sqlite", "path": db_path})
     monkeypatch.setattr(
-        "news_collector.collectors.rss_collector.get_database_manager", lambda: db_manager
+        "news_collector.collectors.rss_collector.get_database_manager",
+        lambda: db_manager,
     )
     collector = RSSCollector()
     source_config = {
@@ -91,8 +92,7 @@ def test_fetch_feed_uses_conditional_headers(tmp_path, monkeypatch):
         assert content == "<rss></rss>"
         assert captured["headers"]["If-None-Match"] == '"old-etag"'
         assert (
-            captured["headers"]["If-Modified-Since"]
-            == "Wed, 21 Oct 2015 07:28:00 GMT"
+            captured["headers"]["If-Modified-Since"] == "Wed, 21 Oct 2015 07:28:00 GMT"
         )
 
         updated = db_manager.get_source_feed_metadata("test_source")

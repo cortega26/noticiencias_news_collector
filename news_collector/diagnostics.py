@@ -3,11 +3,10 @@ Diagnostics module for tracking source health and collection statistics.
 """
 
 import json
-import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, Literal, Optional
 
 FailureStage = Literal[
     "collector.fetch",
@@ -15,8 +14,9 @@ FailureStage = Literal[
     "collector.validate_payload",
     "collector.apply_filters",
     "storage.upsert",
-    "unknown"
+    "unknown",
 ]
+
 
 @dataclass
 class SourceHealth:
@@ -54,13 +54,16 @@ class SourceHealth:
         elif stage == "save":
             self.saved += count
 
-    def record_failure(self, stage: FailureStage, reason: str, details: Dict[str, Any] | None = None):
-        if self.primary_failure_stage is None: # Keep first/most significant failure
-             self.primary_failure_stage = stage
-             self.primary_failure_reason = reason
-             if details:
-                 self.last_error_details = details
-                 self.http_status = details.get("status_code")
+    def record_failure(
+        self, stage: FailureStage, reason: str, details: Dict[str, Any] | None = None
+    ):
+        if self.primary_failure_stage is None:  # Keep first/most significant failure
+            self.primary_failure_stage = stage
+            self.primary_failure_reason = reason
+            if details:
+                self.last_error_details = details
+                self.http_status = details.get("status_code")
+
 
 @dataclass
 class SourceHealthTracker:
@@ -72,12 +75,18 @@ class SourceHealthTracker:
         return self.sources[source_id]
 
     def record_attempt(self, source_id: str):
-         self.get_source(source_id).attempted += 1
+        self.get_source(source_id).attempted += 1
 
     def record_success(self, source_id: str, stage: str, count: int = 1):
         self.get_source(source_id).mark_stage_success(stage, count)
 
-    def record_failure(self, source_id: str, stage: FailureStage, reason: str, details: Dict[str, Any] | None = None):
+    def record_failure(
+        self,
+        source_id: str,
+        stage: FailureStage,
+        reason: str,
+        details: Dict[str, Any] | None = None,
+    ):
         self.get_source(source_id).record_failure(stage, reason, details)
 
     def record_filter_rejection(self, source_id: str, filter_type: str, count: int = 1):
@@ -100,9 +109,7 @@ class SourceHealthTracker:
         self.finalize_status()
         output = {
             "generated_at": datetime.now().isoformat(),
-            "sources": {
-                sid: asdict(data) for sid, data in self.sources.items()
-            }
+            "sources": {sid: asdict(data) for sid, data in self.sources.items()},
         }
 
         p = Path(path)
@@ -114,14 +121,20 @@ class SourceHealthTracker:
         self.finalize_status()
         print("\n🏥 REPORTE DE SALUD DE FUENTES")
         print("=" * 100)
-        print(f"{'FUENTE':<20} | {'ESTADO':<8} | {'FOUND':<5} | {'SAVED':<5} | {'FILT:LEN':<8} | {'FILT:DEDUP':<10} | {'DIAGNOSIS'}")
+        print(
+            f"{'FUENTE':<20} | {'ESTADO':<8} | {'FOUND':<5} | {'SAVED':<5} | {'FILT:LEN':<8} | {'FILT:DEDUP':<10} | {'DIAGNOSIS'}"
+        )
         print("-" * 100)
 
         for sid, data in self.sources.items():
             status_icon = "✅" if data.status == "WORKING" else "❌"
             diagnosis = ""
             if data.status == "FAILING":
-                diagnosis = f"{data.primary_failure_stage}: {data.primary_failure_reason}"[:35]
+                diagnosis = (
+                    f"{data.primary_failure_stage}: {data.primary_failure_reason}"[:35]
+                )
 
-            print(f"{sid[:20]:<20} | {status_icon} {data.status[:7]:<6} | {data.parsed_ok:<5} | {data.saved:<5} | {data.skipped_short_content:<8} | {data.skipped_already_published:<10} | {diagnosis}")
+            print(
+                f"{sid[:20]:<20} | {status_icon} {data.status[:7]:<6} | {data.parsed_ok:<5} | {data.saved:<5} | {data.skipped_short_content:<8} | {data.skipped_already_published:<10} | {diagnosis}"
+            )
         print("=" * 100)

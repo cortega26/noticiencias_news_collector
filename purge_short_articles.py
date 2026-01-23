@@ -1,11 +1,10 @@
-
 import sqlite3
-import sys
 from pathlib import Path
 
 # Adjust path if needed
 DB_PATH = Path("data/news_v3.db")
 MIN_LENGTH = 750
+
 
 def purge():
     if not DB_PATH.exists():
@@ -13,10 +12,10 @@ def purge():
         # Try absolute path based on user info
         DB_PATH_ABS = Path("/home/cortega26/noticiencias_news_collector/data/news.db")
         if DB_PATH_ABS.exists():
-             conn = sqlite3.connect(DB_PATH_ABS)
-             print(f"Connected to {DB_PATH_ABS}")
+            conn = sqlite3.connect(DB_PATH_ABS)
+            print(f"Connected to {DB_PATH_ABS}")
         else:
-             return
+            return
     else:
         conn = sqlite3.connect(DB_PATH)
         print(f"Connected to {DB_PATH}")
@@ -36,7 +35,9 @@ def purge():
             print(f"Found {count} stale articles (short or empty). Purging...")
 
             # Show IDs of some being deleted for audit
-            cursor.execute(f"SELECT id, length(content) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH} LIMIT 5")
+            cursor.execute(
+                f"SELECT id, length(content) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH} LIMIT 5"
+            )
             for row in cursor.fetchall():
                 print(f" - Deleting Article ID {row[0]} (Length: {row[1]})")
 
@@ -49,6 +50,7 @@ def purge():
         print(f"Database error: {e}")
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     purge()

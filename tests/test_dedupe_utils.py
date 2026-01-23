@@ -1,9 +1,9 @@
 from news_collector.utils.dedupe import (
+    duplication_confidence,
+    hamming_distance,
     normalize_article_text,
     sha256_hex,
     simhash64,
-    hamming_distance,
-    duplication_confidence,
 )
 
 

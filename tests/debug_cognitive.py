@@ -1,15 +1,14 @@
-
 import logging
-import sys
-import os
 from datetime import datetime, timezone
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+
 # Mock Source Config
 class MockSourceConfig(dict):
     pass
+
 
 # Mock Article
 class MockArticle:
@@ -28,12 +27,13 @@ class MockArticle:
         self.word_count = 1000
         self.content_quality_score = 0.8
 
+
 try:
     from news_collector.scoring.cognitive_scorer import CognitiveScorer
-    
+
     print("Initializing CognitiveScorer...", flush=True)
     scorer = CognitiveScorer()
-    
+
     print("\n--- Testing Internal LLM Method directly ---", flush=True)
     article = MockArticle()
     try:
@@ -42,9 +42,11 @@ try:
     except Exception as e:
         print(f"Direct Method Failed: {e}", flush=True)
         import traceback
+
         traceback.print_exc()
 
 except Exception as e:
     print(f"❌ Critical Error: {e}", flush=True)
     import traceback
+
     traceback.print_exc()

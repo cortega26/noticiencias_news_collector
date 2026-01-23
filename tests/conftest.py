@@ -1,6 +1,9 @@
-import pytest
 from datetime import datetime, timezone
+
+import pytest
+
 from news_collector.storage import database as database_module
+
 
 @pytest.fixture(autouse=True)
 def _close_global_db_manager():
@@ -9,6 +12,7 @@ def _close_global_db_manager():
     if manager is not None:
         manager.close()
         database_module._db_manager = None
+
 
 @pytest.fixture
 def mock_article_payload():
@@ -21,7 +25,8 @@ def mock_article_payload():
         "content": (
             "This is the main content of the article. It has enough words to pass the validation "
             "checks. We need to ensure that the content is sufficiently long so that the heuristic "
-            "rules for quality do not trigger a validation error. This should be more than enough characters now. " * 30
+            "rules for quality do not trigger a validation error. This should be more than enough characters now. "
+            * 30
         ),
         "source_id": "test_source",
         "source_name": "Test Source",

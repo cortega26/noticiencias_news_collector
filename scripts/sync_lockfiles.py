@@ -146,9 +146,9 @@ def sync_lockfiles() -> None:
                     if "unsafe" in ln:
                         print(f"Line {i+1}: {ln}")
                 sys.exit(1)
-            
+
             if "pip==" in final_content and "# pip==" not in final_content:
-                 pass # We trust the line-by-line logic generally, but header check is critical.
+                pass  # We trust the line-by-line logic generally, but header check is critical.
 
 
 def ensure_lockfiles_clean() -> None:

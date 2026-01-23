@@ -2,9 +2,10 @@
 # Catálogo de fuentes RSS para News Collector (Dinámico vía YAML)
 # ==============================================================
 
-import yaml
 from pathlib import Path
 from typing import Any, Dict
+
+import yaml
 
 # Configuración de categorías (se mantiene estática por ahora)
 CATEGORY_CONFIG = {
@@ -59,6 +60,7 @@ COMMUNITY_FEEDS = {}
 AI_LABS = {}
 ALL_SOURCES = {}
 
+
 def load_sources():
     """Carga las fuentes desde sources.yaml y popula las variables globales."""
     global ELITE_JOURNALS, SCIENCE_MEDIA, INSTITUTIONAL_SOURCES, PREPRINT_SOURCES, COMMUNITY_FEEDS, AI_LABS, ALL_SOURCES
@@ -110,8 +112,10 @@ def load_sources():
     except Exception as e:
         print(f"Error loading sources.yaml: {e}")
 
+
 # Initial Load
 load_sources()
+
 
 # Helper Functions
 def save_sources(new_sources: Dict[str, Any]):
@@ -120,31 +124,42 @@ def save_sources(new_sources: Dict[str, Any]):
     yaml_path = current_dir / "sources.yaml"
 
     with open(yaml_path, "w", encoding="utf-8") as f:
-        yaml.dump(new_sources, f, sort_keys=False, allow_unicode=True, default_flow_style=False)
+        yaml.dump(
+            new_sources,
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+        )
 
     # Reload globals
     load_sources()
 
+
 def get_sources_by_category(category):
     return {
-        sid: cfg for sid, cfg in ALL_SOURCES.items()
-        if cfg.get("category") == category
+        sid: cfg for sid, cfg in ALL_SOURCES.items() if cfg.get("category") == category
     }
+
 
 def get_high_credibility_sources(min_credibility=0.85):
     return {
-        sid: cfg for sid, cfg in ALL_SOURCES.items()
+        sid: cfg
+        for sid, cfg in ALL_SOURCES.items()
         if cfg.get("credibility_score", 0) >= min_credibility
     }
 
+
 def get_sources_by_update_frequency(frequency):
     return {
-        sid: cfg for sid, cfg in ALL_SOURCES.items()
+        sid: cfg
+        for sid, cfg in ALL_SOURCES.items()
         if cfg.get("update_frequency") == frequency
     }
 
+
 def validate_sources():
-    load_sources() # Ensure fresh check
+    load_sources()  # Ensure fresh check
     required_fields = ["name", "url", "credibility_score", "category", "language"]
     for source_id, source_config in ALL_SOURCES.items():
         for field in required_fields:

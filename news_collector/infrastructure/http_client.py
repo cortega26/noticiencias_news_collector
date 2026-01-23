@@ -5,20 +5,22 @@ Centralizes configuration, rate limiting, SSRF protection, and retries.
 
 import asyncio
 import logging
-from typing import Optional, Dict, Any, Union
+from typing import Any, Dict, Optional
+
 import httpx
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log
 )
 
 from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
 from news_collector.utils.security import validate_url_safety
 
 logger = logging.getLogger(__name__)
+
 
 class SmartHttpClient:
     """
@@ -33,7 +35,7 @@ class SmartHttpClient:
         self,
         base_url: str = "",
         headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ):
         self._base_headers = {
             "User-Agent": COLLECTION_CONFIG.get("user_agent", "NoticienciasBot/1.0"),
@@ -52,7 +54,7 @@ class SmartHttpClient:
             headers=self._base_headers,
             timeout=self.timeout,
             limits=limits,
-            follow_redirects=True
+            follow_redirects=True,
         )
 
     async def close(self):
@@ -69,7 +71,7 @@ class SmartHttpClient:
         url: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-        ignore_ssrf: bool = False
+        ignore_ssrf: bool = False,
     ) -> httpx.Response:
         """
         Executes GET request with safety checks and retries.
@@ -84,16 +86,18 @@ class SmartHttpClient:
         wait=wait_exponential(
             multiplier=RATE_LIMITING_CONFIG.get("backoff_base", 0.5),
             min=1,
-            max=RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+            max=RATE_LIMITING_CONFIG.get("backoff_max", 10.0),
         ),
-        retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)),
-        before_sleep=before_sleep_log(logger, logging.WARNING)
+        retry=retry_if_exception_type(
+            (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)
+        ),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _get_with_retry(
         self,
         url: str,
         params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None
+        headers: Optional[Dict[str, str]] = None,
     ) -> httpx.Response:
         try:
             response = await self.client.get(url, params=params, headers=headers)
@@ -102,8 +106,8 @@ class SmartHttpClient:
         except httpx.HTTPStatusError as e:
             # Don't retry 404s or 403s typically, but retry 5xx
             if e.response.status_code in (404, 403, 400, 422):
-                raise # Let caller handle, don't retry permanent errors
-            raise # Retry 500s via decorator
+                raise  # Let caller handle, don't retry permanent errors
+            raise  # Retry 500s via decorator
 
     async def _validate_ssrf(self, url: str):
         """
@@ -113,7 +117,7 @@ class SmartHttpClient:
             await asyncio.to_thread(validate_url_safety, url)
         except ValueError as e:
             logger.error(f"SSRF Blocked: {e}")
-            raise httpx.RequestError(f"SSRF Blocked: {e}")
+            raise httpx.RequestError(f"SSRF Blocked: {e}") from e
 
     async def safe_fetch_text(self, url: str) -> Optional[str]:
         """

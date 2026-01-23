@@ -5,8 +5,6 @@ import re
 import unicodedata
 from typing import Iterable
 
-from bs4 import BeautifulSoup
-
 _BOILERPLATE_PATTERNS: Iterable[re.Pattern] = [
     re.compile(r"^\s*read more\s*$", re.I),
     re.compile(r"^\s*continue reading\s*$", re.I),
@@ -27,9 +25,8 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 
-import bleach
-
 import lxml.html
+
 
 def clean_html(html: str) -> str:
     if not html:
@@ -39,12 +36,12 @@ def clean_html(html: str) -> str:
         # lxml.html.fromstring can parse fragments or documents
         # It handles malformed HTML reasonably well (mimicking browsers)
         try:
-            doc = lxml.html.fragment_fromstring(html, create_parent='div')
+            doc = lxml.html.fragment_fromstring(html, create_parent="div")
         except Exception:
             doc = lxml.html.fromstring(html)
 
         # Security: Remove potentially dangerous tags AND their content
-        for element in doc.xpath('//script|//style|//noscript'):
+        for element in doc.xpath("//script|//style|//noscript"):
             element.drop_tree()
 
         # Extract text with spacing to avoid "0read more" concatenation issues
@@ -114,13 +111,12 @@ def clean_html(html: str) -> str:
 
         return normalize_text(text)
 
-    except Exception as e:
+    except Exception:
         # Fallback
         import re
-        text = re.sub(r'<[^>]+>', ' ', html)
+
+        text = re.sub(r"<[^>]+>", " ", html)
         return normalize_text(text)
-
-
 
 
 def detect_language_simple(text: str) -> str:

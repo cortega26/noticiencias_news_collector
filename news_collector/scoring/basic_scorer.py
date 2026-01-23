@@ -14,17 +14,16 @@ El sistema está diseñado para ser transparente: no es una caja negra, sino
 que explica exactamente por qué cada artículo recibió cierto puntaje.
 """
 
+import asyncio
 import logging
 import math
 import re
-import asyncio
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
-from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from pydantic import ValidationError
 
+from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from news_collector.contracts import ScoringRequestModel
 
 from ..storage.models import Article
@@ -153,8 +152,11 @@ class BasicScorer(AsyncScorer):
 
         except Exception as e:
             logger.error(f"Error calculando score para artículo {article.id}: {e}")
-            print(f"CRITICAL SCORING ERROR for {getattr(article, 'id', 'unknown')}: {e}")
+            print(
+                f"CRITICAL SCORING ERROR for {getattr(article, 'id', 'unknown')}: {e}"
+            )
             import traceback
+
             traceback.print_exc()
             fallback = {
                 "final_score": 0.0,
@@ -175,9 +177,7 @@ class BasicScorer(AsyncScorer):
             except ValidationError:
                 return fallback
 
-    async def score_article_async(
-        self, article_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def score_article_async(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Score an article asynchronously using a thread executor.
 
@@ -194,6 +194,7 @@ class BasicScorer(AsyncScorer):
         class SafeNamespace:
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
+
             def __getattr__(self, name):
                 return None
 
@@ -202,7 +203,9 @@ class BasicScorer(AsyncScorer):
             val = article_dict.get(date_field)
             if isinstance(val, str):
                 try:
-                    article_dict[date_field] = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                    article_dict[date_field] = datetime.fromisoformat(
+                        val.replace("Z", "+00:00")
+                    )
                 except (ValueError, TypeError):
                     pass
 
@@ -212,7 +215,7 @@ class BasicScorer(AsyncScorer):
 
         # Explicitly ensure 'collected_date' exists as datetime
         if not article_obj.collected_date:
-             article_obj.collected_date = datetime.now(timezone.utc)
+            article_obj.collected_date = datetime.now(timezone.utc)
 
         # Ensure 'article_metadata' exists if it's missing (SafeNamespace returns None, causing problems)
         if article_obj.article_metadata is None:
@@ -221,10 +224,7 @@ class BasicScorer(AsyncScorer):
         # Run the synchronous scoring logic in a separate thread to avoid blocking the event loop
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
-            None,  # Use default executor
-            self.score_article,
-            article_obj,
-            source_config
+            None, self.score_article, article_obj, source_config  # Use default executor
         )
 
         return result
@@ -305,9 +305,11 @@ class BasicScorer(AsyncScorer):
             age_hours = (now - reference_date).total_seconds() / 3600
         except Exception as e:
             # Should hopefully not happen now, but log just in case
-            logger.error(f"Error calculating recency: {e}. Ref: {reference_date}, Now: {now}")
+            logger.error(
+                f"Error calculating recency: {e}. Ref: {reference_date}, Now: {now}"
+            )
             # Fallback safe value
-            age_hours = 24 * 7 # Assume 1 week old on error
+            age_hours = 24 * 7  # Assume 1 week old on error
 
         # Función de decay logarítmica
         # Score alto para las primeras 24 horas, decay gradual después
@@ -827,7 +829,7 @@ class BasicScorer(AsyncScorer):
             if pub_date.tzinfo is None:
                 pub_date = pub_date.replace(tzinfo=timezone.utc)
             else:
-                 pub_date = pub_date.astimezone(timezone.utc)
+                pub_date = pub_date.astimezone(timezone.utc)
 
             age = datetime.now(timezone.utc) - pub_date
             if age.days == 0:

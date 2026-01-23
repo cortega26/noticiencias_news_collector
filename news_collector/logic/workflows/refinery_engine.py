@@ -1,11 +1,8 @@
-
 import logging
 import re
-import uuid
-import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
@@ -14,6 +11,7 @@ if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
 
 logger = logging.getLogger("RefineryEngine")
+
 
 class RefineryEngine:
     """
@@ -37,10 +35,7 @@ class RefineryEngine:
         self.config = config
 
     def process_articles(
-        self,
-        articles: List[Dict[str, Any]],
-        target_repo_obj: Any,
-        target_dir: Path
+        self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
     ) -> Dict[str, Any]:
         """
         Processes a batch of articles.
@@ -69,23 +64,16 @@ class RefineryEngine:
                 logger.error(f"Failed to process {article_id}: {e}")
                 errors.append({"id": article_id, "error": str(e)})
 
-        return {
-            "processed_count": processed_count,
-            "errors": errors
-        }
+        return {"processed_count": processed_count, "errors": errors}
 
     def process_single_article(
-        self,
-        article: Dict[str, Any],
-        target_repo_obj: Any,
-        target_dir: Path
+        self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
     ) -> bool:
         """
         Orchestrates full cycle for one article.
         Returns True if successful (PR created), False otherwise.
         """
         article_id = str(article.get("id", article.get("title")))
-        file_name_marker = f"{article_id}.md"
 
         # 1. AI Processing
         refined_content = self.editor.process_article(article)
@@ -106,16 +94,12 @@ class RefineryEngine:
         # 4. Create Branch
         # Use a deterministic branch name
         branch_name = self.git.create_branch(
-            target_repo_obj,
-            branch_prefix="content/add",
-            explicit_name=slug
+            target_repo_obj, branch_prefix="content/add", explicit_name=slug
         )
 
         # 5. Commit & Push
         self.git.commit_and_push(
-            target_repo_obj,
-            f"Add article: {output_filename}",
-            branch_name
+            target_repo_obj, f"Add article: {output_filename}", branch_name
         )
 
         # 6. Create PR
@@ -123,7 +107,7 @@ class RefineryEngine:
             repo_url=self.config.target_repo_url,
             branch_name=branch_name,
             title=f"News: {date_str} - {slug}",
-            body=f"Automated submission for {article_id}.\n\nProcessed by Noticiencias Refinery."
+            body=f"Automated submission for {article_id}.\n\nProcessed by Noticiencias Refinery.",
         )
 
         if pr_url:
@@ -135,7 +119,9 @@ class RefineryEngine:
                 self.db.mark_article_published(numeric_id, pr_url)
             except ValueError:
                 # If we are somehow using string IDs (legacy), we might need a fallback or logging
-                logger.warning(f"Could not mark non-numeric ID {article_id} in main DB. Skipping state update.")
+                logger.warning(
+                    f"Could not mark non-numeric ID {article_id} in main DB. Skipping state update."
+                )
 
             return True
         else:

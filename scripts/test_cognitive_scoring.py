@@ -60,7 +60,7 @@ async def main():
     )
 
     # Initialize Scorer with Mock LLM
-    scorer = CognitiveScorer(llm_client=MockLLMClient())
+    scorer = CognitiveScorer(llm_client=MockOllamaProvider())
 
     # Run Score
     result = scorer.score_article(article)

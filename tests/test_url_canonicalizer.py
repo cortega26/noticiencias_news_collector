@@ -2,7 +2,6 @@ import pytest
 
 import news_collector.utils.url_canonicalizer as url_canonicalizer
 
-
 POSITIVE_CASES = [
     (
         "HTTPS://WWW.Example.com:443/News/Story?utm_source=twitter&b=2&a=1",
