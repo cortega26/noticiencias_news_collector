@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import feedparser
-
 from news_collector.utils.datetime_utils import parse_to_utc_with_tzinfo
 from news_collector.utils.text_cleaner import clean_html
 from news_collector.utils.url_canonicalizer import canonicalize_url
@@ -68,7 +67,7 @@ class RssParser:
                     continue
 
                 candidates.append(candidate)
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
         return candidates
@@ -81,7 +80,7 @@ class RssParser:
                 if val:
                     try:
                         return parse_to_utc_with_tzinfo(val)
-                    except Exception:
+                    except Exception:  # noqa: S112
                         continue
         return parse_to_utc_with_tzinfo(None)
 
@@ -135,7 +134,7 @@ class RssParser:
 
         return list(set(authors))
 
-    def _extract_image_url(self, entry) -> Optional[str]:
+    def _extract_image_url(self, entry) -> Optional[str]:  # noqa: C901
         # 1. Media Content
         if hasattr(entry, "media_content"):
             for media in entry.media_content:

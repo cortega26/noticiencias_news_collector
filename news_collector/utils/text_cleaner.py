@@ -28,7 +28,7 @@ def normalize_text(text: str) -> str:
 import lxml.html
 
 
-def clean_html(html: str) -> str:
+def clean_html(html: str) -> str:  # noqa: C901
     if not html:
         return ""
 

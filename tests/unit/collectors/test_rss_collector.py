@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from news_collector.collectors.rss_collector import RSSCollector
 
 

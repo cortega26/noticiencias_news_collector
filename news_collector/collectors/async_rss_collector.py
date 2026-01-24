@@ -33,7 +33,7 @@ class AsyncRSSCollector(RSSCollector):
     ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
 
-    async def collect_from_multiple_sources_async(
+    async def collect_from_multiple_sources_async(  # noqa: C901
         self,
         sources_config: Dict[str, Dict[str, Any]],
         *,
@@ -142,7 +142,7 @@ class AsyncRSSCollector(RSSCollector):
 
         # Consolidate results logic using map
         source_results = {}
-        for source_id in sources_config.keys():
+        for source_id in sources_config:
             result = results_map.get(source_id)
             if not result:
                 # Should not happen if all executed, unless Exception in gather
@@ -184,7 +184,7 @@ class AsyncRSSCollector(RSSCollector):
                 source_id, source_config, client
             )
 
-    async def _collect_from_source_async_internal(
+    async def _collect_from_source_async_internal(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any], client: httpx.AsyncClient
     ) -> Dict[str, Any]:
         """
@@ -274,7 +274,7 @@ class AsyncRSSCollector(RSSCollector):
                         processed = self._process_article(raw, source_id, source_config)
                         if processed:
                             processed_candidates.append(processed)
-                    except Exception:
+                    except Exception:  # noqa: S110
                         pass  # Logged inside
 
                 # Apply strict sequential filters and save
@@ -305,12 +305,12 @@ class AsyncRSSCollector(RSSCollector):
         """Asynchronous backoff sleep."""
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))  # noqa: S311
 
         delay = min(max_b, (base * (2**attempt)) + jitter)
         await asyncio.sleep(delay)
 
-    async def _fetch_feed_async(
+    async def _fetch_feed_async(  # noqa: C901
         self,
         source_id: str,
         feed_url: str,

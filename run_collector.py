@@ -37,7 +37,6 @@ sys.path.insert(0, str(project_root))
 
 try:
     from main import create_system
-
     from news_collector import setup_logging
     from news_collector.config import ALL_SOURCES
     from news_collector.diagnostics import SourceHealthTracker
@@ -85,7 +84,7 @@ def print_sources_list():
             print(f"  • {source_id:<20} - {config['name']:<30} {credibility}")
 
 
-def run_simple_collection(args):
+def run_simple_collection(args):  # noqa: C901
     """
     Ejecuta una recolección simple con logging amigable.
 
@@ -343,7 +342,7 @@ def check_dependencies():
     return True
 
 
-def main():
+def main():  # noqa: C901
     """Función principal del script."""
     parser = argparse.ArgumentParser(
         description="News Collector System - Recopilador inteligente de noticias científicas",

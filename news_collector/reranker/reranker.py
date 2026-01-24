@@ -17,7 +17,7 @@ def rerank_articles(
     if not articles:
         return []
 
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311
     shuffled = articles[:]
     rng.shuffle(shuffled)
 

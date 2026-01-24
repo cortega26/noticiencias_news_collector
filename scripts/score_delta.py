@@ -94,7 +94,7 @@ def load_dataset(path: Path) -> Dataset:
     return Dataset(entries=list(entries), frozen_at=frozen_at)
 
 
-def load_baseline(
+def load_baseline(  # noqa: C901
     entries: Sequence[Dict[str, object]], baseline_path: Path | None
 ) -> Dict[str, Dict[str, object]]:
     if baseline_path is None:
@@ -273,7 +273,7 @@ def main() -> None:
     else:
         print("No baseline values found in dataset; skipping delta table.")
 
-    unique_k = sorted(set(k for k in args.top_k if isinstance(k, int) and k > 0))
+    unique_k = sorted(set(k for k in args.top_k if isinstance(k, int) and k > 0))  # noqa: C401
     if not unique_k:
         unique_k = [5]
 

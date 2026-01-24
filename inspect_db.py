@@ -1,7 +1,6 @@
-from sqlalchemy import func
-
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
+from sqlalchemy import func
 
 try:
     db = DatabaseManager()

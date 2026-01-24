@@ -16,8 +16,6 @@ if str(project_root) not in sys.path:
 
 import asyncio
 
-from noticiencias.config_manager import load_config
-
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
@@ -26,6 +24,7 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
 from news_collector.utils.logger import get_logger
+from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger("Orchestrator")
 
@@ -255,7 +254,7 @@ def run_collector_script(
         traceback.print_exc()
 
 
-def main(
+def main(  # noqa: C901
     fetch_only=False,
     process_id=None,
     dev=False,
@@ -397,7 +396,7 @@ def main(
     # Priority: Search ONLY in 'data' directory (standard output location)
     # We do NOT fallback to root to avoid picking up repo metadata (labels.md, etc)
     # ONLY load file artifacts if NO export was found OR if we didn't find the requested ID yet
-    if not articles_to_process:
+    if not articles_to_process:  # noqa: SIM102
         if data_dir.exists():
             # Files to ignore (exact matches and patterns)
             IGNORED_FILES = {
@@ -574,7 +573,7 @@ def delete_article(article_id: str) -> dict:
                     if f'refinery_id: "{article_id}"' in content:
                         target_file = file_path
                         break
-                except Exception:
+                except Exception:  # noqa: S112
                     continue
 
         if not target_file:

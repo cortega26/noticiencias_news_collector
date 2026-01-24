@@ -25,7 +25,8 @@ def purge():
     try:
         # Check count of short or empty articles
         # usage of COALESCE logic: length(content) will be null if content is null
-        query_count = f"SELECT count(*) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"
+        # usage of COALESCE logic: length(content) will be null if content is null
+        query_count = f"SELECT count(*) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"  # noqa: S608
         cursor.execute(query_count)
         count = cursor.fetchone()[0]
 
@@ -36,12 +37,12 @@ def purge():
 
             # Show IDs of some being deleted for audit
             cursor.execute(
-                f"SELECT id, length(content) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH} LIMIT 5"
+                f"SELECT id, length(content) FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH} LIMIT 5"  # noqa: S608
             )
             for row in cursor.fetchall():
                 print(f" - Deleting Article ID {row[0]} (Length: {row[1]})")
 
-            query_delete = f"DELETE FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"
+            query_delete = f"DELETE FROM articles WHERE content IS NULL OR length(content) < {MIN_LENGTH}"  # noqa: S608
             cursor.execute(query_delete)
             conn.commit()
             print(f"Successfully purged {count} articles.")

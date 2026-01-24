@@ -56,7 +56,7 @@ def validate_article(article: Dict[str, Any], index: int) -> List[str]:
     return errors
 
 
-def validate_export(file_path: Path) -> bool:
+def validate_export(file_path: Path) -> bool:  # noqa: C901
     """Reads and validates the JSON export."""
     if not file_path.exists():
         print(f"❌ Error: Export file not found at {file_path}")

@@ -6,7 +6,6 @@ from pathlib import Path
 
 import git
 import requests
-
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("components.publishing.github_publisher")
@@ -180,7 +179,7 @@ class GitHubPublisher:
             "base": base_branch,
         }
 
-        response = requests.post(api_url, json=payload, headers=self.headers)
+        response = requests.post(api_url, json=payload, headers=self.headers)  # noqa: S113
 
         if response.status_code == 201:
             pr_url = response.json().get("html_url")

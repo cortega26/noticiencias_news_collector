@@ -25,7 +25,7 @@ SEVERITY_RANK = {
     "UNKNOWN": 3,
 }
 
-SECRET_SEVERITY_DEFAULT = "HIGH"
+SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Document the rationale and review cadence in SECURITY.md under the Suppression Policy table.

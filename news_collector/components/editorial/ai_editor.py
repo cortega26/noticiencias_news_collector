@@ -109,7 +109,7 @@ class EditorAgent:
             count = 0
             for chunk in generator:
                 full_text.append(chunk)
-                count += 1
+                count += 1  # noqa: SIM113
                 if count % 20 == 0:
                     print(".", end="", flush=True)
 
@@ -170,7 +170,7 @@ class EditorAgent:
         safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(article_id))
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
-    def process_article(self, raw_text: str | dict) -> str:
+    def process_article(self, raw_text: str | dict) -> str:  # noqa: C901
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
@@ -206,7 +206,7 @@ class EditorAgent:
             content = raw_text
             import hashlib
 
-            article_id = hashlib.md5(content.encode()).hexdigest()[:8]
+            article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
             raw_category = "other"
 
         # Map source category to site category

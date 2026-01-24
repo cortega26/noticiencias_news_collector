@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from news_collector.scoring.feature_scorer import FeatureBasedScorer
 from news_collector.storage.models import Article
 

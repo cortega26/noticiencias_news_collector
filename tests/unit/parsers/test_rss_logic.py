@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from news_collector.logic.parsers.rss_parser import RssParser
 
 

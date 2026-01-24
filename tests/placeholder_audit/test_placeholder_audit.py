@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import List
 
 import pytest
-
 from tools.placeholder_audit import (
     AgeThresholds,
     AuditConfig,
@@ -113,7 +112,7 @@ def test_detect_placeholders_skips_markdown_fenced_code(
     path = Path("tests/placeholder_audit/fixtures/doc_page.md")
     content = path.read_text(encoding="utf-8")
     fence_lines = track_fences(content)
-    new_lines = {idx: "+" for idx in range(1, len(content.splitlines()) + 1)}
+    new_lines = dict.fromkeys(range(1, len(content.splitlines()) + 1), "+")
     findings = detect_placeholders(
         path=path,
         content=content,

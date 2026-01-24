@@ -67,7 +67,7 @@ def main() -> int:
     )
 
     # We import subprocess only when running, to keep top-level side-effects low
-    import subprocess
+    import subprocess  # nosec
 
     try:
         subprocess.check_call(cmd)

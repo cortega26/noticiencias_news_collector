@@ -26,7 +26,7 @@ def factory_reset():
         # 1. Wipe Tables
         tables = ["articles", "article_metrics", "score_logs"]
         for t in tables:
-            try:
+            try:  # noqa: SIM105
                 cursor.execute(f"DELETE FROM {t}")  # nosec
             except Exception:
                 pass

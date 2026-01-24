@@ -6,7 +6,6 @@ from pathlib import Path
 
 import git
 import requests
-
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("components.publishing.github_publisher")

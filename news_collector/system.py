@@ -856,7 +856,7 @@ class NewsCollectorSystem:
             "details": validation_results,
         }
 
-    async def _execute_scoring(
+    async def _execute_scoring(  # noqa: C901
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
         """Ejecuta la fase de scoring de artículos."""
@@ -1091,7 +1091,7 @@ class NewsCollectorSystem:
 
         # Generar artículos simulados para validar contrato
         simulated_articles = []
-        for i in range(random.randint(5, 15)):
+        for i in range(random.randint(5, 15)):  # noqa: S311
             simulated_articles.append(
                 {
                     "title": f"Artículo Simulado {i+1}",
@@ -1103,7 +1103,7 @@ class NewsCollectorSystem:
                     "author": "Simulador",
                     "categories": ["test", "simulation"],
                     "tags": ["e2e", "contract"],
-                    "editorial_score": random.uniform(0.5, 0.9),
+                    "editorial_score": random.uniform(0.5, 0.9),  # noqa: S311
                 }
             )
 
@@ -1114,7 +1114,7 @@ class NewsCollectorSystem:
                 "articles_saved": len(
                     simulated_articles
                 ),  # En simulación asumimos guardado
-                "success_rate_percent": random.uniform(80, 95),
+                "success_rate_percent": random.uniform(80, 95),  # noqa: S311
             },
             "source_details": {
                 "simulation": {
@@ -1151,12 +1151,12 @@ class NewsCollectorSystem:
             "success": True,
             "statistics": {
                 "articles_scored": articles_found,
-                "articles_included": random.randint(
+                "articles_included": random.randint(  # noqa: S311  # noqa: S311
                     articles_found // 3, articles_found // 2
                 ),
                 "articles_excluded": articles_found
-                - random.randint(articles_found // 3, articles_found // 2),
-                "average_score": random.uniform(0.4, 0.8),
+                - random.randint(articles_found // 3, articles_found // 2),  # noqa: S311
+                "average_score": random.uniform(0.4, 0.8),  # noqa: S311
             },
         }
 

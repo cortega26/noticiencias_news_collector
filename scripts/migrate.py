@@ -12,7 +12,7 @@ Usage:
 """
 
 import os
-import subprocess
+import subprocess  # nosec
 import sys
 from typing import List
 

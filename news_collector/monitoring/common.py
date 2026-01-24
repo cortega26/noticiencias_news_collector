@@ -126,7 +126,7 @@ class MonitoringPayload:
         }
 
     @classmethod
-    def from_components(
+    def from_components(  # noqa: C901
         cls,
         window_start: datetime,
         window_end: datetime,

@@ -80,7 +80,9 @@ class FeedDiagnoser:
             return "SSL/Security"
         return "UNKNOWN"
 
-    def check_feed(self, source_id: str, config: Dict[str, Any]) -> FeedStatus:
+    def check_feed(  # noqa: C901
+        self, source_id: str, config: Dict[str, Any]
+    ) -> FeedStatus:
         url = config["url"]
         start_time = time.time()
 

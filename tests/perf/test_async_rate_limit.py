@@ -2,7 +2,6 @@ import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 
 

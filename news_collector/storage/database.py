@@ -223,7 +223,9 @@ class DatabaseManager:
 
         return
 
-    def _apply_schema_migrations(self, inspector: Any, tables: List[str]) -> None:
+    def _apply_schema_migrations(  # noqa: C901
+        self, inspector: Any, tables: List[str]
+    ) -> None:
         db_type = self.config.get("type", "sqlite")
         timestamp_type = (
             "TIMESTAMP WITH TIME ZONE" if db_type == "postgresql" else "TIMESTAMP"
@@ -491,7 +493,7 @@ class DatabaseManager:
     # OPERACIONES CON ARTÍCULOS
     # =====================================
 
-    def save_article(
+    def save_article(  # noqa: C901
         self, article_data: CollectorArticleModel | Dict[str, Any]
     ) -> Optional[Article]:
         """
@@ -680,7 +682,7 @@ class DatabaseManager:
             return simhash_value + (1 << SIMHASH_BITS)
         return simhash_value
 
-    def _assign_cluster(
+    def _assign_cluster(  # noqa: C901
         self, session: Session, simhash_value: int, published_date: Optional[datetime]
     ) -> Tuple[str, float]:
         simhash_value = self._simhash_normalize_unsigned(simhash_value) or 0

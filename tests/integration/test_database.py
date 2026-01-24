@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Base
 
