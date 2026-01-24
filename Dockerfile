@@ -64,4 +64,4 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
     CMD ["python", "scripts/healthcheck.py", "--max-pending", "500"]
 
 # Default command (can be overridden)
-CMD ["python", "run_collector.py", "--help"]
+CMD ["python", "scripts/run_collector.py", "--help"]

@@ -38,7 +38,7 @@ services:
       dockerfile: Dockerfile
     container_name: noticiencias-collector
     # Just run the help by default to prevent accidental massive scraping
-    command: python run_collector.py --help
+    command: python scripts/run_collector.py --help
     volumes:
       - .:/app
     environment:

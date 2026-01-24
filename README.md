@@ -50,6 +50,7 @@ python run_collector.py
 ```
 
 Common flags:
+
 ```bash
 python run_collector.py --dry-run
 python run_collector.py --sources nature science_daily
@@ -91,6 +92,7 @@ Configuration is managed via `config.toml` (root) and `.env`.
 - GitHub publishing target
 
 Quick start for env:
+
 ```bash
 cp .env.example .env
 ```
@@ -106,14 +108,23 @@ make test
 ### Docker
 
 Run the full stack (Collector + Refinery + DB) with Docker:
+
 ```bash
 docker-compose up --build
 ```
 
 ## Docs
 
-- Architecture and runbook: `ARCHITECTURE.md`, `RUNBOOK.md`
+- Architecture and runbook: `docs/ARCHITECTURE.md`, `docs/ops/RUNBOOK.md`
 - Configuration schema: `docs/config_fields.md`
+
+## Development & Quality
+
+We maintain high code quality standards using a unified suite of tools.
+
+- **Check Quality**: `make quality` (Runs Ruff, Mypy, Bandit, pip-audit, and Semgrep)
+- **Auto-Fix**: `make quality-fix` (Automatically fixes format and simple lint errors)
+- **Standards Guide**: See [`QUALITY.md`](QUALITY.md) for details on the tools and how to handle failures.
 
 ## Security
 
