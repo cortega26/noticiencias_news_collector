@@ -1,10 +1,7 @@
-
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock
-import sys
-import os
-
-
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath("/home/cortega26/noticiencias_news_collector"))
@@ -15,6 +12,7 @@ try:
 except ImportError as e:
     print(f"Import failed: {e}")
     sys.exit(1)
+
 
 class TestEditorAgentTags(unittest.TestCase):
     def setUp(self):
@@ -30,20 +28,18 @@ class TestEditorAgentTags(unittest.TestCase):
             "title": "Test Article",
             "content": "Some content",
             "id": "123",
-            "metadata": {
-                "category": "other"
-            }
+            "metadata": {"category": "other"},
         }
-        
+
         # Mock file operations to avoid writing to disk
         self.agent._get_cache_path = MagicMock()
         self.agent._get_cache_path.return_value.exists.return_value = False
         self.agent._get_cache_path.return_value.write_text = MagicMock()
-        
+
         result = self.agent.process_article(raw_text)
-        
+
         # Check that tags list is empty
-        self.assertIn('tags: []', result)
+        self.assertIn("tags: []", result)
         self.assertNotIn('tags: ["other"]', result)
 
     def test_valid_category_kept(self):
@@ -51,18 +47,17 @@ class TestEditorAgentTags(unittest.TestCase):
             "title": "Test Article",
             "content": "Some content",
             "id": "123",
-            "metadata": {
-                "category": "AI"
-            }
+            "metadata": {"category": "AI"},
         }
-        
+
         self.agent._get_cache_path = MagicMock()
         self.agent._get_cache_path.return_value.exists.return_value = False
-        
+
         result = self.agent.process_article(raw_text)
-        
+
         # Check that AI tag is present
         self.assertIn('tags: ["AI"]', result)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

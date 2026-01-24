@@ -1,11 +1,10 @@
 import sys
+import unittest
 from unittest.mock import MagicMock, patch
 
 # Import moved to test/setup to allow patching
 # from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
-
-import unittest
 
 class TestRefineryEngine(unittest.TestCase):
     def setUp(self):
@@ -18,9 +17,10 @@ class TestRefineryEngine(unittest.TestCase):
         # Safe patching context
         self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
         self.git_patch.start()
-        
+
         # Import inside patch context
         from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
         self.engine = RefineryEngine(
             self.mock_db, self.mock_git, self.mock_editor, self.mock_config
         )
