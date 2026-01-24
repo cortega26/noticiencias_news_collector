@@ -1,10 +1,5 @@
 """Tests for NewsCollectorSystem initialization behavior."""
 
-import importlib.util
-import sys
-import types
-from pathlib import Path
-
 import pytest
 
 # Global path/module hacking removed in favor of proper testing environment

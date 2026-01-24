@@ -1,6 +1,6 @@
+import json
 import re
 import time
-import json
 from pathlib import Path
 
 from news_collector.infrastructure.llm.provider import OllamaProvider

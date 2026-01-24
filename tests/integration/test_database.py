@@ -191,7 +191,9 @@ def test_cleanup_methods(test_db_manager):
     )
     assert test_db_manager.clear_all_articles() >= 1
 
+
 # Merged from tests/test_database_publication.py
+
 
 def test_mark_article_published_excludes_from_scores(test_db_manager) -> None:
     # 1. Create Article
@@ -210,7 +212,7 @@ def test_mark_article_published_excludes_from_scores(test_db_manager) -> None:
         "article_metadata": {},
     }
     saved = test_db_manager.save_article(article_data)
-    
+
     # Enable it for scoring/retrieval
     test_db_manager.update_article_score(
         saved.id,
@@ -229,7 +231,7 @@ def test_mark_article_published_excludes_from_scores(test_db_manager) -> None:
                 "content_quality": 0.25,
                 "engagement": 0.25,
             },
-        }
+        },
     )
 
     # Verify it appears in candidate list
@@ -273,8 +275,9 @@ def test_mark_article_published_uses_original_url(test_db_manager) -> None:
     )
 
     assert updated is True
-    
+
     from news_collector.storage.models import Article
+
     with test_db_manager.get_session() as session:
         art = session.query(Article).filter_by(id=saved.id).first()
         assert art.published_url == "https://github.com/org/repo/pull/1"

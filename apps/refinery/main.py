@@ -17,7 +17,6 @@ if str(project_root) not in sys.path:
 import asyncio
 
 from noticiencias.config_manager import load_config
-from news_collector.utils.logger import get_logger
 
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
@@ -26,6 +25,7 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 # from news_collector.components.editorial import EditorAgent # Removed duplicate
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
+from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("Orchestrator")
 

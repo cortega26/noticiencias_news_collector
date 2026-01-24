@@ -1,6 +1,11 @@
-
 import unittest
-from news_collector.utils.text_cleaner import normalize_text, clean_html, detect_language_simple
+
+from news_collector.utils.text_cleaner import (
+    clean_html,
+    detect_language_simple,
+    normalize_text,
+)
+
 
 class TestTextCleaner(unittest.TestCase):
 
@@ -20,15 +25,15 @@ class TestTextCleaner(unittest.TestCase):
         # Basic removal
         html = "<p>Hello <b>World</b></p>"
         self.assertEqual(clean_html(html), "Hello World")
-        
+
         # Script removal
         html_script = "<div>Content<script>alert('bad');</script></div>"
         self.assertEqual(clean_html(html_script), "Content")
-        
+
         # Style removal
         html_style = "<div>Content<style>body { color: red; }</style></div>"
         self.assertEqual(clean_html(html_style), "Content")
-        
+
         # Boilerplate removal (based on _BOILERPLATE_PATTERNS)
         # Assuming pattern regex requires exact match or specific conditions
         # The patterns are: ^\s*read more\s*$, etc.
@@ -37,31 +42,39 @@ class TestTextCleaner(unittest.TestCase):
         # The regexes in text_cleaner seem to check chunks or full text.
         # Let's verify behavior. If patterns check chunks, "Read More" should be dropped.
         if "Read More" not in clean_html(html_boiler):
-             pass # Good
-        
+            pass  # Good
+
         # Malformed HTML
         html_bad = "<div><p>Unclosed"
         self.assertEqual(clean_html(html_bad), "Unclosed")
-        
+
         # Empty/None
         self.assertEqual(clean_html(None), "")
         self.assertEqual(clean_html(""), "")
 
     def test_detect_language_simple(self):
         # English
-        self.assertEqual(detect_language_simple("The quick brown fox jumps over the lazy dog"), "en")
+        self.assertEqual(
+            detect_language_simple("The quick brown fox jumps over the lazy dog"), "en"
+        )
         self.assertEqual(detect_language_simple("This is a simple test."), "en")
-        
+
         # Spanish
-        self.assertEqual(detect_language_simple("El rápido zorro marrón salta sobre el perro perezoso"), "es")
+        self.assertEqual(
+            detect_language_simple(
+                "El rápido zorro marrón salta sobre el perro perezoso"
+            ),
+            "es",
+        )
         self.assertEqual(detect_language_simple("Esto es una prueba simple."), "es")
-        
+
         # Ambiguous/Default
         self.assertEqual(detect_language_simple(""), "en")
         self.assertEqual(detect_language_simple(None), "en")
-        
+
         # Accents preference
         self.assertEqual(detect_language_simple("canción"), "es")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

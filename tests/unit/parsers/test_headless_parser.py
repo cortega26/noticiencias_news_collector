@@ -1,11 +1,11 @@
 import sys
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
+import pytest
+
 # Mock playwright using patch.dict in the test or setup, not globally here
 # We will do it inside the tests or setUp
 
-
-import pytest
 
 # from news_collector.collectors.headless_collector import HeadlessCollector
 # Import moved to tests
@@ -15,8 +15,12 @@ import pytest
 def headless_collector():
     # We need to mock the module BEFORE importing the class
     mock_playwright = MagicMock()
-    with patch.dict(sys.modules, {"playwright": mock_playwright, "playwright.async_api": mock_playwright}):
+    with patch.dict(
+        sys.modules,
+        {"playwright": mock_playwright, "playwright.async_api": mock_playwright},
+    ):
         from news_collector.collectors.headless_collector import HeadlessCollector
+
         collector = HeadlessCollector()
         collector.health_tracker = MagicMock()
         yield collector

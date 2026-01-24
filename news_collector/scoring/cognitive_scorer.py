@@ -75,6 +75,7 @@ class CognitiveScorer(BasicScorer):
         try:
             CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
             from contextlib import closing
+
             with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
                 with conn:
                     conn.execute("""
@@ -119,6 +120,7 @@ class CognitiveScorer(BasicScorer):
     def _get_from_cache(self, key: str) -> Optional[Dict[str, Any]]:
         try:
             from contextlib import closing
+
             with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
                 # Default read is not transactional but good practice to be consistent
                 cursor = conn.execute(
@@ -139,6 +141,7 @@ class CognitiveScorer(BasicScorer):
     def _save_to_cache(self, key: str, result: Dict[str, Any]):
         try:
             from contextlib import closing
+
             with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
                 with conn:
                     conn.execute(

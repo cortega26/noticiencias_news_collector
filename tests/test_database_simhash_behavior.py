@@ -1,5 +1,4 @@
 import sys
-import types
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,7 +10,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
-
 
 
 from news_collector.config import ENRICHMENT_CONFIG
