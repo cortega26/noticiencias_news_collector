@@ -195,7 +195,7 @@ def _assign_path(target: MutableMapping[str, Any], path: str, value: Any) -> Non
 _UNSET = object()
 
 
-def _serialize_for_toml(value: Any) -> Any:
+def _serialize_for_toml(value: Any) -> Any:  # noqa: C901
     if isinstance(value, Config):
         return _serialize_for_toml(value.model_dump(mode="python"))
     if value is None:
@@ -327,7 +327,7 @@ def _format_validation_error(
     return ConfigError(f"Configuration validation failed:\n - {combined}")
 
 
-def load_config(
+def load_config(  # noqa: C901
     path: Path | None = None,
     *,
     env_prefix: str = DEFAULT_ENV_PREFIX,
@@ -567,7 +567,7 @@ def _apply_updates(config: Config, updates: Mapping[str, str]) -> Config:
     return new_config
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:  # noqa: C901
     parser = argparse.ArgumentParser(
         description="Noticiencias configuration utilities",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

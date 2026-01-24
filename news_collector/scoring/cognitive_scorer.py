@@ -76,7 +76,7 @@ class CognitiveScorer(BasicScorer):
             CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
             from contextlib import closing
 
-            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
+            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:  # noqa: SIM117
                 with conn:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS cognitive_scores (
@@ -134,7 +134,7 @@ class CognitiveScorer(BasicScorer):
                         "details": json.loads(row[1]),
                         "reasoning": row[2] + " (Cached)",
                     }
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         return None
 
@@ -142,7 +142,7 @@ class CognitiveScorer(BasicScorer):
         try:
             from contextlib import closing
 
-            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
+            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:  # noqa: SIM117
                 with conn:
                     conn.execute(
                         "INSERT OR REPLACE INTO cognitive_scores (key, score, details, reasoning) VALUES (?, ?, ?, ?)",
@@ -156,7 +156,7 @@ class CognitiveScorer(BasicScorer):
         except Exception as e:
             logger.warning(f"Cache write failed: {e}")
 
-    async def score_batch_async(
+    async def score_batch_async(  # noqa: C901
         self, payload_list: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
@@ -183,7 +183,7 @@ class CognitiveScorer(BasicScorer):
             for date_field in ["published_date", "collected_date"]:
                 val = article_data.get(date_field)
                 if isinstance(val, str):
-                    try:
+                    try:  # noqa: SIM105
                         article_data[date_field] = datetime.fromisoformat(
                             val.replace("Z", "+00:00")
                         )

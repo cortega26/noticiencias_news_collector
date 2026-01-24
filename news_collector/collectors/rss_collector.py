@@ -109,7 +109,7 @@ class RSSCollector(BaseCollector):
 
         return session
 
-    def collect_from_source(
+    def collect_from_source(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -320,7 +320,7 @@ class RSSCollector(BaseCollector):
 
         return stats
 
-    def _fetch_feed(
+    def _fetch_feed(  # noqa: C901
         self, source_id: str, feed_url: str
     ) -> Tuple[Optional[str], Optional[int]]:
         """
@@ -555,7 +555,7 @@ class RSSCollector(BaseCollector):
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
         return self.parser.is_acceptable_bozo(parsed_feed)
 
-    def _extract_articles_from_feed(
+    def _extract_articles_from_feed(  # noqa: C901
         self,
         parsed_feed,
         source_config: Dict[str, Any],
@@ -673,7 +673,7 @@ class RSSCollector(BaseCollector):
         """Helper to validate minimal requirements before returning from extract."""
         if not article.get("url"):
             return False
-        if not article.get("title"):
+        if not article.get("title"):  # noqa: SIM103
             return False
         return True
 

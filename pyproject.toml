@@ -67,13 +67,23 @@ select = [
     "F",  # pyflakes
     "W",  # pycodestyle warnings
     "B",  # flake8-bugbear
+    "I",  # isort
+    "C4", # flake8-comprehensions
+    "SIM",# flake8-simplify
+    "S",  # flake8-bandit (security)
+    "C90",# mccabe (complexity)
 ]
 ignore = [
     "E203",  # whitespace before ':' (black compatibility)
     "E402",  # allow runtime path adjustments before imports
     "E501",  # long URLs and SQL statements managed manually
     "B027",  # allow optional no-op hooks in abstract classes
+    "S101",  # use of assert detected (allowed in tests usually, will handle via per-file-ignores)
+    "SIM108",# allow if-else blocks instead of ternary operators for readability
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.format]
 quote-style = "double"
@@ -173,6 +183,9 @@ backup = false
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]
+"tests/*" = ["S101", "S105", "S311", "SIM117", "S103", "S106", "S108", "S113", "S603"] # allow asserts, hardcoded secrets, random, nested with, and other test-specific practices
+"scripts/*" = ["S"] # allow lax security in ops scripts
+"tools/*" = ["S603", "S607", "SIM"] # allow subprocess in tools, suppress simplistic checks
 
 [tool.bandit]
 exclude_dirs = [

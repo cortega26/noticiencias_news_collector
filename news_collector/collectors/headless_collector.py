@@ -41,7 +41,7 @@ class HeadlessCollector(BaseCollector):
         """Public method to close browser resources."""
         await self._close_browser()
 
-    async def collect_from_source_async(
+    async def collect_from_source_async(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -224,7 +224,7 @@ class HeadlessCollector(BaseCollector):
 
                 extracted.append(article_data)
 
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
         return extracted

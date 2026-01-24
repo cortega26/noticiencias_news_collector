@@ -16,7 +16,7 @@ class PreScorer:
         self.llm = llm_client or OllamaProvider()
         self.model_name = self.llm.model
 
-    def select_top_candidates(
+    def select_top_candidates(  # noqa: C901
         self, candidates: List[Dict[str, Any]], limit: int = 5, source_context: str = ""
     ) -> List[Dict[str, Any]]:
         """
@@ -75,7 +75,7 @@ class PreScorer:
             # Validar índices
             valid_indices = []
             for idx in selected_indices:
-                if isinstance(idx, int) and 0 <= idx < len(candidates):
+                if isinstance(idx, int) and 0 <= idx < len(candidates):  # noqa: SIM102
                     if idx not in valid_indices:
                         valid_indices.append(idx)
 

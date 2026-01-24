@@ -2,9 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from tenacity import RetryError
-
 from news_collector.infrastructure.http_client import SmartHttpClient
+from tenacity import RetryError
 
 
 @pytest.mark.asyncio

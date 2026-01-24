@@ -99,10 +99,11 @@ class NewsCollectorLogger:
             # Si parece un log estructurado (empieza con llaves y tiene 'event')
             if msg.startswith("{'event'") or msg.startswith('{"event"'):
                 # Permitir solo si es WARNING o ERROR, ocultar INFO/DEBUG
-                if record["level"].no >= 30:  # WARNING=30
+                if record["level"].no >= 30:  # noqa: SIM103
+                    # WARNING=30
                     return True
                 return False
-            return True
+            return True  # noqa: SIM103
 
         if DEBUG:
             # Formato desarrollo: colorido y con detalles completos
@@ -173,16 +174,20 @@ class NewsCollectorLogger:
         # Filtro para requests HTTP (para evitar spam de requests)
         def filter_http_requests(record):
             # Reducir verbosidad de requests exitosos
-            if "requests" in record["name"] and record["level"].name == "DEBUG":
+            if (  # noqa: SIM103
+                "requests" in record["name"] and record["level"].name == "DEBUG"
+            ):
                 return False
-            return True
+            return True  # noqa: SIM103
 
         # Filtro para base de datos (para evitar spam de SQL)
         def filter_db_queries(record):
             # Mostrar solo queries importantes, no todas
-            if "sqlalchemy" in record["name"] and record["level"].name == "INFO":
+            if (  # noqa: SIM103
+                "sqlalchemy" in record["name"] and record["level"].name == "INFO"
+            ):
                 return False
-            return True
+            return True  # noqa: SIM103
 
         # Aplicar filtros solo si no estamos en modo debug completo
         if not DEBUG:

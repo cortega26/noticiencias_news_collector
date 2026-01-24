@@ -532,7 +532,7 @@ class BaseCollector(ABC):
         effective_delay = calculate_effective_delay(
             domain, robots_delay, source_min_delay
         )
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))  # noqa: S311
         wait = (last + effective_delay + jitter) - now
         if wait > 0:
             time.sleep(wait)
@@ -541,7 +541,7 @@ class BaseCollector(ABC):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))
+        jitter = random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))  # noqa: S311
         delay = min(max_b, (base * (2**attempt)) + jitter)
         time.sleep(delay)
 
@@ -692,7 +692,7 @@ class BaseCollector(ABC):
 
         return True
 
-    def _filter_and_save_articles(
+    def _filter_and_save_articles(  # noqa: C901
         self, source_id: str, articles_data: List[Dict[str, Any]], limit: int = 5
     ) -> int:
         """

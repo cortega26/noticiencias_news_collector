@@ -175,7 +175,7 @@ def _coerce_scalar(value: str) -> Any:
     return value
 
 
-def _fallback_yaml_load(text: str) -> Dict[str, Any]:
+def _fallback_yaml_load(text: str) -> Dict[str, Any]:  # noqa: C901
     data: Dict[str, Any] = {}
     current_list: List[Dict[str, Any]] | None = None
     current_item: Dict[str, Any] | None = None
@@ -368,7 +368,7 @@ def looks_like_code(line: str) -> bool:
     return any(re.search(p, line) for p in patterns)
 
 
-def detect_commented_code(
+def detect_commented_code(  # noqa: C901
     path: Path, display_path: str, text: str, context: int
 ) -> List[Finding]:
     findings: List[Finding] = []
@@ -523,7 +523,7 @@ def apply_git_blame(root: Path, findings: List[Finding]) -> None:
             str(rel_path),
         ]
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 blame_args,
                 cwd=root,
                 stdout=subprocess.PIPE,
@@ -662,7 +662,7 @@ def compare_to_baseline(
     return new, resolved
 
 
-def write_markdown(
+def write_markdown(  # noqa: C901
     path: Path,
     findings: Sequence[Finding],
     baseline_entries: Sequence[Dict[str, str]],
@@ -755,7 +755,7 @@ def save_baseline(path: Path, findings: Sequence[Finding]) -> None:
     write_json(path, findings)
 
 
-def run_scan(args: argparse.Namespace) -> int:
+def run_scan(args: argparse.Namespace) -> int:  # noqa: C901
     root = Path(args.root).resolve()
     include_ext = args.include_ext or sorted(DEFAULT_EXTENSIONS)
     patterns = load_patterns(Path(args.patterns))

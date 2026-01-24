@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from news_collector.enrichment.pipeline import EnrichmentPipeline
 
 DATA_PATH = Path(__file__).resolve().parent / "data" / "golden_articles.json"

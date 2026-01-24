@@ -2,7 +2,6 @@ import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from news_collector.collectors.html_collector import HtmlCollector
 
 

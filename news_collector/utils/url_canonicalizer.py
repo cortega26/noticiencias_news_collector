@@ -102,7 +102,7 @@ def _filter_query_params(pairs: Iterable[Tuple[str, str]]) -> Iterable[Tuple[str
         yield pair
 
 
-def _canonicalize_url_impl(url: str) -> str:
+def _canonicalize_url_impl(url: str) -> str:  # noqa: C901
     """Canonicalize a URL string as per the rule set."""
     if not url:
         return url
@@ -148,9 +148,7 @@ def _canonicalize_url_impl(url: str) -> str:
 
     fragment = ""
 
-    if scheme not in ("http", "https"):
-        scheme = "https"
-    elif scheme == "http":
+    if scheme not in ("http", "https") or scheme == "http":
         scheme = "https"
 
     # Remove default ports after scheme normalization

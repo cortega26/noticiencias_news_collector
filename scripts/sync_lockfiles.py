@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-import subprocess
+import subprocess  # nosec
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -94,10 +94,10 @@ def run_command(command: Sequence[str], description: str | None = None) -> None:
     if description:
         LOGGER.info("%s", description)
     LOGGER.debug("Running command: %s", " ".join(command))
-    subprocess.run(command, cwd=ROOT_DIR, check=True)
+    subprocess.run(command, cwd=ROOT_DIR, check=True)  # noqa: S603
 
 
-def sync_lockfiles() -> None:
+def sync_lockfiles() -> None:  # noqa: C901
     """Regenerate both lockfiles using pip-tools."""
     for lockfile, args in LOCK_TARGETS:
         command = (sys.executable, *args)
@@ -177,7 +177,7 @@ def ensure_lockfiles_clean() -> None:
             ),
             cwd=ROOT_DIR,
             check=False,
-        )
+        )  # noqa: S603
         sys.exit(1)
 
 

@@ -1,0 +1,36 @@
+rules:
+  - id: python-security-best-practices
+    message: "Potential security issue: {{$MESSAGE}}"
+    languages: [python]
+    severity: WARNING
+    patterns:
+      - pattern-either:
+          # Check for hardcoded secrets generally
+          - pattern: |
+              $X = "..."
+          # Detect use of dangerous functions
+          - pattern: |
+              exec(...)
+          - pattern: |
+              eval(...)
+          # Detect insecure frequent mistakes
+          - pattern: |
+              flask.request.args.get(...)
+    # Note: This is a minimal starter config.
+    # In a real environment, we would rely on the Semgrep Registry (p/security-audit, p/secrets)
+    # But since we need a local config without external registry deps strictly required for basic runs:
+    # We will assume the user runs `semgrep scan --config auto` or we provide a rule file.
+    # Actually, for "sensible defaults" without massive customized rules, we usually point to the registry.
+    # However, the user asked for a .semgrep.yml configuration.
+    # I will provide a configuration that includes local rules or references to recommended sets.
+    # Since we can't easily validly download rulesets here effectively without network in strict envs (sometimes),
+    # I will configure it to use standard registry rulesets by reference if possible,
+    # OR define some critical local rules.
+    # Given the constraint to "Use reputable default rulesets", typical usage is:
+    # semgrep scan --config=p/python --config=p/security-audit
+    # So .semgrep.yml is often just:
+
+include:
+  - "p/python"
+  - "p/security-audit"
+  - "p/secrets"

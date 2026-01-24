@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 import pytest
-
 from news_collector.storage import database as database_module
 
 

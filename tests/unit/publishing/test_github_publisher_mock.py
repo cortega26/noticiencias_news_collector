@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from news_collector.components.publishing.github_publisher import GitHubPublisher
 
 
@@ -106,8 +105,7 @@ def test_safe_repo_url(publisher):
 
 
 def test_askpass_generation(publisher):
-    with patch("pathlib.Path.write_text") as mock_write:
-        with patch("os.chmod"):
-            script_path = publisher._ensure_askpass_script()
-            assert script_path is not None
-            mock_write.assert_called_once()
+    with patch("pathlib.Path.write_text") as mock_write, patch("os.chmod"):
+        script_path = publisher._ensure_askpass_script()
+        assert script_path is not None
+        mock_write.assert_called_once()

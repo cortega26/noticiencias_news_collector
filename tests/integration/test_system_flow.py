@@ -2,7 +2,6 @@ import asyncio
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
-
 from news_collector.system import NewsCollectorSystem
 
 

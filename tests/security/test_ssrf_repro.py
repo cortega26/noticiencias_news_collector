@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
-
 from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 
 # Tests regarding SSRF protection (P0 Vulnerability) - httpx version

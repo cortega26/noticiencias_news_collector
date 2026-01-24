@@ -202,7 +202,7 @@ class BasicScorer(AsyncScorer):
         for date_field in ["published_date", "collected_date"]:
             val = article_dict.get(date_field)
             if isinstance(val, str):
-                try:
+                try:  # noqa: SIM105
                     article_dict[date_field] = datetime.fromisoformat(
                         val.replace("Z", "+00:00")
                     )

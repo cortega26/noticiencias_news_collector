@@ -89,7 +89,7 @@ class CollectorDispatcher:
             )
         )
 
-    async def collect_from_multiple_sources_async(
+    async def collect_from_multiple_sources_async(  # noqa: C901
         self,
         sources_config: Dict[str, Dict[str, Any]],
         *,

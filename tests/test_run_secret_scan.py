@@ -6,7 +6,6 @@ import argparse
 from pathlib import Path
 
 import pytest
-
 from scripts import run_secret_scan
 
 

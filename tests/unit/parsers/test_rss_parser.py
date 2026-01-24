@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-
 from news_collector.collectors.rss_collector import RSSCollector
 
 # Assuming we will extract RssParser logic or test it via RSSCollector internals for now

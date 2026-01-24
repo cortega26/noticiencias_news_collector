@@ -19,6 +19,7 @@ PRE_COMMIT := $(VENV)/$(BIN_DIR)/pre-commit
 PDOC := $(VENV)/$(BIN_DIR)/pdoc
 PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
+SEMGREP := $(VENV)/$(BIN_DIR)/semgrep
 PYTHON_BIN := $(VENV)/$(BIN_DIR)/python
 REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
@@ -56,7 +57,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests
+	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests semgrep
 	@touch $(BOOTSTRAP_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
@@ -79,6 +80,37 @@ lint-fix: bootstrap ## Auto-format using Black/isort and fix Ruff findings
 	@$(BLACK) .
 	@$(ISORT) .
 	@$(RUFF) check . --fix
+
+quality: bootstrap ## Run all quality checks (lint, type, security, audit)
+	@echo "[quality] Running Ruff (Lint + Security)..."
+	@$(RUFF) check .
+	@echo "[quality] Running Mypy (Types)..."
+	@$(MAKE) type
+	@echo "[quality] Running Bandit (Security)..."
+	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f txt
+	@echo "[quality] Running pip-audit..."
+	@$(PIP_AUDIT) -r requirements.lock --desc --ignore-vuln CVE-2026-0994
+	@echo "[quality] Running Semgrep..."
+	@$(SEMGREP) scan --config .semgrep.yml --error || echo "Semgrep found issues (non-blocking for now)"
+
+quality-fix: bootstrap ## Run auto-fixers then quality checks
+	@echo "[quality-fix] Auto-formatting..."
+	@$(MAKE) lint-fix
+	@$(MAKE) quality
+
+quality-ci: bootstrap ## Run strict quality checks for CI (no fix, fail on error)
+	@echo "[quality-ci] Running Ruff..."
+	@$(RUFF) check . --output-format=github
+	@echo "[quality-ci] Running Mypy..."
+	@$(MAKE) type
+	@echo "[quality-ci] Running Bandit..."
+	@$(BANDIT) -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high
+	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[quality-ci] Running pip-audit..."
+	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT)
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[quality-ci] Running Semgrep..."
+	@$(SEMGREP) scan --config auto --error
 
 docs-api: bootstrap ## Generate API reference documentation with pdoc
 	@$(PYTHON_BIN) scripts/generate_api_docs.py

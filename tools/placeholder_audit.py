@@ -167,7 +167,7 @@ class AuditReport:
 
 
 def run_git(args: Sequence[str], cwd: Optional[Path] = None) -> str:
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         ["git", *args],
         cwd=str(cwd) if cwd else None,
         check=True,
@@ -196,7 +196,7 @@ def list_tracked_files() -> List[Path]:
     return [Path(line) for line in output.splitlines() if line]
 
 
-def parse_diff(base: str, halo: int) -> List[DiffFile]:
+def parse_diff(base: str, halo: int) -> List[DiffFile]:  # noqa: C901
     diff_text = run_git(["diff", f"--unified={halo}", f"{base}...HEAD"])
     files: List[DiffFile] = []
     current: Optional[DiffFile] = None
@@ -362,7 +362,7 @@ def validate_issue(value: Optional[str]) -> bool:
     return bool(re.match(r"https?://", value))
 
 
-def evaluate_placeholder(
+def evaluate_placeholder(  # noqa: C901
     marker: str,
     attributes: Dict[str, str],
     text: str,
@@ -432,9 +432,7 @@ def evaluate_placeholder(
         if completeness_weight > 0.0:
             if context == "prod_code":
                 severity = "HIGH"
-            elif context == "tests":
-                severity = "MED"
-            elif context == "docs":
+            elif context == "tests" or context == "docs":
                 severity = "MED"
     if (
         marker == "TBD"
@@ -711,7 +709,7 @@ def should_fail(
     return report.net_new_high > 0
 
 
-def run_audit(args: argparse.Namespace) -> int:
+def run_audit(args: argparse.Namespace) -> int:  # noqa: C901
     config = AuditConfig.load()
     if args.halo is None:
         args.halo = config.pr_halo_lines

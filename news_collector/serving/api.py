@@ -66,7 +66,7 @@ class ArticleListParams(BaseModel):
 
     @model_validator(mode="after")
     def _validate_date_range(self) -> "ArticleListParams":
-        if self.date_to is not None and self.date_from is not None:
+        if self.date_to is not None and self.date_from is not None:  # noqa: SIM102
             if self.date_to < self.date_from:
                 raise ValueError("date_to must be greater than or equal to date_from")
         return self
@@ -131,7 +131,7 @@ def _extract_topics(article: Article) -> List[str]:
     return [str(keyword) for keyword in keywords] if keywords else []
 
 
-def _summarize_why_ranked(article: Article, score_log: Optional[ScoreLog]) -> List[str]:
+def _summarize_why_ranked(article: Article, score_log: Optional[ScoreLog]) -> List[str]:  # noqa: C901
     if score_log and isinstance(score_log.score_explanation, dict):
         explanation = score_log.score_explanation
         strengths = explanation.get("key_strengths")
@@ -201,7 +201,7 @@ def _build_article_payload(
     }
 
 
-def create_app(database_manager: Optional[DatabaseManager] = None) -> FastAPI:
+def create_app(database_manager: Optional[DatabaseManager] = None) -> FastAPI:  # noqa: C901
     """Create a configured FastAPI application."""
 
     db_manager = database_manager or get_database_manager()

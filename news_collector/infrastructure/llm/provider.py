@@ -12,6 +12,7 @@ from typing import Any, Dict, Generator, Optional, Union, cast
 
 import httpx
 import requests
+from news_collector.utils.logger import get_logger
 from tenacity import (
     before_sleep_log,
     retry,
@@ -19,8 +20,6 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-
-from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
 

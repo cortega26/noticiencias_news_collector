@@ -1,5 +1,4 @@
 import pytest
-
 from news_collector.collectors import RSSCollector
 
 

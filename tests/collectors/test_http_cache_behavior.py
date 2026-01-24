@@ -4,7 +4,6 @@ from types import MethodType
 from typing import Type
 
 import pytest
-
 from news_collector.collectors.async_rss_collector import AsyncRSSCollector
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore

@@ -1,9 +1,8 @@
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
-
 from news_collector.contracts.collector import CollectorArticleModel
+from pydantic import ValidationError
 
 
 def test_contract_validates_short_content(mock_article_payload: dict[str, Any]):
