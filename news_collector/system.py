@@ -714,11 +714,10 @@ class NewsCollectorSystem:
         if dry_run:
             original_save = self.db_manager.save_article
 
-            class DummyArticle:
-                id = 999999
+            from news_collector.contracts.mock_article import MockArticle
 
             def mock_save(*args, **kwargs):
-                return DummyArticle()
+                return MockArticle()
 
             self.db_manager.save_article = mock_save
 
