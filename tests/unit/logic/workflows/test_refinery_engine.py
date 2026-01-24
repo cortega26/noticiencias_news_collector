@@ -1,14 +1,11 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-# Mock git module BEFORE importing modules that depend on it
-sys.modules["git"] = MagicMock()
+# Import moved to test/setup to allow patching
+# from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
 
 import unittest
-
-# Now safe to import
-from news_collector.logic.workflows.refinery_engine import RefineryEngine
-
 
 class TestRefineryEngine(unittest.TestCase):
     def setUp(self):
@@ -18,9 +15,18 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_config = MagicMock()
         self.mock_config.target_repo_url = "http://github.com/target"
 
+        # Safe patching context
+        self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
+        self.git_patch.start()
+        
+        # Import inside patch context
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
         self.engine = RefineryEngine(
             self.mock_db, self.mock_git, self.mock_editor, self.mock_config
         )
+
+    def tearDown(self):
+        self.git_patch.stop()
 
     def test_extract_slug(self):
         content = "---\nslug: my-slug\n---"

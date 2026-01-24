@@ -461,20 +461,32 @@ class DatabaseManager:
 
     def is_article_published(self, article_id: int) -> bool:
         """
-        Checks if an article has already been processed/published.
+        Checks if an article has already been published (PR created).
         """
         with self.get_session() as session:
             # We check for ID existence and status
-            # We also treat 'completed' or having a published_url as published
             stmt = session.query(Article).filter(Article.id == article_id)
             article = stmt.first()
             if not article:
                 return False
 
-            return (
-                article.processing_status == "completed"
-                or article.published_url is not None
-            )
+            return article.published_url is not None or article.published_at is not None
+
+    def is_processed(self, identifier: str | int) -> bool:
+        """
+        Backwards-compatible helper used by Refinery for file-based workflows.
+        Returns True only if the identifier maps to a numeric article ID that
+        has already been published.
+        """
+        ident_str = str(identifier).strip()
+        if ident_str.isdigit():
+            return self.is_article_published(int(ident_str))
+
+        stem = ident_str.rsplit(".", 1)[0]
+        if stem.isdigit():
+            return self.is_article_published(int(stem))
+
+        return False
 
     # OPERACIONES CON ARTÍCULOS
     # =====================================

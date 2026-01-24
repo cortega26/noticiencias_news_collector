@@ -74,19 +74,21 @@ class CognitiveScorer(BasicScorer):
     def _init_cache(self):
         try:
             CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(CACHE_DB_PATH) as conn:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS cognitive_scores (
-                        key TEXT PRIMARY KEY,
-                        score REAL,
-                        details TEXT,
-                        reasoning TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            from contextlib import closing
+            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
+                with conn:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS cognitive_scores (
+                            key TEXT PRIMARY KEY,
+                            score REAL,
+                            details TEXT,
+                            reasoning TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    conn.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_created_at ON cognitive_scores(created_at)"
                     )
-                """)
-                conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_created_at ON cognitive_scores(created_at)"
-                )
         except Exception as e:
             logger.error(f"Failed to init cognitive cache: {e}")
 
@@ -116,7 +118,9 @@ class CognitiveScorer(BasicScorer):
 
     def _get_from_cache(self, key: str) -> Optional[Dict[str, Any]]:
         try:
-            with sqlite3.connect(CACHE_DB_PATH) as conn:
+            from contextlib import closing
+            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
+                # Default read is not transactional but good practice to be consistent
                 cursor = conn.execute(
                     "SELECT score, details, reasoning FROM cognitive_scores WHERE key=?",
                     (key,),
@@ -134,16 +138,18 @@ class CognitiveScorer(BasicScorer):
 
     def _save_to_cache(self, key: str, result: Dict[str, Any]):
         try:
-            with sqlite3.connect(CACHE_DB_PATH) as conn:
-                conn.execute(
-                    "INSERT OR REPLACE INTO cognitive_scores (key, score, details, reasoning) VALUES (?, ?, ?, ?)",
-                    (
-                        key,
-                        result["score"],
-                        json.dumps(result["details"]),
-                        result.get("reasoning", ""),
-                    ),
-                )
+            from contextlib import closing
+            with closing(sqlite3.connect(CACHE_DB_PATH)) as conn:
+                with conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO cognitive_scores (key, score, details, reasoning) VALUES (?, ?, ?, ?)",
+                        (
+                            key,
+                            result["score"],
+                            json.dumps(result["details"]),
+                            result.get("reasoning", ""),
+                        ),
+                    )
         except Exception as e:
             logger.warning(f"Cache write failed: {e}")
 

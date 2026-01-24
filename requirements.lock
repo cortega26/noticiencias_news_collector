@@ -327,7 +327,9 @@ greenlet==3.3.0 \
     --hash=sha256:dcd2bdbd444ff340e8d6bdf54d2f206ccddbb3ccfdcd3c25bf4afaa7b8f0cf45 \
     --hash=sha256:e29f3018580e8412d6aaf5641bb7745d38c85228dacf51a73bd4e26ddf2a6a8e \
     --hash=sha256:e8e18ed6995e9e2c0b4ed264d2cf89260ab3ac7e13555b8032b25a74c6d18655
-    # via sqlalchemy
+    # via
+    #   playwright
+    #   sqlalchemy
 h11==0.16.0 \
     --hash=sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1 \
     --hash=sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86
@@ -859,6 +861,16 @@ pillow==12.1.0 \
     --hash=sha256:f61333d817698bdcdd0f9d7793e365ac3d2a21c1f1eb02b32ad6aefb8d8ea831 \
     --hash=sha256:fb125d860738a09d363a88daa0f59c4533529a90e564785e20fe875b200b6dbd
     # via streamlit
+playwright==1.57.0 \
+    --hash=sha256:1dd93b265688da46e91ecb0606d36f777f8eadcf7fbef12f6426b20bf0c9137c \
+    --hash=sha256:284ed5a706b7c389a06caa431b2f0ba9ac4130113c3a779767dda758c2497bb1 \
+    --hash=sha256:38a1bae6c0a07839cdeaddbc0756b3b2b85e476c07945f64ece08f1f956a86f1 \
+    --hash=sha256:5f065f5a133dbc15e6e7c71e7bc04f258195755b1c32a432b792e28338c8335e \
+    --hash=sha256:6caefb08ed2c6f29d33b8088d05d09376946e49a73be19271c8cd5384b82b14c \
+    --hash=sha256:9351c1ac3dfd9b3820fe7fc4340d96c0d3736bb68097b9b7a69bd45d25e9370c \
+    --hash=sha256:99104771abc4eafee48f47dac2369e0015516dc1ce8c409807d2dd440828b9a4 \
+    --hash=sha256:a4a9d65027bce48eeba842408bcc1421502dfd7e41e28d207e94260fa93ca67e
+    # via -r requirements.txt
 pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
     --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
@@ -1060,6 +1072,10 @@ pydeck==0.9.1 \
     --hash=sha256:b3f75ba0d273fc917094fa61224f3f6076ca8752b93d46faf3bcfd9f9d59b038 \
     --hash=sha256:f74475ae637951d63f2ee58326757f8d4f9cd9f2a457cf42950715003e2cb605
     # via streamlit
+pyee==13.0.0 \
+    --hash=sha256:48195a3cddb3b1515ce0695ed76036b5ccc2ef3a9f963ff9f77aec0139845498 \
+    --hash=sha256:b391e3c5a434d1f5118a25615001dbc8f669cf410ab67d04c4d4e07c55481c37
+    # via playwright
 pygments==2.19.2 \
     --hash=sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887 \
     --hash=sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b
@@ -1680,6 +1696,7 @@ typing-extensions==4.15.0 \
     #   fastapi
     #   pydantic
     #   pydantic-core
+    #   pyee
     #   sqlalchemy
     #   streamlit
     #   typing-inspection

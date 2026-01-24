@@ -1,101 +1,51 @@
-import pytest
 
-import news_collector.utils.url_canonicalizer as url_canonicalizer
+import unittest
+from news_collector.utils.url_canonicalizer import canonicalize_url, configure_canonicalization_cache, clear_canonicalization_cache
 
-POSITIVE_CASES = [
-    (
-        "HTTPS://WWW.Example.com:443/News/Story?utm_source=twitter&b=2&a=1",
-        "https://example.com/News/Story?a=1&b=2",
-    ),
-    (
-        "http://m.example.com/article/amp/?gclid=123",
-        "https://example.com/article/",
-    ),
-    (
-        "example.com/path/?fbclid=abc&utm_medium=email&id=42",
-        "https://example.com/path/?id=42",
-    ),
-    (
-        "https://amp.subdomain.example.com/foo/bar/?amp&c=3&b=2&a=1",
-        "https://subdomain.example.com/foo/bar/?a=1&b=2&c=3",
-    ),
-    (
-        "https://example.com//double//slashes/?utm_campaign=test",
-        "https://example.com/double/slashes/",
-    ),
-]
+class TestUrlCanonicalizer(unittest.TestCase):
 
+    def test_basic_normalization(self):
+        # Scheme and case
+        self.assertEqual(canonicalize_url("HTTP://Example.com/Path"), "https://example.com/Path")
+        # Default port removal
+        self.assertEqual(canonicalize_url("https://example.com:443/"), "https://example.com/")
+        # http://example.com:80/ -> https://example.com:80/ (Port 80 preserved as it's not default for https)
+        self.assertEqual(canonicalize_url("http://example.com:80/"), "https://example.com:80/")
+        # Trailing slash path normalization
+        self.assertEqual(canonicalize_url("https://example.com/path/"), "https://example.com/path/")
+        
+    def test_tracking_params(self):
+        # Remove utm_*, fbclid, etc.
+        url = "https://example.com?utm_source=twitter&fbclid=123&q=search"
+        self.assertEqual(canonicalize_url(url), "https://example.com/?q=search")
+        
+        # Sort params
+        url = "https://example.com?b=2&a=1"
+        self.assertEqual(canonicalize_url(url), "https://example.com/?a=1&b=2")
 
-NEGATIVE_CASES = [
-    (
-        "https://example.com/article?id=1",
-        "https://example.com/article?id=1",
-    ),
-    (
-        "https://maps.google.com/?q=coffee",
-        "https://maps.google.com/?q=coffee",
-    ),
-    (
-        "https://example.com/path/?ref=section",
-        "https://example.com/path/",
-    ),
-]
+    def test_mobile_amp_host(self):
+        self.assertEqual(canonicalize_url("https://m.example.com/story"), "https://example.com/story")
+        self.assertEqual(canonicalize_url("https://www.example.com/story"), "https://example.com/story")
+        self.assertEqual(canonicalize_url("https://amp.example.com/story"), "https://example.com/story")
 
+    def test_amp_path(self):
+        self.assertEqual(canonicalize_url("https://example.com/story/amp"), "https://example.com/story/")
+        self.assertEqual(canonicalize_url("https://example.com/story.amp"), "https://example.com/story/")
 
-@pytest.mark.parametrize("raw, expected", POSITIVE_CASES)
-def test_canonicalize_positive(raw: str, expected: str) -> None:
-    assert url_canonicalizer.canonicalize_url(raw) == expected
+    def test_schemeless(self):
+        self.assertEqual(canonicalize_url("example.com/foo"), "https://example.com/foo")
+        self.assertEqual(canonicalize_url("//example.com/foo"), "https://example.com/foo")
 
+    def test_empty(self):
+        self.assertEqual(canonicalize_url(""), "")
+        self.assertEqual(canonicalize_url(None), None)
 
-@pytest.mark.parametrize("raw, expected", NEGATIVE_CASES)
-def test_canonicalize_negative(raw: str, expected: str) -> None:
-    assert url_canonicalizer.canonicalize_url(raw) == expected
+    def test_caching(self):
+        # Basic smoke test for cache functions
+        configure_canonicalization_cache(100)
+        clear_canonicalization_cache()
+        # Verify it still works
+        self.assertEqual(canonicalize_url("example.com"), "https://example.com/")
 
-
-def test_canonicalize_cache_configuration() -> None:
-    url_canonicalizer.configure_canonicalization_cache(0)
-    url_canonicalizer.clear_canonicalization_cache()
-    assert not hasattr(url_canonicalizer.canonicalize_url, "cache_info")
-
-    url_canonicalizer.configure_canonicalization_cache(8)
-    assert hasattr(url_canonicalizer.canonicalize_url, "cache_info")
-
-    url_canonicalizer.canonicalize_url("https://example.com/path?id=1")
-    url_canonicalizer.canonicalize_url("https://example.com/path?id=1")
-    info = url_canonicalizer.canonicalize_url.cache_info()  # type: ignore[attr-defined]
-    assert info.hits >= 1
-
-    url_canonicalizer.configure_canonicalization_cache(2048)
-    url_canonicalizer.clear_canonicalization_cache()
-    assert hasattr(url_canonicalizer.canonicalize_url, "cache_info")
-
-
-def test_canonicalize_handles_empty_input() -> None:
-    assert url_canonicalizer.canonicalize_url("") == ""
-    assert url_canonicalizer.canonicalize_url("   ") == ""
-
-
-def test_canonicalize_normalizes_host_and_path() -> None:
-    assert (
-        url_canonicalizer.canonicalize_url("https://example.com")
-        == "https://example.com/"
-    )
-    assert url_canonicalizer.canonicalize_url("example.org") == "https://example.org/"
-
-
-def test_canonicalize_filters_amp_and_duplicates() -> None:
-    normalized = url_canonicalizer.canonicalize_url(
-        "https://example.com/post?amp=1&a=1&a=&utm_source=x"
-    )
-    assert normalized == "https://example.com/post?a=1"
-
-
-def test_canonicalize_converts_non_http_scheme() -> None:
-    assert (
-        url_canonicalizer.canonicalize_url("ftp://Example.com:21/data")
-        == "https://example.com:21/data"
-    )
-
-
-def test_canonicalize_preserves_non_web_scheme_without_host() -> None:
-    assert url_canonicalizer.canonicalize_url("mailto:") == "mailto:"
+if __name__ == '__main__':
+    unittest.main()

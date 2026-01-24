@@ -4,6 +4,7 @@ bleach>=6.0.0
 fastapi>=0.128.0
 feedparser>=6.0.0
 httpx>=0.25.0
+playwright>=1.40.0
 hypothesis>=6.0.0
 loguru>=0.7.0
 lxml>=4.9.0

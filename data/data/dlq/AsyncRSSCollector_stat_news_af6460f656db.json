@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014546Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "stat_news",
+  "url": "https://www.statnews.com/2026/01/23/biotech-news-insurers-blame-drugmakers-hospitals-for-prices/?utm_campaign=rss",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

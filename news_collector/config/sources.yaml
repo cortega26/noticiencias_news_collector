@@ -1,6 +1,6 @@
 nature:
   name: Nature
-  url: https://www.nature.com/nature.rss
+  url: https://www.nature.com/latest-news
   credibility_score: 1.0
   update_frequency: weekly
   category: multidisciplinary
@@ -8,15 +8,17 @@ nature:
   impact_factor: 49.962
   description: La revista científica más prestigiosa del mundo
   typical_delay: 0
-  headers:
-    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
-    User-Agent: Mozilla/5.0 (compatible; NoticienciasBot/1.0; +http://noticiencias.com)
+  collector_type: headless
+  selectors:
+    item: article, .c-card, .app-article-list-row__item
+    link: a
+    title: h2, h3, .c-card__title
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
 science:
   name: Science
-  url: https://science.sciencemag.org/rss/current.xml
+  url: https://www.science.org/news
   credibility_score: 1.0
   update_frequency: weekly
   category: multidisciplinary
@@ -24,12 +26,20 @@ science:
   impact_factor: 47.728
   description: Revista insignia de la AAAS, rival histórico de Nature
   typical_delay: 0
+  collector_type: headless
+  selectors:
+    item: article, div.card
+    link: a
+    title: h2, h3, h4
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
 cell:
   name: Cell
-  url: https://www.cell.com/cell/current.rss
+  url: https://www.cell.com/cell/current
   credibility_score: 0.98
   update_frequency: biweekly
   category: biology
@@ -37,12 +47,18 @@ cell:
   impact_factor: 38.637
   description: La revista más importante en biología celular y molecular
   typical_delay: 1
+  collector_type: headless
+  selectors:
+    item: .toc__item
+    link: a
+    title: .toc__item__title
+    summary: .toc__item__body
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
 nejm:
   name: New England Journal of Medicine
-  url: https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss
+  url: https://www.nejm.org/toc/nejm/current
   credibility_score: 0.99
   update_frequency: weekly
   category: medicine
@@ -50,6 +66,12 @@ nejm:
   impact_factor: 91.245
   description: La biblia de la medicina clínica
   typical_delay: 0
+  collector_type: headless
+  selectors:
+    item: .toc__item
+    link: a
+    title: .toc__item__title
+    summary: .toc__item__body
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -94,7 +116,7 @@ ars_technica:
   _group: SCIENCE_MEDIA
 phys_org:
   name: Phys.org
-  url: https://phys.org/rss-feed/
+  url: https://phys.org/
   credibility_score: 0.75
   update_frequency: multiple_daily
   category: multidisciplinary
@@ -103,14 +125,17 @@ phys_org:
   description: Agregador de noticias científicas de universidades
   typical_delay: 0
   min_delay_seconds: 60
-  headers:
-    User-Agent: NoticienciasBot/1.0 (Research Project; contact@noticiencias.com)
+  collector_type: headless
+  selectors:
+    item: article
+    link: a
+    title: h2, h3
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
 scitechdaily:
   name: SciTechDaily
-  url: https://scitechdaily.com/feed/
+  url: https://scitechdaily.com/
   credibility_score: 0.88
   update_frequency: daily
   category: multidisciplinary
@@ -118,6 +143,11 @@ scitechdaily:
   impact_factor: null
   description: Science and technology news and analysis
   typical_delay: 0
+  collector_type: headless
+  selectors:
+    item: article
+    link: a
+    title: h2, h3
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -175,7 +205,7 @@ the_verge:
   _group: SCIENCE_MEDIA
 mit_tech_review:
   name: MIT Technology Review
-  url: https://www.technologyreview.com/feed
+  url: https://www.technologyreview.com/latest/
   credibility_score: 0.9
   update_frequency: daily
   category: technology
@@ -183,12 +213,17 @@ mit_tech_review:
   impact_factor: null
   description: In-depth technology journalism
   typical_delay: 1
+  collector_type: headless
+  selectors:
+    item: article
+    link: a
+    title: h2, h3
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
 stat_news:
   name: STAT News
-  url: https://www.statnews.com/feed/
+  url: https://www.statnews.com/latest/
   credibility_score: 0.92
   update_frequency: daily
   category: medicine
@@ -196,6 +231,11 @@ stat_news:
   impact_factor: null
   description: Reporting from the frontiers of health and medicine
   typical_delay: 1
+  collector_type: headless
+  selectors:
+    item: article
+    link: a
+    title: h2, h3
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -345,12 +385,14 @@ deepmind_blog:
   update_frequency: weekly
   category: artificial_intelligence
   language: en
-  collector_type: html
-  html_selectors:
-    container: .card
+  collection_type: headless
+  # selectors: ... (managed by HeadlessCollector internal logic or generic)
+  collector_type: headless
+  selectors:
+    item: main .card, article
     link: a
-    title: .card__title
-    article_selector: article
+    title: h2, h3, .card__title
+    content: main, article, .rich-text
   etag: null
   last_modified: null
   _group: AI_LABS

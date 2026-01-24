@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T020152Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "nasa_news",
+  "url": "https://www.nasa.gov/image-article/red-green-light-show/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

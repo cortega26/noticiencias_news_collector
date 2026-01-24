@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014553Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "scitechdaily",
+  "url": "https://scitechdaily.com/one-mysterious-molecule-revealed-a-hidden-world-inside-cancer/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

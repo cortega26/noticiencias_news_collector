@@ -60,6 +60,9 @@ class HeadlessCollector(BaseCollector):
             if not url:
                 raise ValueError(f"Source {source_id} missing 'url' config")
 
+            # Record attempt
+            self.health_tracker.record_attempt(source_id)
+
             await self._ensure_browser()
 
             # Create a context with a realistic user agent
@@ -79,7 +82,7 @@ class HeadlessCollector(BaseCollector):
                 # Wait for article selector if present
                 item_selector = selectors.get("item", "article")
                 try:
-                    await page.wait_for_selector(item_selector, timeout=5000)
+                    await page.wait_for_selector(item_selector, timeout=10000)
                 except Exception:
                     self._emit_log(
                         "warning",

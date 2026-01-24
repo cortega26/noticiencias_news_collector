@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014546Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "stat_news",
+  "url": "https://www.statnews.com/2026/01/23/kennedy-autism-advisors-new-panel-members-selection-lacks-transparency/?utm_campaign=rss",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

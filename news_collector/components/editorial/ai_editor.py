@@ -1,5 +1,6 @@
 import re
 import time
+import json
 from pathlib import Path
 
 from news_collector.infrastructure.llm.provider import OllamaProvider
@@ -278,7 +279,7 @@ class EditorAgent:
             f"date: {time.strftime('%Y-%m-%d')}",
             'author: "Noticiencias AI"',
             f'categories: ["{final_category}"]',
-            f'tags: ["{raw_category}"]',
+            f'tags: {json.dumps([t for t in [raw_category] if t.lower() != "other"])}',
         ]
 
         if image_url:

@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T015605Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "reddit_science",
+  "url": "https://www.reddit.com/r/science/comments/1ql7i1k/childhood_adversity_linked_to_accelerated/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

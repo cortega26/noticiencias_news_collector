@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014546Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "science",
+  "url": "https://www.science.org/content/article/how-trump-s-moves-could-dramatically-reshape-scientific-workforce",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

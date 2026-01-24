@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014546Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "science",
+  "url": "https://www.science.org/doi/10.1126/science.adw3020",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}
