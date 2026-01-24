@@ -36,8 +36,8 @@ def test_collector_article_model_timezones():
         source_name="Source Name",
         category="tech",
         published_date=naive,
-        content="Long content " * 100,  # > 1000 chars
-        summary="Summary of enough length used to pass the validation check which enforces fifty chars.",
+        content="Long content " * 200,  # > 1000 chars
+        summary="Summary " * 200,
         word_count=100,
         reading_time_minutes=1,
         # Explicitly provide required fields or ensure defaults work
@@ -66,3 +66,125 @@ def test_content_length_validation():
             reading_time_minutes=1,
         )
     assert "Article too short" in str(exc.value)
+
+def test_published_date_type_error():
+    """Ensure invalid date types raise TypeError."""
+    with pytest.raises(TypeError, match="published_date must be a datetime instance"):
+        CollectorArticleModel(
+            title="Valid Title length > 10",
+            url="https://example.com/bad-date",
+            source_id="src",
+            source_name="Source",
+            category="gen",
+            published_date="not-a-datetime",  # Invalid type
+            summary="Valid length " * 200,
+            word_count=50,
+            reading_time_minutes=1
+        )
+
+def test_authors_normalization():
+    """Ensure authors list is normalized and generic names filtered."""
+    # Test None input
+    model_none = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/none-author",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=50, reading_time_minutes=1,
+        authors=None  # Should convert to empty list
+    )
+    assert model_none.authors == []
+
+    # Test generic names filtering
+    model_filtered = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/filtered",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=50, reading_time_minutes=1,
+        authors=["Admin", "Real Author", "Staff"]
+    )
+    assert model_filtered.authors == ["Real Author"]
+
+    # Test invalid type
+    with pytest.raises(TypeError, match="must be a list of strings"):
+        CollectorArticleModel(
+            title="Valid Title length > 10",
+            url="https://example.com/bad-author-type",
+            source_id="src", source_name="Src", category="cat",
+            published_date=datetime.now(timezone.utc),
+            summary="Valid " * 200,
+            word_count=50, reading_time_minutes=1,
+            authors="Not a list"
+        )
+
+def test_language_validation():
+    """Ensure language code validation."""
+    # Test None -> default 'en'
+    model_none = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/lang-none",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=50, reading_time_minutes=1,
+        language=None
+    )
+    assert model_none.language == "en"
+
+    # Test invalid code
+    with pytest.raises(ValidationError) as exc:
+        CollectorArticleModel(
+            title="Valid Title length > 10",
+            url="https://example.com/bad-lang",
+            source_id="src", source_name="Src", category="cat",
+            published_date=datetime.now(timezone.utc),
+            summary="Valid " * 200,
+            word_count=50, reading_time_minutes=1,
+            language="invalid_code_123"  # Definitely Unsupported
+        )
+    assert "language must be one of" in str(exc.value)
+
+def test_word_count_low_pass():
+    """Ensure extremely low word count is accepted (pass)."""
+    model = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/low-word",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=5,  # < 10, should pass logic check, but content validation needs length
+        reading_time_minutes=1
+    )
+    assert model.word_count == 5
+
+def test_dump_original_url():
+    """Ensure model_dump_for_storage handles original_url logic."""
+    model = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/dump",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=100, reading_time_minutes=1,
+        article_metadata={"original_url": "https://example.com/original"}
+    )
+    dump = model.model_dump_for_storage()
+    assert dump["url"] == "https://example.com/dump"
+    assert dump["original_url"] == "https://example.com/original"
+
+    # Test when original_url is missing in metadata but present in model
+    model2 = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/dump2",
+        source_id="src", source_name="Src", category="cat",
+        published_date=datetime.now(timezone.utc),
+        summary="Valid " * 200,
+        word_count=100, reading_time_minutes=1
+    )
+    # Validator sets original_url = url if missing
+    dump2 = model2.model_dump_for_storage()
+    assert dump2["original_url"] == "https://example.com/dump2"
+

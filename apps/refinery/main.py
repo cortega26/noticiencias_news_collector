@@ -17,7 +17,7 @@ if str(project_root) not in sys.path:
 import asyncio
 
 from noticiencias.config_manager import load_config
-from src.utils.logger import setup_logger
+from news_collector.utils.logger import get_logger
 
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
@@ -27,7 +27,7 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
 
-logger = setup_logger("Orchestrator")
+logger = get_logger().create_module_logger("Orchestrator")
 
 PROCESSED_LOG_FILE = "processed_log.json"
 TEMP_DIR = Path("temp")

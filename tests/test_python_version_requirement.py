@@ -24,7 +24,7 @@ def test_python_version_single_source_of_truth() -> None:
 
     readme_text = Path("README.md").read_text(encoding="utf-8")
     assert f"python-{MIN_PYTHON_VERSION_STR}+-blue.svg" in readme_text
-    assert f"Python {MIN_PYTHON_VERSION_STR} o superior" in readme_text
+    assert f"Python {MIN_PYTHON_VERSION_STR}+" in readme_text
 
     setup_text = Path("setup.py").read_text(encoding="utf-8")
     assert "PYTHON_REQUIRES_SPECIFIER" in setup_text

@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T145814Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "scitechdaily",
+  "url": "https://scitechdaily.com/scientists-solve-a-66-million-year-old-climate-mystery-that-changed-earth-forever/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

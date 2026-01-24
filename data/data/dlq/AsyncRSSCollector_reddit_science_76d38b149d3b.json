@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T145809Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "reddit_science",
+  "url": "https://www.reddit.com/r/science/comments/1qlmo85/diagnoses_of_major_conditions_failing_to_recover/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

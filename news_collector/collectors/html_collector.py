@@ -282,6 +282,7 @@ class HtmlCollector(BaseCollector):
             "source_metadata": {"type": "html"},
             "word_count": word_count,
             "reading_time_minutes": max(1, word_count // 200),
+            "validation_flags": {"allow_short": True if word_count > 100 else False},
             "authors": [],
             "tags": [],
         }

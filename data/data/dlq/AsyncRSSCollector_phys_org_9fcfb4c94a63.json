@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T145809Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "phys_org",
+  "url": "https://phys.org/news/2026-01-central-pacific-el-nios-die.html",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

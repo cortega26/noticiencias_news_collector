@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014546Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "phys_org",
+  "url": "https://phys.org/news/2026-01-qa-future-ecosystem-marine-life.html",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

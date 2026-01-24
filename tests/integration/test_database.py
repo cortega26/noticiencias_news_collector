@@ -190,3 +190,92 @@ def test_cleanup_methods(test_db_manager):
         {**data, "url": "http://new.com", "published_date": datetime.now(timezone.utc)}
     )
     assert test_db_manager.clear_all_articles() >= 1
+
+# Merged from tests/test_database_publication.py
+
+def test_mark_article_published_excludes_from_scores(test_db_manager) -> None:
+    # 1. Create Article
+    url = "https://example.com/article"
+    article_data = {
+        "title": "Demo Article For Publication",
+        "url": url,
+        "source_id": "test",
+        "source_name": "Test Source",
+        "category": "general",
+        "published_date": datetime.now(timezone.utc),
+        "summary": "Summary content.",
+        "content": "Content " * 200,
+        "word_count": 100,
+        "reading_time_minutes": 1,
+        "article_metadata": {},
+    }
+    saved = test_db_manager.save_article(article_data)
+    
+    # Enable it for scoring/retrieval
+    test_db_manager.update_article_score(
+        saved.id,
+        {
+            "final_score": 0.9,
+            "should_include": True,
+            "components": {
+                "source_credibility": 0.9,
+                "recency": 0.9,
+                "content_quality": 0.9,
+                "engagement_potential": 0.9,
+            },
+            "weights": {
+                "source_credibility": 0.25,
+                "recency": 0.25,
+                "content_quality": 0.25,
+                "engagement": 0.25,
+            },
+        }
+    )
+
+    # Verify it appears in candidate list
+    candidates = test_db_manager.get_articles_by_score(exclude_published=True)
+    assert any(a.id == saved.id for a in candidates)
+
+    # 2. Mark Published
+    updated = test_db_manager.mark_article_published(
+        saved.id,
+        pr_url="https://noticiencias.com/demo",
+    )
+    assert updated is True
+
+    # 3. Verify Exclusion
+    candidates_after = test_db_manager.get_articles_by_score(exclude_published=True)
+    assert not any(a.id == saved.id for a in candidates_after)
+
+
+def test_mark_article_published_uses_original_url(test_db_manager) -> None:
+    # 1. Create Article with different original_url
+    url = "https://example.com/canonical"
+    original_url = "https://example.com/original"
+    article_data = {
+        "title": "Canonical Article",
+        "url": url,
+        "source_id": "test",
+        "source_name": "Test Source",
+        "category": "general",
+        "published_date": datetime.now(timezone.utc),
+        "summary": "Summary content.",
+        "content": "Content " * 200,
+        "word_count": 100,
+        "reading_time_minutes": 1,
+        "article_metadata": {"original_url": original_url},
+    }
+    saved = test_db_manager.save_article(article_data)
+
+    # 2. Mark Published
+    updated = test_db_manager.mark_article_published(
+        saved.id, pr_url="https://github.com/org/repo/pull/1"
+    )
+
+    assert updated is True
+    
+    from news_collector.storage.models import Article
+    with test_db_manager.get_session() as session:
+        art = session.query(Article).filter_by(id=saved.id).first()
+        assert art.published_url == "https://github.com/org/repo/pull/1"
+        assert art.processing_status == "completed"  # Updated to match implementation

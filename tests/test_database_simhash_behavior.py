@@ -12,10 +12,7 @@ if str(ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-if "src" not in sys.modules:
-    stub = types.ModuleType("src")
-    stub.__path__ = [str(SRC_DIR)]
-    sys.modules["src"] = stub
+
 
 from news_collector.config import ENRICHMENT_CONFIG
 from news_collector.contracts import CollectorArticleModel

@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T145809Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "cell",
+  "url": "https://www.cell.com/cell/fulltext/S0092-8674(25)01496-5?rss=yes",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}

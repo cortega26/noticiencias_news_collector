@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260124T014553Z",
+  "collector": "AsyncRSSCollector",
+  "source_id": "scitechdaily",
+  "url": "https://scitechdaily.com/a-sun-like-star-went-dark-for-9-months-astronomers-just-found-out-why/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}
