@@ -108,3 +108,33 @@ class ScoringRequestModel(BaseModel):
         """Return a serializable scoring payload."""
 
         return self.model_dump()
+
+
+class ArticleScoringData(TypedDict):
+    """Raw article data required for scoring."""
+
+    id: int
+    title: str
+    summary: str | None
+    url: str
+    published_date: datetime | str | None
+    collected_date: datetime | str | None
+    source_id: str
+    article_metadata: Dict[str, Any]
+    peer_reviewed: bool | None
+    is_preprint: bool | None
+    doi: str | None
+    journal: str | None
+    content: str | None
+    duplication_confidence: float
+    word_count: int
+
+
+class ScoringInputModel(BaseModel):
+    """Validated input payload for the scorer."""
+
+    article: ArticleScoringData
+    source_config: Dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="ignore")
+

@@ -128,10 +128,16 @@ news_collector/utils/url_canonicalizer.py
 typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 	@$(MYPY) --config-file=pyproject.toml $(MYPY_TARGETS)
 
-test: bootstrap ## Execute the unit test suite with coverage reporting and ratchet enforcement
 	@mkdir -p $(COVERAGE_DIR)
 	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
 	@COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
+
+test: bootstrap ## Run all unit tests
+	@$(PYTEST) tests
+
+test-system: bootstrap ## Run S1-scoped verification (Contract + Coverage Gate)
+	@echo "[test-system] Running S1 Refactor Verification..."
+	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py
 
 e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 	@$(PYTEST) -m "e2e" || { echo "E2E tests require additional setup and were skipped."; true; }

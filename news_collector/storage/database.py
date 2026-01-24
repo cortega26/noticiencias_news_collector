@@ -622,6 +622,8 @@ class DatabaseManager:
                     language=payload.get("language", "en"),
                     processing_status=PENDING_STATUS,
                     article_metadata=article_metadata,
+                    word_count=payload.get("word_count"),
+                    reading_time_minutes=payload.get("reading_time_minutes"),
                     cluster_id=cluster_id,
                     duplication_confidence=confidence,
                 )
