@@ -379,7 +379,7 @@ class RSSCollector(BaseCollector):
 
                     response = self.session.get(
                         feed_url,
-                        timeout=COLLECTION_CONFIG["request_timeout"],
+                        timeout=COLLECTION_CONFIG.get("request_timeout", 30),
                         headers=conditional_headers or None,
                     )
                     if response.status_code in (429, 500, 502, 503, 504):

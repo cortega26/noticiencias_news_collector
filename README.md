@@ -115,8 +115,11 @@ docker-compose up --build
 
 ## Docs
 
-- Architecture and runbook: `docs/ARCHITECTURE.md`, `docs/ops/RUNBOOK.md`
-- Configuration schema: `docs/config_fields.md`
+- **Architecture**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **Agents Protocol**: [`docs/AGENTS.md`](docs/AGENTS.md)
+- **Source of Truth**: [`docs/SOURCE_OF_TRUTH.md`](docs/SOURCE_OF_TRUTH.md)
+- **Operations Runbook**: [`docs/ops/RUNBOOK.md`](docs/ops/RUNBOOK.md)
+- **Configuration Schema**: [`docs/config_fields.md`](docs/config_fields.md)
 
 ## Development & Quality
 
@@ -124,7 +127,7 @@ We maintain high code quality standards using a unified suite of tools.
 
 - **Check Quality**: `make quality` (Runs Ruff, Mypy, Bandit, pip-audit, and Semgrep)
 - **Auto-Fix**: `make quality-fix` (Automatically fixes format and simple lint errors)
-- **Standards Guide**: See [`QUALITY.md`](QUALITY.md) for details on the tools and how to handle failures.
+- **Standards Guide**: See [`QUALITY.md`](docs/dev/QUALITY.md) for details on the tools and how to handle failures.
 
 ## Security
 

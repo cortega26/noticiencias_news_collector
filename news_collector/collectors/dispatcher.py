@@ -22,9 +22,7 @@ class CollectorDispatcher:
         # Initialize collectors dynamically or lazily?
         # For now, initialize known ones.
         # We check async_enabled to decide between RSSCollector and AsyncRSSCollector
-        rss_type = (
-            "async_rss" if COLLECTION_CONFIG.get("async_enabled", False) else "rss"
-        )
+        rss_type = "rss"
 
         try:
             self.collectors["rss"] = create_collector(rss_type)

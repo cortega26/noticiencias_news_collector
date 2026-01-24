@@ -94,7 +94,7 @@ class HtmlCollector(BaseCollector):
             async with httpx.AsyncClient(
                 follow_redirects=True,
                 headers=self.headers,
-                timeout=COLLECTION_CONFIG["request_timeout"],
+                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
             ) as client:
                 response = await client.get(url)
                 if response.status_code >= 400:
