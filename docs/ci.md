@@ -4,15 +4,16 @@ The CI system is designed to keep the feedback loop under 15 minutes while enfor
 
 ## Required status checks
 
-| Name | Type | Default | Required | Description |
-| --- | --- | --- | --- | --- |
-| `test` | GitHub Actions job | PR & push | ✅ | Runs the unit suite under `pytest` with coverage reporting enabled. |
-| `coverage` | GitHub Actions job | PR & push | ✅ | Downloads coverage artifacts and enforces the ratchet via `scripts/coverage_ratcheter.sh`. |
-| `bandit` | GitHub Actions job | PR & push | ✅ | Executes Bandit with high-severity rules and blocks regressions through `scripts/security_gate.py`. |
-| `gitleaks` | GitHub Actions job | PR & push | ✅ | Scans the repository for committed secrets using the repo’s `.gitleaks.toml`. |
-| `pip-audit` | GitHub Actions job | PR & push | ✅ | Audits both runtime and security lock files for known vulnerabilities. |
-| `docs/linkcheck` | GitHub Actions job | PR & push (docs scope) | ✅ | Validates README and `docs/` hyperlinks with `linkchecker`. |
-| `healthcheck` | GitHub Actions job | PR & push | ✅ | Launches the collector health check (`run_collector.py --healthcheck`). |
+| Name                           | Type               | Default                  | Required | Description                                                                                         |
+| ------------------------------ | ------------------ | ------------------------ | -------- | --------------------------------------------------------------------------------------------------- |
+| `test`                         | GitHub Actions job | PR & push                | ✅       | Runs the unit suite under `pytest` with coverage reporting enabled.                                 |
+| `coverage`                     | GitHub Actions job | PR & push                | ✅       | Downloads coverage artifacts and enforces the ratchet via `scripts/coverage_ratcheter.sh`.          |
+| `bandit`                       | GitHub Actions job | PR & push                | ✅       | Executes Bandit with high-severity rules and blocks regressions through `scripts/security_gate.py`. |
+| `gitleaks`                     | GitHub Actions job | PR & push                | ✅       | Scans the repository for committed secrets using the repo’s `.gitleaks.toml`.                       |
+| `pip-audit`                    | GitHub Actions job | PR & push                | ✅       | Audits both runtime and security lock files for known vulnerabilities.                              |
+| `docs/linkcheck`               | GitHub Actions job | PR & push (docs scope)   | ✅       | Validates README and `docs/` hyperlinks with `linkchecker`.                                         |
+| `healthcheck`                  | GitHub Actions job | PR & push                | ✅       | Launches the collector health check (`run_collector.py --healthcheck`).                             |
+| `system-contract-and-coverage` | GitHub Actions job | PR & push (system scope) | ✅       | Enforces S1/S1-C strict contract and coverage requirements via `make test-system`.                  |
 
 > These checks should be marked as “Required” in the branch protection rules for `main`.
 

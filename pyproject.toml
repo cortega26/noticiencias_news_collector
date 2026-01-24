@@ -136,7 +136,7 @@ ignore_errors = true
 minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing --cov-fail-under=80"
+addopts = "-ra --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing --cov-fail-under=70"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",

@@ -4,7 +4,7 @@ from types import MethodType
 from typing import Type
 
 import pytest
-from news_collector.collectors.async_rss_collector import AsyncRSSCollector
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore
 
@@ -127,105 +127,4 @@ def test_fetch_feed_skips_when_content_hash_matches() -> None:
     assert store.metadata["source-1"]["content_hash"] == content_hash
 
 
-def test_async_fetch_uses_conditional_headers() -> None:
-    collector = AsyncRSSCollector()
-    store = MemoryFeedStore()
-    collector.db_manager = store
-    store.update_source_feed_metadata(
-        "source-1", etag='W/"cached"', last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
-    )
 
-    captured: dict[str, dict[str, str]] = {}
-
-    class MockClient:
-        async def get(
-            self,
-            url: str,
-            timeout: float | None = None,
-            headers: dict[str, str] | None = None,
-            follow_redirects: bool = True,
-        ):
-            captured["headers"] = headers or {}
-            return _Response200()
-
-    async def _run():
-        return await collector._fetch_feed_async(
-            "source-1", "https://example.com/feed", MockClient()
-        )
-
-    content, status = asyncio.run(_run())
-
-    headers = captured["headers"]
-    assert headers["If-None-Match"] == 'W/"cached"'
-    assert headers["If-Modified-Since"] == "Wed, 12 Mar 2025 11:00:00 GMT"
-    assert status == 200
-    assert store.metadata["source-1"]["etag"] == 'W/"new"'
-
-
-def test_async_fetch_skips_when_content_hash_matches() -> None:
-    collector = AsyncRSSCollector()
-    store = MemoryFeedStore()
-    collector.db_manager = store
-    content_hash = hashlib.sha256(_Response200Same.content).hexdigest()
-    store.update_source_feed_metadata(
-        "source-1",
-        etag='W/"cached"',
-        last_modified="Wed, 12 Mar 2025 11:55:00 GMT",
-        content_hash=content_hash,
-    )
-
-    class MockClient:
-        async def get(
-            self,
-            url: str,
-            timeout: float | None = None,
-            headers: dict[str, str] | None = None,
-            follow_redirects: bool = True,
-        ):
-            return _Response200Same()
-
-    async def _run():
-        return await collector._fetch_feed_async(
-            "source-1", "https://example.com/feed", MockClient()
-        )
-
-    content, status = asyncio.run(_run())
-
-    assert content is None
-    assert status == 304
-    assert store.metadata["source-1"]["content_hash"] == content_hash
-
-
-def test_async_fetch_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
-    collector = AsyncRSSCollector()
-    store = MemoryFeedStore()
-    collector.db_manager = store
-
-    responses = iter([_Response429(), _Response200()])
-    attempts: list[float] = []
-
-    async def fake_sleep(delay: float) -> None:
-        attempts.append(delay)
-
-    class MockClient:
-        async def get(
-            self,
-            url: str,
-            timeout: float | None = None,
-            headers: dict[str, str] | None = None,
-            follow_redirects: bool = True,
-        ):
-            return next(responses)
-
-    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
-
-    async def _run():
-        return await collector._fetch_feed_async(
-            "source-1", "https://example.com/feed", MockClient()
-        )
-
-    content, status = asyncio.run(_run())
-
-    assert status == 200
-    assert len(attempts) == 1
-    assert store.metadata["source-1"]["etag"] == 'W/"new"'

@@ -1,0 +1,13 @@
+[run]
+branch = True
+source = 
+    news_collector/system
+    news_collector/system/observability.py
+omit = 
+    */__init__.py
+    news_collector/system/__init__.py
+
+[report]
+show_missing = True
+fail_under = 80
+precision = 2

@@ -1,4 +1,5 @@
 <!-- markdownlint-disable -->
+
 # Contributing to Noticiencias News Collector
 
 Thanks for helping us keep the Noticiencias stack healthy! This document captures the conventions reviewers expect you to follow from the first commit to the final PR.
@@ -40,7 +41,11 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
    ```
    Puedes usar `make lint type test` para ejecutar los tres pasos en secuencia.
    > Nota: `make type` actualmente cubre los módulos que ya cuentan con tipado estricto (`scripts/generate_api_docs.py`, `src/utils/logger.py`, `src/utils/url_canonicalizer.py`) mientras avanzamos en la migración del resto del código.
-3. Keep CI green by updating fixtures or type stubs when a dependency bump changes behaviour.
+3. For system refactors (S1/S1-C modules), verify strict contracts and coverage:
+   ```bash
+   make test-system
+   ```
+4. Keep CI green by updating fixtures or type stubs when a dependency bump changes behaviour.
 
 ### Structured placeholders
 
@@ -55,7 +60,7 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 ## Commit conventions
 
 - Prefer the imperative mood in commit subject lines (`Add reranker decay flag`, not `Added` or `Adds`).
-- Reference tickets or incidents in the body when relevant and explain *why* the change exists.
+- Reference tickets or incidents in the body when relevant and explain _why_ the change exists.
 - Squash noisy WIP commits before opening a PR; reviewers expect focused diffs with matching tests.
 
 ## Updating golden scoring data
@@ -68,6 +73,7 @@ When you intentionally change the scoring logic, refresh the regression fixtures
    ```
    The command reports precision@K against the stored baseline along with coverage of previously surfaced articles.
 2. If the differences are expected, regenerate the golden file using a frozen timestamp (keeps tests deterministic):
+
    ```bash
    python - <<'PY'
    from datetime import datetime, timezone
@@ -104,6 +110,7 @@ When you intentionally change the scoring logic, refresh the regression fixtures
    data_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
    PY
    ```
+
 3. Commit the regenerated fixture together with the code change so CI and reviewers see the expected impact.
 
 ## Refreshing other fixtures

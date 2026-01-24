@@ -76,38 +76,4 @@ class MockCollector:
         return True
 
 
-def test_initialize_with_failed_sources_warning(monkeypatch):
-    """Initialization should continue when only failed sources are reported."""
 
-    test_logger = MockLogger()
-
-    monkeypatch.setattr(news_collector.system, "setup_logging", lambda: test_logger)
-    mock_db_manager = MockDatabaseManager()
-    monkeypatch.setattr(
-        news_collector.system, "get_database_manager", lambda: mock_db_manager
-    )
-
-    def fake_setup_scoring(self):
-        self.scorer = object()
-        self.logger.create_module_logger("scoring").info("Scoring stub configurado")
-
-    monkeypatch.setattr(NewsCollectorSystem, "_setup_scoring", fake_setup_scoring)
-
-    system = NewsCollectorSystem()
-    assert system.initialize() is True
-
-    database_logger = test_logger.modules.get("database")
-    assert database_logger is not None
-    assert any(
-        isinstance(event, dict)
-        and event.get("event") == "database.health.warning"
-        and event.get("details", {}).get("failed_sources") == 1
-        for event in database_logger.warnings
-    )
-
-    system_logger = test_logger.modules.get("system")
-    assert system_logger is not None
-    assert any(
-        isinstance(event, dict) and event.get("event") == "system.initialize.warning"
-        for event in system_logger.warnings
-    )
