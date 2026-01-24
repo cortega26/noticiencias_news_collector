@@ -64,10 +64,10 @@ bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@echo "Environment ready at $(VENV)"
 
 run-local: bootstrap ## Run the collector locally
-	@$(PYTHON) run_collector.py
+	@$(PYTHON) scripts/run_collector.py
 
 debug: bootstrap ## Run the collector in debug mode (verbose)
-	@$(PYTHON) run_collector.py --verbose
+	@$(PYTHON) scripts/run_collector.py --verbose
 
 lint: bootstrap ## Run code quality hooks via pre-commit
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
