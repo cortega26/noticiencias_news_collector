@@ -3,11 +3,13 @@ Pipeline module for NewsCollectorSystem.
 Encapsulates the execution logic of the collection cycle.
 """
 
-from typing import Any, Dict, List, Optional
 import time
 import uuid
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 from news_collector.system import observability
+
 
 async def run_cycle_orchestration(
     system,
@@ -19,9 +21,7 @@ async def run_cycle_orchestration(
     Ejecuta un ciclo completo de recolección de noticias.
     """
     if not system.is_initialized:
-        raise RuntimeError(
-            "Sistema no inicializado. Ejecutar initialize() primero."
-        )
+        raise RuntimeError("Sistema no inicializado. Ejecutar initialize() primero.")
 
     trace_id = trace_id or str(uuid.uuid4())
 
@@ -42,7 +42,7 @@ async def run_cycle_orchestration(
     try:
         # Access internal methods of system - temporary coupling is allowed for extraction
         sources_to_process = system._get_sources_to_process(sources_filter)
-        
+
         # Trace: Sources Selected
         observability.trace_sources_selected(
             session_logger, trace_id, session_id, len(sources_to_process)
@@ -54,35 +54,28 @@ async def run_cycle_orchestration(
             session_id=session_id,
             trace_id=trace_id,
         )
-        
+
         # Observability: Outcomes (Metrics + Logs)
         observability.record_collection_outcomes(
-            system.logger, 
-            system.metrics, 
-            collection_results, 
-            session_id, 
-            trace_id
+            system.logger, system.metrics, collection_results, session_id, trace_id
         )
 
         validation_results = system._execute_validation(collection_results, dry_run)
-        
+
         # Trace: Validation
         observability.trace_validation_completed(
-            session_logger, 
-            trace_id, 
-            session_id, 
-            validation_results.get("validated_count", 0), 
-            validation_results.get("rejected_count", 0)
+            session_logger,
+            trace_id,
+            session_id,
+            validation_results.get("validated_count", 0),
+            validation_results.get("rejected_count", 0),
         )
 
         scoring_results = await system._execute_scoring(collection_results, dry_run)
-        
+
         # Trace: Scoring
         observability.trace_scoring_completed(
-            session_logger, 
-            trace_id, 
-            session_id, 
-            scoring_results.get("statistics", {})
+            session_logger, trace_id, session_id, scoring_results.get("statistics", {})
         )
 
         final_selection = system._execute_final_selection(
@@ -101,11 +94,11 @@ async def run_cycle_orchestration(
 
         # Trace: Cycle Completed
         observability.trace_cycle_completed(
-            session_logger, 
-            trace_id, 
-            session_id, 
-            time.perf_counter() - cycle_start, 
-            final_report["summary"]
+            session_logger,
+            trace_id,
+            session_id,
+            time.perf_counter() - cycle_start,
+            final_report["summary"],
         )
 
         return final_report
@@ -115,7 +108,7 @@ async def run_cycle_orchestration(
         observability.trace_cycle_error(
             session_logger, trace_id, session_id, latency, str(e)
         )
-        
+
         system.logger.log_error_with_context(
             e,
             {

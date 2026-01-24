@@ -172,13 +172,21 @@ class SchemaDriftDetector:
     def __init__(self, expectation: SchemaExpectation) -> None:
         self._expectation = expectation
 
-    def evaluate(self, samples: Sequence[Mapping[str, object]]) -> Dict[str, List]:  # noqa: C901
+    def evaluate(
+        self, samples: Sequence[Mapping[str, object]]
+    ) -> Dict[str, List]:  # noqa: C901
         if not samples:
             return {"metrics": [], "anomalies": []}
         total = len(samples)
-        missing_counts: MutableMapping[str, int] = dict.fromkeys(self._expectation.required_fields, 0)
-        type_mismatch_counts: MutableMapping[str, int] = dict.fromkeys(self._expectation.required_fields, 0)
-        optional_mismatch: MutableMapping[str, int] = dict.fromkeys(self._expectation.optional_fields, 0)
+        missing_counts: MutableMapping[str, int] = dict.fromkeys(
+            self._expectation.required_fields, 0
+        )
+        type_mismatch_counts: MutableMapping[str, int] = dict.fromkeys(
+            self._expectation.required_fields, 0
+        )
+        optional_mismatch: MutableMapping[str, int] = dict.fromkeys(
+            self._expectation.optional_fields, 0
+        )
         for sample in samples:
             for field_name, field_type in self._expectation.required_fields.items():
                 if field_name not in sample or sample[field_name] is None:
@@ -187,7 +195,9 @@ class SchemaDriftDetector:
                 if not isinstance(sample[field_name], field_type):
                     type_mismatch_counts[field_name] += 1
             for field_name, field_type in self._expectation.optional_fields.items():
-                if field_name in sample and sample[field_name] is not None:  # noqa: SIM102
+                if (
+                    field_name in sample and sample[field_name] is not None
+                ):  # noqa: SIM102
                     if not isinstance(sample[field_name], field_type):
                         optional_mismatch[field_name] += 1
         anomalies: List[Anomaly] = []

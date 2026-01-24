@@ -26,5 +26,3 @@ markers = [
     "e2e: end-to-end scenarios",
 ]
 asyncio_mode = "auto"
-
-

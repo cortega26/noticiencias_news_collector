@@ -38,7 +38,12 @@ def mock_system_components():
         mock_validator = MagicMock()
         mock_build_val.return_value = mock_validator
 
-        yield {"db": mock_db, "collector": mock_collector, "validator": mock_validator, "logger": mock_logger}
+        yield {
+            "db": mock_db,
+            "collector": mock_collector,
+            "validator": mock_validator,
+            "logger": mock_logger,
+        }
 
 
 def test_system_initialization(mock_system_components):
@@ -79,7 +84,6 @@ async def test_run_collection_cycle(mock_system_components):
         ) as mock_scoring,
         patch.object(system, "_execute_final_selection"),
         patch.object(system, "_generate_session_report") as mock_report,
-
     ):
 
         mock_scoring.return_value = {"statistics": {}}
@@ -167,6 +171,3 @@ async def test_system_shutdown(mock_system_components):
 
     await system.shutdown()
     mock_system_components["db"].close.assert_called()
-
-
-

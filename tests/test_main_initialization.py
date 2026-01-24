@@ -8,9 +8,6 @@ import pytest
 
 pytestmark = pytest.mark.e2e
 
-import news_collector.system
-from news_collector.system import NewsCollectorSystem
-
 
 class MockModuleLogger:
     """Simple logger stub that records messages for assertions."""
@@ -74,6 +71,3 @@ class MockCollector:
 
     def is_healthy(self) -> bool:
         return True
-
-
-

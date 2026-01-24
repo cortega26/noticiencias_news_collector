@@ -3,19 +3,16 @@ Observability module for NewsCollectorSystem.
 Centralizes logging, metrics emission, and tracing logic.
 """
 
-from typing import Any, Dict, Optional
-import time
+from typing import Any, Dict
+
 
 def create_session_logger(logger_factory: Any, session_id: str) -> Any:
     """Creates a module-specific logger for the session."""
     return logger_factory.create_module_logger(f"session.{session_id}")
 
+
 def trace_cycle_start(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    dry_run: bool, 
-    sources_filter: Any
+    logger: Any, trace_id: str, session_id: str, dry_run: bool, sources_filter: Any
 ) -> None:
     """Logs collection_cycle.start event."""
     logger.info(
@@ -32,11 +29,9 @@ def trace_cycle_start(
         }
     )
 
+
 def trace_sources_selected(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    count: int
+    logger: Any, trace_id: str, session_id: str, count: int
 ) -> None:
     """Logs collection_cycle.sources.selected event."""
     logger.info(
@@ -50,12 +45,13 @@ def trace_sources_selected(
         }
     )
 
+
 def record_collection_outcomes(
     logger_factory: Any,
     metrics: Any,
     collection_results: Dict[str, Any],
     session_id: str,
-    trace_id: str
+    trace_id: str,
 ) -> None:
     """
     Logs per-source results and emits ingest/error metrics.
@@ -106,12 +102,9 @@ def record_collection_outcomes(
                     session_id=session_id,
                 )
 
+
 def trace_validation_completed(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    validated: int, 
-    rejected: int
+    logger: Any, trace_id: str, session_id: str, validated: int, rejected: int
 ) -> None:
     """Logs collection_cycle.validation.completed event."""
     logger.info(
@@ -128,11 +121,9 @@ def trace_validation_completed(
         }
     )
 
+
 def trace_scoring_completed(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    stats: Dict[str, Any]
+    logger: Any, trace_id: str, session_id: str, stats: Dict[str, Any]
 ) -> None:
     """Logs collection_cycle.scoring.completed event."""
     logger.info(
@@ -146,12 +137,9 @@ def trace_scoring_completed(
         }
     )
 
+
 def trace_cycle_completed(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    latency: float, 
-    summary: Dict[str, Any]
+    logger: Any, trace_id: str, session_id: str, latency: float, summary: Dict[str, Any]
 ) -> None:
     """Logs collection_cycle.completed event."""
     logger.info(
@@ -165,12 +153,9 @@ def trace_cycle_completed(
         }
     )
 
+
 def trace_cycle_error(
-    logger: Any, 
-    trace_id: str, 
-    session_id: str, 
-    latency: float, 
-    error: str
+    logger: Any, trace_id: str, session_id: str, latency: float, error: str
 ) -> None:
     """Logs collection_cycle.error event."""
     logger.error(
@@ -184,17 +169,15 @@ def trace_cycle_error(
         }
     )
 
-def log_user_summary(
-    logger_factory: Any,
-    collection_results: Dict[str, Any]
-) -> None:
+
+def log_user_summary(logger_factory: Any, collection_results: Dict[str, Any]) -> None:
     """Logs the high-level human readable summary (saved articles count)."""
     source_details = collection_results.get("source_details", {})
     total_sources = len(source_details)
     sources_with_data = sum(
         1 for res in source_details.values() if res.get("articles_saved", 0) > 0
     )
-    
+
     # We use create_module_logger directly if we don't have a specific system_logger instance passed,
     # or just assume logger_factory IS the system logger if passed?
     # In pipeline.py it uses system.system_logger.
@@ -203,7 +186,7 @@ def log_user_summary(
     # Let's look at pipeline.py usage: "if system.system_logger: system.system_logger.info(...)"
     # We should probably pass the system_logger directly if available, or simpler:
     # Use logger_factory to create/get "system" logger.
-    
+
     # "system" logger creation: logger.create_module_logger("system")
     system_logger = logger_factory.create_module_logger("system")
     system_logger.info(

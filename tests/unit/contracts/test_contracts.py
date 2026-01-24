@@ -4,16 +4,15 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from pydantic import ValidationError
-
-from news_collector.contracts.export import ExportContractV1, ExportArticleModel
-from news_collector.contracts.scoring import ScoringInputModel
-from news_collector.contracts.validation import ArticleValidationPayload
 from news_collector.contracts.adapters import (
     adapt_article_to_export,
     adapt_to_scoring_input,
-    adapt_to_validation_payload
+    adapt_to_validation_payload,
 )
+from news_collector.contracts.export import ExportArticleModel, ExportContractV1
+from news_collector.contracts.scoring import ScoringInputModel
+from pydantic import ValidationError
+
 
 def test_export_contract_v1_valid():
     """Verify ExportContractV1 structure."""
@@ -22,16 +21,15 @@ def test_export_contract_v1_valid():
         title="Test",
         url="http://example.com",
         source_name="test_source",
-        score=0.9
+        score=0.9,
     )
     contract = ExportContractV1(
-        generated_at=datetime.now().isoformat(),
-        article_count=1,
-        articles=[article]
+        generated_at=datetime.now().isoformat(), article_count=1, articles=[article]
     )
     dump = contract.model_dump()
     assert dump["contract"] == "news_collector.export.v1"
     assert dump["articles"][0]["score"] == 0.9  # Alias checking
+
 
 def test_adapt_article_to_export():
     """Verify ORM adapter for export."""
@@ -58,6 +56,7 @@ def test_adapt_article_to_export():
     assert model.metadata["foo"] == "bar"
     assert model.score == 0.85
 
+
 def test_scoring_input_model_validation():
     """Verify ScoringInputModel requires essential fields."""
     with pytest.raises(ValidationError):
@@ -78,11 +77,12 @@ def test_scoring_input_model_validation():
         "is_preprint": None,
         "doi": None,
         "journal": None,
-        "content": None
+        "content": None,
     }
     # It allows TypedDict construction
     model = ScoringInputModel(article=valid_data)
     assert model.article["title"] == "Test Scorer"
+
 
 def test_adapt_to_scoring_input():
     """Verify adapter produces valid model."""
@@ -108,12 +108,13 @@ def test_adapt_to_scoring_input():
     assert model.article["id"] == 55
     assert model.source_config["credibility"] == 0.5
 
+
 def test_validation_payload_adapter():
     """Verify validation payload adapter."""
     mock_art = MagicMock()
     mock_art.to_dict.return_value = {"id": 1, "title": "Validation"}
     mock_art.content = "Should be here"
-    
+
     payload = adapt_to_validation_payload([mock_art])
     assert len(payload.articles) == 1
     assert payload.articles[0].content == "Should be here"
