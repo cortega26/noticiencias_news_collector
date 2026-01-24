@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-
-from .common import ArticleMetadataModel
 
 
 class ExportArticleModel(BaseModel):
     """
     Normalized article representation for export.
-    
+
     Matches the schema historically produced by system.export_latest_articles.
     """
+
     id: int
     title: str
     url: str
@@ -26,7 +24,9 @@ class ExportArticleModel(BaseModel):
     published_at: str | None = None
     published_url: str | None = None
     collected_date: str | None = None
-    score: float | None = Field(default=None) # Note: system.py maps final_score -> score. We'll handle mapping in adapter.
+    score: float | None = Field(
+        default=None
+    )  # Note: system.py maps final_score -> score. We'll handle mapping in adapter.
     image_url: str | None = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     authors: List[str] | None = None
@@ -39,9 +39,10 @@ class ExportArticleModel(BaseModel):
 class ExportContractV1(BaseModel):
     """
     Version 1 of the data export contract.
-    
+
     Used by: system.export_latest_articles
     """
+
     schema_version: int = 1
     generated_at: str
     contract: Literal["news_collector.export.v1"] = "news_collector.export.v1"

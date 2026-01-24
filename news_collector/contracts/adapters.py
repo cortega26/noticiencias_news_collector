@@ -3,8 +3,11 @@
 from typing import Any, Dict, List
 
 from news_collector.contracts.export import ExportArticleModel
-from news_collector.contracts.scoring import ScoringInputModel, ArticleScoringData
-from news_collector.contracts.validation import ArticleValidationItem, ArticleValidationPayload
+from news_collector.contracts.scoring import ScoringInputModel
+from news_collector.contracts.validation import (
+    ArticleValidationItem,
+    ArticleValidationPayload,
+)
 from news_collector.storage.models import Article
 
 
@@ -17,12 +20,20 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
         summary=article.summary,
         content=article.content,
         source_name=article.source_name,
-        published_date=article.published_date.isoformat() if article.published_date else None,
+        published_date=(
+            article.published_date.isoformat() if article.published_date else None
+        ),
         published_at=article.published_at.isoformat() if article.published_at else None,
         published_url=article.published_url,
-        collected_date=article.collected_date.isoformat() if article.collected_date else None,
+        collected_date=(
+            article.collected_date.isoformat() if article.collected_date else None
+        ),
         score=article.final_score,
-        image_url=article.article_metadata.get("image_url") if article.article_metadata else None,
+        image_url=(
+            article.article_metadata.get("image_url")
+            if article.article_metadata
+            else None
+        ),
         metadata=article.article_metadata or {},
         authors=article.authors or [],
         category=article.category,
@@ -35,7 +46,7 @@ def adapt_article_to_scoring(article: Any) -> Dict[str, Any]:
     Prepatres ORM article for scoring.
     Returns the 'article' dict part of ScoringInputModel.
     """
-    # Note: System uses a dict construction logic. We emulate it here, 
+    # Note: System uses a dict construction logic. We emulate it here,
     # but ensure it matches ArticleScoringData typed dict structure.
     return {
         "id": article.id,
@@ -57,7 +68,10 @@ def adapt_article_to_scoring(article: Any) -> Dict[str, Any]:
         "word_count": getattr(article, "word_count", 0),
     }
 
-def adapt_to_scoring_input(article: Any, source_config: Dict[str, Any] | None) -> ScoringInputModel:
+
+def adapt_to_scoring_input(
+    article: Any, source_config: Dict[str, Any] | None
+) -> ScoringInputModel:
     """Creates a validated scoring payload."""
     data = adapt_article_to_scoring(article)
     return ScoringInputModel(article=data, source_config=source_config)
@@ -72,5 +86,5 @@ def adapt_to_validation_payload(articles: List[Any]) -> ArticleValidationPayload
         # Ensure content is present as per current logic
         base_data["content"] = art.content
         items.append(ArticleValidationItem(**base_data))
-    
+
     return ArticleValidationPayload(articles=items)

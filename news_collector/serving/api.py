@@ -131,7 +131,9 @@ def _extract_topics(article: Article) -> List[str]:
     return [str(keyword) for keyword in keywords] if keywords else []
 
 
-def _summarize_why_ranked(article: Article, score_log: Optional[ScoreLog]) -> List[str]:  # noqa: C901
+def _summarize_why_ranked(
+    article: Article, score_log: Optional[ScoreLog]
+) -> List[str]:  # noqa: C901
     if score_log and isinstance(score_log.score_explanation, dict):
         explanation = score_log.score_explanation
         strengths = explanation.get("key_strengths")
@@ -201,7 +203,9 @@ def _build_article_payload(
     }
 
 
-def create_app(database_manager: Optional[DatabaseManager] = None) -> FastAPI:  # noqa: C901
+def create_app(
+    database_manager: Optional[DatabaseManager] = None,
+) -> FastAPI:  # noqa: C901
     """Create a configured FastAPI application."""
 
     db_manager = database_manager or get_database_manager()

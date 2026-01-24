@@ -1,9 +1,9 @@
 [run]
 branch = True
-source = 
+source =
     news_collector/system
     news_collector/system/observability.py
-omit = 
+omit =
     */__init__.py
     news_collector/system/__init__.py
 

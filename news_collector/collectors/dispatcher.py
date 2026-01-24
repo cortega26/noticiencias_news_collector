@@ -2,7 +2,6 @@ import asyncio
 from typing import Any, Dict, Optional
 
 from news_collector.collectors.base_collector import BaseCollector, create_collector
-from news_collector.config.settings import COLLECTION_CONFIG
 
 
 class CollectorDispatcher:

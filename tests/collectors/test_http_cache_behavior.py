@@ -1,10 +1,8 @@
-import asyncio
 import hashlib
 from types import MethodType
 from typing import Type
 
 import pytest
-
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore
 
@@ -125,6 +123,3 @@ def test_fetch_feed_skips_when_content_hash_matches() -> None:
     assert content is None
     assert status == 304
     assert store.metadata["source-1"]["content_hash"] == content_hash
-
-
-

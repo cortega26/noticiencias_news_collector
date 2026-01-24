@@ -3,20 +3,13 @@ Bootstrap module for NewsCollectorSystem.
 Encapsulates dependency construction and system startup logic.
 """
 
-from typing import Any, Dict, List, Optional
-import uuid
-import time
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 from news_collector import get_database_manager, get_metrics_reporter, setup_logging
-from news_collector.config import (
-    ALL_SOURCES,
-    COLLECTION_CONFIG,
-    SCORING_CONFIG,
-    validate_config,
-    validate_sources,
-)
+from news_collector.config import ALL_SOURCES, validate_config, validate_sources
 from news_collector.validation.validator import ContentValidator
+
 
 def build_logging(system_id: str):
     """Configura el sistema de logging."""
@@ -26,11 +19,15 @@ def build_logging(system_id: str):
     logger.log_system_health()
     return logger, system_logger
 
+
 def build_metrics():
     """Inicializa el emisor de métricas del sistema."""
     return get_metrics_reporter()
 
-def validate_system_config(config_override: Optional[Dict[str, Any]] = None, logger: Any = None):
+
+def validate_system_config(
+    config_override: Optional[Dict[str, Any]] = None, logger: Any = None
+):
     """Valida toda la configuración del sistema."""
     # Validar configuración general
     validate_config()
@@ -44,6 +41,7 @@ def validate_system_config(config_override: Optional[Dict[str, Any]] = None, log
             f"Aplicando {len(config_override)} overrides de configuración"
         )
 
+
 def build_database(logger: Any):
     """Inicializa el sistema de base de datos."""
     db_manager = get_database_manager()
@@ -52,6 +50,7 @@ def build_database(logger: Any):
     if logger:
         logger.create_module_logger("database").info("Base de datos configurada")
     return db_manager
+
 
 def build_collectors(logger: Any, health_tracker: Any):
     """Configura los colectores del sistema."""
@@ -77,6 +76,7 @@ def build_collectors(logger: Any, health_tracker: Any):
             )
         raise
 
+
 def build_validator(logger: Any):
     """Configura el sistema de validación."""
     validator = ContentValidator()
@@ -86,6 +86,7 @@ def build_validator(logger: Any):
         )
     return validator
 
+
 def build_scorer(config_override: Dict[str, Any], logger: Any):
     """Configura el sistema de scoring."""
     from news_collector.scoring import create_scorer
@@ -93,18 +94,16 @@ def build_scorer(config_override: Dict[str, Any], logger: Any):
     weights_override = config_override.get("scoring_weights")
     mode_override = config_override.get("scoring_mode")
     scorer = create_scorer(weights_override, mode=mode_override)
-    
+
     if logger:
         logger.create_module_logger("scoring").info(
             "Sistema de scoring configurado",
         )
     return scorer
 
+
 def check_system_health(
-    db_manager: Any, 
-    collector: Any, 
-    logger: Any,
-    sources_config: Dict[str, Any]
+    db_manager: Any, collector: Any, logger: Any, sources_config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Verifica la salud general del sistema.

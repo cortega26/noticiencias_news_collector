@@ -137,4 +137,3 @@ class ScoringInputModel(BaseModel):
     source_config: Dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="ignore")
-

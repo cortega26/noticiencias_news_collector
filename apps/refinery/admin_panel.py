@@ -518,9 +518,13 @@ with tab2:
                             ]
                             for table in tables_to_wipe:
                                 try:
-                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # noqa: S608
+                                    cursor.execute(
+                                        f"DELETE FROM {table}"
+                                    )  # noqa: S608  # noqa: S608
                                     st.write(f"  - Tabla `{table}` limpiada.")
-                                except Exception:  # noqa: S110, SIM105  # noqa: S110, SIM105
+                                except (
+                                    Exception
+                                ):  # noqa: S110, SIM105  # noqa: S110, SIM105
                                     pass  # Table might not exist yet
 
                             # Reset Source Metadata (Force Re-fetch)

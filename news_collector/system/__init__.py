@@ -119,7 +119,9 @@ class NewsCollectorSystem:
             self.db_manager = bootstrap.build_database(self.logger)
 
             # 5. Collectors
-            self.collector = bootstrap.build_collectors(self.logger, self.health_tracker)
+            self.collector = bootstrap.build_collectors(
+                self.logger, self.health_tracker
+            )
 
             # 6. Validation
             self.validator = bootstrap.build_validator(self.logger)
@@ -205,6 +207,7 @@ class NewsCollectorSystem:
             Diccionario con resultados detallados del ciclo
         """
         from news_collector.system import pipeline
+
         return await pipeline.run_cycle_orchestration(
             self, sources_filter, dry_run, trace_id
         )
@@ -280,14 +283,14 @@ class NewsCollectorSystem:
 
             # Transform via adapter
             export_models = [adapt_article_to_export(art) for art in articles]
-            
+
             # Create contract
             contract = ExportContractV1(
                 generated_at=datetime.now(timezone.utc).isoformat(),
                 article_count=len(export_models),
-                articles=export_models
+                articles=export_models,
             )
-            
+
             # Serialize
             export_payload = contract.model_dump()
 
@@ -437,8 +440,6 @@ class NewsCollectorSystem:
             if original_save:
                 self.db_manager.save_article = original_save
 
-
-
     def _execute_validation(
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
@@ -451,13 +452,15 @@ class NewsCollectorSystem:
 
         # Prepare payload via contract adapter
         from news_collector.contracts.adapters import adapt_to_validation_payload
-        
+
         validation_payload = adapt_to_validation_payload(pending_articles)
         # Validation currently expects list of dicts. We model_dump 'articles' list.
         # But wait, ContentValidator.validate_batch takes List[Dict].
         # Our adapter returns ArticleValidationPayload which has .articles list of models.
         # So we dump the individual items.
-        articles_to_validate = [item.model_dump() for item in validation_payload.articles]
+        articles_to_validate = [
+            item.model_dump() for item in validation_payload.articles
+        ]
 
         validation_results = self.validator.validate_batch(articles_to_validate)
 
@@ -538,7 +541,7 @@ class NewsCollectorSystem:
             payloads = []
             # Prepare payloads using contract adapter
             from news_collector.contracts.adapters import adapt_to_scoring_input
-            
+
             payloads = []
             for article in pending_articles:
                 source_config = ALL_SOURCES.get(article.source_id)
@@ -785,7 +788,9 @@ class NewsCollectorSystem:
                     articles_found // 3, articles_found // 2
                 ),
                 "articles_excluded": articles_found
-                - random.randint(articles_found // 3, articles_found // 2),  # noqa: S311
+                - random.randint(
+                    articles_found // 3, articles_found // 2
+                ),  # noqa: S311
                 "average_score": random.uniform(0.4, 0.8),  # noqa: S311
             },
         }
