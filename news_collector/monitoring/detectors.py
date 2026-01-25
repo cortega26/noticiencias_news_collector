@@ -172,9 +172,9 @@ class SchemaDriftDetector:
     def __init__(self, expectation: SchemaExpectation) -> None:
         self._expectation = expectation
 
-    def evaluate(
+    def evaluate(  # noqa: C901
         self, samples: Sequence[Mapping[str, object]]
-    ) -> Dict[str, List]:  # noqa: C901
+    ) -> Dict[str, List]:
         if not samples:
             return {"metrics": [], "anomalies": []}
         total = len(samples)
@@ -196,10 +196,11 @@ class SchemaDriftDetector:
                     type_mismatch_counts[field_name] += 1
             for field_name, field_type in self._expectation.optional_fields.items():
                 if (
-                    field_name in sample and sample[field_name] is not None
-                ):  # noqa: SIM102
-                    if not isinstance(sample[field_name], field_type):
-                        optional_mismatch[field_name] += 1
+                    field_name in sample
+                    and sample[field_name] is not None
+                    and not isinstance(sample[field_name], field_type)
+                ):
+                    optional_mismatch[field_name] += 1
         anomalies: List[Anomaly] = []
         metrics: List[Metric] = []
         for field_name, count in missing_counts.items():

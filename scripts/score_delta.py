@@ -273,9 +273,7 @@ def main() -> None:
     else:
         print("No baseline values found in dataset; skipping delta table.")
 
-    unique_k = sorted(
-        set(k for k in args.top_k if isinstance(k, int) and k > 0)
-    )  # noqa: C401
+    unique_k = sorted({k for k in args.top_k if isinstance(k, int) and k > 0})
     if not unique_k:
         unique_k = [5]
 

@@ -8,7 +8,7 @@ print("Testing imports...")
 
 try:
     print("1. Importing NewsCollectorSystem from news_collector.system...")
-    from news_collector.system import NewsCollectorSystem
+    from news_collector.system import NewsCollectorSystem  # noqa: F401
 
     print("   -> Success")
 except ImportError as e:
@@ -17,7 +17,7 @@ except ImportError as e:
 
 try:
     print("2. Importing bootstrap module...")
-    import news_collector.system.bootstrap
+    import news_collector.system.bootstrap  # noqa: F401
 
     print("   -> Success")
 except ImportError as e:
@@ -26,7 +26,7 @@ except ImportError as e:
 
 try:
     print("3. Importing pipeline module...")
-    import news_collector.system.pipeline
+    import news_collector.system.pipeline  # noqa: F401
 
     print("   -> Success")
 except ImportError as e:
