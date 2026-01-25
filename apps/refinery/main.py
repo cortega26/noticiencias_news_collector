@@ -640,6 +640,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete-id", type=str, help="Unpublish/Delete a specific article ID."
     )
+    parser.add_argument(
+        "--export-path", type=str, help="Use specific JSON export file."
+    )
     args = parser.parse_args()
 
     if args.delete_id:
