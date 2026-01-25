@@ -178,4 +178,17 @@ These REQUIRE explicit user authorization.
 
 ---
 
+### LAW‑5: Canonical URLs Are Deterministic & Immutable
+
+The canonical URL (slug) of an article:
+
+- MUST be deterministic (derived from source date + title)
+- MUST NOT depend on processing time (`now()`)
+- MUST be persisted in the DB (`canonical_slug`) on first creation
+- MUST be re-used from DB on all subsequent updates
+
+Processing an article 100 times must result in the **exact same URL** 100 times.
+
+---
+
 **End of AGENTS.md — Backend Law**
