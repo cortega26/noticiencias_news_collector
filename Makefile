@@ -66,6 +66,9 @@ bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 run-local: bootstrap ## Run the collector locally
 	@$(PYTHON) scripts/run_collector.py
 
+refinery: bootstrap ## Launch the Refinery Admin Panel (Streamlit UI)
+	@$(PYTHON_BIN) -m streamlit run apps/refinery/admin_panel.py
+
 debug: bootstrap ## Run the collector in debug mode (verbose)
 	@$(PYTHON) scripts/run_collector.py --verbose
 

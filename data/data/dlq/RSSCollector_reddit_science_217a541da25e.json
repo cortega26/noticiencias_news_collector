@@ -1,0 +1,8 @@
+{
+  "timestamp": "20260125T021915Z",
+  "collector": "RSSCollector",
+  "source_id": "reddit_science",
+  "url": "https://www.reddit.com/r/science/comments/1qlxs0j/severe_sleep_problems_is_associated_with_fewer/",
+  "reason": "collector_payload_invalid",
+  "context": {}
+}
