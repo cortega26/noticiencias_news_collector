@@ -170,11 +170,27 @@ class EditorAgent:
         safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(article_id))
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
-    def process_article(self, raw_text: str | dict) -> str:  # noqa: C901
+    def process_article(  # noqa: C901
+        self, raw_text: str | dict, override_date: str = None
+    ) -> str:
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
         """
+        # ... args ...
+
+        # ... (skipping context, I need to check where I am replacing)
+        # Wait, I cannot skip context in ReplacementContent if I am using replace_file_content.
+        # I must act on the specific lines.
+
+        # ACTUALLY, I will use multi_replace to simplify if possible, but replace_file_content is safer if I target precise blocks.
+        # I will Target the `def process_article` definition line AND the `date:` line in metadata_block.
+
+        # But `process_article` is huge.
+        # I will replace the definition line.
+
+        pass
+
         # 1. Extract Info
         title = ""
         summary = ""
@@ -276,7 +292,7 @@ class EditorAgent:
         metadata_block = [
             "---",
             f'title: "{final_title}"',
-            f"date: {time.strftime('%Y-%m-%d')}",
+            f"date: {override_date or time.strftime('%Y-%m-%d')}",
             'author: "Noticiencias AI"',
             f'categories: ["{final_category}"]',
             f'tags: {json.dumps([t for t in [raw_category] if t.lower() != "other"])}',
