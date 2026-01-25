@@ -144,8 +144,6 @@ class TestS1RefactorSafety:
         # We must explicitly ensure it behaves as missing.
         # However, del on a mock doesn't always work as expected for getattr.
         # Better: create a new mock that definitely doesn't have it
-
-        sync_collector = MagicMock()
         # Mock specs are safer but let's just use del and spec=list or something,
         # or just configure the mock property to raise AttributeError?
         # Actually pipeline.py does: if hasattr(...)
@@ -188,9 +186,7 @@ class TestS1RefactorSafety:
         # Mock reranker import or logic if needed, but if DB returns empty, it might skip reranker or handle empty
         # Real code imports inside the method: from news_collector.reranker import rerank_articles
         # We need to mock that import or the function
-        with patch(
-            "news_collector.reranker.rerank_articles", return_value=[]
-        ) as mock_rank:
+        with patch("news_collector.reranker.rerank_articles", return_value=[]):
             res = system.get_top_articles(limit=5)
             assert res == []
 

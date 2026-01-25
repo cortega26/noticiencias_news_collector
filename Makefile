@@ -69,16 +69,16 @@ run-local: bootstrap ## Run the collector locally
 debug: bootstrap ## Run the collector in debug mode (verbose)
 	@$(PYTHON) scripts/run_collector.py --verbose
 
-lint: bootstrap ## Run code quality hooks via pre-commit
+lint: bootstrap ## Run code quality checks (check-only)
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
-	@$(PRE_COMMIT) run --all-files --show-diff-on-failure
+	@$(BLACK) --check .
+	@$(RUFF) check .
 
 fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
 	@$(PYTHON) -m tools.fix_makefile_tabs
 
 lint-fix: bootstrap ## Auto-format using Black/isort and fix Ruff findings
 	@$(BLACK) .
-	@$(ISORT) .
 	@$(RUFF) check . --fix
 
 quality: bootstrap ## Run all quality checks (lint, type, security, audit)

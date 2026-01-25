@@ -368,9 +368,7 @@ class ConfigEditor:
     ) -> tuple[tk.Widget, tk.Variable]:
         if self._uses_language_dropdown(doc.name):
             options = self._language_options()
-            mapping: Dict[str, str] = {
-                label: code for label, code in options
-            }  # noqa: C416
+            mapping: Dict[str, str] = dict(options)
             reverse: Dict[str, str] = {code: label for label, code in options}
             if isinstance(value, str) and value and value not in reverse:
                 reverse[value] = LANGUAGE_LABELS.get(value, value)

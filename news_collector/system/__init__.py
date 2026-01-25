@@ -13,15 +13,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from news_collector import get_database_manager, get_metrics_reporter, setup_logging
-from news_collector.config import (
-    ALL_SOURCES,
-    COLLECTION_CONFIG,
-    SCORING_CONFIG,
-    validate_config,
-    validate_sources,
-)
-from news_collector.validation.validator import ContentValidator
+from news_collector import get_database_manager as get_database_manager
+from news_collector import get_metrics_reporter as get_metrics_reporter
+from news_collector import setup_logging as setup_logging
+from news_collector.config import ALL_SOURCES, COLLECTION_CONFIG, SCORING_CONFIG
+from news_collector.config import validate_config as validate_config
+from news_collector.config import validate_sources as validate_sources
+from news_collector.validation.validator import ContentValidator as ContentValidator
 
 
 class NewsCollectorSystem:
@@ -788,9 +786,9 @@ class NewsCollectorSystem:
                     articles_found // 3, articles_found // 2
                 ),
                 "articles_excluded": articles_found
-                - random.randint(
+                - random.randint(  # noqa: S311
                     articles_found // 3, articles_found // 2
-                ),  # noqa: S311
+                ),
                 "average_score": random.uniform(0.4, 0.8),  # noqa: S311
             },
         }

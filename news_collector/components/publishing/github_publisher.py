@@ -179,9 +179,9 @@ class GitHubPublisher:
             "base": base_branch,
         }
 
-        response = requests.post(
+        response = requests.post(  # noqa: S113
             api_url, json=payload, headers=self.headers
-        )  # noqa: S113
+        )
 
         if response.status_code == 201:
             pr_url = response.json().get("html_url")
