@@ -110,24 +110,26 @@ class ScoringRequestModel(BaseModel):
         return self.model_dump()
 
 
-class ArticleScoringData(TypedDict):
+class ArticleScoringData(BaseModel):
     """Raw article data required for scoring."""
 
     id: int
     title: str
-    summary: str | None
+    summary: str | None = None
     url: str
-    published_date: datetime | str | None
-    collected_date: datetime | str | None
+    published_date: datetime | str | None = None
+    collected_date: datetime | str | None = None
     source_id: str
-    article_metadata: Dict[str, Any]
-    peer_reviewed: bool | None
-    is_preprint: bool | None
-    doi: str | None
-    journal: str | None
-    content: str | None
-    duplication_confidence: float
-    word_count: int
+    article_metadata: Dict[str, Any] = Field(default_factory=dict)
+    peer_reviewed: bool | None = None
+    is_preprint: bool | None = None
+    doi: str | None = None
+    journal: str | None = None
+    content: str | None = None
+    duplication_confidence: float = 0.0
+    word_count: int = 0
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class ScoringInputModel(BaseModel):

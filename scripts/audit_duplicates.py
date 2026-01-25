@@ -14,16 +14,17 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+
 def audit_duplicates(posts_dir: Path):
     if not posts_dir.exists():
         print(f"❌ Directory not found: {posts_dir}")
         return
 
     print(f"🔍 Scanning {posts_dir}...")
-    
+
     # Map ID -> List[Filename]
     id_map = defaultdict(list)
-    
+
     # Regex to find refinery_id: "123"
     id_pattern = re.compile(r'refinery_id:\s*"([^"]+)"')
 
@@ -50,13 +51,24 @@ def audit_duplicates(posts_dir: Path):
     if not duplicates_found:
         print("\n✅ No duplicates found. Canonical integrity checks passed.")
     else:
-        print("\n❌ Duplicates detected! Please merge or delete the incorrect versions manually.")
+        print(
+            "\n❌ Duplicates detected! Please merge or delete the incorrect versions manually."
+        )
         import sys
+
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Audit published posts for duplicate IDs.")
-    parser.add_argument("--path", type=str, default="apps/refinery/temp/target/src/content/posts", help="Path to posts directory")
+    parser = argparse.ArgumentParser(
+        description="Audit published posts for duplicate IDs."
+    )
+    parser.add_argument(
+        "--path",
+        type=str,
+        default="apps/refinery/temp/target/src/content/posts",
+        help="Path to posts directory",
+    )
     args = parser.parse_args()
-    
+
     audit_duplicates(Path(args.path))

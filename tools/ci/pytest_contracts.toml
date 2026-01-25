@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+# Paths relative to project root (since we will run with --rootdir=.)
+testpaths = ["tests/unit/contracts"]
+pythonpath = ["."]
+# Explicitly ignore unrelated directories
+norecursedirs = ["apps", "temp", "data", "dist", "build", ".venv", "tools"]
+addopts = "-ra --cov=news_collector/contracts --cov-config=tools/ci/coverage_contracts.rc --cov-report=term-missing"
+asyncio_mode = "auto"

@@ -1,0 +1,12 @@
+[run]
+branch = True
+source =
+    news_collector/contracts
+omit =
+    */__init__.py
+    news_collector/contracts/__init__.py
+
+[report]
+show_missing = True
+fail_under = 80
+precision = 2

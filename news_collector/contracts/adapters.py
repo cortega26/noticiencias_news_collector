@@ -3,7 +3,7 @@
 from typing import Any, Dict, List
 
 from news_collector.contracts.export import ExportArticleModel
-from news_collector.contracts.scoring import ScoringInputModel
+from news_collector.contracts.scoring import ArticleScoringData, ScoringInputModel
 from news_collector.contracts.validation import (
     ArticleValidationItem,
     ArticleValidationPayload,
@@ -13,6 +13,7 @@ from news_collector.storage.models import Article
 
 def adapt_article_to_export(article: Article) -> ExportArticleModel:
     """Safely converts an ORM Article to an ExportArticleModel."""
+
     return ExportArticleModel(
         id=article.id,
         title=article.title,
@@ -41,32 +42,27 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
     )
 
 
-def adapt_article_to_scoring(article: Any) -> Dict[str, Any]:
+def adapt_article_to_scoring(article: Any) -> ArticleScoringData:  # Updated return type
     """
-    Prepatres ORM article for scoring.
-    Returns the 'article' dict part of ScoringInputModel.
+    Prepares ORM article for scoring using strict contract.
     """
-    # Note: System uses a dict construction logic. We emulate it here,
-    # but ensure it matches ArticleScoringData typed dict structure.
-    return {
-        "id": article.id,
-        "title": article.title,
-        "summary": article.summary,
-        "url": article.url,
-        "published_date": article.published_date,
-        "collected_date": article.collected_date,
-        "source_id": article.source_id,
-        "article_metadata": article.article_metadata or {},
-        "peer_reviewed": article.peer_reviewed,
-        "is_preprint": article.is_preprint,
-        "doi": article.doi,
-        "journal": article.journal,
-        # Content fields
-        "content": article.content,
-        # Fields for feature scorer
-        "duplication_confidence": getattr(article, "duplication_confidence", 0.0),
-        "word_count": getattr(article, "word_count", 0),
-    }
+    return ArticleScoringData(
+        id=article.id,
+        title=article.title,
+        summary=article.summary,
+        url=article.url,
+        published_date=article.published_date,
+        collected_date=article.collected_date,
+        source_id=article.source_id,
+        article_metadata=article.article_metadata or {},
+        peer_reviewed=article.peer_reviewed,
+        is_preprint=article.is_preprint,
+        doi=article.doi,
+        journal=article.journal,
+        content=article.content,
+        duplication_confidence=getattr(article, "duplication_confidence", 0.0),
+        word_count=getattr(article, "word_count", 0),
+    )
 
 
 def adapt_to_scoring_input(

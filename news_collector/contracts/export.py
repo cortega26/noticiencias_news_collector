@@ -44,6 +44,7 @@ class ExportContractV1(BaseModel):
     """
 
     schema_version: int = 1
+    version: Literal["1.0"] = "1.0"
     generated_at: str
     contract: Literal["news_collector.export.v1"] = "news_collector.export.v1"
     article_count: int
