@@ -145,6 +145,11 @@ class Article(Base):
     cluster_id = Column(String(36))
     duplication_confidence = Column(Float, default=0.0)
 
+    # Identidad Canónica (Fix S2/D1)
+    # =============================
+    # Esto garantiza que la URL sea estable e independiente del tiempo de procesamiento.
+    canonical_slug = Column(String(200), unique=True, index=True)
+
     # Relaciones con otras tablas
     # ==========================
     metrics = relationship(

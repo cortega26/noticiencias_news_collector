@@ -333,6 +333,23 @@ class DatabaseManager:
                         "published_url",
                     )
                 )
+            if "canonical_slug" not in existing_article_columns:
+                migrations.append(
+                    (
+                        "ALTER TABLE articles ADD COLUMN canonical_slug VARCHAR(200)",
+                        "articles",
+                        "canonical_slug",
+                    )
+                )
+                indexes = [idx["name"] for idx in inspector.get_indexes("articles")]
+                if "ix_articles_canonical_slug" not in indexes:
+                     migrations.append(
+                        (
+                            "CREATE UNIQUE INDEX ix_articles_canonical_slug ON articles(canonical_slug)",
+                            "articles",
+                            "ix_articles_canonical_slug",
+                        )
+                    )
             if "uq_articles_content_hash" not in existing_article_indexes:
                 where_clause = "WHERE content_hash IS NOT NULL"
                 migrations.append(
@@ -489,6 +506,51 @@ class DatabaseManager:
             return self.is_article_published(int(stem))
 
         return False
+
+    def get_canonical_slug(self, article_id: int | str) -> Optional[str]:
+        """
+        Retrieves the immutable canonical slug for an article.
+        Ensures URL stability across multiple processing runs.
+        """
+        try:
+            val_id = int(str(article_id).strip())
+        except ValueError:
+            return None
+
+        with self.get_session() as session:
+             article = session.query(Article).filter(Article.id == val_id).first()
+             if article:
+                 return article.canonical_slug
+        return None
+
+    def set_canonical_slug(self, article_id: int | str, slug: str) -> bool:
+        """
+        Persists the immutable canonical slug for an article.
+        Fails safely if already set (though logic should handle this upstream).
+        """
+        try:
+            val_id = int(str(article_id).strip())
+        except ValueError:
+             return False
+        
+        if not slug or not slug.strip():
+            return False
+
+        with self.get_session() as session:
+             article = session.query(Article).filter(Article.id == val_id).first()
+             if not article:
+                 return False
+             
+             # Double check to respect immutability
+             if article.canonical_slug and article.canonical_slug != slug:
+                 logger.warning(
+                     f"Attempted to overwrite existing slug {article.canonical_slug} with {slug}. Ignored."
+                 )
+                 return False
+                 
+             article.canonical_slug = slug
+             session.add(article)
+             return True
 
     # OPERACIONES CON ARTÍCULOS
     # =====================================
