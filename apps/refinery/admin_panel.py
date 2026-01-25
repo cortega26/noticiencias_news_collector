@@ -923,13 +923,21 @@ with tab3:
 
     st.markdown("---")
     st.markdown("### Registro de Actividad Reciente")
-    log_file = BASE_DIR / "refinery.log"  # Assuming standard log file
-    if log_file.exists():
-        with open(log_file, "r") as f:
+    st.markdown("### Registro de Actividad Reciente")
+    # Read from the configured system log path
+    from news_collector.config.settings import LOGGING_CONFIG
+
+    log_file_path = Path(LOGGING_CONFIG["file_path"])
+    # Resolve relative to project root if needed
+    if not log_file_path.is_absolute():
+        log_file_path = (Path(__file__).resolve().parents[2] / log_file_path).resolve()
+
+    if log_file_path.exists():
+        with open(log_file_path, "r") as f:
             logs = f.readlines()[-20:]  # Last 20 lines
             st.code("".join(logs))
     else:
-        st.text("Aún no hay registros.")
+        st.text(f"Aún no hay registros en {log_file_path.name}.")
 
 
 # --- Tab 4: Analytics ---
