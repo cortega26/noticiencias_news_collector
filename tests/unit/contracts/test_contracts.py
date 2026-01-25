@@ -60,6 +60,7 @@ def test_adapt_article_to_export():
 def test_scoring_input_model_validation():
     """Verify ScoringInputModel requires essential fields."""
     with pytest.raises(ValidationError):
+        # We need to construct valid ArticleScoringData first, or pass invalid dict
         ScoringInputModel(article={})  # Missing required fields like id, title
 
     valid_data = {
@@ -79,9 +80,10 @@ def test_scoring_input_model_validation():
         "journal": None,
         "content": None,
     }
-    # It allows TypedDict construction
+    # Pydantic allows init via dict
     model = ScoringInputModel(article=valid_data)
-    assert model.article["title"] == "Test Scorer"
+    # ACCESS via attribute, not item
+    assert model.article.title == "Test Scorer"
 
 
 def test_adapt_to_scoring_input():
@@ -105,14 +107,21 @@ def test_adapt_to_scoring_input():
     mock_art.content = "Some content"
 
     model = adapt_to_scoring_input(mock_art, {"credibility": 0.5})
-    assert model.article["id"] == 55
+    # ACCESS via attribute
+    assert model.article.id == 55
     assert model.source_config["credibility"] == 0.5
 
 
 def test_validation_payload_adapter():
     """Verify validation payload adapter."""
     mock_art = MagicMock()
-    mock_art.to_dict.return_value = {"id": 1, "title": "Validation"}
+    mock_art.to_dict.return_value = {
+        "id": 1,
+        "title": "Validation",
+        "url": "http://val.com",
+        "source_id": "src",
+        "content": "Should be here",
+    }
     mock_art.content = "Should be here"
 
     payload = adapt_to_validation_payload([mock_art])

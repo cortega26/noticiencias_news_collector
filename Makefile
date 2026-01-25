@@ -142,6 +142,14 @@ test-system: bootstrap ## Run S1-scoped verification (Contract + Coverage Gate)
 	@echo "[test-system] Running S1 Refactor Verification..."
 	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py
 
+test-contracts: bootstrap ## Run D1 Contract enforcement tests (Contract + Coverage Gate)
+	@echo "[test-contracts] Running D1 Contract Enforcement..."
+	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_contracts.toml --rootdir=.
+
+test-boundaries: bootstrap ## Run D1 System Boundary tests (Behavior only, no coverage)
+	@echo "[test-boundaries] Verifying System Boundaries (D1 Phase 2)..."
+	@PYTHONPATH=$(CURDIR) $(PYTEST) tests/unit/system/test_d1_pipeline_boundaries.py --no-cov
+
 e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 	@$(PYTEST) -m "e2e" || { echo "E2E tests require additional setup and were skipped."; true; }
 
