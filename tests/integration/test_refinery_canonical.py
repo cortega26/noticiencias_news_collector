@@ -13,6 +13,7 @@ class TestRefineryCanonical:
     def engine(self, tmp_path):
         # Mock dependencies
         db = MagicMock()
+        db.get_canonical_slug.return_value = None  # Default: No locked identity
         git = MagicMock()
         editor = MagicMock()
         config = MagicMock()
