@@ -180,9 +180,10 @@ def save_toml_config(config_data):
 
 
 # --- Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+tab1, tab_prompts, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
         "🧠 IA & Refinería",
+        "📝 Prompts",
         "📊 Scraper & Scoring",
         "💼 Gestión",
         "📈 Analítica",
@@ -272,72 +273,72 @@ with tab1:
         save_secrets(secrets)
         st.success("¡Configuración y Secretos actualizados!")
 
-        st.subheader("📝 Prompts del Sistema (Definidos en prompts.yaml)")
+    # End of Tab 1
 
-        # Path to prompts.yaml
-        PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
+# --- Tab Prompts ---
+with tab_prompts:
+    st.header("📝 Prompts del Sistema")
+    st.info("Define las instrucciones para cada fase del proceso de refinamiento.")
 
-        import yaml
+    # Path to prompts.yaml
+    PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
 
-        current_prompts = {}
-        if PROMPTS_YAML_PATH.exists():
-            try:
-                with open(PROMPTS_YAML_PATH, "r", encoding="utf-8") as f:
-                    current_prompts = yaml.safe_load(f) or {}
-            except Exception as e:
-                st.error(f"Error leyendo prompts.yaml: {e}")
-        else:
-            st.warning(
-                "⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar."
-            )
+    import yaml
 
-        # Translator Prompt
-        st.markdown("##### 1. Traductor (Fase 1)")
-        trans_sys = current_prompts.get("translator", {}).get("system", "")
-        new_trans_sys = st.text_area(
-            "Prompt Traductor", value=trans_sys, height=150, key="prompt_trans"
+    current_prompts = {}
+    if PROMPTS_YAML_PATH.exists():
+        try:
+            with open(PROMPTS_YAML_PATH, "r", encoding="utf-8") as f:
+                current_prompts = yaml.safe_load(f) or {}
+        except Exception as e:
+            st.error(f"Error leyendo prompts.yaml: {e}")
+    else:
+        st.warning(
+            "⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar."
         )
 
-        # Editor Prompt
-        st.markdown("##### 2. Editor (Fase 2)")
-        edit_sys = current_prompts.get("editor", {}).get("system", "")
-        new_edit_sys = st.text_area(
-            "Prompt Editor", value=edit_sys, height=200, key="prompt_edit"
-        )
+    # Translator Prompt
+    st.markdown("##### 1. Traductor (Fase 1)")
+    trans_sys = current_prompts.get("translator", {}).get("system", "")
+    new_trans_sys = st.text_area(
+        "Prompt Traductor", value=trans_sys, height=150, key="prompt_trans"
+    )
 
-        # Headline Prompt
-        st.markdown("##### 3. Titulares (Fase 3)")
-        head_sys = current_prompts.get("headline", {}).get("system", "")
-        new_head_sys = st.text_area(
-            "Prompt Titulares", value=head_sys, height=100, key="prompt_head"
-        )
+    # Editor Prompt
+    st.markdown("##### 2. Editor (Fase 2)")
+    edit_sys = current_prompts.get("editor", {}).get("system", "")
+    new_edit_sys = st.text_area(
+        "Prompt Editor", value=edit_sys, height=200, key="prompt_edit"
+    )
 
-        if st.button("💾 Guardar Prompts (YAML)"):
-            updated_prompts = current_prompts.copy()
-            if "translator" not in updated_prompts:
-                updated_prompts["translator"] = {}
-            if "editor" not in updated_prompts:
-                updated_prompts["editor"] = {}
-            if "headline" not in updated_prompts:
-                updated_prompts["headline"] = {}
+    # Headline Prompt
+    st.markdown("##### 3. Titulares (Fase 3)")
+    head_sys = current_prompts.get("headline", {}).get("system", "")
+    new_head_sys = st.text_area(
+        "Prompt Titulares", value=head_sys, height=100, key="prompt_head"
+    )
 
-            updated_prompts["translator"]["system"] = new_trans_sys
-            updated_prompts["editor"]["system"] = new_edit_sys
-            updated_prompts["headline"]["system"] = new_head_sys
+    if st.button("💾 Guardar Prompts (YAML)"):
+        updated_prompts = current_prompts.copy()
+        if "translator" not in updated_prompts:
+            updated_prompts["translator"] = {}
+        if "editor" not in updated_prompts:
+            updated_prompts["editor"] = {}
+        if "headline" not in updated_prompts:
+            updated_prompts["headline"] = {}
 
-            try:
-                with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
-                    yaml.dump(
-                        updated_prompts, f, allow_unicode=True, default_flow_style=False
-                    )
-                st.success("¡Prompts actualizados en config/prompts.yaml!")
-            except Exception as e:
-                st.error(f"Error guardando prompts: {e}")
+        updated_prompts["translator"]["system"] = new_trans_sys
+        updated_prompts["editor"]["system"] = new_edit_sys
+        updated_prompts["headline"]["system"] = new_head_sys
 
-            # Also save env vars if any other changes were made
-            # save_secrets(secrets) # Prompts button handles prompts. Main button handles config.
-            # st.success("¡Variables de entorno actualizadas!") # Removed implicit save here
-    # else block removed as we init defaults
+        try:
+            with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    updated_prompts, f, allow_unicode=True, default_flow_style=False
+                )
+            st.success("¡Prompts actualizados en config/prompts.yaml!")
+        except Exception as e:
+            st.error(f"Error guardando prompts: {e}")
 
 # --- Tab 2: Scraper Settings ---
 with tab2:
@@ -865,13 +866,38 @@ with tab3:
                                                 f"Error invocando despublicación: {e}"
                                             )
 
+                        # Dynamic Time Estimation Helper
+                        def estimate_time(art_len: int, model: str) -> str:
+                            # Base speed heuristics (words per minute for 3 stages)
+                            # Stage 1 (Trans), Stage 2 (Edit), Stage 3 (Meta)
+                            total_words = art_len or 1000
+                            # Very rough factors based on CPU inference
+                            if "llama3.3" in model or "70b" in model:
+                                speed_factor = 0.05  # Slow (big model)
+                            elif "8b" in model:
+                                speed_factor = 2.0  # Fast (medium model)
+                            else:
+                                speed_factor = 5.0  # Very Fast (small/tiny model)
+
+                            est_min = int((total_words * 3) / (speed_factor * 60))
+                            est_min = max(est_min, 1)  # At least 1 min
+
+                            return f"~{est_min} mins ({model})"
+
                         # Standard Process Button (Always visible for force reprocessing or new items)
+
+                        # Calculate estimate
+                        content_len = len(selected_art.get("content", "").split())
+                        active_model = env_vars.get("OLLAMA_MODEL", "unknown")
+                        time_est = estimate_time(content_len, active_model)
+
                         if st.button(
                             f"✨ Refinar y Publicar (ID: {selected_id})",
                             type="primary",
+                            help=f"Estimación de tiempo: {time_est}",
                         ):
                             with st.spinner(
-                                f"Procesando ID {selected_id}... Esto toma ~15 mins en CPU."
+                                f"Procesando ID {selected_id}... Esto toma {time_est} en CPU."
                             ):
                                 # Direct call to main module
                                 if not auth_ok:
