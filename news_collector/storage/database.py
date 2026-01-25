@@ -343,7 +343,7 @@ class DatabaseManager:
                 )
                 indexes = [idx["name"] for idx in inspector.get_indexes("articles")]
                 if "ix_articles_canonical_slug" not in indexes:
-                     migrations.append(
+                    migrations.append(
                         (
                             "CREATE UNIQUE INDEX ix_articles_canonical_slug ON articles(canonical_slug)",
                             "articles",
@@ -518,9 +518,9 @@ class DatabaseManager:
             return None
 
         with self.get_session() as session:
-             article = session.query(Article).filter(Article.id == val_id).first()
-             if article:
-                 return article.canonical_slug
+            article = session.query(Article).filter(Article.id == val_id).first()
+            if article:
+                return article.canonical_slug
         return None
 
     def set_canonical_slug(self, article_id: int | str, slug: str) -> bool:
@@ -531,26 +531,26 @@ class DatabaseManager:
         try:
             val_id = int(str(article_id).strip())
         except ValueError:
-             return False
-        
+            return False
+
         if not slug or not slug.strip():
             return False
 
         with self.get_session() as session:
-             article = session.query(Article).filter(Article.id == val_id).first()
-             if not article:
-                 return False
-             
-             # Double check to respect immutability
-             if article.canonical_slug and article.canonical_slug != slug:
-                 logger.warning(
-                     f"Attempted to overwrite existing slug {article.canonical_slug} with {slug}. Ignored."
-                 )
-                 return False
-                 
-             article.canonical_slug = slug
-             session.add(article)
-             return True
+            article = session.query(Article).filter(Article.id == val_id).first()
+            if not article:
+                return False
+
+            # Double check to respect immutability
+            if article.canonical_slug and article.canonical_slug != slug:
+                logger.warning(
+                    f"Attempted to overwrite existing slug {article.canonical_slug} with {slug}. Ignored."
+                )
+                return False
+
+            article.canonical_slug = slug
+            session.add(article)
+            return True
 
     # OPERACIONES CON ARTÍCULOS
     # =====================================
