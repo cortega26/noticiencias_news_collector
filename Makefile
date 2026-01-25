@@ -138,6 +138,10 @@ typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 test: bootstrap ## Run all unit tests
 	@$(PYTEST) tests
 
+check-coverage: bootstrap ## Check if coverage meets the required threshold (fails under 80%)
+	@echo "[coverage] Checking coverage threshold..."
+	@$(PYTHON_BIN) -m coverage report --fail-under=80
+
 test-system: bootstrap ## Run S1-scoped verification (Contract + Coverage Gate)
 	@echo "[test-system] Running S1 Refactor Verification..."
 	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py

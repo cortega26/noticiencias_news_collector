@@ -56,12 +56,16 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.create_branch.return_value = "content/add/test-branch"
         self.mock_git.create_pull_request.return_value = "http://pr.url"
 
+        # Configure DB to simulate no existing slug
+        self.mock_db.get_canonical_slug.return_value = None
+
         # Run
         result = self.engine.process_single_article(article, mock_repo, mock_target_dir)
 
         # Assertions
         self.assertTrue(result)
-        self.mock_editor.process_article.assert_called_with(article)
+        # We now pass override_date="2026-01-01" because src date is not provided, so it uses now()
+        self.mock_editor.process_article.assert_called_with(article, override_date="2026-01-01")
         self.mock_git.create_branch.assert_called()
         self.mock_git.commit_and_push.assert_called()
         self.mock_git.create_pull_request.assert_called()
