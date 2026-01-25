@@ -6,11 +6,10 @@ timezone = "UTC"
 [github]
 source_repo_url = ""
 target_repo_url = ""
-# token is loaded from .env
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
-model = "llama3.2"
+model = "llama3.3"
 timeout = 300
 
 [paths]
@@ -37,7 +36,6 @@ pool_recycle = 1800
 collection_interval_hours = 6
 request_timeout_seconds = 30
 async_enabled = true
-
 max_concurrent_requests = 1
 max_articles_per_source = 5
 recent_days_threshold = 365
@@ -66,7 +64,6 @@ daily_top_count = 10
 minimum_score = 0.3
 mode = "cognitive"
 llm_model = "llama3.2"
-
 workers = 1
 reranker_seed = 1337
 source_cap_percentage = 0.5
@@ -102,15 +99,15 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 
 [scoring.weights]
 source_credibility = 0.15
-recency = 0.20
+recency = 0.2
 content_quality = 0.35
-engagement_potential = 0.30
+engagement_potential = 0.3
 
 [scoring.feature_weights]
 source_credibility = 0.15
-freshness = 0.20
+freshness = 0.2
 content_quality = 0.35
-engagement = 0.30
+engagement = 0.3
 
 [scoring.freshness]
 half_life_hours = 18.0
