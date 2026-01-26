@@ -148,10 +148,10 @@ class EditorAgent:
         return result
 
     def _generate_headlines(self, adapted_content: str) -> dict:
-        """Stage 3: Headline Generation"""
+        """Stage 3: Headline Generation & Metadata"""
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe
-        prompt = f"Analyze this article and generate headlines keys: direct, question, benefit.\n\n{adapted_content[:2000]}"
+        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', and 'excerpt' (max 140 chars summary for SEO).\n\n{adapted_content[:2000]}"
         response = self._send_prompt(prompt, system=system_prompt)
 
         try:
@@ -160,9 +160,7 @@ class EditorAgent:
             logger.error(
                 f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
             )
-            # Fallback to empty if fails, don't crash the whole pipeline,
-            # OR raise if strictly required. The original code raised, so let's log and re-raise or return empty?
-            # Original raised ValueError.
+            # Fallback to empty if fails
             raise ValueError(f"Failed to generate headlines: {e}") from e
 
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
@@ -177,20 +175,6 @@ class EditorAgent:
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
         """
-        # ... args ...
-
-        # ... (skipping context, I need to check where I am replacing)
-        # Wait, I cannot skip context in ReplacementContent if I am using replace_file_content.
-        # I must act on the specific lines.
-
-        # ACTUALLY, I will use multi_replace to simplify if possible, but replace_file_content is safer if I target precise blocks.
-        # I will Target the `def process_article` definition line AND the `date:` line in metadata_block.
-
-        # But `process_article` is huge.
-        # I will replace the definition line.
-
-        pass
-
         # 1. Extract Info
         title = ""
         summary = ""
@@ -288,6 +272,12 @@ class EditorAgent:
             final_title = final_title[0] if final_title else "Untitled"
         final_title = str(final_title).replace('"', '\\"')
 
+        # Sanitize excerpt
+        final_excerpt = headlines.get("excerpt", "")
+        if isinstance(final_excerpt, list):
+             final_excerpt = final_excerpt[0] if final_excerpt else ""
+        final_excerpt = str(final_excerpt).replace('"', '\\"')
+
         # Construct Frontmatter
         metadata_block = [
             "---",
@@ -297,6 +287,9 @@ class EditorAgent:
             f'categories: ["{final_category}"]',
             f'tags: {json.dumps([t for t in [raw_category] if t.lower() != "other"])}',
         ]
+
+        if final_excerpt:
+            metadata_block.append(f'excerpt: "{final_excerpt}"')
 
         if image_url:
             metadata_block.append(f'image: "{image_url}"')
