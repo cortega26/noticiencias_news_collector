@@ -454,7 +454,7 @@ class NewsCollectorSystem:
         batch_count = 0
 
         validation_results = {"invalid": [], "valid": []}
-        
+
         while True:
             if batch_count >= MAX_BATCHES:
                 self.logger.create_module_logger("validation").error(
@@ -465,22 +465,22 @@ class NewsCollectorSystem:
             pending_articles = self.db_manager.get_pending_articles(limit=BATCH_SIZE)
             if not pending_articles:
                 break
-            
+
             batch_count += 1
 
             # Prepare payload via contract adapter
             from news_collector.contracts.adapters import adapt_to_validation_payload
-            
+
             validation_payload = adapt_to_validation_payload(pending_articles)
             articles_to_validate = [
                 item.model_dump() for item in validation_payload.articles
             ]
 
             batch_results = self.validator.validate_batch(articles_to_validate)
-            
+
             # Aggregate stats
             total_validated += len(pending_articles)
-            current_rejected = 0 # Count rejected in this batch
+            current_rejected = 0  # Count rejected in this batch
 
             # Process invalid articles
             if batch_results["invalid"]:
@@ -496,21 +496,23 @@ class NewsCollectorSystem:
 
                         article_id = article_data["id"]
 
-                        article = session.query(Article).filter_by(id=article_id).first()
+                        article = (
+                            session.query(Article).filter_by(id=article_id).first()
+                        )
                         if article:
                             article.processing_status = "rejected"
                             article.error_message = (
                                 f"Validation failed: {rule_name} - {reason}"
                             )
-                
+
                 # Accumulate results for report
                 validation_results["invalid"].extend(batch_results["invalid"])
-            
+
             if batch_results.get("valid"):
-                 # Accumulate valid results for report if validator returns them
-                 if "valid" not in validation_results:
-                     validation_results["valid"] = []
-                 validation_results["valid"].extend(batch_results.get("valid", []))
+                # Accumulate valid results for report if validator returns them
+                if "valid" not in validation_results:
+                    validation_results["valid"] = []
+                validation_results["valid"].extend(batch_results.get("valid", []))
 
         self.logger.create_module_logger("validation").info(
             {
@@ -518,7 +520,7 @@ class NewsCollectorSystem:
                 "total": total_validated,
                 "rejected": total_rejected,
                 "valid": total_validated - total_rejected,
-                "batches": batch_count
+                "batches": batch_count,
             }
         )
 
@@ -580,7 +582,7 @@ class NewsCollectorSystem:
             if payloads:
                 # Flag to track if we should fallback to sequential
                 use_batch = hasattr(self.scorer, "score_batch_async")
-                
+
                 if use_batch:
                     try:
                         results = await self.scorer.score_batch_async(payloads)
@@ -589,13 +591,17 @@ class NewsCollectorSystem:
                         self.logger.create_module_logger("scoring").error(
                             f"Batch scoring failed ({len(payloads)} items): {batch_error}"
                         )
-                        
+
                         # Harden Fix: Verify fallback exists before attempting
                         if not hasattr(self.scorer, "score_article_async"):
-                            self.logger.create_module_logger("scoring").error("Safe fallback failed: 'score_article_async' not found on scorer.")
+                            self.logger.create_module_logger("scoring").error(
+                                "Safe fallback failed: 'score_article_async' not found on scorer."
+                            )
                             raise batch_error
 
-                        self.logger.create_module_logger("scoring").info("Attempting sequential fallback.")
+                        self.logger.create_module_logger("scoring").info(
+                            "Attempting sequential fallback."
+                        )
                         use_batch = False
                         results = []
 
