@@ -142,6 +142,7 @@ markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
     "security: security and compliance checks",
+    "regression: regression tests (no network)",
 ]
 asyncio_mode = "auto"
 
