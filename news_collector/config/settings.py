@@ -50,6 +50,7 @@ SCORING_CONFIG: Dict[str, Any] = CONFIG.scoring.model_dump(mode="python")
 TEXT_PROCESSING_CONFIG: Dict[str, Any] = CONFIG.text_processing.model_dump(
     mode="python"
 )
+TEXT_PROCESSING_CONFIG.setdefault("min_title_length", 10)
 
 
 def _normalize_enrichment(config: Config) -> Dict[str, Any]:

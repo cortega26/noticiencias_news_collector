@@ -15,7 +15,7 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 import sys
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Union, Tuple
 
 from sqlalchemy import create_engine, desc, inspect, text
 from sqlalchemy.engine import URL
@@ -732,16 +732,18 @@ class DatabaseManager:
                 raise
 
     def save_articles_bulk(
-        self, articles_data: List[CollectorArticleModel | Dict[str, Any]]
+        self,
+        articles_data: List[Union[Dict[str, Any], CollectorArticleModel]],
+        batch_size: int = 50,
     ) -> int:
         """
-        Guarda múltiples artículos en una sola transacción.
-        Optimizado para reducir I/O y churn de conexiones.
+        Guarda múltiples artículos de manera eficiente y en lotes para evitar bloqueos largos.
         """
         if not articles_data:
             return 0
 
         saved_count = 0
+        batch_count = 0
         seen_urls = set()
 
         with self.get_session() as session:
@@ -844,8 +846,13 @@ class DatabaseManager:
                     )
                     session.add(article)
                     saved_count += 1
+                    batch_count += 1
 
-                session.commit()
+                    if batch_count >= batch_size:
+                        session.commit()
+                        batch_count = 0
+
+                session.commit() # Commit leftovers
                 logger.info(f"💾 Bulk save completed: {saved_count} articles")
                 return saved_count
 
@@ -1095,7 +1102,7 @@ class DatabaseManager:
                 .all()
             )
 
-    def get_pending_articles(self) -> List[Article]:
+    def get_pending_articles(self, limit: Optional[int] = None) -> List[Article]:
         """
         Obtiene artículos pendientes de procesamiento.
 
@@ -1103,12 +1110,16 @@ class DatabaseManager:
         sido catalogados apropiadamente.
         """
         with self.get_session() as session:
-            pending_articles = (
+            query = (
                 session.query(Article)
                 .filter(Article.processing_status == PENDING_STATUS)
                 .order_by(Article.collected_date)
-                .all()
             )
+
+            if limit:
+                query = query.limit(limit)
+
+            pending_articles = query.all()
             session.expunge_all()
             return pending_articles
 

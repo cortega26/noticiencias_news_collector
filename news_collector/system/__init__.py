@@ -446,61 +446,86 @@ class NewsCollectorSystem:
             # En dry_run no validamos porque no hay artículos en DB
             return {"success": True, "validated_count": 0, "rejected_count": 0}
 
-        pending_articles = self.db_manager.get_pending_articles()
+        # Validation Batching
+        BATCH_SIZE = 100
+        MAX_BATCHES = 10_000
+        total_validated = 0
+        total_rejected = 0
+        batch_count = 0
 
-        # Prepare payload via contract adapter
-        from news_collector.contracts.adapters import adapt_to_validation_payload
+        validation_results = {"invalid": [], "valid": []}
+        
+        while True:
+            if batch_count >= MAX_BATCHES:
+                self.logger.create_module_logger("validation").error(
+                    f"Validation halted: Max batches ({MAX_BATCHES}) reached. Possible infinite loop."
+                )
+                break
 
-        validation_payload = adapt_to_validation_payload(pending_articles)
-        # Validation currently expects list of dicts. We model_dump 'articles' list.
-        # But wait, ContentValidator.validate_batch takes List[Dict].
-        # Our adapter returns ArticleValidationPayload which has .articles list of models.
-        # So we dump the individual items.
-        articles_to_validate = [
-            item.model_dump() for item in validation_payload.articles
-        ]
+            pending_articles = self.db_manager.get_pending_articles(limit=BATCH_SIZE)
+            if not pending_articles:
+                break
+            
+            batch_count += 1
 
-        validation_results = self.validator.validate_batch(articles_to_validate)
+            # Prepare payload via contract adapter
+            from news_collector.contracts.adapters import adapt_to_validation_payload
+            
+            validation_payload = adapt_to_validation_payload(pending_articles)
+            articles_to_validate = [
+                item.model_dump() for item in validation_payload.articles
+            ]
 
-        rejected_count = 0
-        validated_count = len(pending_articles)
+            batch_results = self.validator.validate_batch(articles_to_validate)
+            
+            # Aggregate stats
+            total_validated += len(pending_articles)
+            current_rejected = 0 # Count rejected in this batch
 
-        # Process invalid articles
-        if validation_results["invalid"]:
-            from news_collector.storage.models import Article
+            # Process invalid articles
+            if batch_results["invalid"]:
+                from news_collector.storage.models import Article
 
-            with self.db_manager.get_session() as session:
-                for invalid_item in validation_results["invalid"]:
-                    article_data = invalid_item["article"]
-                    reason = invalid_item["reason"]
-                    rule_name = invalid_item["rule"]
+                with self.db_manager.get_session() as session:
+                    for invalid_item in batch_results["invalid"]:
+                        current_rejected += 1
+                        total_rejected += 1
+                        article_data = invalid_item["article"]
+                        reason = invalid_item["reason"]
+                        rule_name = invalid_item["rule"]
 
-                    # Find and update article
-                    article_id = article_data["id"]
+                        article_id = article_data["id"]
 
-                    # We accept that get_session creates a new session, so we need to fetch object again
-                    # or merge. Fetching is safer.
-                    article = session.query(Article).filter_by(id=article_id).first()
-                    if article:
-                        article.processing_status = "rejected"
-                        article.error_message = (
-                            f"Validation failed: {rule_name} - {reason}"
-                        )
-                        rejected_count += 1
+                        article = session.query(Article).filter_by(id=article_id).first()
+                        if article:
+                            article.processing_status = "rejected"
+                            article.error_message = (
+                                f"Validation failed: {rule_name} - {reason}"
+                            )
+                
+                # Accumulate results for report
+                validation_results["invalid"].extend(batch_results["invalid"])
+            
+            if batch_results.get("valid"):
+                 # Accumulate valid results for report if validator returns them
+                 if "valid" not in validation_results:
+                     validation_results["valid"] = []
+                 validation_results["valid"].extend(batch_results.get("valid", []))
 
         self.logger.create_module_logger("validation").info(
             {
                 "event": "validation.completed",
-                "total": validated_count,
-                "rejected": rejected_count,
-                "valid": validated_count - rejected_count,
+                "total": total_validated,
+                "rejected": total_rejected,
+                "valid": total_validated - total_rejected,
+                "batches": batch_count
             }
         )
 
         return {
             "success": True,
-            "validated_count": validated_count,
-            "rejected_count": rejected_count,
+            "validated_count": total_validated,
+            "rejected_count": total_rejected,
             "details": validation_results,
         }
 
@@ -553,18 +578,30 @@ class NewsCollectorSystem:
             # Execute Scoring (Batch or Sequential)
             results = []
             if payloads:
-                if hasattr(self.scorer, "score_batch_async"):
-                    # New Hybrid Batch Scorer
+                # Flag to track if we should fallback to sequential
+                use_batch = hasattr(self.scorer, "score_batch_async")
+                
+                if use_batch:
                     try:
                         results = await self.scorer.score_batch_async(payloads)
-                    except Exception as e:
+                    except Exception as batch_error:
+                        # Harden Fix: Log batch failure as ERROR
                         self.logger.create_module_logger("scoring").error(
-                            f"Batch scoring failed: {e}"
+                            f"Batch scoring failed ({len(payloads)} items): {batch_error}"
                         )
-                        # Fallback to empty results -> error handling loop below will catch checks
-                        results = [e] * len(payloads)
-                else:
-                    # Legacy Sequential
+                        
+                        # Harden Fix: Verify fallback exists before attempting
+                        if not hasattr(self.scorer, "score_article_async"):
+                            self.logger.create_module_logger("scoring").error("Safe fallback failed: 'score_article_async' not found on scorer.")
+                            raise batch_error
+
+                        self.logger.create_module_logger("scoring").info("Attempting sequential fallback.")
+                        use_batch = False
+                        results = []
+
+                if not use_batch:
+                    # Legacy Sequential or Fallback Execution
+                    # This isolates failures to individual items
                     tasks = [self.scorer.score_article_async(p) for p in payloads]
                     results = await asyncio.gather(*tasks, return_exceptions=True)
 
