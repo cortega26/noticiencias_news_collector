@@ -681,7 +681,7 @@ class BaseCollector(ABC):
         Valida que un artículo tenga la información mínima necesaria.
         """
         # Verificaciones básicas
-        if not article_data.get("title") or len(article_data["title"].strip()) < 10:
+        if not article_data.get("title") or len(article_data["title"].strip()) < TEXT_PROCESSING_CONFIG.get("min_title_length", 10):
             return False
 
         if not article_data.get("url") or not article_data["url"].startswith("http"):
