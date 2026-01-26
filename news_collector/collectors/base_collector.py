@@ -113,10 +113,32 @@ class BaseCollector(ABC):
         """
         Versión asíncrona de collect_from_source.
         Por defecto, delega a la versión síncrona usando un hilo.
+        Incluye un timeout global de seguridad (5 minutos) para evitar hilos zombis.
         """
-        return await asyncio.to_thread(
-            self.collect_from_source, source_id, source_config
-        )
+        # Hard cap of 5 minutes per source to prevent system hangs
+        # This is a safety net; inner requests should have their own shorter timeouts
+        timeout = getattr(self, "GLOBAL_SOURCE_TIMEOUT", 300)
+
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(self.collect_from_source, source_id, source_config),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            self._emit_log(
+                "error",
+                "collector.source.timeout_hard_limit",
+                source_id=source_id,
+                details={"timeout_seconds": timeout},
+            )
+            return {
+                "source_id": source_id,
+                "success": False,
+                "articles_found": 0,
+                "articles_saved": 0,
+                "error_message": f"Timeout global excedido ({timeout}s)",
+                "processing_time": timeout,
+            }
 
     def collect_from_multiple_sources(
         self,
@@ -762,14 +784,20 @@ class BaseCollector(ABC):
                     )
                 continue
 
-        # Filter 2: Duplicate Check (Already Published)
+        # Filter 2: Duplicate Check (Already Published) - BULK OPTIMIZATION (QW4)
         unique_candidates = []
-        for article in valid_candidates:
-            if self.db_manager.article_exists(str(article.url)):
-                if self.health_tracker:
-                    self.health_tracker.record_filter_rejection(source_id, "duplicate")
-                continue
-            unique_candidates.append(article)
+        if valid_candidates:
+            candidate_urls = [str(a.url) for a in valid_candidates]
+            existing_urls = self.db_manager.articles_exist(candidate_urls)
+
+            for article in valid_candidates:
+                if str(article.url) in existing_urls:
+                    if self.health_tracker:
+                        self.health_tracker.record_filter_rejection(
+                            source_id, "duplicate"
+                        )
+                    continue
+                unique_candidates.append(article)
 
         # Filter 3: Top-N Sorting
         # Sort by impact factor (if we had it per article) or published_date
@@ -787,12 +815,31 @@ class BaseCollector(ABC):
                 source_id, "top_n", skipped_top_n
             )
 
-        # Save Phase
-        for article in top_n:
-            if self._save_article(article):
-                saved_count += 1
+        # Save Phase - BULK OPTIMIZATION (QW1)
+        if top_n:
+            try:
+                saved_count = self.db_manager.save_articles_bulk(top_n)
                 if self.health_tracker:
-                    self.health_tracker.record_success(source_id, "save")
+                    # Approximate health tracking since we don't know exactly which ones were accepted
+                    # (though strictly all should be accepted if the filter passed)
+                    for _ in range(saved_count):
+                        self.health_tracker.record_success(source_id, "save")
+
+                # Emit batch log instead of individual logs
+                self._emit_log(
+                    "info",
+                    "collector.batch.saved",
+                    source_id=source_id,
+                    details={"count": saved_count, "attempted": len(top_n)},
+                )
+            except Exception as e:
+                self._emit_log(
+                    "error",
+                    "collector.batch.save_failed",
+                    source_id=source_id,
+                    details={"error": str(e)},
+                )
+                saved_count = 0
 
         return saved_count
 

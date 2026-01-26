@@ -88,10 +88,25 @@ class RSSCollector(BaseCollector):
         """
         session = requests.Session()
 
+        import secrets
+
+        # Rotation of User-Agents to avoid static blocking, but maintaining Bot contact info
+        user_agents = [
+            "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36",
+        ]
+
+        base_ua = secrets.choice(user_agents)
+        # Ensure we always identify ourselves
+        bot_identifier = f"NoticienciasBot/1.0 (+{COLLECTION_CONFIG.get('contact_email', 'admin@noticiencias.com')})"
+        final_ua = f"{base_ua} {bot_identifier}"
+
         # Headers que nos identifican como un bot legítimo y responsable
         session.headers.update(
             {
-                "User-Agent": COLLECTION_CONFIG["user_agent"],
+                "User-Agent": final_ua,
                 "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
                 "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
                 "Accept-Encoding": "gzip, deflate",
@@ -763,7 +778,8 @@ class RSSCollector(BaseCollector):
                 )
                 processed_article["article_metadata"]["enrichment"] = enrichment
                 processed_article["language"] = enrichment["language"]
-            except Exception as exc:  # pragma: no cover - enrichment should not fail
+            except Exception as exc:
+                # Fail-open: Log the error but don't crash the collector
                 self._emit_log(
                     "warning",
                     "collector.article.enrichment_failed",
@@ -773,6 +789,17 @@ class RSSCollector(BaseCollector):
                         "url": raw_article.get("url"),
                     },
                 )
+                # Ensure minimal enrichment structure exists
+                processed_article["article_metadata"]["enrichment"] = {
+                    "entities": [],
+                    "topics": [],
+                    "sentiment": "neutral",
+                    "error": str(exc),
+                    "language": processed_article.get("language", "en"),
+                    "normalized_title": processed_article["title"][:500],
+                    "normalized_summary": processed_article["summary"][:2000],
+                    "model_version": "fallback_v1",
+                }
 
             try:
                 return CollectorArticleModel.model_validate(processed_article)

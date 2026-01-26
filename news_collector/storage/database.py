@@ -15,7 +15,7 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 import sys
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import create_engine, desc, inspect, text
 from sqlalchemy.engine import URL
@@ -456,6 +456,29 @@ class DatabaseManager:
                 session.query(Article).filter_by(url=url).exists()
             ).scalar()
 
+    def articles_exist(self, urls: List[str]) -> Set[str]:
+        """
+        Batch check for existing articles by URL.
+        Returns a set of URLs that already exist.
+        """
+        if not urls:
+            return set()
+
+        # Split into chunks to avoid SQLite limits if necessary (999 variables)
+        # SQLAlchemy usually handles IN clauses well, but safe chunking is better.
+        CHUNK_SIZE = 500
+        existing_urls = set()
+
+        with self.get_session() as session:
+            for i in range(0, len(urls), CHUNK_SIZE):
+                chunk = urls[i : i + CHUNK_SIZE]
+                results = (
+                    session.query(Article.url).filter(Article.url.in_(chunk)).all()
+                )
+                existing_urls.update(r[0] for r in results)
+
+        return existing_urls
+
     def mark_article_published(self, article_id: int, pr_url: str) -> bool:
         """
         Marks an article as published (or PR created) in the main database.
@@ -706,6 +729,129 @@ class DatabaseManager:
                 return None
             except Exception as e:
                 logger.error(f"Error guardando artículo: {e}")
+                raise
+
+    def save_articles_bulk(
+        self, articles_data: List[CollectorArticleModel | Dict[str, Any]]
+    ) -> int:
+        """
+        Guarda múltiples artículos en una sola transacción.
+        Optimizado para reducir I/O y churn de conexiones.
+        """
+        if not articles_data:
+            return 0
+
+        saved_count = 0
+        seen_urls = set()
+
+        with self.get_session() as session:
+            try:
+                for data in articles_data:
+                    # ... processing code ...
+                    if isinstance(data, CollectorArticleModel):
+                        model = data
+                    else:
+                        try:
+                            model = CollectorArticleModel.model_validate(data)
+                        except ValidationError as exc:
+                            logger.warning(f"Invalid bulk item skipped: {exc}")
+                            continue
+
+                    payload = model.model_dump_for_storage()
+                    url = payload["url"]
+
+                    # 0. Internal Deduplication (Batch Scope)
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+
+                    normalized_published = self._ensure_timezone(
+                        payload.get("published_date")
+                    )
+                    if normalized_published:
+                        payload["published_date"] = normalized_published
+
+                    # 1. Existence Check (URL)
+                    if (
+                        session.query(Article)
+                        .filter_by(url=payload["url"])
+                        .with_entities(Article.id)
+                        .first()
+                    ):
+                        continue
+
+                    # 2. Preparation
+                    norm_title, norm_summary, normalized_text = normalize_article_text(
+                        payload.get("title", ""),
+                        payload.get("summary", ""),
+                    )
+                    normalized_basis = normalized_text or payload["url"]
+                    content_hash = sha256_hex(normalized_basis)
+
+                    # 3. Content Hash Check
+                    if (
+                        session.query(Article)
+                        .filter_by(content_hash=content_hash)
+                        .with_entities(Article.id)
+                        .first()
+                    ):
+                        continue
+
+                    # 4. SimHash & Clustering
+                    simhash_value = self._simhash_normalize_unsigned(
+                        simhash64(normalized_basis)
+                    )
+                    simhash_prefix = self._simhash_prefix_value(simhash_value)
+                    cluster_id, confidence = self._assign_cluster(
+                        session, simhash_value, payload.get("published_date")
+                    )
+
+                    # 5. Model Construction
+                    article_metadata = payload.get("article_metadata", {}) or {}
+                    article_metadata.setdefault("normalized_title", norm_title)
+                    article_metadata.setdefault("normalized_summary", norm_summary)
+                    article_metadata.setdefault(
+                        "original_url", payload.get("original_url", payload["url"])
+                    )
+
+                    article = Article(
+                        url=payload["url"],
+                        content_hash=content_hash,
+                        simhash=self._simhash_to_storage(simhash_value),
+                        simhash_prefix=simhash_prefix,
+                        title=payload["title"],
+                        summary=payload.get("summary"),
+                        content=payload.get("content"),
+                        source_id=payload["source_id"],
+                        source_name=payload["source_name"],
+                        published_date=payload.get("published_date"),
+                        published_tz_offset_minutes=payload.get(
+                            "published_tz_offset_minutes"
+                        ),
+                        published_tz_name=payload.get("published_tz_name"),
+                        authors=payload.get("authors"),
+                        category=payload["category"],
+                        doi=payload.get("doi"),
+                        journal=payload.get("journal"),
+                        is_preprint=payload.get("is_preprint", False),
+                        language=payload.get("language", "en"),
+                        processing_status=PENDING_STATUS,
+                        article_metadata=article_metadata,
+                        word_count=payload.get("word_count"),
+                        reading_time_minutes=payload.get("reading_time_minutes"),
+                        cluster_id=cluster_id,
+                        duplication_confidence=confidence,
+                    )
+                    session.add(article)
+                    saved_count += 1
+
+                session.commit()
+                logger.info(f"💾 Bulk save completed: {saved_count} articles")
+                return saved_count
+
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error en bulk save: {e}")
                 raise
 
     @staticmethod
