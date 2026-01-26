@@ -275,7 +275,7 @@ class EditorAgent:
         # Sanitize excerpt
         final_excerpt = headlines.get("excerpt", "")
         if isinstance(final_excerpt, list):
-             final_excerpt = final_excerpt[0] if final_excerpt else ""
+            final_excerpt = final_excerpt[0] if final_excerpt else ""
         final_excerpt = str(final_excerpt).replace('"', '\\"')
 
         # Construct Frontmatter

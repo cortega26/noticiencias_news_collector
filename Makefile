@@ -1,6 +1,7 @@
 .PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues
 
 VENV ?= .venv
+VENV_REFINERY ?= .venv-refinery
 ifeq ($(OS),Windows_NT)
 BIN_DIR := Scripts
 PYTHON ?= python
@@ -21,6 +22,11 @@ PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
 BANDIT := $(VENV)/$(BIN_DIR)/bandit
 SEMGREP := $(VENV)/$(BIN_DIR)/semgrep
 PYTHON_BIN := $(VENV)/$(BIN_DIR)/python
+
+# Refinery Environment
+PIP_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/pip
+PYTHON_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/python
+
 REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
 PERF_DIR := $(REPORTS_DIR)/perf
@@ -43,6 +49,7 @@ BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
 TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
+BOOTSTRAP_REFINERY_STAMP := $(VENV_REFINERY)/.bootstrap-complete
 
 CONFIG_FILE ?= $(CURDIR)/config.toml
 KEY ?=
@@ -60,14 +67,25 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests semgrep
 	@touch $(BOOTSTRAP_STAMP)
 
+$(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
+	@echo "[bootstrap-refinery] Creating isolated environment in $(VENV_REFINERY)"
+	@$(PYTHON) -m venv $(VENV_REFINERY)
+	@$(PIP_REFINERY) install --upgrade pip
+	@$(PIP_REFINERY) install --no-deps --require-hashes -r requirements-refinery.lock
+	@# Install app in editable mode, assuming refinery deps cover runtime needs
+	@$(PIP_REFINERY) install -e . --no-deps
+	@touch $(BOOTSTRAP_REFINERY_STAMP)
+
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@echo "Environment ready at $(VENV)"
 
 run-local: bootstrap ## Run the collector locally
 	@$(PYTHON) scripts/run_collector.py
 
-refinery: bootstrap ## Launch the Refinery Admin Panel (Streamlit UI)
-	@$(PYTHON_BIN) -m streamlit run apps/refinery/admin_panel.py
+bootstrap-refinery: $(BOOTSTRAP_REFINERY_STAMP) ## Provision refinery environment
+
+refinery: bootstrap-refinery ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
+	@$(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
 
 debug: bootstrap ## Run the collector in debug mode (verbose)
 	@$(PYTHON) scripts/run_collector.py --verbose
@@ -172,6 +190,12 @@ security: bootstrap ## Run security and dependency scans
 	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 
+security-dev: bootstrap ## Run security audit on dev and refinery environments
+	@echo "[security-dev] Auditing dev and refinery dependencies..."
+	@# Ignoring GHSA-7gcm-g887-7qv7 (protobuf) - Dev/Refinery only, unreachable in production
+	@$(PIP_AUDIT) -r requirements-security.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
+	@$(PIP_AUDIT) -r requirements-refinery.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
+	@echo "[security-dev] All dev/refinery audits passed (no known vulnerabilities)."
 
 audit-issues: ## Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)
 	@tools/audit_to_issues.sh $(AUDIT_ISSUES_FLAGS)

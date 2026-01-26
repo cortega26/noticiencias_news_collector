@@ -19,12 +19,6 @@ scikit-learn>=1.3.0
 sqlalchemy>=2.0.0
 textblob>=0.17.0
 tomli-w>=1.0.0
-# Admin Panel / GUI Dependencies
-streamlit>=1.30.0
-pandas>=2.0.0
-GitPython>=3.1.0
-PyYAML>=6.0.0
-toml>=0.10.0
-numpy!=2.4.0
-starlette>=0.49.1
+# Admin Panel / GUI Dependencies (Moved to [project.optional-dependencies] refinery)
+# streamlit, pandas, gitpython, etc are now installed via `pip install .[refinery]`
 urllib3>=2.6.3
