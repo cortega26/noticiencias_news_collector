@@ -15,7 +15,7 @@ de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 import sys
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Union, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from sqlalchemy import create_engine, desc, inspect, text
 from sqlalchemy.engine import URL
@@ -731,7 +731,7 @@ class DatabaseManager:
                 logger.error(f"Error guardando artículo: {e}")
                 raise
 
-    def save_articles_bulk(
+    def save_articles_bulk(  # noqa: C901
         self,
         articles_data: List[Union[Dict[str, Any], CollectorArticleModel]],
         batch_size: int = 50,
@@ -852,7 +852,7 @@ class DatabaseManager:
                         session.commit()
                         batch_count = 0
 
-                session.commit() # Commit leftovers
+                session.commit()  # Commit leftovers
                 logger.info(f"💾 Bulk save completed: {saved_count} articles")
                 return saved_count
 
