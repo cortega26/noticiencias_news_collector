@@ -65,19 +65,19 @@ def test_concurrent_batches_race_condition():
         db_file = temp_dir / "stress.db"
         manager = DatabaseManager({"type": "sqlite", "path": db_file})
         Base.metadata.create_all(manager.engine)
-        
+
         # Two workers trying to save exact same batch of 10 articles at same time
         batch = [create_article_payload(i) for i in range(10)]
-        
+
         # Share manager (it has check_same_thread=False)
         t1 = threading.Thread(target=worker_batch_save, args=(manager, batch))
         t2 = threading.Thread(target=worker_batch_save, args=(manager, batch))
-        
+
         t1.start()
         t2.start()
         t1.join()
         t2.join()
-        
+
         with manager.get_session() as session:
             total = session.query(Article).count()
             # If 0, both failed (bad). If >0, at least one succeeded.
