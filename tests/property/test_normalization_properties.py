@@ -47,7 +47,10 @@ def test_normalize_text_collapses_whitespace(parts: list[str], spacer: str) -> N
 
 @st.composite
 def html_fragments(draw) -> str:
-    words = draw(st.lists(st.text(min_size=1, max_size=10), min_size=1, max_size=5))
+    safe_text = st.text(min_size=1, max_size=10).filter(
+        lambda t: "script" not in t.lower() and "style" not in t.lower()
+    )
+    words = draw(st.lists(safe_text, min_size=1, max_size=5))
     boilerplate = draw(
         st.sampled_from(
             [

@@ -5,7 +5,7 @@ from news_collector.collectors.base_collector import BaseCollector
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 
 
-class TestCollector(BaseCollector):
+class MockCollector(BaseCollector):
     def collect_from_source(self, source_id, source_config):
         return {}
 
@@ -14,7 +14,7 @@ class TestCollector(BaseCollector):
 def collector():
     # Patch min_content_length to avoid needing huge strings
     with patch.dict(TEXT_PROCESSING_CONFIG, {"min_content_length": 0}):
-        yield TestCollector(logger_factory=MagicMock())
+        yield MockCollector(logger_factory=MagicMock())
 
 
 def test_validation_default_threshold(collector):
