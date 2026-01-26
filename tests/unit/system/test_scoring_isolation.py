@@ -12,6 +12,8 @@ def mock_system_components():
     system = NewsCollectorSystem()
     system.db_manager = MagicMock()
     system.scorer = AsyncMock()
+    # Explicitly mock reset_cycle_metrics as SYNC to match production usage and avoid RuntimeWarning
+    system.scorer.reset_cycle_metrics = MagicMock()
     system.logger = MagicMock()
 
     # Mock logger to accept log calls
