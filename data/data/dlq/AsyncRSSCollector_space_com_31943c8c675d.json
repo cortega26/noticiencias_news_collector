@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031823Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "space_com",
-  "url": "https://www.space.com/entertainment/space-movies-shows/meet-a-trio-of-intrepid-cadets-boldly-joining-star-trek-starfleet-academy-interview",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031152Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "livescience",
-  "url": "https://www.livescience.com/space/mars/nasas-mars-sample-return-is-dead-leaving-china-to-retrieve-signs-of-life-from-the-red-planet",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

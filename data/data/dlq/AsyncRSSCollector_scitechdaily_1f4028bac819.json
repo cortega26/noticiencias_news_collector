@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T145814Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "scitechdaily",
-  "url": "https://scitechdaily.com/scientists-uncover-hidden-weakness-in-quantum-encryption/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

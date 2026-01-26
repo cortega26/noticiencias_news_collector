@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T014553Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "scitechdaily",
-  "url": "https://scitechdaily.com/astronomers-solve-the-mystery-of-how-black-holes-got-big-so-fast/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T014546Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "nature",
-  "url": "https://www.nature.com/articles/d41586-026-00207-6",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031820Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "yale_news",
-  "url": "https://engineering.yale.edu/news-and-events/news/plasma-zapping-harmful-chemicals-away",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

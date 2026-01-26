@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T231211Z",
-  "collector": "RSSCollector",
-  "source_id": "reddit_science",
-  "url": "https://www.reddit.com/r/science/comments/1qlyeuo/motivation_acts_as_a_camera_lens_that_shapes_how/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

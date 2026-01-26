@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T164708Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "reddit_science",
-  "url": "https://www.reddit.com/r/science/comments/1qloq7s/flexibility_mindsets_enhance_proenvironmental/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

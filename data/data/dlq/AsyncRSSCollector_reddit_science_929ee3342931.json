@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T020150Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "reddit_science",
-  "url": "https://www.reddit.com/r/science/comments/1ql2du2/onethird_of_patients_in_an_athome_blood_pressure/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}
