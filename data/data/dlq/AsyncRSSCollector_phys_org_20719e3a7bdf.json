@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T020150Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "phys_org",
-  "url": "https://phys.org/news/2026-01-qa-fairness-society.html",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

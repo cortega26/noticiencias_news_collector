@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T145809Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "nejm",
-  "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2504966?af=R&rss=currentIssue",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

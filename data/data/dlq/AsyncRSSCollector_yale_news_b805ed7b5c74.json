@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031440Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "yale_news",
-  "url": "https://news.yale.edu/2026/01/09/why-leaving-things-unfinished-messes-your-mind",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

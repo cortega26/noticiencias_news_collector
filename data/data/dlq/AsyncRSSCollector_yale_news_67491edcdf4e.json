@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031440Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "yale_news",
-  "url": "https://news.yale.edu/2026/01/13/how-yale-and-connecticut-are-bridging-gap-between-arts-and-innovation",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

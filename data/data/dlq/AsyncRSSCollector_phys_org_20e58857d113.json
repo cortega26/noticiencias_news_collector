@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260124T015605Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "phys_org",
-  "url": "https://phys.org/news/2026-01-qa-carbon-neutral-society-freshwater.html",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031440Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "wired",
-  "url": "https://www.wired.com/story/jackery-explorer-300-plus-deal-126/",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}

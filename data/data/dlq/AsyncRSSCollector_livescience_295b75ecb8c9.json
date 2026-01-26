@@ -1,8 +1,0 @@
-{
-  "timestamp": "20260117T031152Z",
-  "collector": "AsyncRSSCollector",
-  "source_id": "livescience",
-  "url": "https://www.livescience.com/planet-earth/forced-closure-of-premier-us-weather-modeling-institute-could-endanger-millions-of-americans",
-  "reason": "collector_payload_invalid",
-  "context": {}
-}
