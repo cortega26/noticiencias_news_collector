@@ -98,10 +98,10 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 "reddit.com" = 30.0
 
 [scoring.weights]
-source_credibility = 0.15
+source_credibility = 0.1
 recency = 0.2
 content_quality = 0.35
-engagement_potential = 0.3
+engagement_potential = 0.35
 
 [scoring.feature_weights]
 source_credibility = 0.15

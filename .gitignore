@@ -137,3 +137,8 @@ reports/*
 backups/
 logs/config_editor.log
 final_lint_log.txt
+
+
+*.db-wal
+*.db-shm
+data/**/dlq/*.json

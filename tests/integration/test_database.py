@@ -58,6 +58,47 @@ def test_save_and_retrieve_article_full_flow(test_db_manager):
         assert fetched.title == article_data["title"]
 
 
+def test_save_articles_bulk(test_db_manager):
+    # Prepare batch data
+    articles = []
+    for i in range(5):
+        articles.append(
+            {
+                "title": f"Bulk Article {i}",
+                "url": f"http://test.com/bulk/{i}",
+                "source_id": "src1",
+                "category": "general",
+                "published_date": datetime.now(timezone.utc),
+                "source_name": "Source A",
+                "summary": "Bulk summary",
+                "content": "Bulk content " * 50,
+                "word_count": 100,
+                "reading_time_minutes": 1,
+                "authors": ["Batch Bot"],
+                "language": "en",
+            }
+        )
+
+    # Execute bulk save
+    count = test_db_manager.save_articles_bulk(articles)
+    assert count == 5
+
+    # Verify existing check within bulk (should skip duplicates)
+    count_retry = test_db_manager.save_articles_bulk(articles)
+    assert count_retry == 0
+
+    # Verify persistence
+    from news_collector.storage.models import Article
+
+    with test_db_manager.get_session() as session:
+        saved_count = (
+            session.query(Article)
+            .filter(Article.url.like("http://test.com/bulk/%"))
+            .count()
+        )
+        assert saved_count == 5
+
+
 def test_update_article_score(test_db_manager):
     # 1. Create Article
     article_data = {
