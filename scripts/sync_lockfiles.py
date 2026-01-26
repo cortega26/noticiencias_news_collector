@@ -26,6 +26,24 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "requirements-refinery.lock",
+        (
+            "-m",
+            "piptools",
+            "compile",
+            "--no-header",
+            "--generate-hashes",
+            "--allow-unsafe",
+            "-c",
+            "requirements.lock",
+            "--extra",
+            "refinery",
+            "--output-file",
+            "requirements-refinery.lock",
+            "pyproject.toml",
+        ),
+    ),
+    (
         "requirements-security.lock",
         (
             "-m",
@@ -38,6 +56,8 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "requirements.lock",
             "--extra",
             "security",
+            "--extra",
+            "test",
             "--output-file",
             "requirements-security.lock",
             "pyproject.toml",
