@@ -36,6 +36,7 @@ PENDING_STATUS = "pen" + "ding"
 PROCESSING_STATUS_VALUES = (
     PENDING_STATUS,
     "processing",
+    "validated",
     "completed",
     "error",
     "rejected",
