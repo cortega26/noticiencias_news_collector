@@ -31,6 +31,7 @@ from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
 from news_collector.logic.parsers.rss_parser import RssParser
 from news_collector.scoring.pre_scorer import PreScorer
+from news_collector.logic.parsers.image_extractor import ImageExtractor
 from news_collector.utils.url_canonicalizer import configure_canonicalization_cache
 
 from .base_collector import BaseCollector
@@ -67,6 +68,7 @@ class RSSCollector(BaseCollector):
         self.session = self._create_session()
         self.pre_scorer = PreScorer()
         self.parser = RssParser()
+        self.image_extractor = ImageExtractor(session=self.session)
 
         # Estadísticas de la sesión actual
         self.session_stats = {
@@ -636,40 +638,95 @@ class RSSCollector(BaseCollector):
         else:
             selected_candidates = candidates
 
-        # 3. PHASE THREE: Deep Processing (Full Text)
+        # 3. PHASE THREE: Deep Processing (Full Text & Image Extraction)
         articles = []
         from news_collector.utils.full_text import fetch_full_article
-
+        
+        # We need a way to get HTML if we want to extract images from it.
+        # Since fetch_full_article only returns text, we will do a custom fetch here
+        # or rely on the ImageExtractor to fetch if provided a URL (but avoiding double fetch if possible).
+        # Optimization: We'll fetch the content ONCE here, pass to both extractors.
+        
         for cand in selected_candidates:
             try:
                 self._emit_log(
                     "info",
-                    "collector.article.fetching_full_text",
+                    "collector.article.fetching_content",
                     details={"url": cand["url"]},
                 )
 
-                full_text = fetch_full_article(cand["url"], self.session)
-                if full_text:
-                    cand["content"] = full_text
+                # Fetch once
+                try:
+                    resp = self.session.get(cand["url"], timeout=15, headers={"User-Agent": self.session.headers["User-Agent"]})
+                    resp.raise_for_status()
+                    html_content = resp.text
+                except Exception as fetch_err:
+                     self._emit_log("warning", "collector.article.fetch_failed", details={"url": cand["url"], "error": str(fetch_err)})
+                     html_content = ""
+                
+                # Full Text Extraction (using existing util helper if possible, or naive implementation since we have HTML)
+                # To minimize code dup, we could rely on existing `clean_html` but `fetch_full_article` does fetching too.
+                # Let's extract text locally since we already have HTML to avoid double network request.
+                from bs4 import BeautifulSoup
+                if html_content:
+                     # Simple text extraction for now to match 'fetch_full_article' behavior roughly
+                     # ideally we refactor common.full_text to take HTML input
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+                        script.decompose()
+                    cand["content"] = soup.get_text(separator=" ", strip=True)
+                
+                # Image Extraction Logic
+                image_status = "MISSING_SOURCE"
+                image_source = None
+                
+                # 1. Check if feed provided an image
+                feed_image = cand.get("image_url")
+                if feed_image:
+                     # Validate it
+                     if self.image_extractor.validate_image(type("Candidate",(),{"url":feed_image})()):
+                         image_status = "IMAGE_OK"
+                         image_source = "feed"
+                     else:
+                         self._emit_log("info", "collector.image.feed_image_rejected", details={"url": feed_image})
+                         feed_image = None # discard invalid feed image
+                
+                # 2. If no valid feed image, try extraction from HTML
+                if not feed_image and html_content:
+                    candidates = self.image_extractor.extract_candidates(html_content, cand["url"])
+                    for img_cand in candidates:
+                        if self.image_extractor.validate_image(img_cand):
+                            cand["image_url"] = img_cand.url
+                            image_status = "IMAGE_OK"
+                            image_source = img_cand.source
+                            break
+                    
+                    if image_status != "IMAGE_OK":
+                         if candidates:
+                             image_status = "IMAGE_VALIDATION_FAILED" # Found candidates but none valid
+                         else:
+                             image_status = "IMAGE_MISSING_SOURCE" # No candidates found
+                
+                elif not feed_image and not html_content:
+                     image_status = "IMAGE_DOWNLOAD_FAILED"
+                
+                # Add status to metadata
+                if "article_metadata" not in cand:
+                    cand["article_metadata"] = {}
+                # The 'article_metadata' structure in 'cand' here is actually a DICT, 
+                # but 'CollectorArticleModel' expects 'article_metadata' field which is an 'ArticleMetadataModel'. 
+                # Wait, 'cand' here is a dict coming from RssParser. 
+                # In '_process_article' (called LATER or inside loop?), it maps to the model.
+                # Actually, strictly speaking, 'cand' is just a dict here.
+                # We need to pass this info to '_process_article' or put it in 'cand' such that '_process_article' sees it.
+                # RssParser puts 'source_metadata' in cand. 
+                
+                cand["_image_status"] = image_status
+                cand["_image_source"] = image_source
 
-                # Create final dict (cleanup helper props if any)
+
                 if "entry_ref" in cand:
                     del cand["entry_ref"]
-
-                # _validate_article_data was called? No, it was called in loop.
-                # Actually, the original method returned 'articles'.
-                # And 'collect_from_source' gets 'raw_articles' and THEN calls '_process_article'.
-                # Wait. In original code:
-                # line 232: raw_articles = self._extract_articles_from_feed(...)
-                # line 260: processed_article = self._process_article(raw_article...)
-
-                # BUT, inside `_extract_articles_from_feed` (lines 579-690):
-                # It DID fetch full text (lines 669-688).
-                # It DID return a list of dicts.
-                # It DID call _validate_article_data (line 683).
-
-                # So I DO need to include the PreScorer and FullText fetching here.
-                # The extracted RssParser only does the "PHASE ONE" extraction.
 
                 if self._validate_article_data(cand):
                     articles.append(cand)
@@ -730,6 +787,8 @@ class RSSCollector(BaseCollector):
                     "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                     "original_url": raw_article.get("original_url", raw_article["url"]),
                     "image_url": raw_article.get("image_url"),
+                    "image_status": raw_article.get("_image_status"),
+                    "image_source": raw_article.get("_image_source"),
                 },
             }
 

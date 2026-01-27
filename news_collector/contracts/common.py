@@ -18,6 +18,8 @@ class ArticleMetadata(TypedDict, total=False):
     processing_timestamp: str
     original_url: str
     enrichment: ArticleEnrichment
+    image_status: str
+    image_source: str
 
 
 class ArticleMetadataModel(BaseModel):
@@ -28,6 +30,8 @@ class ArticleMetadataModel(BaseModel):
     processing_timestamp: datetime | None = None
     original_url: str | None = None
     enrichment: ArticleEnrichmentModel | None = None
+    image_status: str | None = None
+    image_source: str | None = None
 
     model_config = ConfigDict(extra="allow")
 
