@@ -133,8 +133,11 @@ def _canonicalize_url_impl(url: str) -> str:  # noqa: C901
 
     # Normalize path, stripping AMP markers
     normalized_path = _normalize_path(path)
-    for pattern in AMP_PATH_PATTERNS:
-        normalized_path = pattern.sub("/", normalized_path)
+    previous_path = None
+    while previous_path != normalized_path:
+        previous_path = normalized_path
+        for pattern in AMP_PATH_PATTERNS:
+            normalized_path = pattern.sub("/", normalized_path)
     if not normalized_path:
         normalized_path = "/"
 

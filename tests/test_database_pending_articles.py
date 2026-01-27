@@ -135,68 +135,62 @@ class _DummyLogger:
 def test_pending_articles_detached_and_scored(
     database_manager: DatabaseManager,
 ) -> None:
-    try:
-        payload = _basic_article_payload()
-        saved_article = database_manager.save_article(payload)
-        assert saved_article is not None
+    payload = _basic_article_payload()
+    saved_article = database_manager.save_article(payload)
+    assert saved_article is not None
 
-        pending_articles = database_manager.get_pending_articles()
-        assert len(pending_articles) == 1
+    pending_articles = database_manager.get_pending_articles()
+    assert len(pending_articles) == 1
 
-        article = pending_articles[0]
+    article = pending_articles[0]
 
-        # Objects should keep their loaded state outside the session context
-        assert article.title == payload["title"]
-        assert article.source_id == payload["source_id"]
-        assert article.processing_status == PENDING_TOKEN
+    # Objects should keep their loaded state outside the session context
+    assert article.title == payload["title"]
+    assert article.source_id == payload["source_id"]
+    assert article.processing_status == PENDING_TOKEN
 
-        system = NewsCollectorSystem(config_override={"scoring_workers": 1})
-        system.db_manager = database_manager
-        system.scorer = _DummyScorer()
-        system.logger = _DummyLogger()
+    system = NewsCollectorSystem(config_override={"scoring_workers": 1})
+    system.db_manager = database_manager
+    system.scorer = _DummyScorer()
+    system.logger = _DummyLogger()
 
-        scoring_result = asyncio.run(
-            system._execute_scoring(collection_results={}, dry_run=False)
-        )
-        assert scoring_result["success"]
-        assert scoring_result["processed_articles"] == 1
+    scoring_result = asyncio.run(
+        system._execute_scoring(collection_results={}, dry_run=False)
+    )
+    assert scoring_result["success"]
+    assert scoring_result["processed_articles"] == 1
 
-        with database_manager.get_session() as session:
-            refreshed = session.query(Article).filter_by(id=article.id).one()
-            assert refreshed.processing_status == "completed"
-    finally:
-        database_manager.close()
+    with database_manager.get_session() as session:
+        refreshed = session.query(Article).filter_by(id=article.id).one()
+        assert refreshed.processing_status == "completed"
 
 
 def test_invalid_scoring_payload_rejected(database_manager: DatabaseManager) -> None:
-    try:
-        payload = _basic_article_payload()
-        saved_article = database_manager.save_article(payload)
-        assert saved_article is not None
+    payload = _basic_article_payload()
+    saved_article = database_manager.save_article(payload)
+    assert saved_article is not None
 
-        invalid_score = {
-            "final_score": 1.5,
-            "should_include": True,
-            "components": {
-                "source_credibility": 0.5,
-                "recency": 0.3,
-                "content_quality": 0.1,
-                "engagement": 0.1,
-            },
-            "weights": {
-                "source_credibility": 0.5,
-                "recency": 0.3,
-                "content_quality": 0.1,
-                "engagement": 0.1,
-            },
-            "version": "test",
-            "explanation": {"reason": "invalid"},
-        }
+    invalid_score = {
+        "final_score": "not_a_number",
+        "should_include": True,
+        "components": {
+            "source_credibility": 0.5,
+            "recency": 0.3,
+            "content_quality": 0.1,
+            "engagement": 0.1,
+        },
+        "weights": {
+            "source_credibility": 0.5,
+            "recency": 0.3,
+            "content_quality": 0.1,
+            "engagement": 0.1,
+        },
+        "version": "test",
+        "explanation": {"reason": "invalid"},
+    }
 
-        with pytest.raises(ValueError):
-            database_manager.update_article_score(saved_article.id, invalid_score)
-    finally:
-        database_manager.close()
+    with pytest.raises(ValueError):
+        database_manager.update_article_score(saved_article.id, invalid_score)
 
 
 PENDING_TOKEN = "pen" + "ding"

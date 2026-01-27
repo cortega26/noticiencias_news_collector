@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from sqlalchemy import create_engine, desc, inspect, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, close_all_sessions, load_only, sessionmaker
+from sqlalchemy.orm import Session, load_only, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from news_collector.utils.pydantic_compat import get_pydantic_module
@@ -412,10 +412,6 @@ class DatabaseManager:
 
     def close(self) -> None:
         """Dispose pooled connections for clean shutdowns/tests."""
-        try:
-            close_all_sessions()
-        except Exception as exc:
-            logger.warning("Error cerrando sesiones activas: %s", exc)
         if self.engine is None:
             return
         try:
