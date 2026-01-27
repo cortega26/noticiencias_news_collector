@@ -1150,7 +1150,7 @@ with tab5:
                         if st.button(
                             "🗑️ Despublicar",
                             key=f"btn_del_{f.name}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             if refinery_id:
                                 # Copy-paste of delete logic
@@ -1178,7 +1178,7 @@ with tab5:
                         if st.button(
                             "♻️ Reset",
                             key=f"btn_rst_{f.name}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             # Copy-paste of reset logic
                             try:
@@ -1232,7 +1232,7 @@ with tab6:
                 }
             )
 
-        st.dataframe(source_list, use_container_width=True)
+        st.dataframe(source_list, width="stretch")
 
     st.divider()
 
