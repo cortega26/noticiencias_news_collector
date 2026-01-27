@@ -514,6 +514,23 @@ class NewsCollectorSystem:
                     validation_results["valid"] = []
                 validation_results["valid"].extend(batch_results.get("valid", []))
 
+                # FIX: Update valid articles to 'validated' so they exit the pending loop
+                from news_collector.storage.models import Article
+
+                with self.db_manager.get_session() as session:
+                    for valid_item in batch_results.get("valid", []):
+                        # valid_item might be the article dict itself or a wrapper
+                        # Assuming it mimics structure of invalid items or is the article dict
+                        # Contract Adapter usually returns list of models or dicts for batch
+                        # Check validator implementation if possible, but safely assuming we can find by ID
+                        
+                        # In validate_batch, 'valid' usually contains the input payload for valid items
+                        article_id = valid_item.get("id")
+                        if article_id:
+                             article = session.query(Article).filter_by(id=article_id).first()
+                             if article:
+                                 article.processing_status = "validated"
+
         self.logger.create_module_logger("validation").info(
             {
                 "event": "validation.completed",
@@ -541,7 +558,8 @@ class NewsCollectorSystem:
             return self._simulate_scoring(collection_results)
         else:
             # Scoring real
-            pending_articles = self.db_manager.get_pending_articles()
+            # FIX: Fetch 'validated' articles instead of 'pending' to match pipeline flow
+            pending_articles = self.db_manager.get_pending_articles(status="validated")
 
             scoring_stats = {
                 "articles_scored": 0,

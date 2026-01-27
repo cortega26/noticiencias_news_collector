@@ -178,6 +178,42 @@ def check_system_health(
             }
         )
 
+    # Verificar LLM Provider (Ollama)
+    try:
+        import requests
+        from news_collector.config.settings import CONFIG
+
+        ollama_url = CONFIG.ollama.api_url
+        # If /api/generate is in the URL, strip it to check base health
+        base_url = ollama_url.split("/api/")[0]
+        health_url = f"{base_url}/api/tags"  # Standard Ollama check
+        
+        try:
+            resp = requests.get(health_url, timeout=2)
+            if resp.status_code != 200:
+                warning_msg = f"Ollama health check returned {resp.status_code} at {health_url}"
+                warnings.append(warning_msg)
+                logger.create_module_logger("system").warning(warning_msg)
+            else:
+                 # Check if configured model exists
+                 models = resp.json().get("models", [])
+                 model_name = CONFIG.ollama.model
+                 if not any(m.get("name") == model_name or m.get("model") == model_name for m in models):
+                     # Try fuzzy match (e.g. 'llama3.2:latest' vs 'llama3.2')
+                     if not any(model_name in (m.get("name") or "") for m in models):
+                         warning_msg = f"Model '{model_name}' not found in Ollama. Available: {[m.get('name') for m in models[:3]]}..."
+                         warnings.append(warning_msg)
+                         logger.create_module_logger("system").warning(warning_msg)
+
+        except Exception as conn_err:
+             warning_msg = f"LLM Provider unreachable at {base_url}: {conn_err}"
+             warnings.append(warning_msg)
+             # Do not mark as critical to avoid stopping the collector, but log warning
+             logger.create_module_logger("system").warning(warning_msg)
+
+    except Exception as e:
+        logger.create_module_logger("system").warning(f"Skipping LLM check: {e}")
+
     return {
         "healthy": len(critical_issues) == 0,
         "issues": issues,

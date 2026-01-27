@@ -1098,9 +1098,11 @@ class DatabaseManager:
                 .all()
             )
 
-    def get_pending_articles(self, limit: Optional[int] = None) -> List[Article]:
+    def get_pending_articles(
+        self, limit: Optional[int] = None, status: str = PENDING_STATUS
+    ) -> List[Article]:
         """
-        Obtiene artículos pendientes de procesamiento.
+        Obtiene artículos pendientes de procesamiento (o con otro status).
 
         Como obtener la lista de libros que llegaron pero aún no han
         sido catalogados apropiadamente.
@@ -1108,7 +1110,7 @@ class DatabaseManager:
         with self.get_session() as session:
             query = (
                 session.query(Article)
-                .filter(Article.processing_status == PENDING_STATUS)
+                .filter(Article.processing_status == status)
                 .order_by(Article.collected_date)
             )
 
