@@ -231,6 +231,22 @@ Gracias al **Cognitive Scorer**, ahora puedes ajustar la sensibilidad de la IA d
 
 ## 7. Mantenimiento y Solución de Problemas
 
+### 7.0 Verificación de Salud
+
+Antes de operar, puedes verificar la configuración y servicios críticos:
+
+**Verificar Configuración Resolved:**
+
+```bash
+python -c "from core.config_manager import CONFIG; print(f'API: {CONFIG.ollama.api_url}, Model: {CONFIG.ollama.model}')"
+```
+
+**Chequeo de Salud (Bootstrap/Ollama):**
+
+```bash
+python -c "from news_collector.system.bootstrap import bootstrap_system; print(bootstrap_system())"
+```
+
 ### 7.1 Logs y Auditoría
 
 - **Refinery Logs**: Se muestran en la parte inferior de la pestaña "Operations" en la UI.

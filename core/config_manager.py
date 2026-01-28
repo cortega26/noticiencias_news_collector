@@ -12,6 +12,10 @@ from noticiencias.config_manager import (
     save_config,
 )
 
+# Expose stable entrypoints
+get_config = load_config
+CONFIG = load_config()
+
 __all__ = [
     "Config",
     "ConfigError",
@@ -20,4 +24,6 @@ __all__ = [
     "load_config",
     "save_config",
     "main",
+    "get_config",
+    "CONFIG",
 ]

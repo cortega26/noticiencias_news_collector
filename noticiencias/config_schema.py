@@ -664,7 +664,7 @@ class OllamaConfig(StrictModel):
         description="Base URL for the Ollama API.",
     )
     model: str = Field(
-        default="llama3.3",
+        default="llama3.3:latest",
         description="Model tag to use for generation.",
     )
     timeout: PositiveInt = Field(
