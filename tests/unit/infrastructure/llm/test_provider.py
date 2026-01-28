@@ -45,6 +45,7 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.provider._extract_json("No json here"), {})
 
     @patch("requests.post")
+    @patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True)
     def test_generate_sync(self, mock_post):
         mock_resp = MagicMock()
         mock_resp.status_code = 200

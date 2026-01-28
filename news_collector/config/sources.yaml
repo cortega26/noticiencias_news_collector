@@ -8,6 +8,7 @@ nature:
   impact_factor: 49.962
   description: La revista científica más prestigiosa del mundo
   typical_delay: 0
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -21,6 +22,7 @@ science:
   impact_factor: 47.728
   description: Revista insignia de la AAAS, rival histórico de Nature
   typical_delay: 0
+  content_mode: summary_only
   headers:
     User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
@@ -37,6 +39,7 @@ cell:
   impact_factor: 38.637
   description: La revista más importante en biología celular y molecular
   typical_delay: 1
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -50,6 +53,7 @@ nejm:
   impact_factor: 91.245
   description: La biblia de la medicina clínica
   typical_delay: 0
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -63,6 +67,7 @@ scientific_american:
   impact_factor: null
   description: Divulgación científica de alta calidad desde 1845
   typical_delay: 2
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -76,6 +81,7 @@ new_scientist:
   impact_factor: null
   description: Enfoque en ciencia emergente y tendencias futuras
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -89,6 +95,7 @@ ars_technica:
   impact_factor: null
   description: Excelente cobertura de tecnología y ciencia aplicada
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -103,6 +110,7 @@ phys_org:
   description: Agregador de noticias científicas de universidades
   typical_delay: 0
   min_delay_seconds: 60
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -116,6 +124,7 @@ scitechdaily:
   impact_factor: null
   description: Science and technology news and analysis
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -129,6 +138,7 @@ sciencedaily_top:
   impact_factor: null
   description: Latest research news
   typical_delay: 0
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -142,6 +152,7 @@ wired:
   impact_factor: null
   description: Leading tech and culture publication
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -155,6 +166,7 @@ techcrunch:
   impact_factor: null
   description: Startup and technology news
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -168,6 +180,7 @@ the_verge:
   impact_factor: null
   description: Mainstream technology news and reviews
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -181,6 +194,7 @@ mit_tech_review:
   impact_factor: null
   description: In-depth technology journalism
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -194,6 +208,7 @@ stat_news:
   impact_factor: null
   description: Reporting from the frontiers of health and medicine
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -207,6 +222,7 @@ space_com:
   impact_factor: null
   description: Space exploration and astronomy news
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -220,6 +236,7 @@ livescience:
   impact_factor: null
   description: Science news for general audience
   typical_delay: 1
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -233,6 +250,7 @@ mit_news:
   impact_factor: null
   description: Investigación de una de las mejores universidades técnicas
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -246,6 +264,7 @@ yale_news:
   impact_factor: null
   description: Yale University Science & Technology News
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -259,6 +278,7 @@ nasa_news:
   impact_factor: null
   description: Noticias espaciales de la fuente más autorizada
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -272,6 +292,7 @@ nih_news:
   impact_factor: null
   description: Instituto Nacional de Salud, máxima autoridad médica de EE.UU.
   typical_delay: 0
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -287,6 +308,7 @@ arxiv_ai:
   typical_delay: 0
   special_handling: preprint
   min_delay_seconds: 20
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: PREPRINT_SOURCES
@@ -301,6 +323,7 @@ biorxiv:
   description: Preprints de biología y ciencias de la vida
   typical_delay: 0
   special_handling: preprint
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: PREPRINT_SOURCES
@@ -316,6 +339,7 @@ reddit_science:
   typical_delay: 0
   rate_limit_notes: Usar user-agent dedicado y no superar 60 requests por minuto
   min_delay_seconds: 30
+  content_mode: summary_only
   etag: null
   last_modified: null
   _group: COMMUNITY_FEEDS
@@ -347,6 +371,7 @@ deepmind_blog:
   language: en
   impact_factor: null
   description: News and stories from Google DeepMind
+  content_mode: full_text
   etag: null
   last_modified: null
   _group: AI_LABS

@@ -27,10 +27,24 @@ def main():
     parser.add_argument(
         "--export-json", type=str, help="Ruta para exportar resultados a JSON"
     )
+    parser.add_argument(
+        "--max-items-per-source",
+        type=int,
+        help="Límite de artículos por fuente (override)",
+    )
 
     args = parser.parse_args()
 
     try:
+        # Override global config if requested (Runtime patching for dry-run/testing)
+        if args.max_items_per_source:
+            from news_collector.config.settings import COLLECTION_CONFIG
+
+            print(
+                f"🔧 Overriding max_articles_per_source to {args.max_items_per_source}"
+            )
+            COLLECTION_CONFIG["max_articles_per_source"] = args.max_items_per_source
+
         system = create_system()
 
         print("🔧 Inicializando sistema...")

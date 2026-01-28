@@ -179,6 +179,20 @@ def save_toml_config(config_data):
         toml.dump(config_data, f)
 
 
+def load_source_health():
+    """Load latest health stats from collector export."""
+    try:
+        # NEWS_COLLECTOR_PATH is defined globally above
+        health_path = NEWS_COLLECTOR_PATH / "data" / "exports" / "source_health.json"
+        if not health_path.exists():
+            return None
+        import json
+        with open(health_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 # --- Tabs ---
 tab1, tab_prompts, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
@@ -1205,6 +1219,55 @@ with tab5:
 # --- Tab 6: Source Manager ---
 with tab6:
     st.header("📡 Gestión de Fuentes RSS")
+
+    # --- Source Health Dashboard ---
+    health_data = load_source_health()
+    if health_data:
+        st.subheader("🩺 Estado de Salud (Última Ejecución)")
+        
+        # Metrics Calculation
+        total_sources = len(health_data)
+        feed_ok_count = sum(1 for s in health_data.values() if s.get("feed_ok"))
+        content_ok_count = sum(1 for s in health_data.values() if s.get("content_ok"))
+        failed_count = total_sources - feed_ok_count
+        
+        success_rate = (feed_ok_count / total_sources * 100) if total_sources > 0 else 0
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Fuentes Totales", total_sources)
+        m2.metric("Success Rate (Feed)", f"{success_rate:.1f}%")
+        m3.metric("Con Contenido", f"{content_ok_count}", help="Artículos guardados > 0")
+        m4.metric("Fallando", failed_count, delta=-failed_count if failed_count > 0 else 0, delta_color="inverse")
+
+        # Failing Sources Table
+        if failed_count > 0:
+            st.warning(f"⚠️ {failed_count} fuentes fallaron en la última ejecución.")
+            failed_items = [
+                {
+                    "Source": sid, 
+                    "Error": d.get("last_error_message"), 
+                    "Latency": f"{d.get('latency', 0):.2f}s"
+                }
+                for sid, d in health_data.items() 
+                if not d.get("feed_ok")
+            ]
+            st.table(failed_items)
+            
+        # Detailed Health Dataframe
+        with st.expander("📊 Ver Matriz de Salud Completa"):
+            import pandas as pd
+            health_df = pd.DataFrame.from_dict(health_data, orient="index")
+            # Reorder columns for readability
+            cols = ["feed_ok", "content_ok", "content_mode", "articles_found", "articles_saved", "latency", "last_error_message"]
+            # Filter cols that exist
+            cols = [c for c in cols if c in health_df.columns]
+            st.dataframe(health_df[cols].style.highlight_max(axis=0, subset=["latency"], color="#ffcdd2"), use_container_width=True)
+            
+        st.divider()
+    else:
+        st.info("ℹ️ No hay datos de salud recientes (ejecuta el colector para generar `source_health.json`).")
+        st.divider()
+
     st.info("Modifica, agrega o deshabilita fuentes sin reiniciar el servidor.")
 
     # Import sources config

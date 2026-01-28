@@ -743,8 +743,9 @@ class BaseCollector(ABC):
                 else:
                     article = data
 
-                # Strict length check (business rule filter)
-                if len(article.content or "") < min_length:
+                # Strict length check (business rule filter), unless summary_only
+                is_summary_only = getattr(article, "content_mode", None) == "summary_only"
+                if not is_summary_only and len(article.content or "") < min_length:
                     self._emit_log(
                         "info",
                         "collector.filter.length_rejected",
