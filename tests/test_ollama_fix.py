@@ -39,7 +39,7 @@ class TestOllamaFix:
 
         # Init with "bad" values
         provider = OllamaProvider(
-            api_url="http://127.0.0.1:9999", # Base URL
+            api_url="http://127.0.0.1:9999", # Base URL. Using 9999 port for test
             model="llama3.3"                 # Missing tag
         )
 
@@ -54,7 +54,7 @@ class TestOllamaFix:
 
         # Assert
         # 1. URL should be normalized
-        expected_url = "http://127.0.0.1:9999/api/generate"
+        expected_url = "http://127.0.0.1:9999/api/generate" # Using 9999 port for test
         # 2. Payload should have normalized model
         expected_payload = {
             "model": "llama3.3:latest",

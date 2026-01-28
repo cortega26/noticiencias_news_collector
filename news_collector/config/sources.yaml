@@ -124,7 +124,8 @@ scitechdaily:
   impact_factor: null
   description: Science and technology news and analysis
   typical_delay: 0
-  content_mode: full_text
+  content_mode: summary_only # rss_only mode to avoid 403 blocks on HTML fetch
+  fetch_mode: rss_only # Explicit new flag
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -352,8 +353,9 @@ openai_research:
   language: en
   impact_factor: null
   description: Latest research from OpenAI
-  # No verified RSS feed available
+  # No verified RSS feed available, blocking requests.
   is_active: false
+  fetch_mode: headless # Requires headless if enabled
   collector_type: headless
   selectors:
     item: div.snap-start
