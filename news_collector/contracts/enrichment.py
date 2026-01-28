@@ -27,7 +27,9 @@ class ArticleEnrichment(TypedDict, total=False):
     entities: List[str]
     topics: List[str]
     sentiment: str
+    sentiment: str
     model_version: str
+    editorial_display_category: str
 
 
 class ArticleForEnrichmentModel(BaseModel):
@@ -59,6 +61,7 @@ class ArticleEnrichmentModel(BaseModel):
     topics: List[str] = Field(default_factory=list)
     sentiment: str = Field(min_length=3)
     model_version: str = Field(min_length=1)
+    editorial_display_category: str | None = Field(default=None)
 
     model_config = ConfigDict(extra="allow")
 
