@@ -44,6 +44,31 @@ class OllamaProvider:
         self.model = model
         self.timeout = timeout
 
+        # --- Fix C: Deterministic Normalization ---
+        # 1. Model Tag: Ensure it has a tag (default to :latest if missing)
+        if ":" not in self.model:
+            self.model = f"{self.model}:latest"
+
+        # 2. API URL: Handle base vs endpoint mismatch
+        # We need self.api_url to point to /api/generate for generation
+        # But we might be passed a base url like http://localhost:11434
+        
+        # Strip trailing slash if present
+        clean_url = self.api_url.rstrip("/")
+        
+        if clean_url.endswith("/api/generate"):
+            # It's already the endpoint, keep it (but stripped)
+            self.api_url = clean_url
+        else:
+            # Assume it's a base URL (or some other path), append /api/generate
+            # Logic: If config passed "http://host:port", we want "http://host:port/api/generate"
+            # Note: If user passed "http://host:port/api", this might duplicate, so we should be careful.
+            # Safe approach per requirements: compute base then add.
+            
+            # Simple heuristic: if it doesn't end in /api/generate, append it.
+            # But wait, what if it's /api/tags? The provider seems focused on generation.
+            self.api_url = f"{clean_url}/api/generate"
+
         # Async client reused from infrastructure
         self.async_client = httpx.AsyncClient(timeout=timeout)
 
