@@ -141,6 +141,10 @@ def validate_config(config: Config | None = None) -> None:
         if missing:
             raise ConfigError("postgresql configuration missing: " + ", ".join(missing))
 
+# Runtime state flags
+LLM_SYSTEM_AVAILABLE = True  # Default to True, updated by bootstrap health checks
+
+
 
 __all__ = [
     "BASE_DIR",
@@ -162,5 +166,6 @@ __all__ = [
     "ENRICHMENT_CONFIG",
     "NEWS_CONFIG",
     "LOGGING_CONFIG",
+    "LLM_SYSTEM_AVAILABLE",
     "validate_config",
 ]

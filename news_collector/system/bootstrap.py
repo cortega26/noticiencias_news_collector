@@ -214,6 +214,13 @@ def check_system_health(
     except Exception as e:
         logger.create_module_logger("system").warning(f"Skipping LLM check: {e}")
 
+    # Update global state if LLM issues found
+    if any("LLM Provider unreachable" in w for w in warnings) or \
+       any("Ollama health check returned" in w for w in warnings):
+        import news_collector.config.settings
+        news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
+        logger.create_module_logger("system").warning("⚠️ LLM System Disabled due to health check failure.")
+
     return {
         "healthy": len(critical_issues) == 0,
         "issues": issues,

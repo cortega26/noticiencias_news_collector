@@ -69,6 +69,7 @@ class CollectorArticleModel(BaseModel):
     word_count: int = Field(gt=0)
     reading_time_minutes: int = Field(gt=0)
     article_metadata: ArticleMetadataModel = Field(default_factory=ArticleMetadataModel)
+    content_mode: str = Field(default="full_text")
 
     model_config = ConfigDict(from_attributes=True, extra="allow")
 
@@ -108,14 +109,22 @@ class CollectorArticleModel(BaseModel):
         self.original_url = self.article_metadata.original_url
 
         # Validation: At least one of 'summary' or 'content' must meet the minimum length.
-        min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
+        # If content_mode is summary_only, we apply a much lower threshold (e.g. 30 chars).
+        # Otherwise, we use the configured minimum (likely 500).
+        default_min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
+        
+        if self.content_mode == "summary_only":
+            min_len = 30
+        else:
+            min_len = default_min_len
+
         summary_len = len(self.summary.strip()) if self.summary else 0
         content_len = len(self.content.strip()) if self.content else 0
 
         if summary_len < min_len and content_len < min_len:
             raise ValueError(
                 f"Article too short. Neither summary ({summary_len}) nor content ({content_len}) "
-                f"meets minimum length of {min_len} chars."
+                f"meets minimum length of {min_len} chars (mode={self.content_mode})."
             )
 
         # Ensure word_count consistency

@@ -123,6 +123,12 @@ class OllamaProvider:
             prompt, system, stream=stream, json_mode=json_mode
         )
 
+        # Fail fast if system marked LLM as unavailable (boot check)
+        from news_collector.config import settings
+        if not settings.LLM_SYSTEM_AVAILABLE:
+            # Raise ValueError or similar non-retriable error to bypass retry loop
+            raise ValueError("LLM System is marked as unavailable (Disabled).")
+
         try:
             # We use direct requests for sync to avoid async loop issues in strict sync contexts
             logger.debug(f"Sending sync prompt to Ollama ({self.model})...")

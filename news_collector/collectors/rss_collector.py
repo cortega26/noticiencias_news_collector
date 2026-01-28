@@ -151,6 +151,7 @@ class RSSCollector(BaseCollector):
             "articles_saved": 0,
             "error_message": None,
             "processing_time": 0,
+            "content_mode": source_config.get("content_mode", "full_text"),
         }
 
         try:
@@ -194,7 +195,7 @@ class RSSCollector(BaseCollector):
             )
 
             feed_content, status_code = self._fetch_feed(
-                source_id, source_config["url"]
+                source_id, source_config["url"], source_config
             )
             if status_code == 304:
                 self._emit_log(
@@ -338,7 +339,7 @@ class RSSCollector(BaseCollector):
         return stats
 
     def _fetch_feed(  # noqa: C901
-        self, source_id: str, feed_url: str
+        self, source_id: str, feed_url: str, source_config: Dict[str, Any] = None
     ) -> Tuple[Optional[str], Optional[int]]:
         """
         Obtiene el contenido de un feed RSS de manera robusta.
@@ -384,20 +385,24 @@ class RSSCollector(BaseCollector):
 
             for attempt in range(0, max_retries + 1):
                 try:
-                    conditional_headers = {}
+                    request_headers = {}
                     # FORCE REFRESH: Temporarily disable ETag/Last-Modified to ensure we re-process feeds
                     # and trigger the full-text fetcher for existing items.
                     if cached_headers.get("etag"):
-                        conditional_headers["If-None-Match"] = cached_headers["etag"]
+                        request_headers["If-None-Match"] = cached_headers["etag"]
                     if cached_headers.get("last_modified"):
-                        conditional_headers["If-Modified-Since"] = cached_headers[
+                        request_headers["If-Modified-Since"] = cached_headers[
                             "last_modified"
                         ]
+
+                    # Merge source-specific headers (e.g. User-Agent) if provided
+                    if source_config and source_config.get("headers"):
+                        request_headers.update(source_config["headers"])
 
                     response = self.session.get(
                         feed_url,
                         timeout=COLLECTION_CONFIG.get("request_timeout", 30),
-                        headers=conditional_headers or None,
+                        headers=request_headers or None,
                     )
                     if response.status_code in (429, 500, 502, 503, 504):
                         if attempt < max_retries:
@@ -561,13 +566,17 @@ class RSSCollector(BaseCollector):
                     return (None, None)
             return (None, None)
         except requests.exceptions.RequestException as e:
+            status_code = None
+            if e.response is not None:
+                status_code = e.response.status_code
+
             self._emit_log(
                 "error",
                 "collector.feed.fetch_exception",
                 source_id=source_id,
-                details={"error": str(e), "url": feed_url},
+                details={"error": str(e), "url": feed_url, "status_code": status_code},
             )
-            return (None, None)
+            return (None, status_code)
 
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
         return self.parser.is_acceptable_bozo(parsed_feed)
@@ -642,39 +651,41 @@ class RSSCollector(BaseCollector):
         articles = []
         from news_collector.utils.full_text import fetch_full_article
         
-        # We need a way to get HTML if we want to extract images from it.
-        # Since fetch_full_article only returns text, we will do a custom fetch here
         # or rely on the ImageExtractor to fetch if provided a URL (but avoiding double fetch if possible).
         # Optimization: We'll fetch the content ONCE here, pass to both extractors.
         
         for cand in selected_candidates:
             try:
-                self._emit_log(
-                    "info",
-                    "collector.article.fetching_content",
-                    details={"url": cand["url"]},
-                )
-
-                # Fetch once
-                try:
-                    resp = self.session.get(cand["url"], timeout=15, headers={"User-Agent": self.session.headers["User-Agent"]})
-                    resp.raise_for_status()
-                    html_content = resp.text
-                except Exception as fetch_err:
-                     self._emit_log("warning", "collector.article.fetch_failed", details={"url": cand["url"], "error": str(fetch_err)})
-                     html_content = ""
-                
                 # Full Text Extraction (using existing util helper if possible, or naive implementation since we have HTML)
-                # To minimize code dup, we could rely on existing `clean_html` but `fetch_full_article` does fetching too.
-                # Let's extract text locally since we already have HTML to avoid double network request.
-                from bs4 import BeautifulSoup
+                source_content_mode = source_config.get("content_mode", "full_text")
+                cand["content_mode"] = source_content_mode # Propagate to model
+                
+                # Fetch logic
+                html_content = ""
+                if source_content_mode != "summary_only":
+                     try:
+                        self._emit_log(
+                            "info",
+                            "collector.article.fetching_content",
+                            details={"url": cand["url"]},
+                        )
+                        # Fetch once
+                        resp = self.session.get(cand["url"], timeout=15, headers={"User-Agent": self.session.headers["User-Agent"]})
+                        resp.raise_for_status()
+                        html_content = resp.text
+                     except Exception as fetch_err:
+                        self._emit_log("warning", "collector.article.fetch_failed", details={"url": cand["url"], "error": str(fetch_err)})
+                else:
+                    self._emit_log("info", "collector.article.skipping_full_text", details={"url": cand["url"], "reason": "summary_only_mode"})
+
+                # Full Text Extraction
                 if html_content:
                      # Simple text extraction for now to match 'fetch_full_article' behavior roughly
-                     # ideally we refactor common.full_text to take HTML input
-                    soup = BeautifulSoup(html_content, "html.parser")
-                    for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+                     from bs4 import BeautifulSoup
+                     soup = BeautifulSoup(html_content, "html.parser")
+                     for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
                         script.decompose()
-                    cand["content"] = soup.get_text(separator=" ", strip=True)
+                     cand["content"] = soup.get_text(separator=" ", strip=True)
                 
                 # Image Extraction Logic
                 image_status = "MISSING_SOURCE"
@@ -790,6 +801,7 @@ class RSSCollector(BaseCollector):
                     "image_status": raw_article.get("_image_status"),
                     "image_source": raw_article.get("_image_source"),
                 },
+                "content_mode": raw_article.get("content_mode", "full_text"),
             }
 
             # Extraer DOI si está disponible

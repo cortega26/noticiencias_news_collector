@@ -107,8 +107,7 @@ class RssParser:
 
                 if content and isinstance(content, str):
                     cleaned = clean_html(content)
-                    if len(cleaned) >= 50:  # Min content length from settings?
-                        # Hardcoding 50 for now as safe default, or pass in config.
+                    if len(cleaned) >= 10:  # Lowered from 50 to allow short summaries (validation happens in Collector)
                         return cleaned
         return ""
 

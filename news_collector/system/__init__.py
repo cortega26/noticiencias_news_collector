@@ -773,6 +773,33 @@ class NewsCollectorSystem:
             },
         }
 
+        # Export source health data
+        try:
+            health_data = {}
+            source_details = collection_results.get("source_details", {})
+            for source_id, result in source_details.items():
+                success = result.get("success", False)
+                saved = result.get("articles_saved", 0)
+                
+                health_data[source_id] = {
+                    "last_run": datetime.now(timezone.utc).isoformat(),
+                    "feed_ok": success,
+                    "pipeline_ok": True,  # If we have a result here, pipeline ran
+                    "content_ok": saved > 0,
+                    "content_mode": result.get("content_mode", "unknown"),
+                    "articles_found": result.get("articles_found", 0),
+                    "articles_saved": saved,
+                    "last_error_message": result.get("error_message"),
+                    "latency": result.get("processing_time", 0)
+                }
+            
+            export_path = Path("data/exports/source_health.json")
+            export_path.parent.mkdir(parents=True, exist_ok=True)
+            export_path.write_text(json.dumps(health_data, indent=2))
+        except Exception as e:
+             # Fail silently to avoid crashing report generation
+             pass
+
         return report
 
     def _simulate_collection(

@@ -1,0 +1,63 @@
+name: Source Reliability & Gate
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "news_collector/collectors/**"
+      - "news_collector/config/sources.yaml"
+      - "news_collector/contracts/**"
+      - "tests/test_feed_reliability.py"
+      - "tests/test_source_config.py"
+      - "tests/test_llm_resilience.py"
+      - ".github/workflows/source_reliability.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "news_collector/collectors/**"
+      - "news_collector/config/sources.yaml"
+      - "news_collector/contracts/**"
+      - "tests/test_feed_reliability.py"
+      - "tests/test_source_config.py"
+      - "tests/test_llm_resilience.py"
+      - ".github/workflows/source_reliability.yml"
+  workflow_dispatch:
+
+jobs:
+  gate_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run Source Config Validation
+        run: |
+          # Ensures sources.yaml integrity and content_mode compliance
+          pytest tests/test_source_config.py -v
+
+      - name: Run Feed Reliability Tests
+        run: |
+          # Logic tests for parsing, headers, and error handling
+          pytest tests/test_feed_reliability.py -v
+
+      - name: Run LLM Resilience Tests
+        env:
+          OLLAMA_API_URL: "http://localhost:59999" # Intentional dead port for failure testing
+        run: |
+          # Verifies circuit breaker and fail-safe behavior
+          pytest tests/test_llm_resilience.py -v

@@ -153,7 +153,12 @@ def test_pending_articles_detached_and_scored(
     system.db_manager = database_manager
     system.scorer = _DummyScorer()
     system.logger = _DummyLogger()
-
+    
+    # FIX: Update article status to 'validated' since scoring now consumes validated articles
+    with database_manager.get_session() as session:
+        a = session.query(Article).filter_by(id=article.id).one()
+        a.processing_status = "validated"
+    
     scoring_result = asyncio.run(
         system._execute_scoring(collection_results={}, dry_run=False)
     )
