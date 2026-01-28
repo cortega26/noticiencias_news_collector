@@ -963,21 +963,60 @@ with tab3:
 
     st.markdown("---")
     st.markdown("### Registro de Actividad Reciente")
+    # Integrated Activity Monitor
+    from news_collector.system.activity_monitor import ActivityMonitor
+
     st.markdown("### Registro de Actividad Reciente")
-    # Read from the configured system log path
-    from news_collector.config.settings import LOGGING_CONFIG
-
-    log_file_path = Path(LOGGING_CONFIG["file_path"])
-    # Resolve relative to project root if needed
-    if not log_file_path.is_absolute():
-        log_file_path = (Path(__file__).resolve().parents[2] / log_file_path).resolve()
-
-    if log_file_path.exists():
-        with open(log_file_path, "r") as f:
-            logs = f.readlines()[-20:]  # Last 20 lines
-            st.code("".join(logs))
+    
+    # Initialize monitor
+    # Note: We rely on default path resolution in ActivityMonitor, but we can pass explicit if needed.
+    monitor = ActivityMonitor() 
+    events = monitor.get_recent_activity(limit=15) # Show last 15 aggregated events
+    
+    if notevents:
+        st.info("ℹ️ No hay actividad reciente registrada.")
     else:
-        st.text(f"Aún no hay registros en {log_file_path.name}.")
+        # Custom CSS for timeline-like look (optional, keeping it simple first)
+        for event in reversed(events): # Show newest first
+            
+            # Icon & Color mapping
+            icon = "🔹"
+            if event.level == "ERROR":
+                icon = "❌"
+            elif event.level == "WARNING":
+                icon = "⚠️"
+            elif event.category == "Lifecycle":
+                icon = "🔄"
+            elif event.category == "Publishing":
+                icon = "🚀"
+            elif event.category == "Scoring":
+                icon = "🧠"
+            elif event.category == "Collection":
+                icon = "📡"
+
+            # Format relative time (approximate)
+            time_label = event.timestamp_str
+            if event.timestamp_dt:
+                # Simple "X mins ago" logic could go here, or just show time
+                time_label = event.timestamp_dt.strftime("%H:%M:%S")
+
+            # Render
+            with st.container():
+                # Columns: Icon | Time | Message
+                c_icon, c_time, c_msg = st.columns([0.5, 1.5, 8])
+                c_icon.write(icon)
+                c_time.caption(time_label)
+                # Style message based on severity
+                if event.level == "ERROR":
+                    c_msg.error(f"[{event.category}] {event.message}")
+                elif event.level == "WARNING":
+                    c_msg.warning(f"[{event.category}] {event.message}")
+                else:
+                    # Normal info
+                    c_msg.markdown(f"**[{event.category}]** {event.message}")
+                
+            st.divider()
+
 
 
 # --- Tab 4: Analytics ---
