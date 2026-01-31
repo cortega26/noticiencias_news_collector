@@ -11,6 +11,7 @@ target_repo_url = ""
 api_url = "http://localhost:11434/api/generate"
 model = "llama3.3:latest"
 timeout = 300
+headlines_model = "llama3.2:latest"
 
 [paths]
 data_dir = "./data"
