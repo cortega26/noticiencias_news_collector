@@ -28,12 +28,12 @@ class TestPublicEntrypoints:
         assert callable(bootstrap_system)
         
         # We need to mock requests to avoid actual network calls and potential failures if offline
-        with patch("news_collector.system.bootstrap.requests") as mock_requests:
+        with patch("requests.get") as mock_get:
              # Mock successful response
              mock_response = MagicMock()
              mock_response.status_code = 200
              mock_response.json.return_value = {"models": [{"name": "llama3.3:latest"}]}
-             mock_requests.get.return_value = mock_response
+             mock_get.return_value = mock_response
              
              # Also need to ensure CONFIG.ollama.model matches the mocked response
              # We can't easily patch CONFIG.ollama.model here since it's already imported inside the function
@@ -55,9 +55,9 @@ class TestPublicEntrypoints:
         """Task 2b: Verify it returns warnings instead of raising exception."""
         from news_collector.system.bootstrap import bootstrap_system
         
-        with patch("news_collector.system.bootstrap.requests") as mock_requests:
+        with patch("requests.get") as mock_get:
              # Mock failure
-             mock_requests.get.side_effect = Exception("Connection refused")
+             mock_get.side_effect = Exception("Connection refused")
              
              warnings = bootstrap_system()
              

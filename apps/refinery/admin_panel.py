@@ -973,7 +973,8 @@ with tab3:
     monitor = ActivityMonitor() 
     events = monitor.get_recent_activity(limit=15) # Show last 15 aggregated events
     
-    if notevents:
+    from news_collector.utils.refinery_helper import has_no_activity
+    if has_no_activity(events):
         st.info("ℹ️ No hay actividad reciente registrada.")
     else:
         # Custom CSS for timeline-like look (optional, keeping it simple first)

@@ -45,6 +45,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
 
         # Mock Session
         collector.session = MagicMock() # Replace the whole session object
+        collector.client.session = collector.session # Ensure RobustRequestsClient uses the mock
         
         # 1. Feed Fetch Response
         feed_response = MagicMock()
@@ -137,6 +138,7 @@ def test_rss_collector_image_missing_source(collector):
         
         # Mock Session
         collector.session = MagicMock()
+        collector.client.session = collector.session
         long_content = "Content " * 200
         feed_response = MagicMock(status_code=200, text="<rss></rss>", content=b"<rss></rss>", headers={"content-type": "xml"})
         article_response = MagicMock(status_code=200, text=f"<html><body>{long_content}</body></html>", headers={"Content-Type": "text/html"})
