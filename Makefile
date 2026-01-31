@@ -142,6 +142,12 @@ format: lint-fix ## Alias for auto-formatting helpers
 
 type: typecheck ## Alias for static type checking (mypy)
 
+quality-gate: bootstrap ## Run snapshot-first quality gate (No LLM required)
+	@$(PYTHON) scripts/quality_gate.py
+
+quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwrite warning!)
+	@PYTHONPATH=$(CURDIR) $(PYTHON) scripts/quality_gate_refresh.py
+
 MYPY_TARGETS := scripts/generate_api_docs.py \
 news_collector/utils/logger.py \
 news_collector/utils/url_canonicalizer.py

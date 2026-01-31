@@ -1,0 +1,8 @@
+{
+    "must_have_sections": [],
+    "forbidden_phrases": ["eslabón perdido", "revoluciona la biología", "cura el cáncer", "En conclusión"],
+    "must_not_claim": ["primera rana del mundo"],
+    "headlines_schema": ["directo", "pregunta", "relevancia"],
+    "min_length_chars": 500,
+    "max_length_ratio": 2.5
+}
