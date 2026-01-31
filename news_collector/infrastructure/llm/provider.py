@@ -37,7 +37,7 @@ class OllamaProvider:
     def __init__(
         self,
         api_url: Optional[str] = None,
-        model: str = "llama3.2:1b",
+        model: Optional[str] = None,
         timeout: int = 120,
     ):
         self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
@@ -46,27 +46,14 @@ class OllamaProvider:
 
         # --- Fix C: Deterministic Normalization ---
         # 1. Model Tag: Ensure it has a tag (default to :latest if missing)
-        if ":" not in self.model:
+        if self.model and ":" not in self.model:
             self.model = f"{self.model}:latest"
-
+        
         # 2. API URL: Handle base vs endpoint mismatch
-        # We need self.api_url to point to /api/generate for generation
-        # But we might be passed a base url like http://localhost:11434
-        
-        # Strip trailing slash if present
         clean_url = self.api_url.rstrip("/")
-        
         if clean_url.endswith("/api/generate"):
-            # It's already the endpoint, keep it (but stripped)
             self.api_url = clean_url
         else:
-            # Assume it's a base URL (or some other path), append /api/generate
-            # Logic: If config passed "http://host:port", we want "http://host:port/api/generate"
-            # Note: If user passed "http://host:port/api", this might duplicate, so we should be careful.
-            # Safe approach per requirements: compute base then add.
-            
-            # Simple heuristic: if it doesn't end in /api/generate, append it.
-            # But wait, what if it's /api/tags? The provider seems focused on generation.
             self.api_url = f"{clean_url}/api/generate"
 
         # Async client reused from infrastructure
@@ -81,9 +68,18 @@ class OllamaProvider:
         system: Optional[str] = None,
         stream: bool = False,
         json_mode: bool = False,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
+        use_model = model or self.model
+        if use_model is None:
+             raise ValueError("Ollama model is not configured. Provide a model in config or pass model=...")
+
+        # Normalization again just in case override is raw
+        if ":" not in use_model:
+            use_model = f"{use_model}:latest"
+
         payload = {
-            "model": self.model,
+            "model": use_model,
             "prompt": prompt,
             "stream": stream,
         }
@@ -96,17 +92,21 @@ class OllamaProvider:
     # --- ASYNC API (Recommended) ---
 
     async def generate_async(
-        self, prompt: str, system: Optional[str] = None, json_mode: bool = False
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        json_mode: bool = False,
+        model: Optional[str] = None,
     ) -> Union[str, Dict[str, Any]]:
         """
         Async generation. Returns text or dict if json_mode is True.
         """
         payload = self._prepare_payload(
-            prompt, system, stream=False, json_mode=json_mode
+            prompt, system, stream=False, json_mode=json_mode, model=model
         )
 
         try:
-            logger.debug(f"Sending async prompt to Ollama ({self.model})...")
+            logger.debug(f"Sending async prompt to Ollama ({payload['model']})...")
             start = time.time()
             response = await self.async_client.post(
                 self.api_url, json=payload, timeout=self.timeout
@@ -139,13 +139,14 @@ class OllamaProvider:
         system: Optional[str] = None,
         json_mode: bool = False,
         stream: bool = False,
+        model: Optional[str] = None,
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
         """
         Sync generation for legacy components.
         Supports streaming generator if stream=True and json_mode=False.
         """
         payload = self._prepare_payload(
-            prompt, system, stream=stream, json_mode=json_mode
+            prompt, system, stream=stream, json_mode=json_mode, model=model
         )
 
         # Fail fast if system marked LLM as unavailable (boot check)
@@ -156,7 +157,7 @@ class OllamaProvider:
 
         try:
             # We use direct requests for sync to avoid async loop issues in strict sync contexts
-            logger.debug(f"Sending sync prompt to Ollama ({self.model})...")
+            logger.debug(f"Sending sync prompt to Ollama ({payload['model']})...")
             response = requests.post(
                 self.api_url, json=payload, stream=stream, timeout=self.timeout
             )
@@ -225,3 +226,50 @@ class OllamaProvider:
 
         logger.warning(f"Failed to extract JSON from: {text[:100]}...")
         return {}
+
+    def list_models(self) -> list[str]:
+        """
+        Fetches available models from Ollama /api/tags.
+        Returns a list of model names (e.g. ['llama3:latest', ...]).
+        """
+        # Construct tags endpoint based on api_url
+        # api_url typically ends in /api/generate
+        # We need /api/tags
+        base = self.api_url.replace("/api/generate", "")
+        tags_url = f"{base}/api/tags"
+        
+        try:
+            resp = requests.get(tags_url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                models = [m.get("name") for m in data.get("models", [])]
+                return models
+            else:
+                logger.warning(f"Failed to list models: {resp.status_code}")
+                return []
+        except Exception as e:
+            logger.warning(f"Error listing models: {e}")
+            return []
+
+    def check_model_exists(self, model_name: str) -> bool:
+        """
+        Checks if a specific model exists in local Ollama instance.
+        """
+        available = self.list_models()
+        # Direct match or partial match logic?
+        # Ollama usually needs exact match (maybe without :latest implicit)
+        
+        # normalize input
+        target = model_name
+        if ":" not in target:
+            target = f"{target}:latest"
+            
+        if target in available:
+            return True
+            
+        # fallback for raw names if available list has them differently
+        # e.g. input "llama3.2" might match "llama3.2:latest"
+        if model_name in available:
+            return True
+            
+        return False

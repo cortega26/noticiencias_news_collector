@@ -12,9 +12,20 @@ from noticiencias.config_manager import load_config
 
 
 class EditorAgent:
-    def __init__(self, api_url: str, model: str):
+    def __init__(
+        self,
+        api_url: str,
+        model: str,
+        translator_model: str = None,
+        editor_model: str = None,
+        headlines_model: str = None,
+    ):
         self.api_url = api_url
-        self.model = model
+        self.model = model  # This is the "Legacy Default"
+        self._translator_model_cfg = translator_model
+        self._editor_model_cfg = editor_model
+        self._headlines_model_cfg = headlines_model
+
         self.cache_dir = Path("temp/cache")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._emoji_re = re.compile(
@@ -33,6 +44,57 @@ class EditorAgent:
         self.provider = OllamaProvider(
             api_url=self.api_url, model=self.model, timeout=900
         )
+        
+        # Cache for verified models
+        self._available_models = None
+        
+        # Resolve models eagerly or lazily? Eager allows warning early.
+        # But we need provider to be ready.
+        # let's just resolve on demand or in init.
+        # We will resolve them now.
+        self.translator_model = self._resolve_model(self._translator_model_cfg, "Translator")
+        self.editor_model = self._resolve_model(self._editor_model_cfg, "Editor")
+        self.headlines_model = self._resolve_model(self._headlines_model_cfg, "Headlines")
+
+    def _get_available_models(self):
+        if self._available_models is None:
+            self._available_models = self.provider.list_models()
+        return self._available_models
+
+    def _resolve_model(self, specific_model: str, phase_name: str) -> str:
+        """
+        Resolves the model to use for a phase.
+        1. If specific_model is None/Empty -> Use check legacy (self.model).
+        2. If specific_model is set -> Check existence.
+           - If exists -> Use it.
+           - If missing -> Log warning, Fallback to legacy.
+        """
+        target = specific_model
+        if not target:
+            return self.model
+
+        # Check existence
+        available = self._get_available_models()
+        # available has names.
+        
+        # Normalize target for check
+        check_target = target
+        if ":" not in check_target:
+            check_target = f"{check_target}:latest"
+
+        # Simple check: direct or in list
+        # If check_target is in list OR target is in list
+        is_available = (check_target in available) or (target in available)
+        
+        if is_available:
+            logger.info(f"[{phase_name}] using specialized model: {target}")
+            return target
+        
+        logger.warning(
+            f"[{phase_name}] Model '{target}' not found in Ollama. "
+            f"Falling back to legacy default: {self.model}"
+        )
+        return self.model
 
     def _load_prompts(self) -> dict:
         """Loads prompt templates from yaml config."""
@@ -94,16 +156,17 @@ class EditorAgent:
             return match.group(1)
         return text
 
-    def _send_prompt(self, prompt: str, system: str = None) -> str:
+    def _send_prompt(self, prompt: str, system: str = None, model: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
-        logger.info(f"Sending prompt to Ollama ({self.model})...")
+        use_model = model or self.model
+        logger.info(f"Sending prompt to Ollama ({use_model})...")
         sys_preview = (system or "")[:20]
-        print(f"Processing ({sys_preview}...)", end="", flush=True)
+        print(f"Processing ({sys_preview}...) [{use_model}]", end="", flush=True)
 
         try:
             start_time = time.time()
             # Use provider's sync iterator which handles retries
-            generator = self.provider.generate_sync(prompt, system=system, stream=True)
+            generator = self.provider.generate_sync(prompt, system=system, stream=True, model=use_model)
 
             full_text = []
             count = 0
@@ -127,12 +190,12 @@ class EditorAgent:
     def _translate_scientific(self, content: str) -> str:
         """Stage 1: Scientific Translation"""
         system_prompt = self.prompts.get("translator", {}).get("system", "")
-        return self._send_prompt(content, system=system_prompt)
+        return self._send_prompt(content, system=system_prompt, model=self.translator_model)
 
     def _adapt_editorial(self, translated_content: str) -> str:
         """Stage 2: Editorial Adaptation"""
         system_prompt = self.prompts.get("editor", {}).get("system", "")
-        return self._send_prompt(translated_content, system=system_prompt)
+        return self._send_prompt(translated_content, system=system_prompt, model=self.editor_model)
 
     def _extract_json(self, text: str) -> dict:
         """
@@ -152,7 +215,7 @@ class EditorAgent:
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe
         prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', and 'excerpt' (max 140 chars summary for SEO).\n\n{adapted_content[:2000]}"
-        response = self._send_prompt(prompt, system=system_prompt)
+        response = self._send_prompt(prompt, system=system_prompt, model=self.headlines_model)
 
         try:
             return self._extract_json(response)

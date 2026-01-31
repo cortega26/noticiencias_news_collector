@@ -25,7 +25,7 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
 
             mock_post.side_effect = get_response
 
-            result = await self.provider.generate_async("Hi")
+            result = await self.provider.generate_async("Hi", model="test-model")
             self.assertEqual(result, "Hello World")
             mock_post.assert_called_once()
 
@@ -52,7 +52,7 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
         mock_resp.json.return_value = {"response": "Sync Hello", "done": True}
         mock_post.return_value = mock_resp
 
-        result = self.provider.generate_sync("Hi")
+        result = self.provider.generate_sync("Hi", model="test-model")
         self.assertEqual(result, "Sync Hello")
 
 

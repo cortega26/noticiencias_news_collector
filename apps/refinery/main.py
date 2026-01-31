@@ -289,7 +289,13 @@ def main(  # noqa: C901
     db_manager = DatabaseManager()
 
     git_handler = GitHubPublisher(config.github.token)
-    editor_agent = EditorAgent(config.ollama.api_url, config.ollama.model)
+    editor_agent = EditorAgent(
+        api_url=config.ollama.api_url,
+        model=config.ollama.model,
+        translator_model=config.ollama.translator_model,
+        editor_model=config.ollama.editor_model,
+        headlines_model=config.ollama.headlines_model,
+    )
 
     # Initialize Engine
     engine = RefineryEngine(

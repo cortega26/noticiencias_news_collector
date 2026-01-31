@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+import re
 
 from pydantic import (
     BaseModel,
@@ -671,6 +672,32 @@ class OllamaConfig(StrictModel):
         default=300,
         description="Request timeout in seconds.",
     )
+    translator_model: Optional[str] = Field(
+        default=None,
+        description="Model override for translation phase.",
+    )
+    editor_model: Optional[str] = Field(
+        default=None,
+        description="Model override for editorial phase.",
+    )
+    headlines_model: Optional[str] = Field(
+        default=None,
+        description="Model override for headlines phase.",
+    )
+
+    @field_validator("model", "translator_model", "editor_model", "headlines_model")
+    @classmethod
+    def _validate_model_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        # Allowlist regex: alphanum starting char, then allow . : - _
+        # Max length 128
+        pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                f"Invalid model name '{v}'. Must start with alphanumeric and only contain [a-zA-Z0-9_.:-], max 128 chars."
+            )
+        return v
 
 
 class Config(StrictModel):
