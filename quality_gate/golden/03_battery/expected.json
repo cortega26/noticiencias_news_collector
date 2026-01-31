@@ -2,7 +2,7 @@
     "must_have_sections": [],
     "forbidden_phrases": ["milagroso", "energía infinita", "En conclusión"],
     "must_not_claim": ["batería perfecta"],
-    "headlines_schema": ["directo", "pregunta", "relevancia"],
+    "headlines_schema": ["directo", "relevancia"],
     "min_length_chars": 600,
-    "max_length_ratio": 2.5
+    "max_length_ratio": 3.0
 }

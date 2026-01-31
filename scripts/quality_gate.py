@@ -29,7 +29,6 @@ class QualityGateValidator:
         
         # Security: Ensure Ollama is not accidentally used
         if os.getenv("OLLAMA_API_URL"):
-             # Just a debug print, not a failure, but shows we are rigorous
              pass
 
         for case_dir in cases:
@@ -52,28 +51,43 @@ class QualityGateValidator:
 
         if not snapshot_path.exists():
             print(f"   ❌ Snapshot missing: {snapshot_path.name}")
-            print(f"      Run 'make quality-gate-refresh' to generate it.")
+            print(f"      Run 'make quality-gate-refresh' from a clean state.")
             return False
             
+        # Load Data
+        try:
+            with open(snapshot_path, "r") as f:
+                snapshot = json.load(f)
+        except Exception as e:
+            print(f"   ❌ JSON Error: {e}")
+            return False
+
+        # --- METADATA VALIDATION ---
+        meta = snapshot.get("_meta", {})
+        if not meta:
+            print(f"   ❌ Integrity Violation: Missing '_meta'. Manual edit suspected.")
+            return False
+        
+        if meta.get("generated_by") != "quality_gate_refresh":
+            print(f"   ❌ Integrity Violation: Invalid generator '{meta.get('generated_by')}'.")
+            return False
+
+        if not meta.get("git_commit"):
+             print(f"   ❌ Integrity Violation: Missing git provenance.")
+             return False
+        # ---------------------------
+
         if not expect_path.exists():
              print(f"   ⚠️ Expected rules missing. Skipping.")
              return True
 
         if not input_path.exists():
-             print(f"   ⚠️ Input text missing. Skipping length checks.")
              input_len = 0
         else:
              input_len = len(input_path.read_text())
 
-        # Load Data
-        try:
-            with open(snapshot_path, "r") as f:
-                snapshot = json.load(f)
-            with open(expect_path, "r") as f:
-                expectations = json.load(f)
-        except Exception as e:
-            print(f"   ❌ JSON Error: {e}")
-            return False
+        with open(expect_path, "r") as f:
+             expectations = json.load(f)
 
         content = snapshot.get("content", "")
         headlines = snapshot.get("headlines", {})
@@ -90,7 +104,6 @@ class QualityGateValidator:
         # A. Section Presence
         required_sections = rules.get("must_have_sections", [])
         for sec in required_sections:
-            # Check for generic presence
             if sec not in output:
                 errors.append(f"Missing required section content: '{sec}'")
 
@@ -108,7 +121,6 @@ class QualityGateValidator:
                 errors.append(f"Found forbidden claim: '{claim}'")
 
         # D. Headlines Schema
-        # Check required keys
         required_keys = rules.get("headlines_schema", ["directo", "pregunta", "relevancia"])
         for k in required_keys:
             if k not in headlines or not headlines[k]:

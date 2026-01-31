@@ -6,6 +6,8 @@ import time
 import argparse
 from pathlib import Path
 import re
+import datetime
+import subprocess
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -20,22 +22,42 @@ except ImportError as e:
 
 GOLDEN_DIR = PROJECT_ROOT / "quality_gate" / "golden"
 
+def get_git_commit():
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
+    except Exception:
+        return "unknown"
+
 def main():
     print("⚠️  WARNING: You are about to regenerate Quality Gate snapshots.")
-    print("   This involves calling the LLM and overwriting authoritative baselines.")
-    print("   Review the git diffs CAREFULLY before committing.\n")
+    print("   This process enforces MACHINE-ONLY generation.")
     
-    # Simple confirmation delay
+    # Check for existing snapshots - fail if found
+    existing = list(GOLDEN_DIR.glob("*/snapshot.json"))
+    if existing:
+        print(f"\n❌ Snapshot generation aborted.")
+        print(f"   Found {len(existing)} existing snapshots:")
+        for p in existing:
+            print(f"   - {p.relative_to(PROJECT_ROOT)}")
+        print("\n   Snapshot generation requires a clean state.")
+        print("   Run 'rm quality_gate/golden/*/snapshot.json' first.")
+        sys.exit(1)
+
+    print("   Clean state confirmed.")
     print("Starting in 3 seconds...", end="", flush=True)
     time.sleep(3)
     print(" GO.\n")
 
+    model_name = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
     agent = EditorAgent(
         api_url=os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate"),
-        model=os.getenv("OLLAMA_MODEL", "llama3.2:latest"),
+        model=model_name,
     )
     # Increase timeout for generation
     agent.provider.timeout = 300
+    
+    git_commit = get_git_commit()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     cases = sorted([d for d in GOLDEN_DIR.iterdir() if d.is_dir()])
     
@@ -56,7 +78,7 @@ def main():
             print(f"   ❌ Generation failed: {e}")
             sys.exit(1)
 
-        # Parse headlines from frontmatter to store in structured format
+        # Parse headlines
         headlines = {}
         title_match = re.search(r'title: "(.*?)"', full_output)
         if title_match: headlines["directo"] = title_match.group(1)
@@ -68,6 +90,12 @@ def main():
         if b_match: headlines["relevancia"] = b_match.group(1)
 
         snapshot_data = {
+            "_meta": {
+                "generated_by": "quality_gate_refresh",
+                "model": model_name,
+                "timestamp": timestamp,
+                "git_commit": git_commit
+            },
             "content": full_output,
             "headlines": headlines
         }
@@ -76,7 +104,7 @@ def main():
         with open(snap_path, "w", encoding="utf-8") as f:
             json.dump(snapshot_data, f, indent=2, ensure_ascii=False)
             
-        print(f"   ✅ Saved snapshot to {snap_path.name}")
+        print(f"   ✅ Saved generated snapshot to {snap_path.name}")
 
     print("\n✨ Refresh Complete. Run 'make quality-gate' to verify.")
 

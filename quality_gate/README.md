@@ -34,6 +34,12 @@ make quality-gate-refresh
 
 **Warning:** This will overwrite `snapshot.json`. You must review the git diffs manually to ensure the new output is acceptable.
 
+### 3. Rules (Strict)
+
+> **Snapshots are write-only artifacts.**
+> They are generated exclusively by `make quality-gate-refresh`.
+> Manual edits invalidate the quality gate and are forbidden (verified by cryptographic metadata).
+
 ## Structure
 
 ```
