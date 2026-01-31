@@ -72,7 +72,7 @@ def test_fetch_feed_uses_conditional_headers(tmp_path, monkeypatch):
 
         captured = {}
 
-        def fake_get(self, url, timeout, headers=None):
+        def fake_get(self, url, timeout, headers=None, **kwargs):
             captured["headers"] = headers
             return DummyResponse(
                 200,
@@ -112,7 +112,7 @@ def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
 
         captured = {}
 
-        def fake_get(self, url, timeout, headers=None):
+        def fake_get(self, url, timeout, headers=None, **kwargs):
             captured["headers"] = headers
             return DummyResponse(
                 304,

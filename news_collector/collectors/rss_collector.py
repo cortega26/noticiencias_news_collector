@@ -329,7 +329,7 @@ class RSSCollector(BaseCollector):
                 "content_hash": None,
             }
             try:
-                self.db_manager.get_source_feed_metadata(source_id)
+                cached_headers = self.db_manager.get_source_feed_metadata(source_id) or cached_headers
             except Exception as metadata_error:
                 # Log warning but continue
                 pass
@@ -366,6 +366,16 @@ class RSSCollector(BaseCollector):
                 return (None, status_code)
 
             if response.status_code == 304:
+                # Update metadata if headers changed (e.g. ETag rotation)
+                try:
+                    self.db_manager.update_source_feed_metadata(
+                        source_id,
+                        etag=response.headers.get("ETag"),
+                        last_modified=response.headers.get("Last-Modified"),
+                        # content_hash is not available/changed since no content
+                    )
+                except Exception:
+                    pass
                 return (None, 304)
 
             # --- Validation & Metadata Update Logic (Preserved) ---
@@ -382,6 +392,24 @@ class RSSCollector(BaseCollector):
 
             response_text = response.text
             content_hash = hashlib.sha256(response.content).hexdigest()
+
+            if cached_headers.get("content_hash") == content_hash:
+                 self._emit_log("info", "collector.feed.content_unchanged", source_id=source_id, details={"hash": content_hash})
+                 # Still update metadata execution time/headers if needed? 
+                 # For now, just return 304 to signal skip.
+                 # But we might want to update the 'last_checked' timestamp in DB?
+                 # load_source_feed_metadata updates? No, update_source_feed_metadata does.
+                 # Let's update metadata before returning to ensure freshness?
+                 try:
+                     self.db_manager.update_source_feed_metadata(
+                         source_id,
+                         etag=response.headers.get("ETag"),
+                         last_modified=response.headers.get("Last-Modified"),
+                         content_hash=content_hash,
+                     )
+                 except Exception:
+                     pass
+                 return (None, 304)
 
             # Metadata Updates (Cleaned up)
             try:
