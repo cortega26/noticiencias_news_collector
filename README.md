@@ -125,6 +125,28 @@ docker-compose up --build
 - **Operations Runbook**: [`docs/ops/RUNBOOK.md`](docs/ops/RUNBOOK.md)
 - **Configuration Schema**: [`docs/config_fields.md`](docs/config_fields.md)
 
+## Quality Gate (Editorial Regression Protection)
+
+To prevent silent degradations in editorial quality, we maintain a set of "Golden Cases" that define structural and semantic invariants.
+
+### Usage
+
+When modifying prompts, models, or pipeline logic, verify that the golden set still passes:
+
+```bash
+make quality-gate
+```
+
+This runs the current pipeline against cached scenarios in `quality_gate/golden/` and verifies strict constraints (forbidden phrases, mandatory sections, length bounds).
+
+To visually inspect changes, use snapshot mode:
+
+```bash
+python scripts/quality_gate.py --snapshot
+```
+
+This saves generated outputs to `quality_gate/snapshots/` for manual review.
+
 ## Development & Quality
 
 We maintain high code quality standards using a unified suite of tools.
