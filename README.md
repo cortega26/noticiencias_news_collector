@@ -16,6 +16,7 @@ This repository contains the backend ingestion pipeline plus the Streamlit-based
 - **Storage**: Persists data to SQLite/Postgres (schema validation included).
 - **Monitoring**: Logs and tracks collection health.
 - **Refinery UI**: Human-in-the-loop editorial panel for review and publishing.
+- **Per-Phase AI Config**: Independently configure models for Translation, Editing, and Headlines.
 
 ## Installation
 
@@ -85,16 +86,19 @@ The Refinery uses Ollama for local LLM inference.
 
 Configuration is managed via `config.toml` (root) and `.env`.
 
-- RSS Feed URLs
-- Scoring thresholds
-- Output paths
-- LLM provider configuration (Ollama)
-- GitHub publishing target
+#### Per-Phase Model Configuration (Recommended for CPU)
 
-Quick start for env:
+For standard CPU deployments, use **Llama 3.2** for all phases to ensure reasonable performance (< 5 mins/article). 14B+ models require a GPU or very long processing times.
 
-```bash
-cp .env.example .env
+```toml
+[ollama]
+# Base Model (Fallback)
+model = "llama3.2:latest"
+
+# Per-Phase Overrides (Optional)
+translator_model = "llama3.2:latest"
+editor_model = "llama3.2:latest"
+headlines_model = "llama3.2:latest"
 ```
 
 ### Testing

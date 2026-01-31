@@ -1,0 +1,1188 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-8.4.2, pluggy-1.6.0
+rootdir: /home/cortega26/noticiencias_news_collector
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.12.1, cov-7.0.0, hypothesis-6.150.2, asyncio-0.23.5
+asyncio: mode=Mode.AUTO
+collected 353 items
+
+tests/collectors/test_http_cache_behavior.py FFFF                        [  1%]
+tests/contracts/test_article_model.py ........                           [  3%]
+tests/contracts/test_scoring_models.py ........                          [  5%]
+tests/editorial/test_council.py .                                        [  5%]
+tests/integration/test_database.py .......                               [  7%]
+tests/integration/test_pipeline_flow.py ..                               [  8%]
+tests/integration/test_refinery_canonical.py ..                          [  9%]
+tests/integration/test_system_flow.py ....                               [ 10%]
+tests/legacy/test_title_sanitize.py .                                    [ 10%]
+tests/mutation_smoke/test_mutation_smoke.py ..                           [ 11%]
+tests/placeholder_audit/test_placeholder_audit.py ...........            [ 14%]
+tests/property/test_normalization_properties.py .....                    [ 15%]
+tests/regression/test_batch_stress.py ..                                 [ 16%]
+tests/regression/test_enrichment_fail_open.py F                          [ 16%]
+tests/security/test_ssrf_protection.py F                                 [ 16%]
+tests/security/test_xss_prevention.py ....                               [ 17%]
+tests/test_ai_editor_tags.py ..                                          [ 18%]
+tests/test_async_scoring.py .                                            [ 18%]
+tests/test_cli_config.py ....                                            [ 19%]
+tests/test_collector_logging.py .F                                       [ 20%]
+tests/test_config_guardrails.py .                                        [ 20%]
+tests/test_config_manager.py ................                            [ 25%]
+tests/test_contracts_validation.py ...                                   [ 26%]
+tests/test_database_migrations.py ...                                    [ 26%]
+tests/test_database_pending_articles.py ..                               [ 27%]
+tests/test_database_simhash_behavior.py ..                               [ 28%]
+tests/test_datetime_utils.py ..                                          [ 28%]
+tests/test_dedupe_utils.py ...                                           [ 29%]
+tests/test_editor_agent.py F.                                            [ 30%]
+tests/test_enrichment_pipeline.py ......                                 [ 31%]
+tests/test_feature_scorer_config.py ....                                 [ 32%]
+tests/test_feed_reliability.py FFFF                                      [ 33%]
+tests/test_full_text.py .....                                            [ 35%]
+tests/test_healthcheck.py ..                                             [ 35%]
+tests/test_hybrid_scorer.py ...                                          [ 36%]
+tests/test_llm_resilience.py .                                           [ 37%]
+tests/test_monitoring_anomalies.py ......                                [ 38%]
+tests/test_ollama_fix.py ..FF.                                           [ 40%]
+tests/test_public_entrypoints.py ...                                     [ 41%]
+tests/test_python_version_requirement.py .                               [ 41%]
+tests/test_quality_rules.py ....                                         [ 42%]
+tests/test_rate_limit_and_backoff.py FFFFF                               [ 43%]
+tests/test_regression_fixes_v3.py EE.                                    [ 44%]
+tests/test_run_secret_scan.py ...                                        [ 45%]
+tests/test_scan_placeholders.py .........                                [ 48%]
+tests/test_security_gate.py ...                                          [ 49%]
+tests/test_serving_api.py ...                                            [ 49%]
+tests/test_source_config.py .                                            [ 50%]
+tests/test_source_health_schema.py .                                     [ 50%]
+tests/test_text_cleaner.py ...                                           [ 51%]
+tests/test_url_canonicalizer.py .......                                  [ 53%]
+tests/test_utils_security.py .....                                       [ 54%]
+tests/test_validation_loop.py .                                          [ 54%]
+tests/tools/test_check_makefile_tabs.py ..                               [ 55%]
+tests/unit/collectors/test_base_collector.py ..                          [ 56%]
+tests/unit/collectors/test_dispatcher.py ....                            [ 57%]
+tests/unit/collectors/test_rss_collector.py EE                           [ 57%]
+tests/unit/collectors/test_rss_collector_images.py EE                    [ 58%]
+tests/unit/collectors/test_validation_config.py ..                       [ 58%]
+tests/unit/contracts/test_collector_contract.py ......                   [ 60%]
+tests/unit/contracts/test_common_contract.py .....                       [ 62%]
+tests/unit/contracts/test_contracts.py .....                             [ 63%]
+tests/unit/contracts/test_d1_enforcement.py ....                         [ 64%]
+tests/unit/contracts/test_enrichment_contract.py .....                   [ 66%]
+tests/unit/contracts/test_export_contract.py ..                          [ 66%]
+tests/unit/contracts/test_mock_usage.py .                                [ 66%]
+tests/unit/editorial/test_classifier.py .....                            [ 68%]
+tests/unit/infrastructure/llm/test_provider.py FFF                       [ 69%]
+tests/unit/infrastructure/test_http_client.py ....                       [ 70%]
+tests/unit/infrastructure/test_requests_client.py ....                   [ 71%]
+tests/unit/logic/workflows/test_refinery_engine.py ...                   [ 72%]
+tests/unit/parsers/test_headless_parser.py .                             [ 72%]
+tests/unit/parsers/test_html_parser.py ...                               [ 73%]
+tests/unit/parsers/test_image_extractor.py ......                        [ 75%]
+tests/unit/parsers/test_rss_logic.py ..                                  [ 75%]
+tests/unit/parsers/test_rss_parser.py EE                                 [ 76%]
+tests/unit/publishing/test_github_publisher_mock.py ........             [ 78%]
+tests/unit/reranker/test_reranker.py ...                                 [ 79%]
+tests/unit/scoring/test_basic_scorer.py ......                           [ 81%]
+tests/unit/scoring/test_cognitive_scorer.py .....                        [ 82%]
+tests/unit/scoring/test_feature_scorer.py ........                       [ 84%]
+tests/unit/security/test_ssrf_strict.py ..                               [ 85%]
+tests/unit/storage/test_db_chunking.py ....                              [ 86%]
+tests/unit/system/test_activity_monitor.py ....                          [ 87%]
+tests/unit/system/test_d1_pipeline_boundaries.py ...                     [ 88%]
+tests/unit/system/test_s1_refactor.py .........                          [ 90%]
+tests/unit/system/test_scoring_isolation.py ..                           [ 91%]
+tests/unit/system/test_validation_chunking.py ....                       [ 92%]
+tests/unit/test_diagnostics.py ....                                      [ 93%]
+tests/unit/test_per_phase_models.py ...                                  [ 94%]
+tests/unit/test_refinery_utils.py ....                                   [ 95%]
+tests/unit/test_system_orchestration.py .                                [ 96%]
+tests/unit/utils/test_dedupe.py .....                                    [ 97%]
+tests/unit/utils/test_security.py ....                                   [ 98%]
+tests/validation/test_validator.py .....                                 [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestRegressionFixesV3.test_rss_collector_adds_credibility_score _
+
+self = <test_regression_fixes_v3.TestRegressionFixesV3 object at 0x7a2750493390>
+mock_db = <MagicMock spec='DatabaseManager' id='134309191427008'>
+
+    @pytest.fixture
+    def collector(self, mock_db):
+        # Patch the session creation to avoid real DB init
+        with patch(
+            "news_collector.collectors.base_collector.get_database_manager",
+            return_value=mock_db,
+        ):
+>           collector = RSSCollector()
+                        ^^^^^^^^^^^^^^
+
+tests/test_regression_fixes_v3.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741bcf150>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_ ERROR at setup of TestRegressionFixesV3.test_rss_collector_uses_article_exists _
+
+self = <test_regression_fixes_v3.TestRegressionFixesV3 object at 0x7a2750493610>
+mock_db = <MagicMock spec='DatabaseManager' id='134309194415616'>
+
+    @pytest.fixture
+    def collector(self, mock_db):
+        # Patch the session creation to avoid real DB init
+        with patch(
+            "news_collector.collectors.base_collector.get_database_manager",
+            return_value=mock_db,
+        ):
+>           collector = RSSCollector()
+                        ^^^^^^^^^^^^^^
+
+tests/test_regression_fixes_v3.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27502570e0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+___________________ ERROR at setup of test_parse_feed_entry ____________________
+
+    @pytest.fixture
+    def rss_collector():
+        with patch("news_collector.collectors.base_collector.get_database_manager"):
+            logger_mock = MagicMock()
+>           return RSSCollector(logger_factory=logger_mock)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/collectors/test_rss_collector.py:11: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27418ec9f0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+___________________ ERROR at setup of test_collect_sync_mock ___________________
+
+    @pytest.fixture
+    def rss_collector():
+        with patch("news_collector.collectors.base_collector.get_database_manager"):
+            logger_mock = MagicMock()
+>           return RSSCollector(logger_factory=logger_mock)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/collectors/test_rss_collector.py:11: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27418ed6a0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________ ERROR at setup of test_rss_collector_image_fallback_to_dom __________
+
+    @pytest.fixture
+    def collector():
+        logger_factory = MagicMock()
+>       return RSSCollector(logger_factory=logger_factory)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/collectors/test_rss_collector_images.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27418ede80>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________ ERROR at setup of test_rss_collector_image_missing_source ___________
+
+    @pytest.fixture
+    def collector():
+        logger_factory = MagicMock()
+>       return RSSCollector(logger_factory=logger_factory)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/collectors/test_rss_collector_images.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27418ef070>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_________________ ERROR at setup of test_rss_parses_atom_entry _________________
+
+    @pytest.fixture
+    def rss_collector():
+>       return RSSCollector()
+               ^^^^^^^^^^^^^^
+
+tests/unit/parsers/test_rss_parser.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741678b40>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________ ERROR at setup of test_rss_fallback_description_to_content __________
+
+    @pytest.fixture
+    def rss_collector():
+>       return RSSCollector()
+               ^^^^^^^^^^^^^^
+
+tests/unit/parsers/test_rss_parser.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741679010>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+=================================== FAILURES ===================================
+__________ test_fetch_feed_applies_conditional_headers[_Response200] ___________
+
+response_cls = <class 'test_http_cache_behavior._Response200'>
+
+    @pytest.mark.parametrize("response_cls", [_Response200, _Response304])
+    def test_fetch_feed_applies_conditional_headers(
+        response_cls: Type[_BaseResponse],
+    ) -> None:
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/collectors/test_http_cache_behavior.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a274bfcc6e0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________ test_fetch_feed_applies_conditional_headers[_Response304] ___________
+
+response_cls = <class 'test_http_cache_behavior._Response304'>
+
+    @pytest.mark.parametrize("response_cls", [_Response200, _Response304])
+    def test_fetch_feed_applies_conditional_headers(
+        response_cls: Type[_BaseResponse],
+    ) -> None:
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/collectors/test_http_cache_behavior.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a274be782d0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+___________________ test_fetch_feed_invokes_backoff_on_retry ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a274bd650f0>
+
+    def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/collectors/test_http_cache_behavior.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a274be79590>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_______________ test_fetch_feed_skips_when_content_hash_matches ________________
+
+    def test_fetch_feed_skips_when_content_hash_matches() -> None:
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/collectors/test_http_cache_behavior.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a274bd66190>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+______________________ test_enrichment_failure_fail_open _______________________
+
+    @pytest.mark.regression
+    def test_enrichment_failure_fail_open():
+        """Verify that enrichment failures produce a valid degraded article object."""
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/regression/test_enrichment_fail_open.py:11: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741d2c3e0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+___________________ test_ssrf_protection_blocks_internal_ips ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2742e99f20>
+
+    def test_ssrf_protection_blocks_internal_ips(monkeypatch):
+        """
+        Test that the RSSCollector blocks requests to internal/private IP addresses
+        to prevent SSRF attacks.
+        """
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/security/test_ssrf_protection.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2743686210>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+______________________ test_save_article_logs_article_id _______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2742e9a8b0>
+
+    def test_save_article_logs_article_id(monkeypatch: pytest.MonkeyPatch) -> None:
+        """_save_article should emit article_id and source context when persisting."""
+    
+        saved_article = SimpleNamespace(
+            id=123,
+            url="https://example.com/article",
+            source_id="demo",
+        )
+        stub_db = SimpleNamespace(save_article=lambda _payload: saved_article)
+    
+        # monkeypatch.setattr(
+        #     "news_collector.collectors.rss_collector.get_database_manager",
+        #     lambda: stub_db,
+        # )
+    
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_collector_logging.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741cb8b50>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+________ test_process_article_strips_tldr_without_image_and_adds_source ________
+
+    def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
+        agent = EditorAgent("http://example", "model")
+        sample_output = (
+            "---\n"
+            "title: Demo\n"
+            "author: AI\n"
+            "date: 2026-01-01\n"
+            "---\n\n"
+            "**TL;DR Visual**\n"
+            "- ⚡ Punto uno\n\n"
+            "**El Impacto (Lead)**\n"
+            "Texto base.\n"
+        )
+        agent._send_prompt = lambda prompt, system=None: sample_output  # type: ignore[method-assign]
+    
+>       result = agent.process_article(
+            {
+                "title": "Demo",
+                "summary": "Resumen",
+                "content": "Contenido " * 200,
+                "image_url": None,
+                "url": "https://example.com/source",
+            }
+        )
+
+tests/test_editor_agent.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/components/editorial/ai_editor.py:327: in process_article
+    headlines = self._generate_headlines(final_content)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.components.editorial.ai_editor.EditorAgent object at 0x7a27504916d0>
+adapted_content = '---\ntitle: Demo\nauthor: AI\ndate: 2026-01-01\n---\n\n**TL;DR Visual**\n- Punto uno\n\n**El Impacto (Lead)**\nTexto base.\n'
+
+    def _generate_headlines(self, adapted_content: str) -> dict:
+        """Stage 3: Headline Generation & Metadata"""
+        system_prompt = self.prompts.get("headline", {}).get("system", "")
+        # Prompt explicitly for JSON in the message body as well to be safe
+        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', and 'excerpt' (max 140 chars summary for SEO).\n\n{adapted_content[:2000]}"
+>       response = self._send_prompt(prompt, system=system_prompt, model=self.headlines_model)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: test_process_article_strips_tldr_without_image_and_adds_source.<locals>.<lambda>() got an unexpected keyword argument 'model'
+
+news_collector/components/editorial/ai_editor.py:218: TypeError
+----------------------------- Captured stdout call -----------------------------
+
+--- STAGE 1: Scientific Translation ---
+(Loaded from cache: temp/cache/unknown_stage1_translation.txt)
+
+--- STAGE 2: Editorial Adaptation ---
+(Loaded from cache: temp/cache/unknown_stage2_editorial.txt)
+
+--- STAGE 3: Metadata & Headlines ---
+_________________________ test_fetch_feed_handles_404 __________________________
+
+mock_session = <MagicMock name='Session' id='134309194414608'>
+
+    def test_fetch_feed_handles_404(mock_session):
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_feed_reliability.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741dc0c80>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________________ test_fetch_feed_handles_html_content_type ___________________
+
+mock_session = <MagicMock name='Session' id='134309191804512'>
+
+    def test_fetch_feed_handles_html_content_type(mock_session):
+        # Simulate a 200 OK but with text/html content type
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_feed_reliability.py:32: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741d91550>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_______________________ test_fetch_feed_handles_410_gone _______________________
+
+mock_session = <MagicMock name='Session' id='134309191810560'>
+
+    def test_fetch_feed_handles_410_gone(mock_session):
+        # Regression test for Science feed issue
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_feed_reliability.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741d92f90>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_________________________ test_malformed_xml_handling __________________________
+
+    def test_malformed_xml_handling():
+        # Test that bozo bit handling prevents crashing
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_feed_reliability.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741dd28f0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________ TestOllamaFix.test_api_url_normalization_handles_base_url ___________
+
+self = <test_ollama_fix.TestOllamaFix object at 0x7a2750386b10>
+
+    def test_api_url_normalization_handles_base_url(self):
+        """Step E.3a: When api_url is base (`http://localhost:11434`), it appends `/api/generate`."""
+>       provider = OllamaProvider(api_url="http://localhost:11434")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ollama_fix.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741dca990>
+api_url = 'http://localhost:11434', model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+________ TestOllamaFix.test_api_url_normalization_handles_endpoint_url _________
+
+self = <test_ollama_fix.TestOllamaFix object at 0x7a2750386fd0>
+
+    def test_api_url_normalization_handles_endpoint_url(self):
+        """Step E.3b: When api_url is endpoint (`.../api/generate`), it stays valid."""
+>       provider = OllamaProvider(api_url="http://localhost:11434/api/generate")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ollama_fix.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741dee7b0>
+api_url = 'http://localhost:11434/api/generate', model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_________________________ test_backoff_monotonic_small _________________________
+
+    def test_backoff_monotonic_small():
+>       c = RSSCollector()
+            ^^^^^^^^^^^^^^
+
+tests/test_rate_limit_and_backoff.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741be0170>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+___________________ test_fetch_feed_uses_conditional_headers ___________________
+
+tmp_path = PosixPath('/tmp/pytest-of-cortega26/pytest-9/test_fetch_feed_uses_condition0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2741d5aa80>
+
+    def test_fetch_feed_uses_conditional_headers(tmp_path, monkeypatch):
+>       collector, db_manager, source_config = _setup_collector(tmp_path, monkeypatch)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_rate_limit_and_backoff.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_rate_limit_and_backoff.py:41: in _setup_collector
+    collector = RSSCollector()
+                ^^^^^^^^^^^^^^
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741b3b7d0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+________________ test_collect_from_source_handles_not_modified _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-cortega26/pytest-9/test_collect_from_source_handl0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2741d58230>
+
+    def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
+>       collector, db_manager, source_config = _setup_collector(tmp_path, monkeypatch)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_rate_limit_and_backoff.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_rate_limit_and_backoff.py:41: in _setup_collector
+    collector = RSSCollector()
+                ^^^^^^^^^^^^^^
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741bb87d0>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+__________________ test_rate_limit_chooses_strictest_override __________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2741d68e50>
+
+    def test_rate_limit_chooses_strictest_override(monkeypatch):
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_rate_limit_and_backoff.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741bce430>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+________________________ test_rate_limit_applies_jitter ________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a2741dad2b0>
+
+    def test_rate_limit_applies_jitter(monkeypatch):
+>       collector = RSSCollector()
+                    ^^^^^^^^^^^^^^
+
+tests/test_rate_limit_and_backoff.py:175: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+news_collector/collectors/rss_collector.py:75: in __init__
+    self.pre_scorer = PreScorer()
+                      ^^^^^^^^^^^
+news_collector/scoring/pre_scorer.py:16: in __init__
+    self.llm = llm_client or OllamaProvider()
+                             ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a2741bce970>
+api_url = None, model = None, timeout = 120
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_________________ TestOllamaProvider.test_extract_json_robust __________________
+
+self = <test_provider.TestOllamaProvider testMethod=test_extract_json_robust>
+
+    def setUp(self):
+>       self.provider = OllamaProvider(timeout=1)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/infrastructure/llm/test_provider.py:9: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a275014e200>
+api_url = None, model = None, timeout = 1
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+_________________ TestOllamaProvider.test_generate_async_text __________________
+
+self = <test_provider.TestOllamaProvider testMethod=test_generate_async_text>
+
+    def setUp(self):
+>       self.provider = OllamaProvider(timeout=1)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/infrastructure/llm/test_provider.py:9: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a27418efb60>
+api_url = None, model = None, timeout = 1
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+____________________ TestOllamaProvider.test_generate_sync _____________________
+
+self = <test_provider.TestOllamaProvider testMethod=test_generate_sync>
+
+    def setUp(self):
+>       self.provider = OllamaProvider(timeout=1)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/infrastructure/llm/test_provider.py:9: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <news_collector.infrastructure.llm.provider.OllamaProvider object at 0x7a275014e970>
+api_url = None, model = None, timeout = 1
+
+    def __init__(
+        self,
+        api_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 120,
+    ):
+        self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
+        if model is None:
+>           raise ValueError("Model must be explicitly provided in configuration.")
+E           ValueError: Model must be explicitly provided in configuration.
+
+news_collector/infrastructure/llm/provider.py:45: ValueError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.11-final-0 _______________
+
+Name                                        Stmts   Miss Branch BrPart   Cover   Missing
+----------------------------------------------------------------------------------------
+news_collector/contracts/__init__.py            5      0      0      0 100.00%
+news_collector/contracts/adapters.py           19      0      2      0 100.00%
+news_collector/contracts/collector.py         110      2     24      3  96.27%   117, 142, 161->163
+news_collector/contracts/common.py             42      0     10      0 100.00%
+news_collector/contracts/enrichment.py         53      1      6      1  96.61%   72
+news_collector/contracts/export.py             29      0      0      0 100.00%
+news_collector/contracts/mock_article.py       20      0      0      0 100.00%
+news_collector/contracts/scoring.py            85      0     18      1  99.03%   95->105
+news_collector/contracts/validation.py         15      0      0      0 100.00%
+news_collector/reranker/__init__.py             2      0      0      0 100.00%
+news_collector/reranker/reranker.py            33      2     12      2  91.11%   41, 51
+news_collector/utils/__init__.py                3      0      0      0 100.00%
+news_collector/utils/dedupe.py                 37      2     12      2  91.84%   29, 32
+news_collector/utils/full_text.py              29      0      8      0 100.00%
+news_collector/utils/pydantic_compat.py        18      3      2      1  80.00%   40-48
+news_collector/utils/refinery_helper.py         7      0      4      0 100.00%
+news_collector/utils/security.py               22      1      8      1  93.33%   57
+news_collector/utils/text_cleaner.py           67      7     30      2  90.72%   40-41, 51->50, 99, 114-119
+news_collector/utils/url_canonicalizer.py     104      7     52      8  90.38%   80, 95, 97, 112, 142, 173, 191, 200->exit
+----------------------------------------------------------------------------------------
+TOTAL                                         700     25    188     21  94.82%
+=========================== short test summary info ============================
+ERROR tests/test_regression_fixes_v3.py::TestRegressionFixesV3::test_rss_collector_adds_credibility_score
+ERROR tests/test_regression_fixes_v3.py::TestRegressionFixesV3::test_rss_collector_uses_article_exists
+ERROR tests/unit/collectors/test_rss_collector.py::test_parse_feed_entry - Va...
+ERROR tests/unit/collectors/test_rss_collector.py::test_collect_sync_mock - V...
+ERROR tests/unit/collectors/test_rss_collector_images.py::test_rss_collector_image_fallback_to_dom
+ERROR tests/unit/collectors/test_rss_collector_images.py::test_rss_collector_image_missing_source
+ERROR tests/unit/parsers/test_rss_parser.py::test_rss_parses_atom_entry - Val...
+ERROR tests/unit/parsers/test_rss_parser.py::test_rss_fallback_description_to_content
+FAILED tests/collectors/test_http_cache_behavior.py::test_fetch_feed_applies_conditional_headers[_Response200]
+FAILED tests/collectors/test_http_cache_behavior.py::test_fetch_feed_applies_conditional_headers[_Response304]
+FAILED tests/collectors/test_http_cache_behavior.py::test_fetch_feed_invokes_backoff_on_retry
+FAILED tests/collectors/test_http_cache_behavior.py::test_fetch_feed_skips_when_content_hash_matches
+FAILED tests/regression/test_enrichment_fail_open.py::test_enrichment_failure_fail_open
+FAILED tests/security/test_ssrf_protection.py::test_ssrf_protection_blocks_internal_ips
+FAILED tests/test_collector_logging.py::test_save_article_logs_article_id - V...
+FAILED tests/test_editor_agent.py::test_process_article_strips_tldr_without_image_and_adds_source
+FAILED tests/test_feed_reliability.py::test_fetch_feed_handles_404 - ValueErr...
+FAILED tests/test_feed_reliability.py::test_fetch_feed_handles_html_content_type
+FAILED tests/test_feed_reliability.py::test_fetch_feed_handles_410_gone - Val...
+FAILED tests/test_feed_reliability.py::test_malformed_xml_handling - ValueErr...
+FAILED tests/test_ollama_fix.py::TestOllamaFix::test_api_url_normalization_handles_base_url
+FAILED tests/test_ollama_fix.py::TestOllamaFix::test_api_url_normalization_handles_endpoint_url
+FAILED tests/test_rate_limit_and_backoff.py::test_backoff_monotonic_small - V...
+FAILED tests/test_rate_limit_and_backoff.py::test_fetch_feed_uses_conditional_headers
+FAILED tests/test_rate_limit_and_backoff.py::test_collect_from_source_handles_not_modified
+FAILED tests/test_rate_limit_and_backoff.py::test_rate_limit_chooses_strictest_override
+FAILED tests/test_rate_limit_and_backoff.py::test_rate_limit_applies_jitter
+FAILED tests/unit/infrastructure/llm/test_provider.py::TestOllamaProvider::test_extract_json_robust
+FAILED tests/unit/infrastructure/llm/test_provider.py::TestOllamaProvider::test_generate_async_text
+FAILED tests/unit/infrastructure/llm/test_provider.py::TestOllamaProvider::test_generate_sync
+================== 22 failed, 323 passed, 8 errors in 11.25s ===================

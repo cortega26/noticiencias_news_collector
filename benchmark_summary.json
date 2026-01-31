@@ -1,0 +1,20 @@
+[
+  {
+    "scenario": "D_Fast",
+    "article": "long_01",
+    "duration": 265.4671518802643,
+    "status": "OK"
+  },
+  {
+    "scenario": "D_Fast",
+    "article": "med_01",
+    "duration": 209.4193184375763,
+    "status": "OK"
+  },
+  {
+    "scenario": "D_Fast",
+    "article": "tech_01",
+    "duration": 177.78056287765503,
+    "status": "OK"
+  }
+]

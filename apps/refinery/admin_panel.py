@@ -45,6 +45,7 @@ import logging
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from news_collector.config.settings import DATABASE_CONFIG
 from news_collector.storage.database import DatabaseManager
+from news_collector.infrastructure.llm.provider import OllamaProvider
 
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
@@ -220,27 +221,137 @@ with tab1:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🤖 Modelo de IA")
+        st.subheader("🤖 Configuración de Modelos (Per-Phase)")
+        
         # Read from TOML [ollama] section
         ollama_cfg = config_data.get("ollama", {})
-        current_model = ollama_cfg.get("model", "llama3.2")
-
-        new_model = st.selectbox(
-            "Seleccionar Modelo Ollama",
-            ["llama3.2", "llama3.3", "llama3.1:70b", "mistral"],
-            index=0 if "3.2" in current_model else 1,
-        )
-
-        # Update TOML dict
-        if "ollama" not in config_data:
-            config_data["ollama"] = {}
-        config_data["ollama"]["model"] = new_model
-
-        st.subheader("🔗 URL de API")
+        
+        # API URL First
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
-        config_data["ollama"]["api_url"] = st.text_input(
-            "Endpoint de Ollama", current_api
+        new_api_url = st.text_input("Endpoint de Ollama", current_api)
+        config_data["ollama"]["api_url"] = new_api_url
+
+        # Fetch Available Models
+        available_models = []
+        try:
+            temp_provider = OllamaProvider(api_url=new_api_url, timeout=5)
+            available_models = temp_provider.list_models()
+        except Exception as e:
+            st.warning(f"No se pudieron cargar modelos: {e}")
+        
+        # Fallback list
+        model_options = available_models if available_models else ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
+        
+        # Helper index
+        def get_idx(options, value, default=0):
+            try:
+                return options.index(value)
+            except ValueError:
+                return default
+
+        # Helper: Detect "Slow" Models
+        def is_heavy_model(m_name):
+            if not m_name: return False
+            m_lower = m_name.lower()
+            return "14b" in m_lower or "27b" in m_lower or "70b" in m_lower or "mixtral" in m_lower
+
+        # --- Base Model (Fallback) ---
+        current_base = ollama_cfg.get("model", "llama3.3:latest")
+        if is_heavy_model(current_base):
+            st.warning(f"⚠️ El modelo base '{current_base}' es muy pesado para CPU. Considera usar llama3.2.")
+
+        base_model_sel = st.selectbox(
+            "Modelo Base (Fallback)",
+            options=model_options,
+            index=get_idx(model_options, current_base),
+            help="Modelo usado si se selecciona 'Default' en una fase."
         )
+        config_data["ollama"]["model"] = base_model_sel
+
+        # --- Resolved Summary (Truth) ---
+        st.markdown("##### 🔍 Resumen de Configuración (Resuelto)")
+        r_trans = ollama_cfg.get("translator_model") or base_model_sel
+        r_edit = ollama_cfg.get("editor_model") or base_model_sel
+        r_head = ollama_cfg.get("headlines_model") or base_model_sel
+        
+        c_r1, c_r2, c_r3 = st.columns(3)
+        c_r1.metric("1. Traductor", r_trans, delta="Lento" if is_heavy_model(r_trans) else "Rápido", delta_color="inverse")
+        c_r2.metric("2. Editor", r_edit, delta="Lento" if is_heavy_model(r_edit) else "Rápido", delta_color="inverse")
+        c_r3.metric("3. Titulares", r_head, delta="Lento" if is_heavy_model(r_head) else "Rápido", delta_color="inverse")
+
+        st.markdown("---")
+        
+        # --- PRESETS (Shortcuts) ---
+        st.markdown("#### ⚡ Presets (Atajos)")
+        st.caption("Aplica una configuración recomendada. Esto rellenará los selectores de abajo.")
+        
+        col_p1, col_p2, col_p3 = st.columns(3)
+        
+        # Preset: Production (Llama 3.2 Pure)
+        if col_p1.button("🚀 Producción (CPU / Rápido)", help="Llama 3.2 en todo. Ideal para servidores sin GPU."):
+            config_data["ollama"]["model"] = "llama3.2:latest"
+            config_data["ollama"]["translator_model"] = "llama3.2:latest"
+            config_data["ollama"]["editor_model"] = "llama3.2:latest"
+            config_data["ollama"]["headlines_model"] = "llama3.2:latest"
+            save_toml_config(config_data) 
+            st.rerun()
+
+        # Preset: Balanced (Qwen 14B)
+        if col_p2.button("⚖️ Calidad (GPU Requerida)", help="Qwen 14B. NO USAR EN CPU (Tiempos > 45min)."):
+            config_data["ollama"]["model"] = "qwen2.5:14b"
+            config_data["ollama"]["translator_model"] = "qwen2.5:14b"
+            config_data["ollama"]["editor_model"] = "qwen2.5:14b"
+            config_data["ollama"]["headlines_model"] = "llama3.2:latest" 
+            save_toml_config(config_data)
+            st.rerun()
+
+        # Preset: Reset
+        if col_p3.button("↺ Reset a Base", help="Borra overrides y usa Modelo Base para todo."):
+            keys_to_remove = ["translator_model", "editor_model", "headlines_model"]
+            for k in keys_to_remove:
+                if k in config_data["ollama"]:
+                    del config_data["ollama"][k]
+            save_toml_config(config_data)
+            st.rerun()
+
+        st.markdown("---")
+
+        # --- Phase Overrides (Explicit) ---
+        st.markdown("#### 🛠️ Configuración Manual por Fase")
+        
+        phases = [
+            ("translator_model", "1. Traductor Científico"),
+            ("editor_model", "2. Editor Periodístico"),
+            ("headlines_model", "3. Generador de Titulares"),
+        ]
+        
+        # Options: Default + Models
+        # Display "Default (Base)" to be clear
+        default_label = f"(Default: {base_model_sel})"
+        phase_options = [default_label] + model_options
+        
+        for cfg_key, label in phases:
+            curr_val = ollama_cfg.get(cfg_key) # None or str
+            
+            # Determine Index
+            sel_idx = 0
+            if curr_val and curr_val in model_options:
+                sel_idx = model_options.index(curr_val) + 1 # +1 because of Default item
+            
+            sel = st.selectbox(
+                label,
+                options=phase_options,
+                index=sel_idx,
+                key=f"sel_{cfg_key}"
+            )
+            
+            # Save Logic
+            if sel == default_label:
+                # Remove explicit key to inherit base
+                if cfg_key in config_data["ollama"]:
+                    del config_data["ollama"][cfg_key]
+            else:
+                config_data["ollama"][cfg_key] = sel
 
     with col2:
         st.subheader("📂 Repositorios")
