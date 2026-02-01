@@ -2,7 +2,7 @@
     "must_have_sections": [],
     "forbidden_phrases": ["el invento más importante", "increíble", "wow", "En conclusión"],
     "must_not_claim": ["Gutenberg inventó la escritura"],
-    "headlines_schema": ["directo", "relevancia"],
+    "headlines_schema": ["directo", "pregunta", "relevancia"],
     "min_length_chars": 1000,
-    "max_length_ratio": 3.0
+    "max_length_ratio": 2.5
 }
