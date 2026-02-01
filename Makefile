@@ -148,6 +148,8 @@ quality-gate: bootstrap ## Run snapshot-first quality gate (No LLM required)
 quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwrite warning!)
 	@PYTHONPATH=$(CURDIR) $(PYTHON) scripts/quality_gate_refresh.py
 
+prepush: test quality-gate ## Run all checks required before pushing (Test + Quality Gate)
+
 MYPY_TARGETS := scripts/generate_api_docs.py \
 news_collector/utils/logger.py \
 news_collector/utils/url_canonicalizer.py

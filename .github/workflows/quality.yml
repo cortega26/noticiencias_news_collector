@@ -44,7 +44,9 @@ jobs:
             | tar -xz -C /usr/local/bin gitleaks
 
       - name: Run Quality Checks (CI Strict Mode)
-        run: make quality-ci
+        run: |
+          make quality-ci
+          make quality-gate
 
       - name: Upload Security Reports
         if: always()

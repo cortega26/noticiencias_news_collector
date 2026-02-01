@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Utility script to bump the project semantic version."""
+"""Utility script to bump the project semantic version in news_collector/config/VERSION."""
 
 from __future__ import annotations
 
@@ -9,12 +9,9 @@ import sys
 from pathlib import Path
 from typing import Final, Tuple
 
-VERSION_FILE: Final[Path] = Path("config") / "version.py"
-PROJECT_VERSION_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r'^(?P<prefix>PROJECT_VERSION\s*:\s*Final\[str\]\s*=\s*")'
-    r'(?P<version>[^"\n]+)'
-    r'(?P<suffix>"\s*)$'
-)
+# Authoritative source is the flat VERSION file
+VERSION_FILE: Final[Path] = Path("news_collector") / "config" / "VERSION"
+
 SEMVER_RE: Final[re.Pattern[str]] = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
 )
@@ -26,7 +23,7 @@ class VersionBumpError(RuntimeError):
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Bump the project version in config/version.py",
+        description="Bump the project version in news_collector/config/VERSION",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -48,15 +45,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def read_current_version() -> Tuple[str, list[str]]:
-    lines = VERSION_FILE.read_text(encoding="utf-8").splitlines()
-    for line in lines:
-        match = PROJECT_VERSION_PATTERN.match(line.strip())
-        if match:
-            return match.group("version"), lines
-    raise VersionBumpError(
-        "PROJECT_VERSION declaration not found in config/version.py",
-    )
+def read_current_version() -> str:
+    if not VERSION_FILE.exists():
+         raise VersionBumpError(f"VERSION file not found at {VERSION_FILE}")
+    
+    # Read first line, strip whitespace
+    content = VERSION_FILE.read_text(encoding="utf-8").strip()
+    # Simple validation
+    if not SEMVER_RE.match(content):
+        raise VersionBumpError(f"Invalid current version format in file: {content}")
+    return content
 
 
 def validate_semver(version: str) -> Tuple[int, int, int]:
@@ -86,26 +84,15 @@ def compute_next_version(current: str, part: str | None, explicit: str | None) -
     return f"{major}.{minor}.{patch}"
 
 
-def write_version(lines: list[str], new_version: str) -> None:
-    updated_lines: list[str] = []
-    for line in lines:
-        stripped = line.strip()
-        match = PROJECT_VERSION_PATTERN.match(stripped)
-        if match:
-            updated_line = (
-                f"{match.group('prefix')}{new_version}{match.group('suffix')}"
-            )
-            leading = line[: len(line) - len(stripped)]
-            updated_lines.append(f"{leading}{updated_line}")
-        else:
-            updated_lines.append(line)
-    VERSION_FILE.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+def write_version(new_version: str) -> None:
+    # Write only the clean version string
+    VERSION_FILE.write_text(f"{new_version}\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     try:
-        current_version, lines = read_current_version()
+        current_version = read_current_version()
         new_version = compute_next_version(
             current_version,
             part=args.part,
@@ -114,10 +101,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             print(new_version)
             return 0
-        write_version(lines, new_version)
+        write_version(new_version)
         print(new_version)
         return 0
-    except VersionBumpError as error:
+    except (VersionBumpError, FileNotFoundError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
