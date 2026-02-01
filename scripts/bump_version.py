@@ -47,8 +47,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def read_current_version() -> str:
     if not VERSION_FILE.exists():
-         raise VersionBumpError(f"VERSION file not found at {VERSION_FILE}")
-    
+        raise VersionBumpError(f"VERSION file not found at {VERSION_FILE}")
+
     # Read first line, strip whitespace
     content = VERSION_FILE.read_text(encoding="utf-8").strip()
     # Simple validation

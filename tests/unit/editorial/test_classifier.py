@@ -1,7 +1,8 @@
-
 import unittest
 from unittest.mock import MagicMock
+
 from news_collector.editorial.classifier import EditorialClassifier
+
 
 class TestEditorialClassifier(unittest.TestCase):
     def setUp(self):
@@ -32,6 +33,7 @@ class TestEditorialClassifier(unittest.TestCase):
         self.mock_llm.generate_sync.side_effect = Exception("Boom")
         result = self.classifier.classify_article("Title", "Summary")
         self.assertEqual(result, "CIENCIA")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -438,7 +438,7 @@ class NewsCollectorSystem:
             if original_save:
                 self.db_manager.save_article = original_save
 
-    def _execute_validation(
+    def _execute_validation(  # noqa: C901
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
         """Ejecuta la fase de validación de artículos recolectados."""
@@ -523,13 +523,15 @@ class NewsCollectorSystem:
                         # Assuming it mimics structure of invalid items or is the article dict
                         # Contract Adapter usually returns list of models or dicts for batch
                         # Check validator implementation if possible, but safely assuming we can find by ID
-                        
+
                         # In validate_batch, 'valid' usually contains the input payload for valid items
                         article_id = valid_item.get("id")
                         if article_id:
-                             article = session.query(Article).filter_by(id=article_id).first()
-                             if article:
-                                 article.processing_status = "validated"
+                            article = (
+                                session.query(Article).filter_by(id=article_id).first()
+                            )
+                            if article:
+                                article.processing_status = "validated"
 
         self.logger.create_module_logger("validation").info(
             {
@@ -780,7 +782,7 @@ class NewsCollectorSystem:
             for source_id, result in source_details.items():
                 success = result.get("success", False)
                 saved = result.get("articles_saved", 0)
-                
+
                 health_data[source_id] = {
                     "last_run": datetime.now(timezone.utc).isoformat(),
                     "feed_ok": success,
@@ -790,15 +792,15 @@ class NewsCollectorSystem:
                     "articles_found": result.get("articles_found", 0),
                     "articles_saved": saved,
                     "last_error_message": result.get("error_message"),
-                    "latency": result.get("processing_time", 0)
+                    "latency": result.get("processing_time", 0),
                 }
-            
+
             export_path = Path("data/exports/source_health.json")
             export_path.parent.mkdir(parents=True, exist_ok=True)
             export_path.write_text(json.dumps(health_data, indent=2))
-        except Exception as e:
-             # Fail silently to avoid crashing report generation
-             pass
+        except Exception:  # noqa: S110
+            # Fail silently to avoid crashing report generation
+            pass
 
         return report
 

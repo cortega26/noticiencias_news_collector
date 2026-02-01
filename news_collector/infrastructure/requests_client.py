@@ -5,9 +5,11 @@ Wraps requests.Session with retries, timeouts, and fail-fast logic for 403s.
 
 import logging
 import secrets
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import requests
+from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.utils.security import validate_url_safety
 from requests.adapters import HTTPAdapter
 from tenacity import (
     before_sleep_log,
@@ -17,13 +19,10 @@ from tenacity import (
     wait_exponential,
 )
 
-from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
-from news_collector.utils.security import validate_url_safety
-
 logger = logging.getLogger(__name__)
 
 
-def _is_retryable_error(exception: Exception) -> bool:
+def _is_retryable_error(exception: BaseException) -> bool:
     """
     Determines if an exception should trigger a retry.
     Returns True for transient errors (5xx, timeouts).
@@ -42,16 +41,16 @@ def _is_retryable_error(exception: Exception) -> bool:
         # Retry on Server Errors (5xx)
         if 500 <= status < 600:
             return True
-        # Retry on Rate Limit (429) - though we usually handle this with sleeps, 
+        # Retry on Rate Limit (429) - though we usually handle this with sleeps,
         # tenacity can help if we miss the header.
         if status == 429:
             return True
 
     # Retry on specific Request errors (Connection, Timeout)
-    if isinstance(exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
-        return True
-
-    return False
+    # Retry on specific Request errors (Connection, Timeout)
+    return isinstance(
+        exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
+    )
 
 
 class RobustRequestsClient:
@@ -99,7 +98,7 @@ class RobustRequestsClient:
             pool_connections=10,
             pool_maxsize=20,
             # We handle retries via tenacity, but requests adapter can handle some connection resets
-            max_retries=0 
+            max_retries=0,
         )
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
@@ -135,7 +134,7 @@ class RobustRequestsClient:
         req_timeout = timeout or self.timeout
 
         # Merge local headers if provided without overwriting defaults completely
-        request_headers = self.session.headers.copy()
+        request_headers = dict(self.session.headers)
         if headers:
             request_headers.update(headers)
 
@@ -146,10 +145,10 @@ class RobustRequestsClient:
             timeout=req_timeout,
             allow_redirects=True,
         )
-        
+
         # Raise for status to trigger retry logic or fail-fast logic
         response.raise_for_status()
-        
+
         return response
 
     def close(self):

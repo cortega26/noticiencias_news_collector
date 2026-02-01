@@ -44,17 +44,21 @@ class EditorAgent:
         self.provider = OllamaProvider(
             api_url=self.api_url, model=self.model, timeout=900
         )
-        
+
         # Cache for verified models
         self._available_models = None
-        
+
         # Resolve models eagerly or lazily? Eager allows warning early.
         # But we need provider to be ready.
         # let's just resolve on demand or in init.
         # We will resolve them now.
-        self.translator_model = self._resolve_model(self._translator_model_cfg, "Translator")
+        self.translator_model = self._resolve_model(
+            self._translator_model_cfg, "Translator"
+        )
         self.editor_model = self._resolve_model(self._editor_model_cfg, "Editor")
-        self.headlines_model = self._resolve_model(self._headlines_model_cfg, "Headlines")
+        self.headlines_model = self._resolve_model(
+            self._headlines_model_cfg, "Headlines"
+        )
 
     def _get_available_models(self):
         if self._available_models is None:
@@ -76,7 +80,7 @@ class EditorAgent:
         # Check existence
         available = self._get_available_models()
         # available has names.
-        
+
         # Normalize target for check
         check_target = target
         if ":" not in check_target:
@@ -85,11 +89,11 @@ class EditorAgent:
         # Simple check: direct or in list
         # If check_target is in list OR target is in list
         is_available = (check_target in available) or (target in available)
-        
+
         if is_available:
             logger.info(f"[{phase_name}] using specialized model: {target}")
             return target
-        
+
         logger.warning(
             f"[{phase_name}] Model '{target}' not found in Ollama. "
             f"Falling back to legacy default: {self.model}"
@@ -166,7 +170,9 @@ class EditorAgent:
         try:
             start_time = time.time()
             # Use provider's sync iterator which handles retries
-            generator = self.provider.generate_sync(prompt, system=system, stream=True, model=use_model)
+            generator = self.provider.generate_sync(
+                prompt, system=system, stream=True, model=use_model
+            )
 
             full_text = []
             count = 0
@@ -190,12 +196,16 @@ class EditorAgent:
     def _translate_scientific(self, content: str) -> str:
         """Stage 1: Scientific Translation"""
         system_prompt = self.prompts.get("translator", {}).get("system", "")
-        return self._send_prompt(content, system=system_prompt, model=self.translator_model)
+        return self._send_prompt(
+            content, system=system_prompt, model=self.translator_model
+        )
 
     def _adapt_editorial(self, translated_content: str) -> str:
         """Stage 2: Editorial Adaptation"""
         system_prompt = self.prompts.get("editor", {}).get("system", "")
-        return self._send_prompt(translated_content, system=system_prompt, model=self.editor_model)
+        return self._send_prompt(
+            translated_content, system=system_prompt, model=self.editor_model
+        )
 
     def _extract_json(self, text: str) -> dict:
         """
@@ -215,7 +225,9 @@ class EditorAgent:
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe
         prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', and 'excerpt' (max 140 chars summary for SEO).\n\n{adapted_content[:2000]}"
-        response = self._send_prompt(prompt, system=system_prompt, model=self.headlines_model)
+        response = self._send_prompt(
+            prompt, system=system_prompt, model=self.headlines_model
+        )
 
         try:
             return self._extract_json(response)
@@ -226,24 +238,30 @@ class EditorAgent:
             # Fallback to empty if fails
             raise ValueError(f"Failed to generate headlines: {e}") from e
 
-    def _repair_output(self, content: str, headlines: dict, input_len: int) -> tuple[str, dict]:
+    def _repair_output(  # noqa: C901
+        self, content: str, headlines: dict, input_len: int
+    ) -> tuple[str, dict]:
         """
         Deterministic Repair Layer.
         Enforces invariants without LLM calls.
         """
         logger.info("Running Deterministic Repair...")
-        
+
         # 1. Headline Repair
         # Ensure mandatory keys exist (Map Spanish requirements to internal English keys)
         if "direct" not in headlines or not headlines["direct"]:
-             headlines["direct"] = headlines.get("directo", "Noticia Científica")
-             
+            headlines["direct"] = headlines.get("directo", "Noticia Científica")
+
         if "question" not in headlines or not headlines["question"]:
-             # Deterministic fallback
-             headlines["question"] = headlines.get("pregunta", "¿Qué plantea este estudio y por qué es relevante?")
-             
+            # Deterministic fallback
+            headlines["question"] = headlines.get(
+                "pregunta", "¿Qué plantea este estudio y por qué es relevante?"
+            )
+
         if "benefit" not in headlines or not headlines["benefit"]:
-             headlines["benefit"] = headlines.get("relevancia", "Importancia del hallazgo para el campo.")
+            headlines["benefit"] = headlines.get(
+                "relevancia", "Importancia del hallazgo para el campo."
+            )
 
         # 2. Section Normalization (Simple Mapping)
         # Normalize common variations to standard headers
@@ -252,7 +270,7 @@ class EditorAgent:
             "## Antecedentes": "## Contexto",
             "## Conclusión": "## Cierre",
             "**Introducción**": "**Apertura**",
-            "**Conclusión**": "**Cierre**"
+            "**Conclusión**": "**Cierre**",
         }
         for old, new in replacements.items():
             content = content.replace(old, new)
@@ -260,34 +278,40 @@ class EditorAgent:
         # 3. Length Repair
         # Target strict 2.5x ratio on FINAL output (Frontmatter + Body)
         # Frontmatter can be large (~600-800 chars). To be safe, target Body < 1.8x Input.
-        max_chars = int(input_len * 1.8) 
+        max_chars = int(input_len * 1.8)
         if len(content) > max_chars:
-             logger.warning(f"Output body too long ({len(content)} > {max_chars}). Applying deterministic trim.")
-             
-             # Rule 1: Remove trailing after Cierre
-             if "Cierre" in content:
-                 match = re.search(r"(#{2,3} |[*]{2})Cierre", content, re.IGNORECASE)
-                 if match:
-                     start_idx = match.start()
-                     # Keep Cierre paragraph (assumed ~500 chars max)
-                     # Find next double newline after start
-                     cierre_end = content.find("\n\n", start_idx + 50)
-                     if cierre_end == -1: cierre_end = len(content)
-                     else: cierre_end = min(len(content), cierre_end + 1000) # Keep a bit more context
-                     
-                     potential_cut = content[:cierre_end]
-                     if len(potential_cut) < len(content):
-                         content = potential_cut
-             
-             # Rule 3 (Fail-safe): Hard truncate
-             if len(content) > max_chars:
-                 content = content[:max_chars]
-                 last_period = content.rfind('.')
-                 if last_period > 0:
-                     content = content[:last_period+1]
-                 else:
-                     content += "..."
-                     
+            logger.warning(
+                f"Output body too long ({len(content)} > {max_chars}). Applying deterministic trim."
+            )
+
+            # Rule 1: Remove trailing after Cierre
+            if "Cierre" in content:
+                match = re.search(r"(#{2,3} |[*]{2})Cierre", content, re.IGNORECASE)
+                if match:
+                    start_idx = match.start()
+                    # Keep Cierre paragraph (assumed ~500 chars max)
+                    # Find next double newline after start
+                    cierre_end = content.find("\n\n", start_idx + 50)
+                    if cierre_end == -1:
+                        cierre_end = len(content)
+                    else:
+                        cierre_end = min(
+                            len(content), cierre_end + 1000
+                        )  # Keep a bit more context
+
+                    potential_cut = content[:cierre_end]
+                    if len(potential_cut) < len(content):
+                        content = potential_cut
+
+            # Rule 3 (Fail-safe): Hard truncate
+            if len(content) > max_chars:
+                content = content[:max_chars]
+                last_period = content.rfind(".")
+                if last_period > 0:
+                    content = content[: last_period + 1]
+                else:
+                    content += "..."
+
         return content, headlines
 
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
@@ -391,7 +415,9 @@ class EditorAgent:
         headlines = self._generate_headlines(final_content)
 
         # --- DETERMINISTIC REPAIR LAYER ---
-        final_content, headlines = self._repair_output(final_content, headlines, len(input_text))
+        final_content, headlines = self._repair_output(
+            final_content, headlines, len(input_text)
+        )
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination

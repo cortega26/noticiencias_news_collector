@@ -44,8 +44,8 @@ import logging
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from news_collector.config.settings import DATABASE_CONFIG
-from news_collector.storage.database import DatabaseManager
 from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.storage.database import DatabaseManager
 
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
@@ -188,6 +188,7 @@ def load_source_health():
         if not health_path.exists():
             return None
         import json
+
         with open(health_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
@@ -222,10 +223,10 @@ with tab1:
 
     with col1:
         st.subheader("🤖 Configuración de Modelos (Per-Phase)")
-        
+
         # Read from TOML [ollama] section
         ollama_cfg = config_data.get("ollama", {})
-        
+
         # API URL First
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
         new_api_url = st.text_input("Endpoint de Ollama", current_api)
@@ -238,10 +239,14 @@ with tab1:
             available_models = temp_provider.list_models()
         except Exception as e:
             st.warning(f"No se pudieron cargar modelos: {e}")
-        
+
         # Fallback list
-        model_options = available_models if available_models else ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
-        
+        model_options = (
+            available_models
+            if available_models
+            else ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
+        )
+
         # Helper index
         def get_idx(options, value, default=0):
             try:
@@ -251,20 +256,28 @@ with tab1:
 
         # Helper: Detect "Slow" Models
         def is_heavy_model(m_name):
-            if not m_name: return False
+            if not m_name:
+                return False
             m_lower = m_name.lower()
-            return "14b" in m_lower or "27b" in m_lower or "70b" in m_lower or "mixtral" in m_lower
+            return (
+                "14b" in m_lower
+                or "27b" in m_lower
+                or "70b" in m_lower
+                or "mixtral" in m_lower
+            )
 
         # --- Base Model (Fallback) ---
         current_base = ollama_cfg.get("model", "llama3.3:latest")
         if is_heavy_model(current_base):
-            st.warning(f"⚠️ El modelo base '{current_base}' es muy pesado para CPU. Considera usar llama3.2.")
+            st.warning(
+                f"⚠️ El modelo base '{current_base}' es muy pesado para CPU. Considera usar llama3.2."
+            )
 
         base_model_sel = st.selectbox(
             "Modelo Base (Fallback)",
             options=model_options,
             index=get_idx(model_options, current_base),
-            help="Modelo usado si se selecciona 'Default' en una fase."
+            help="Modelo usado si se selecciona 'Default' en una fase.",
         )
         config_data["ollama"]["model"] = base_model_sel
 
@@ -273,40 +286,65 @@ with tab1:
         r_trans = ollama_cfg.get("translator_model") or base_model_sel
         r_edit = ollama_cfg.get("editor_model") or base_model_sel
         r_head = ollama_cfg.get("headlines_model") or base_model_sel
-        
+
         c_r1, c_r2, c_r3 = st.columns(3)
-        c_r1.metric("1. Traductor", r_trans, delta="Lento" if is_heavy_model(r_trans) else "Rápido", delta_color="inverse")
-        c_r2.metric("2. Editor", r_edit, delta="Lento" if is_heavy_model(r_edit) else "Rápido", delta_color="inverse")
-        c_r3.metric("3. Titulares", r_head, delta="Lento" if is_heavy_model(r_head) else "Rápido", delta_color="inverse")
+        c_r1.metric(
+            "1. Traductor",
+            r_trans,
+            delta="Lento" if is_heavy_model(r_trans) else "Rápido",
+            delta_color="inverse",
+        )
+        c_r2.metric(
+            "2. Editor",
+            r_edit,
+            delta="Lento" if is_heavy_model(r_edit) else "Rápido",
+            delta_color="inverse",
+        )
+        c_r3.metric(
+            "3. Titulares",
+            r_head,
+            delta="Lento" if is_heavy_model(r_head) else "Rápido",
+            delta_color="inverse",
+        )
 
         st.markdown("---")
-        
+
         # --- PRESETS (Shortcuts) ---
         st.markdown("#### ⚡ Presets (Atajos)")
-        st.caption("Aplica una configuración recomendada. Esto rellenará los selectores de abajo.")
-        
+        st.caption(
+            "Aplica una configuración recomendada. Esto rellenará los selectores de abajo."
+        )
+
         col_p1, col_p2, col_p3 = st.columns(3)
-        
+
         # Preset: Production (Llama 3.2 Pure)
-        if col_p1.button("🚀 Producción (CPU / Rápido)", help="Llama 3.2 en todo. Ideal para servidores sin GPU."):
+        if col_p1.button(
+            "🚀 Producción (CPU / Rápido)",
+            help="Llama 3.2 en todo. Ideal para servidores sin GPU.",
+        ):
             config_data["ollama"]["model"] = "llama3.2:latest"
             config_data["ollama"]["translator_model"] = "llama3.2:latest"
             config_data["ollama"]["editor_model"] = "llama3.2:latest"
             config_data["ollama"]["headlines_model"] = "llama3.2:latest"
-            save_toml_config(config_data) 
+            save_toml_config(config_data)
             st.rerun()
 
         # Preset: Balanced (Qwen 14B)
-        if col_p2.button("⚖️ Calidad (GPU Requerida)", help="Qwen 14B. NO USAR EN CPU (Tiempos > 45min)."):
+        if col_p2.button(
+            "⚖️ Calidad (GPU Requerida)",
+            help="Qwen 14B. NO USAR EN CPU (Tiempos > 45min).",
+        ):
             config_data["ollama"]["model"] = "qwen2.5:14b"
             config_data["ollama"]["translator_model"] = "qwen2.5:14b"
             config_data["ollama"]["editor_model"] = "qwen2.5:14b"
-            config_data["ollama"]["headlines_model"] = "llama3.2:latest" 
+            config_data["ollama"]["headlines_model"] = "llama3.2:latest"
             save_toml_config(config_data)
             st.rerun()
 
         # Preset: Reset
-        if col_p3.button("↺ Reset a Base", help="Borra overrides y usa Modelo Base para todo."):
+        if col_p3.button(
+            "↺ Reset a Base", help="Borra overrides y usa Modelo Base para todo."
+        ):
             keys_to_remove = ["translator_model", "editor_model", "headlines_model"]
             for k in keys_to_remove:
                 if k in config_data["ollama"]:
@@ -318,33 +356,32 @@ with tab1:
 
         # --- Phase Overrides (Explicit) ---
         st.markdown("#### 🛠️ Configuración Manual por Fase")
-        
+
         phases = [
             ("translator_model", "1. Traductor Científico"),
             ("editor_model", "2. Editor Periodístico"),
             ("headlines_model", "3. Generador de Titulares"),
         ]
-        
+
         # Options: Default + Models
         # Display "Default (Base)" to be clear
         default_label = f"(Default: {base_model_sel})"
         phase_options = [default_label] + model_options
-        
+
         for cfg_key, label in phases:
-            curr_val = ollama_cfg.get(cfg_key) # None or str
-            
+            curr_val = ollama_cfg.get(cfg_key)  # None or str
+
             # Determine Index
             sel_idx = 0
             if curr_val and curr_val in model_options:
-                sel_idx = model_options.index(curr_val) + 1 # +1 because of Default item
-            
+                sel_idx = (
+                    model_options.index(curr_val) + 1
+                )  # +1 because of Default item
+
             sel = st.selectbox(
-                label,
-                options=phase_options,
-                index=sel_idx,
-                key=f"sel_{cfg_key}"
+                label, options=phase_options, index=sel_idx, key=f"sel_{cfg_key}"
             )
-            
+
             # Save Logic
             if sel == default_label:
                 # Remove explicit key to inherit base
@@ -644,7 +681,7 @@ with tab2:
                             ]
                             for table in tables_to_wipe:
                                 try:
-                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608
+                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # nosemgrep
                                     st.write(f"  - Tabla `{table}` limpiada.")
                                 except Exception:  # noqa: S110, SIM105
                                     pass  # Table might not exist yet
@@ -1078,19 +1115,20 @@ with tab3:
     from news_collector.system.activity_monitor import ActivityMonitor
 
     st.markdown("### Registro de Actividad Reciente")
-    
+
     # Initialize monitor
     # Note: We rely on default path resolution in ActivityMonitor, but we can pass explicit if needed.
-    monitor = ActivityMonitor() 
-    events = monitor.get_recent_activity(limit=15) # Show last 15 aggregated events
-    
+    monitor = ActivityMonitor()
+    events = monitor.get_recent_activity(limit=15)  # Show last 15 aggregated events
+
     from news_collector.utils.refinery_helper import has_no_activity
+
     if has_no_activity(events):
         st.info("ℹ️ No hay actividad reciente registrada.")
     else:
         # Custom CSS for timeline-like look (optional, keeping it simple first)
-        for event in reversed(events): # Show newest first
-            
+        for event in reversed(events):  # Show newest first
+
             # Icon & Color mapping
             icon = "🔹"
             if event.level == "ERROR":
@@ -1126,9 +1164,8 @@ with tab3:
                 else:
                     # Normal info
                     c_msg.markdown(f"**[{event.category}]** {event.message}")
-                
-            st.divider()
 
+            st.divider()
 
 
 # --- Tab 4: Analytics ---
@@ -1375,48 +1412,71 @@ with tab6:
     health_data = load_source_health()
     if health_data:
         st.subheader("🩺 Estado de Salud (Última Ejecución)")
-        
+
         # Metrics Calculation
         total_sources = len(health_data)
         feed_ok_count = sum(1 for s in health_data.values() if s.get("feed_ok"))
         content_ok_count = sum(1 for s in health_data.values() if s.get("content_ok"))
         failed_count = total_sources - feed_ok_count
-        
+
         success_rate = (feed_ok_count / total_sources * 100) if total_sources > 0 else 0
-        
+
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Fuentes Totales", total_sources)
         m2.metric("Success Rate (Feed)", f"{success_rate:.1f}%")
-        m3.metric("Con Contenido", f"{content_ok_count}", help="Artículos guardados > 0")
-        m4.metric("Fallando", failed_count, delta=-failed_count if failed_count > 0 else 0, delta_color="inverse")
+        m3.metric(
+            "Con Contenido", f"{content_ok_count}", help="Artículos guardados > 0"
+        )
+        m4.metric(
+            "Fallando",
+            failed_count,
+            delta=-failed_count if failed_count > 0 else 0,
+            delta_color="inverse",
+        )
 
         # Failing Sources Table
         if failed_count > 0:
             st.warning(f"⚠️ {failed_count} fuentes fallaron en la última ejecución.")
             failed_items = [
                 {
-                    "Source": sid, 
-                    "Error": d.get("last_error_message"), 
-                    "Latency": f"{d.get('latency', 0):.2f}s"
+                    "Source": sid,
+                    "Error": d.get("last_error_message"),
+                    "Latency": f"{d.get('latency', 0):.2f}s",
                 }
-                for sid, d in health_data.items() 
+                for sid, d in health_data.items()
                 if not d.get("feed_ok")
             ]
             st.table(failed_items)
-            
+
         # Detailed Health Dataframe
         with st.expander("📊 Ver Matriz de Salud Completa"):
             import pandas as pd
+
             health_df = pd.DataFrame.from_dict(health_data, orient="index")
             # Reorder columns for readability
-            cols = ["feed_ok", "content_ok", "content_mode", "articles_found", "articles_saved", "latency", "last_error_message"]
+            cols = [
+                "feed_ok",
+                "content_ok",
+                "content_mode",
+                "articles_found",
+                "articles_saved",
+                "latency",
+                "last_error_message",
+            ]
             # Filter cols that exist
             cols = [c for c in cols if c in health_df.columns]
-            st.dataframe(health_df[cols].style.highlight_max(axis=0, subset=["latency"], color="#ffcdd2"), use_container_width=True)
-            
+            st.dataframe(
+                health_df[cols].style.highlight_max(
+                    axis=0, subset=["latency"], color="#ffcdd2"
+                ),
+                use_container_width=True,
+            )
+
         st.divider()
     else:
-        st.info("ℹ️ No hay datos de salud recientes (ejecuta el colector para generar `source_health.json`).")
+        st.info(
+            "ℹ️ No hay datos de salud recientes (ejecuta el colector para generar `source_health.json`)."
+        )
         st.divider()
 
     st.info("Modifica, agrega o deshabilita fuentes sin reiniciar el servidor.")

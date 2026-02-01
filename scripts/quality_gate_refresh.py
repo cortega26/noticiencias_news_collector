@@ -1,13 +1,11 @@
-
-import sys
-import os
-import json
-import time
-import argparse
-from pathlib import Path
-import re
 import datetime
+import json
+import os
+import re
 import subprocess
+import sys
+import time
+from pathlib import Path
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -22,20 +20,26 @@ except ImportError as e:
 
 GOLDEN_DIR = PROJECT_ROOT / "quality_gate" / "golden"
 
+
 def get_git_commit():
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .decode("utf-8")
+            .strip()
+        )
     except Exception:
         return "unknown"
+
 
 def main():
     print("⚠️  WARNING: You are about to regenerate Quality Gate snapshots.")
     print("   This process enforces MACHINE-ONLY generation.")
-    
+
     # Check for existing snapshots - fail if found
     existing = list(GOLDEN_DIR.glob("*/snapshot.json"))
     if existing:
-        print(f"\n❌ Snapshot generation aborted.")
+        print("\n❌ Snapshot generation aborted.")
         print(f"   Found {len(existing)} existing snapshots:")
         for p in existing:
             print(f"   - {p.relative_to(PROJECT_ROOT)}")
@@ -55,20 +59,20 @@ def main():
     )
     # Increase timeout for generation
     agent.provider.timeout = 300
-    
+
     git_commit = get_git_commit()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     cases = sorted([d for d in GOLDEN_DIR.iterdir() if d.is_dir()])
-    
+
     for case_dir in cases:
         print(f">> 🔄 Refreshing: {case_dir.name}")
-        
+
         input_path = case_dir / "input.txt"
         if not input_path.exists():
-            print(f"   Skipping (no input.txt)")
+            print("   Skipping (no input.txt)")
             continue
-            
+
         with open(input_path, "r") as f:
             content_text = f.read()
 
@@ -81,32 +85,36 @@ def main():
         # Parse headlines
         headlines = {}
         title_match = re.search(r'title: "(.*?)"', full_output)
-        if title_match: headlines["directo"] = title_match.group(1)
-        
+        if title_match:
+            headlines["directo"] = title_match.group(1)
+
         q_match = re.search(r'question: "(.*?)"', full_output)
-        if q_match: headlines["pregunta"] = q_match.group(1)
-            
+        if q_match:
+            headlines["pregunta"] = q_match.group(1)
+
         b_match = re.search(r'benefit: "(.*?)"', full_output)
-        if b_match: headlines["relevancia"] = b_match.group(1)
+        if b_match:
+            headlines["relevancia"] = b_match.group(1)
 
         snapshot_data = {
             "_meta": {
                 "generated_by": "quality_gate_refresh",
                 "model": model_name,
                 "timestamp": timestamp,
-                "git_commit": git_commit
+                "git_commit": git_commit,
             },
             "content": full_output,
-            "headlines": headlines
+            "headlines": headlines,
         }
-        
+
         snap_path = case_dir / "snapshot.json"
         with open(snap_path, "w", encoding="utf-8") as f:
             json.dump(snapshot_data, f, indent=2, ensure_ascii=False)
-            
+
         print(f"   ✅ Saved generated snapshot to {snap_path.name}")
 
     print("\n✨ Refresh Complete. Run 'make quality-gate' to verify.")
+
 
 if __name__ == "__main__":
     main()

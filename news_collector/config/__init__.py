@@ -86,10 +86,10 @@ def __getattr__(name: str) -> Any:
     module_name = _ATTR_TO_MODULE.get(name)
     if module_name is None:
         raise AttributeError(f"module 'config' has no attribute {name!r}")
-    module = import_module(module_name)
+    module = import_module(module_name)  # nosemgrep
     for attribute in _MODULE_ATTRS[module_name]:
-        globals()[attribute] = getattr(module, attribute)
-    return globals()[name]
+        globals()[attribute] = getattr(module, attribute)  # nosemgrep
+    return globals()[name]  # nosemgrep
 
 
 __author__ = "News Collector Team"

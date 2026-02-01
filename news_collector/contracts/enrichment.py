@@ -27,7 +27,6 @@ class ArticleEnrichment(TypedDict, total=False):
     entities: List[str]
     topics: List[str]
     sentiment: str
-    sentiment: str
     model_version: str
     editorial_display_category: str
 

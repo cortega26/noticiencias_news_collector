@@ -1,12 +1,14 @@
-import pytest
-from bs4 import BeautifulSoup
 from unittest.mock import MagicMock
-from news_collector.logic.parsers.image_extractor import ImageExtractor, ImageCandidate
+
+import pytest
+from news_collector.logic.parsers.image_extractor import ImageCandidate, ImageExtractor
+
 
 @pytest.fixture
 def image_extractor():
     session = MagicMock()
     return ImageExtractor(session=session)
+
 
 def test_extract_candidates_metadata(image_extractor):
     html = """
@@ -23,6 +25,7 @@ def test_extract_candidates_metadata(image_extractor):
     assert candidates[0].url == "https://example.com/og_image.jpg"
     assert candidates[0].source == "meta:og:image"
 
+
 def test_extract_candidates_dom(image_extractor):
     html = """
     <html>
@@ -38,7 +41,8 @@ def test_extract_candidates_dom(image_extractor):
     assert len(candidates) == 1
     assert candidates[0].url == "https://example.com/images/article_image.jpg"
     assert candidates[0].source == "dom"
-    assert candidates[0].score > 1.0 # Should get boost for size
+    assert candidates[0].score > 1.0  # Should get boost for size
+
 
 def test_extract_candidates_lazy(image_extractor):
     html = """
@@ -54,6 +58,7 @@ def test_extract_candidates_lazy(image_extractor):
     assert len(candidates) == 1
     assert candidates[0].url == "https://example.com/lazy.jpg"
 
+
 def test_blacklist(image_extractor):
     html = """
     <html>
@@ -68,22 +73,24 @@ def test_blacklist(image_extractor):
     assert len(candidates) == 1
     assert candidates[0].url == "https://example.com/valid.jpg"
 
+
 def test_validation_success(image_extractor):
     candidate = ImageCandidate(url="https://example.com/img.jpg", source="dom")
-    
+
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.headers = {"Content-Type": "image/jpeg", "Content-Length": "10000"}
     image_extractor.session.head.return_value = mock_resp
-    
+
     assert image_extractor.validate_image(candidate) is True
+
 
 def test_validation_reject_small(image_extractor):
     candidate = ImageCandidate(url="https://example.com/tiny.jpg", source="dom")
-    
+
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.headers = {"Content-Type": "image/jpeg", "Content-Length": "100"}
     image_extractor.session.head.return_value = mock_resp
-    
+
     assert image_extractor.validate_image(candidate) is False
