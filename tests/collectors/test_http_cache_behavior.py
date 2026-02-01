@@ -1,5 +1,4 @@
 import hashlib
-from types import MethodType
 from typing import Type
 
 import pytest
@@ -15,10 +14,11 @@ class _BaseResponse:
 
     def raise_for_status(self) -> None:  # pragma: no cover - defensive
         if self.status_code >= 400:
-             import requests
-             error = requests.HTTPError(f"HTTP {self.status_code}")
-             error.response = self
-             raise error
+            import requests
+
+            error = requests.HTTPError(f"HTTP {self.status_code}")
+            error.response = self
+            raise error
 
 
 class _Response200(_BaseResponse):
@@ -62,7 +62,9 @@ def test_fetch_feed_applies_conditional_headers(
 
     captured: dict[str, dict[str, str]] = {}
 
-    def fake_get(url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs):
+    def fake_get(
+        url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs
+    ):
         captured["headers"] = headers or {}
         return response_cls()
 
@@ -89,7 +91,9 @@ def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) ->
     responses = iter([_Response429(), _Response200()])
     calls = []
 
-    def fake_get(url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs):
+    def fake_get(
+        url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs
+    ):
         calls.append(1)
         return next(responses)
 
@@ -115,7 +119,9 @@ def test_fetch_feed_skips_when_content_hash_matches() -> None:
         content_hash=content_hash,
     )
 
-    def fake_get(url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs):
+    def fake_get(
+        url: str, timeout: float, headers: dict[str, str] | None = None, **kwargs
+    ):
         return _Response200Same()
 
     collector.session.get = fake_get  # type: ignore[assignment]

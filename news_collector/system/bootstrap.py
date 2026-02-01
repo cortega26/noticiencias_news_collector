@@ -189,41 +189,47 @@ def check_system_health(
     }
 
 
-def _verify_llm_health(logger: Any, warnings: List[str]) -> None:
+def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
     """Internal helper to verify Ollama availability."""
     try:
         import requests
+
         from news_collector.config.settings import CONFIG
 
         ollama_url = CONFIG.ollama.api_url
         # If /api/generate is in the URL, strip it to check base health
         base_url = ollama_url.split("/api/")[0]
         health_url = f"{base_url}/api/tags"  # Standard Ollama check
-        
+
         try:
             resp = requests.get(health_url, timeout=2)
             if resp.status_code != 200:
-                warning_msg = f"Ollama health check returned {resp.status_code} at {health_url}"
+                warning_msg = (
+                    f"Ollama health check returned {resp.status_code} at {health_url}"
+                )
                 warnings.append(warning_msg)
                 if logger:
                     logger.create_module_logger("system").warning(warning_msg)
             else:
-                 # Check if configured model exists
-                 models = resp.json().get("models", [])
-                 model_name = CONFIG.ollama.model
-                 if not any(m.get("name") == model_name or m.get("model") == model_name for m in models):
-                     # Try fuzzy match (e.g. 'llama3.2:latest' vs 'llama3.2')
-                     if not any(model_name in (m.get("name") or "") for m in models):
-                         warning_msg = f"Model '{model_name}' not found in Ollama. Available: {[m.get('name') for m in models[:3]]}..."
-                         warnings.append(warning_msg)
-                         if logger:
-                             logger.create_module_logger("system").warning(warning_msg)
+                # Check if configured model exists
+                models = resp.json().get("models", [])
+                model_name = CONFIG.ollama.model
+                if not any(  # noqa: SIM102
+                    m.get("name") == model_name or m.get("model") == model_name
+                    for m in models
+                ):
+                    # Try fuzzy match (e.g. 'llama3.2:latest' vs 'llama3.2')
+                    if not any(model_name in (m.get("name") or "") for m in models):
+                        warning_msg = f"Model '{model_name}' not found in Ollama. Available: {[m.get('name') for m in models[:3]]}..."
+                        warnings.append(warning_msg)
+                        if logger:
+                            logger.create_module_logger("system").warning(warning_msg)
 
         except Exception as conn_err:
-             warning_msg = f"LLM Provider unreachable at {base_url}: {conn_err}"
-             warnings.append(warning_msg)
-             # Do not mark as critical to avoid stopping the collector, but log warning
-             if logger:
+            warning_msg = f"LLM Provider unreachable at {base_url}: {conn_err}"
+            warnings.append(warning_msg)
+            # Do not mark as critical to avoid stopping the collector, but log warning
+            if logger:
                 logger.create_module_logger("system").warning(warning_msg)
 
     except Exception as e:
@@ -231,12 +237,16 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:
             logger.create_module_logger("system").warning(f"Skipping LLM check: {e}")
 
     # Update global state if LLM issues found
-    if any("LLM Provider unreachable" in w for w in warnings) or \
-       any("Ollama health check returned" in w for w in warnings):
+    if any("LLM Provider unreachable" in w for w in warnings) or any(
+        "Ollama health check returned" in w for w in warnings
+    ):
         import news_collector.config.settings
+
         news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
         if logger:
-            logger.create_module_logger("system").warning("⚠️ LLM System Disabled due to health check failure.")
+            logger.create_module_logger("system").warning(
+                "⚠️ LLM System Disabled due to health check failure."
+            )
 
 
 def bootstrap_system() -> List[str]:
@@ -247,10 +257,10 @@ def bootstrap_system() -> List[str]:
     """
     warnings: List[str] = []
     # We pass None as logger to avoid noise/setup complexity during simple CLI checks,
-    # or we could set up a basic logger if needed. 
+    # or we could set up a basic logger if needed.
     # For 'surgical' read-only check, None is safer to avoid side effects.
-    
+
     # Run the extracted LLM check
     _verify_llm_health(None, warnings)
-    
+
     return warnings

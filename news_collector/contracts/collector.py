@@ -112,7 +112,7 @@ class CollectorArticleModel(BaseModel):
         # If content_mode is summary_only, we apply a much lower threshold (e.g. 30 chars).
         # Otherwise, we use the configured minimum (likely 500).
         default_min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
-        
+
         if self.content_mode == "summary_only":
             min_len = 30
         else:

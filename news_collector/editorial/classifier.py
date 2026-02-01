@@ -30,15 +30,15 @@ class EditorialClassifier:
         """
         article_text = f"TITULAR: {title}\n\nRESUMEN: {summary}\n"
         if content:
-             # Just a small snippet if available, though prompt relies mostly on core subject
+            # Just a small snippet if available, though prompt relies mostly on core subject
             article_text += f"\nCONTEXTO: {content[:500]}..."
 
         try:
             response = self.llm.generate_sync(
                 prompt=article_text,
                 system=EDITORIAL_CLASSIFICATION_SYSTEM_PROMPT,
-                json_mode=False, # We expect a single string token
-                temperature=0.0 # Deterministic
+                json_mode=False,  # We expect a single string token
+                temperature=0.0,  # Deterministic
             )
 
             if not response:
@@ -47,18 +47,20 @@ class EditorialClassifier:
 
             # Cleaning
             category = response.strip().upper()
-            
+
             # Simple validation against known set
             valid_categories = {"CIENCIA", "SALUD", "TECNOLOGÍA", "EDITORIAL"}
-            
+
             # Handle potential extra punctuation (e.g. "SALUD.")
             if category.endswith("."):
                 category = category[:-1]
-                
+
             if category in valid_categories:
                 return category
-            
-            logger.warning(f"Editorial Classifier returned invalid category: '{category}'")
+
+            logger.warning(
+                f"Editorial Classifier returned invalid category: '{category}'"
+            )
             return "CIENCIA"
 
         except Exception as e:
