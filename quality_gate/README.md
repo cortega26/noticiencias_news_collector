@@ -40,6 +40,21 @@ make quality-gate-refresh
 > They are generated exclusively by `make quality-gate-refresh`.
 > Manual edits invalidate the quality gate and are forbidden (verified by cryptographic metadata).
 
+### 4. Developer Workflow
+
+Before pushing code:
+
+```bash
+make prepush
+```
+
+This runs:
+
+1.  Full Unit Tests (`make test`)
+2.  Quality Gate Validation (`make quality-gate`)
+
+**Do NOT run `make quality-gate-refresh` in CI.**
+
 ## Structure
 
 ```
