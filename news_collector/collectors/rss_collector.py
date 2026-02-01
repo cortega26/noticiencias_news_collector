@@ -26,12 +26,12 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
+from news_collector.logic.parsers.image_extractor import ImageExtractor
 from news_collector.logic.parsers.rss_parser import RssParser
 from news_collector.scoring.pre_scorer import PreScorer
-from news_collector.logic.parsers.image_extractor import ImageExtractor
 from news_collector.utils.url_canonicalizer import configure_canonicalization_cache
 
 from .base_collector import BaseCollector
@@ -43,8 +43,6 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 configure_canonicalization_cache(
     int(COLLECTION_CONFIG.get("canonicalization_cache_size", 0))
 )
-
-from news_collector.utils.security import validate_url_safety
 
 
 class RSSCollector(BaseCollector):
@@ -67,11 +65,12 @@ class RSSCollector(BaseCollector):
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         # Replaced manual session with RobustRequestsClient
         from news_collector.infrastructure.requests_client import RobustRequestsClient
+
         self.client = RobustRequestsClient()
         # Expose session object for backward compatibility with ImageExtractor if needed
         # (ImageExtractor takes a session, we can pass self.client.session)
         self.session = self.client.session
-        
+
         self.pre_scorer = PreScorer()
         self.parser = RssParser()
         self.image_extractor = ImageExtractor(session=self.session)
@@ -87,9 +86,11 @@ class RSSCollector(BaseCollector):
 
     def _create_session(self):
         """Deprecated: Internal session is managed by RobustRequestsClient."""
-        pass 
-        
-    def _fetch_feed_content(self, feed_url: str, request_headers: Dict[str, str]) -> requests.Response:
+        pass
+
+    def _fetch_feed_content(
+        self, feed_url: str, request_headers: Dict[str, str]
+    ) -> requests.Response:
         """Helper to fetch using robust client."""
         return self.client.get(feed_url, headers=request_headers)
 
@@ -99,10 +100,9 @@ class RSSCollector(BaseCollector):
 
     # 1. Update _fetch_feed to use self.client.get
     # 2. Update the full text fetch loop to use self.client.get and check fetch_mode
-    
+
     # Let's perform surgical edits using multi_replace first.
     # I will cancel this Replace and use MultiReplace.
-
 
     def collect_from_source(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
@@ -328,9 +328,12 @@ class RSSCollector(BaseCollector):
                 "last_modified": None,
                 "content_hash": None,
             }
-            try:
-                cached_headers = self.db_manager.get_source_feed_metadata(source_id) or cached_headers
-            except Exception as metadata_error:
+            try:  # noqa: SIM105
+                cached_headers = (
+                    self.db_manager.get_source_feed_metadata(source_id)
+                    or cached_headers
+                )
+            except Exception:  # noqa: SIM105,S110
                 # Log warning but continue
                 pass
 
@@ -367,60 +370,77 @@ class RSSCollector(BaseCollector):
 
             if response.status_code == 304:
                 # Update metadata if headers changed (e.g. ETag rotation)
-                try:
+                try:  # noqa: SIM105
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         # content_hash is not available/changed since no content
                     )
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # noqa: S110
                 return (None, 304)
 
             # --- Validation & Metadata Update Logic (Preserved) ---
             # Verificar tamaño razonable
             content_length = len(response.content)
             if content_length > 10 * 1024 * 1024:  # 10MB límite
-                 self._emit_log("warning", "collector.feed.too_large", source_id=source_id, details={"bytes": content_length})
-                 return (None, response.status_code)
+                self._emit_log(
+                    "warning",
+                    "collector.feed.too_large",
+                    source_id=source_id,
+                    details={"bytes": content_length},
+                )
+                return (None, response.status_code)
 
             # Validate Content-Type (Relaxed warning)
             content_type = response.headers.get("content-type", "").lower()
-            if not any(x in content_type for x in ["xml", "rss", "atom", "json"]): # json feeds exist
-                 self._emit_log("debug", "collector.feed.suspicious_content_type", source_id=source_id, details={"type": content_type})
+            if not any(
+                x in content_type for x in ["xml", "rss", "atom", "json"]
+            ):  # json feeds exist
+                self._emit_log(
+                    "debug",
+                    "collector.feed.suspicious_content_type",
+                    source_id=source_id,
+                    details={"type": content_type},
+                )
 
             response_text = response.text
             content_hash = hashlib.sha256(response.content).hexdigest()
 
             if cached_headers.get("content_hash") == content_hash:
-                 self._emit_log("info", "collector.feed.content_unchanged", source_id=source_id, details={"hash": content_hash})
-                 # Still update metadata execution time/headers if needed? 
-                 # For now, just return 304 to signal skip.
-                 # But we might want to update the 'last_checked' timestamp in DB?
-                 # load_source_feed_metadata updates? No, update_source_feed_metadata does.
-                 # Let's update metadata before returning to ensure freshness?
-                 try:
-                     self.db_manager.update_source_feed_metadata(
-                         source_id,
-                         etag=response.headers.get("ETag"),
-                         last_modified=response.headers.get("Last-Modified"),
-                         content_hash=content_hash,
-                     )
-                 except Exception:
-                     pass
-                 return (None, 304)
+                self._emit_log(
+                    "info",
+                    "collector.feed.content_unchanged",
+                    source_id=source_id,
+                    details={"hash": content_hash},
+                )
+                # Still update metadata execution time/headers if needed?
+                # For now, just return 304 to signal skip.
+                # But we might want to update the 'last_checked' timestamp in DB?
+                # load_source_feed_metadata updates? No, update_source_feed_metadata does.
+                # Let's update metadata before returning to ensure freshness?
+                try:  # noqa: SIM105
+                    self.db_manager.update_source_feed_metadata(
+                        source_id,
+                        etag=response.headers.get("ETag"),
+                        last_modified=response.headers.get("Last-Modified"),
+                        content_hash=content_hash,
+                    )
+                except Exception:  # noqa: S110
+                    pass  # noqa: S110
+                return (None, 304)
 
             # Metadata Updates (Cleaned up)
-            try:
+            try:  # noqa: SIM105
                 self.db_manager.update_source_feed_metadata(
                     source_id,
                     etag=response.headers.get("ETag"),
                     last_modified=response.headers.get("Last-Modified"),
                     content_hash=content_hash,
                 )
-            except Exception:
-                pass # Non-critical
+            except Exception:  # noqa: S110
+                pass  # noqa: S110  # Non-critical
 
             return (response_text, response.status_code)
 
@@ -504,11 +524,10 @@ class RSSCollector(BaseCollector):
 
         # 3. PHASE THREE: Deep Processing (Full Text & Image Extraction)
         articles = []
-        from news_collector.utils.full_text import fetch_full_article
-        
+
         # or rely on the ImageExtractor to fetch if provided a URL (but avoiding double fetch if possible).
         # Optimization: We'll fetch the content ONCE here, pass to both extractors.
-        
+
         for cand in selected_candidates:
             try:
                 # Determine Fetch Mode
@@ -516,16 +535,26 @@ class RSSCollector(BaseCollector):
                 # 2. Fallback to 'content_mode' if fetch_mode missing (legacy config compat)
                 fetch_mode = source_config.get("fetch_mode")
                 if not fetch_mode:
-                    fetch_mode = "rss_only" if source_config.get("content_mode") == "summary_only" else "html"
-                
-                cand["content_mode"] = source_config.get("content_mode", "full_text") # Propagate to model
-                
+                    fetch_mode = (
+                        "rss_only"
+                        if source_config.get("content_mode") == "summary_only"
+                        else "html"
+                    )
+
+                cand["content_mode"] = source_config.get(
+                    "content_mode", "full_text"
+                )  # Propagate to model
+
                 # Fetch logic
                 html_content = ""
                 if fetch_mode == "rss_only":
-                     self._emit_log("debug", "collector.article.skipping_fetch", details={"url": cand["url"], "mode": "rss_only"})
+                    self._emit_log(
+                        "debug",
+                        "collector.article.skipping_fetch",
+                        details={"url": cand["url"], "mode": "rss_only"},
+                    )
                 elif fetch_mode == "html":
-                     try:
+                    try:
                         self._emit_log(
                             "info",
                             "collector.article.fetching_content",
@@ -534,81 +563,100 @@ class RSSCollector(BaseCollector):
                         # Using RobustClient (fail-fast on 403)
                         resp = self.client.get(cand["url"], timeout=15)
                         html_content = resp.text
-                     except requests.RequestException as fetch_err:
+                    except requests.RequestException as fetch_err:
                         # 403s will end up here immediately.
                         self._emit_log(
-                            "warning", 
-                            "collector.article.fetch_failed", 
+                            "warning",
+                            "collector.article.fetch_failed",
                             details={
-                                "url": cand["url"], 
+                                "url": cand["url"],
                                 "error": str(fetch_err),
-                                "status": getattr(fetch_err.response, "status_code", None)
-                            }
+                                "status": getattr(
+                                    fetch_err.response, "status_code", None
+                                ),
+                            },
                         )
                         # Do not fail the article, just proceed with empty HTML (will fallback to summary)
-                
+
                 # Full Text Extraction
                 if html_content:
-                     # Simple text extraction
-                     from bs4 import BeautifulSoup
-                     soup = BeautifulSoup(html_content, "html.parser")
-                     for script in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
-                        script.decompose()
-                     cand["content"] = soup.get_text(separator=" ", strip=True)
-                else:
-                     # Ensure we fallback to summary if no content is found or allowed
-                     if not cand.get("content"):
-                         cand["content"] = cand.get("summary", "")
+                    # Simple text extraction
+                    from bs4 import BeautifulSoup
 
-                
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    for script in soup(
+                        [
+                            "script",
+                            "style",
+                            "nav",
+                            "footer",
+                            "header",
+                            "aside",
+                            "noscript",
+                        ]
+                    ):
+                        script.decompose()
+                    cand["content"] = soup.get_text(separator=" ", strip=True)
+                else:
+                    # Ensure we fallback to summary if no content is found or allowed
+                    if not cand.get("content"):
+                        cand["content"] = cand.get("summary", "")
+
                 # Image Extraction Logic
                 image_status = "MISSING_SOURCE"
                 image_source = None
-                
+
                 # 1. Check if feed provided an image
                 feed_image = cand.get("image_url")
                 if feed_image:
-                     # Validate it
-                     if self.image_extractor.validate_image(type("Candidate",(),{"url":feed_image})()):
-                         image_status = "IMAGE_OK"
-                         image_source = "feed"
-                     else:
-                         self._emit_log("info", "collector.image.feed_image_rejected", details={"url": feed_image})
-                         feed_image = None # discard invalid feed image
-                
+                    # Validate it
+                    if self.image_extractor.validate_image(
+                        type("Candidate", (), {"url": feed_image})()
+                    ):
+                        image_status = "IMAGE_OK"
+                        image_source = "feed"
+                    else:
+                        self._emit_log(
+                            "info",
+                            "collector.image.feed_image_rejected",
+                            details={"url": feed_image},
+                        )
+                        feed_image = None  # discard invalid feed image
+
                 # 2. If no valid feed image, try extraction from HTML
                 if not feed_image and html_content:
-                    candidates = self.image_extractor.extract_candidates(html_content, cand["url"])
+                    candidates = self.image_extractor.extract_candidates(
+                        html_content, cand["url"]
+                    )
                     for img_cand in candidates:
                         if self.image_extractor.validate_image(img_cand):
                             cand["image_url"] = img_cand.url
                             image_status = "IMAGE_OK"
                             image_source = img_cand.source
                             break
-                    
+
                     if image_status != "IMAGE_OK":
-                         if candidates:
-                             image_status = "IMAGE_VALIDATION_FAILED" # Found candidates but none valid
-                         else:
-                             image_status = "IMAGE_MISSING_SOURCE" # No candidates found
-                
+                        if candidates:
+                            image_status = "IMAGE_VALIDATION_FAILED"  # Found candidates but none valid
+                        else:
+                            image_status = "IMAGE_MISSING_SOURCE"  # No candidates found
+
                 elif not feed_image and not html_content:
-                     image_status = "IMAGE_DOWNLOAD_FAILED"
-                
+                    image_status = "IMAGE_DOWNLOAD_FAILED"
+
                 # Add status to metadata
                 if "article_metadata" not in cand:
                     cand["article_metadata"] = {}
-                # The 'article_metadata' structure in 'cand' here is actually a DICT, 
-                # but 'CollectorArticleModel' expects 'article_metadata' field which is an 'ArticleMetadataModel'. 
-                # Wait, 'cand' here is a dict coming from RssParser. 
+                # The 'article_metadata' structure in 'cand' here is actually a DICT,
+                # but 'CollectorArticleModel' expects 'article_metadata' field which is an 'ArticleMetadataModel'.
+                # Wait, 'cand' here is a dict coming from RssParser.
                 # In '_process_article' (called LATER or inside loop?), it maps to the model.
                 # Actually, strictly speaking, 'cand' is just a dict here.
                 # We need to pass this info to '_process_article' or put it in 'cand' such that '_process_article' sees it.
-                # RssParser puts 'source_metadata' in cand. 
-                
+                # RssParser puts 'source_metadata' in cand.
+
                 cand["_image_status"] = image_status
                 cand["_image_source"] = image_source
-
 
                 if "entry_ref" in cand:
                     del cand["entry_ref"]

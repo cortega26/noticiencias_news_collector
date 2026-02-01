@@ -1,7 +1,7 @@
-
-import pytest
 from unittest.mock import MagicMock, patch
+
 from news_collector.infrastructure.llm.provider import OllamaProvider
+
 
 class TestOllamaFix:
 
@@ -14,7 +14,7 @@ class TestOllamaFix:
         """Step E.2: When model is `llama3.3:latest`, it should stay `llama3.3:latest`."""
         provider = OllamaProvider(model="llama3.3:latest")
         assert provider.model == "llama3.3:latest"
-        
+
         provider_custom = OllamaProvider(model="mistral:instruct")
         assert provider_custom.model == "mistral:instruct"
 
@@ -39,14 +39,14 @@ class TestOllamaFix:
 
         # Init with "bad" values
         provider = OllamaProvider(
-            api_url="http://127.0.0.1:9999", # Base URL. Using 9999 port for test
-            model="llama3.3"                 # Missing tag
+            api_url="http://127.0.0.1:9999",  # Base URL. Using 9999 port for test
+            model="llama3.3",  # Missing tag
         )
 
         # We need to bypass the strict system check mocking locally.
         # Since `settings` is imported inside `generate_sync`, we must patch it at the source: `news_collector.config.settings`.
         # We'll use a mock for the settings object itself if needed, or just set the attribute.
-        
+
         # We need to mock `news_collector.config.settings` where it is defined.
         with patch("news_collector.config.settings") as mock_settings:
             mock_settings.LLM_SYSTEM_AVAILABLE = True
@@ -54,16 +54,16 @@ class TestOllamaFix:
 
         # Assert
         # 1. URL should be normalized
-        expected_url = "http://127.0.0.1:9999/api/generate" # Using 9999 port for test
+        expected_url = "http://127.0.0.1:9999/api/generate"  # Using 9999 port for test
         # 2. Payload should have normalized model
         expected_payload = {
             "model": "llama3.3:latest",
             "prompt": "Test",
-            "stream": False
+            "stream": False,
         }
 
         mock_post.assert_called_once()
         args, kwargs = mock_post.call_args
-        
+
         assert args[0] == expected_url
         assert kwargs["json"] == expected_payload

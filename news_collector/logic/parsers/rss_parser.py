@@ -107,7 +107,9 @@ class RssParser:
 
                 if content and isinstance(content, str):
                     cleaned = clean_html(content)
-                    if len(cleaned) >= 10:  # Lowered from 50 to allow short summaries (validation happens in Collector)
+                    if (
+                        len(cleaned) >= 10
+                    ):  # Lowered from 50 to allow short summaries (validation happens in Collector)
                         return cleaned
         return ""
 

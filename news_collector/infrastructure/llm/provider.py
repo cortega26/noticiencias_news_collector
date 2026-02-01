@@ -48,7 +48,7 @@ class OllamaProvider:
         # 1. Model Tag: Ensure it has a tag (default to :latest if missing)
         if self.model and ":" not in self.model:
             self.model = f"{self.model}:latest"
-        
+
         # 2. API URL: Handle base vs endpoint mismatch
         clean_url = self.api_url.rstrip("/")
         if clean_url.endswith("/api/generate"):
@@ -72,7 +72,9 @@ class OllamaProvider:
     ) -> Dict[str, Any]:
         use_model = model or self.model
         if use_model is None:
-             raise ValueError("Ollama model is not configured. Provide a model in config or pass model=...")
+            raise ValueError(
+                "Ollama model is not configured. Provide a model in config or pass model=..."
+            )
 
         # Normalization again just in case override is raw
         if ":" not in use_model:
@@ -151,6 +153,7 @@ class OllamaProvider:
 
         # Fail fast if system marked LLM as unavailable (boot check)
         from news_collector.config import settings
+
         if not settings.LLM_SYSTEM_AVAILABLE:
             # Raise ValueError or similar non-retriable error to bypass retry loop
             raise ValueError("LLM System is marked as unavailable (Disabled).")
@@ -237,7 +240,7 @@ class OllamaProvider:
         # We need /api/tags
         base = self.api_url.replace("/api/generate", "")
         tags_url = f"{base}/api/tags"
-        
+
         try:
             resp = requests.get(tags_url, timeout=5)
             if resp.status_code == 200:
@@ -258,18 +261,15 @@ class OllamaProvider:
         available = self.list_models()
         # Direct match or partial match logic?
         # Ollama usually needs exact match (maybe without :latest implicit)
-        
+
         # normalize input
         target = model_name
         if ":" not in target:
             target = f"{target}:latest"
-            
+
         if target in available:
             return True
-            
+
         # fallback for raw names if available list has them differently
         # e.g. input "llama3.2" might match "llama3.2:latest"
-        if model_name in available:
-            return True
-            
-        return False
+        return model_name in available

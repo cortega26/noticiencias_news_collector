@@ -55,6 +55,6 @@ def test_ssrf_protection_blocks_internal_ips(monkeypatch):
 
     with pytest.raises(ValueError, match="SSRF"):
         # We will expose/test the validator directly or via a specific hook
-        from news_collector.collectors.rss_collector import validate_url_safety
+        from news_collector.utils.security import validate_url_safety
 
         validate_url_safety("http://169.254.169.254")

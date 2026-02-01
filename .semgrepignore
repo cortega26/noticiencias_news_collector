@@ -1,0 +1,14 @@
+# Generated files
+debug_headless.html
+quality_ci_*.log
+.coverage
+reports/
+bench_results/
+
+# Config and Documentation (Semgrep noise)
+docker-compose.yml
+docs/
+
+# Non-production code (Tests, Scripts)
+scripts/
+tests/
