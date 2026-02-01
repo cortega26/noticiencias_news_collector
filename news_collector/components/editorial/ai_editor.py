@@ -226,6 +226,70 @@ class EditorAgent:
             # Fallback to empty if fails
             raise ValueError(f"Failed to generate headlines: {e}") from e
 
+    def _repair_output(self, content: str, headlines: dict, input_len: int) -> tuple[str, dict]:
+        """
+        Deterministic Repair Layer.
+        Enforces invariants without LLM calls.
+        """
+        logger.info("Running Deterministic Repair...")
+        
+        # 1. Headline Repair
+        # Ensure mandatory keys exist (Map Spanish requirements to internal English keys)
+        if "direct" not in headlines or not headlines["direct"]:
+             headlines["direct"] = headlines.get("directo", "Noticia Científica")
+             
+        if "question" not in headlines or not headlines["question"]:
+             # Deterministic fallback
+             headlines["question"] = headlines.get("pregunta", "¿Qué plantea este estudio y por qué es relevante?")
+             
+        if "benefit" not in headlines or not headlines["benefit"]:
+             headlines["benefit"] = headlines.get("relevancia", "Importancia del hallazgo para el campo.")
+
+        # 2. Section Normalization (Simple Mapping)
+        # Normalize common variations to standard headers
+        replacements = {
+            "## Introducción": "## Apertura",
+            "## Antecedentes": "## Contexto",
+            "## Conclusión": "## Cierre",
+            "**Introducción**": "**Apertura**",
+            "**Conclusión**": "**Cierre**"
+        }
+        for old, new in replacements.items():
+            content = content.replace(old, new)
+
+        # 3. Length Repair
+        # Target strict 2.5x ratio on FINAL output (Frontmatter + Body)
+        # Frontmatter can be large (~600-800 chars). To be safe, target Body < 1.8x Input.
+        max_chars = int(input_len * 1.8) 
+        if len(content) > max_chars:
+             logger.warning(f"Output body too long ({len(content)} > {max_chars}). Applying deterministic trim.")
+             
+             # Rule 1: Remove trailing after Cierre
+             if "Cierre" in content:
+                 match = re.search(r"(#{2,3} |[*]{2})Cierre", content, re.IGNORECASE)
+                 if match:
+                     start_idx = match.start()
+                     # Keep Cierre paragraph (assumed ~500 chars max)
+                     # Find next double newline after start
+                     cierre_end = content.find("\n\n", start_idx + 50)
+                     if cierre_end == -1: cierre_end = len(content)
+                     else: cierre_end = min(len(content), cierre_end + 1000) # Keep a bit more context
+                     
+                     potential_cut = content[:cierre_end]
+                     if len(potential_cut) < len(content):
+                         content = potential_cut
+             
+             # Rule 3 (Fail-safe): Hard truncate
+             if len(content) > max_chars:
+                 content = content[:max_chars]
+                 last_period = content.rfind('.')
+                 if last_period > 0:
+                     content = content[:last_period+1]
+                 else:
+                     content += "..."
+                     
+        return content, headlines
+
     def _get_cache_path(self, article_id: str, stage: str) -> Path:
         """Returns the path for a cached stage artifact."""
         safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(article_id))
@@ -325,6 +389,9 @@ class EditorAgent:
         # We could cache it, but usually we want to regenerate headlines if we tweak code.
         # For now, we won't cache Stage 3 to allow easier re-runs of the final formatting.
         headlines = self._generate_headlines(final_content)
+
+        # --- DETERMINISTIC REPAIR LAYER ---
+        final_content, headlines = self._repair_output(final_content, headlines, len(input_text))
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
