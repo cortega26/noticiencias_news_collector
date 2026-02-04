@@ -40,7 +40,7 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
    make docs
    ```
    Puedes usar `make lint type test` para ejecutar los tres pasos en secuencia.
-   > Nota: `make type` actualmente cubre los módulos que ya cuentan con tipado estricto (`scripts/generate_api_docs.py`, `src/utils/logger.py`, `src/utils/url_canonicalizer.py`) mientras avanzamos en la migración del resto del código.
+   > Nota: `make type` actualmente cubre los módulos que ya cuentan con tipado estricto (`scripts/generate_api_docs.py`, `news_collector/utils/logger.py`, `news_collector/utils/url_canonicalizer.py`) mientras avanzamos en la migración del resto del código.
 3. For system refactors (S1/S1-C modules), verify strict contracts and coverage:
    ```bash
    make test-system
@@ -81,8 +81,8 @@ When you intentionally change the scoring logic, refresh the regression fixtures
    from pathlib import Path
    from types import SimpleNamespace
 
-   from src.scoring import feature_scorer
-   from src.scoring.feature_scorer import FeatureBasedScorer
+   from news_collector.scoring import feature_scorer
+   from news_collector.scoring.feature_scorer import FeatureBasedScorer
 
    data_path = Path("tests/data/scoring_golden.json")
    payload = json.loads(data_path.read_text(encoding="utf-8"))
