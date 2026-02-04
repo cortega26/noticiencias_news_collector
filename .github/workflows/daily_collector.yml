@@ -3,7 +3,7 @@ name: Daily News Collection
 on:
   schedule:
     # Run at 06:00 UTC every day
-    - cron: '0 6 * * *'
+    - cron: "0 6 * * *"
   workflow_dispatch:
     # Allow manual triggering from GitHub UI
 
@@ -16,55 +16,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-        cache: 'pip'
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # Install requirements. Linux usually handles binary wheels better than Windows
-        pip install -r requirements.txt
-        # Explicitly install textblob corpora if needed, though often implicit
-        python -m textblob.download_corpora
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install requirements. Linux usually handles binary wheels better than Windows
+          pip install -r requirements.txt
+          # Explicitly install textblob corpora if needed, though often implicit
+          python -m textblob.download_corpora
 
-    - name: Run News Collector
-      run: |
-        # Run the collector script
-        # Assuming run_collector.py handles the logic
-        python run_collector.py --headless --export-json data/exports/latest_articles.json
-      env:
-        # Pass secrets if your scraper needs keys (add these to Repo Secrets later)
-        LOG_LEVEL: INFO
+      - name: Run News Collector
+        run: |
+          # Run the collector script
+          # Assuming run_collector.py handles the logic
+          python scripts/run_collector.py --headless --export-json data/exports/latest_articles.json
+        env:
+          # Pass secrets if your scraper needs keys (add these to Repo Secrets later)
+          LOG_LEVEL: INFO
 
-    - name: Commit and Push Data
-      run: |
-        git config --global user.name "Noticiencias Bot"
-        git config --global user.email "bot@noticiencias.com"
+      - name: Commit and Push Data
+        run: |
+          git config --global user.name "Noticiencias Bot"
+          git config --global user.email "bot@noticiencias.com"
 
-        # Check for changes in data/ folder
-        git add data/exports/latest_articles.json
+          # Check for changes in data/ folder
+          git add data/exports/latest_articles.json
 
-        # Only commit if there are changes
-        if git diff --staged --quiet; then
-          echo "No changes to commit."
-        else
-          git commit -m "🤖 Data update: $(date -u +'%Y-%m-%d')"
-          git push
-        fi
-    - name: Alert on Failure
-      if: failure()
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        gh issue create \
-          --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
-          --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-          --assignee ${{ github.actor }}
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "🤖 Data update: $(date -u +'%Y-%m-%d')"
+            git push
+          fi
+      - name: Alert on Failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
+            --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --assignee ${{ github.actor }}
