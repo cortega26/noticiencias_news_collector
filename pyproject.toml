@@ -202,7 +202,8 @@ exclude_dirs = [
     "build",
     "reports",
     ".venv",
-    ".git"
+    ".git",
+    "temp",
 ]
 skips = [
     "B101", # assert used in tests
