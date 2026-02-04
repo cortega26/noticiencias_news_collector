@@ -47,7 +47,7 @@ jobs:
       - name: Run Bandit
         run: |
           set -euo pipefail
-          bandit -ll -r src core scripts noticiencias run_collector.py main.py -v -f json -o reports/security/bandit.json
+          bandit -ll -r news_collector scripts -v -f json -o reports/security/bandit.json
 
       - name: Run Gitleaks
         run: |
