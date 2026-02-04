@@ -1639,6 +1639,10 @@ semgrep==1.121.0 \
     --hash=sha256:dc697f87f98ae3538018cc57058054705385351655150360f89b3f1c0da2e5d9 \
     --hash=sha256:e427dd2e2432263b7a243f14738e6879bfe08bb086932b37230e86cd67de0398
     # via noticiencias-news-collector (pyproject.toml)
+setuptools==80.10.2 \
+    --hash=sha256:95b30ddfb717250edb492926c92b5221f7ef3fbcc2b07579bcd4a27da21d0173 \
+    --hash=sha256:8b0e9d10c784bf7d262c4e5ec5d4ec94127ce206e8738f29a437945fbc219b70
+    # via opentelemetry-instrumentation
 sgmllib3k==1.0.0 \
     --hash=sha256:7868fb1c8bfa764c1ac563d3cf369c381d1325d36124933a726f29fcdaa812e9
     # via
