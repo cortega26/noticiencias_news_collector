@@ -12,7 +12,7 @@ La filosofía aquí es crear una capa de abstracción que nos permita cambiar
 de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
 """
 
-import sys
+import contextlib
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -427,12 +427,10 @@ class DatabaseManager:
     def __del__(self) -> None:
         if getattr(self, "engine", None) is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.close()
-        except Exception:
             # During shutdown, logging/sys might be gone or fragile.
             # We suppress errors to avoid annoying "NoneType" tracebacks.
-            pass
 
     # =====================================
     # Operaciones Principales (Public API)
