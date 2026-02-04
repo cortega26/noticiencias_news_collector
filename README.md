@@ -30,7 +30,7 @@ This repository contains the backend ingestion pipeline plus the Streamlit-based
 1.  Clone the repository:
 
     ```bash
-    git clone <repository_url>
+    git clone https://github.com/cortega26/noticiencias_news_collector.git
     cd noticiencias_news_collector
     ```
 
