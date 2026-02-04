@@ -212,7 +212,7 @@ jobs:
         run: make bootstrap
       - name: Run collector healthcheck
         run: |
-          .venv/bin/python run_collector.py --healthcheck \
+          .venv/bin/python scripts/run_collector.py --healthcheck \
             --healthcheck-max-pending 0 \
             --healthcheck-max-ingest-minutes 60
 
