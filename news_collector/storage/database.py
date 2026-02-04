@@ -429,14 +429,10 @@ class DatabaseManager:
             return
         try:
             self.close()
-        except Exception as exc:
-            try:
-                logger.warning("Error finalizando DatabaseManager: %s", exc)
-            except Exception:
-                try:
-                    sys.stderr.write(f"Error finalizando DatabaseManager: {exc}\n")
-                except Exception:
-                    raise
+        except Exception:
+            # During shutdown, logging/sys might be gone or fragile.
+            # We suppress errors to avoid annoying "NoneType" tracebacks.
+            pass
 
     # =====================================
     # Operaciones Principales (Public API)
