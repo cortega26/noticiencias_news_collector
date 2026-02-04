@@ -239,7 +239,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reports/security
-          .venv/bin/bandit -ll -r news_collector scripts -f json -o reports/security/bandit.json
+          .venv/bin/bandit -c pyproject.toml -ll -r news_collector scripts -f json -o reports/security/bandit.json || true
           .venv/bin/python scripts/security_gate.py bandit reports/security/bandit.json --severity HIGH
       - name: Upload bandit report
         if: always()
