@@ -1472,7 +1472,7 @@ with tab6:
                 health_df[cols].style.highlight_max(
                     axis=0, subset=["latency"], color="#ffcdd2"
                 ),
-                # Deprecated: use_container_width -> width='stretch'
+                # Deprecated arg replaced by width='stretch'
                 width="stretch",
             )
 
