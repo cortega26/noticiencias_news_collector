@@ -23,3 +23,4 @@ tomli-w>=1.0.0
 # Admin Panel / GUI Dependencies (Moved to [project.optional-dependencies] refinery)
 # streamlit, pandas, gitpython, etc are now installed via `pip install .[refinery]`
 urllib3>=2.6.3
+tenacity>=8.1.0
