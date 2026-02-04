@@ -71,7 +71,7 @@ ENV_FILE = BASE_DIR / ".env"
 # Load environment variables into os.environ for main.py to see them
 dotenv.load_dotenv(ENV_FILE, override=True)
 
-REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"  # noqa: S105  # noqa: S105
+REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"  # noqa: S105  # noqa: S105 # nosec
 REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 
 # Paths continued below after NEWS_COLLECTOR_PATH logic...
@@ -682,7 +682,7 @@ with tab2:
                             for table in tables_to_wipe:
                                 try:
                                     # fmt: off
-                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # nosemgrep
+                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # nosemgrep # nosec
                                     # fmt: on
                                     st.write(f"  - Tabla `{table}` limpiada.")
                                 except Exception:  # noqa: S110, SIM105

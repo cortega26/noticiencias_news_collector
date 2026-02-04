@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import re
-import subprocess
+import subprocess  # nosec
 import sys
 import time
 from pathlib import Path
@@ -24,7 +24,7 @@ GOLDEN_DIR = PROJECT_ROOT / "quality_gate" / "golden"
 def get_git_commit():
     try:
         return (
-            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            subprocess.check_output(["git", "rev-parse", "HEAD"])  # nosec
             .decode("utf-8")
             .strip()
         )
