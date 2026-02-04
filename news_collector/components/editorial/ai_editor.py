@@ -42,7 +42,7 @@ class EditorAgent:
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
         self.provider = OllamaProvider(
-            api_url=self.api_url, model=self.model, timeout=900
+            api_url=self.api_url, model=self.model, timeout=3600
         )
 
         # Cache for verified models

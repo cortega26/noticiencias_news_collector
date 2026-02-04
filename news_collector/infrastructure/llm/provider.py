@@ -38,7 +38,7 @@ class OllamaProvider:
         self,
         api_url: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: int = 120,
+        timeout: int = 3600,
     ):
         self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
         self.model = model
