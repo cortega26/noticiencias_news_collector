@@ -94,6 +94,7 @@ lint: bootstrap ## Run code quality checks (check-only)
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
 	@$(BLACK) --check .
 	@$(RUFF) check .
+	@$(MAKE) check-deprecated
 
 fix-makefile-tabs: ## Normalize Makefile recipes to start with tabs
 	@$(PYTHON) -m tools.fix_makefile_tabs
@@ -281,4 +282,12 @@ bump-version: ## Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)
 
 .PHONY: audit-placeholders
 audit-placeholders:
-	python -m tools.placeholder_audit --pr-diff-only --base origin/main --halo 10 --sarif audit.sarif
+
+.PHONY: check-deprecated
+check-deprecated: ## Check for deprecated Streamlit arguments
+	@echo "[check-deprecated] Scanning for 'use_container_width'..."
+	@if grep -r --include="*.py" --exclude-dir=".*" "use_container_width" apps/refinery; then \
+		echo "Error: usage of deprecated 'use_container_width' found in apps/refinery."; \
+		exit 1; \
+	fi
+

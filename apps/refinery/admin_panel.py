@@ -1472,7 +1472,8 @@ with tab6:
                 health_df[cols].style.highlight_max(
                     axis=0, subset=["latency"], color="#ffcdd2"
                 ),
-                use_container_width=True,
+                # Deprecated: use_container_width -> width='stretch'
+                width="stretch",
             )
 
         st.divider()
