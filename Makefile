@@ -125,6 +125,7 @@ quality-ci: bootstrap ## Run strict quality checks for CI (no fix, fail on error
 	@echo "[quality-ci] Running Mypy..."
 	@$(MAKE) type
 	@echo "[quality-ci] Running Bandit..."
+	@mkdir -p $(SECURITY_DIR)
 	@$(BANDIT) -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running pip-audit..."
