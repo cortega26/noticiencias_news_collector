@@ -8,7 +8,7 @@ import csv
 import json
 import os
 import re
-import subprocess
+import subprocess  # nosec
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass

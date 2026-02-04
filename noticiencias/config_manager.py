@@ -386,7 +386,7 @@ def load_config(  # noqa: C901
     # LEGACY/FLAT ENV VAR MAPPING LAYER
     # Helps map flat .env vars (e.g. GITHUB_TOKEN) to new nested schema (github.token)
     legacy_map = {
-        "GITHUB_TOKEN": "github.token",
+        "GITHUB_TOKEN": "github.token",  # nosec
         "GITHUB_USER_NAME": "github.user_name",
         "GITHUB_USER_EMAIL": "github.user_email",
         "SOURCE_REPO_URL": "github.source_repo_url",

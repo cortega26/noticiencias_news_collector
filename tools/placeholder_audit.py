@@ -7,7 +7,7 @@ import datetime as dt
 import fnmatch
 import json
 import re
-import subprocess
+import subprocess  # nosec
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
