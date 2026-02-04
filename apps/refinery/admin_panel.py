@@ -848,11 +848,12 @@ with tab3:
             # ------------------------
 
             # UX IMPROVEMENT: Allow showing processed items
-            show_processed = st.sidebar.checkbox(
+            # UX IMPROVEMENT: Allow showing processed items
+            show_processed = st.checkbox(
                 "Mostrar artículos procesados (Force Reprocess)", value=False
             )
             if show_processed:
-                st.sidebar.info(
+                st.info(
                     "Modo 'Force Reprocess' activo: Se muestran todos los artículos."
                 )
 
