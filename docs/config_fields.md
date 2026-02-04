@@ -116,5 +116,8 @@
 | github.target_repo_url | str | "https://github.com/cortega26/noticiencias" | URL of the target publishing repository. |  |  |
 | ollama | OllamaConfig |  |  |  |  |
 | ollama.api_url | str | "http://localhost:11434" | Base URL for the Ollama API. |  |  |
-| ollama.model | str | "llama3.3" | Model tag to use for generation. |  |  |
+| ollama.model | str | "llama3.3:latest" | Model tag to use for generation. |  |  |
 | ollama.timeout | int | 300 | Request timeout in seconds. |  |  |
+| ollama.translator_model | Optional |  | Model override for translation phase. |  |  |
+| ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
+| ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
