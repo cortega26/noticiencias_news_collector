@@ -523,7 +523,7 @@ def apply_git_blame(root: Path, findings: List[Finding]) -> None:
             str(rel_path),
         ]
         try:
-            result = subprocess.run(  # noqa: S603
+            result = subprocess.run(  # noqa: S603 # nosec
                 blame_args,
                 cwd=root,
                 stdout=subprocess.PIPE,

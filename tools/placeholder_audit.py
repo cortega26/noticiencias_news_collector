@@ -167,7 +167,7 @@ class AuditReport:
 
 
 def run_git(args: Sequence[str], cwd: Optional[Path] = None) -> str:
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(  # noqa: S603 # nosec
         ["git", *args],
         cwd=str(cwd) if cwd else None,
         check=True,
