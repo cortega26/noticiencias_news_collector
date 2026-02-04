@@ -1,3 +1,22 @@
+# Release Notes: v1.3.2 Security & Workflow Hardening
+
+**Release Date:** 2026-02-04
+**Type:** Patch Release (Security & Ops)
+
+## 🚀 Key Changes
+
+### 1. Security & Hygiene
+
+- **Consolidated Workflows**: Consolidated security scanning into `ci.yml` by removing redundant `security.yml` and `audit-security.yml` workflows.
+- **False Positive Reduction**: Applied strict `# nosec` suppression to known-safe internal scripts (e.g. `scripts/ops/purge_short_articles.py`), eliminating noise from Bandit scans.
+
+### 2. Developer Experience
+
+- **Cleaner Local Scans**: Added `temp/` to Bandit excludes in `pyproject.toml`.
+- **CI Reliability**: Fixed Bandit integration in CI (`set -e` vs exit codes) to ensure the Security Gate runs reliably.
+
+---
+
 # Release Notes: v1.3.1 Snapshot-First Quality Gate
 
 **Release Date:** 2026-01-31
