@@ -1,6 +1,7 @@
 # Database Deployment Guide
 
 ## Overview
+
 The News Collector operates with two database profiles:
 
 - **Development:** defaults to SQLite stored under `data/news.db`. This mode
@@ -14,52 +15,56 @@ The runtime environment is detected via `config/settings.py` and the selected
 profile is exposed through `config.DATABASE_CONFIG`.
 
 ## Environment Variables
+
 When PostgreSQL is enabled the following variables are read at process start
 (using the `NOTICIENCIAS__` prefix):
 
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `NOTICIENCIAS__DATABASE__HOST` | PostgreSQL host | `localhost` |
-| `NOTICIENCIAS__DATABASE__PORT` | PostgreSQL port | `5432` |
-| `NOTICIENCIAS__DATABASE__NAME` | Database name | `noticiencias` |
-| `NOTICIENCIAS__DATABASE__USER` | Connection user | `collector` |
-| `NOTICIENCIAS__DATABASE__PASSWORD` | Password for the user | empty string |
-| `NOTICIENCIAS__DATABASE__SSLMODE` | Optional SSL mode (e.g., `require`) | (leave blank for default) |
-| `NOTICIENCIAS__DATABASE__CONNECT_TIMEOUT` | Connect timeout in seconds | `10` |
-| `NOTICIENCIAS__DATABASE__STATEMENT_TIMEOUT` | Statement timeout in milliseconds | `30000` |
-| `NOTICIENCIAS__DATABASE__POOL_SIZE` | Base pool size | `10` |
-| `NOTICIENCIAS__DATABASE__MAX_OVERFLOW` | Additional connections beyond the pool | `5` |
-| `NOTICIENCIAS__DATABASE__POOL_TIMEOUT` | Seconds to wait for a pooled connection | `30` |
-| `NOTICIENCIAS__DATABASE__POOL_RECYCLE` | Seconds before recycling idle connections | `1800` |
+| Variable                                    | Purpose                                   | Default                   |
+| ------------------------------------------- | ----------------------------------------- | ------------------------- |
+| `NOTICIENCIAS__DATABASE__HOST`              | PostgreSQL host                           | `localhost`               |
+| `NOTICIENCIAS__DATABASE__PORT`              | PostgreSQL port                           | `5432`                    |
+| `NOTICIENCIAS__DATABASE__NAME`              | Database name                             | `noticiencias`            |
+| `NOTICIENCIAS__DATABASE__USER`              | Connection user                           | `collector`               |
+| `NOTICIENCIAS__DATABASE__PASSWORD`          | Password for the user                     | empty string              |
+| `NOTICIENCIAS__DATABASE__SSLMODE`           | Optional SSL mode (e.g., `require`)       | (leave blank for default) |
+| `NOTICIENCIAS__DATABASE__CONNECT_TIMEOUT`   | Connect timeout in seconds                | `10`                      |
+| `NOTICIENCIAS__DATABASE__STATEMENT_TIMEOUT` | Statement timeout in milliseconds         | `30000`                   |
+| `NOTICIENCIAS__DATABASE__POOL_SIZE`         | Base pool size                            | `10`                      |
+| `NOTICIENCIAS__DATABASE__MAX_OVERFLOW`      | Additional connections beyond the pool    | `5`                       |
+| `NOTICIENCIAS__DATABASE__POOL_TIMEOUT`      | Seconds to wait for a pooled connection   | `30`                      |
+| `NOTICIENCIAS__DATABASE__POOL_RECYCLE`      | Seconds before recycling idle connections | `1800`                    |
 
 Ensure these variables are provided by the orchestrator (Docker, systemd,
 Kubernetes secrets, etc.) before switching to the production profile.
 
 ## Migration Procedure
+
 The `DatabaseManager` performs the following actions on startup (this is the
 runtime source of truth for schema safety):
 
 1. Builds an SQLAlchemy engine with PostgreSQL-friendly pooling, timeouts,
    and statement timeout wiring.
 2. Executes `Base.metadata.create_all` to provision missing tables.
-3. Runs `_run_schema_migrations` which performs idempotent DDL fixes.
+3. **NO LONGER** runs `_run_schema_migrations` automatically. Schema changes must be applied explicitly before deployment or during startup via `make migrate`.
 
-Alembic is available for **manual** or **production** migration workflows
-(`scripts/migrate.py`), but it is not invoked at runtime. When you add
-structural changes, keep Alembic revisions and `_run_schema_migrations`
-aligned so dev (SQLite) and prod (Postgres) stay consistent.
+Alembic is the **only** source of truth for schema changes.
+
+- **Development**: `make migrate` runs automatically when starting `make refinery`.
+- **Production**: Run `python scripts/migrate.py up` (or `alembic upgrade head`) as part of the deployment pipeline.
+  (`scripts/migrate.py`), but it is not invoked at runtime. When you add
+  structural changes, keep Alembic revisions and `_run_schema_migrations`
+  aligned so dev (SQLite) and prod (Postgres) stay consistent.
 
 For production changes follow this extended checklist:
 
 1. **Prepare:**
-   - Capture the current schema via `pg_dump --schema-only` (or SQLite
-     equivalent during the initial migration).
+   - Capture the current schema via `pg_dump --schema-only` - [x] Check and update equivalent documentation <!-- id: 2 -->migration).
    - Assess upcoming schema changes and confirm corresponding code updates.
 2. **Dry Run:**
    - Start an instance against a staging database populated with sanitized
      production data.
-   - Verify that `_run_schema_migrations` completes without errors and that
-     the application boots cleanly.
+   - Verify that database migrations have been applied using external tools (Alembic) or manual scripts.
+   - Verify that the application boots cleanly.
 3. **Apply:**
    - Deploy the new release.
    - Monitor application logs for the "Base de datos configurada"
@@ -71,6 +76,7 @@ For production changes follow this extended checklist:
      utilization.
 
 ## Replication and Backups
+
 - **Replication:** configure streaming replication (or managed equivalents) on
   the PostgreSQL cluster. Ensure replicas are placed in separate zones and
   apply the same statement timeout parameters for consistent behavior.
@@ -82,6 +88,7 @@ For production changes follow this extended checklist:
   forward compatibility.
 
 ## Development Reset
+
 For local development you can safely delete `data/news.db` to start with a
 clean slate. No additional services are required when `ENV=development` or
 when the environment variables above are not provided.

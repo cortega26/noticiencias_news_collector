@@ -19,6 +19,13 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
         "Texto base.\n"
     )
     agent._send_prompt = lambda prompt, system=None, **kwargs: sample_output  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args: True  # type: ignore[method-assign]
+    agent._generate_headlines = lambda *args: {
+        "direct": "Direct Headline",
+        "question": "Question Headline?",
+        "benefit": "Benefit Headline",
+        "excerpt": "This is a short excerpt for SEO purposes that is long enough."
+    }  # type: ignore[method-assign]
 
     result = agent.process_article(
         {
@@ -50,6 +57,13 @@ def test_process_article_keeps_sections_with_image() -> None:
         "Texto base.\n"
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args: True  # type: ignore[method-assign]
+    agent._generate_headlines = lambda *args: {
+        "direct": "Direct Headline",
+        "question": "Question Headline?",
+        "benefit": "Benefit Headline",
+        "excerpt": "This is a short excerpt for SEO purposes that is long enough."
+    }  # type: ignore[method-assign]
 
     result = agent.process_article(
         {

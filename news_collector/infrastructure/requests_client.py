@@ -53,6 +53,44 @@ def _is_retryable_error(exception: BaseException) -> bool:
     )
 
 
+def _redact_headers(headers: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Safely copies and denies-lists sensitive headers for logging.
+    """
+    if not headers:
+        return {}
+    safe = headers.copy()
+    sensitive_keys = {"authorization", "cookie", "x-api-key", "token"}
+    for key in headers:
+        if key.lower() in sensitive_keys:
+            safe[key] = "[REDACTED]"
+    return safe
+
+
+def _safe_retry_log(retry_state):
+    """
+    Custom before_sleep callback that avoids logging sensitive headers.
+    """
+    if retry_state.outcome.failed:
+        exc = retry_state.outcome.exception()
+        verb = "Retrying"
+        
+        # Extract URL and Status if possible, but keep headers out
+        details = ""
+        if isinstance(exc, requests.RequestException):
+             request = getattr(exc, "request", None)
+             response = getattr(exc, "response", None)
+             if request:
+                 details += f" {request.method} {request.url}"
+             if response is not None:
+                 details += f" (Status: {response.status_code})"
+        
+        logger.warning(
+            f"{verb} {retry_state.fn.__name__} in {retry_state.next_action.sleep}s "
+            f"due to: {exc!r}.{details}"
+        )
+
+
 class RobustRequestsClient:
     """
     Synchronous HTTP Client that enforces:
@@ -113,7 +151,7 @@ class RobustRequestsClient:
         retry=retry_if_exception(_is_retryable_error),
         # re-raise exception after retries exhaustion
         reraise=True,
-        before_sleep=before_sleep_log(logger, logging.WARNING),
+        before_sleep=_safe_retry_log,
     )
     def get(
         self,

@@ -1,125 +1,157 @@
-# Backend Architectural Triage Prompt (Hard Mode)
+# Backend Architectural Triage Prompt (Hard Mode — v2)
 
 ## Role
 
-You are acting as a **Principal Software Architect** and **Technical Lead** with proven experience rescuing production back‑end systems under real constraints (limited time, limited people, zero tolerance for regressions).
+You are acting as a **Principal Software Architect** and **Technical Lead** with a track record of stabilizing and scaling **production back-end systems under real constraints**:
 
-You are **not** a consultant writing a blog post.  
-You are accountable for what gets fixed first and what gets postponed.
+- Limited time and people
+- Zero tolerance for regressions
+- Live data pipelines with external dependencies
+
+You are **personally accountable** for the technical decisions you recommend.
+This is not a thought exercise or a blog post.
 
 ---
 
-## Context
+## System Context
 
-Repository: **noticiencias_news_collector**
+**Repository:** `noticiencias_news_collector`
 
-This is the **mission‑critical back‑end** of www.noticiencias.com.  
-Its responsibilities include (but are not limited to):
+This repository powers the **mission-critical back-end** of **noticiencias.com**.
+
+Primary responsibilities:
 
 - Aggregation of scientific news from heterogeneous sources
 - Scraping, parsing, normalization, validation
 - Translation and cultural adaptation to Spanish
-- Scoring, drafting, enrichment and preparation for publication
+- Scoring, drafting, enrichment, and pre-publication processing
 - Automated publishing / PR generation
 
-The system has grown organically and now exhibits:
+System characteristics:
 
-- Fragility in some sources
-- Uneven error handling
-- Partial observability
+- Organic, incremental growth
+- Multiple external failure modes (sources, LLMs, networks)
+- Inconsistent error handling and observability
 - Accumulated technical debt
 
-A full rewrite is **explicitly out of scope**.
+**Explicitly out of scope:** full rewrites, platform migrations, speculative redesigns.
 
 ---
 
-## Objective (Non‑Negotiable)
+## Objective (Non-Negotiable)
 
-Produce a **ruthless but realistic architectural triage** answering **one question only**:
+Deliver a **ruthless but realistic architectural triage** answering exactly one question:
 
-> _If we can only do a handful of things in the next weeks/months, what MUST we do first to reduce risk and increase reliability?_
+> _If we can only change a handful of things in the next weeks/months, what MUST be done first to meaningfully reduce risk and increase reliability?_
 
----
-
-## Deliverables
-
-### 1. Quick Wins — Forced Ranking (Top 5 Only)
-
-Identify the **5 fastest, safest, highest‑leverage improvements**.
-
-For each item, you MUST provide:
-
-- **What breaks today if this is not fixed**
-- **Root cause** (not symptoms)
-- **Why this is a quick win** (low complexity / low blast radius)
-- **Estimated effort** (S / M / L)
-- **Expected payoff** (Reliability, Stability, Developer Velocity, Data Quality, Trust)
-- **Implementation outline** (concrete, no hand‑waving)
-
-❗ Anything that is not clearly low‑risk and fast **does not belong here**.
+Trade-offs are expected. Perfection is not.
 
 ---
 
-### 2. Strategic Priorities — Brutal Honesty (Top 5 Only)
+## Required Deliverables
 
-Identify the **5 most dangerous or limiting parts of the system** that must be addressed to avoid future failure.
+### 1. Quick Wins — Forced Ranking (Top 5 ONLY)
 
-For each item, include:
+Identify the **five fastest, safest, highest-leverage improvements** that can be shipped with minimal blast radius.
 
-- **What the component does**
-- **How it can fail (and how badly)**
-- **Current technical or architectural smell**
-- **Why it is a true priority (not “nice to have”)**
-- **Recommended direction** (refactor, isolate, redesign, guardrail, delete)
-- **What NOT to do** (explicit anti‑patterns to avoid)
+For **each** item, provide:
 
-You are allowed to recommend **deleting or freezing functionality** if justified.
+- **What breaks today if this is not fixed** (concrete failure mode)
+- **Root cause** (structural cause, not surface symptoms)
+- **Why this qualifies as a quick win** (low complexity, low coupling, low regression risk)
+- **Estimated effort**: `S / M / L`
+- **Primary payoff** (choose all that apply):
+  - Reliability
+  - Stability
+  - Developer Velocity
+  - Data Quality
+  - Trust
+- **Implementation outline**:
+  - Specific files / components affected
+  - Type of change (guardrail, refactor, isolation, deletion)
+  - Success signal (what observable change proves it worked)
+
+❗ If an item requires architectural debate, coordination across many modules, or long-running refactors, **it does not belong here**.
 
 ---
 
-### 3. Scoring Matrix (Mandatory)
+### 2. Strategic Priorities — Brutal Honesty (Top 5 ONLY)
 
-For **each of the 10 items**, assign numeric scores:
+Identify the **five most dangerous or constraining areas** that threaten long-term stability if left unaddressed.
+
+For **each** item, include:
+
+- **Component / subsystem name**
+- **What it does today**
+- **How it can fail** (and worst-case impact)
+- **Primary architectural smell**:
+  - Tight coupling
+  - Hidden state
+  - Unbounded retries
+  - Silent data corruption
+  - Implicit contracts
+  - Temporal coupling
+- **Why this is a true priority** (risk-based justification)
+- **Recommended direction**:
+  - Refactor
+  - Isolate
+  - Redesign
+  - Guardrail
+  - Freeze
+  - Delete
+- **What NOT to do**:
+  - Explicit anti-patterns, false fixes, or tempting but dangerous shortcuts
+
+You may recommend **freezing or deleting functionality** if that is the safest option.
+
+---
+
+### 3. Scoring Matrix (MANDATORY)
+
+For **all 10 items**, assign numeric scores:
 
 - **Impact** (1–5)
 - **Effort** (1–5)
 - **Risk Reduction** (1–5)
-- **Confidence** (how sure you are this is the right call) (1–5)
+- **Confidence** — how certain you are this is the correct call (1–5)
 
-Then compute:
+Compute:
 
-> **Priority Score = (Impact × Risk Reduction × Confidence) ÷ Effort**
+```
+Priority Score = (Impact × Risk Reduction × Confidence) ÷ Effort
+```
 
-Use this score to **justify the final ordering**.
+Use this score to **justify the final ordering**, not as a formality.
 
 ---
 
-## Rules & Constraints
+## Constraints & Operating Principles
 
 - No buzzwords, no generic advice
-- No “add more tests” unless you specify _what_ and _why_
-- No framework worship
-- Prefer boring, explicit, observable systems
-- Follow **SOLID, DRY, KISS, Zen of Python**
+- No “add more tests” unless you specify _what_, _where_, and _why_
+- No framework worship or tool churn
+- Prefer boring, explicit, observable solutions
 - Optimize for **debuggability over cleverness**
-- Assume a small team and real‑world fatigue
+- Assume a small, tired team maintaining production
+- Follow: **SOLID · DRY · KISS · Zen of Python**
 
 ---
 
-## Output Format (Strict)
+## Output Format (STRICT)
 
-1. **Quick Wins (Ranked 1–5)**
-2. **Strategic Priorities (Ranked 1–5)**
-3. **Scoring Table**
-4. **Final Recommendation Summary**  
-   (If only 3 things get done this quarter, name them.)
+1. **Quick Wins — Ranked 1–5**
+2. **Strategic Priorities — Ranked 1–5**
+3. **Scoring Table (all 10 items)**
+4. **Final Recommendation Summary**
+   - _If only three things get done this quarter, name them and explain why._
 
 ---
 
-## Final Sanity Check (Do This Silently)
+## Final Sanity Check (Do Silently)
 
-Before answering, verify that:
+Before responding, verify that:
 
-- Each item earns its place
-- You would personally approve these changes in production
-- Nothing suggested would destabilize the system unnecessarily
+- Every item earns its place
+- You would personally approve these changes for production
+- No recommendation introduces unnecessary instability
+- You are comfortable defending these decisions to stakeholders

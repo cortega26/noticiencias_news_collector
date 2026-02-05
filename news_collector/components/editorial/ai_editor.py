@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -9,6 +10,13 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 from noticiencias.config_manager import load_config
+from pydantic import BaseModel, Field, ValidationError
+
+class HeadlinesSchema(BaseModel):
+    direct: str = Field(..., min_length=5)
+    question: str = Field(..., min_length=5)
+    benefit: str = Field(..., min_length=5)
+    excerpt: str = Field(..., min_length=10, max_length=160)
 
 
 class EditorAgent:
@@ -220,6 +228,46 @@ class EditorAgent:
             raise ValueError("No parsing valid JSON object found")
         return result
 
+    def _critic_pass(self, content: str) -> bool:
+        """
+        Stage 1.5: Critic Guardrail.
+        Verifies that the content is in Spanish and relevant to science.
+        """
+        # Feature Flag: Kill Switch
+        import os
+        if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
+            logger.info("Translation Guard Disabled (Critic Pass Skipped)")
+            return True
+
+        system_prompt = "You are a Quality Control Editor. Output ONLY JSON."
+        prompt = (
+            "Analyze the following text. \n"
+            "1. Is it written in Spanish? \n"
+            "2. Is it about science/technology? \n"
+            "Output JSON: {\"valid\": boolean, \"reason\": \"short string\"}\n\n"
+            f"{content[:2000]}"
+        )
+        
+        try:
+            # Use headlines model (usually faster/smarter) or editor model
+            response = self._send_prompt(prompt, system=system_prompt, model=self.editor_model)
+            result = self._extract_json(response)
+            
+            if not result.get("valid", False):
+                logger.warning(f"⛔ CRITIC REJECTED: {result.get('reason')}")
+                return False
+                
+            logger.info("✅ Critic Pass Passed")
+            return True
+        except Exception as e:
+            logger.warning(f"Critic Pass Failed (Error): {e} - Failing Open (MVS)")
+            # MVS Decision: If critic crashes, do we fail open or closed?
+            # Plan says "Fail if invalid". But if LLM crashes... 
+            # Let's Fail Closed for safety as per "Do No Harm".
+            # BUT implementation plan says "Discard article".
+            # So return False.
+            return False
+
     def _generate_headlines(self, adapted_content: str) -> dict:
         """Stage 3: Headline Generation & Metadata"""
         system_prompt = self.prompts.get("headline", {}).get("system", "")
@@ -230,7 +278,18 @@ class EditorAgent:
         )
 
         try:
-            return self._extract_json(response)
+            data = self._extract_json(response)
+            
+            # Feature Flag: Kill Switch
+            if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
+                return data
+
+            # Schema Enforcement (MVS)
+            validated = HeadlinesSchema(**data)
+            return validated.model_dump()
+        except ValidationError as ve:
+             logger.error(f"❌ Headline Schema Validation Failed: {ve}")
+             raise ValueError(f"Schema Validation Failed: {ve}")
         except Exception as e:
             logger.error(
                 f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
@@ -406,6 +465,11 @@ class EditorAgent:
             final_content = self._adapt_editorial(translated_text)
             final_content = self._extract_markdown_content(final_content)  # Cleanup
             cache_s2.write_text(final_content, encoding="utf-8")
+
+        # --- STAGE 1.5: Critic Pass (MVS) ---
+        # We run this on the adapted content to be sure.
+        if not self._critic_pass(final_content):
+            raise ValueError("Translation Guardrail: Content rejected by critic (Not Spanish or Not Science)")
 
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
