@@ -14,6 +14,7 @@ encontramos (o al menos no peor).
 """
 
 import hashlib
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -133,6 +134,29 @@ class RSSCollector(BaseCollector):
         }
 
         try:
+            # 0. Circuit Breaker Check (MVS)
+            # Feature Flag: Kill Switch
+            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
+                circuit_state = self.db_manager.get_source_circuit_state(source_id)
+                if circuit_state:
+                    if (
+                        circuit_state.get("status") == "COOLDOWN"
+                        and circuit_state.get("next_retry_at")
+                        and circuit_state["next_retry_at"] > datetime.now(timezone.utc)
+                    ):
+                        self._emit_log(
+                            "info",
+                            "collector.circuit_breaker.skip",
+                            source_id=source_id,
+                            details={
+                                "reason": "COOLDOWN",
+                                "retry_at": circuit_state["next_retry_at"].isoformat(),
+                            },
+                        )
+                        stats["success"] = True
+                        stats["error_message"] = "Circuit Breaker: Skipped (Cooldown)"
+                        return stats
+
             job_key = self._make_job_key(source_id, source_config["url"])
             if self._is_duplicate_job(job_key):
                 self._emit_log(
@@ -308,6 +332,21 @@ class RSSCollector(BaseCollector):
                 )
 
         finally:
+            # Update Circuit Breaker State
+            try:
+                self.db_manager.update_source_circuit_state(
+                    source_id,
+                    success=stats["success"],
+                    error_message=stats.get("error_message"),
+                )
+            except Exception as e:
+                self._emit_log(
+                    "error",
+                    "collector.circuit_breaker.update_failed",
+                    source_id=source_id,
+                    details={"error": str(e)},
+                )
+
             stats["processing_time"] = time.time() - start_time
             self._update_source_stats(source_id, stats)
             self.session_stats["sources_checked"] += 1

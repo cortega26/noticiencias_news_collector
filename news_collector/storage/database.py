@@ -192,8 +192,8 @@ class DatabaseManager:
             # Crear todas las tablas
             Base.metadata.create_all(self.engine)
 
-            # Ejecutar migraciones ligeras para mantener el esquema al día
-            self._run_schema_migrations()
+            # Schema migrations must now be run form external tooling (scripts/migrate.py)
+            # self._run_schema_migrations()
 
             logger.info(
                 f"✅ Base de datos configurada exitosamente: {self.config['type']}"
@@ -203,187 +203,7 @@ class DatabaseManager:
             logger.error(f"❌ Error configurando base de datos: {e}")
             raise
 
-    def _run_schema_migrations(self) -> None:
-        """Aplica migraciones ligeras necesarias para el esquema actual.
 
-        Detalles adicionales y pasos manuales complementarios se
-        documentan en ``docs/database_deployment.md`` para garantizar que
-        las migraciones automatizadas convivan con procesos operativos
-        como backups y replicación.
-        """
-
-        try:
-            with self.engine.connect() as connection:
-                inspector = inspect(connection)
-                tables = inspector.get_table_names()
-                self._apply_schema_migrations(inspector, tables)
-        except Exception as exc:  # pragma: no cover - solo en errores del driver
-            logger.error("No se pudo inspeccionar la base de datos: %s", exc)
-            return
-
-        return
-
-    def _apply_schema_migrations(  # noqa: C901
-        self, inspector: Any, tables: List[str]
-    ) -> None:
-        db_type = self.config.get("type", "sqlite")
-        timestamp_type = (
-            "TIMESTAMP WITH TIME ZONE" if db_type == "postgresql" else "TIMESTAMP"
-        )
-        boolean_type = "BOOLEAN" if db_type != "sqlite" else "INTEGER"
-
-        migrations: List[Tuple[str, str, str]] = []
-
-        if "sources" in tables:
-            existing_columns = {col["name"] for col in inspector.get_columns("sources")}
-
-            if "suppressed_until" not in existing_columns:
-                migrations.append(
-                    (
-                        f"ALTER TABLE sources ADD COLUMN suppressed_until {timestamp_type}",
-                        "sources",
-                        "suppressed_until",
-                    )
-                )
-
-            if "suppression_reason" not in existing_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE sources ADD COLUMN suppression_reason TEXT",
-                        "sources",
-                        "suppression_reason",
-                    )
-                )
-
-            if "auto_suppressed" not in existing_columns:
-                default_clause = "DEFAULT 0" if db_type == "sqlite" else "DEFAULT FALSE"
-                migrations.append(
-                    (
-                        f"ALTER TABLE sources ADD COLUMN auto_suppressed {boolean_type} {default_clause}",
-                        "sources",
-                        "auto_suppressed",
-                    )
-                )
-
-            if "dq_consecutive_anomalies" not in existing_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE sources ADD COLUMN dq_consecutive_anomalies INTEGER DEFAULT 0",
-                        "sources",
-                        "dq_consecutive_anomalies",
-                    )
-                )
-
-            if "last_canary_check" not in existing_columns:
-                migrations.append(
-                    (
-                        f"ALTER TABLE sources ADD COLUMN last_canary_check {timestamp_type}",
-                        "sources",
-                        "last_canary_check",
-                    )
-                )
-
-            if "last_canary_status" not in existing_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE sources ADD COLUMN last_canary_status TEXT",
-                        "sources",
-                        "last_canary_status",
-                    )
-                )
-
-            if "feed_etag" not in existing_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE sources ADD COLUMN feed_etag TEXT",
-                        "sources",
-                        "feed_etag",
-                    )
-                )
-
-            if "feed_last_modified" not in existing_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE sources ADD COLUMN feed_last_modified TEXT",
-                        "sources",
-                        "feed_last_modified",
-                    )
-                )
-
-        if "articles" in tables:
-            existing_article_columns = {
-                col["name"] for col in inspector.get_columns("articles")
-            }
-            existing_article_indexes = {
-                idx.get("name") for idx in inspector.get_indexes("articles")
-            }
-            if "published_at" not in existing_article_columns:
-                migrations.append(
-                    (
-                        f"ALTER TABLE articles ADD COLUMN published_at {timestamp_type}",
-                        "articles",
-                        "published_at",
-                    )
-                )
-            if "published_url" not in existing_article_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE articles ADD COLUMN published_url TEXT",
-                        "articles",
-                        "published_url",
-                    )
-                )
-            if "canonical_slug" not in existing_article_columns:
-                migrations.append(
-                    (
-                        "ALTER TABLE articles ADD COLUMN canonical_slug VARCHAR(200)",
-                        "articles",
-                        "canonical_slug",
-                    )
-                )
-                indexes = [idx["name"] for idx in inspector.get_indexes("articles")]
-                if "ix_articles_canonical_slug" not in indexes:
-                    migrations.append(
-                        (
-                            "CREATE UNIQUE INDEX ix_articles_canonical_slug ON articles(canonical_slug)",
-                            "articles",
-                            "ix_articles_canonical_slug",
-                        )
-                    )
-            if "uq_articles_content_hash" not in existing_article_indexes:
-                where_clause = "WHERE content_hash IS NOT NULL"
-                migrations.append(
-                    (
-                        (
-                            "CREATE UNIQUE INDEX IF NOT EXISTS uq_articles_content_hash "
-                            f"ON articles (content_hash) {where_clause}"
-                        ),
-                        "articles",
-                        "uq_articles_content_hash",
-                    )
-                )
-
-            # Add index for published_date to optimize range queries
-            if "ix_articles_published_date" not in existing_article_indexes:
-                migrations.append(
-                    (
-                        "CREATE INDEX IF NOT EXISTS ix_articles_published_date ON articles (published_date)",
-                        "articles",
-                        "ix_articles_published_date",
-                    )
-                )
-
-        if not migrations:
-            return
-
-        with self.engine.begin() as connection:
-            for statement, table_name, column_name in migrations:
-                connection.execute(text(statement))
-                logger.info(
-                    "🛠️  Columna '%s' agregada a la tabla %s mediante migración automática",
-                    column_name,
-                    table_name,
-                )
 
     @contextmanager
     def get_session(self):
@@ -431,6 +251,59 @@ class DatabaseManager:
             self.close()
             # During shutdown, logging/sys might be gone or fragile.
             # We suppress errors to avoid annoying "NoneType" tracebacks.
+
+    def get_source_circuit_state(self, source_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves circuit breaker state for a source.
+        """
+        with self.get_session() as session:
+            source = session.query(Source).filter(Source.id == source_id).first()
+            if not source:
+                return None
+            return {
+                "status": source.status,
+                "next_retry_at": source.next_retry_at,
+                "consecutive_failures": source.consecutive_failures,
+                "is_active": source.is_active,
+            }
+
+    def update_source_circuit_state(
+        self, source_id: str, success: bool, error_message: str = None
+    ) -> None:
+        """
+        Updates the circuit breaker state for a source.
+        Implements the logic: 3 strikes -> COOLDOWN (4 hours).
+        """
+        with self.get_session() as session:
+            source = session.query(Source).filter(Source.id == source_id).first()
+            if not source:
+                return
+
+            if success:
+                # Reset on success
+                if source.consecutive_failures > 0 or source.status != "ACTIVE":
+                    source.consecutive_failures = 0
+                    source.status = "ACTIVE"
+                    source.next_retry_at = None
+                    source.error_message = None  # Clear error on success? Or keep history?
+                    # We usually keep history in logs, but clearing current error state is good.
+                    logger.info(f"✅ Source {source_id} recovered/healthy. Reset circuit.")
+            else:
+                # Handle Failure
+                source.consecutive_failures = (source.consecutive_failures or 0) + 1
+                source.error_message = str(error_message)[:500] if error_message else "Unknown Error"
+                
+                # Check Threshold (MVS: 3 failures)
+                if source.consecutive_failures >= 3:
+                     # Enter Cooldown
+                     source.status = "COOLDOWN"
+                     # Hardcoded 4 hours for MVS
+                     source.next_retry_at = datetime.now(timezone.utc) + timedelta(hours=4)
+                     logger.warning(
+                         f"🔌 CIRCUIT BREAKER TRIPPED: Source {source_id} entering COOLDOWN until {source.next_retry_at}"
+                     )
+            
+            session.add(source)
 
     # =====================================
     # Operaciones Principales (Public API)

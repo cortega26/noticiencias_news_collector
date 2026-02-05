@@ -320,6 +320,8 @@ class Source(Base):
 
     # Estado de recolección
     # ====================
+    status = Column(String(20), default="ACTIVE")  # ACTIVE, COOLDOWN, DEAD
+    next_retry_at = Column(DateTime(timezone=True))
     last_checked = Column(DateTime(timezone=True))
     last_successful_check = Column(DateTime(timezone=True))
     last_article_found = Column(DateTime(timezone=True))

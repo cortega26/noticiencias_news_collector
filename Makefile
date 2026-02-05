@@ -84,7 +84,10 @@ run-local: bootstrap ## Run the collector locally
 
 bootstrap-refinery: $(BOOTSTRAP_REFINERY_STAMP) ## Provision refinery environment
 
-refinery: bootstrap-refinery ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
+migrate: bootstrap ## Run database migrations (up to head)
+	@$(PYTHON) scripts/migrate.py up
+
+refinery: bootstrap-refinery migrate ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
 	@$(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
 
 debug: bootstrap ## Run the collector in debug mode (verbose)
