@@ -207,9 +207,28 @@ class EditorAgent:
             logger.error(f"Error communicating with Ollama: {e}")
             raise
 
+    def _load_scientific_entities(self) -> str:
+        """Loads the canonical list of scientific entities for prompt injection."""
+        try:
+            path = Path(__file__).resolve().parents[3] / "news_collector" / "data" / "scientific_entities.json"
+            if path.exists():
+                data = json.loads(path.read_text(encoding="utf-8"))
+                # Format as a readable list for the LLM
+                entities_str = "\n".join([f"- {k} -> {v.get('es_name', k)} ({v.get('type')})" for k, v in data.items()])
+                return f"\n\nLISTA CANÓNICA DE ENTIDADES CIENTÍFICAS (USAR ESTAS TRADUCCIONES O MANTENER ORIGINAL):\n{entities_str}"
+        except Exception as e:
+            logger.warning(f"Failed to load scientific entities: {e}")
+        return ""
+
     def _translate_scientific(self, content: str) -> str:
         """Stage 1: Scientific Translation"""
         system_prompt = self.prompts.get("translator", {}).get("system", "")
+        
+        # Inject Canonical List
+        entities_context = self._load_scientific_entities()
+        if entities_context:
+            system_prompt += entities_context
+
         return self._send_prompt(
             content, system=system_prompt, model=self.translator_model
         )
@@ -246,11 +265,20 @@ class EditorAgent:
             return True
 
         system_prompt = "You are a Quality Control Editor. Output ONLY JSON."
+        
+        # Load entities for the critic to check against
+        entities_context = self._load_scientific_entities()
+        
         prompt = (
             "Analyze the following text. \n"
             "1. Is it written in Spanish? \n"
             "2. Is it about science/technology? \n"
+            "3. [CRITICAL] Does it respect proper nouns? Check for literal translations of scientific institutions/surveys.\n"
+            f"   Specific check: Do NOT allow literal translations of these entities if they differ from the canonical list:\n{entities_context}\n"
+            "   Example FAIL: 'Encuesta de Energía Oscura' (Should be 'Observatorio...' or 'Dark Energy Survey').\n"
+            "   Example FAIL: 'Telescopio Muy Grande' (Should be 'Very Large Telescope' or 'VLT').\n\n"
             "Rate confidence 0-100. \n"
+            "If a canonical entity name is malformed or literally translated, SCORE MUST BE 0.\n"
             "Output JSON: {\"score\": integer, \"reason\": \"short string\"}\n\n"
             f"{content[:2000]}"
         )

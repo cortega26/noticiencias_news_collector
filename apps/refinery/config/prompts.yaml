@@ -15,6 +15,11 @@ translator:
     FORMATO DE SALIDA:
     Solo el texto traducido en Markdown limpio.
 
+    REGLA DE ORO DE NOMBRES PROPIOS:
+    - NUNCA traduzcas nombres de misiones, observatorios, surveys o experimentos (ej. "Dark Energy Survey", "Very Large Telescope", "Hubble").
+    - Mantenlos en su idioma original o usa su nombre oficial en español si es canónico (ver lista si provista).
+    - Ante la duda, preserva el nombre en inglés entre paréntesis.
+
 # Stage 2: LatAm Editor
 # Goal: "Noticiencias Voice", regional context, "No-Hype".
 editor:
