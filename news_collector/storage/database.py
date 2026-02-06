@@ -29,7 +29,7 @@ ValidationError = get_pydantic_module().ValidationError
 
 import logging
 
-from news_collector.config.settings import DATABASE_CONFIG, DEDUP_CONFIG
+from news_collector.config.settings import COLLECTION_CONFIG, DATABASE_CONFIG, DEDUP_CONFIG
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 
 from ..storage.analytics import (
@@ -293,12 +293,14 @@ class DatabaseManager:
                 source.consecutive_failures = (source.consecutive_failures or 0) + 1
                 source.error_message = str(error_message)[:500] if error_message else "Unknown Error"
                 
-                # Check Threshold (MVS: 3 failures)
-                if source.consecutive_failures >= 3:
+                # Check Threshold (Configurable)
+                max_failures = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
+                cooldown_hours = COLLECTION_CONFIG.get("circuit_breaker_cooldown_hours", 4)
+
+                if source.consecutive_failures >= max_failures:
                      # Enter Cooldown
                      source.status = "COOLDOWN"
-                     # Hardcoded 4 hours for MVS
-                     source.next_retry_at = datetime.now(timezone.utc) + timedelta(hours=4)
+                     source.next_retry_at = datetime.now(timezone.utc) + timedelta(hours=cooldown_hours)
                      logger.warning(
                          f"🔌 CIRCUIT BREAKER TRIPPED: Source {source_id} entering COOLDOWN until {source.next_retry_at}"
                      )

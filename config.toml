@@ -11,7 +11,7 @@ target_repo_url = ""
 api_url = "http://localhost:11434/api/generate"
 model = "llama3.3:latest"
 timeout = 300
-headlines_model = "llama3.2:latest"
+headlines_model = "qwen2.5:14b"
 
 [paths]
 data_dir = "./data"
@@ -101,8 +101,8 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 [scoring.weights]
 source_credibility = 0.1
 recency = 0.2
-content_quality = 0.35
-engagement_potential = 0.35
+content_quality = 0.3
+engagement_potential = 0.4
 
 [scoring.feature_weights]
 source_credibility = 0.15

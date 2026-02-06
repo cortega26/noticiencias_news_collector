@@ -9,14 +9,15 @@ from news_collector.components.editorial.ai_editor import EditorAgent
 # 1. Circuit Breaker Testing
 # =============================================================================
 
-@patch('news_collector.collectors.rss_collector.get_database_manager')
-def test_circuit_breaker_skips_cooldown(mock_get_db):
+@patch('news_collector.storage.database.DatabaseManager')
+@patch('news_collector.infrastructure.requests_client.RobustRequestsClient')
+def test_circuit_breaker_skips_cooldown(mock_client_cls, mock_db_cls):
     """
     Verifies that RSSCollector acts as a Circuit Breaker when source is in COOLDOWN.
     """
     # Setup Mocks
     mock_db = MagicMock()
-    mock_get_db.return_value = mock_db
+    # mock_get_db.return_value = mock_db # Removed
     
     # Mock DB state: Source is in COOLDOWN until tomorrow
     next_retry = datetime.now(timezone.utc) + timedelta(hours=4)
@@ -74,7 +75,7 @@ def test_critic_pass_rejects_bad_content(mock_provider_cls):
     agent._send_prompt = MagicMock(side_effect=[
         "Hola",          # Translate
         "Hola Mundo",    # Adapt
-        '{"valid": false, "reason": "Not Science"}' # Critic
+        '{"score": 10, "reason": "Not Science"}' # Critic (Score < 70)
     ])
     
     # Execution
@@ -111,7 +112,7 @@ def test_headline_schema_validation(mock_provider_cls):
 
 if __name__ == "__main__":
     # Manual run support
-    test_circuit_breaker_skips_cooldown(MagicMock())
+    test_circuit_breaker_skips_cooldown(MagicMock(), MagicMock())
     test_critic_pass_rejects_bad_content(MagicMock())
     test_headline_schema_validation(MagicMock())
     print("\n🎉 ALL PHASE 1 VERIFICATION TESTS PASSED")

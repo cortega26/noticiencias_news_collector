@@ -35,6 +35,11 @@ COLLECTION_CONFIG["collection_interval"] = COLLECTION_CONFIG[
 ]
 COLLECTION_CONFIG["request_timeout"] = COLLECTION_CONFIG["request_timeout_seconds"]
 
+# Circuit Breaker Config (MVS Phase 1)
+# Defaults: 3 failures, 4 hours cooldown
+COLLECTION_CONFIG["circuit_breaker_max_failures"] = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
+COLLECTION_CONFIG["circuit_breaker_cooldown_hours"] = COLLECTION_CONFIG.get("circuit_breaker_cooldown_hours", 4)
+
 RATE_LIMITING_CONFIG: Dict[str, Any] = CONFIG.rate_limiting.model_dump(mode="python")
 RATE_LIMITING_CONFIG["delay_between_requests"] = RATE_LIMITING_CONFIG[
     "delay_between_requests_seconds"
@@ -50,7 +55,10 @@ SCORING_CONFIG: Dict[str, Any] = CONFIG.scoring.model_dump(mode="python")
 TEXT_PROCESSING_CONFIG: Dict[str, Any] = CONFIG.text_processing.model_dump(
     mode="python"
 )
+# Translation Guard Config (Phase 1)
 TEXT_PROCESSING_CONFIG.setdefault("min_title_length", 10)
+# Default match "Strict" behavior: high bar for quality
+TEXT_PROCESSING_CONFIG["critic_score_threshold"] = 70
 
 
 def _normalize_enrichment(config: Config) -> Dict[str, Any]:

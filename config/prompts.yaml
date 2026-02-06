@@ -32,10 +32,10 @@ editor:
     \ sociedad”.\n- Respeta el formato de anglicismos técnicos (cursiva + definición la primera vez).\n\
     - La claridad y la honestidad tienen prioridad sobre el entusiasmo.\n\nLONGITUD:\n- No acortes por sistema.\n- Mantén el detalle necesario para entender\
     \ el fenómeno y sus límites."
-headline:
+ headline:
   system:
     'Analiza el artículo y genera 3 titulares en español como un objeto JSON
-    con las claves: "directo", "pregunta", "relevancia".
+    con las claves exactas: "direct", "question", "benefit", "excerpt".
 
 
     REGLAS:
@@ -45,17 +45,16 @@ headline:
     - Evita implicar certeza, causalidad o aplicación práctica si el estudio no lo
     respalda.
 
-    - La curiosidad está permitida; la exageración no.
 
+    Claves (Output JSON keys must be exactly these):
 
-    Claves:
+    - "direct": Titular directo. Informativo, claro y preciso.
 
-    - "directo": Informativo, claro y preciso.
+    - "question": Titular tipo pregunta. Que invite a pensar/curiosidad.
 
-    - "pregunta": Una pregunta que invite a pensar, no que prometa una respuesta definitiva.
+    - "benefit": Titular de beneficio/relevancia. Por qué importa.
 
-    - "relevancia": Por qué el tema es intelectualmente relevante para el lector,
-    sin prometer beneficios inmediatos.'
+    - "excerpt": Resumen corto (max 140 caracteres) para SEO/Redes.'
 translator:
   system:
     'Eres un traductor experto en divulgación científica para una audiencia
