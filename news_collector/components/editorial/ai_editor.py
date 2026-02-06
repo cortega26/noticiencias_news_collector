@@ -10,7 +10,10 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 from noticiencias.config_manager import load_config
+from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
+
+from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 
 class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
@@ -41,9 +44,12 @@ class EditorAgent:
             flags=re.UNICODE,
         )
         try:
-            self.min_content_length = load_config().text_processing.min_content_length
+            cfg = load_config()
+            self.min_content_length = cfg.text_processing.min_content_length
         except Exception:
             self.min_content_length = 750  # Fallback
+
+        self.critic_threshold = TEXT_PROCESSING_CONFIG.get("critic_score_threshold", 70)
 
         self.prompts = self._load_prompts()
 
@@ -244,7 +250,8 @@ class EditorAgent:
             "Analyze the following text. \n"
             "1. Is it written in Spanish? \n"
             "2. Is it about science/technology? \n"
-            "Output JSON: {\"valid\": boolean, \"reason\": \"short string\"}\n\n"
+            "Rate confidence 0-100. \n"
+            "Output JSON: {\"score\": integer, \"reason\": \"short string\"}\n\n"
             f"{content[:2000]}"
         )
         
@@ -253,11 +260,12 @@ class EditorAgent:
             response = self._send_prompt(prompt, system=system_prompt, model=self.editor_model)
             result = self._extract_json(response)
             
-            if not result.get("valid", False):
-                logger.warning(f"⛔ CRITIC REJECTED: {result.get('reason')}")
+            score = result.get("score", 0)
+            if score < self.critic_threshold:
+                logger.warning(f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {result.get('reason')}")
                 return False
                 
-            logger.info("✅ Critic Pass Passed")
+            logger.info(f"✅ Critic Pass Passed (Score: {score})")
             return True
         except Exception as e:
             logger.warning(f"Critic Pass Failed (Error): {e} - Failing Open (MVS)")
