@@ -1,0 +1,47 @@
+{
+  "Dark Energy Survey": {
+    "es_name": "Observatorio de la Energía Oscura",
+    "alias": ["DES"],
+    "type": "Survey"
+  },
+  "Very Large Telescope": {
+    "es_name": "Very Large Telescope",
+    "alias": ["VLT"],
+    "type": "Observatory"
+  },
+  "Hubble Space Telescope": {
+    "es_name": "Telescopio Espacial Hubble",
+    "alias": ["HST", "Hubble"],
+    "type": "Space Telescope"
+  },
+  "James Webb Space Telescope": {
+    "es_name": "Telescopio Espacial James Webb",
+    "alias": ["JWST", "Webb"],
+    "type": "Space Telescope"
+  },
+  "Large Hadron Collider": {
+    "es_name": "Gran Colisionador de Hadrones",
+    "alias": ["LHC"],
+    "type": "Particle Accelerator"
+  },
+  "European Southern Observatory": {
+    "es_name": "Observatorio Europeo Austral",
+    "alias": ["ESO"],
+    "type": "Organization"
+  },
+  "Vera C. Rubin Observatory": {
+    "es_name": "Observatorio Vera C. Rubin",
+    "alias": ["Rubin Observatory"],
+    "type": "Observatory"
+  },
+  "Event Horizon Telescope": {
+    "es_name": "Telescopio del Horizonte de Sucesos",
+    "alias": ["EHT"],
+    "type": "Collaboration"
+  },
+  "Sloan Digital Sky Survey": {
+    "es_name": "Sloan Digital Sky Survey",
+    "alias": ["SDSS"],
+    "type": "Survey"
+  }
+}
