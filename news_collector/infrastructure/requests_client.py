@@ -12,7 +12,6 @@ from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONF
 from news_collector.utils.security import validate_url_safety
 from requests.adapters import HTTPAdapter
 from tenacity import (
-    before_sleep_log,
     retry,
     retry_if_exception,
     stop_after_attempt,
@@ -74,7 +73,7 @@ def _safe_retry_log(retry_state):
     if retry_state.outcome.failed:
         exc = retry_state.outcome.exception()
         verb = "Retrying"
-        
+
         # Extract URL and Status if possible, but keep headers out
         details = ""
         if isinstance(exc, requests.RequestException):
@@ -84,7 +83,7 @@ def _safe_retry_log(retry_state):
                  details += f" {request.method} {request.url}"
              if response is not None:
                  details += f" (Status: {response.status_code})"
-        
+
         logger.warning(
             f"{verb} {retry_state.fn.__name__} in {retry_state.next_action.sleep}s "
             f"due to: {exc!r}.{details}"

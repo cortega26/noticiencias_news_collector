@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from sqlalchemy import create_engine, desc, inspect, text
+from sqlalchemy import create_engine, desc
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only, sessionmaker
@@ -29,7 +29,11 @@ ValidationError = get_pydantic_module().ValidationError
 
 import logging
 
-from news_collector.config.settings import COLLECTION_CONFIG, DATABASE_CONFIG, DEDUP_CONFIG
+from news_collector.config.settings import (
+    COLLECTION_CONFIG,
+    DATABASE_CONFIG,
+    DEDUP_CONFIG,
+)
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 
 from ..storage.analytics import (
@@ -292,7 +296,7 @@ class DatabaseManager:
                 # Handle Failure
                 source.consecutive_failures = (source.consecutive_failures or 0) + 1
                 source.error_message = str(error_message)[:500] if error_message else "Unknown Error"
-                
+
                 # Check Threshold (Configurable)
                 max_failures = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
                 cooldown_hours = COLLECTION_CONFIG.get("circuit_breaker_cooldown_hours", 4)
@@ -304,7 +308,7 @@ class DatabaseManager:
                      logger.warning(
                          f"🔌 CIRCUIT BREAKER TRIPPED: Source {source_id} entering COOLDOWN until {source.next_retry_at}"
                      )
-            
+
             session.add(source)
 
     # =====================================
