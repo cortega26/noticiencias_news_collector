@@ -134,10 +134,21 @@ class GitHubPublisher:
         if branch_name in repo.heads:
             logger.info(f"Branch {branch_name} already exists. Checking it out.")
             new_branch = repo.heads[branch_name]
+            new_branch.checkout()
+
+            # AUTO-UPDATE: Merge origin/main to get latest CI/App fixes
+            try:
+                logger.info(f"Merging origin/main into {branch_name} to ensure freshness...")
+                repo.git.pull("origin", "main", "--no-rebase")
+                logger.info("Successfully merged origin/main.")
+            except Exception as e:
+                logger.warning(f"Failed to merge origin/main into {branch_name}: {e}")
+                # We don't fail hard here, as the user might resolve conflicts manually or just push force later
+                # But it's better to warn.
         else:
             new_branch = repo.create_head(branch_name)
+            new_branch.checkout()
 
-        new_branch.checkout()
         logger.info(f"Checked out branch: {branch_name}")
         return branch_name
 
