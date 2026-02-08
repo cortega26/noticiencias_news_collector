@@ -106,7 +106,9 @@ def ensure_piptools_installed(force: bool) -> None:
     else:
         LOGGER.info("Reinstalling pip-tools as requested.")
 
-    run_command((sys.executable, "-m", "pip", "install", "pip-tools==7.5.2", "pip<26.0"))
+    run_command(
+        (sys.executable, "-m", "pip", "install", "pip-tools==7.5.2", "pip<26.0")
+    )
 
 
 def run_command(command: Sequence[str], description: str | None = None) -> None:
