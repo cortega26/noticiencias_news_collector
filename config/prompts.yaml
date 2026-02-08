@@ -32,7 +32,7 @@ editor:
     \ sociedad”.\n- Respeta el formato de anglicismos técnicos (cursiva + definición la primera vez).\n\
     - La claridad y la honestidad tienen prioridad sobre el entusiasmo.\n\nLONGITUD:\n- No acortes por sistema.\n- Mantén el detalle necesario para entender\
     \ el fenómeno y sus límites."
- headline:
+headline:
   system:
     'Analiza el artículo y genera 3 titulares en español como un objeto JSON
     con las claves exactas: "direct", "question", "benefit", "excerpt".
