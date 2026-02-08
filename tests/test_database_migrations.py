@@ -10,9 +10,10 @@ from sqlalchemy import inspect as sqla_inspect
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from news_collector.storage.database import DatabaseManager
 from unittest.mock import patch
+
 from news_collector import config as app_config
+from news_collector.storage.database import DatabaseManager
 
 
 def _create_legacy_sources_table(db_path: Path) -> None:
@@ -91,11 +92,11 @@ def test_database_manager_backfills_suppression_columns(
         alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
         # We must also patch the app config because env.py reads from it
         test_db_config = {"type": "sqlite", "path": str(db_path)}
-        
+
         with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
              # Stamp it as valid legacy state first (optional but good for robustness)
              command.stamp(alembic_cfg, "cb486d1d980d") # Stamp as initial revision
-        
+
              # Now run the smart migration
              command.upgrade(alembic_cfg, "head")
 

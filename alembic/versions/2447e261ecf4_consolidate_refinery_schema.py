@@ -7,8 +7,8 @@ Create Date: 2026-02-05 12:32:45.709055
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
@@ -23,7 +23,7 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = inspect(bind)
     source_columns = {col['name'] for col in inspector.get_columns('sources')}
-    
+
     article_columns = {col['name'] for col in inspector.get_columns('articles')}
     article_indexes = {idx['name'] for idx in inspector.get_indexes('articles')}
 
@@ -33,60 +33,75 @@ def upgrade() -> None:
 
     # 2. Add Sources columns
     with op.batch_alter_table('sources', schema=None) as batch_op:
-        if 'status' not in source_columns:
-            batch_op.add_column(sa.Column('status', sa.String(length=20), server_default='ACTIVE', nullable=True))
-        
-        if 'suppressed_until' not in source_columns:
-            batch_op.add_column(sa.Column('suppressed_until', sa.DateTime(timezone=True), nullable=True))
-            
-        if 'suppression_reason' not in source_columns:
-            batch_op.add_column(sa.Column('suppression_reason', sa.Text(), nullable=True))
-            
-        if 'auto_suppressed' not in source_columns:
-            batch_op.add_column(sa.Column('auto_suppressed', sa.Boolean(), server_default='0', nullable=True))
-            
-        if 'dq_consecutive_anomalies' not in source_columns:
-            batch_op.add_column(sa.Column('dq_consecutive_anomalies', sa.Integer(), server_default='0', nullable=True))
-
-        if 'last_canary_check' not in source_columns:
-            batch_op.add_column(sa.Column('last_canary_check', sa.DateTime(timezone=True), nullable=True))
-
-        if 'last_canary_status' not in source_columns:
-            batch_op.add_column(sa.Column('last_canary_status', sa.String(length=20), nullable=True))
-            
-        if 'feed_etag' not in source_columns:
-            batch_op.add_column(sa.Column('feed_etag', sa.String(length=512), nullable=True))
-
-        if 'feed_last_modified' not in source_columns:
-            batch_op.add_column(sa.Column('feed_last_modified', sa.String(length=100), nullable=True))
-            
-        if 'next_retry_at' not in source_columns:
-             batch_op.add_column(sa.Column('next_retry_at', sa.DateTime(timezone=True), nullable=True))
-        else:
-             # Fix type if needed (was generic TIMESTAMP)
-             batch_op.alter_column('next_retry_at',
-                   existing_type=sa.TIMESTAMP(),
-                   type_=sa.DateTime(timezone=True),
-                   existing_nullable=True)
+        _upgrade_sources_table(batch_op, source_columns)
 
     # 3. Add Articles columns
     with op.batch_alter_table('articles', schema=None) as batch_op:
-        if 'published_at' not in article_columns:
-             batch_op.add_column(sa.Column('published_at', sa.DateTime(timezone=True), nullable=True))
-             
-        if 'published_url' not in article_columns:
-             batch_op.add_column(sa.Column('published_url', sa.Text(), nullable=True))
-             
-        if 'canonical_slug' not in article_columns:
-             batch_op.add_column(sa.Column('canonical_slug', sa.String(length=200), nullable=True))
+        _upgrade_articles_table(batch_op, article_columns)
 
     # 4. Indexes
+    _create_indexes(article_indexes, article_columns)
+
+
+def _upgrade_sources_table(batch_op, source_columns):  # noqa: C901
+    """Helper to upgrade sources table."""
+    if 'status' not in source_columns:
+        batch_op.add_column(sa.Column('status', sa.String(length=20), server_default='ACTIVE', nullable=True))
+
+    if 'suppressed_until' not in source_columns:
+        batch_op.add_column(sa.Column('suppressed_until', sa.DateTime(timezone=True), nullable=True))
+
+    if 'suppression_reason' not in source_columns:
+        batch_op.add_column(sa.Column('suppression_reason', sa.Text(), nullable=True))
+
+    if 'auto_suppressed' not in source_columns:
+        batch_op.add_column(sa.Column('auto_suppressed', sa.Boolean(), server_default='0', nullable=True))
+
+    if 'dq_consecutive_anomalies' not in source_columns:
+        batch_op.add_column(sa.Column('dq_consecutive_anomalies', sa.Integer(), server_default='0', nullable=True))
+
+    if 'last_canary_check' not in source_columns:
+        batch_op.add_column(sa.Column('last_canary_check', sa.DateTime(timezone=True), nullable=True))
+
+    if 'last_canary_status' not in source_columns:
+        batch_op.add_column(sa.Column('last_canary_status', sa.String(length=20), nullable=True))
+
+    if 'feed_etag' not in source_columns:
+        batch_op.add_column(sa.Column('feed_etag', sa.String(length=512), nullable=True))
+
+    if 'feed_last_modified' not in source_columns:
+        batch_op.add_column(sa.Column('feed_last_modified', sa.String(length=100), nullable=True))
+
+    if 'next_retry_at' not in source_columns:
+         batch_op.add_column(sa.Column('next_retry_at', sa.DateTime(timezone=True), nullable=True))
+    else:
+         # Fix type if needed (was generic TIMESTAMP)
+         batch_op.alter_column('next_retry_at',
+               existing_type=sa.TIMESTAMP(),
+               type_=sa.DateTime(timezone=True),
+               existing_nullable=True)
+
+
+def _upgrade_articles_table(batch_op, article_columns):
+    """Helper to upgrade articles table."""
+    if 'published_at' not in article_columns:
+         batch_op.add_column(sa.Column('published_at', sa.DateTime(timezone=True), nullable=True))
+
+    if 'published_url' not in article_columns:
+         batch_op.add_column(sa.Column('published_url', sa.Text(), nullable=True))
+
+    if 'canonical_slug' not in article_columns:
+         batch_op.add_column(sa.Column('canonical_slug', sa.String(length=200), nullable=True))
+
+
+def _create_indexes(article_indexes, article_columns):
+    """Helper to create indexes."""
     if 'ix_articles_canonical_slug' not in article_indexes and 'canonical_slug' in article_columns:
         op.create_index('ix_articles_canonical_slug', 'articles', ['canonical_slug'], unique=True)
 
     if 'uq_articles_content_hash' not in article_indexes:
         # SQLite partial index syntax
-        op.create_index('uq_articles_content_hash', 'articles', ['content_hash'], unique=True, 
+        op.create_index('uq_articles_content_hash', 'articles', ['content_hash'], unique=True,
                         sqlite_where=sa.text("content_hash IS NOT NULL"))
 
     if 'ix_articles_published_date' not in article_indexes:
@@ -95,7 +110,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # Simplified downgrade: just drop columns. 
+    # Simplified downgrade: just drop columns.
     # Not STRICTLY necessary for this catch-up migration but good practice.
     with op.batch_alter_table('sources', schema=None) as batch_op:
         batch_op.drop_column('status')

@@ -9,11 +9,10 @@ from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
-from noticiencias.config_manager import load_config
+from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
-from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 
 class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
@@ -223,7 +222,7 @@ class EditorAgent:
     def _translate_scientific(self, content: str) -> str:
         """Stage 1: Scientific Translation"""
         system_prompt = self.prompts.get("translator", {}).get("system", "")
-        
+
         # Inject Canonical List
         entities_context = self._load_scientific_entities()
         if entities_context:
@@ -265,10 +264,10 @@ class EditorAgent:
             return True
 
         system_prompt = "You are a Quality Control Editor. Output ONLY JSON."
-        
+
         # Load entities for the critic to check against
         entities_context = self._load_scientific_entities()
-        
+
         prompt = (
             "Analyze the following text. \n"
             "1. Is it written in Spanish? \n"
@@ -282,23 +281,23 @@ class EditorAgent:
             "Output JSON: {\"score\": integer, \"reason\": \"short string\"}\n\n"
             f"{content[:2000]}"
         )
-        
+
         try:
             # Use headlines model (usually faster/smarter) or editor model
             response = self._send_prompt(prompt, system=system_prompt, model=self.editor_model)
             result = self._extract_json(response)
-            
+
             score = result.get("score", 0)
             if score < self.critic_threshold:
                 logger.warning(f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {result.get('reason')}")
                 return False
-                
+
             logger.info(f"✅ Critic Pass Passed (Score: {score})")
             return True
         except Exception as e:
             logger.warning(f"Critic Pass Failed (Error): {e} - Failing Open (MVS)")
             # MVS Decision: If critic crashes, do we fail open or closed?
-            # Plan says "Fail if invalid". But if LLM crashes... 
+            # Plan says "Fail if invalid". But if LLM crashes...
             # Let's Fail Closed for safety as per "Do No Harm".
             # BUT implementation plan says "Discard article".
             # So return False.
@@ -315,7 +314,7 @@ class EditorAgent:
 
         try:
             data = self._extract_json(response)
-            
+
             # Feature Flag: Kill Switch
             if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
                 return data
@@ -325,7 +324,7 @@ class EditorAgent:
             return validated.model_dump()
         except ValidationError as ve:
              logger.error(f"❌ Headline Schema Validation Failed: {ve}")
-             raise ValueError(f"Schema Validation Failed: {ve}")
+             raise ValueError(f"Schema Validation Failed: {ve}") from ve
         except Exception as e:
             logger.error(
                 f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
