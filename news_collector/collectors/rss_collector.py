@@ -139,10 +139,15 @@ class RSSCollector(BaseCollector):
             if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
                 circuit_state = self.db_manager.get_source_circuit_state(source_id)
                 if circuit_state:
+                    next_retry = circuit_state.get("next_retry_at")
+                    # Ensure timezone awareness for comparison (SQLite may return naive)
+                    if next_retry and next_retry.tzinfo is None:
+                        next_retry = next_retry.replace(tzinfo=timezone.utc)
+
                     if (
                         circuit_state.get("status") == "COOLDOWN"
-                        and circuit_state.get("next_retry_at")
-                        and circuit_state["next_retry_at"] > datetime.now(timezone.utc)
+                        and next_retry
+                        and next_retry > datetime.now(timezone.utc)
                     ):
                         self._emit_log(
                             "info",
