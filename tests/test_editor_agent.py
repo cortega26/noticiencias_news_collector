@@ -24,7 +24,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
-        "excerpt": "This is a short excerpt for SEO purposes that is long enough."
+        "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
     }  # type: ignore[method-assign]
 
     result = agent.process_article(
@@ -62,7 +62,7 @@ def test_process_article_keeps_sections_with_image() -> None:
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
-        "excerpt": "This is a short excerpt for SEO purposes that is long enough."
+        "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
     }  # type: ignore[method-assign]
 
     result = agent.process_article(

@@ -273,4 +273,73 @@ El proyecto incluye un `Makefile` para tareas de calidad de código:
 
 ---
 
+## 8. Referencia de Herramientas y Scripts
+
+Este proyecto incluye una suite de herramientas de línea de comandos en `scripts/` para facilitar la operación y mantenimiento. Todas deben ejecutarse desde la raíz del proyecto, preferiblemente usando `make` o el entorno virtual.
+
+### 8.1 Gestión de Base de Datos (`scripts/migrate.py`)
+
+Gestiona las migraciones de esquema de la base de datos (Alembic).
+
+- **Comandos:**
+  - `python scripts/migrate.py up`: Aplica todas las migraciones pendientes.
+  - `python scripts/migrate.py down`: Revierte la última migración.
+  - `python scripts/migrate.py history`: Muestra el historial de versiones.
+  - `python scripts/migrate.py make "mensaje"`: Crea una nueva migración automática.
+
+### 8.2 Verificación de Salud (`scripts/healthcheck.py`)
+
+Diagnóstico rápido del estado del sistema. Verifica conectividad a DB, colas y frescura de datos.
+
+- **Uso:** `python scripts/healthcheck.py`
+- **Opciones:**
+  - `--max-pending N`: Alerta si hay más de N items en cola.
+  - `--max-ingest-minutes N`: Alerta si no hubo ingesta en N minutos.
+
+### 8.3 Control de Calidad y Seguridad
+
+#### Quality Gate (`scripts/quality_gate.py`)
+
+Verifica que el pipeline de IA mantenga la calidad esperada usando "snapshots" dorados. Previene regresiones en la generación de texto.
+
+- **Uso:** `make quality-gate`
+
+#### Escaneo de Secretos (`scripts/run_secret_scan.py`)
+
+Busca credenciales hardcodeadas o tokens en el código y el historial reciente.
+
+- **Uso:** `python scripts/run_secret_scan.py --output report.json .`
+
+#### Validación de Exportación (`scripts/validate_export.py`)
+
+Asegura que `data/exports/latest_articles.json` cumple con el contrato esperado por el Frontend.
+
+- **Uso:** `python scripts/validate_export.py data/exports/latest_articles.json`
+
+### 8.4 Gestión de Versiones (`scripts/bump_version.py`)
+
+Utilidad para incrementar la versión semántica del proyecto (`VERSION`).
+
+- **Uso:**
+  - `python scripts/bump_version.py --part patch` (1.0.0 -> 1.0.1)
+  - `python scripts/bump_version.py --part minor` (1.0.0 -> 1.1.0)
+  - `python scripts/bump_version.py --set 2.0.0`
+
+### 8.5 Referencia Completa del Makefile
+
+| Comando           | Descripción                                             |
+| :---------------- | :------------------------------------------------------ |
+| `make bootstrap`  | Instala dependencias y configura el entorno `.venv`.    |
+| `make refinery`   | Inicia la interfaz gráfica de administración.           |
+| `make run-local`  | Ejecuta el recolector de noticias una vez.              |
+| `make lint`       | Verifica estilo de código (Ruff, Black).                |
+| `make format`     | Corrige estilo de código automáticamente.               |
+| `make test`       | Ejecuta pruebas unitarias (Pytest).                     |
+| `make type`       | Verificación estática de tipos (Mypy).                  |
+| `make security`   | Auditoría de seguridad (Bandit, Pip-audit, TruffleHog). |
+| `make quality-ci` | Ejecuta todos los chequeos estrictos (CI pipeline).     |
+| `make clean`      | Limpia caché y archivos temporales.                     |
+
+---
+
 **Noticiencias News Collector** - _Ingeniería aplicada al periodismo científico._

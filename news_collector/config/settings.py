@@ -37,8 +37,12 @@ COLLECTION_CONFIG["request_timeout"] = COLLECTION_CONFIG["request_timeout_second
 
 # Circuit Breaker Config (MVS Phase 1)
 # Defaults: 3 failures, 4 hours cooldown
-COLLECTION_CONFIG["circuit_breaker_max_failures"] = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
-COLLECTION_CONFIG["circuit_breaker_cooldown_hours"] = COLLECTION_CONFIG.get("circuit_breaker_cooldown_hours", 4)
+COLLECTION_CONFIG["circuit_breaker_max_failures"] = COLLECTION_CONFIG.get(
+    "circuit_breaker_max_failures", 3
+)
+COLLECTION_CONFIG["circuit_breaker_cooldown_hours"] = COLLECTION_CONFIG.get(
+    "circuit_breaker_cooldown_hours", 4
+)
 
 RATE_LIMITING_CONFIG: Dict[str, Any] = CONFIG.rate_limiting.model_dump(mode="python")
 RATE_LIMITING_CONFIG["delay_between_requests"] = RATE_LIMITING_CONFIG[

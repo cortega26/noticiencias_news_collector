@@ -77,12 +77,12 @@ def _safe_retry_log(retry_state):
         # Extract URL and Status if possible, but keep headers out
         details = ""
         if isinstance(exc, requests.RequestException):
-             request = getattr(exc, "request", None)
-             response = getattr(exc, "response", None)
-             if request:
-                 details += f" {request.method} {request.url}"
-             if response is not None:
-                 details += f" (Status: {response.status_code})"
+            request = getattr(exc, "request", None)
+            response = getattr(exc, "response", None)
+            if request:
+                details += f" {request.method} {request.url}"
+            if response is not None:
+                details += f" (Status: {response.status_code})"
 
         logger.warning(
             f"{verb} {retry_state.fn.__name__} in {retry_state.next_action.sleep}s "

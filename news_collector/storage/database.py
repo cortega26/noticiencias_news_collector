@@ -207,8 +207,6 @@ class DatabaseManager:
             logger.error(f"❌ Error configurando base de datos: {e}")
             raise
 
-
-
     @contextmanager
     def get_session(self):
         """
@@ -289,25 +287,35 @@ class DatabaseManager:
                     source.consecutive_failures = 0
                     source.status = "ACTIVE"
                     source.next_retry_at = None
-                    source.error_message = None  # Clear error on success? Or keep history?
+                    source.error_message = (
+                        None  # Clear error on success? Or keep history?
+                    )
                     # We usually keep history in logs, but clearing current error state is good.
-                    logger.info(f"✅ Source {source_id} recovered/healthy. Reset circuit.")
+                    logger.info(
+                        f"✅ Source {source_id} recovered/healthy. Reset circuit."
+                    )
             else:
                 # Handle Failure
                 source.consecutive_failures = (source.consecutive_failures or 0) + 1
-                source.error_message = str(error_message)[:500] if error_message else "Unknown Error"
+                source.error_message = (
+                    str(error_message)[:500] if error_message else "Unknown Error"
+                )
 
                 # Check Threshold (Configurable)
                 max_failures = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
-                cooldown_hours = COLLECTION_CONFIG.get("circuit_breaker_cooldown_hours", 4)
+                cooldown_hours = COLLECTION_CONFIG.get(
+                    "circuit_breaker_cooldown_hours", 4
+                )
 
                 if source.consecutive_failures >= max_failures:
-                     # Enter Cooldown
-                     source.status = "COOLDOWN"
-                     source.next_retry_at = datetime.now(timezone.utc) + timedelta(hours=cooldown_hours)
-                     logger.warning(
-                         f"🔌 CIRCUIT BREAKER TRIPPED: Source {source_id} entering COOLDOWN until {source.next_retry_at}"
-                     )
+                    # Enter Cooldown
+                    source.status = "COOLDOWN"
+                    source.next_retry_at = datetime.now(timezone.utc) + timedelta(
+                        hours=cooldown_hours
+                    )
+                    logger.warning(
+                        f"🔌 CIRCUIT BREAKER TRIPPED: Source {source_id} entering COOLDOWN until {source.next_retry_at}"
+                    )
 
             session.add(source)
 
