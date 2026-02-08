@@ -6,6 +6,7 @@ are functioning in sync with the Alembic migration history.
 If this test fails, it means you have modified the models but forgot to run:
     python scripts/migrate.py make "your_change_message"
 """
+
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,6 +19,7 @@ from news_collector.storage.models import Base
 from sqlalchemy import create_engine, pool
 
 ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_models_match_migrations(tmp_path: Path):
     """
@@ -85,7 +87,10 @@ def test_models_match_migrations(tmp_path: Path):
 
             filtered_diff = [d for d in diff if not _is_false_positive(d)]
 
-            assert not filtered_diff, f"Schema Drift Detected! Models differ from migrations:\n{filtered_diff}"
+            assert (
+                not filtered_diff
+            ), f"Schema Drift Detected! Models differ from migrations:\n{filtered_diff}"
+
 
 def _is_false_positive(diff_item):
     """

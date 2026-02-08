@@ -81,7 +81,9 @@ def test_database_manager_backfills_suppression_columns(
             columns = {col["name"] for col in inspector.get_columns("sources")}
 
         # Check a sample column is MISSING initially
-        assert "auto_suppressed" not in columns, "DatabaseManager should not auto-migrate anymore"
+        assert (
+            "auto_suppressed" not in columns
+        ), "DatabaseManager should not auto-migrate anymore"
 
         # 2. Run Alembic Migration Programmatically
         from alembic import command
@@ -94,11 +96,11 @@ def test_database_manager_backfills_suppression_columns(
         test_db_config = {"type": "sqlite", "path": str(db_path)}
 
         with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
-             # Stamp it as valid legacy state first (optional but good for robustness)
-             command.stamp(alembic_cfg, "cb486d1d980d") # Stamp as initial revision
+            # Stamp it as valid legacy state first (optional but good for robustness)
+            command.stamp(alembic_cfg, "cb486d1d980d")  # Stamp as initial revision
 
-             # Now run the smart migration
-             command.upgrade(alembic_cfg, "head")
+            # Now run the smart migration
+            command.upgrade(alembic_cfg, "head")
 
         # 3. Verify columns exist after migration
         with manager.engine.connect() as connection:

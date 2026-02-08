@@ -209,11 +209,21 @@ class EditorAgent:
     def _load_scientific_entities(self) -> str:
         """Loads the canonical list of scientific entities for prompt injection."""
         try:
-            path = Path(__file__).resolve().parents[3] / "news_collector" / "data" / "scientific_entities.json"
+            path = (
+                Path(__file__).resolve().parents[3]
+                / "news_collector"
+                / "data"
+                / "scientific_entities.json"
+            )
             if path.exists():
                 data = json.loads(path.read_text(encoding="utf-8"))
                 # Format as a readable list for the LLM
-                entities_str = "\n".join([f"- {k} -> {v.get('es_name', k)} ({v.get('type')})" for k, v in data.items()])
+                entities_str = "\n".join(
+                    [
+                        f"- {k} -> {v.get('es_name', k)} ({v.get('type')})"
+                        for k, v in data.items()
+                    ]
+                )
                 return f"\n\nLISTA CANÓNICA DE ENTIDADES CIENTÍFICAS (USAR ESTAS TRADUCCIONES O MANTENER ORIGINAL):\n{entities_str}"
         except Exception as e:
             logger.warning(f"Failed to load scientific entities: {e}")
@@ -259,6 +269,7 @@ class EditorAgent:
         """
         # Feature Flag: Kill Switch
         import os
+
         if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
             logger.info("Translation Guard Disabled (Critic Pass Skipped)")
             return True
@@ -278,18 +289,22 @@ class EditorAgent:
             "   Example FAIL: 'Telescopio Muy Grande' (Should be 'Very Large Telescope' or 'VLT').\n\n"
             "Rate confidence 0-100. \n"
             "If a canonical entity name is malformed or literally translated, SCORE MUST BE 0.\n"
-            "Output JSON: {\"score\": integer, \"reason\": \"short string\"}\n\n"
+            'Output JSON: {"score": integer, "reason": "short string"}\n\n'
             f"{content[:2000]}"
         )
 
         try:
             # Use headlines model (usually faster/smarter) or editor model
-            response = self._send_prompt(prompt, system=system_prompt, model=self.editor_model)
+            response = self._send_prompt(
+                prompt, system=system_prompt, model=self.editor_model
+            )
             result = self._extract_json(response)
 
             score = result.get("score", 0)
             if score < self.critic_threshold:
-                logger.warning(f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {result.get('reason')}")
+                logger.warning(
+                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {result.get('reason')}"
+                )
                 return False
 
             logger.info(f"✅ Critic Pass Passed (Score: {score})")
@@ -323,8 +338,8 @@ class EditorAgent:
             validated = HeadlinesSchema(**data)
             return validated.model_dump()
         except ValidationError as ve:
-             logger.error(f"❌ Headline Schema Validation Failed: {ve}")
-             raise ValueError(f"Schema Validation Failed: {ve}") from ve
+            logger.error(f"❌ Headline Schema Validation Failed: {ve}")
+            raise ValueError(f"Schema Validation Failed: {ve}") from ve
         except Exception as e:
             logger.error(
                 f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
@@ -504,7 +519,9 @@ class EditorAgent:
         # --- STAGE 1.5: Critic Pass (MVS) ---
         # We run this on the adapted content to be sure.
         if not self._critic_pass(final_content):
-            raise ValueError("Translation Guardrail: Content rejected by critic (Not Spanish or Not Science)")
+            raise ValueError(
+                "Translation Guardrail: Content rejected by critic (Not Spanish or Not Science)"
+            )
 
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
