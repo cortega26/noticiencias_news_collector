@@ -18,7 +18,7 @@ class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
     question: str = Field(..., min_length=5)
     benefit: str = Field(..., min_length=5)
-    excerpt: str = Field(..., min_length=10, max_length=160)
+    excerpt: str = Field(..., min_length=10, max_length=200)
 
 
 class EditorAgent:
@@ -516,7 +516,8 @@ class EditorAgent:
             final_content = self._extract_markdown_content(final_content)  # Cleanup
             cache_s2.write_text(final_content, encoding="utf-8")
 
-        # --- STAGE 1.5: Critic Pass (MVS) ---
+        # --- STAGE 2.5: Critic Pass (MVS) ---
+        print("\n--- STAGE 2.5: Critic Pass (Validation) ---")
         # We run this on the adapted content to be sure.
         if not self._critic_pass(final_content):
             raise ValueError(
