@@ -43,5 +43,10 @@
     "es_name": "Sloan Digital Sky Survey",
     "alias": ["SDSS"],
     "type": "Survey"
+  },
+  "Galaxy Survey": {
+    "es_name": "Sondeo de Galaxias",
+    "alias": ["Cartografiado de Galaxias"],
+    "type": "Generic Term"
   }
 }
