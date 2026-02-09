@@ -1414,12 +1414,20 @@ with tab6:
     # --- Source Health Dashboard ---
     health_data = load_source_health()
     if health_data:
-        st.subheader("🩺 Estado de Salud (Última Ejecución)")
+        # Normalize data structure (handle 'sources' wrapper)
+        if "sources" in health_data and isinstance(health_data["sources"], dict):
+            health_data_sources = health_data["sources"]
+            last_run_time = health_data.get("generated_at", "Unknown")
+        else:
+            health_data_sources = health_data
+            last_run_time = "Unknown"
+
+        st.subheader(f"🩺 Estado de Salud (Última Ejecución: {last_run_time})")
 
         # Metrics Calculation
-        total_sources = len(health_data)
-        feed_ok_count = sum(1 for s in health_data.values() if s.get("feed_ok"))
-        content_ok_count = sum(1 for s in health_data.values() if s.get("content_ok"))
+        total_sources = len(health_data_sources)
+        feed_ok_count = sum(1 for s in health_data_sources.values() if isinstance(s, dict) and s.get("feed_ok"))
+        content_ok_count = sum(1 for s in health_data_sources.values() if isinstance(s, dict) and s.get("content_ok"))
         failed_count = total_sources - feed_ok_count
 
         success_rate = (feed_ok_count / total_sources * 100) if total_sources > 0 else 0
@@ -1428,34 +1436,26 @@ with tab6:
         m1.metric("Fuentes Totales", total_sources)
         m2.metric("Success Rate (Feed)", f"{success_rate:.1f}%")
         m3.metric(
-            "Con Contenido", f"{content_ok_count}", help="Artículos guardados > 0"
+            "Feed OK",
+            f"{feed_ok_count}/{total_sources}",
+            delta=feed_ok_count - total_sources if failed_count > 0 else 0,
         )
-        m4.metric(
-            "Fallando",
-            failed_count,
-            delta=-failed_count if failed_count > 0 else 0,
-            delta_color="inverse",
-        )
+        m4.metric("Content OK", f"{content_ok_count}/{total_sources}")
 
-        # Failing Sources Table
         if failed_count > 0:
-            st.warning(f"⚠️ {failed_count} fuentes fallaron en la última ejecución.")
-            failed_items = [
-                {
-                    "Source": sid,
-                    "Error": d.get("last_error_message"),
-                    "Latency": f"{d.get('latency', 0):.2f}s",
-                }
-                for sid, d in health_data.items()
-                if not d.get("feed_ok")
-            ]
-            st.table(failed_items)
+            st.warning(f"⚠️ {failed_count} fuentes fallando")
+            with st.expander("Ver Errores"):
+                for source_id, data in health_data_sources.items():
+                    if isinstance(data, dict) and not data.get("feed_ok"):
+                        st.error(
+                            f"**{source_id}** (Status: {data.get('status')}) - {data.get('last_error_details')}"
+                        )
 
         # Detailed Health Dataframe
         with st.expander("📊 Ver Matriz de Salud Completa"):
             import pandas as pd
 
-            health_df = pd.DataFrame.from_dict(health_data, orient="index")
+            health_df = pd.DataFrame.from_dict(health_data_sources, orient="index")
             # Reorder columns for readability
             cols = [
                 "feed_ok",

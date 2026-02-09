@@ -262,7 +262,7 @@ class EditorAgent:
             raise ValueError("No parsing valid JSON object found")
         return result
 
-    def _critic_pass(self, content: str) -> bool:
+    def _critic_pass(self, content: str) -> tuple[bool, str | None]:
         """
         Stage 1.5: Critic Guardrail.
         Verifies that the content is in Spanish and relevant to science.
@@ -301,14 +301,16 @@ class EditorAgent:
             result = self._extract_json(response)
 
             score = result.get("score", 0)
+            reason = result.get("reason", "Unknown reason") # Default reason
+            
             if score < self.critic_threshold:
                 logger.warning(
-                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {result.get('reason')}"
+                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {reason}"
                 )
-                return False
+                return False, reason
 
             logger.info(f"✅ Critic Pass Passed (Score: {score})")
-            return True
+            return True, None
         except Exception as e:
             logger.warning(f"Critic Pass Failed (Error): {e} - Failing Open (MVS)")
             # MVS Decision: If critic crashes, do we fail open or closed?
@@ -316,7 +318,23 @@ class EditorAgent:
             # Let's Fail Closed for safety as per "Do No Harm".
             # BUT implementation plan says "Discard article".
             # So return False.
-            return False
+            return False, f"Critic Exception: {e}"
+
+    def _repair_editorial(self, base_content: str, feedback: str) -> str:
+        """
+        Stage 2.5 Repair: Re-run adaptation with specific feedback.
+        """
+        logger.info(f"🔧 Repairing Editorial Content based on feedback: {feedback}")
+        system_prompt = self.prompts.get("editor", {}).get("system", "")
+        repair_prompt = (
+            f"The previous version was rejected by the Quality Control Editor for the following reason:\n"
+            f"'{feedback}'\n\n"
+            f"Please rewrite the article to address this specific issue while maintaining the original style and structure.\n"
+            f"Base Content:\n{base_content}"
+        )
+        return self._send_prompt(
+            repair_prompt, system=system_prompt, model=self.editor_model
+        )
 
     def _generate_headlines(self, adapted_content: str) -> dict:
         """Stage 3: Headline Generation & Metadata"""
@@ -516,13 +534,27 @@ class EditorAgent:
             final_content = self._extract_markdown_content(final_content)  # Cleanup
             cache_s2.write_text(final_content, encoding="utf-8")
 
-        # --- STAGE 2.5: Critic Pass (MVS) ---
-        print("\n--- STAGE 2.5: Critic Pass (Validation) ---")
-        # We run this on the adapted content to be sure.
-        if not self._critic_pass(final_content):
-            raise ValueError(
-                "Translation Guardrail: Content rejected by critic (Not Spanish or Not Science)"
-            )
+        # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
+        print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
+        
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            # We run this on the adapted content to be sure.
+            is_valid, reason = self._critic_pass(final_content)
+            
+            if is_valid:
+                break
+            
+            if attempt < max_retries:
+                print(f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing...")
+                print(f"   Reason: {reason}")
+                # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
+                final_content = self._repair_editorial(translated_text, reason)
+                final_content = self._extract_markdown_content(final_content) # Cleanup
+            else:
+                 raise ValueError(
+                    f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
+                )
 
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")

@@ -344,26 +344,7 @@ reddit_science:
   etag: null
   last_modified: null
   _group: COMMUNITY_FEEDS
-openai_research:
-  name: OpenAI Research
-  url: https://openai.com/research
-  credibility_score: 0.92
-  update_frequency: weekly
-  category: artificial_intelligence
-  language: en
-  impact_factor: null
-  description: Latest research from OpenAI
-  # No verified RSS feed available, blocking requests.
-  is_active: false
-  fetch_mode: headless # Requires headless if enabled
-  collector_type: headless
-  selectors:
-    item: div.snap-start
-    link: a
-    title: div.text-h5 p
-  etag: null
-  last_modified: null
-  _group: AI_LABS
+
 deepmind_blog:
   name: Google DeepMind
   url: https://deepmind.google/blog/rss.xml
