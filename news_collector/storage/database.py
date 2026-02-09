@@ -1305,4 +1305,8 @@ def get_database_manager() -> DatabaseManager:
     global _db_manager
     if _db_manager is None:
         _db_manager = DatabaseManager()
+    elif _db_manager.SessionLocal is None:
+        # Instance exists but was closed (zombie). Re-initialize.
+        logger.warning("♻️ Detectada instancia de DB cerrada. Reinicializando...")
+        _db_manager = DatabaseManager()
     return _db_manager

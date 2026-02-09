@@ -641,10 +641,13 @@ class RSSCollector(BaseCollector):
                     ):
                         script.decompose()
                     cand["content"] = soup.get_text(separator=" ", strip=True)
-                else:
-                    # Ensure we fallback to summary if no content is found or allowed
-                    if not cand.get("content"):
-                        cand["content"] = cand.get("summary", "")
+                
+                # Fallback logic
+                if not cand.get("content"):
+                    cand["content"] = cand.get("summary", "")
+                    # Mark as fallback so validation rules can be lenient
+                    if cand["content"]:  # Only if we actually have a summary
+                        cand["content_mode"] = "summary_fallback"
 
                 # Image Extraction Logic
                 image_status = "MISSING_SOURCE"
