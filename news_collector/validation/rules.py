@@ -56,10 +56,15 @@ class MinContentLengthRule(ValidationRule):
         # Simple word count approximation
         word_count = len(content.split())
 
-        if word_count < self.min_words:
+        if article.get("content_mode") in ("summary_only", "summary_fallback"):
+            min_words = 20  # Relaxed limit for summaries
+        else:
+            min_words = self.min_words
+
+        if word_count < min_words:
             return ValidationResult(
                 is_valid=False,
-                reason=f"Content too short ({word_count} words < {self.min_words})",
+                reason=f"Content too short ({word_count} words < {min_words})",
                 rule_name=self.name,
             )
         return ValidationResult(is_valid=True, rule_name=self.name)
@@ -85,6 +90,10 @@ class TitleBodyRelevanceRule(ValidationRule):
         if not title or not content:
             # Cannot validate if missing fields, but let's be permissive here
             # or aggressive? Let's be permissive and rely on other rules.
+            return ValidationResult(is_valid=True, rule_name=self.name)
+
+        # Skip strict relevance check for summaries (they often miss keywords)
+        if article.get("content_mode") in ("summary_only", "summary_fallback"):
             return ValidationResult(is_valid=True, rule_name=self.name)
 
         title_words = [w for w in re.split(r"\W+", title) if len(w) > 3]
