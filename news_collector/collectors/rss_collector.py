@@ -641,7 +641,7 @@ class RSSCollector(BaseCollector):
                     ):
                         script.decompose()
                     cand["content"] = soup.get_text(separator=" ", strip=True)
-                
+
                 # Fallback logic
                 if not cand.get("content"):
                     cand["content"] = cand.get("summary", "")

@@ -22,7 +22,7 @@ class TestEditorAgentTags(unittest.TestCase):
         self.agent._extract_json = MagicMock(return_value={"direct": "Title"})
         # Mock min_content_length to avoid validation error
         self.agent.min_content_length = 0
-        self.agent._critic_pass = MagicMock(return_value=True)
+        self.agent._critic_pass = MagicMock(return_value=(True, None))
         self.agent._generate_headlines = MagicMock(
             return_value={
                 "direct": "Direct Headline",

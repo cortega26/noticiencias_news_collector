@@ -138,7 +138,9 @@ class GitHubPublisher:
 
             # AUTO-UPDATE: Merge origin/main to get latest CI/App fixes
             try:
-                logger.info(f"Merging origin/main into {branch_name} to ensure freshness...")
+                logger.info(
+                    f"Merging origin/main into {branch_name} to ensure freshness..."
+                )
                 repo.git.pull("origin", "main", "--no-rebase")
                 logger.info("Successfully merged origin/main.")
             except Exception as e:

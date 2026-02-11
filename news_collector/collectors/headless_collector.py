@@ -78,7 +78,7 @@ class HeadlessCollector(BaseCollector):
                 viewport={"width": 1920, "height": 1080},
                 locale="en-US",
             )
-            
+
             # Add init script to hide webdriver property (Stealth)
             await context.add_init_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
@@ -146,20 +146,26 @@ class HeadlessCollector(BaseCollector):
                             "collector.headless.content_fetch_failed",
                             details={"url": article["url"], "error": str(e)},
                         )
-                
+
                 # Ensure valid defaults if fetch failed
                 if not article.get("content"):
-                    article["content"] = None  # None is better than empty string for "no content"
+                    article["content"] = (
+                        None  # None is better than empty string for "no content"
+                    )
                     article["content_mode"] = "summary_only"
                     # synthesize a summary to pass validation (min 30 chars)
                     # Title + URL is usually safe
                     fallback_summary = f"{article.get('title', '')}. Read more at: {article.get('url', '')}"
                     if len(fallback_summary) < 30:
-                         fallback_summary += " [Content unavailable]"
+                        fallback_summary += " [Content unavailable]"
                     article["summary"] = fallback_summary
 
                 # Fix zero values to pass validation if we have minimal content
-                article["word_count"] = len((article.get("content") or "").split()) or len((article.get("summary") or "").split()) or 1
+                article["word_count"] = (
+                    len((article.get("content") or "").split())
+                    or len((article.get("summary") or "").split())
+                    or 1
+                )
                 article["reading_time_minutes"] = max(1, article["word_count"] // 200)
 
                 if self._save_article(article):
@@ -266,9 +272,9 @@ class HeadlessCollector(BaseCollector):
                 "document.title !== 'Just a moment...'", timeout=30000
             )
             await page.wait_for_timeout(3000)  # Extra buffer for hydration
-        except Exception:
+        except Exception as e:
             # Emit warning but proceed
-            pass
+            logger.warning(f"Failed to wait for hydration: {e}")
 
     async def _fetch_full_content(
         self, context: BrowserContext, url: str
@@ -297,9 +303,9 @@ class HeadlessCollector(BaseCollector):
             return None
         except Exception as e:
             self._emit_log(
-                "warning", 
+                "warning",
                 "collector.headless.fetch_error",
-                details={"url": url, "error": str(e)}
+                details={"url": url, "error": str(e)},
             )
             return None
         finally:

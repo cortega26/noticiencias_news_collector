@@ -1426,8 +1426,16 @@ with tab6:
 
         # Metrics Calculation
         total_sources = len(health_data_sources)
-        feed_ok_count = sum(1 for s in health_data_sources.values() if isinstance(s, dict) and s.get("feed_ok"))
-        content_ok_count = sum(1 for s in health_data_sources.values() if isinstance(s, dict) and s.get("content_ok"))
+        feed_ok_count = sum(
+            1
+            for s in health_data_sources.values()
+            if isinstance(s, dict) and s.get("feed_ok")
+        )
+        content_ok_count = sum(
+            1
+            for s in health_data_sources.values()
+            if isinstance(s, dict) and s.get("content_ok")
+        )
         failed_count = total_sources - feed_ok_count
 
         success_rate = (feed_ok_count / total_sources * 100) if total_sources > 0 else 0
