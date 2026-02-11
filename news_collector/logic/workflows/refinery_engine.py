@@ -146,6 +146,28 @@ class RefineryEngine:
         # 2. AI Processing
         # We pass canonical_date to ensure the frontmatter matches our filename expectation
         logger.info(f"Processing with intended date: {canonical_date}")
+
+        # --- IMAGE HANDLING ---
+        # 2a. Download Remote Image (if present)
+        # We need a slug for the image filename. 
+        # If we have a DB slug, use that. If not, construct a tentative one.
+        # Note: If we don't have a DB slug yet, the filename might change slightly later 
+        # (e.g. if we add a random suffix for uniqueness), but using a base slug here is fine.
+        
+        image_slug = db_canonical_slug # e.g. "2024-01-01-my-title"
+        if not image_slug:
+             # Create a safe base slug from ID or Title
+             # Using same logic as below (but simplified for image filename)
+             safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", article_id)
+             image_slug = f"{canonical_date}-{safe_id}"
+        
+        raw_image_url = article.get("image_url")
+        if raw_image_url and raw_image_url.startswith("http"):
+             local_image_ref = self._download_image(raw_image_url, image_slug, target_dir)
+             if local_image_ref:
+                 logger.info(f"Updated article image to local asset: {local_image_ref}")
+                 article["image_url"] = local_image_ref
+
         refined_content = self.editor.process_article(
             article, override_date=canonical_date
         )
@@ -257,3 +279,44 @@ class RefineryEngine:
             if match:
                 slug = match.group(1).strip()
         return slug
+
+    def _download_image(self, url: str, slug: str, target_dir: Path) -> str | None:
+        """
+        Downloads a remote image to the local assets directory.
+        Returns the Astro-compatible local path (e.g. "~/assets/images/slug.jpg")
+        or None if download fails.
+        """
+        if not url or not url.startswith("http"):
+            return None
+
+        # Determine extension
+        # Simple heuristic from URL, default to .jpg if unknown/complex
+        ext = ".jpg"
+        if ".png" in url.lower():
+            ext = ".png"
+        elif ".webp" in url.lower():
+            ext = ".webp"
+        elif ".jpeg" in url.lower():
+            ext = ".jpg"
+
+        filename = f"{slug}{ext}"
+        
+        # Paths
+        assets_dir = target_dir / "src/assets/images"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        local_path = assets_dir / filename
+        
+        logger.info(f"Downloading image from {url} to {local_path}")
+        
+        from news_collector.infrastructure.requests_client import RobustRequestsClient
+        
+        try:
+            with RobustRequestsClient() as client:
+                response = client.get(url, timeout=15)
+                local_path.write_bytes(response.content)
+                logger.info(f"Image saved: {local_path}")
+                # Return Astro format
+                return f"~/assets/images/{filename}"
+        except Exception as e:
+            logger.error(f"Failed to download image {url}: {e}")
+            return None
