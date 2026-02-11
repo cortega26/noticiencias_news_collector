@@ -61,9 +61,9 @@ def test_critic_rejects_bad_terminology(agent):
                 '{"score": 10, "reason": "Incorrect translation of Dark Energy Survey"}'
             )
 
-            result = agent._critic_pass("La Encuesta de Energía Oscura reportó...")
+            is_valid, _ = agent._critic_pass("La Encuesta de Energía Oscura reportó...")
 
-            assert result is False
+            assert is_valid is False
 
 
 def test_critic_accepts_good_terminology(agent):
@@ -72,8 +72,8 @@ def test_critic_accepts_good_terminology(agent):
         with patch.object(agent, "_send_prompt") as mock_send:
             mock_send.return_value = '{"score": 95, "reason": "Correct terminology"}'
 
-            result = agent._critic_pass(
+            is_valid, _ = agent._critic_pass(
                 "El Observatorio de la Energía Oscura reportó..."
             )
 
-            assert result is True
+            assert is_valid is True

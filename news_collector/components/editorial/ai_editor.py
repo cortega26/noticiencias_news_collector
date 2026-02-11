@@ -272,7 +272,7 @@ class EditorAgent:
 
         if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
             logger.info("Translation Guard Disabled (Critic Pass Skipped)")
-            return True
+            return True, None
 
         system_prompt = "You are a Quality Control Editor. Output ONLY JSON."
 
@@ -301,8 +301,8 @@ class EditorAgent:
             result = self._extract_json(response)
 
             score = result.get("score", 0)
-            reason = result.get("reason", "Unknown reason") # Default reason
-            
+            reason = result.get("reason", "Unknown reason")  # Default reason
+
             if score < self.critic_threshold:
                 logger.warning(
                     f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {reason}"
@@ -536,23 +536,25 @@ class EditorAgent:
 
         # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
         print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
-        
+
         max_retries = 2
         for attempt in range(max_retries + 1):
             # We run this on the adapted content to be sure.
             is_valid, reason = self._critic_pass(final_content)
-            
+
             if is_valid:
                 break
-            
+
             if attempt < max_retries:
-                print(f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing...")
+                print(
+                    f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
+                )
                 print(f"   Reason: {reason}")
                 # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
                 final_content = self._repair_editorial(translated_text, reason)
-                final_content = self._extract_markdown_content(final_content) # Cleanup
+                final_content = self._extract_markdown_content(final_content)  # Cleanup
             else:
-                 raise ValueError(
+                raise ValueError(
                     f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
                 )
 

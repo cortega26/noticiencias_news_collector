@@ -2,17 +2,60 @@
 # Punto de entrada principal del News Collector System
 # ==================================================
 
+
+
 import argparse
 import asyncio
 import sys
+import json
+import traceback
 
 from news_collector.system import create_system
+from news_collector.exceptions import NewsCollectorError, EXIT_INTERNAL, EXIT_SUCCESS
+
+
+def handle_exception(e: Exception) -> None:
+    """
+    Maneja excepciones no capturadas de nivel superior.
+    Genera log estructurado JSON en stdout y mensaje legible en stderr.
+    """
+    # Determinar código de salida y categoría basado en la excepción
+    if isinstance(e, NewsCollectorError):
+        exit_code = e.exit_code
+        error_category = e.category
+    else:
+        exit_code = EXIT_INTERNAL
+        error_category = "UNEXPECTED_ERROR"
+
+    # Construir log estructurado
+    error_log = {
+        "status": "fatal_error",
+        "error_category": error_category,
+        "error_type": type(e).__name__,
+        "error_message": str(e),
+        "traceback": traceback.format_exc(),
+        "exit_code": exit_code,
+    }
+
+    # 1. Log JSON estructurado a stdout (para herramientas de observabilidad)
+    print(json.dumps(error_log))
+
+    # 2. Mensaje legible a stderr (para humanos en consola)
+    sys.stderr.write(f"\n❌ ERROR FATAL DEL SISTEMA (Código {exit_code}):\n")
+    sys.stderr.write(f"   Categoría: {error_category}\n")
+    sys.stderr.write(f"   Tipo: {type(e).__name__}\n")
+    sys.stderr.write(f"   Detalle: {str(e)}\n")
+    sys.stderr.write("   Consulte los logs estructurados para el stack trace completo.\n")
+
+    # 3. Salida con código de error decidido
+    sys.exit(exit_code)
 
 
 def main():
     """
     Función principal para ejecución desde línea de comandos.
     """
+    # Configuración de argumentos
     parser = argparse.ArgumentParser(description="News Collector System")
     parser.add_argument("--sources", nargs="+", help="Fuentes específicas a procesar")
     parser.add_argument(
@@ -33,9 +76,9 @@ def main():
         help="Límite de artículos por fuente (override)",
     )
 
-    args = parser.parse_args()
-
     try:
+        args = parser.parse_args()
+
         # Override global config if requested (Runtime patching for dry-run/testing)
         if args.max_items_per_source:
             from news_collector.config.settings import COLLECTION_CONFIG
@@ -49,6 +92,7 @@ def main():
 
         print("🔧 Inicializando sistema...")
         if not system.initialize():
+            # Error controlado de inicialización
             print("❌ Error durante inicialización")
             sys.exit(1)
 
@@ -106,13 +150,13 @@ def main():
                     )
 
         print("\n✅ Ejecución completada exitosamente!")
+        sys.exit(EXIT_SUCCESS)
 
     except KeyboardInterrupt:
         print("\n⚠️  Ejecución interrumpida por usuario")
-        sys.exit(1)
+        sys.exit(130)  # Standard SIGINT exit code
     except Exception as e:
-        print(f"\n❌ Error durante ejecución: {str(e)}")
-        sys.exit(1)
+        handle_exception(e)
 
 
 if __name__ == "__main__":
