@@ -10,8 +10,11 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
+import yaml
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
+
+from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariants
 
 
 class HeadlinesSchema(BaseModel):
@@ -615,36 +618,59 @@ class EditorAgent:
             logger.error(f"Tag Normalization Failed: {e}")
             final_tags = headlines.get("tags") or []  # Fallback to raw
 
-        # Construct Frontmatter
-        metadata_block = [
-            "---",
-            "schema_version: 2",
-            f'title: "{final_title}"',
-            f"date: {override_date or time.strftime('%Y-%m-%d')}",
-            'author: "Noticiencias AI"',
-            f'categories: ["{final_category}"]',
-            f'tags: {json.dumps(final_tags)}',  # Use sanitized tags
-        ]
-
-        if final_excerpt:
-            metadata_block.append(f'excerpt: "{final_excerpt}"')
-
-        if image_url:
-            metadata_block.append(f'image: "{image_url}"')
-        if source_url:
-            metadata_block.append(f'source_url: "{source_url}"')
-
-        if article_id != "unknown":
-            metadata_block.append(f'refinery_id: "{article_id}"')
-
-        # Add generated headlines as hidden metadata for A/B testing potential
-        metadata_block.append("headlines_variants:")
-        metadata_block.append(f"  question: \"{headlines.get('question', '')}\"")
-        metadata_block.append(f"  benefit: \"{headlines.get('benefit', '')}\"")
-
-        metadata_block.append("---\n")
-
-        full_article = "\n".join(metadata_block) + "\n" + final_content
+        # Construct Frontmatter using Strict Contract
+        try:
+            # Prepare optional fields
+            hl_variants = None
+            if headlines:
+                hl_variants = HeadlinesVariants(
+                    question=headlines.get("question", ""),
+                    benefit=headlines.get("benefit", "")
+                )
+            
+            # Categories is a list in schema, but currently single string. Wrap it.
+            # Schema expects list[str].
+            categories_list = [final_category] if final_category else []
+            
+            post = AstroPost(
+                title=final_title,
+                schema_version=2,
+                date=override_date or time.strftime('%Y-%m-%d'),
+                author="Noticiencias AI",
+                categories=categories_list,
+                tags=final_tags,
+                excerpt=final_excerpt,
+                image=image_url if image_url else None,
+                source_url=source_url if source_url else None,
+                refinery_id=article_id if article_id != "unknown" else None,
+                headlines_variants=hl_variants
+            )
+            
+            # Dump to YAML
+            # We use distinct model_dump to exclude None values for cleaner output
+            model_dict = post.model_dump(exclude_none=True)
+            
+            # Custom dumper to ensure correct formatting (e.g. no aliases)
+            # Safe dump usually avoids complex tags
+            yaml_frontmatter = yaml.dump(
+                model_dict, 
+                allow_unicode=True, 
+                default_flow_style=False, 
+                sort_keys=False,
+                width=1000  # Avoid wrapping long lines unnecessarily
+            ).strip()
+            
+            # Prepare full article
+            full_article = f"---\n{yaml_frontmatter}\n---\n\n{final_content}"
+            
+        except ValidationError as ve:
+            logger.error(f"❌ AstroPost Contract Validation Failed: {ve}")
+            # Fallback to manual construction or raise?
+            # FAIL CLOSED: Raise error to prevent invalid content
+            raise ValueError(f"Content Contract Violation: {ve}") from ve
+        except Exception as e:
+            logger.error(f"❌ Error generating frontmatter: {e}")
+            raise
 
         # Append source link footer if missing
         if source_url and "Fuente original" not in full_article:
