@@ -9,25 +9,26 @@ from news_collector.contracts.adapters import (
     adapt_to_scoring_input,
     adapt_to_validation_payload,
 )
-from news_collector.contracts.export import ExportArticleModel, ExportContractV1
+from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.contracts.scoring import ScoringInputModel
 from pydantic import ValidationError
 
 
-def test_export_contract_v1_valid():
-    """Verify ExportContractV1 structure."""
+def test_export_contract_v2_valid():
+    """Verify ExportContractV2 structure."""
     article = ExportArticleModel(
         id=1,
         title="Test",
         url="http://example.com",
         source_name="test_source",
+        source_id="test_id",
         score=0.9,
     )
-    contract = ExportContractV1(
+    contract = ExportContractV2(
         generated_at=datetime.now().isoformat(), article_count=1, articles=[article]
     )
     dump = contract.model_dump()
-    assert dump["contract"] == "news_collector.export.v1"
+    assert dump["contract"] == "news_collector.export.v2"
     assert dump["articles"][0]["score"] == 0.9  # Alias checking
 
 
@@ -38,6 +39,7 @@ def test_adapt_article_to_export():
     mock_art.title = "Export Me"
     mock_art.url = "http://test.com/1"
     mock_art.source_name = "MockSource"
+    mock_art.source_id = "mock_src_id"
     mock_art.final_score = 0.85
     mock_art.article_metadata = {"foo": "bar"}
     mock_art.published_date = datetime(2025, 1, 1)
