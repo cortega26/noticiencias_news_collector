@@ -1,0 +1,49 @@
+stop_tags:
+  - other
+  - varios
+  - misc
+  - et al
+  - haps
+
+alias_map:
+  ia: inteligencia artificial
+  ai: inteligencia artificial
+  artificial intelligence: inteligencia artificial
+  salud publica: salud pública
+  energia oscura: energía oscura
+  expansion cosmica: expansión cósmica
+  nucleo terrestre: núcleo terrestre
+  fisica: física
+  quimica: química
+  medicina basada en evidencia: medicina basada en la evidencia
+  direigibles estratosfericos: dirigibles estratosféricos
+  conectividad por satelite: conectividad por satélite
+  acceso a internet: acceso a internet
+  sarampion: sarampión
+  vacunacion: vacunación
+  desinformacion: desinformación
+  ciencia solida: ciencia sólida
+  fisica cuantica: física cuántica
+  superposicion: superposición
+  ordenadores cuanticos: ordenadores cuánticos
+  electridos: eléctridos
+  mision: misión
+  periodismo cientifico: periodismo científico
+  gestion empresarial: gestión empresarial
+  transformacion profesional: transformación profesional
+  codificacion: codificación
+  programacion: programación
+  guarderia: guardería
+  energia-oscura: energía oscura
+  expansion-cosmica: expansión cósmica
+
+whitelist_short:
+  - ia
+  - adn
+  - arn
+  - sol
+  - luz
+  - gas
+  - mar
+
+max_tags_per_article: 8
