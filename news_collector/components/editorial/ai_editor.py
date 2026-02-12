@@ -341,7 +341,7 @@ class EditorAgent:
         """Stage 3: Headline Generation & Metadata"""
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe
-        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), and 'tags' (list of 3-5 semantic lowercase keywords in Spanish).\n\n{adapted_content[:2000]}"
+        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), and 'tags' (list of 3-5 semantic keywords in Spanish. Rules: lowercase, singular, specific entities/concepts. NO generic tags like 'ciencia', 'tecnologia', 'salud', 'noticia').\n\n{adapted_content[:2000]}"
         response = self._send_prompt(
             prompt, system=system_prompt, model=self.headlines_model
         )
@@ -586,6 +586,35 @@ class EditorAgent:
             final_excerpt = final_excerpt[0] if final_excerpt else ""
         final_excerpt = str(final_excerpt).replace('"', '\\"')
 
+        # Sanitize and Validate Tags (Repo-Truth Implementation)
+        try:
+            from news_collector.taxonomy.normalizer import TagNormalizer
+            normalizer = TagNormalizer()
+            
+            raw_tags = headlines.get("tags") or []
+            # Fallback if raw_tags is None or empty, use category if not 'other'
+            if not raw_tags and raw_category.lower() != "other":
+                raw_tags = [raw_category]
+                
+            # SANITIZE
+            norm_result = normalizer.sanitize_tags(raw_tags)
+            final_tags = norm_result.tags
+            
+            # VALIDATE
+            val_result = normalizer.validate_tags(final_tags)
+            if val_result.needs_review:
+                logger.warning(f"⚠️ Tags require review: {val_result.errors}")
+                # We could add a frontmatter flag 'needs_tag_review: true' here if desired
+                # for now, we just log it.
+                
+            # Audit log
+            if norm_result.replaced or norm_result.removed or norm_result.merged:
+                logger.info(f"Tag Audit: {norm_result.model_dump_json(exclude={'tags', 'warnings'})}")
+                
+        except Exception as e:
+            logger.error(f"Tag Normalization Failed: {e}")
+            final_tags = headlines.get("tags") or []  # Fallback to raw
+
         # Construct Frontmatter
         metadata_block = [
             "---",
@@ -594,8 +623,7 @@ class EditorAgent:
             f"date: {override_date or time.strftime('%Y-%m-%d')}",
             'author: "Noticiencias AI"',
             f'categories: ["{final_category}"]',
-            f'categories: ["{final_category}"]',
-            f'tags: {json.dumps(headlines.get("tags") or [t for t in [raw_category] if t.lower() != "other"])}',
+            f'tags: {json.dumps(final_tags)}',  # Use sanitized tags
         ]
 
         if final_excerpt:

@@ -4,38 +4,46 @@ stop_tags:
   - misc
   - et al
   - haps
+  - general
+  - news
+  - article
+  - articulo
+  - noticia
+  - resumen
+  - undefined
+  - null
+  - none
 
 alias_map:
+  # General Aliases
   ia: inteligencia artificial
   ai: inteligencia artificial
   artificial intelligence: inteligencia artificial
-  salud publica: salud pública
-  energia oscura: energía oscura
-  expansion cosmica: expansión cósmica
-  nucleo terrestre: núcleo terrestre
-  fisica: física
-  quimica: química
-  medicina basada en evidencia: medicina basada en la evidencia
-  direigibles estratosfericos: dirigibles estratosféricos
-  conectividad por satelite: conectividad por satélite
-  acceso a internet: acceso a internet
-  sarampion: sarampión
-  vacunacion: vacunación
-  desinformacion: desinformación
-  ciencia solida: ciencia sólida
-  fisica cuantica: física cuántica
-  superposicion: superposición
-  ordenadores cuanticos: ordenadores cuánticos
-  electridos: eléctridos
-  mision: misión
-  periodismo cientifico: periodismo científico
-  gestion empresarial: gestión empresarial
-  transformacion profesional: transformación profesional
-  codificacion: codificación
-  programacion: programación
-  guarderia: guardería
-  energia-oscura: energía oscura
-  expansion-cosmica: expansión cósmica
+  ml: machine learning
+  aprendizaje automatico: machine learning
+  llm: grandes modelos de lenguaje
+  nlp: procesamiento de lenguaje natural
+
+  # Space & Astronomy
+  esa: agencia espacial europea
+  nasa: nasa
+  jpl: jet propulsion laboratory
+  jwst: james webb space telescope
+  hubble: hubble space telescope
+  iss: estacion espacial internacional
+
+  # Biology & Health
+  dna: adn
+  rna: arn
+  crispr: crispr
+  covid: covid-19
+  covid19: covid-19
+  sars-cov-2: covid-19
+
+  # Tech & Energy
+  ev: vehiculos electricos
+  fusion: fusion nuclear
+  fision: fision nuclear
 
 whitelist_short:
   - ia
@@ -45,5 +53,17 @@ whitelist_short:
   - luz
   - gas
   - mar
+  - 5g
+  - 6g
+  - red
+  - web
+  - app
+  - api
+  - bot
+  - cern
+  - mit
 
 max_tags_per_article: 8
+min_tag_length: 3
+max_tag_length: 40
+allowed_chars_regex: "^[a-z0-9áéíóúüñ\\s]+$"
