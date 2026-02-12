@@ -64,8 +64,8 @@ class TestEditorAgentTags(unittest.TestCase):
 
         result = self.agent.process_article(raw_text)
 
-        # Check that AI tag is present
-        self.assertIn('tags: ["AI"]', result)
+        # Check that AI tag is present (aliased to semantic term)
+        self.assertIn('tags: ["inteligencia artificial"]', result)
 
 
 if __name__ == "__main__":
