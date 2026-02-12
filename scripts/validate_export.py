@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 # Define Contract Schema (Mirroring src/content/config.ts requirements)
+EXPECTED_SCHEMA_VERSION = 2
 REQUIRED_FIELDS = ["title", "url", "source_id", "published_date", "summary"]
 
 OPTIONAL_FIELDS = [
@@ -72,6 +73,11 @@ def validate_export(file_path: Path) -> bool:  # noqa: C901
     if not isinstance(data, dict):
         print("❌ Error: Root element must be a dictionary")
         return False
+
+    # Check Schema Version
+    if data.get("schema_version") != EXPECTED_SCHEMA_VERSION:
+         print(f"❌ Error: Schema version mismatch. Expected {EXPECTED_SCHEMA_VERSION}, got {data.get('schema_version')}")
+         return False
 
     # Depending on export format, articles might be in a key like 'articles' or 'selection_results' -> 'articles'
     # Based on main.py: results["summary"]["articles_found"] etc.
