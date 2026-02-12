@@ -18,7 +18,8 @@ class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
     question: str = Field(..., min_length=5)
     benefit: str = Field(..., min_length=5)
-    excerpt: str = Field(..., min_length=10, max_length=200)
+    excerpt: str = Field(..., min_length=10, max_length=300)
+    tags: list[str] = Field(default_factory=list, min_length=1, max_length=8)
 
 
 class EditorAgent:
@@ -340,7 +341,7 @@ class EditorAgent:
         """Stage 3: Headline Generation & Metadata"""
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe
-        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', and 'excerpt' (max 140 chars summary for SEO).\n\n{adapted_content[:2000]}"
+        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), and 'tags' (list of 3-5 semantic lowercase keywords in Spanish).\n\n{adapted_content[:2000]}"
         response = self._send_prompt(
             prompt, system=system_prompt, model=self.headlines_model
         )
@@ -593,7 +594,8 @@ class EditorAgent:
             f"date: {override_date or time.strftime('%Y-%m-%d')}",
             'author: "Noticiencias AI"',
             f'categories: ["{final_category}"]',
-            f'tags: {json.dumps([t for t in [raw_category] if t.lower() != "other"])}',
+            f'categories: ["{final_category}"]',
+            f'tags: {json.dumps(headlines.get("tags") or [t for t in [raw_category] if t.lower() != "other"])}',
         ]
 
         if final_excerpt:
