@@ -53,7 +53,7 @@ class MockORMArticle:
 
 
 def test_export_boundary_uses_contract(mock_system):
-    """Verify export_latest_articles uses ExportContractV1."""
+    """Verify export_latest_articles uses ExportContractV2."""
     # Mock DB return
     mock_art = MockORMArticle(id=1, title="Test Export", source_name="Export Src")
     mock_system.db_manager.get_articles_by_score.return_value = [mock_art]
@@ -63,9 +63,9 @@ def test_export_boundary_uses_contract(mock_system):
 
     # Result should be a dict (serialized model)
     assert isinstance(result, dict)
-    assert result["contract"] == "news_collector.export.v1"
+    assert result["contract"] == "news_collector.export.v2"
     assert result["article_count"] == 1
-    assert result["version"] == "1.0"
+    assert result["version"] == "2.0"
 
 
 def test_validation_boundary_uses_payload(mock_system):
