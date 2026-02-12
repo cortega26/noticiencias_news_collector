@@ -167,6 +167,9 @@ class RefineryEngine:
              if local_image_ref:
                  logger.info(f"Updated article image to local asset: {local_image_ref}")
                  article["image_url"] = local_image_ref
+             else:
+                 logger.warning(f"Failed to download image from {raw_image_url} (or download failed). Enforcing local policy with default.")
+                 article["image_url"] = "~/assets/images/default.png"
 
         refined_content = self.editor.process_article(
             article, override_date=canonical_date
