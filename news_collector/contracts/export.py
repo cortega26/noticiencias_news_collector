@@ -20,6 +20,7 @@ class ExportArticleModel(BaseModel):
     summary: str | None = None
     content: str | None = None
     source_name: str
+    source_id: str
     published_date: str | None = None
     published_at: str | None = None
     published_url: str | None = None
@@ -36,17 +37,18 @@ class ExportArticleModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
-class ExportContractV1(BaseModel):
+
+class ExportContractV2(BaseModel):
     """
-    Version 1 of the data export contract.
+    Version 2 of the data export contract.
 
     Used by: system.export_latest_articles
     """
 
-    schema_version: int = 1
-    version: Literal["1.0"] = "1.0"
+    schema_version: int = 2
+    version: Literal["2.0"] = "2.0"
     generated_at: str
-    contract: Literal["news_collector.export.v1"] = "news_collector.export.v1"
+    contract: Literal["news_collector.export.v2"] = "news_collector.export.v2"
     article_count: int
     articles: List[ExportArticleModel]
 

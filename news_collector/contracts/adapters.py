@@ -21,6 +21,7 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
         summary=article.summary,
         content=article.content,
         source_name=article.source_name,
+        source_id=article.source_id,
         published_date=(
             article.published_date.isoformat() if article.published_date else None
         ),

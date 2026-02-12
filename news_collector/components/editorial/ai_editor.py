@@ -588,6 +588,7 @@ class EditorAgent:
         # Construct Frontmatter
         metadata_block = [
             "---",
+            "schema_version: 2",
             f'title: "{final_title}"',
             f"date: {override_date or time.strftime('%Y-%m-%d')}",
             'author: "Noticiencias AI"',

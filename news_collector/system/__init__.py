@@ -277,13 +277,13 @@ class NewsCollectorSystem:
             )
 
             from news_collector.contracts.adapters import adapt_article_to_export
-            from news_collector.contracts.export import ExportContractV1
+            from news_collector.contracts.export import ExportContractV2
 
             # Transform via adapter
             export_models = [adapt_article_to_export(art) for art in articles]
 
             # Create contract
-            contract = ExportContractV1(
+            contract = ExportContractV2(
                 generated_at=datetime.now(timezone.utc).isoformat(),
                 article_count=len(export_models),
                 articles=export_models,
