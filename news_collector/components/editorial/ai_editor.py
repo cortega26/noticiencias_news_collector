@@ -648,7 +648,8 @@ class EditorAgent:
             
             # Dump to YAML
             # We use distinct model_dump to exclude None values for cleaner output
-            model_dict = post.model_dump(exclude_none=True)
+            # mode='json' ensures complex types like HttpUrl are converted to strings
+            model_dict = post.model_dump(exclude_none=True, mode='json')
             
             # Custom dumper to ensure correct formatting (e.g. no aliases)
             # Safe dump usually avoids complex tags
