@@ -11,6 +11,9 @@ if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
 
 logger = logging.getLogger("RefineryEngine")
+import json
+
+MANIFEST_FILENAME = "refinery_manifest.json"
 
 
 class RefineryEngine:
@@ -33,6 +36,8 @@ class RefineryEngine:
         self.git = git_handler
         self.editor = editor_agent
         self.config = config
+        self._manifest_cache: Dict[str, str] = {}
+        self._manifest_loaded = False
 
     def process_articles(
         self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
@@ -203,6 +208,9 @@ class RefineryEngine:
 
         target_file_path.write_text(refined_content, encoding="utf-8")
         logger.info(f"Written content to {target_file_path}")
+        
+        # Update Sidecar Manifest
+        self._update_manifest(posts_dir, article_id, output_filename)
 
         # 5. Create Branch
         # Use a deterministic branch name based on ID or filename to allow updates to same PR
@@ -241,21 +249,30 @@ class RefineryEngine:
             return False
 
     def _find_existing_file(self, posts_dir: Path, article_id: str) -> Path | None:
-        """Scans the posts directory for a file containing the given refinery_id."""
+        """
+        Scans for existing file using O(1) manifest lookup, falling back to scanner.
+        """
         if not posts_dir.exists():
             return None
+            
+        # 1. Try Manifest Lookup (Fast Path)
+        self._load_manifest(posts_dir)
+        if article_id in self._manifest_cache:
+            filename = self._manifest_cache[article_id]
+            file_path = posts_dir / filename
+            if file_path.exists():
+                logger.info(f"⚡ Manifest hit: {article_id} -> {filename}")
+                return file_path
+            else:
+                logger.warning(f"Manifest stale: {filename} not found on disk.")
+                # Fallthrough to robust scan
 
-        # Optimization: Check if we have a map? No, simple scan for now.
-        # 1. Try strict filename match if we knew the slug? No, slug changes.
-        # 2. Grep content.
-
-        # Check most recent files first?
-        # Or search all.
+        # 2. Legacy Linear Scan (Slow Path)
+        logger.info(f"🐢 Slow scan triggered for {article_id}")
         try:
             for file_path in posts_dir.glob("*.md"):
                 try:
                     # Quick check: read first 50 lines (Frontmatter)
-                    # We assume refinery_id is in frontmatter
                     content_head = []
                     with open(file_path, "r") as f:
                         for _ in range(50):
@@ -266,6 +283,8 @@ class RefineryEngine:
 
                     full_head = "".join(content_head)
                     if f'refinery_id: "{article_id}"' in full_head:
+                        # Self-heal manifest
+                        self._update_manifest(posts_dir, article_id, file_path.name)
                         return file_path
                 except Exception:  # noqa: S112
                     continue
@@ -273,6 +292,44 @@ class RefineryEngine:
             logger.error(f"Error scanning for existing files: {e}")
 
         return None
+
+    def _load_manifest(self, posts_dir: Path):
+        """Loads the sidecar manifest into memory if not already loaded."""
+        if self._manifest_loaded:
+            return
+            
+        manifest_path = posts_dir / MANIFEST_FILENAME
+        if manifest_path.exists():
+            try:
+                data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                self._manifest_cache = data
+                self._manifest_loaded = True
+                logger.info(f"Loaded refinery manifest with {len(data)} entries")
+            except Exception as e:
+                logger.error(f"Failed to load manifest: {e}")
+                self._manifest_cache = {}
+        else:
+            self._manifest_cache = {}
+            self._manifest_loaded = True # Loaded empty
+
+    def _update_manifest(self, posts_dir: Path, article_id: str, filename: str):
+        """Updates the in-memory cache and persists the manifest to disk."""
+        self._load_manifest(posts_dir) # Ensure loaded
+        
+        if self._manifest_cache.get(article_id) == filename:
+            return # No change
+            
+        self._manifest_cache[article_id] = filename
+        
+        # Persist
+        try:
+            manifest_path = posts_dir / MANIFEST_FILENAME
+            manifest_path.write_text(
+                json.dumps(self._manifest_cache, indent=2, sort_keys=True), 
+                encoding="utf-8"
+            )
+        except Exception as e:
+            logger.error(f"Failed to persist manifest: {e}")
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
         """Extracts slug from frontmatter or generates fallback."""
