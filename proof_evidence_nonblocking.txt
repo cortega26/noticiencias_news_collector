@@ -1,506 +1,576 @@
-[32m13:42:44[0m | [1mINFO    [0m | 🎯 Sistema de logging configurado exitosamente
-2026-02-14 13:42:44,313 - 
+[32m20:34:49[0m | [1mINFO    [0m | 🎯 Sistema de logging configurado exitosamente
+2026-02-14 20:34:50,056 - 
 === TEST 1: NON-BLOCKING & CLEAN TEARDOWN (Event Control) ===
-2026-02-14 13:42:44,346 - Executing 10 iterations of process_single_article...
-2026-02-14 13:42:44,347 - Processing with intended date: 2024-01-01
-[32m13:42:44[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
-2026-02-14 13:42:44,347 - Submitting Auditor task for id_0 (Non-blocking)...
-[32m13:42:44[0m | [1mINFO    [0m | Starting Editorial Audit for id_0...
-2026-02-14 13:42:44,348 - 🔒 Identity Created: 2024-01-01-article-id_0
-2026-02-14 13:42:44,348 - [MockProvider] Blocked waiting for release...
-2026-02-14 13:42:44,349 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_0.md
-2026-02-14 13:42:44,349 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,349 - Could not mark non-numeric ID id_0 in main DB. Skipping state update.
-2026-02-14 13:42:44,349 - Iter 0: 2.3706 ms
-2026-02-14 13:42:44,349 - 🐢 Slow scan triggered for id_1
-2026-02-14 13:42:44,349 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,349 - Auditor Backpressure: Skipping audit for id_1 (Previous task still active)
-2026-02-14 13:42:44,349 - 🔒 Identity Created: 2024-01-01-article-id_1
-2026-02-14 13:42:44,349 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_1.md
-2026-02-14 13:42:44,350 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,350 - Could not mark non-numeric ID id_1 in main DB. Skipping state update.
-2026-02-14 13:42:44,350 - Iter 1: 0.8154 ms
-2026-02-14 13:42:44,350 - 🐢 Slow scan triggered for id_2
-2026-02-14 13:42:44,350 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,350 - Auditor Backpressure: Skipping audit for id_2 (Previous task still active)
-2026-02-14 13:42:44,350 - 🔒 Identity Created: 2024-01-01-article-id_2
-2026-02-14 13:42:44,350 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_2.md
-2026-02-14 13:42:44,350 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,350 - Could not mark non-numeric ID id_2 in main DB. Skipping state update.
-2026-02-14 13:42:44,350 - Iter 2: 0.7424 ms
-2026-02-14 13:42:44,351 - 🐢 Slow scan triggered for id_3
-2026-02-14 13:42:44,351 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,351 - Auditor Backpressure: Skipping audit for id_3 (Previous task still active)
-2026-02-14 13:42:44,351 - 🔒 Identity Created: 2024-01-01-article-id_3
-2026-02-14 13:42:44,351 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_3.md
-2026-02-14 13:42:44,351 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,351 - Could not mark non-numeric ID id_3 in main DB. Skipping state update.
-2026-02-14 13:42:44,351 - Iter 3: 0.7145 ms
-2026-02-14 13:42:44,351 - 🐢 Slow scan triggered for id_4
-2026-02-14 13:42:44,352 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,352 - Auditor Backpressure: Skipping audit for id_4 (Previous task still active)
-2026-02-14 13:42:44,352 - 🔒 Identity Created: 2024-01-01-article-id_4
-2026-02-14 13:42:44,352 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_4.md
-2026-02-14 13:42:44,352 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,352 - Could not mark non-numeric ID id_4 in main DB. Skipping state update.
-2026-02-14 13:42:44,352 - Iter 4: 0.6659 ms
-2026-02-14 13:42:44,352 - 🐢 Slow scan triggered for id_5
-2026-02-14 13:42:44,352 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,352 - Auditor Backpressure: Skipping audit for id_5 (Previous task still active)
-2026-02-14 13:42:44,352 - 🔒 Identity Created: 2024-01-01-article-id_5
-2026-02-14 13:42:44,352 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_5.md
-2026-02-14 13:42:44,352 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,352 - Could not mark non-numeric ID id_5 in main DB. Skipping state update.
-2026-02-14 13:42:44,353 - Iter 5: 0.5989 ms
-2026-02-14 13:42:44,353 - 🐢 Slow scan triggered for id_6
-2026-02-14 13:42:44,353 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,353 - Auditor Backpressure: Skipping audit for id_6 (Previous task still active)
-2026-02-14 13:42:44,353 - 🔒 Identity Created: 2024-01-01-article-id_6
-2026-02-14 13:42:44,353 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_6.md
-2026-02-14 13:42:44,353 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,353 - Could not mark non-numeric ID id_6 in main DB. Skipping state update.
-2026-02-14 13:42:44,353 - Iter 6: 0.7734 ms
-2026-02-14 13:42:44,353 - 🐢 Slow scan triggered for id_7
-2026-02-14 13:42:44,354 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,354 - Auditor Backpressure: Skipping audit for id_7 (Previous task still active)
-2026-02-14 13:42:44,354 - 🔒 Identity Created: 2024-01-01-article-id_7
-2026-02-14 13:42:44,354 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_7.md
-2026-02-14 13:42:44,354 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,354 - Could not mark non-numeric ID id_7 in main DB. Skipping state update.
-2026-02-14 13:42:44,354 - Iter 7: 0.9036 ms
-2026-02-14 13:42:44,354 - 🐢 Slow scan triggered for id_8
-2026-02-14 13:42:44,355 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,355 - Auditor Backpressure: Skipping audit for id_8 (Previous task still active)
-2026-02-14 13:42:44,355 - 🔒 Identity Created: 2024-01-01-article-id_8
-2026-02-14 13:42:44,355 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_8.md
-2026-02-14 13:42:44,355 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,355 - Could not mark non-numeric ID id_8 in main DB. Skipping state update.
-2026-02-14 13:42:44,355 - Iter 8: 0.6595 ms
-2026-02-14 13:42:44,355 - 🐢 Slow scan triggered for id_9
-2026-02-14 13:42:44,355 - Processing with intended date: 2024-01-01
-2026-02-14 13:42:44,355 - Auditor Backpressure: Skipping audit for id_9 (Previous task still active)
-2026-02-14 13:42:44,355 - 🔒 Identity Created: 2024-01-01-article-id_9
-2026-02-14 13:42:44,356 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_9.md
-2026-02-14 13:42:44,356 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,356 - Could not mark non-numeric ID id_9 in main DB. Skipping state update.
-2026-02-14 13:42:44,356 - Iter 9: 0.7899 ms
-2026-02-14 13:42:44,356 - Total time: 0.0094s
-2026-02-14 13:42:44,356 - ✅ Max Latency 2.37ms < 50ms
-2026-02-14 13:42:44,456 - ✅ Backpressure verified: Only 1 active audit despite 10 submissions.
-2026-02-14 13:42:44,456 - Releasing background tasks...
-2026-02-14 13:42:44,456 - [MockProvider] Released!
-[32m13:42:44[0m | [1mINFO    [0m | Audit Complete for id_0. Epistemic Score: 5.0
-2026-02-14 13:42:44,458 - ✅ Teardown complete (No hang).
-2026-02-14 13:42:44,458 - 
+[32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
+2026-02-14 20:34:50,057 - Refinery Engine initialized with Editorial Mode: STANDARD
+2026-02-14 20:34:50,086 - Executing 10 iterations of process_single_article...
+2026-02-14 20:34:50,086 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,087 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+[32m20:34:50[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
+2026-02-14 20:34:50,087 - Submitting Auditor task for id_0 (Non-blocking)...
+[32m20:34:50[0m | [1mINFO    [0m | Starting Editorial Audit for id_0...
+2026-02-14 20:34:50,087 - 🔒 Identity Created: 2024-01-01-article-id_0
+2026-02-14 20:34:50,088 - [MockProvider] Blocked waiting for release...
+2026-02-14 20:34:50,089 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_0.md
+2026-02-14 20:34:50,089 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,089 - Could not mark non-numeric ID id_0 in main DB. Skipping state update.
+2026-02-14 20:34:50,089 - Iter 0: 2.7537 ms
+2026-02-14 20:34:50,089 - 🐢 Slow scan triggered for id_1
+2026-02-14 20:34:50,089 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,089 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,089 - Auditor Backpressure: Skipping audit for id_1 (Previous task still active)
+2026-02-14 20:34:50,090 - 🔒 Identity Created: 2024-01-01-article-id_1
+2026-02-14 20:34:50,090 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_1.md
+2026-02-14 20:34:50,090 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,090 - Could not mark non-numeric ID id_1 in main DB. Skipping state update.
+2026-02-14 20:34:50,090 - Iter 1: 1.2610 ms
+2026-02-14 20:34:50,090 - 🐢 Slow scan triggered for id_2
+2026-02-14 20:34:50,091 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,091 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,091 - Auditor Backpressure: Skipping audit for id_2 (Previous task still active)
+2026-02-14 20:34:50,091 - 🔒 Identity Created: 2024-01-01-article-id_2
+2026-02-14 20:34:50,091 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_2.md
+2026-02-14 20:34:50,091 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,091 - Could not mark non-numeric ID id_2 in main DB. Skipping state update.
+2026-02-14 20:34:50,091 - Iter 2: 0.9344 ms
+2026-02-14 20:34:50,091 - 🐢 Slow scan triggered for id_3
+2026-02-14 20:34:50,092 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,092 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,092 - Auditor Backpressure: Skipping audit for id_3 (Previous task still active)
+2026-02-14 20:34:50,092 - 🔒 Identity Created: 2024-01-01-article-id_3
+2026-02-14 20:34:50,092 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_3.md
+2026-02-14 20:34:50,092 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,092 - Could not mark non-numeric ID id_3 in main DB. Skipping state update.
+2026-02-14 20:34:50,092 - Iter 3: 0.7157 ms
+2026-02-14 20:34:50,092 - 🐢 Slow scan triggered for id_4
+2026-02-14 20:34:50,092 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,092 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,092 - Auditor Backpressure: Skipping audit for id_4 (Previous task still active)
+2026-02-14 20:34:50,092 - 🔒 Identity Created: 2024-01-01-article-id_4
+2026-02-14 20:34:50,093 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_4.md
+2026-02-14 20:34:50,093 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,093 - Could not mark non-numeric ID id_4 in main DB. Skipping state update.
+2026-02-14 20:34:50,093 - Iter 4: 0.7710 ms
+2026-02-14 20:34:50,093 - 🐢 Slow scan triggered for id_5
+2026-02-14 20:34:50,093 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,093 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,093 - Auditor Backpressure: Skipping audit for id_5 (Previous task still active)
+2026-02-14 20:34:50,093 - 🔒 Identity Created: 2024-01-01-article-id_5
+2026-02-14 20:34:50,093 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_5.md
+2026-02-14 20:34:50,093 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,094 - Could not mark non-numeric ID id_5 in main DB. Skipping state update.
+2026-02-14 20:34:50,094 - Iter 5: 0.7105 ms
+2026-02-14 20:34:50,094 - 🐢 Slow scan triggered for id_6
+2026-02-14 20:34:50,094 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,094 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,094 - Auditor Backpressure: Skipping audit for id_6 (Previous task still active)
+2026-02-14 20:34:50,094 - 🔒 Identity Created: 2024-01-01-article-id_6
+2026-02-14 20:34:50,094 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_6.md
+2026-02-14 20:34:50,094 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,094 - Could not mark non-numeric ID id_6 in main DB. Skipping state update.
+2026-02-14 20:34:50,094 - Iter 6: 0.7553 ms
+2026-02-14 20:34:50,094 - 🐢 Slow scan triggered for id_7
+2026-02-14 20:34:50,095 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,095 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,095 - Auditor Backpressure: Skipping audit for id_7 (Previous task still active)
+2026-02-14 20:34:50,095 - 🔒 Identity Created: 2024-01-01-article-id_7
+2026-02-14 20:34:50,095 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_7.md
+2026-02-14 20:34:50,095 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,095 - Could not mark non-numeric ID id_7 in main DB. Skipping state update.
+2026-02-14 20:34:50,095 - Iter 7: 0.7100 ms
+2026-02-14 20:34:50,095 - 🐢 Slow scan triggered for id_8
+2026-02-14 20:34:50,095 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,095 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,095 - Auditor Backpressure: Skipping audit for id_8 (Previous task still active)
+2026-02-14 20:34:50,095 - 🔒 Identity Created: 2024-01-01-article-id_8
+2026-02-14 20:34:50,096 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_8.md
+2026-02-14 20:34:50,096 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,096 - Could not mark non-numeric ID id_8 in main DB. Skipping state update.
+2026-02-14 20:34:50,096 - Iter 8: 0.7391 ms
+2026-02-14 20:34:50,096 - 🐢 Slow scan triggered for id_9
+2026-02-14 20:34:50,096 - Processing with intended date: 2024-01-01
+2026-02-14 20:34:50,096 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,096 - Auditor Backpressure: Skipping audit for id_9 (Previous task still active)
+2026-02-14 20:34:50,096 - 🔒 Identity Created: 2024-01-01-article-id_9
+2026-02-14 20:34:50,096 - Written content to temp_proof_hardened/src/content/posts/2024-01-01-article-id_9.md
+2026-02-14 20:34:50,097 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,097 - Could not mark non-numeric ID id_9 in main DB. Skipping state update.
+2026-02-14 20:34:50,097 - Iter 9: 0.7606 ms
+2026-02-14 20:34:50,097 - Total time: 0.0105s
+2026-02-14 20:34:50,097 - ✅ Max Latency 2.75ms < 50ms
+2026-02-14 20:34:50,197 - ✅ Backpressure verified: Only 1 active audit despite 10 submissions.
+2026-02-14 20:34:50,197 - Releasing background tasks...
+2026-02-14 20:34:50,197 - [MockProvider] Released!
+[32m20:34:50[0m | [1mINFO    [0m | Audit Complete for id_0. Epistemic Score: 5.0
+2026-02-14 20:34:50,199 - ✅ Teardown complete (No hang).
+2026-02-14 20:34:50,199 - 
 === TEST 2: BURST SUBMISSION & BACKPRESSURE ===
-2026-02-14 13:42:44,477 - Bursting 50 submissions...
-2026-02-14 13:42:44,477 - Loaded refinery manifest with 10 entries
-2026-02-14 13:42:44,477 - 🐢 Slow scan triggered for burst_0
-2026-02-14 13:42:44,477 - Processing with intended date: 2026-02-14
-[32m13:42:44[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
-2026-02-14 13:42:44,478 - Submitting Auditor task for burst_0 (Non-blocking)...
-[32m13:42:44[0m | [1mINFO    [0m | Starting Editorial Audit for burst_0...
-2026-02-14 13:42:44,478 - 🔒 Identity Created: 2026-02-14-article-burst_0
-2026-02-14 13:42:44,479 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_0.md
-2026-02-14 13:42:44,479 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,479 - Could not mark non-numeric ID burst_0 in main DB. Skipping state update.
-2026-02-14 13:42:44,479 - 🐢 Slow scan triggered for burst_1
-2026-02-14 13:42:44,479 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,479 - Auditor Backpressure: Skipping audit for burst_1 (Previous task still active)
-2026-02-14 13:42:44,479 - 🔒 Identity Created: 2026-02-14-article-burst_1
-2026-02-14 13:42:44,480 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_1.md
-2026-02-14 13:42:44,480 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,480 - Could not mark non-numeric ID burst_1 in main DB. Skipping state update.
-2026-02-14 13:42:44,480 - 🐢 Slow scan triggered for burst_2
-2026-02-14 13:42:44,480 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,480 - Auditor Backpressure: Skipping audit for burst_2 (Previous task still active)
-2026-02-14 13:42:44,480 - 🔒 Identity Created: 2026-02-14-article-burst_2
-2026-02-14 13:42:44,480 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_2.md
-2026-02-14 13:42:44,481 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,481 - Could not mark non-numeric ID burst_2 in main DB. Skipping state update.
-2026-02-14 13:42:44,485 - 🐢 Slow scan triggered for burst_3
-2026-02-14 13:42:44,485 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,485 - Auditor Backpressure: Skipping audit for burst_3 (Previous task still active)
-2026-02-14 13:42:44,485 - 🔒 Identity Created: 2026-02-14-article-burst_3
-2026-02-14 13:42:44,486 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_3.md
-2026-02-14 13:42:44,486 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,486 - Could not mark non-numeric ID burst_3 in main DB. Skipping state update.
-2026-02-14 13:42:44,486 - 🐢 Slow scan triggered for burst_4
-2026-02-14 13:42:44,486 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,486 - Auditor Backpressure: Skipping audit for burst_4 (Previous task still active)
-2026-02-14 13:42:44,486 - 🔒 Identity Created: 2026-02-14-article-burst_4
-2026-02-14 13:42:44,486 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_4.md
-2026-02-14 13:42:44,487 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,487 - Could not mark non-numeric ID burst_4 in main DB. Skipping state update.
-2026-02-14 13:42:44,487 - 🐢 Slow scan triggered for burst_5
-2026-02-14 13:42:44,487 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,487 - Auditor Backpressure: Skipping audit for burst_5 (Previous task still active)
-2026-02-14 13:42:44,487 - 🔒 Identity Created: 2026-02-14-article-burst_5
-2026-02-14 13:42:44,487 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_5.md
-2026-02-14 13:42:44,488 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,488 - Could not mark non-numeric ID burst_5 in main DB. Skipping state update.
-2026-02-14 13:42:44,488 - 🐢 Slow scan triggered for burst_6
-2026-02-14 13:42:44,488 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,488 - Auditor Backpressure: Skipping audit for burst_6 (Previous task still active)
-2026-02-14 13:42:44,488 - 🔒 Identity Created: 2026-02-14-article-burst_6
-2026-02-14 13:42:44,488 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_6.md
-2026-02-14 13:42:44,489 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,489 - Could not mark non-numeric ID burst_6 in main DB. Skipping state update.
-2026-02-14 13:42:44,489 - 🐢 Slow scan triggered for burst_7
-2026-02-14 13:42:44,489 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,489 - Auditor Backpressure: Skipping audit for burst_7 (Previous task still active)
-2026-02-14 13:42:44,489 - 🔒 Identity Created: 2026-02-14-article-burst_7
-2026-02-14 13:42:44,489 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_7.md
-2026-02-14 13:42:44,489 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,489 - Could not mark non-numeric ID burst_7 in main DB. Skipping state update.
-2026-02-14 13:42:44,489 - 🐢 Slow scan triggered for burst_8
-2026-02-14 13:42:44,490 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,490 - Auditor Backpressure: Skipping audit for burst_8 (Previous task still active)
-2026-02-14 13:42:44,490 - 🔒 Identity Created: 2026-02-14-article-burst_8
-2026-02-14 13:42:44,490 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_8.md
-2026-02-14 13:42:44,491 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,491 - Could not mark non-numeric ID burst_8 in main DB. Skipping state update.
-2026-02-14 13:42:44,491 - 🐢 Slow scan triggered for burst_9
-2026-02-14 13:42:44,492 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,492 - Auditor Backpressure: Skipping audit for burst_9 (Previous task still active)
-2026-02-14 13:42:44,492 - 🔒 Identity Created: 2026-02-14-article-burst_9
-2026-02-14 13:42:44,492 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_9.md
-2026-02-14 13:42:44,492 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,492 - Could not mark non-numeric ID burst_9 in main DB. Skipping state update.
-2026-02-14 13:42:44,492 - 🐢 Slow scan triggered for burst_10
-2026-02-14 13:42:44,493 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,493 - Auditor Backpressure: Skipping audit for burst_10 (Previous task still active)
-2026-02-14 13:42:44,493 - 🔒 Identity Created: 2026-02-14-article-burst_10
-2026-02-14 13:42:44,493 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_10.md
-2026-02-14 13:42:44,493 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,493 - Could not mark non-numeric ID burst_10 in main DB. Skipping state update.
-2026-02-14 13:42:44,493 - 🐢 Slow scan triggered for burst_11
-2026-02-14 13:42:44,494 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,494 - Auditor Backpressure: Skipping audit for burst_11 (Previous task still active)
-2026-02-14 13:42:44,494 - 🔒 Identity Created: 2026-02-14-article-burst_11
-2026-02-14 13:42:44,494 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_11.md
-2026-02-14 13:42:44,494 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,494 - Could not mark non-numeric ID burst_11 in main DB. Skipping state update.
-2026-02-14 13:42:44,494 - 🐢 Slow scan triggered for burst_12
-2026-02-14 13:42:44,495 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,495 - Auditor Backpressure: Skipping audit for burst_12 (Previous task still active)
-2026-02-14 13:42:44,495 - 🔒 Identity Created: 2026-02-14-article-burst_12
-2026-02-14 13:42:44,495 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_12.md
-2026-02-14 13:42:44,495 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,495 - Could not mark non-numeric ID burst_12 in main DB. Skipping state update.
-2026-02-14 13:42:44,496 - 🐢 Slow scan triggered for burst_13
-2026-02-14 13:42:44,496 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,496 - Auditor Backpressure: Skipping audit for burst_13 (Previous task still active)
-2026-02-14 13:42:44,496 - 🔒 Identity Created: 2026-02-14-article-burst_13
-2026-02-14 13:42:44,496 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_13.md
-2026-02-14 13:42:44,496 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,497 - Could not mark non-numeric ID burst_13 in main DB. Skipping state update.
-2026-02-14 13:42:44,497 - 🐢 Slow scan triggered for burst_14
-2026-02-14 13:42:44,497 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,497 - Auditor Backpressure: Skipping audit for burst_14 (Previous task still active)
-2026-02-14 13:42:44,497 - 🔒 Identity Created: 2026-02-14-article-burst_14
-2026-02-14 13:42:44,497 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_14.md
-2026-02-14 13:42:44,498 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,498 - Could not mark non-numeric ID burst_14 in main DB. Skipping state update.
-2026-02-14 13:42:44,498 - 🐢 Slow scan triggered for burst_15
-2026-02-14 13:42:44,498 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,498 - Auditor Backpressure: Skipping audit for burst_15 (Previous task still active)
-2026-02-14 13:42:44,498 - 🔒 Identity Created: 2026-02-14-article-burst_15
-2026-02-14 13:42:44,498 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_15.md
-2026-02-14 13:42:44,499 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,499 - Could not mark non-numeric ID burst_15 in main DB. Skipping state update.
-2026-02-14 13:42:44,499 - 🐢 Slow scan triggered for burst_16
-2026-02-14 13:42:44,499 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,499 - Auditor Backpressure: Skipping audit for burst_16 (Previous task still active)
-2026-02-14 13:42:44,499 - 🔒 Identity Created: 2026-02-14-article-burst_16
-2026-02-14 13:42:44,499 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_16.md
-2026-02-14 13:42:44,499 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,499 - Could not mark non-numeric ID burst_16 in main DB. Skipping state update.
-2026-02-14 13:42:44,499 - 🐢 Slow scan triggered for burst_17
-2026-02-14 13:42:44,500 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,500 - Auditor Backpressure: Skipping audit for burst_17 (Previous task still active)
-2026-02-14 13:42:44,500 - 🔒 Identity Created: 2026-02-14-article-burst_17
-2026-02-14 13:42:44,500 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_17.md
-2026-02-14 13:42:44,500 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,500 - Could not mark non-numeric ID burst_17 in main DB. Skipping state update.
-2026-02-14 13:42:44,500 - 🐢 Slow scan triggered for burst_18
-2026-02-14 13:42:44,501 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,501 - Auditor Backpressure: Skipping audit for burst_18 (Previous task still active)
-2026-02-14 13:42:44,501 - 🔒 Identity Created: 2026-02-14-article-burst_18
-2026-02-14 13:42:44,501 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_18.md
-2026-02-14 13:42:44,501 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,501 - Could not mark non-numeric ID burst_18 in main DB. Skipping state update.
-2026-02-14 13:42:44,501 - 🐢 Slow scan triggered for burst_19
-2026-02-14 13:42:44,502 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,502 - Auditor Backpressure: Skipping audit for burst_19 (Previous task still active)
-2026-02-14 13:42:44,502 - 🔒 Identity Created: 2026-02-14-article-burst_19
-2026-02-14 13:42:44,502 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_19.md
-2026-02-14 13:42:44,502 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,502 - Could not mark non-numeric ID burst_19 in main DB. Skipping state update.
-2026-02-14 13:42:44,503 - 🐢 Slow scan triggered for burst_20
-2026-02-14 13:42:44,504 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,504 - Auditor Backpressure: Skipping audit for burst_20 (Previous task still active)
-2026-02-14 13:42:44,504 - 🔒 Identity Created: 2026-02-14-article-burst_20
-2026-02-14 13:42:44,505 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_20.md
-2026-02-14 13:42:44,506 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,506 - Could not mark non-numeric ID burst_20 in main DB. Skipping state update.
-2026-02-14 13:42:44,506 - 🐢 Slow scan triggered for burst_21
-2026-02-14 13:42:44,507 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,507 - Auditor Backpressure: Skipping audit for burst_21 (Previous task still active)
-2026-02-14 13:42:44,507 - 🔒 Identity Created: 2026-02-14-article-burst_21
-2026-02-14 13:42:44,507 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_21.md
-2026-02-14 13:42:44,508 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,508 - Could not mark non-numeric ID burst_21 in main DB. Skipping state update.
-2026-02-14 13:42:44,508 - 🐢 Slow scan triggered for burst_22
-2026-02-14 13:42:44,509 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,509 - Auditor Backpressure: Skipping audit for burst_22 (Previous task still active)
-2026-02-14 13:42:44,509 - 🔒 Identity Created: 2026-02-14-article-burst_22
-2026-02-14 13:42:44,509 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_22.md
-2026-02-14 13:42:44,509 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,509 - Could not mark non-numeric ID burst_22 in main DB. Skipping state update.
-2026-02-14 13:42:44,509 - 🐢 Slow scan triggered for burst_23
-2026-02-14 13:42:44,510 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,510 - Auditor Backpressure: Skipping audit for burst_23 (Previous task still active)
-2026-02-14 13:42:44,510 - 🔒 Identity Created: 2026-02-14-article-burst_23
-2026-02-14 13:42:44,510 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_23.md
-2026-02-14 13:42:44,510 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,510 - Could not mark non-numeric ID burst_23 in main DB. Skipping state update.
-2026-02-14 13:42:44,511 - 🐢 Slow scan triggered for burst_24
-2026-02-14 13:42:44,511 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,511 - Auditor Backpressure: Skipping audit for burst_24 (Previous task still active)
-2026-02-14 13:42:44,511 - 🔒 Identity Created: 2026-02-14-article-burst_24
-2026-02-14 13:42:44,512 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_24.md
-2026-02-14 13:42:44,512 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,512 - Could not mark non-numeric ID burst_24 in main DB. Skipping state update.
-2026-02-14 13:42:44,512 - 🐢 Slow scan triggered for burst_25
-2026-02-14 13:42:44,512 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,512 - Auditor Backpressure: Skipping audit for burst_25 (Previous task still active)
-2026-02-14 13:42:44,512 - 🔒 Identity Created: 2026-02-14-article-burst_25
-2026-02-14 13:42:44,513 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_25.md
-2026-02-14 13:42:44,513 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,513 - Could not mark non-numeric ID burst_25 in main DB. Skipping state update.
-2026-02-14 13:42:44,514 - 🐢 Slow scan triggered for burst_26
-2026-02-14 13:42:44,514 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,514 - Auditor Backpressure: Skipping audit for burst_26 (Previous task still active)
-2026-02-14 13:42:44,514 - 🔒 Identity Created: 2026-02-14-article-burst_26
-2026-02-14 13:42:44,515 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_26.md
-2026-02-14 13:42:44,515 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,515 - Could not mark non-numeric ID burst_26 in main DB. Skipping state update.
-2026-02-14 13:42:44,515 - 🐢 Slow scan triggered for burst_27
-2026-02-14 13:42:44,516 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,516 - Auditor Backpressure: Skipping audit for burst_27 (Previous task still active)
-2026-02-14 13:42:44,516 - 🔒 Identity Created: 2026-02-14-article-burst_27
-2026-02-14 13:42:44,516 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_27.md
-2026-02-14 13:42:44,517 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,517 - Could not mark non-numeric ID burst_27 in main DB. Skipping state update.
-2026-02-14 13:42:44,517 - 🐢 Slow scan triggered for burst_28
-2026-02-14 13:42:44,518 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,518 - Auditor Backpressure: Skipping audit for burst_28 (Previous task still active)
-2026-02-14 13:42:44,518 - 🔒 Identity Created: 2026-02-14-article-burst_28
-2026-02-14 13:42:44,518 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_28.md
-2026-02-14 13:42:44,518 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,518 - Could not mark non-numeric ID burst_28 in main DB. Skipping state update.
-2026-02-14 13:42:44,518 - 🐢 Slow scan triggered for burst_29
-2026-02-14 13:42:44,519 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,519 - Auditor Backpressure: Skipping audit for burst_29 (Previous task still active)
-2026-02-14 13:42:44,519 - 🔒 Identity Created: 2026-02-14-article-burst_29
-2026-02-14 13:42:44,519 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_29.md
-2026-02-14 13:42:44,519 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,519 - Could not mark non-numeric ID burst_29 in main DB. Skipping state update.
-2026-02-14 13:42:44,519 - 🐢 Slow scan triggered for burst_30
-2026-02-14 13:42:44,520 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,520 - Auditor Backpressure: Skipping audit for burst_30 (Previous task still active)
-2026-02-14 13:42:44,520 - 🔒 Identity Created: 2026-02-14-article-burst_30
-2026-02-14 13:42:44,520 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_30.md
-2026-02-14 13:42:44,521 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,521 - Could not mark non-numeric ID burst_30 in main DB. Skipping state update.
-2026-02-14 13:42:44,521 - 🐢 Slow scan triggered for burst_31
-2026-02-14 13:42:44,521 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,522 - Auditor Backpressure: Skipping audit for burst_31 (Previous task still active)
-2026-02-14 13:42:44,522 - 🔒 Identity Created: 2026-02-14-article-burst_31
-2026-02-14 13:42:44,522 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_31.md
-2026-02-14 13:42:44,522 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,522 - Could not mark non-numeric ID burst_31 in main DB. Skipping state update.
-2026-02-14 13:42:44,522 - 🐢 Slow scan triggered for burst_32
-2026-02-14 13:42:44,523 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,523 - Auditor Backpressure: Skipping audit for burst_32 (Previous task still active)
-2026-02-14 13:42:44,523 - 🔒 Identity Created: 2026-02-14-article-burst_32
-2026-02-14 13:42:44,523 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_32.md
-2026-02-14 13:42:44,523 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,523 - Could not mark non-numeric ID burst_32 in main DB. Skipping state update.
-2026-02-14 13:42:44,523 - 🐢 Slow scan triggered for burst_33
-2026-02-14 13:42:44,524 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,524 - Auditor Backpressure: Skipping audit for burst_33 (Previous task still active)
-2026-02-14 13:42:44,524 - 🔒 Identity Created: 2026-02-14-article-burst_33
-2026-02-14 13:42:44,524 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_33.md
-2026-02-14 13:42:44,524 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,524 - Could not mark non-numeric ID burst_33 in main DB. Skipping state update.
-2026-02-14 13:42:44,524 - 🐢 Slow scan triggered for burst_34
-2026-02-14 13:42:44,525 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,525 - Auditor Backpressure: Skipping audit for burst_34 (Previous task still active)
-2026-02-14 13:42:44,525 - 🔒 Identity Created: 2026-02-14-article-burst_34
-2026-02-14 13:42:44,526 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_34.md
-2026-02-14 13:42:44,526 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,526 - Could not mark non-numeric ID burst_34 in main DB. Skipping state update.
-2026-02-14 13:42:44,526 - 🐢 Slow scan triggered for burst_35
-2026-02-14 13:42:44,527 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,527 - Auditor Backpressure: Skipping audit for burst_35 (Previous task still active)
-2026-02-14 13:42:44,527 - 🔒 Identity Created: 2026-02-14-article-burst_35
-2026-02-14 13:42:44,528 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_35.md
-2026-02-14 13:42:44,528 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,528 - Could not mark non-numeric ID burst_35 in main DB. Skipping state update.
-2026-02-14 13:42:44,528 - 🐢 Slow scan triggered for burst_36
-2026-02-14 13:42:44,529 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,529 - Auditor Backpressure: Skipping audit for burst_36 (Previous task still active)
-2026-02-14 13:42:44,529 - 🔒 Identity Created: 2026-02-14-article-burst_36
-2026-02-14 13:42:44,529 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_36.md
-2026-02-14 13:42:44,529 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,529 - Could not mark non-numeric ID burst_36 in main DB. Skipping state update.
-2026-02-14 13:42:44,529 - 🐢 Slow scan triggered for burst_37
-2026-02-14 13:42:44,530 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,530 - Auditor Backpressure: Skipping audit for burst_37 (Previous task still active)
-2026-02-14 13:42:44,530 - 🔒 Identity Created: 2026-02-14-article-burst_37
-2026-02-14 13:42:44,530 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_37.md
-2026-02-14 13:42:44,530 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,530 - Could not mark non-numeric ID burst_37 in main DB. Skipping state update.
-2026-02-14 13:42:44,530 - 🐢 Slow scan triggered for burst_38
-2026-02-14 13:42:44,531 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,531 - Auditor Backpressure: Skipping audit for burst_38 (Previous task still active)
-2026-02-14 13:42:44,531 - 🔒 Identity Created: 2026-02-14-article-burst_38
-2026-02-14 13:42:44,531 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_38.md
-2026-02-14 13:42:44,532 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,532 - Could not mark non-numeric ID burst_38 in main DB. Skipping state update.
-2026-02-14 13:42:44,532 - 🐢 Slow scan triggered for burst_39
-2026-02-14 13:42:44,533 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,533 - Auditor Backpressure: Skipping audit for burst_39 (Previous task still active)
-2026-02-14 13:42:44,533 - 🔒 Identity Created: 2026-02-14-article-burst_39
-2026-02-14 13:42:44,533 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_39.md
-2026-02-14 13:42:44,533 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,533 - Could not mark non-numeric ID burst_39 in main DB. Skipping state update.
-2026-02-14 13:42:44,533 - 🐢 Slow scan triggered for burst_40
-2026-02-14 13:42:44,534 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,534 - Auditor Backpressure: Skipping audit for burst_40 (Previous task still active)
-2026-02-14 13:42:44,534 - 🔒 Identity Created: 2026-02-14-article-burst_40
-2026-02-14 13:42:44,535 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_40.md
-2026-02-14 13:42:44,535 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,535 - Could not mark non-numeric ID burst_40 in main DB. Skipping state update.
-2026-02-14 13:42:44,535 - 🐢 Slow scan triggered for burst_41
-2026-02-14 13:42:44,536 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,536 - Auditor Backpressure: Skipping audit for burst_41 (Previous task still active)
-2026-02-14 13:42:44,536 - 🔒 Identity Created: 2026-02-14-article-burst_41
-2026-02-14 13:42:44,536 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_41.md
-2026-02-14 13:42:44,536 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,537 - Could not mark non-numeric ID burst_41 in main DB. Skipping state update.
-2026-02-14 13:42:44,537 - 🐢 Slow scan triggered for burst_42
-2026-02-14 13:42:44,537 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,537 - Auditor Backpressure: Skipping audit for burst_42 (Previous task still active)
-2026-02-14 13:42:44,537 - 🔒 Identity Created: 2026-02-14-article-burst_42
-2026-02-14 13:42:44,538 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_42.md
-2026-02-14 13:42:44,538 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,538 - Could not mark non-numeric ID burst_42 in main DB. Skipping state update.
-2026-02-14 13:42:44,538 - 🐢 Slow scan triggered for burst_43
-2026-02-14 13:42:44,539 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,539 - Auditor Backpressure: Skipping audit for burst_43 (Previous task still active)
-2026-02-14 13:42:44,539 - 🔒 Identity Created: 2026-02-14-article-burst_43
-2026-02-14 13:42:44,539 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_43.md
-2026-02-14 13:42:44,539 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,539 - Could not mark non-numeric ID burst_43 in main DB. Skipping state update.
-2026-02-14 13:42:44,539 - 🐢 Slow scan triggered for burst_44
-2026-02-14 13:42:44,540 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,540 - Auditor Backpressure: Skipping audit for burst_44 (Previous task still active)
-2026-02-14 13:42:44,540 - 🔒 Identity Created: 2026-02-14-article-burst_44
-2026-02-14 13:42:44,540 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_44.md
-2026-02-14 13:42:44,541 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,541 - Could not mark non-numeric ID burst_44 in main DB. Skipping state update.
-2026-02-14 13:42:44,541 - 🐢 Slow scan triggered for burst_45
-2026-02-14 13:42:44,542 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,542 - Auditor Backpressure: Skipping audit for burst_45 (Previous task still active)
-2026-02-14 13:42:44,542 - 🔒 Identity Created: 2026-02-14-article-burst_45
-2026-02-14 13:42:44,542 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_45.md
-2026-02-14 13:42:44,543 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,543 - Could not mark non-numeric ID burst_45 in main DB. Skipping state update.
-2026-02-14 13:42:44,543 - 🐢 Slow scan triggered for burst_46
-2026-02-14 13:42:44,544 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,544 - Auditor Backpressure: Skipping audit for burst_46 (Previous task still active)
-2026-02-14 13:42:44,544 - 🔒 Identity Created: 2026-02-14-article-burst_46
-2026-02-14 13:42:44,544 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_46.md
-2026-02-14 13:42:44,545 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,545 - Could not mark non-numeric ID burst_46 in main DB. Skipping state update.
-2026-02-14 13:42:44,545 - 🐢 Slow scan triggered for burst_47
-2026-02-14 13:42:44,546 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,546 - Auditor Backpressure: Skipping audit for burst_47 (Previous task still active)
-2026-02-14 13:42:44,546 - 🔒 Identity Created: 2026-02-14-article-burst_47
-2026-02-14 13:42:44,546 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_47.md
-2026-02-14 13:42:44,546 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,546 - Could not mark non-numeric ID burst_47 in main DB. Skipping state update.
-2026-02-14 13:42:44,546 - 🐢 Slow scan triggered for burst_48
-2026-02-14 13:42:44,547 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,547 - Auditor Backpressure: Skipping audit for burst_48 (Previous task still active)
-2026-02-14 13:42:44,547 - 🔒 Identity Created: 2026-02-14-article-burst_48
-2026-02-14 13:42:44,547 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_48.md
-2026-02-14 13:42:44,547 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,548 - Could not mark non-numeric ID burst_48 in main DB. Skipping state update.
-2026-02-14 13:42:44,548 - 🐢 Slow scan triggered for burst_49
-2026-02-14 13:42:44,549 - Processing with intended date: 2026-02-14
-2026-02-14 13:42:44,549 - Auditor Backpressure: Skipping audit for burst_49 (Previous task still active)
-2026-02-14 13:42:44,549 - 🔒 Identity Created: 2026-02-14-article-burst_49
-2026-02-14 13:42:44,549 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_49.md
-2026-02-14 13:42:44,549 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,549 - Could not mark non-numeric ID burst_49 in main DB. Skipping state update.
-2026-02-14 13:42:44,549 - Total submissions sent to executor: 1
-2026-02-14 13:42:44,549 - ✅ Bound constraints met (<=2 actual submissions for 50 requests).
-[32m13:42:44[0m | [33m[1mWARNING [0m | Auditor received invalid provider output type (<class 'bool'>). Using defaults.
-[32m13:42:44[0m | [1mINFO    [0m | Audit Complete for burst_0. Epistemic Score: 0.0
-2026-02-14 13:42:44,552 - 
+[32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
+2026-02-14 20:34:50,200 - Refinery Engine initialized with Editorial Mode: STANDARD
+2026-02-14 20:34:50,217 - Bursting 50 submissions...
+2026-02-14 20:34:50,218 - Loaded refinery manifest with 10 entries
+2026-02-14 20:34:50,218 - 🐢 Slow scan triggered for burst_0
+2026-02-14 20:34:50,218 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,218 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+[32m20:34:50[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
+2026-02-14 20:34:50,219 - Submitting Auditor task for burst_0 (Non-blocking)...
+[32m20:34:50[0m | [1mINFO    [0m | Starting Editorial Audit for burst_0...
+2026-02-14 20:34:50,219 - 🔒 Identity Created: 2026-02-14-article-burst_0
+2026-02-14 20:34:50,220 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_0.md
+2026-02-14 20:34:50,220 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,220 - Could not mark non-numeric ID burst_0 in main DB. Skipping state update.
+2026-02-14 20:34:50,225 - 🐢 Slow scan triggered for burst_1
+2026-02-14 20:34:50,226 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,226 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,226 - Auditor Backpressure: Skipping audit for burst_1 (Previous task still active)
+2026-02-14 20:34:50,226 - 🔒 Identity Created: 2026-02-14-article-burst_1
+2026-02-14 20:34:50,226 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_1.md
+2026-02-14 20:34:50,226 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,226 - Could not mark non-numeric ID burst_1 in main DB. Skipping state update.
+2026-02-14 20:34:50,226 - 🐢 Slow scan triggered for burst_2
+2026-02-14 20:34:50,227 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,227 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,227 - Auditor Backpressure: Skipping audit for burst_2 (Previous task still active)
+2026-02-14 20:34:50,227 - 🔒 Identity Created: 2026-02-14-article-burst_2
+2026-02-14 20:34:50,227 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_2.md
+2026-02-14 20:34:50,227 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,227 - Could not mark non-numeric ID burst_2 in main DB. Skipping state update.
+2026-02-14 20:34:50,227 - 🐢 Slow scan triggered for burst_3
+2026-02-14 20:34:50,227 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,228 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,228 - Auditor Backpressure: Skipping audit for burst_3 (Previous task still active)
+2026-02-14 20:34:50,228 - 🔒 Identity Created: 2026-02-14-article-burst_3
+2026-02-14 20:34:50,228 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_3.md
+2026-02-14 20:34:50,228 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,228 - Could not mark non-numeric ID burst_3 in main DB. Skipping state update.
+2026-02-14 20:34:50,228 - 🐢 Slow scan triggered for burst_4
+2026-02-14 20:34:50,228 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,228 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,228 - Auditor Backpressure: Skipping audit for burst_4 (Previous task still active)
+2026-02-14 20:34:50,228 - 🔒 Identity Created: 2026-02-14-article-burst_4
+2026-02-14 20:34:50,229 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_4.md
+2026-02-14 20:34:50,229 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,229 - Could not mark non-numeric ID burst_4 in main DB. Skipping state update.
+2026-02-14 20:34:50,229 - 🐢 Slow scan triggered for burst_5
+2026-02-14 20:34:50,229 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,229 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,229 - Auditor Backpressure: Skipping audit for burst_5 (Previous task still active)
+2026-02-14 20:34:50,229 - 🔒 Identity Created: 2026-02-14-article-burst_5
+2026-02-14 20:34:50,229 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_5.md
+2026-02-14 20:34:50,230 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,230 - Could not mark non-numeric ID burst_5 in main DB. Skipping state update.
+2026-02-14 20:34:50,230 - 🐢 Slow scan triggered for burst_6
+2026-02-14 20:34:50,230 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,230 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,230 - Auditor Backpressure: Skipping audit for burst_6 (Previous task still active)
+2026-02-14 20:34:50,230 - 🔒 Identity Created: 2026-02-14-article-burst_6
+2026-02-14 20:34:50,231 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_6.md
+2026-02-14 20:34:50,231 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,231 - Could not mark non-numeric ID burst_6 in main DB. Skipping state update.
+2026-02-14 20:34:50,231 - 🐢 Slow scan triggered for burst_7
+2026-02-14 20:34:50,232 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,232 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,232 - Auditor Backpressure: Skipping audit for burst_7 (Previous task still active)
+2026-02-14 20:34:50,232 - 🔒 Identity Created: 2026-02-14-article-burst_7
+2026-02-14 20:34:50,232 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_7.md
+2026-02-14 20:34:50,232 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,232 - Could not mark non-numeric ID burst_7 in main DB. Skipping state update.
+2026-02-14 20:34:50,232 - 🐢 Slow scan triggered for burst_8
+2026-02-14 20:34:50,233 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,233 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,233 - Auditor Backpressure: Skipping audit for burst_8 (Previous task still active)
+2026-02-14 20:34:50,233 - 🔒 Identity Created: 2026-02-14-article-burst_8
+2026-02-14 20:34:50,233 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_8.md
+2026-02-14 20:34:50,233 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,233 - Could not mark non-numeric ID burst_8 in main DB. Skipping state update.
+2026-02-14 20:34:50,233 - 🐢 Slow scan triggered for burst_9
+2026-02-14 20:34:50,234 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,234 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,234 - Auditor Backpressure: Skipping audit for burst_9 (Previous task still active)
+2026-02-14 20:34:50,234 - 🔒 Identity Created: 2026-02-14-article-burst_9
+2026-02-14 20:34:50,234 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_9.md
+2026-02-14 20:34:50,234 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,235 - Could not mark non-numeric ID burst_9 in main DB. Skipping state update.
+2026-02-14 20:34:50,235 - 🐢 Slow scan triggered for burst_10
+2026-02-14 20:34:50,235 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,235 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,235 - Auditor Backpressure: Skipping audit for burst_10 (Previous task still active)
+2026-02-14 20:34:50,235 - 🔒 Identity Created: 2026-02-14-article-burst_10
+2026-02-14 20:34:50,236 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_10.md
+2026-02-14 20:34:50,236 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,236 - Could not mark non-numeric ID burst_10 in main DB. Skipping state update.
+2026-02-14 20:34:50,236 - 🐢 Slow scan triggered for burst_11
+2026-02-14 20:34:50,236 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,236 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,236 - Auditor Backpressure: Skipping audit for burst_11 (Previous task still active)
+2026-02-14 20:34:50,236 - 🔒 Identity Created: 2026-02-14-article-burst_11
+2026-02-14 20:34:50,237 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_11.md
+2026-02-14 20:34:50,237 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,237 - Could not mark non-numeric ID burst_11 in main DB. Skipping state update.
+2026-02-14 20:34:50,237 - 🐢 Slow scan triggered for burst_12
+2026-02-14 20:34:50,237 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,237 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,237 - Auditor Backpressure: Skipping audit for burst_12 (Previous task still active)
+2026-02-14 20:34:50,237 - 🔒 Identity Created: 2026-02-14-article-burst_12
+2026-02-14 20:34:50,238 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_12.md
+2026-02-14 20:34:50,238 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,238 - Could not mark non-numeric ID burst_12 in main DB. Skipping state update.
+2026-02-14 20:34:50,238 - 🐢 Slow scan triggered for burst_13
+2026-02-14 20:34:50,238 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,238 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,238 - Auditor Backpressure: Skipping audit for burst_13 (Previous task still active)
+2026-02-14 20:34:50,238 - 🔒 Identity Created: 2026-02-14-article-burst_13
+2026-02-14 20:34:50,239 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_13.md
+2026-02-14 20:34:50,239 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,239 - Could not mark non-numeric ID burst_13 in main DB. Skipping state update.
+2026-02-14 20:34:50,239 - 🐢 Slow scan triggered for burst_14
+2026-02-14 20:34:50,239 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,239 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,239 - Auditor Backpressure: Skipping audit for burst_14 (Previous task still active)
+2026-02-14 20:34:50,239 - 🔒 Identity Created: 2026-02-14-article-burst_14
+2026-02-14 20:34:50,240 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_14.md
+2026-02-14 20:34:50,240 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,240 - Could not mark non-numeric ID burst_14 in main DB. Skipping state update.
+2026-02-14 20:34:50,240 - 🐢 Slow scan triggered for burst_15
+2026-02-14 20:34:50,240 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,240 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,240 - Auditor Backpressure: Skipping audit for burst_15 (Previous task still active)
+2026-02-14 20:34:50,240 - 🔒 Identity Created: 2026-02-14-article-burst_15
+2026-02-14 20:34:50,241 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_15.md
+2026-02-14 20:34:50,241 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,241 - Could not mark non-numeric ID burst_15 in main DB. Skipping state update.
+2026-02-14 20:34:50,241 - 🐢 Slow scan triggered for burst_16
+2026-02-14 20:34:50,241 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,241 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,241 - Auditor Backpressure: Skipping audit for burst_16 (Previous task still active)
+2026-02-14 20:34:50,241 - 🔒 Identity Created: 2026-02-14-article-burst_16
+2026-02-14 20:34:50,242 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_16.md
+2026-02-14 20:34:50,242 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,242 - Could not mark non-numeric ID burst_16 in main DB. Skipping state update.
+2026-02-14 20:34:50,242 - 🐢 Slow scan triggered for burst_17
+2026-02-14 20:34:50,242 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,242 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,242 - Auditor Backpressure: Skipping audit for burst_17 (Previous task still active)
+2026-02-14 20:34:50,242 - 🔒 Identity Created: 2026-02-14-article-burst_17
+2026-02-14 20:34:50,243 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_17.md
+2026-02-14 20:34:50,243 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,243 - Could not mark non-numeric ID burst_17 in main DB. Skipping state update.
+2026-02-14 20:34:50,243 - 🐢 Slow scan triggered for burst_18
+2026-02-14 20:34:50,244 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,244 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,244 - Auditor Backpressure: Skipping audit for burst_18 (Previous task still active)
+2026-02-14 20:34:50,244 - 🔒 Identity Created: 2026-02-14-article-burst_18
+2026-02-14 20:34:50,244 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_18.md
+2026-02-14 20:34:50,244 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,244 - Could not mark non-numeric ID burst_18 in main DB. Skipping state update.
+2026-02-14 20:34:50,244 - 🐢 Slow scan triggered for burst_19
+2026-02-14 20:34:50,245 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,245 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,245 - Auditor Backpressure: Skipping audit for burst_19 (Previous task still active)
+2026-02-14 20:34:50,245 - 🔒 Identity Created: 2026-02-14-article-burst_19
+2026-02-14 20:34:50,245 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_19.md
+2026-02-14 20:34:50,245 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,245 - Could not mark non-numeric ID burst_19 in main DB. Skipping state update.
+2026-02-14 20:34:50,245 - 🐢 Slow scan triggered for burst_20
+2026-02-14 20:34:50,246 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,246 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,246 - Auditor Backpressure: Skipping audit for burst_20 (Previous task still active)
+2026-02-14 20:34:50,246 - 🔒 Identity Created: 2026-02-14-article-burst_20
+2026-02-14 20:34:50,246 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_20.md
+2026-02-14 20:34:50,246 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,246 - Could not mark non-numeric ID burst_20 in main DB. Skipping state update.
+2026-02-14 20:34:50,246 - 🐢 Slow scan triggered for burst_21
+2026-02-14 20:34:50,247 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,247 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,247 - Auditor Backpressure: Skipping audit for burst_21 (Previous task still active)
+2026-02-14 20:34:50,247 - 🔒 Identity Created: 2026-02-14-article-burst_21
+2026-02-14 20:34:50,247 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_21.md
+2026-02-14 20:34:50,247 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,247 - Could not mark non-numeric ID burst_21 in main DB. Skipping state update.
+2026-02-14 20:34:50,247 - 🐢 Slow scan triggered for burst_22
+2026-02-14 20:34:50,248 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,248 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,248 - Auditor Backpressure: Skipping audit for burst_22 (Previous task still active)
+2026-02-14 20:34:50,248 - 🔒 Identity Created: 2026-02-14-article-burst_22
+2026-02-14 20:34:50,248 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_22.md
+2026-02-14 20:34:50,248 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,248 - Could not mark non-numeric ID burst_22 in main DB. Skipping state update.
+2026-02-14 20:34:50,248 - 🐢 Slow scan triggered for burst_23
+2026-02-14 20:34:50,249 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,249 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,249 - Auditor Backpressure: Skipping audit for burst_23 (Previous task still active)
+2026-02-14 20:34:50,249 - 🔒 Identity Created: 2026-02-14-article-burst_23
+2026-02-14 20:34:50,249 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_23.md
+2026-02-14 20:34:50,249 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,249 - Could not mark non-numeric ID burst_23 in main DB. Skipping state update.
+2026-02-14 20:34:50,250 - 🐢 Slow scan triggered for burst_24
+2026-02-14 20:34:50,250 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,250 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,250 - Auditor Backpressure: Skipping audit for burst_24 (Previous task still active)
+2026-02-14 20:34:50,250 - 🔒 Identity Created: 2026-02-14-article-burst_24
+2026-02-14 20:34:50,250 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_24.md
+2026-02-14 20:34:50,250 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,251 - Could not mark non-numeric ID burst_24 in main DB. Skipping state update.
+2026-02-14 20:34:50,251 - 🐢 Slow scan triggered for burst_25
+2026-02-14 20:34:50,251 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,251 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,251 - Auditor Backpressure: Skipping audit for burst_25 (Previous task still active)
+2026-02-14 20:34:50,251 - 🔒 Identity Created: 2026-02-14-article-burst_25
+2026-02-14 20:34:50,252 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_25.md
+2026-02-14 20:34:50,252 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,252 - Could not mark non-numeric ID burst_25 in main DB. Skipping state update.
+2026-02-14 20:34:50,252 - 🐢 Slow scan triggered for burst_26
+2026-02-14 20:34:50,252 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,253 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,253 - Auditor Backpressure: Skipping audit for burst_26 (Previous task still active)
+2026-02-14 20:34:50,253 - 🔒 Identity Created: 2026-02-14-article-burst_26
+2026-02-14 20:34:50,253 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_26.md
+2026-02-14 20:34:50,253 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,253 - Could not mark non-numeric ID burst_26 in main DB. Skipping state update.
+2026-02-14 20:34:50,253 - 🐢 Slow scan triggered for burst_27
+2026-02-14 20:34:50,254 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,254 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,254 - Auditor Backpressure: Skipping audit for burst_27 (Previous task still active)
+2026-02-14 20:34:50,254 - 🔒 Identity Created: 2026-02-14-article-burst_27
+2026-02-14 20:34:50,255 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_27.md
+2026-02-14 20:34:50,256 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,256 - Could not mark non-numeric ID burst_27 in main DB. Skipping state update.
+2026-02-14 20:34:50,256 - 🐢 Slow scan triggered for burst_28
+2026-02-14 20:34:50,257 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,257 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,257 - Auditor Backpressure: Skipping audit for burst_28 (Previous task still active)
+2026-02-14 20:34:50,257 - 🔒 Identity Created: 2026-02-14-article-burst_28
+2026-02-14 20:34:50,258 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_28.md
+2026-02-14 20:34:50,259 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,259 - Could not mark non-numeric ID burst_28 in main DB. Skipping state update.
+2026-02-14 20:34:50,259 - 🐢 Slow scan triggered for burst_29
+2026-02-14 20:34:50,260 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,260 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,260 - Auditor Backpressure: Skipping audit for burst_29 (Previous task still active)
+2026-02-14 20:34:50,260 - 🔒 Identity Created: 2026-02-14-article-burst_29
+2026-02-14 20:34:50,261 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_29.md
+2026-02-14 20:34:50,261 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,261 - Could not mark non-numeric ID burst_29 in main DB. Skipping state update.
+2026-02-14 20:34:50,261 - 🐢 Slow scan triggered for burst_30
+2026-02-14 20:34:50,262 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,262 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,262 - Auditor Backpressure: Skipping audit for burst_30 (Previous task still active)
+2026-02-14 20:34:50,262 - 🔒 Identity Created: 2026-02-14-article-burst_30
+2026-02-14 20:34:50,262 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_30.md
+2026-02-14 20:34:50,262 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,262 - Could not mark non-numeric ID burst_30 in main DB. Skipping state update.
+2026-02-14 20:34:50,263 - 🐢 Slow scan triggered for burst_31
+2026-02-14 20:34:50,263 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,263 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,263 - Auditor Backpressure: Skipping audit for burst_31 (Previous task still active)
+2026-02-14 20:34:50,263 - 🔒 Identity Created: 2026-02-14-article-burst_31
+2026-02-14 20:34:50,264 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_31.md
+2026-02-14 20:34:50,264 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,264 - Could not mark non-numeric ID burst_31 in main DB. Skipping state update.
+2026-02-14 20:34:50,264 - 🐢 Slow scan triggered for burst_32
+2026-02-14 20:34:50,265 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,265 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,265 - Auditor Backpressure: Skipping audit for burst_32 (Previous task still active)
+2026-02-14 20:34:50,265 - 🔒 Identity Created: 2026-02-14-article-burst_32
+2026-02-14 20:34:50,265 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_32.md
+2026-02-14 20:34:50,265 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,265 - Could not mark non-numeric ID burst_32 in main DB. Skipping state update.
+2026-02-14 20:34:50,265 - 🐢 Slow scan triggered for burst_33
+2026-02-14 20:34:50,266 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,266 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,266 - Auditor Backpressure: Skipping audit for burst_33 (Previous task still active)
+2026-02-14 20:34:50,266 - 🔒 Identity Created: 2026-02-14-article-burst_33
+2026-02-14 20:34:50,266 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_33.md
+2026-02-14 20:34:50,266 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,266 - Could not mark non-numeric ID burst_33 in main DB. Skipping state update.
+2026-02-14 20:34:50,267 - 🐢 Slow scan triggered for burst_34
+2026-02-14 20:34:50,267 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,267 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,267 - Auditor Backpressure: Skipping audit for burst_34 (Previous task still active)
+2026-02-14 20:34:50,267 - 🔒 Identity Created: 2026-02-14-article-burst_34
+2026-02-14 20:34:50,267 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_34.md
+2026-02-14 20:34:50,268 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,268 - Could not mark non-numeric ID burst_34 in main DB. Skipping state update.
+2026-02-14 20:34:50,268 - 🐢 Slow scan triggered for burst_35
+2026-02-14 20:34:50,268 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,269 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,269 - Auditor Backpressure: Skipping audit for burst_35 (Previous task still active)
+2026-02-14 20:34:50,269 - 🔒 Identity Created: 2026-02-14-article-burst_35
+2026-02-14 20:34:50,269 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_35.md
+2026-02-14 20:34:50,269 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,269 - Could not mark non-numeric ID burst_35 in main DB. Skipping state update.
+2026-02-14 20:34:50,269 - 🐢 Slow scan triggered for burst_36
+2026-02-14 20:34:50,270 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,270 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,270 - Auditor Backpressure: Skipping audit for burst_36 (Previous task still active)
+2026-02-14 20:34:50,270 - 🔒 Identity Created: 2026-02-14-article-burst_36
+2026-02-14 20:34:50,270 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_36.md
+2026-02-14 20:34:50,270 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,270 - Could not mark non-numeric ID burst_36 in main DB. Skipping state update.
+2026-02-14 20:34:50,271 - 🐢 Slow scan triggered for burst_37
+2026-02-14 20:34:50,271 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,271 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,271 - Auditor Backpressure: Skipping audit for burst_37 (Previous task still active)
+2026-02-14 20:34:50,271 - 🔒 Identity Created: 2026-02-14-article-burst_37
+2026-02-14 20:34:50,272 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_37.md
+2026-02-14 20:34:50,272 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,272 - Could not mark non-numeric ID burst_37 in main DB. Skipping state update.
+2026-02-14 20:34:50,272 - 🐢 Slow scan triggered for burst_38
+2026-02-14 20:34:50,273 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,273 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,273 - Auditor Backpressure: Skipping audit for burst_38 (Previous task still active)
+2026-02-14 20:34:50,273 - 🔒 Identity Created: 2026-02-14-article-burst_38
+2026-02-14 20:34:50,273 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_38.md
+2026-02-14 20:34:50,273 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,273 - Could not mark non-numeric ID burst_38 in main DB. Skipping state update.
+2026-02-14 20:34:50,273 - 🐢 Slow scan triggered for burst_39
+2026-02-14 20:34:50,274 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,274 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,274 - Auditor Backpressure: Skipping audit for burst_39 (Previous task still active)
+2026-02-14 20:34:50,274 - 🔒 Identity Created: 2026-02-14-article-burst_39
+2026-02-14 20:34:50,275 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_39.md
+2026-02-14 20:34:50,275 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,275 - Could not mark non-numeric ID burst_39 in main DB. Skipping state update.
+2026-02-14 20:34:50,275 - 🐢 Slow scan triggered for burst_40
+2026-02-14 20:34:50,276 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,276 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,276 - Auditor Backpressure: Skipping audit for burst_40 (Previous task still active)
+2026-02-14 20:34:50,276 - 🔒 Identity Created: 2026-02-14-article-burst_40
+2026-02-14 20:34:50,276 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_40.md
+2026-02-14 20:34:50,276 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,276 - Could not mark non-numeric ID burst_40 in main DB. Skipping state update.
+2026-02-14 20:34:50,277 - 🐢 Slow scan triggered for burst_41
+2026-02-14 20:34:50,277 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,277 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,277 - Auditor Backpressure: Skipping audit for burst_41 (Previous task still active)
+2026-02-14 20:34:50,277 - 🔒 Identity Created: 2026-02-14-article-burst_41
+2026-02-14 20:34:50,278 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_41.md
+2026-02-14 20:34:50,278 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,278 - Could not mark non-numeric ID burst_41 in main DB. Skipping state update.
+2026-02-14 20:34:50,278 - 🐢 Slow scan triggered for burst_42
+2026-02-14 20:34:50,279 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,279 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,279 - Auditor Backpressure: Skipping audit for burst_42 (Previous task still active)
+2026-02-14 20:34:50,279 - 🔒 Identity Created: 2026-02-14-article-burst_42
+2026-02-14 20:34:50,279 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_42.md
+2026-02-14 20:34:50,279 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,279 - Could not mark non-numeric ID burst_42 in main DB. Skipping state update.
+2026-02-14 20:34:50,280 - 🐢 Slow scan triggered for burst_43
+2026-02-14 20:34:50,283 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,283 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,283 - Auditor Backpressure: Skipping audit for burst_43 (Previous task still active)
+2026-02-14 20:34:50,283 - 🔒 Identity Created: 2026-02-14-article-burst_43
+2026-02-14 20:34:50,284 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_43.md
+2026-02-14 20:34:50,284 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,284 - Could not mark non-numeric ID burst_43 in main DB. Skipping state update.
+2026-02-14 20:34:50,284 - 🐢 Slow scan triggered for burst_44
+2026-02-14 20:34:50,285 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,285 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,285 - Auditor Backpressure: Skipping audit for burst_44 (Previous task still active)
+2026-02-14 20:34:50,285 - 🔒 Identity Created: 2026-02-14-article-burst_44
+2026-02-14 20:34:50,285 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_44.md
+2026-02-14 20:34:50,286 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,286 - Could not mark non-numeric ID burst_44 in main DB. Skipping state update.
+2026-02-14 20:34:50,286 - 🐢 Slow scan triggered for burst_45
+2026-02-14 20:34:50,287 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,287 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,287 - Auditor Backpressure: Skipping audit for burst_45 (Previous task still active)
+2026-02-14 20:34:50,287 - 🔒 Identity Created: 2026-02-14-article-burst_45
+2026-02-14 20:34:50,288 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_45.md
+2026-02-14 20:34:50,288 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,288 - Could not mark non-numeric ID burst_45 in main DB. Skipping state update.
+2026-02-14 20:34:50,288 - 🐢 Slow scan triggered for burst_46
+2026-02-14 20:34:50,290 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,290 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,290 - Auditor Backpressure: Skipping audit for burst_46 (Previous task still active)
+2026-02-14 20:34:50,290 - 🔒 Identity Created: 2026-02-14-article-burst_46
+2026-02-14 20:34:50,291 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_46.md
+2026-02-14 20:34:50,291 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,291 - Could not mark non-numeric ID burst_46 in main DB. Skipping state update.
+2026-02-14 20:34:50,291 - 🐢 Slow scan triggered for burst_47
+2026-02-14 20:34:50,292 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,293 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,293 - Auditor Backpressure: Skipping audit for burst_47 (Previous task still active)
+2026-02-14 20:34:50,293 - 🔒 Identity Created: 2026-02-14-article-burst_47
+2026-02-14 20:34:50,293 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_47.md
+2026-02-14 20:34:50,293 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,293 - Could not mark non-numeric ID burst_47 in main DB. Skipping state update.
+2026-02-14 20:34:50,294 - 🐢 Slow scan triggered for burst_48
+2026-02-14 20:34:50,295 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,295 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,295 - Auditor Backpressure: Skipping audit for burst_48 (Previous task still active)
+2026-02-14 20:34:50,295 - 🔒 Identity Created: 2026-02-14-article-burst_48
+2026-02-14 20:34:50,295 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_48.md
+2026-02-14 20:34:50,296 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,296 - Could not mark non-numeric ID burst_48 in main DB. Skipping state update.
+2026-02-14 20:34:50,296 - 🐢 Slow scan triggered for burst_49
+2026-02-14 20:34:50,297 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,297 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+2026-02-14 20:34:50,297 - Auditor Backpressure: Skipping audit for burst_49 (Previous task still active)
+2026-02-14 20:34:50,297 - 🔒 Identity Created: 2026-02-14-article-burst_49
+2026-02-14 20:34:50,297 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-burst_49.md
+2026-02-14 20:34:50,297 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,298 - Could not mark non-numeric ID burst_49 in main DB. Skipping state update.
+2026-02-14 20:34:50,298 - Total submissions sent to executor: 1
+2026-02-14 20:34:50,298 - ✅ Bound constraints met (<=2 actual submissions for 50 requests).
+[32m20:34:50[0m | [33m[1mWARNING [0m | Auditor received invalid provider output type (<class 'bool'>). Using defaults.
+[32m20:34:50[0m | [1mINFO    [0m | Audit Complete for burst_0. Epistemic Score: 0.0
+2026-02-14 20:34:50,300 - 
 === TEST 3: DUAL TIMEOUT PROOF (Production & Fast) ===
-2026-02-14 13:42:44,553 - 
+2026-02-14 20:34:50,301 - 
 --- Subtest: Fast Timeout Smoke Test (Timeout=0.5s, Stall=2.0s) ---
-2026-02-14 13:42:44,572 - Using Provider Timeout: 0.5s
-2026-02-14 13:42:44,573 - Using Provider Retries: 0
-2026-02-14 13:42:44,573 - Triggering pipeline...
-2026-02-14 13:42:44,573 - Loaded refinery manifest with 60 entries
-2026-02-14 13:42:44,573 - 🐢 Slow scan triggered for timeout_run
-2026-02-14 13:42:44,574 - Processing with intended date: 2026-02-14
-[32m13:42:44[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
-2026-02-14 13:42:44,575 - Submitting Auditor task for timeout_run (Non-blocking)...
-[32m13:42:44[0m | [1mINFO    [0m | Starting Editorial Audit for timeout_run...
-2026-02-14 13:42:44,575 - 🔒 Identity Created: 2026-02-14-article-timeout_run
-2026-02-14 13:42:44,576 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-timeout_run.md
-2026-02-14 13:42:44,577 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:44,577 - Could not mark non-numeric ID timeout_run in main DB. Skipping state update.
-2026-02-14 13:42:44,577 - Pipeline submit duration: 3.94 ms
-2026-02-14 13:42:44,578 - Waiting for timeout enforcement...
-[32m13:42:45[0m | [31m[1mERROR   [0m | Sync LLM Request Error (Attempt 1): HTTPConnectionPool(host='127.0.0.1', port=44389): Read timed out. (read timeout=0.5)
-[32m13:42:45[0m | [31m[1mERROR   [0m | Auditor Error for timeout_run: HTTPConnectionPool(host='127.0.0.1', port=44389): Read timed out. (read timeout=0.5)
-2026-02-14 13:42:45,080 - Total Audit Duration: 0.51s
-2026-02-14 13:42:45,080 - ✅ Fast Timeout Smoke Test Passed. Duration within limits.
-2026-02-14 13:42:45,080 -    Configured: 0.5s
-2026-02-14 13:42:45,080 -    Measured:   0.51s
-2026-02-14 13:42:45,080 -    Retries:    0 (1 attempt)
-2026-02-14 13:42:46,579 - 
+[32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
+2026-02-14 20:34:50,302 - Refinery Engine initialized with Editorial Mode: STANDARD
+2026-02-14 20:34:50,321 - Using Provider Timeout: 0.5s
+2026-02-14 20:34:50,321 - Using Provider Retries: 0
+2026-02-14 20:34:50,321 - Triggering pipeline...
+2026-02-14 20:34:50,321 - Loaded refinery manifest with 60 entries
+2026-02-14 20:34:50,321 - 🐢 Slow scan triggered for timeout_run
+2026-02-14 20:34:50,322 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:50,322 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+[32m20:34:50[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
+2026-02-14 20:34:50,323 - Submitting Auditor task for timeout_run (Non-blocking)...
+[32m20:34:50[0m | [1mINFO    [0m | Starting Editorial Audit for timeout_run...
+2026-02-14 20:34:50,323 - 🔒 Identity Created: 2026-02-14-article-timeout_run
+2026-02-14 20:34:50,326 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-timeout_run.md
+2026-02-14 20:34:50,326 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:50,327 - Could not mark non-numeric ID timeout_run in main DB. Skipping state update.
+2026-02-14 20:34:50,327 - Pipeline submit duration: 5.71 ms
+2026-02-14 20:34:50,327 - Waiting for timeout enforcement...
+[32m20:34:50[0m | [31m[1mERROR   [0m | Sync LLM Request Error (Attempt 1): HTTPConnectionPool(host='127.0.0.1', port=50583): Read timed out. (read timeout=0.5)
+[32m20:34:50[0m | [31m[1mERROR   [0m | Auditor Error for timeout_run: HTTPConnectionPool(host='127.0.0.1', port=50583): Read timed out. (read timeout=0.5)
+2026-02-14 20:34:50,828 - Total Audit Duration: 0.51s
+2026-02-14 20:34:50,828 - ✅ Fast Timeout Smoke Test Passed. Duration within limits.
+2026-02-14 20:34:50,828 -    Configured: 0.5s
+2026-02-14 20:34:50,828 -    Measured:   0.51s
+2026-02-14 20:34:50,828 -    Retries:    0 (1 attempt)
+2026-02-14 20:34:52,327 - 
 --- Subtest: Production Timeout Proof (Critical) (Timeout=15.0s, Stall=17.0s) ---
-2026-02-14 13:42:46,599 - Using Provider Timeout: 15.0s
-2026-02-14 13:42:46,599 - Using Provider Retries: 0
-2026-02-14 13:42:46,599 - Triggering pipeline...
-2026-02-14 13:42:46,600 - Loaded refinery manifest with 61 entries
-2026-02-14 13:42:46,600 - ⚡ Manifest hit: timeout_run -> 2026-02-14-article-timeout_run.md
-2026-02-14 13:42:46,600 - ♻️ Idempotency: Found existing file 2026-02-14-article-timeout_run.md
-2026-02-14 13:42:46,600 - 💾 Backfilled canonical slug to DB: 2026-02-14-article-timeout_run
-2026-02-14 13:42:46,600 - Processing with intended date: 2026-02-14
-[32m13:42:46[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
-2026-02-14 13:42:46,600 - Submitting Auditor task for timeout_run (Non-blocking)...
-[32m13:42:46[0m | [1mINFO    [0m | Starting Editorial Audit for timeout_run...
-2026-02-14 13:42:46,604 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-timeout_run.md
-2026-02-14 13:42:46,604 - Pull Request created successfully: http://mock/pr/1
-2026-02-14 13:42:46,604 - Could not mark non-numeric ID timeout_run in main DB. Skipping state update.
-2026-02-14 13:42:46,604 - Pipeline submit duration: 4.80 ms
-2026-02-14 13:42:46,604 - Waiting for timeout enforcement...
-[32m13:43:01[0m | [31m[1mERROR   [0m | Sync LLM Request Error (Attempt 1): HTTPConnectionPool(host='127.0.0.1', port=55993): Read timed out. (read timeout=15.0)
-[32m13:43:01[0m | [31m[1mERROR   [0m | Auditor Error for timeout_run: HTTPConnectionPool(host='127.0.0.1', port=55993): Read timed out. (read timeout=15.0)
-2026-02-14 13:43:01,619 - Total Audit Duration: 15.02s
-2026-02-14 13:43:01,619 - ✅ Production Timeout Proof (Critical) Passed. Duration within limits.
-2026-02-14 13:43:01,619 -    Configured: 15.0s
-2026-02-14 13:43:01,619 -    Measured:   15.02s
-2026-02-14 13:43:01,619 -    Retries:    0 (1 attempt)
-2026-02-14 13:43:03,605 - 
+[32m20:34:52[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
+2026-02-14 20:34:52,327 - Refinery Engine initialized with Editorial Mode: STANDARD
+2026-02-14 20:34:52,345 - Using Provider Timeout: 15.0s
+2026-02-14 20:34:52,345 - Using Provider Retries: 0
+2026-02-14 20:34:52,345 - Triggering pipeline...
+2026-02-14 20:34:52,345 - Loaded refinery manifest with 61 entries
+2026-02-14 20:34:52,345 - ⚡ Manifest hit: timeout_run -> 2026-02-14-article-timeout_run.md
+2026-02-14 20:34:52,345 - ♻️ Idempotency: Found existing file 2026-02-14-article-timeout_run.md
+2026-02-14 20:34:52,345 - 💾 Backfilled canonical slug to DB: 2026-02-14-article-timeout_run
+2026-02-14 20:34:52,345 - Processing with intended date: 2026-02-14
+2026-02-14 20:34:52,345 - Enforcing Critic Threshold: 80.0 (Mode: standard)
+[32m20:34:52[0m | [1mINFO    [0m | Auditor Triggered: Category match (health)
+2026-02-14 20:34:52,346 - Submitting Auditor task for timeout_run (Non-blocking)...
+[32m20:34:52[0m | [1mINFO    [0m | Starting Editorial Audit for timeout_run...
+2026-02-14 20:34:52,348 - Written content to temp_proof_hardened/src/content/posts/2026-02-14-article-timeout_run.md
+2026-02-14 20:34:52,348 - Pull Request created successfully: http://mock/pr/1
+2026-02-14 20:34:52,348 - Could not mark non-numeric ID timeout_run in main DB. Skipping state update.
+2026-02-14 20:34:52,348 - Pipeline submit duration: 2.97 ms
+2026-02-14 20:34:52,348 - Waiting for timeout enforcement...
+[32m20:35:07[0m | [31m[1mERROR   [0m | Sync LLM Request Error (Attempt 1): HTTPConnectionPool(host='127.0.0.1', port=59211): Read timed out. (read timeout=15.0)
+[32m20:35:07[0m | [31m[1mERROR   [0m | Auditor Error for timeout_run: HTTPConnectionPool(host='127.0.0.1', port=59211): Read timed out. (read timeout=15.0)
+2026-02-14 20:35:07,950 - Total Audit Duration: 15.60s
+2026-02-14 20:35:07,950 - ✅ Production Timeout Proof (Critical) Passed. Duration within limits.
+2026-02-14 20:35:07,950 -    Configured: 15.0s
+2026-02-14 20:35:07,950 -    Measured:   15.60s
+2026-02-14 20:35:07,950 -    Retries:    0 (1 attempt)
+2026-02-14 20:35:09,934 - 
 ✨ HARDENED PROOF SUITE PASSED ✨

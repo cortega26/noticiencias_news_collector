@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "mode": "standard",
+  "critic_threshold": 80.0,
+  "auditor_threshold": 8.0,
+  "require_caveats": true,
+  "require_no_hallucinations": false,
+  "sha256": "b6e90727ac9dab40c9c01d05d71bbafdc3d42f157cf4b8c715147f402febd3e8"
+}

@@ -20,13 +20,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
-# --- Mock Classes for Integration ---
+# --- Mock Classes for Integrati# Mock Config
+class MockAppConfig:
+    def __init__(self):
+        self.editorial_mode = "standard"
+
 class MockConfig:
-    editorial_auditor = {"enabled": True, "sampling_rate": 1.0, "trigger_keywords": ["trigger"], "trigger_categories": ["health"]}
-    paths = {"data_dir": "./temp_proof_hardened"}
-    ollama = {"api_url": "http://mock", "model": "mock"}
-    github = {"repo_name": "mock/repo"} 
-    target_repo_url = "http://mock/repo" # needed for create_pull_request
+    def __init__(self):
+        self.editorial_auditor = {"enabled": True, "blocking": False, "sampling_rate": 1.0, "trigger_keywords": ["trigger"], "trigger_categories": ["health"]}
+        self.app = MockAppConfig()
+        self.paths = {"data_dir": "./temp_proof_hardened"}
+        self.ollama = {"api_url": "http://mock", "model": "mock"}
+        self.github = {"repo_name": "mock/repo"} 
+        self.target_repo_url = "http://mock/repo" # needed for create_pull_request
+        # Add other necessary attributes if any accessed by RefineryEngine
 
 class MockDB: 
     def get_canonical_slug(self, *args): return None

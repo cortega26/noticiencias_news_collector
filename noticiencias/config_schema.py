@@ -52,6 +52,16 @@ class AppSettings(StrictModel):
         description="Default timezone for user-facing timestamps.",
         examples=["America/Santiago"],
     )
+    editorial_mode: str = Field(
+        default="standard",
+        description="Editorial rigor level: velocity, standard, or strict.",
+        examples=["standard"],
+    )
+    policy_integrity_mode: str = Field(
+        default="enforced",
+        description="Policy integrity check behavior: enforced, warn, or disabled.",
+        examples=["enforced", "disabled"],
+    )
 
     @field_validator("environment")
     @classmethod

@@ -17,6 +17,7 @@ class TestRefineryCanonical:
         git = MagicMock()
         editor = MagicMock()
         config = MagicMock()
+        config.app.policy_integrity_mode = "disabled"
 
         # Configure output of editor
         editor.process_article.return_value = (

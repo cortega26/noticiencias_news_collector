@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+import json
+
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
@@ -12,7 +14,8 @@ if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
 
 logger = logging.getLogger("RefineryEngine")
-import json
+
+# Removing duplicate import if it exists further down
 
 MANIFEST_FILENAME = "refinery_manifest.json"
 
@@ -35,8 +38,53 @@ class RefineryEngine:
     ):
         self.db = db_manager
         self.config = config
-        self.content_translator = ContentTranslator(self.config)
-        self.editor = EditorAgent(self.config) # or use passed editor_agent? original used passed arg.
+        from news_collector.editorial.policy import EditorialPolicy
+        # Load Policy
+        # Check app.editorial_mode first, fall back to root if needed (though we moved it)
+        mode = getattr(self.config.app, "editorial_mode", "standard")
+        self.policy = EditorialPolicy.from_mode(mode)
+        
+        # INTEGRITY CHECK
+        integrity_mode = getattr(self.config.app, "policy_integrity_mode", "enforced")
+        
+        if integrity_mode == "disabled":
+             logger.info("⚠️ Policy Integrity Check DISABLED by configuration (Test Mode)")
+        else:
+            try:
+                import news_collector.editorial
+                manifest_path = Path(news_collector.editorial.__file__).parent / "policy_manifest.json"
+                
+                try:
+                    self.policy.verify_integrity(manifest_path)
+                except Exception as e:
+                    if integrity_mode == "warn":
+                        logger.warning(f"⚠️ Policy Integrity Check Failed (Mode: Warn): {e}")
+                    else:
+                        # Enforced (Default)
+                        logger.critical(f"FATAL: Policy Integrity Check Failed: {e}")
+                        raise e
+                        
+            except Exception as e:
+                # Catch-all for outer errors (import/path issues) unrelated to verification logic itself
+                # unless it was the raised error from above
+                if integrity_mode == "enforced":
+                     logger.critical(f"FATAL: Policy Integrity System Error: {e}")
+                     raise e
+                logger.error(f"Policy Integrity System Error (Non-Fatal): {e}")
+            
+        logger.info(f"Refinery Engine initialized with Editorial Mode: {self.policy.mode.upper()}")
+        
+        # Enforcement Log Path
+        paths = getattr(config, "paths", None) or {}
+        if isinstance(paths, dict):
+             data_dir = paths.get("data_dir", "./data")
+        else:
+             data_dir = getattr(paths, "data_dir", "./data")
+        self.enforcement_log_path = Path(data_dir) / "editorial_policy_enforcement_log.jsonl"
+
+        
+        self.editor = editor_agent
+
         # Original: self.editor = editor_agent
         # Let's stick to original args where possible to avoid breaking other things
         # But my previous edit replaced self.editor = editor_agent with self.editor = EditorAgent(self.config)
@@ -194,9 +242,19 @@ class RefineryEngine:
                  logger.warning(f"Failed to download image from {raw_image_url} (or download failed). Enforcing local policy with default.")
                  article["image_url"] = "~/assets/images/default.png"
 
-        refined_content = self.editor.process_article(
-            article, override_date=canonical_date
-        )
+        # Apply Policy to Editor
+        self.editor.critic_threshold = self.policy.critic_threshold
+        logger.info(f"Enforcing Critic Threshold: {self.policy.critic_threshold} (Mode: {self.policy.mode})")
+
+        try:
+            refined_content = self.editor.process_article(
+                article, override_date=canonical_date
+            )
+        except ValueError as ve:
+             if "Translation Guardrail" in str(ve):
+                 logger.warning(f"⛔ Blocked by Editorial Policy (Critic): {ve}")
+                 return False
+             raise ve
 
         # --- AUDIT PHASE (True Non-Blocking & Backpressure) ---
         # We audit the refined content to score it.
@@ -235,10 +293,16 @@ class RefineryEngine:
                     logger.info(f"🔒 Identity Created: {final_slug}")
                 except Exception as e:
                     logger.error(f"Failed to persist canonical slug: {e}")
-                    # If we fail to save identity, should we abort?
-                    # For safety, yes, but for robustness maybe warn.
-                    # Given the incident, we should probably fail strict.
                     pass
+
+        # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
+        # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
+        # Check cached score first.
+        cached_score = self.auditor.get_cached_score(article_id)
+        
+        if not self._enforce_editorial_policy(article_id, cached_score):
+             logger.warning(f"⛔ Article {article_id} rejected by Editorial Policy (Auditor/Strictness).")
+             return False
 
         # 4. Save File
         posts_dir.mkdir(parents=True, exist_ok=True)
@@ -249,6 +313,8 @@ class RefineryEngine:
         
         # Update Sidecar Manifest
         self._update_manifest(posts_dir, article_id, output_filename)
+        
+        # (Auditor checking validation block removed from here as it is done above)
 
         # 5. Create Branch
         # Use a deterministic branch name based on ID or filename to allow updates to same PR
@@ -418,3 +484,75 @@ class RefineryEngine:
         except Exception as e:
             logger.error(f"Failed to download image {url}: {e}")
             return None
+    def _enforce_editorial_policy(self, article_id: str, cached_score: dict | None) -> bool:
+        """
+        Enforces editorial policy deterministically and logs result.
+        Returns True if allowed, False if blocked.
+        """
+        decision = "allowed"
+        reason = "Non-blocking check passed (Fail-Open) or Score Sufficient"
+        score_data = {}
+        
+        try:
+            # Fail-Open if no score available (Non-Blocking Auditor)
+            # Using strict usage of 'is None'
+            if cached_score is None:
+                decision = "allowed"
+                reason = "No Auditor score available (Non-blocking default)"
+                return True
+                
+            score_data = cached_score
+            epistemic = float(cached_score.get("epistemic_rigor_score", 0.0))
+            
+            # 1. Check Threshold
+            if epistemic < self.policy.auditor_threshold:
+                 reason = f"Auditor Score {epistemic} < Threshold {self.policy.auditor_threshold}"
+                 logger.warning(f"⛔ Blocked by Editorial Policy (Auditor): {reason}")
+                 decision = "blocked"
+                 return False
+            
+            # 2. Check Caveats
+            if self.policy.require_caveats:
+                 # STRICT: Default to False (block) if key usage is missing or uncertain
+                 # This overrides any previous logic that defaulted to True
+                 has_caveats = cached_score.get("has_proper_caveats", False)
+                 if has_caveats is not True: # Strict bool check
+                      reason = "Caveats Required but missing/false"
+                      logger.warning(f"⛔ Blocked by Editorial Policy (Caveats): {reason}")
+                      decision = "blocked"
+                      return False
+                      
+            return True
+        
+        except Exception as e:
+            logger.error(f"Error enforcing policy for {article_id}: {e}")
+            decision = "blocked"
+            reason = f"Enforcement Error: {e}"
+            return False
+            
+        finally:
+            self._log_enforcement_decision(article_id, cached_score, decision, reason)
+
+    def _log_enforcement_decision(self, article_id: str, score: dict | None, result: str, reason: str):
+        """Appends structured log of enforcement decision."""
+        try:
+            entry = {
+                "timestamp": datetime.now().isoformat(),
+                "article_id": article_id,
+                "mode": self.policy.mode,
+                "thresholds": {
+                    "critic": self.policy.critic_threshold,
+                    "auditor": self.policy.auditor_threshold
+                },
+                "score": score,
+                "result": result,
+                "reason": reason,
+                "policy_sha256": self.policy.policy_sha256
+            }
+            
+            # Atomic Append
+            with open(self.enforcement_log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+                
+        except Exception as e:
+            logger.error(f"Failed to write enforcement log: {e}")

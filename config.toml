@@ -2,6 +2,7 @@
 environment = "development"
 debug = false
 timezone = "UTC"
+editorial_mode = "standard"
 
 [github]
 source_repo_url = ""

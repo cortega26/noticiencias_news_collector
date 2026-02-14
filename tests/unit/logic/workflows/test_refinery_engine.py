@@ -13,6 +13,7 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_editor = MagicMock()
         self.mock_config = MagicMock()
         self.mock_config.target_repo_url = "http://github.com/target"
+        self.mock_config.app.policy_integrity_mode = "disabled"
 
         # Safe patching context
         self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})

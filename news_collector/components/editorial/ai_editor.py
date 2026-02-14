@@ -674,8 +674,10 @@ class EditorAgent:
             raise
 
         # Append source link footer if missing
-        if source_url and source_url not in full_article:
-            full_article += f"\n\nFuente original: [{source_url}]({source_url})"
+        # Logic update: explicit footer check because source_url is now in frontmatter too
+        footer_link = f"Fuente original: [{source_url}]({source_url})"
+        if source_url and footer_link not in full_article:
+            full_article += f"\n\n{footer_link}"
 
         # Logic to strip Visual planning section if no image is present (Rule from tests)
         if not image_url:

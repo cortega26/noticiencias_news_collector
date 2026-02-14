@@ -73,6 +73,7 @@ async def test_refinery_integration_stub():
         mock_git = MagicMock()
         mock_editor = MagicMock()
         mock_config = MagicMock()
+        mock_config.app.policy_integrity_mode = "disabled"
 
         engine = RefineryEngine(
             db_manager=mock_db_instance,
