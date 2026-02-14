@@ -15,10 +15,10 @@ import requests
 from news_collector.utils.logger import get_logger
 from tenacity import (
     before_sleep_log,
-    retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    Retrying,
 )
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
@@ -39,10 +39,12 @@ class OllamaProvider:
         api_url: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 3600,
+        max_retries: int = 2 # Default 2 retries (3 attempts total)
     ):
         self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
         self.model = model
         self.timeout = timeout
+        self.max_retries = max_retries
 
         # --- Fix C: Deterministic Normalization ---
         # 1. Model Tag: Ensure it has a tag (default to :latest if missing)
@@ -129,12 +131,8 @@ class OllamaProvider:
 
     # --- SYNC API (Legacy/Compat) ---
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(requests.RequestException),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
+    # --- SYNC API (Legacy/Compat) ---
+
     def generate_sync(
         self,
         prompt: str,
@@ -144,8 +142,7 @@ class OllamaProvider:
         model: Optional[str] = None,
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
         """
-        Sync generation for legacy components.
-        Supports streaming generator if stream=True and json_mode=False.
+        Sync generation with configurable retries.
         """
         payload = self._prepare_payload(
             prompt, system, stream=stream, json_mode=json_mode, model=model
@@ -155,31 +152,41 @@ class OllamaProvider:
         from news_collector.config import settings
 
         if not settings.LLM_SYSTEM_AVAILABLE:
-            # Raise ValueError or similar non-retriable error to bypass retry loop
             raise ValueError("LLM System is marked as unavailable (Disabled).")
 
-        try:
-            # We use direct requests for sync to avoid async loop issues in strict sync contexts
-            logger.debug(f"Sending sync prompt to Ollama ({payload['model']})...")
-            response = requests.post(
-                self.api_url, json=payload, stream=stream, timeout=self.timeout
-            )
-            response.raise_for_status()
+        # Configure Retry logic dynamically
+        retry_config = Retrying(
+            stop=stop_after_attempt(self.max_retries + 1), # +1 because 0 retries = 1 attempt
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type(requests.RequestException),
+            before_sleep=before_sleep_log(logger, logging.WARNING),
+            reraise=True
+        )
 
-            if stream:
-                return self._stream_generator(response)
+        # Execute with retries
+        for attempt in retry_config:
+            with attempt:
+                try:
+                    logger.debug(f"Sending sync prompt to Ollama ({payload['model']})... Attempt {attempt.retry_state.attempt_number}/{self.max_retries + 1}")
+                    response = requests.post(
+                        self.api_url, json=payload, stream=stream, timeout=self.timeout
+                    )
+                    response.raise_for_status()
 
-            # Non-streaming
-            data = response.json()
-            text = data.get("response", "")
+                    if stream:
+                        return self._stream_generator(response)
 
-            if json_mode:
-                return self._extract_json(str(text))
-            return str(text)
+                    # Non-streaming
+                    data = response.json()
+                    text = data.get("response", "")
 
-        except requests.RequestException as e:
-            logger.error(f"Sync LLM Request Error: {e}")
-            raise
+                    if json_mode:
+                        return self._extract_json(str(text))
+                    return str(text)
+
+                except requests.RequestException as e:
+                    logger.error(f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}")
+                    raise
 
     def _stream_generator(
         self, response: requests.Response
