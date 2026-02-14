@@ -34,10 +34,26 @@ class RefineryEngine:
         config: Any,
     ):
         self.db = db_manager
-        self.git = git_handler
-        self.editor = editor_agent
         self.config = config
-        self.auditor = EditorialAuditor(config)
+        self.content_translator = ContentTranslator(self.config)
+        self.editor = EditorAgent(self.config) # or use passed editor_agent? original used passed arg.
+        # Original: self.editor = editor_agent
+        # Let's stick to original args where possible to avoid breaking other things
+        # But my previous edit replaced self.editor = editor_agent with self.editor = EditorAgent(self.config)
+        # If I want to be safe, I should use the passed args if they are valid.
+        # However, looking at imports, EditorAgent is imported. 
+        # Let's assume the passed `editor_agent` is what we want.
+        self.editor = editor_agent
+        self.git = git_handler
+        
+        # Auditor & Executor
+        self.auditor = EditorialAuditor(self.config)
+        
+        # ThreadPool for Auditor (Non-blocking)
+        from concurrent.futures import ThreadPoolExecutor
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self._last_audit_future = None
+
         self._manifest_cache: Dict[str, str] = {}
         self._manifest_loaded = False
 
@@ -182,19 +198,25 @@ class RefineryEngine:
             article, override_date=canonical_date
         )
 
-        # --- AUDIT PHASE (Non-Blocking) ---
+        # --- AUDIT PHASE (True Non-Blocking & Backpressure) ---
         # We audit the refined content to score it.
-        # This happens after editor but before we finalize filename/PR, 
-        # so we can potentially use the score later (though req says non-blocking).
         try:
-             self.auditor.audit_article(
-                 article_id=article_id,
-                 content=refined_content,
-                 source_url=article.get("url") or article.get("source_url") or "",
-                 article_data=article
-             )
+             # BACKPRESSURE GUARD (Objective 4):
+             # If a previous audit is still running/queued, skip this one to prevent unbounded growth.
+             # invalid/done futures are safe to overwrite.
+             if self._last_audit_future and not self._last_audit_future.done():
+                 logger.warning(f"Auditor Backpressure: Skipping audit for {article_id} (Previous task still active)")
+             elif self.auditor.should_run_fast(article, refined_content):
+                 logger.info(f"Submitting Auditor task for {article_id} (Non-blocking)...")
+                 self._last_audit_future = self.executor.submit(
+                     self.auditor.audit_article_sync,
+                     article_id=article_id,
+                     content=refined_content,
+                     source_url=article.get("url") or article.get("source_url") or "",
+                     article_data=article
+                 )
         except Exception as e:
-             logger.error(f"Auditor invocation failed for {article_id}: {e}")
+             logger.error(f"Auditor submission failed for {article_id}: {e}")
 
         # 3. Determine Output Filename (if not yet locked)
         if not output_filename:

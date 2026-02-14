@@ -1,9 +1,12 @@
 import json
 import logging
 import random
+import time
 from pathlib import Path
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+import tempfile
+import os
 
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.utils.logger import get_logger
@@ -19,16 +22,13 @@ class EditorialAuditor:
         self.config = config
         
         # Load Auditor Config (Safe navigation)
-        # We handle config as either a dict or an object depending on how it's passed
         audit_cfg = {}
         if isinstance(config, dict):
             audit_cfg = config.get("editorial_auditor", {})
         else:
             audit_cfg = getattr(config, "editorial_auditor", {})
             if not isinstance(audit_cfg, dict):
-                # If it's an object, convert to dict or access attributes
-                # For safety, let's assume we can getattr
-                pass
+                 pass
 
         # Helper to get config value safely
         def get_cfg(obj, key, default):
@@ -52,8 +52,7 @@ class EditorialAuditor:
 
         # Paths
         paths = getattr(config, "paths", None) or {}
-        if not isinstance(paths, dict): # If it's an object
-             # Quick fallback
+        if not isinstance(paths, dict):
              data_dir = getattr(paths, "data_dir", "./data")
         else:
              data_dir = paths.get("data_dir", "./data")
@@ -76,14 +75,22 @@ class EditorialAuditor:
         self.api_url = api_url
         self.model = model
         
+        # OBJECTIVE 2: Strict Timeout Enforcement (15s)
         self.provider = OllamaProvider(
             api_url=self.api_url, 
             model=self.model, 
-            timeout=120 
+            timeout=15,  # Recommended 15s max
+            max_retries=0 # STRICT ONE-SHOT: Auditor is non-critical, do not retry.
         )
         
         self.prompts = self._load_prompts()
         self.rolling_avg_file = self.metadata_dir / "auditor_rolling_average.json"
+
+        # Circuit Breaker State
+        self.failure_count = 0
+        self.last_failure_time = 0.0
+        self.circuit_open_until = 0.0
+        self.COOLDOWN_SECONDS = 1800 # 30 minutes
 
     def _load_prompts(self) -> dict:
         """Loads prompt templates from yaml config."""
@@ -98,12 +105,19 @@ class EditorialAuditor:
             logger.warning(f"Failed to load prompts: {e}")
         return {}
 
-    def _should_run(self, article: Dict[str, Any], content: str) -> bool:
+    def should_run_fast(self, article: Dict[str, Any], content: str) -> bool:
         """
-        Determines if the auditor should run based on sampling or triggers.
+        OBJECTIVE 4: CPU Load Minimization.
+        Checks ALL conditions (Circuit Breaker, Sampling, Triggers) BEFORE submission.
         """
         if not self.enabled:
             return False
+
+        # Check Circuit Breaker
+        now = time.time()
+        if now < self.circuit_open_until:
+             logger.warning(f"Auditor Circuit Open. Skipping. (Opens until {datetime.fromtimestamp(self.circuit_open_until)})")
+             return False
 
         # 1. Trigger by Category
         category = article.get("category", "").lower()
@@ -127,62 +141,138 @@ class EditorialAuditor:
 
         return False
 
-    def audit_article(self, article_id: str, content: str, source_url: str, article_data: Dict[str, Any] = {}) -> None:
+    def _get_default_audit_result(self) -> Dict[str, Any]:
+        """Returns the robust default schema for audit results."""
+        return {
+            "epistemic_rigor_score": 0.0,
+            "clarity_score": 0.0,
+            "speculation_control_score": 0.0,
+            "engagement_score": 0.0,
+            "has_therapeutic_claims": False,
+            "has_proper_caveats": False,
+            "opening_strength": "moderate",
+            "issues": []
+        }
+
+    def _normalize_audit_result(self, raw: Any) -> Dict[str, Any]:
         """
-        Main entry point. Runs the audit if triggered and saves results.
-        Failures are caught and logged (non-blocking).
+        OBJECTIVE 2 & 3: Strict Normalization & Single Warning.
+        Silently corrects types. Returns safe defaults if structure is invalid.
+        """
+        defaults = self._get_default_audit_result()
+        
+        if not isinstance(raw, dict):
+            logger.warning("Auditor received invalid provider output. Using defaults.")
+            return defaults
+            
+        normalized = defaults.copy()
+        
+        for key, default_val in defaults.items():
+            if key not in raw:
+                continue
+                
+            val = raw[key]
+            
+            # 1. Float Normalization (Clamp 0.0 - 10.0)
+            if isinstance(default_val, float):
+                try:
+                    # Handle string floats "5.0" or real floats 5.0
+                    f_val = float(val)
+                    normalized[key] = max(0.0, min(10.0, f_val))
+                except (ValueError, TypeError):
+                    pass # Keep default, no log noise
+
+            # 2. Bool Normalization (Strict)
+            elif isinstance(default_val, bool):
+                if isinstance(val, bool):
+                     normalized[key] = val
+                # Option: Accept "true"/"false" strings if needed? 
+                # Prompt says "Strict bool". So probably strict type or safe defaults.
+                # We leave default if not bool.
+            
+            # 3. List Normalization (Strict)
+            elif isinstance(default_val, list):
+                if isinstance(val, list):
+                    normalized[key] = val
+                # Prevent "bool is not iterable" by rejecting non-lists
+            
+            # 4. String Normalization
+            elif isinstance(default_val, str):
+                if isinstance(val, str):
+                    normalized[key] = val
+
+        return normalized
+
+    def audit_article_sync(self, article_id: str, content: str, source_url: str, article_data: Dict[str, Any] = {}) -> None:
+        """
+        Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.
+        Handles LLM interaction, result parsing, and persistence.
         """
         try:
-            if not self._should_run(article_data, content):
-                return
-
             logger.info(f"Starting Editorial Audit for {article_id}...")
             
             system_prompt = self.prompts.get("auditor", {}).get("system", "")
             if not system_prompt:
-                # Fallback if config is missing
                 system_prompt = "Analyze validity. Output JSON."
 
-            user_prompt = f"Title: {article_data.get('title', 'Unknown')}\nURL: {source_url}\n\nContent:\n{content[:10000]}" # Limit context
+            user_prompt = f"Title: {article_data.get('title', 'Unknown')}\nURL: {source_url}\n\nContent:\n{content[:10000]}"
 
-            # Call LLM
-            # Using generate_sync with stream=False should return the full response object or string depending on provider imp.
-            # Checking ai_editor usage: it iterates over generator.
-            # Let's handle generator.
-            generator = self.provider.generate_sync(
+            # Call LLM with Timeout (handled in provider init)
+            # OBJECTIVE 1: Rename ambiguous variable
+            provider_result = self.provider.generate_sync(
                 user_prompt, 
                 system=system_prompt, 
                 stream=False,
                 model=self.model
             )
             
-            response_text = ""
-            # If provider returns a string when stream=False, great. If generator, consume it.
-            if isinstance(generator, str):
-                response_text = generator
+            raw_data = {}
+            
+            # OBJECTIVE 4: Harden Extraction Layer
+            # Gracefully handle various return types
+            if isinstance(provider_result, dict):
+                raw_data = provider_result
+            elif isinstance(provider_result, str):
+                 raw_data = self.provider._extract_json(provider_result)
+            elif hasattr(provider_result, '__iter__'):
+                 # Best effort for iterators (though prompt warns against assumption)
+                 try:
+                     text = "".join(str(chunk) for chunk in provider_result)
+                     raw_data = self.provider._extract_json(text)
+                 except Exception:
+                     pass # Treated as invalid by _normalize
             else:
-                 for chunk in generator:
-                     response_text += chunk
-
-            # Extract JSON
-            result = self.provider._extract_json(response_text)
-            if not result:
-                logger.warning(f"Auditor failed to produce JSON for {article_id}")
-                return
+                 logger.warning(f"Auditor received invalid provider output type ({type(provider_result)}). Using defaults.")
+                 raw_data = {}
+            
+            # Validate & Normalize (Handles non-dict raw_data internally)
+            # This satisfies Objective 6 (Invariant: never raise exception from output type)
+            validated_result = self._normalize_audit_result(raw_data)
 
             # Save Score
-            self._save_score(article_id, result)
+            self._save_score(article_id, validated_result)
             
             # Update Rolling Average
-            self._update_rolling_average(result)
+            self._update_rolling_average(validated_result)
             
-            logger.info(f"Audit Complete for {article_id}. Epistemic Score: {result.get('epistemic_rigor_score')}")
+            # SUCCESS: Reset Circuit Breaker
+            self.failure_count = 0
+            
+            logger.info(f"Audit Complete for {article_id}. Epistemic Score: {validated_result.get('epistemic_rigor_score')}")
 
         except Exception as e:
             logger.error(f"Auditor Error for {article_id}: {e}")
-            # Non-blocking, simply exit
+            
+            # FAILURE: Update Circuit Breaker
+            self.failure_count += 1
+            if self.failure_count >= 3:
+                 self.circuit_open_until = time.time() + self.COOLDOWN_SECONDS
+                 logger.critical(f"Auditor Circuit Breaker TRIPPED. Pausing audits for 30 mins. Failure count: {self.failure_count}")
 
     def _save_score(self, article_id: str, score_data: Dict[str, Any]):
+        """
+        OBJECTIVE 5: Persist Audit Results Safely (Atomic Write).
+        """
         try:
             safe_id = str(article_id).replace("/", "_").replace("\\", "_")
             article_meta_dir = self.metadata_dir / safe_id
@@ -195,9 +285,18 @@ class EditorialAuditor:
                 "audit": score_data
             }
             
-            score_file.write_text(json.dumps(final_data, indent=2), encoding="utf-8")
+            # Atomic Write
+            # cast dir to str for compatibility, enforce utf-8
+            with tempfile.NamedTemporaryFile("w", dir=str(article_meta_dir), delete=False, encoding="utf-8") as tf:
+                 json.dump(final_data, tf, indent=2)
+                 temp_name = tf.name
+            
+            os.replace(temp_name, score_file)
+            
         except Exception as e:
             logger.error(f"Failed to save auditor score: {e}")
+            if 'temp_name' in locals() and os.path.exists(temp_name):
+                os.unlink(temp_name)
 
     def _update_rolling_average(self, new_score: Dict[str, Any]):
         try:
@@ -217,20 +316,20 @@ class EditorialAuditor:
             
             for f in fields:
                 old_val = float(current_avg.get(f, 0.0))
-                # Handle possible string/none in new_score
-                try:
-                    new_val_raw = new_score.get(f, 0.0)
-                    if new_val_raw is None: 
-                        new_val = 0.0 
-                    else:
-                        new_val = float(new_val_raw)
-                except (ValueError, TypeError):
-                    new_val = 0.0
+                # New values are strictly validated floats now
+                new_val = new_score.get(f, 0.0) 
                 
                 updated_val = old_val + (new_val - old_val) / new_count
                 updated[f] = round(updated_val, 4)
             
-            self.rolling_avg_file.write_text(json.dumps(updated, indent=2), encoding="utf-8")
+            # Atomic Write for Average too
+            with tempfile.NamedTemporaryFile("w", dir=str(self.metadata_dir), delete=False, encoding="utf-8") as tf:
+                 json.dump(updated, tf, indent=2)
+                 temp_name = tf.name
+            
+            os.replace(temp_name, self.rolling_avg_file)
             
         except Exception as e:
             logger.error(f"Failed to update rolling average: {e}")
+            if 'temp_name' in locals() and os.path.exists(temp_name):
+                os.unlink(temp_name)
