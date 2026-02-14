@@ -13,6 +13,7 @@ def test_manifest_operations(tmp_path):
     mock_git = MagicMock()
     mock_editor = MagicMock()
     mock_config = MagicMock()
+    mock_config.app.policy_integrity_mode = "disabled"
     
     engine = RefineryEngine(mock_db, mock_git, mock_editor, mock_config)
     

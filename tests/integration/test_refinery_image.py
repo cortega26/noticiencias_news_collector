@@ -12,6 +12,7 @@ def mock_refinery_engine(tmp_path):
     editor_agent.process_article.return_value = "---\ntitle: Test\nimage: ~/assets/images/test-slug.jpg\n---\nContent"
     
     config = MagicMock()
+    config.app.policy_integrity_mode = "disabled"
     
     engine = RefineryEngine(db_manager, git_handler, editor_agent, config)
     

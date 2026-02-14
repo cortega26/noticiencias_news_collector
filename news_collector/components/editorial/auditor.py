@@ -203,6 +203,22 @@ class EditorialAuditor:
 
         return normalized
 
+    def get_cached_score(self, article_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves the last known auditor score for an article, if available.
+        Does NOT trigger a new audit.
+        """
+        try:
+            safe_id = str(article_id).replace("/", "_").replace("\\", "_")
+            score_file = self.metadata_dir / safe_id / "auditor_score.json"
+            
+            if score_file.exists():
+                data = json.loads(score_file.read_text(encoding="utf-8"))
+                return data.get("audit") # Return inner audit object
+        except Exception as e:
+            logger.warning(f"Failed to read cached score for {article_id}: {e}")
+        return None
+
     def audit_article_sync(self, article_id: str, content: str, source_url: str, article_data: Dict[str, Any] = {}) -> None:
         """
         Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.

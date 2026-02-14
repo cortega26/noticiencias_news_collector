@@ -7,6 +7,7 @@ from pathlib import Path
 import dotenv
 import streamlit as st
 import toml
+import json
 
 # Import refinery main explicitly to avoid ambiguous module resolution.
 # Import refinery main explicitly to avoid ambiguous module resolution.
@@ -64,6 +65,37 @@ st.set_page_config(
 )
 
 st.title("🎛️ Panel de Control Unificado Noticiencias")
+
+# --- Editorial Mode Badge ---
+from news_collector.editorial.policy import EditorialPolicy
+# Load Config (We need to reload it to get fresh values or just load it here)
+# refinery_main has config object usually?
+# Let's load mode from config.toml directly or via config_manager
+try:
+    from noticiencias.config_manager import load_config
+    sys_config = load_config()
+    editorial_mode = getattr(sys_config.app, "editorial_mode", "standard")
+    policy = EditorialPolicy.from_mode(editorial_mode)
+    
+    # Display Badge
+    mode_color = "blue"
+    if policy.mode == "strict":
+        mode_color = "red"
+    elif policy.mode == "velocity":
+        mode_color = "green"
+        
+    st.markdown(
+        f"""
+        <div style="padding: 10px; border-radius: 5px; background-color: rgba(28, 131, 225, 0.1); border: 1px solid {mode_color}; margin-bottom: 20px;">
+            <h4 style="margin:0; color: {mode_color};">🛡️ Editorial Mode: {policy.mode.upper()}</h4>
+            <small>Critic Threshold: <b>{policy.critic_threshold}</b> | Auditor Threshold: <b>{policy.auditor_threshold}</b> | Caveats Required: <b>{policy.require_caveats}</b></small>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+except Exception as e:
+    st.error(f"Failed to load editorial policy: {e}")
+
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -400,6 +432,42 @@ with tab1:
         config_data["github"]["target_repo_url"] = st.text_input(
             "Repo Destino", github_cfg.get("target_repo_url", "")
         )
+
+        st.markdown("---")
+        st.subheader("🛡️ Fase 2.5: Crítico (Guardrail)")
+        
+        # Load Env Var for Critic
+        # Note: We read from os.environ because it's a runtime toggle, but we also check secrets 
+        # to see if it was just set.
+        env_guard = str(os.getenv("ENABLE_TRANSLATION_GUARD", "true")).lower() == "true"
+        # Also check secrets dict in case it's defined there but not yet in env (rare)
+        secret_guard = str(secrets.get("ENABLE_TRANSLATION_GUARD", "true")).lower() == "true"
+        
+        # Effective State
+        is_critic_enabled = env_guard
+        
+        if not is_critic_enabled:
+             st.error("⚠️ **CRITIC DISABLED**: El guardrail de calidad está APAGADO. El contenido inestable pasará al editor.")
+        else:
+             st.success("✅ **CRITIC ENABLED**: Guardrail activo.")
+
+        # Critic Configuration (Read-Only from Settings/Hardcoded defaults as per contracts)
+        # We assume standard defaults if not in config
+        critic_threshold = 70 # Default contract
+        if "text_processing" in config_data:
+             critic_threshold = config_data["text_processing"].get("critic_score_threshold", 70)
+        
+        c_col1, c_col2 = st.columns(2)
+        c_col1.metric("Umbral de Aprobación", f"{critic_threshold}/100", help="Puntuación mínima para pasar.")
+        c_col2.metric("Reintentos Máximos", "2", help="Hardcoded en pipeline.")
+        
+        st.caption(f"🤖 **Modelo**: Usa el mismo modelo que el **Editor** ({r_edit}).")
+        
+        # Toggle (saves to secrets/.env)
+        new_guard_state = st.toggle("Habilitar Crítico", value=is_critic_enabled)
+        if new_guard_state != is_critic_enabled:
+             secrets["ENABLE_TRANSLATION_GUARD"] = "true" if new_guard_state else "false"
+             st.warning("Cambio pendiente. Guarda la configuración para aplicar.")
 
         # --- PATH remains in Secrets/Env ---
         secrets["NEWS_COLLECTOR_PATH"] = st.text_input(
@@ -779,15 +847,67 @@ with tab3:
     elif SIBLING_PATH.exists():
         JSON_PATH = SIBLING_PATH
     # If JSON is missing, try to generate it from local MD files (Mock/Test Data)
-    if not (JSON_PATH and JSON_PATH.exists()):
+    # OBJECTIVE 3: Handoff Fallback (No SPOF)
+    # We implement a robust loader that falls back to DB if JSON is missing or corrupt.
+    
+    candidates = []
+    candidates_source = "Unknown"
+    
+    # 1. Try to load JSON
+    if JSON_PATH and JSON_PATH.exists():
+        try:
+            with open(JSON_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict) and "articles" in data:
+                     candidates = data["articles"]
+                     candidates_source = f"Export JSON ({JSON_PATH.name})"
+                elif isinstance(data, list):
+                     candidates = data
+                     candidates_source = f"Export JSON ({JSON_PATH.name}) - Legacy List"
+                else:
+                     raise ValueError("Invalid JSON structure")
+        except Exception as e:
+            st.warning(f"⚠️ **Export Artifact Corrupt/Invalid**: {e}. Attempting DB Fallback...")
+            JSON_PATH = None # Force fallback
+
+    # 2. Fallback: DB Pending Items (Real Recovery)
+    if not candidates:
+        try:
+             # Connect to DB to find pending items
+             with sqlite3.connect(REFINERY_DB_PATH) as conn:
+                 conn.row_factory = sqlite3.Row
+                 cursor = conn.cursor()
+                 # Check if articles table exists
+                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='articles'")
+                 if cursor.fetchone():
+                      # Fetch pending/new articles
+                      # We might need to map DB columns to Article Schema
+                      cursor.execute("SELECT id, title, url, source_id, published_date, collected_date FROM articles WHERE processing_status IN ('new', 'pending') ORDER BY collected_date DESC LIMIT 50")
+                      rows = cursor.fetchall()
+                      if rows:
+                           st.info(f"ℹ️ **Modo Recuperación**: Cargados {len(rows)} artículos pendientes directamente de Base de Datos.")
+                           candidates_source = "Direct DB Connection (Pending)"
+                           for r in rows:
+                                candidates.append({
+                                     "id": r["id"],
+                                     "title": r["title"],
+                                     "url": r["url"],
+                                     "source_id": r["source_id"],
+                                     "published_date": r["published_date"],
+                                     "summary": "Loaded from DB (Content might be fetched on demand)"
+                                })
+        except Exception as e:
+             st.error(f"❌ Fallback DB failed: {e}")
+
+    # 3. Last Resort: Mock Data (Dev/Test)
+    if not candidates:
         data_dir = CLONED_PATH.parent.parent  # temp/source/data
         md_files = list(data_dir.glob("*.md"))
         if md_files:
             try:
                 # Generate a temporary JSON for the UI to consume
-                temp_articles = []
                 for mf in md_files:
-                    temp_articles.append(
+                    candidates.append(
                         {
                             "id": mf.name,
                             "title": mf.stem.replace("_", " ").title(),
@@ -821,25 +941,19 @@ with tab3:
             except Exception as e:
                 st.error(f"Error generando datos mock: {e}")
 
-    if JSON_PATH and JSON_PATH.exists():
+    # --- HANDOFF FALLBACK INTEGRATION ---
+    # We use the 'candidates' list populated above (from JSON, DB, or Mock).
+    if candidates:
         import json
-
         import pandas as pd
 
         try:
             refinery_db = DatabaseManager()  # Initialize using global config
-
-            with open(JSON_PATH, "r", encoding="utf-8") as f:
-                payload = json.load(f)
-            if isinstance(payload, dict):
-                articles = payload.get("articles", [])
-            else:
-                articles = payload
+            articles = candidates
+            
+            # Legacy compatibility (ensure list)
             if not isinstance(articles, list):
-                st.error(
-                    "Formato de exportación inválido: no es una lista de artículos."
-                )
-                articles = []
+                 articles = []
 
             # --- RE-SCORING LOGIC DISABLED ---
             # We trust the score coming from the collector (especially for Cognitive Mode).
@@ -1350,11 +1464,37 @@ with tab5:
                         st.caption(f.name)
                         if refinery_id:
                             st.caption(f"ID: `{refinery_id}`")
+                            
+                            # OBJECTIVE 4: Auditor Visibility
+                            
+                            # OBJECTIVE 4: Auditor Visibility
+                            # Check for auditor score
+                            try:
+                                score_path = BASE_DIR / "data" / "article_metadata" / str(refinery_id).replace("/", "_") / "auditor_score.json"
+                                if score_path.exists():
+                                    with open(score_path, "r", encoding="utf-8") as af:
+                                        score_data = json.load(af).get("audit", {})
+                                        epistemic = float(score_data.get("epistemic_rigor_score", 0.0))
+                                        
+                                        # Severity Badge
+                                        color = "red"
+                                        border = "🔴"
+                                        if epistemic >= 8.0: 
+                                             color = "green"
+                                             border = "🟢"
+                                        elif epistemic >= 5.0: 
+                                             color = "orange"
+                                             border = "🟡"
+                                        
+                                        st.markdown(f"**{border} Rigor: :{color}[{epistemic:.1f}]**")
+                                else:
+                                    st.caption("⏳ No audit yet")
+                            except Exception:
+                                pass
 
                     with c3:
                         if st.button(
                             "🗑️ Despublicar",
-                            key=f"btn_del_{f.name}",
                             width="stretch",
                         ):
                             if refinery_id:

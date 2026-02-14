@@ -302,7 +302,7 @@ def main(  # noqa: C901
         db_manager=db_manager,
         git_handler=git_handler,
         editor_agent=editor_agent,
-        config=config.github,
+        config=config,
     )
 
     source_dir = SOURCE_DIR
