@@ -700,6 +700,18 @@ class OllamaConfig(StrictModel):
         return v
 
 
+class EditorialAuditorConfig(StrictModel):
+    """Configuration for Editorial Auditor."""
+
+    enabled: bool = Field(default=True, description="Enable the editorial auditor.")
+    sampling_rate: float = Field(
+        default=0.2, ge=0.0, le=1.0, description="Probability of auditing an article."
+    )
+    blocking: bool = Field(
+        default=False, description="If true, blocks publication on audit failure."
+    )
+
+
 class Config(StrictModel):
     """Complete Noticiencias configuration model."""
 
@@ -717,6 +729,9 @@ class Config(StrictModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    editorial_auditor: EditorialAuditorConfig = Field(
+        default_factory=EditorialAuditorConfig
+    )
     _metadata: object = PrivateAttr(default=None)
 
     @model_validator(mode="after")

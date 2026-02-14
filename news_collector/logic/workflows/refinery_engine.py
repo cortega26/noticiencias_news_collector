@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from news_collector.components.editorial.ai_editor import EditorAgent
+from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
 
 if "TYPE_CHECKING":
@@ -36,6 +37,7 @@ class RefineryEngine:
         self.git = git_handler
         self.editor = editor_agent
         self.config = config
+        self.auditor = EditorialAuditor(config)
         self._manifest_cache: Dict[str, str] = {}
         self._manifest_loaded = False
 
@@ -179,6 +181,20 @@ class RefineryEngine:
         refined_content = self.editor.process_article(
             article, override_date=canonical_date
         )
+
+        # --- AUDIT PHASE (Non-Blocking) ---
+        # We audit the refined content to score it.
+        # This happens after editor but before we finalize filename/PR, 
+        # so we can potentially use the score later (though req says non-blocking).
+        try:
+             self.auditor.audit_article(
+                 article_id=article_id,
+                 content=refined_content,
+                 source_url=article.get("url") or article.get("source_url") or "",
+                 article_data=article
+             )
+        except Exception as e:
+             logger.error(f"Auditor invocation failed for {article_id}: {e}")
 
         # 3. Determine Output Filename (if not yet locked)
         if not output_filename:
