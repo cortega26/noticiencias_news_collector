@@ -13,6 +13,11 @@ model = "llama3.3:latest"
 timeout = 300
 headlines_model = "qwen2.5:14b"
 
+[editorial_auditor]
+enabled = true
+sampling_rate = 0.2
+blocking = false
+
 [paths]
 data_dir = "./data"
 logs_dir = "./data/logs"
