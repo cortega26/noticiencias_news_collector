@@ -106,9 +106,9 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 
 [scoring.weights]
 source_credibility = 0.1
-recency = 0.2
-content_quality = 0.3
-engagement_potential = 0.4
+recency = 0.3
+content_quality = 0.1
+engagement_potential = 0.5
 
 [scoring.feature_weights]
 source_credibility = 0.15

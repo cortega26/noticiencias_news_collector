@@ -5,6 +5,7 @@ Wraps requests.Session with retries, timeouts, and fail-fast logic for 403s.
 
 import logging
 import secrets
+import time
 from typing import Any, Dict, Optional
 
 import requests
@@ -152,22 +153,17 @@ class RobustRequestsClient:
         reraise=True,
         before_sleep=_safe_retry_log,
     )
-    def get(
+    def _execute_request(
         self,
         url: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[float] = None,
-        ignore_ssrf: bool = False,
+        proxies: Optional[Dict[str, str]] = None,
     ) -> requests.Response:
         """
-        Executes GET request with safety checks and retries.
-        Raises requests.RequestException on failure (including 403s after 1 attempt).
+        Internal method that executes the request with strict retry logic.
         """
-        if not ignore_ssrf:
-            # Raises ValueError if unsafe
-            validate_url_safety(url)
-
         req_timeout = timeout or self.timeout
 
         # Merge local headers if provided without overwriting defaults completely
@@ -181,12 +177,99 @@ class RobustRequestsClient:
             headers=request_headers,
             timeout=req_timeout,
             allow_redirects=True,
+            proxies=proxies,
         )
 
         # Raise for status to trigger retry logic or fail-fast logic
         response.raise_for_status()
 
         return response
+
+    def get(
+        self,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
+        ignore_ssrf: bool = False,
+        source_config: Optional[Dict[str, Any]] = None,
+    ) -> requests.Response:
+        """
+        Executes GET request with safety checks, retries, and Proxy Fallback.
+        """
+        if not ignore_ssrf:
+            validate_url_safety(url)
+
+        # 1. Try Direct Connection
+        try:
+            return self._execute_request(url, params, headers, timeout)
+        except Exception as e:
+            # 2. Check Proxy Eligibility
+            # We need source_config to check proxy policy. If not provided, we can't proxy.
+            if not source_config:
+                raise e
+
+            from news_collector.infrastructure.proxy_manager import proxy_manager
+            
+            response = getattr(e, "response", None)
+            
+            if proxy_manager.should_retry_with_proxy(source_config, error=e, response=response):
+                proxy_settings = proxy_manager.get_proxy_settings(source_config)
+                
+                if proxy_settings:
+                    logger.info(
+                        {
+                            "event": "proxy.attempt",
+                            "details": {
+                                "url": url,
+                                "source_id": source_config.get("name", "unknown"),
+                                "reason": str(e)
+                            }
+                        }
+                    )
+                    
+                    start_time = time.time()
+                    try:
+                        # Retry with proxy
+                        # We use _execute_request again, but tenacity might retry *proxied* requests too, which is desired.
+                        resp = self._execute_request(url, params, headers, timeout, proxies=proxy_settings)
+                        
+                        duration = time.time() - start_time
+                        proxy_manager.record_usage(duration)
+                        
+                        logger.info(
+                            {
+                                "event": "proxy.success",
+                                "details": {
+                                    "url": url,
+                                    "duration": duration
+                                }
+                            }
+                        )
+                        return resp
+                        
+                    except Exception as proxy_err:
+                        duration = time.time() - start_time
+                        proxy_manager.record_usage(duration) # Record usage even on failure
+                        
+                        logger.warning(
+                            {
+                                "event": "proxy.failed",
+                                "details": {
+                                    "url": url,
+                                    "error": str(proxy_err),
+                                    "duration": duration
+                                }
+                            }
+                        )
+                        # Fall through to re-raise original error or proxy error?
+                        # Usually better to raise the proxy error if that was the last attempt, 
+                        # OR raise the original if proxy was just a fallback that didn't work.
+                        # Given strict requirements, let's raise the proxy error as it's the most recent state.
+                        raise proxy_err
+
+            # If not eligible or proxy failed logic, re-raise original
+            raise e
 
     def close(self):
         self.session.close()

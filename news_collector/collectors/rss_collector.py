@@ -57,6 +57,16 @@ class RSSCollector(BaseCollector):
     Hereda de BaseCollector para mantener consistencia con otros tipos de
     colectores que podríamos agregar en el futuro (APIs, web scraping, etc.).
     """
+    
+    # Robust Headers for Feed Fetching (Browser-like to avoid 403s)
+    # NOTE: Removed 'br' (Brotli) because if the python environment lacks the brotli package,
+    # requests won't decode it automatically, leading to binary garbage.
+    FEED_REQUEST_headers = {
+        "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7",
+        "Accept-Encoding": "gzip, deflate", 
+        "Accept-Language": "en-US,en;q=0.9,es;q=0.7",
+        # User-Agent is handled by the client/config, but we ensure it's set there.
+    }
 
     def __init__(
         self,
@@ -75,6 +85,14 @@ class RSSCollector(BaseCollector):
         self.pre_scorer = PreScorer()
         self.parser = RssParser()
         self.image_extractor = ImageExtractor(session=self.session)
+        
+        # Scholarly Enrichment
+        from news_collector.enrichment.scholarly import ScholarlyMetadataEnricher
+        self.scholarly_enricher = ScholarlyMetadataEnricher()
+        
+        # Enrichment Strategy Router
+        from news_collector.enrichment.router import EnrichmentStrategyRouter
+        self.router = EnrichmentStrategyRouter(logger_factory=logger_factory)
 
         # Estadísticas de la sesión actual
         self.session_stats = {
@@ -201,46 +219,35 @@ class RSSCollector(BaseCollector):
                 domain, robots_delay, source_config.get("min_delay_seconds")
             )
 
-            feed_content, status_code = self._fetch_feed(
-                source_id, source_config["url"], source_config
-            )
-            if status_code == 304:
-                self._emit_log(
-                    "info",
-                    "collector.feed.not_modified",
-                    source_id=source_id,
-                    details={"status_code": status_code},
-                )
+            # 1. Robust Fetch
+            feed_response = self._fetch_feed_robust(source_id, source_config)
+            
+            if not feed_response["success"]:
+                 stats["success"] = False # Explicitly false if fetch failed
+                 stats["error_message"] = feed_response.get("error_message")
+                 # Already logged in fetch_robust
+                 return stats
+            
+            if feed_response.get("status_code") == 304:
                 stats["success"] = True
                 return stats
+            
+            # 2. Robust Parse
+            parse_result = self._parse_feed_robust(
+                source_id, 
+                feed_response["content"], 
+                feed_response["url"],
+                source_config
+            )
 
-            if not feed_content:
-                stats["error_message"] = "No se pudo obtener el feed"
-                self._emit_log(
-                    "warning",
-                    "collector.feed.unavailable",
-                    source_id=source_id,
-                    details={
-                        "status_code": status_code,
-                        "url": source_config.get("url"),
-                    },
-                )
-                return stats
+            if not parse_result["success"]:
+                 stats["error_message"] = parse_result.get("error_message")
+                 # Classification logic is inside parse_robust
+                 return stats
 
-            parsed_feed = feedparser.parse(feed_content)
+            parsed_feed = parse_result["parsed_feed"]
 
-            if parsed_feed.bozo and not self._is_acceptable_bozo(parsed_feed):
-                stats["error_message"] = (
-                    f"Feed malformado: {parsed_feed.bozo_exception}"
-                )
-                self._emit_log(
-                    "warning",
-                    "collector.feed.malformed",
-                    source_id=source_id,
-                    details={"error": str(parsed_feed.bozo_exception)},
-                )
-                return stats
-
+            # 3. Extract Articles
             try:
                 raw_articles = self._extract_articles_from_feed(
                     parsed_feed, source_config, source_id
@@ -304,11 +311,12 @@ class RSSCollector(BaseCollector):
                 details={
                     "articles_found": len(raw_articles),
                     "articles_saved": saved_count,
+                    "feed_type": parse_result.get("feed_type", "unknown")
                 },
             )
 
         except requests.RequestException as exc:
-            stats["error_message"] = f"Error de red: {exc}"
+            stats["error_message"] = f"Error de red general: {exc}"
             self._emit_log(
                 "error",
                 "collector.fetch.network_error",
@@ -360,142 +368,189 @@ class RSSCollector(BaseCollector):
 
         return stats
 
-    def _fetch_feed(  # noqa: C901
-        self, source_id: str, feed_url: str, source_config: Dict[str, Any] = None
-    ) -> Tuple[Optional[str], Optional[int]]:
+    def _fetch_feed_robust(self, source_id: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Obtiene el contenido de un feed RSS de manera robusta usando RobustRequestsClient.
+        Fetches feed content with robust handling for bytes, headers, and status codes.
+        Returns a dict with success, status_code, content (bytes), url, and error_message.
         """
+        url = source_config["url"]
+        
+        # 1. Check Metadata for Conditional Get
+        cached_headers = {}
         try:
-            cached_headers: Dict[str, Optional[str]] = {
-                "etag": None,
-                "last_modified": None,
-                "content_hash": None,
-            }
-            try:  # noqa: SIM105
-                cached_headers = (
-                    self.db_manager.get_source_feed_metadata(source_id)
-                    or cached_headers
-                )
-            except Exception:  # noqa: SIM105,S110
-                # Log warning but continue
-                pass
+             meta = self.db_manager.get_source_feed_metadata(source_id)
+             if meta:
+                 cached_headers = meta
+        except Exception:
+            pass
+            
+        request_headers = self.FEED_REQUEST_headers.copy()
+        if cached_headers.get("etag"):
+            request_headers["If-None-Match"] = cached_headers["etag"]
+        if cached_headers.get("last_modified"):
+            request_headers["If-Modified-Since"] = cached_headers["last_modified"]
+            
+        if source_config.get("headers"):
+            request_headers.update(source_config["headers"])
 
-            # SSRF Check is done inside client, but we can double check or rely on client.
-            # Client.get(ignore_ssrf=False) does it.
+        try:
+            start_t = time.perf_counter()
+            response = self.client.get(
+                url,
+                headers=request_headers,
+                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+            )
+            latency = (time.perf_counter() - start_t) * 1000
+            
+            # Log raw fetch details for observability
+            self._emit_log(
+                "debug", "collector.fetch.raw", source_id=source_id,
+                details={
+                    "status": response.status_code,
+                    "bytes": len(response.content),
+                    "content_type": response.headers.get("Content-Type", ""),
+                    "latency_ms": latency
+                }
+            )
 
-            request_headers = {}
-            # ETag / Last-Modified Logic
-            if cached_headers.get("etag"):
-                request_headers["If-None-Match"] = cached_headers["etag"]
-            if cached_headers.get("last_modified"):
-                request_headers["If-Modified-Since"] = cached_headers["last_modified"]
-
-            if source_config and source_config.get("headers"):
-                request_headers.update(source_config["headers"])
-
-            try:
-                # Robust GET with retries enabled
-                response = self.client.get(
-                    feed_url,
-                    headers=request_headers or None,
-                    timeout=COLLECTION_CONFIG.get("request_timeout", 30),
-                )
-            except requests.RequestException as e:
-                # Client raises execution for 403, 404, or exhausted retries
-                status_code = getattr(e.response, "status_code", None)
-                self._emit_log(
-                    "warning",
-                    "collector.feed.fetch_failed",
-                    source_id=source_id,
-                    details={"error": str(e), "url": feed_url, "status": status_code},
-                )
-                return (None, status_code)
-
+            # 2. Handle Status Codes
             if response.status_code == 304:
-                # Update metadata if headers changed (e.g. ETag rotation)
-                try:  # noqa: SIM105
-                    self.db_manager.update_source_feed_metadata(
-                        source_id,
-                        etag=response.headers.get("ETag"),
-                        last_modified=response.headers.get("Last-Modified"),
-                        # content_hash is not available/changed since no content
-                    )
-                except Exception:  # noqa: S110
-                    pass  # noqa: S110
-                return (None, 304)
+                run_304 = True
+                # Sometimes 304 is returned but we might want to force refresh if local cache invalid?
+                # For now optimize: 304 means success but no new content.
+                # Update last checked?
+                return {"success": True, "status_code": 304, "content": None, "url": url}
+                
+            if response.status_code >= 400:
+                 self._emit_log(
+                    "warning", "collector.fetch.error", source_id=source_id,
+                    details={"status": response.status_code, "url": url}
+                 )
+                 return {"success": False, "status_code": response.status_code, "error_message": f"HTTP {response.status_code}", "url": url}
 
-            # --- Validation & Metadata Update Logic (Preserved) ---
-            # Verificar tamaño razonable
-            content_length = len(response.content)
-            if content_length > 10 * 1024 * 1024:  # 10MB límite
-                self._emit_log(
-                    "warning",
-                    "collector.feed.too_large",
-                    source_id=source_id,
-                    details={"bytes": content_length},
-                )
-                return (None, response.status_code)
+            # 3. Content Size Check
+            if len(response.content) > 10 * 1024 * 1024:
+                return {"success": False, "error_message": "Feed too large (>10MB)", "url": url}
 
-            # Validate Content-Type (Relaxed warning)
-            content_type = response.headers.get("content-type", "").lower()
-            if not any(
-                x in content_type for x in ["xml", "rss", "atom", "json"]
-            ):  # json feeds exist
-                self._emit_log(
-                    "debug",
-                    "collector.feed.suspicious_content_type",
-                    source_id=source_id,
-                    details={"type": content_type},
-                )
-
-            response_text = response.text
+            # 4. Success - Return Content
+            # Handle ETag updates
             content_hash = hashlib.sha256(response.content).hexdigest()
-
+            
             if cached_headers.get("content_hash") == content_hash:
-                self._emit_log(
-                    "info",
-                    "collector.feed.content_unchanged",
-                    source_id=source_id,
-                    details={"hash": content_hash},
-                )
-                # Still update metadata execution time/headers if needed?
-                # For now, just return 304 to signal skip.
-                # But we might want to update the 'last_checked' timestamp in DB?
-                # load_source_feed_metadata updates? No, update_source_feed_metadata does.
-                # Let's update metadata before returning to ensure freshness?
-                try:  # noqa: SIM105
-                    self.db_manager.update_source_feed_metadata(
+                 self._emit_log("info", "collector.feed.content_unchanged", source_id=source_id)
+                 # Update metadata timestamp even if 304-equivalent
+                 try:
+                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
-                        content_hash=content_hash,
-                    )
-                except Exception:  # noqa: S110
-                    pass  # noqa: S110
-                return (None, 304)
+                        content_hash=content_hash
+                     )
+                 except Exception: pass
+                 return {"success": True, "status_code": 304, "content": None, "url": url} # Treat as 304 logic upstream
 
-            # Metadata Updates (Cleaned up)
-            try:  # noqa: SIM105
+            # Save metadata
+            try:
                 self.db_manager.update_source_feed_metadata(
                     source_id,
                     etag=response.headers.get("ETag"),
                     last_modified=response.headers.get("Last-Modified"),
-                    content_hash=content_hash,
+                    content_hash=content_hash
                 )
-            except Exception:  # noqa: S110
-                pass  # noqa: S110  # Non-critical
+            except Exception: pass
 
-            return (response_text, response.status_code)
+            return {
+                "success": True, 
+                "status_code": response.status_code, 
+                "content": response.content, # Return BYTES
+                "url": url,
+                "encoding": response.encoding
+            }
 
-        except Exception as exc:
-            self._emit_log(
-                "error",
-                "collector.feed.unexpected_error",
-                source_id=source_id,
-                details={"error": str(exc)},
-            )
-            return (None, None)
+        except requests.RequestException as e:
+            return {"success": False, "error_message": f"Network Error: {str(e)}", "url": url}
+        except Exception as e:
+            return {"success": False, "error_message": f"Unexpected Error: {str(e)}", "url": url}
+
+    def _parse_feed_robust(self, source_id: str, content: bytes, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Parses feed content (bytes) with robust error classification.
+        Detects HTML blocks, JSON, and tries standard parsing.
+        """
+        # 1. Sniff Content Type
+        content_prefix = content[:1000].strip().lower()
+        
+        # Check for HTML (Blocked/AuthWall/Splash)
+        # Look for <html, <!doctype html, or specific block text
+        html_indicators = [
+            b"<html", 
+            b"<!doctype html", 
+            b"<body", 
+            b"cloudflare", 
+            b"please enable cookies",
+            b"captcha",
+            b"<head"
+        ]
+        
+        if any(ind in content_prefix for ind in html_indicators):
+             self._emit_log(
+                 "warning", 
+                 "collector.feed.classified_as_html", 
+                 source_id=source_id, 
+                 details={"prefix": str(content_prefix[:200])} # Log more for debug
+             )
+             return {
+                 "success": False, 
+                 "error_message": "Feed blocked/invalid (HTML Response)",
+                 "classification": "BLOCKED_OR_NOT_FEED"
+             }
+        
+        # Check for JSON
+        if content_prefix.startswith(b"{") or content_prefix.startswith(b"["):
+             # For now, we don't support JSON feeds standard implementation unless feedparser handles it?
+             # Feedparser DOES support JSON Feed (v1). So let's try to parse it, 
+             # but if it fails, classify clearly.
+             pass 
+
+        # 2. Parse
+        # Pass bytes directly to feedparser to let it handle encoding sniffing
+        parsed = feedparser.parse(content)
+        
+        # 3. Analyze Bozo
+        if parsed.bozo:
+            # Tolerant Check
+            if self._is_acceptable_bozo(parsed):
+                pass # Continue
+            else:
+                exc = parsed.get("bozo_exception")
+                # Secondary check: if it failed and content looks like HTML
+                self._emit_log(
+                    "warning",
+                    "collector.feed.parse_error_debug",
+                    source_id=source_id,
+                    details={
+                        "error": str(exc),
+                        "prefix_hex": content[:100].hex(),
+                        "prefix_repr": repr(content[:100])
+                    }
+                )
+                return {
+                    "success": False,
+                    "error_message": f"Malformed Feed: {exc}",
+                    "classification": "MALFORMED_XML"
+                }
+        
+        # 4. Check for Empty Entries + Feed Index?
+        if not parsed.entries:
+             # Could be a feed index (OPML or similar list of feeds)? Or just empty.
+             # Implementation of Feed Index detection would go here.
+             pass
+
+        return {
+            "success": True,
+            "parsed_feed": parsed,
+            "feed_type": getattr(parsed, "version", "unknown")
+        }
 
     def _is_acceptable_bozo(self, parsed_feed) -> bool:
         return self.parser.is_acceptable_bozo(parsed_feed)
@@ -558,11 +613,21 @@ class RSSCollector(BaseCollector):
                 details={"candidates": len(candidates), "limit": max_articles},
             )
 
-            selected_candidates = self.pre_scorer.select_top_candidates(
-                candidates,
-                limit=max_articles,
-                source_context=source_config.get("name", source_id),
-            )
+            # --- START PRESCORER UPDATE ---
+            # If default LLM is not configured, use heuristic scoring
+            if self.pre_scorer.model_name == "ollama": # Default placeholder check
+                 # Heuristic backup: Prefers longer summaries and content (if available)
+                 # Sort by length of summary descending
+                 candidates.sort(key=lambda x: len(x.get("summary", "") or ""), reverse=True)
+                 selected_candidates = candidates[:max_articles]
+                 self._emit_log("info", "collector.prescorer.heuristic_fallback", details={"method": "length_sort"})
+            else:
+                 selected_candidates = self.pre_scorer.select_top_candidates(
+                    candidates,
+                    limit=max_articles,
+                    source_context=source_config.get("name", source_id),
+                )
+            # --- END PRESCORER UPDATE ---
         else:
             selected_candidates = candidates
 
@@ -574,79 +639,38 @@ class RSSCollector(BaseCollector):
 
         for cand in selected_candidates:
             try:
-                # Determine Fetch Mode
-                # 1. 'fetch_mode' explicit config (rss_only, html, headless)
-                # 2. Fallback to 'content_mode' if fetch_mode missing (legacy config compat)
-                fetch_mode = source_config.get("fetch_mode")
-                if not fetch_mode:
-                    fetch_mode = (
-                        "rss_only"
-                        if source_config.get("content_mode") == "summary_only"
-                        else "html"
+                # --- ENRICHMENT STRATEGY ROUTER ---
+                enrichment_result = self.router.route_enrichment(
+                    source_id, source_config, cand
+                )
+
+                cand["content"] = enrichment_result.get("content", "")
+                html_content = enrichment_result.get("raw_content") or ""
+                
+                # Metadata from Scholarly, etc.
+                if enrichment_result.get("metadata"):
+                    cand["enrichment_metadata"] = enrichment_result["metadata"]
+
+                # Log strategy used
+                if enrichment_result.get("strategy_used") != "none":
+                     self._emit_log(
+                        "info",
+                        "enrichment.router.selected",
+                        source_id=source_id,
+                        details={
+                            "url": cand.get("url"),
+                            "strategy": enrichment_result.get("strategy_used"),
+                            "success": enrichment_result.get("success"),
+                            "reason": enrichment_result.get("reason")
+                        }
                     )
 
-                cand["content_mode"] = source_config.get(
-                    "content_mode", "full_text"
-                )  # Propagate to model
-
-                # Fetch logic
-                html_content = ""
-                if fetch_mode == "rss_only":
-                    self._emit_log(
-                        "debug",
-                        "collector.article.skipping_fetch",
-                        details={"url": cand["url"], "mode": "rss_only"},
-                    )
-                elif fetch_mode == "html":
-                    try:
-                        self._emit_log(
-                            "info",
-                            "collector.article.fetching_content",
-                            details={"url": cand["url"]},
-                        )
-                        # Using RobustClient (fail-fast on 403)
-                        resp = self.client.get(cand["url"], timeout=15)
-                        html_content = resp.text
-                    except requests.RequestException as fetch_err:
-                        # 403s will end up here immediately.
-                        self._emit_log(
-                            "warning",
-                            "collector.article.fetch_failed",
-                            details={
-                                "url": cand["url"],
-                                "error": str(fetch_err),
-                                "status": getattr(
-                                    fetch_err.response, "status_code", None
-                                ),
-                            },
-                        )
-                        # Do not fail the article, just proceed with empty HTML (will fallback to summary)
-
-                # Full Text Extraction
-                if html_content:
-                    # Simple text extraction
-                    from bs4 import BeautifulSoup
-
-                    soup = BeautifulSoup(html_content, "html.parser")
-                    for script in soup(
-                        [
-                            "script",
-                            "style",
-                            "nav",
-                            "footer",
-                            "header",
-                            "aside",
-                            "noscript",
-                        ]
-                    ):
-                        script.decompose()
-                    cand["content"] = soup.get_text(separator=" ", strip=True)
-
-                # Fallback logic
+                # Fallback logic (Router handles strategies, but we still ensure content/summary logic)
                 if not cand.get("content"):
                     cand["content"] = cand.get("summary", "")
                     # Mark as fallback so validation rules can be lenient
-                    if cand["content"]:  # Only if we actually have a summary
+                    # BUT preserve 'summary_only' if explicitly configured of via discovery_only
+                    if cand["content"] and cand.get("content_mode") != "summary_only":  
                         cand["content_mode"] = "summary_fallback"
 
                 # Image Extraction Logic
@@ -694,14 +718,7 @@ class RSSCollector(BaseCollector):
                 # Add status to metadata
                 if "article_metadata" not in cand:
                     cand["article_metadata"] = {}
-                # The 'article_metadata' structure in 'cand' here is actually a DICT,
-                # but 'CollectorArticleModel' expects 'article_metadata' field which is an 'ArticleMetadataModel'.
-                # Wait, 'cand' here is a dict coming from RssParser.
-                # In '_process_article' (called LATER or inside loop?), it maps to the model.
-                # Actually, strictly speaking, 'cand' is just a dict here.
-                # We need to pass this info to '_process_article' or put it in 'cand' such that '_process_article' sees it.
-                # RssParser puts 'source_metadata' in cand.
-
+                
                 cand["_image_status"] = image_status
                 cand["_image_source"] = image_source
 
@@ -771,6 +788,8 @@ class RSSCollector(BaseCollector):
                     "image_source": raw_article.get("_image_source"),
                 },
                 "content_mode": raw_article.get("content_mode", "full_text"),
+                "min_summary_length_override": source_config.get("min_summary_length"),
+                "min_content_length_override": source_config.get("min_content_length"),
             }
 
             # Extraer DOI si está disponible
@@ -789,60 +808,123 @@ class RSSCollector(BaseCollector):
             processed_article["reading_time_minutes"] = max(
                 1, processed_article["word_count"] // 200
             )
-
-            # Detección simple de idioma (determinística)
-            try:
-                # Priorizar configuración
-                if source_config.get("language"):
-                    processed_article["language"] = source_config["language"]
-                else:
-                    from news_collector.utils.text_cleaner import detect_language_simple
-
-                    processed_article["language"] = detect_language_simple(
-                        content_for_stats
-                    )
-            except Exception:
+            
+            if not processed_article["language"]:
                 processed_article["language"] = "en"
 
-            # Enrichment pipeline (deterministic with caching)
-            try:
-                enrichment = enrichment_pipeline.enrich_article(
-                    {
-                        "title": processed_article["title"],
-                        "summary": processed_article["summary"],
-                        "content": raw_article.get("source_metadata", {}).get(
-                            "content", ""
-                        ),
-                        "language": processed_article["language"],
-                    }
-                )
-                processed_article["article_metadata"]["enrichment"] = enrichment
-                processed_article["language"] = enrichment["language"]
-            except Exception as exc:
-                # Fail-open: Log the error but don't crash the collector
-                self._emit_log(
-                    "warning",
-                    "collector.article.enrichment_failed",
-                    source_id=source_id,
-                    details={
+            original_content = processed_article.get("content", "") or ""
+            original_title = processed_article.get("title", "") or ""
+            
+            # --- 2. ENRICHMENT STRATEGY ROUTING ---
+            enrichment_strategy = COLLECTION_CONFIG.get("sources", {}).get(source_id, {}).get("enrichment_strategy")
+            
+            # Temporary: Check if source_id in hardcoded list if config not loaded deep enough
+            # (In production, config is loaded from yaml)
+            
+            is_scholarly = enrichment_strategy == "scholarly_metadata"
+            
+            if is_scholarly:
+                 # Use Scholarly Enricher (Crossref/Reference Metadata)
+                 url_to_enrich = processed_article.get("url", "")
+                 enrich_result = self.scholarly_enricher.enrich_url(url_to_enrich)
+                 
+                 if enrich_result["success"]:
+                     processed_article["content"] = enrich_result["content"]
+                     processed_article["title"] = enrich_result.get("title") or original_title
+                     # Add metadata to existing dictionary if possible or create new field in model later
+                     # For now, just ensuring content is high quality.
+                     
+                     # Create minimal "enrichment" block to satisfy schema
+                     processed_article["article_metadata"]["enrichment"] = {
+                        "entities": [],
+                        "topics": [],
+                        "sentiment": "neutral",
+                        "model_version": "scholarly_v1",
+                        "normalized_title": processed_article["title"][:500],
+                        "normalized_summary": processed_article["summary"][:2000]
+                     }
+                 else:
+                     # Failed scholarly enrichment
+                     self._emit_log(
+                        "warning",
+                        "collector.enrichment.scholarly_failed",
+                        source_id=source_id,
+                        details={"reason": enrich_result.get("reason"), "url": url_to_enrich}
+                     )
+                     # Fallthrough might leave content short, which gets caught by Stage B
+                     processed_article["article_metadata"]["enrichment"] = {
+                        "model_version": "scholarly_failed",
+                        "error": enrich_result.get("reason")
+                     }
+
+            else:
+                # --- STANDARD ENRICHMENT (Web Scraping) ---
+                try:
+                    enrichment = enrichment_pipeline.enrich_article(
+                        {
+                            "title": original_title,
+                            "summary": processed_article.get("summary", ""),
+                            "content": original_content,
+                            "language": processed_article.get("language", "en"),
+                            "url": raw_article.get("url"), # Passing URL might be useful if pipeline supports it in future or for logging, but model uses title/summary/content
+                        }
+                    )
+                    
+                    if enrichment:
+                        processed_article["content"] = enrichment.get("content", original_content)
+                        # Only update fields if they are present in enrichment to avoid None overwrites
+                        if enrichment.get("normalized_title"): processed_article["normalized_title"] = enrichment.get("normalized_title")
+                        if enrichment.get("normalized_summary"): processed_article["normalized_summary"] = enrichment.get("normalized_summary")
+                        if enrichment.get("topics"): processed_article["topics"] = enrichment.get("topics")
+                        if enrichment.get("entities"): processed_article["entities"] = enrichment.get("entities")
+                        if enrichment.get("sentiment"): processed_article["sentiment"] = enrichment.get("sentiment")
+                        if enrichment.get("language"): processed_article["language"] = enrichment.get("language")
+                        if enrichment.get("reading_time_minutes"): processed_article["reading_time_minutes"] = enrichment.get("reading_time_minutes")
+                        if enrichment.get("model_version"): processed_article["model_version"] = enrichment.get("model_version")
+
+                        processed_article["article_metadata"]["enrichment"] = enrichment
+                except Exception as exc:
+                    self._emit_log(
+                        "warning",
+                        "collector.article.enrichment_failed",
+                        source_id=source_id,
+                        details={
+                            "error": str(exc),
+                            "url": raw_article.get("url"),
+                        },
+                    )
+                    processed_article["article_metadata"]["enrichment"] = {
                         "error": str(exc),
-                        "url": raw_article.get("url"),
-                    },
-                )
-                # Ensure minimal enrichment structure exists
-                processed_article["article_metadata"]["enrichment"] = {
-                    "entities": [],
-                    "topics": [],
-                    "sentiment": "neutral",
-                    "error": str(exc),
-                    "language": processed_article.get("language", "en"),
-                    "normalized_title": processed_article["title"][:500],
-                    "normalized_summary": processed_article["summary"][:2000],
-                    "model_version": "fallback_v1",
-                }
+                        "model_version": "fallback_v1"
+                    }
 
             try:
-                return CollectorArticleModel.model_validate(processed_article)
+                article_model = CollectorArticleModel.model_validate(processed_article)
+
+                # STAGE B: Quality Contract (Publishability Check)
+                # Enforce STRICT length requirements for "pending" (publishable) status.
+                # If short, it's saved as "enrichment_failed" (Candidate Only).
+                # This ensures we discover everything (Stage A) but only publish quality (Stage B).
+                min_publish_len = 500
+                
+                content_len = len(article_model.content.strip()) if article_model.content else 0
+                summary_len = len(article_model.summary.strip()) if article_model.summary else 0
+                
+                if content_len < min_publish_len and summary_len < min_publish_len:
+                     article_model.processing_status_override = "enrichment_failed"
+                     self._emit_log(
+                        "info",
+                        "collector.contract.stage_b_failed",
+                        source_id=source_id,
+                        details={
+                            "reason": "content_too_short_for_publication",
+                            "len": max(content_len, summary_len),
+                            "threshold": min_publish_len,
+                            "url": str(article_model.url)
+                        }
+                     )
+                
+                return article_model
             except ValidationError as exc:
                 self._emit_log(
                     "warning",
