@@ -16,16 +16,19 @@ el mantenimiento y la extensión del sistema.
 import asyncio
 import hashlib
 import json
+import os
 import random
 import time
 import urllib.robotparser as robotparser
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import httpx
+import email.utils
+from dateutil import parser as date_parser
 
 from news_collector.collectors.rate_limit_utils import calculate_effective_delay
 from news_collector.config.settings import (
@@ -231,6 +234,17 @@ class BaseCollector(ABC):
 
     def _process_single_source_sync(self, source_id, source_config):
         try:
+            if not self._check_crawl_interval(source_id, source_config):
+                return {
+                    "source_id": source_id,
+                    "success": True, # Using True to not count as error, but 0 articles found
+                    "articles_found": 0,
+                    "articles_saved": 0,
+                    "error_message": None,
+                    "processing_time": 0.0,
+                    "skipped": True
+                }
+
             self._pre_process_source(source_id, source_config)
             source_result = self.collect_from_source(source_id, source_config)
             self._update_global_stats(source_result)
@@ -242,6 +256,17 @@ class BaseCollector(ABC):
 
     async def _process_single_source_async(self, source_id, source_config):
         try:
+            if not self._check_crawl_interval(source_id, source_config):
+                return {
+                    "source_id": source_id,
+                    "success": True,
+                    "articles_found": 0,
+                    "articles_saved": 0,
+                    "error_message": None,
+                    "processing_time": 0.0,
+                    "skipped": True
+                }
+
             # Note: _pre_process_source might be sync, but it's usually fast.
             # If it were heavy, we'd need to asyncify it too.
             self._pre_process_source(source_id, source_config)
@@ -568,8 +593,58 @@ class BaseCollector(ABC):
         jitter = random.uniform(  # noqa: S311
             0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
         )
-        delay = min(max_b, (base * (2**attempt)) + jitter)
-        time.sleep(delay)
+        # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
+        # This prevents thundering herd better than "Equal Jitter" or constant jitter.
+        # User requested: "Add jitter to exponential backoff (deterministic in tests)"
+        # We will use random.uniform(0.5 * delay, 1.5 * delay) to respect the exponential growth 
+        # but smear it out.
+        
+        target_delay = min(max_b, (base * (2**attempt)))
+        
+        # Jitter: +/- 50% of the target delay, but clamped to 0
+        low = target_delay * 0.5
+        high = target_delay * 1.5
+        jittered_delay = random.uniform(low, high)
+        
+        time.sleep(jittered_delay)
+
+    async def _backoff_sleep_async(self, attempt: int):
+        """Async version of backoff sleep to avoid blocking the event loop."""
+        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
+        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+        
+        target_delay = min(max_b, (base * (2**attempt)))
+        
+        # Jitter: +/- 50%
+        low = target_delay * 0.5
+        high = target_delay * 1.5
+        jittered_delay = random.uniform(low, high)
+        
+        await asyncio.sleep(jittered_delay)
+
+    def _parse_retry_after(self, response: httpx.Response) -> Optional[datetime]:
+        """
+        Parses Retry-After header which can be seconds (int) or HTTP Date.
+        Returns absolute UTC datetime or None if invalid.
+        """
+        header = response.headers.get("Retry-After")
+        if not header:
+            return None
+        
+        try:
+            # Try seconds first
+            seconds = int(header)
+            return datetime.now(timezone.utc) + timedelta(seconds=seconds)
+        except ValueError:
+            # Try HTTP Date
+            try:
+                # email.utils.parsedate_to_datetime handles RFC 2822
+                dt = email.utils.parsedate_to_datetime(header)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+            except Exception:
+                return None
 
     # Dead-letter queue
     # =================
@@ -606,6 +681,85 @@ class BaseCollector(ABC):
                 details={"error": str(exc), "path": str(path)},
             )
         return path
+
+    def _check_crawl_interval(self, source_id: str, source_config: Dict[str, Any]) -> bool:
+        """
+        Check if the source is ready to be crawled based on its interval.
+        Returns True if ready, False otherwise.
+        """
+        # Force Run Override (Kill Switch / Manual Debug)
+        if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() == "false":
+            return True
+
+        interval = source_config.get("crawl_interval_seconds", 0)
+        if interval <= 0:
+            return True
+
+        try:
+            state = self.db_manager.get_source_circuit_state(source_id)
+            if not state:
+                return True
+
+            # 1. Check Circuit Breaker Status
+            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
+                if state.get("status") == "COOLDOWN":
+                    next_retry = state.get("next_retry_at")
+                    if next_retry:
+                        # Ensure timezone awareness
+                        if next_retry.tzinfo is None:
+                            next_retry = next_retry.replace(tzinfo=timezone.utc)
+                        else:
+                            next_retry = next_retry.astimezone(timezone.utc)
+                        
+                        now = datetime.now(timezone.utc)
+                        if now < next_retry:
+                            self._emit_log(
+                                "warning",
+                                "collector.circuit_breaker.skip",
+                                source_id=source_id,
+                                details={
+                                    "reason": "COOLDOWN",
+                                    "retry_at": next_retry.isoformat()
+                                }
+                            )
+                            return False
+
+            if not state.get("last_checked"):
+                return True
+
+            last_checked = state["last_checked"]
+            # Ensure timezone awareness
+            if last_checked.tzinfo is None:
+                last_checked = last_checked.replace(tzinfo=timezone.utc)
+            else:
+                last_checked = last_checked.astimezone(timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            
+            if (now - last_checked).total_seconds() < interval:
+                 self._emit_log(
+                    "info",
+                    "collector.source.skipped_interval",
+                    source_id=source_id,
+                    details={
+                        "reason": "interval_not_met",
+                        "interval": interval,
+                        "last_checked": last_checked.isoformat(),
+                        "wait_time": interval - (now - last_checked).total_seconds()
+                    }
+                )
+                 return False
+            
+            return True
+        except Exception as e:
+            # Fail open on error to avoid permanent stalling
+            self._emit_log(
+                "warning", 
+                "collector.interval_check.failed",
+                source_id=source_id,
+                details={"error": str(e)}
+            )
+            return True
 
     def _save_article(
         self, article_data: CollectorArticleModel | Dict[str, Any]
@@ -1010,10 +1164,6 @@ def create_collector(collector_type: str) -> BaseCollector:
         from .async_rss_collector import AsyncRSSCollector
 
         return AsyncRSSCollector()
-    elif collector_type.lower() == "headless":
-        from .headless_collector import HeadlessCollector
-
-        return HeadlessCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 

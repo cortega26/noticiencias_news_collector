@@ -158,13 +158,82 @@ def get_sources_by_update_frequency(frequency):
     }
 
 
-def validate_sources():
-    load_sources()  # Ensure fresh check
-    required_fields = ["name", "url", "credibility_score", "category", "language"]
-    for source_id, source_config in ALL_SOURCES.items():
-        for field in required_fields:
-            if field not in source_config:
-                raise ValueError(f"Fuente {source_id} le falta el campo {field}")
 
-        # Check enabled logic? Not implemented in sources.py natively yet, assuming all active.
-    print(f"✅ {len(ALL_SOURCES)} fuentes validadas correctamente")
+# Tier Definitions
+TIER_A_INTERVAL = 600  # 10 mins (Range 300-900)
+TIER_B_INTERVAL = 3600  # 1 hour (Range 1800-3600)
+TIER_C_INTERVAL = 21600  # 6 hours
+TIER_D_INTERVAL = 86400  # 24 hours (Manual/Restricted)
+
+VALID_TIERS = ["A", "B", "C", "D"]
+
+
+def validate_sources():
+    """
+    Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
+    Raises ValueError if any source is invalid.
+    """
+    load_sources()  # Ensure fresh check
+    required_fields = [
+        "name",
+        "url",
+        "credibility_score",
+        "category",
+        "tier",
+        "fetchability_score",
+        "crawl_interval_seconds",
+    ]
+
+    errors = []
+
+    for source_id, config in ALL_SOURCES.items():
+        # 1. Check required fields
+        for field in required_fields:
+            if field not in config:
+                errors.append(f"Source '{source_id}' missing required field: '{field}'")
+
+        # 2. Check Tier Validity
+        tier = config.get("tier")
+        if tier and tier not in VALID_TIERS:
+            errors.append(f"Source '{source_id}' has invalid tier: '{tier}'. Must be one of {VALID_TIERS}")
+
+        # 3. Check Fetchability Score
+        f_score = config.get("fetchability_score")
+        if f_score is not None:
+            if not isinstance(f_score, (int, float)) or not (0 <= f_score <= 100):
+                 errors.append(f"Source '{source_id}' has invalid fetchability_score: {f_score}. Must be 0-100.")
+
+        # 4. Check Interval
+        interval = config.get("crawl_interval_seconds")
+        if interval is not None:
+             if not isinstance(interval, int) or interval <= 0:
+                 errors.append(f"Source '{source_id}' has invalid crawl_interval_seconds: {interval}. Must be positive int.")
+
+    # 5. Check Enrichment Strategy
+        strategy = config.get("enrichment_strategy", "http")  # Default to http if missing
+        valid_strategies = ["scholarly", "http", "headless_fallback", "discovery_only"]
+        if strategy not in valid_strategies:
+             errors.append(f"Source '{source_id}' has invalid enrichment_strategy: '{strategy}'. Must be one of {valid_strategies}")
+
+        # 6. Check Headless Configuration
+        if strategy == "headless_fallback":
+             if not isinstance(config.get("headless_enabled"), bool):
+                  errors.append(f"Source '{source_id}' must specify 'headless_enabled' (bool) when using headless_fallback.")
+             
+             max_seconds = config.get("headless_max_seconds")
+             if max_seconds is not None:
+                  if not isinstance(max_seconds, int) or max_seconds <= 0:
+                       errors.append(f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int.")
+
+    if errors:
+        error_msg = f"❌ Configuration Validation Failed ({len(errors)} errors):\n" + "\n".join([f"  - {e}" for e in errors])
+        raise ValueError(error_msg)
+
+    print(f"✅ {len(ALL_SOURCES)} sources validated successfully against strict schema.")
+
+
+def get_sources_by_tier(tier: str) -> Dict[str, Any]:
+    """Retrieve sources belonging to a specific tier (A, B, C, D)."""
+    return {
+        sid: cfg for sid, cfg in ALL_SOURCES.items() if cfg.get("tier") == tier
+    }

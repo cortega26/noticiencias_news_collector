@@ -66,10 +66,13 @@ class CollectorArticleModel(BaseModel):
     doi: str | None = None
     journal: str | None = None
     is_preprint: bool = False
-    word_count: int = Field(gt=0)
-    reading_time_minutes: int = Field(gt=0)
+    word_count: int = Field(default=0)
+    reading_time_minutes: int = Field(default=1, gt=0)
     article_metadata: ArticleMetadataModel = Field(default_factory=ArticleMetadataModel)
     content_mode: str = Field(default="full_text")
+    min_summary_length_override: int | None = None
+    min_content_length_override: int | None = None
+    processing_status_override: str | None = None
 
     model_config = ConfigDict(from_attributes=True, extra="allow")
 
@@ -108,30 +111,21 @@ class CollectorArticleModel(BaseModel):
         self.article_metadata.ensure_original_url(self.original_url or str(self.url))
         self.original_url = self.article_metadata.original_url
 
-        # Validation: At least one of 'summary' or 'content' must meet the minimum length.
-        # If content_mode is summary_only, we apply a much lower threshold (e.g. 30 chars).
-        # Otherwise, we use the configured minimum (likely 500).
-        default_min_len = TEXT_PROCESSING_CONFIG.get("min_content_length", 50)
-
-        if self.content_mode == "summary_only":
-            min_len = 30
-        else:
-            min_len = default_min_len
+        # Validation: We relax the strict length check here to allow "Discovery" of candidates.
+        # The strict 500-char limit will be enforced in the Enrichment stage (Stage B)
+        # before marking an article as 'pending' (ready for publishing).
+        
+        # We still enforce a sanity check to avoid empty garbage.
+        min_sanity_len = 1 
 
         summary_len = len(self.summary.strip()) if self.summary else 0
         content_len = len(self.content.strip()) if self.content else 0
 
-        if summary_len < min_len and content_len < min_len:
-            raise ValueError(
-                f"Article too short. Neither summary ({summary_len}) nor content ({content_len}) "
-                f"meets minimum length of {min_len} chars (mode={self.content_mode})."
+        if summary_len < min_sanity_len and content_len < min_sanity_len:
+             # Just a warning log in production, but here we raise if it's truly empty
+             raise ValueError(
+                f"Article content/summary empty. Likely extraction error."
             )
-
-        # Ensure word_count consistency
-        # We trust the self.word_count provided by collector logic, but it should be reasonable.
-        if self.word_count < 10:
-            # Only complain if it's ridiculously low, suggesting extraction failure.
-            pass
 
         return self
 

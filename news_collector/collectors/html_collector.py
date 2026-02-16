@@ -1,8 +1,9 @@
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+# Fixed imports
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -11,6 +12,7 @@ from bs4 import BeautifulSoup
 from news_collector.collectors.base_collector import BaseCollector
 from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.utils.security import validate_url_safety
+import hashlib
 
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
@@ -91,24 +93,17 @@ class HtmlCollector(BaseCollector):
             )
 
             # 2. Fetch HTML
-            async with httpx.AsyncClient(
-                follow_redirects=True,
-                headers=self.headers,
-                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
-            ) as client:
-                response = await client.get(url)
-                if response.status_code >= 400:
-                    stats["error_message"] = f"Error HTTP {response.status_code}"
-                    if self.health_tracker:
-                        self.health_tracker.record_failure(
-                            source_id,
-                            "collector.fetch.http",
-                            f"HTTP Error {response.status_code}",
-                            {"status_code": response.status_code, "url": url},
-                        )
-                    return stats
-
-                html_content = response.text
+            # 2. Fetch HTML (Conditional)
+            html_content, status_code = await self._fetch_html_conditional(url, source_id, source_config)
+            
+            if status_code == 304:
+                stats["success"] = True
+                stats["articles_found"] = 0
+                return stats
+                
+            if not html_content:
+                stats["error_message"] = f"Error HTTP {status_code}" if status_code else "Error fetching content"
+                return stats
 
             # 3. Parse & Extract
             try:
@@ -330,3 +325,119 @@ class HtmlCollector(BaseCollector):
             return text
         except Exception:
             return None
+    async def _fetch_html_conditional(
+        self, url: str, source_id: str, source_config: Dict[str, Any]
+    ) -> Tuple[Optional[str], Optional[int]]:
+        """
+        Fetches HTML content using conditional GET (ETag/Last-Modified).
+        Returns (content, status_code). Content is None if 304 or error.
+        """
+        cached_headers = {
+            "etag": None,
+            "last_modified": None,
+            "content_hash": None,
+        }
+        try:
+            cached_headers = (
+                self.db_manager.get_source_feed_metadata(source_id) or cached_headers
+            )
+        except Exception:
+            pass
+
+        headers = self.headers.copy()
+        if cached_headers.get("etag"):
+            headers["If-None-Match"] = cached_headers["etag"]
+        if cached_headers.get("last_modified"):
+            headers["If-Modified-Since"] = cached_headers["last_modified"]
+
+        try:
+            async with httpx.AsyncClient(
+                follow_redirects=True,
+                headers=headers,
+                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+            ) as client:
+                
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        response = await client.get(url)
+                        
+                        if response.status_code == 304:
+                            self._emit_log("info", "collector.html.not_modified", source_id=source_id)
+                            self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                etag=response.headers.get("ETag") or cached_headers.get("etag"),
+                                last_modified=response.headers.get("Last-Modified") or cached_headers.get("last_modified"),
+                                content_hash=cached_headers.get("content_hash")
+                            )
+                            return None, 304
+
+                        if response.status_code >= 500:
+                            # Server error, retry
+                            if attempt < max_retries - 1:
+                                await self._backoff_sleep_async(attempt)
+                                continue
+                            return None, response.status_code
+                        
+                        if response.status_code == 429:
+                            # 429 Too Many Requests - Respect Retry-After
+                            retry_at = self._parse_retry_after(response)
+                            if not retry_at:
+                                # Default to 15 minutes if no header provided
+                                retry_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+                            
+                            self._emit_log(
+                                "warning",
+                                "collector.rate_limit.exceeded",
+                                source_id=source_id,
+                                details={
+                                    "retry_after": retry_at.isoformat(),
+                                    "header": response.headers.get("Retry-After")
+                                }
+                            )
+                            
+                            # Force Circuit Breaker COOLDOWN
+                            self.db_manager.update_source_circuit_state(
+                                source_id, 
+                                success=False, 
+                                error_message=f"HTTP 429: Rate Limit Exceeded",
+                                force_cooldown_until=retry_at
+                            )
+                            return None, 429
+
+                        if response.status_code >= 400:
+                            # Client error (403, 404), strictly no retry
+                            return None, response.status_code
+
+                        # Success 200
+                        content = response.text
+                        content_hash = hashlib.sha256(response.content).hexdigest()
+
+                        if cached_headers.get("content_hash") == content_hash:
+                             self._emit_log("info", "collector.html.content_unchanged", source_id=source_id)
+                             self.db_manager.update_source_feed_metadata(
+                                source_id,
+                                etag=response.headers.get("ETag"),
+                                last_modified=response.headers.get("Last-Modified"),
+                                content_hash=content_hash
+                            )
+                             return None, 304
+
+                        self.db_manager.update_source_feed_metadata(
+                            source_id,
+                            etag=response.headers.get("ETag"),
+                            last_modified=response.headers.get("Last-Modified"),
+                            content_hash=content_hash
+                        )
+                        
+                        return content, response.status_code
+
+                    except (httpx.TimeoutException, httpx.NetworkError):
+                        if attempt < max_retries - 1:
+                            await self._backoff_sleep_async(attempt)
+                            continue
+                        return None, None
+
+        except Exception as e:
+            self._emit_log("error", "collector.fetch.exception", source_id=source_id, details={"error": str(e)})
+            return None, None

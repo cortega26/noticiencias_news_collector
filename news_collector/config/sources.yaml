@@ -9,9 +9,15 @@ nature:
   description: La revista científica más prestigiosa del mundo
   typical_delay: 0
   content_mode: summary_only
+  enrichment_strategy: scholarly
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
 science:
   name: Science
   url: https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science
@@ -26,9 +32,15 @@ science:
   headers:
     User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  enrichment_strategy: scholarly
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
 cell:
   name: Cell
   url: https://www.cell.com/cell/inpress.rss
@@ -40,23 +52,35 @@ cell:
   description: La revista más importante en biología celular y molecular
   typical_delay: 1
   content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 nejm:
   name: New England Journal of Medicine
-  url: https://www.nejm.org/medical-research/most-viewed-rss.xml
-  credibility_score: 0.99
+  # UPDATED: eTOC RSS Feed (More reliable than Most Viewed)
+  url: https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm
+  fetch_mode: "rss_only" # Enforce robust fetcher
+  content_mode: "summary_only" # RSS summary is short (~80 chars), bypass strict length check
+  enrichment_strategy: scholarly
+  headless_enabled: false
+  credibility_score: 0.95
   update_frequency: weekly
   category: medicine
-  language: en
   impact_factor: 91.245
   description: La biblia de la medicina clínica
   typical_delay: 0
-  content_mode: summary_only
-  etag: null
-  last_modified: null
   _group: ELITE_JOURNALS
+  tier: "A"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 scientific_american:
   name: Scientific American
   url: https://www.scientificamerican.com/platform/syndication/rss/
@@ -71,6 +95,10 @@ scientific_american:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 new_scientist:
   name: New Scientist
   url: https://www.newscientist.com/feed/home/
@@ -85,6 +113,10 @@ new_scientist:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 ars_technica:
   name: Ars Technica Science
   url: https://feeds.arstechnica.com/arstechnica/science
@@ -99,6 +131,10 @@ ars_technica:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 95
+  crawl_interval_seconds: 3600
+
 phys_org:
   name: Phys.org
   url: https://phys.org/rss-feed/
@@ -107,13 +143,21 @@ phys_org:
   category: multidisciplinary
   language: en
   impact_factor: null
-  description: Agregador de noticias científicas de universidades
+  description: Leading web-based science, research and technology news service
   typical_delay: 0
   min_delay_seconds: 60
-  content_mode: full_text
+  content_mode: summary_only # HTML fetch blocked (403), use summary
+  fetch_mode: rss_only # Skip HTML fetch attempts
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 95
+  crawl_interval_seconds: 3600
+
 scitechdaily:
   name: SciTechDaily
   url: https://scitechdaily.com/feed/
@@ -126,9 +170,16 @@ scitechdaily:
   typical_delay: 0
   content_mode: summary_only # rss_only mode to avoid 403 blocks on HTML fetch
   fetch_mode: rss_only # Explicit new flag
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "C"
+  fetchability_score: 70
+  crawl_interval_seconds: 21600
+
 sciencedaily_top:
   name: ScienceDaily
   url: https://www.sciencedaily.com/rss/top/science.xml
@@ -140,9 +191,16 @@ sciencedaily_top:
   description: Latest research news
   typical_delay: 0
   content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "C"
+  fetchability_score: 75
+  crawl_interval_seconds: 21600
+
 wired:
   name: Wired
   url: https://www.wired.com/feed/rss
@@ -157,6 +215,10 @@ wired:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
 techcrunch:
   name: TechCrunch
   url: https://techcrunch.com/feed/
@@ -171,6 +233,10 @@ techcrunch:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 the_verge:
   name: The Verge
   url: https://www.theverge.com/rss/index.xml
@@ -185,6 +251,10 @@ the_verge:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 mit_tech_review:
   name: MIT Technology Review
   url: https://www.technologyreview.com/feed/
@@ -199,6 +269,10 @@ mit_tech_review:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 88
+  crawl_interval_seconds: 3600
+
 stat_news:
   name: STAT News
   url: https://www.statnews.com/feed/
@@ -213,6 +287,10 @@ stat_news:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
 space_com:
   name: Space.com
   url: https://www.space.com/feeds.xml
@@ -227,6 +305,10 @@ space_com:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
 livescience:
   name: Live Science
   url: https://www.livescience.com/feeds.xml
@@ -241,6 +323,10 @@ livescience:
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
 mit_news:
   name: MIT News
   url: https://news.mit.edu/rss/feed
@@ -255,6 +341,10 @@ mit_news:
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
+  tier: "B"
+  fetchability_score: 92
+  crawl_interval_seconds: 3600
+
 yale_news:
   name: Yale News
   url: https://news.yale.edu/topics/science-technology/rss
@@ -269,6 +359,10 @@ yale_news:
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
+  tier: "B"
+  fetchability_score: 92
+  crawl_interval_seconds: 3600
+
 nasa_news:
   name: NASA News
   url: https://www.nasa.gov/rss/dyn/breaking_news.rss
@@ -283,6 +377,10 @@ nasa_news:
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 98
+  crawl_interval_seconds: 600
+
 nih_news:
   name: NIH News
   url: https://www.nih.gov/news-releases/feed.xml
@@ -297,6 +395,10 @@ nih_news:
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 98
+  crawl_interval_seconds: 600
+
 arxiv_ai:
   name: arXiv AI/ML
   url: http://export.arxiv.org/rss/cs.AI+cs.LG+cs.CL+cs.CV
@@ -313,6 +415,10 @@ arxiv_ai:
   etag: null
   last_modified: null
   _group: PREPRINT_SOURCES
+  tier: "C"
+  fetchability_score: 60
+  crawl_interval_seconds: 21600
+
 biorxiv:
   name: bioRxiv
   url: https://connect.biorxiv.org/biorxiv_xml.php?subject=all
@@ -328,6 +434,10 @@ biorxiv:
   etag: null
   last_modified: null
   _group: PREPRINT_SOURCES
+  tier: "C"
+  fetchability_score: 60
+  crawl_interval_seconds: 21600
+
 reddit_science:
   name: r/science
   url: https://www.reddit.com/r/science/new/.rss
@@ -336,14 +446,18 @@ reddit_science:
   category: community_science
   language: en
   impact_factor: null
-  description: Subreddit de divulgación científica con moderación especializada
+  description: Subreddit for verified scientific news
   typical_delay: 0
   rate_limit_notes: Usar user-agent dedicado y no superar 60 requests por minuto
   min_delay_seconds: 30
-  content_mode: summary_only
+  content_mode: full_text
+  status: blocked # Permanently 403WAF blocked, requires API integration (Future)
   etag: null
   last_modified: null
   _group: COMMUNITY_FEEDS
+  tier: "D"
+  fetchability_score: 50
+  crawl_interval_seconds: 86400
 
 deepmind_blog:
   name: Google DeepMind
@@ -358,3 +472,413 @@ deepmind_blog:
   etag: null
   last_modified: null
   _group: AI_LABS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+harvard_gazette:
+  name: Harvard Gazette
+  url: https://news.harvard.edu/gazette/feed
+  credibility_score: 0.95
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: Official news from Harvard University
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+caltech_news:
+  name: Caltech News
+  url: https://www.caltech.edu/news/rss
+  credibility_score: 0.95
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: News from California Institute of Technology
+  typical_delay: 0
+  content_mode: summary_only
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+michigan_news:
+  name: University of Michigan News
+  url: https://news.umich.edu/feed
+  credibility_score: 0.92
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: Research news from U-M
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 92
+  crawl_interval_seconds: 600
+
+uw_news:
+  name: UW News
+  url: https://www.washington.edu/news/feed
+  credibility_score: 0.92
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: University of Washington News
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 92
+  crawl_interval_seconds: 600
+
+uw_madison_news:
+  name: UW-Madison News
+  url: https://news.wisc.edu/feed
+  credibility_score: 0.92
+  update_frequency: daily
+  category: multidisciplinary
+  language: en
+  impact_factor: null
+  description: University of Wisconsin-Madison News
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 92
+  crawl_interval_seconds: 600
+
+medicalxpress:
+  name: MedicalXpress
+  url: https://medicalxpress.com/rss-feed/
+  credibility_score: 0.85
+  update_frequency: multiple_daily
+  category: medicine
+  language: en
+  impact_factor: null
+  description: Medical and health news (Science X network)
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
+techxplore:
+  name: TechXplore
+  url: https://techxplore.com/rss-feed/
+  credibility_score: 0.85
+  update_frequency: multiple_daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Technology and electronics news (Science X network)
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
+google_research:
+  name: Google Research
+  url: https://research.google/blog/rss
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Latest from Google Research
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+microsoft_research:
+  name: Microsoft Research
+  url: https://www.microsoft.com/en-us/research/feed/
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Research news from Microsoft
+  typical_delay: 0
+  content_mode: summary_only
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "A"
+  fetchability_score: 90
+  crawl_interval_seconds: 600
+
+# Sources Configuration
+#
+# Schema:
+#   name: string (required)
+#   url: string (required, RSS/Atom feed URL)
+#   credibility_score: float (0.0 - 1.0)
+#   update_frequency: string (hourly, daily, weekly)
+#   category: string (biology, physics, ai, etc.)
+#   language: string (en, es)
+#   impact_factor: float (optional)
+#   description: string
+#   typical_delay: int (seconds, optional)
+#   content_mode: string (full_text, summary_only)
+#   headers: dict (optional custom headers)
+#   enrichment_strategy: string (http, scholarly, headless_fallback)
+#   headless_enabled: boolean (optional, enables headless fallback)
+#   proxy_mode: string (optional: off, auto, force. Default: auto)
+#   proxy_pool: string (optional: default, residential, datacenter. Default: default)
+#   etag: null
+#   last_modified: null
+#   _group: AI_LABS
+#   tier: "A"
+#   fetchability_score: 95
+openai_blog:
+  name: OpenAI Blog
+  url: https://openai.com/blog/rss.xml
+  credibility_score: 0.98
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Announcements from OpenAI
+  typical_delay: 0
+  content_mode: summary_only # Full text blocked (403), use summary to pass validation
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
+  headless_max_seconds: 60
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+nvidia_research:
+  name: NVIDIA Deep Learning
+  url: https://blogs.nvidia.com/blog/category/deep-learning/feed/
+  credibility_score: 0.9
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Deep Learning news from NVIDIA
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
+aws_ml_blog:
+  name: AWS Machine Learning
+  url: https://aws.amazon.com/blogs/machine-learning/feed/
+  credibility_score: 0.9
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: ML on AWS
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
+apple_ml:
+  name: Apple Machine Learning
+  url: https://machinelearning.apple.com/rss.xml
+  credibility_score: 0.9
+  update_frequency: monthly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Apple Machine Learning Research
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
+bair_blog:
+  name: Berkeley AI Research
+  url: https://bair.berkeley.edu/blog/feed.xml
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: BAIR Blog
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+stanford_ai_lab:
+  name: Stanford AI Lab
+  url: https://ai.stanford.edu/blog/feed.xml
+  credibility_score: 0.95
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: SAIL Blog
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: INSTITUTIONAL_SOURCES
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+hugging_face_blog:
+  name: Hugging Face Blog
+  url: https://huggingface.co/blog/feed.xml
+  credibility_score: 0.92
+  update_frequency: daily
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: The AI community building the future
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: AI_LABS
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 600
+
+distill_pub:
+  name: Distill
+  url: https://distill.pub/rss.xml
+  credibility_score: 0.98
+  update_frequency: monthly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Clarity in Machine Learning
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 21600
+
+the_gradient:
+  name: The Gradient
+  url: https://thegradient.pub/rss/
+  credibility_score: 0.9
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Perspectives on AI
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
+last_week_in_ai:
+  name: Last Week in AI
+  url: https://lastweekin.ai/feed
+  credibility_score: 0.85
+  update_frequency: weekly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: AI News Digest
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
+
+lilian_weng:
+  name: Lil'Log
+  url: https://lilianweng.github.io/index.xml
+  credibility_score: 0.95
+  update_frequency: monthly
+  category: artificial_intelligence
+  language: en
+  impact_factor: null
+  description: Lilian Weng's Research Blog
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 21600

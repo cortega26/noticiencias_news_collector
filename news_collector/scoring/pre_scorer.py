@@ -36,6 +36,12 @@ class PreScorer:
             )
             return candidates
 
+        if not self.model_name or self.model_name == "ollama":
+             # "ollama" is sometimes default placeholder. Check if specific model is set?
+             # Actually, if we want to silence it, better to try/except specific error or check config.
+             # Assuming OllamaProvider raises the error we saw.
+             pass
+
         logger.info(
             f"🤖 PreScorer: Analizando {len(candidates)} candidatos para seleccionar Top {limit}..."
         )
@@ -100,5 +106,9 @@ class PreScorer:
             return selected_candidates
 
         except Exception as e:
-            logger.error(f"Error en PreScorer: {e}. Fallback a FIFO.")
+            if "not configured" in str(e):
+                 # Silence this specific error to avoid log spam
+                 logger.warning("PreScorer: LLM skipped (not configured). Falling back to FIFO.")
+            else:
+                 logger.error(f"Error en PreScorer: {e}. Fallback a FIFO.")
             return candidates[:limit]

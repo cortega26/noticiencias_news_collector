@@ -267,14 +267,20 @@ class DatabaseManager:
                 "next_retry_at": source.next_retry_at,
                 "consecutive_failures": source.consecutive_failures,
                 "is_active": source.is_active,
+                "last_checked": source.last_checked,
             }
 
     def update_source_circuit_state(
-        self, source_id: str, success: bool, error_message: str = None
+        self, 
+        source_id: str, 
+        success: bool, 
+        error_message: str = None,
+        force_cooldown_until: Optional[datetime] = None
     ) -> None:
         """
         Updates the circuit breaker state for a source.
         Implements the logic: 3 strikes -> COOLDOWN (4 hours).
+        Allows forcing COOLDOWN immediately (e.g. for 429s).
         """
         with self.get_session() as session:
             source = session.query(Source).filter(Source.id == source_id).first()
@@ -307,7 +313,14 @@ class DatabaseManager:
                     "circuit_breaker_cooldown_hours", 4
                 )
 
-                if source.consecutive_failures >= max_failures:
+                if force_cooldown_until:
+                     # Explicit backoff (e.g. 429)
+                    source.status = "COOLDOWN"
+                    source.next_retry_at = force_cooldown_until
+                    logger.warning(
+                        f"🔌 CIRCUIT BREAKER FORCED: Source {source_id} entering COOLDOWN until {source.next_retry_at} (Reason: {error_message})"
+                    )
+                elif source.consecutive_failures >= max_failures:
                     # Enter Cooldown
                     source.status = "COOLDOWN"
                     source.next_retry_at = datetime.now(timezone.utc) + timedelta(
@@ -560,6 +573,9 @@ class DatabaseManager:
                     payload.get("original_url", payload["url"]),
                 )
 
+                # Use override status if provided (e.g. for rejected candidates), otherwise pending.
+                initial_status = getattr(model, "processing_status_override", None) or PENDING_STATUS
+
                 # Crear nuevo artículo
                 article = Article(
                     url=payload["url"],
@@ -582,7 +598,7 @@ class DatabaseManager:
                     journal=payload.get("journal"),
                     is_preprint=payload.get("is_preprint", False),
                     language=payload.get("language", "en"),
-                    processing_status=PENDING_STATUS,
+                    processing_status=initial_status,
                     article_metadata=article_metadata,
                     word_count=payload.get("word_count"),
                     reading_time_minutes=payload.get("reading_time_minutes"),
@@ -721,6 +737,12 @@ class DatabaseManager:
                         cluster_id=cluster_id,
                         duplication_confidence=confidence,
                     )
+                    
+                    # Apply processing status override if present
+                    initial_status = getattr(model, "processing_status_override", None)
+                    if initial_status:
+                        article.processing_status = initial_status
+
                     session.add(article)
                     saved_count += 1
                     batch_count += 1
