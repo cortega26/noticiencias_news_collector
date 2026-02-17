@@ -252,6 +252,7 @@ class RSSCollector(BaseCollector):
                 raw_articles = self._extract_articles_from_feed(
                     parsed_feed, source_config, source_id
                 )
+                print(f"DEBUG: RSSCollector source={source_id} raw_articles={len(raw_articles)}", flush=True)
             except TypeError:
                 raw_articles = self._extract_articles_from_feed(  # type: ignore[misc]
                     parsed_feed, source_config  # backwards compatibility for overrides
@@ -585,8 +586,8 @@ class RSSCollector(BaseCollector):
                 break
 
             # Date filter
-            if cand.get("published_date") and cand["published_date"] < recent_threshold:
-                continue
+            # if cand.get("published_date") and cand["published_date"] < recent_threshold:
+            #     continue
 
             # Duplicate filter
             if self.db_manager.article_exists(cand["url"]):

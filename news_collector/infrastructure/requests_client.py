@@ -235,7 +235,8 @@ class RobustRequestsClient:
                         resp = self._execute_request(url, params, headers, timeout, proxies=proxy_settings)
                         
                         duration = time.time() - start_time
-                        proxy_manager.record_usage(duration)
+                        source_id = source_config.get("name") if source_config else None
+                        proxy_manager.record_usage(duration, source_id=source_id)
                         
                         logger.info(
                             {
@@ -250,7 +251,8 @@ class RobustRequestsClient:
                         
                     except Exception as proxy_err:
                         duration = time.time() - start_time
-                        proxy_manager.record_usage(duration) # Record usage even on failure
+                        source_id = source_config.get("name") if source_config else None
+                        proxy_manager.record_usage(duration, source_id=source_id) # Record usage even on failure
                         
                         logger.warning(
                             {

@@ -1,0 +1,110 @@
+[32m18:12:02[0m | [1mINFO    [0m | 🎯 Sistema de logging configurado exitosamente
+======================================================================
+🧬 NEWS COLLECTOR SYSTEM - Recopilador Inteligente de Noticias Científicas
+======================================================================
+📅 Fecha: 2026-02-16 18:12:02
+🎯 Fuentes configuradas: 45
+======================================================================
+🔧 Inicializando sistema (RunID: 415dc5b5-22d8-409e-ad59-4c35d2ce2719, Env: production)...
+🎯 Inicializando News Collector System (ID: 943aa7ca)
+[32m18:12:02[0m | [1mINFO    [0m | 🏥 ESTADO DEL SISTEMA:
+[32m18:12:02[0m | [1mINFO    [0m |   • Python: 3.13.11
+[32m18:12:02[0m | [1mINFO    [0m |   • Plataforma: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+[32m18:12:02[0m | [1mINFO    [0m |   • CPU cores: x86_64
+✅ 45 sources validated successfully against strict schema.
+[32m18:12:02[0m | [1mINFO    [0m | Base de datos configurada
+DEBUG: Dispatcher init health_tracker=SourceHealthTracker(sources={}) id=132339357507872
+DEBUG: Dispatcher set tracker on rss (<class 'news_collector.collectors.rss_collector.RSSCollector'>)
+DEBUG: Dispatcher set tracker on html (<class 'news_collector.collectors.html_collector.HtmlCollector'>)
+DEBUG: Dispatcher set tracker on headless (<class 'news_collector.collectors.headless_collector.HeadlessCollector'>)
+DEBUG: System created Dispatcher with health_tracker=SourceHealthTracker(sources={}) id=132339357507872
+[32m18:12:02[0m | [1mINFO    [0m | Dispatcher de colectores configurado
+[32m18:12:02[0m | [1mINFO    [0m | Sistema de validación configurado
+DEBUG: create_scorer selected_mode=cognitive (from config: cognitive)
+18:12:02 | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)
+[32m18:12:02[0m | [1mINFO    [0m | Sistema de scoring configurado
+[32m18:12:02[0m | [33m[1mWARNING [0m | {'event': 'database.health.warning', 'trace_id': None, 'session_id': None, 'source_id': 'database', 'latency': 0.0, 'details': {'failed_sources': 3}}
+[32m18:12:02[0m | [33m[1mWARNING [0m | {'event': 'system.initialize.warning', 'trace_id': '72681b46-2bf9-40bb-8e5e-23e3d3d9349c', 'session_id': 'init-943aa7ca', 'source_id': 'system', 'latency': 0.0, 'details': {'warnings': ['3 fuentes fallando']}}
+[32m18:12:02[0m | [1mINFO    [0m | ============================================================
+[32m18:12:02[0m | [1mINFO    [0m | 🚀 NEWS COLLECTOR SYSTEM INICIADO
+[32m18:12:02[0m | [1mINFO    [0m | ============================================================
+[32m18:12:02[0m | [1mINFO    [0m | Versión: 1.0.0
+[32m18:12:02[0m | [1mINFO    [0m | Modo debug: False
+[32m18:12:02[0m | [1mINFO    [0m | Configuración principal:
+[32m18:12:02[0m | [1mINFO    [0m |   sources_configured: 45
+[32m18:12:02[0m | [1mINFO    [0m |   database_type: sqlite
+[32m18:12:02[0m | [1mINFO    [0m |   collection_interval: 6
+[32m18:12:02[0m | [1mINFO    [0m |   min_score_threshold: 0.3
+[32m18:12:02[0m | [1mINFO    [0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log
+[32m18:12:02[0m | [1mINFO    [0m | ============================================================
+✅ Sistema inicializado correctamente
+🎯 Procesando 3 fuentes específicas: science, nejm, deepmind_blog
+
+🚀 Iniciando recolección...
+[32m18:12:03[0m | [33m[1mWARNING [0m | {'event': 'collector.prescorer.ranking_start', 'trace_id': '415dc5b5-22d8-409e-ad59-4c35d2ce2719', 'session_id': '943aa7ca-20260216-211202', 'collector_type': 'RSSCollector', 'details': {'candidates': 11, 'limit': 5}}
+PreScorer: LLM skipped (not configured). Falling back to FIFO.
+Lock Rejected for science: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2510935?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2510935?af=R&rss=currentIssue
+HttpEnricher fetch failed for https://science.org/doi/abs/10.1126/science.aeg3196?af=R: 403 Client Error: Forbidden for url: https://www.science.org/doi/abs/10.1126/science.aeg3196?af=R
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2503304?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2503304?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMc2601288?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMc2601288?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMc2507760?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMc2507760?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMicm2509457?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMicm2509457?af=R&rss=currentIssue
+Batch LLM failed: Ollama model is not configured. Provide a model in config or pass model=...
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=science strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=science entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+[32m18:12:16[0m | [1mINFO    [0m | 📊 MÉTRICAS DE PERFORMANCE CICLO COMPLETO
+[32m18:12:16[0m | [1mINFO    [0m |   total_duration_seconds: 13.434
+[32m18:12:16[0m | [1mINFO    [0m |   articles_per_second: 0.447
+[32m18:12:16[0m | [1mINFO    [0m |   sources_per_minute: 3.000
+[32m18:12:16[0m | [1mINFO    [0m |   success_rate_percent: 100.000
+[32m18:12:16[0m | [1mINFO    [0m | 📊 Reporte de Recolección: 2/3 fuentes produjeron información con éxito (artículos guardados).
+
+📊 RESUMEN DE RESULTADOS:
+----------------------------------------
+⏱️  Duración: 13.4 segundos
+🌐 Fuentes procesadas: 3
+📰 Artículos encontrados: 6
+💾 Artículos guardados: 6
+🎯 Artículos puntuados: 16
+⭐ Selección final: 10
+📈 Tasa de éxito: 100.0%
+⚡ Velocidad: 0.4 artículos/segundo
+
+⭐ TOP 4 ARTÍCULOS:
+================================================================================
+ 1. This Unexpected Ingredient Makes Bread Much Healthier
+    📊 Score: 0.936 | 🔗 Fuente: SciTechDaily
+
+ 2. Prehistoric Victory Celebrations Were Far More Brutal Tha...
+    📊 Score: 0.927 | 🔗 Fuente: SciTechDaily
+
+ 3. Intracellular Delivery of Peptides and Proteins with an E...
+    📊 Score: 0.864 | 🔗 Fuente: bioRxiv
+
+ 4. Opinion: How public health saved the CDC Injury Center
+    📊 Score: 0.862 | 🔗 Fuente: STAT News
+
+🏥 REPORTE DE SALUD DE FUENTES
+====================================================================================================
+FUENTE               | ESTADO   | FOUND | SAVED | FILT:LEN | FILT:DEDUP | DIAGNOSIS
+----------------------------------------------------------------------------------------------------
+science              | ✅ WORKING | 1     | 1     | 0        | 0          | 
+nejm                 | ✅ WORKING | 1     | 5     | 0        | 0          | 
+====================================================================================================
+🎉 ¡Recolección completada exitosamente!

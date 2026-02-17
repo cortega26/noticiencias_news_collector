@@ -1164,6 +1164,10 @@ def create_collector(collector_type: str) -> BaseCollector:
         from .async_rss_collector import AsyncRSSCollector
 
         return AsyncRSSCollector()
+    elif collector_type.lower() == "headless":
+        from .headless_collector import HeadlessCollector
+
+        return HeadlessCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 
