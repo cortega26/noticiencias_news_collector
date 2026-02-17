@@ -175,9 +175,12 @@ class ProxyManager:
             "https": proxy_url
         }
 
-    def record_usage(self, duration: float):
+    def record_usage(self, duration: float, source_id: Optional[str] = None):
         """Records usage (success or failure) to decrement budget."""
         self.budget_manager.record_usage(duration)
+        if source_id:
+             from news_collector.observability.enrichment_metrics_store import enrichment_metrics
+             enrichment_metrics.record_cost(source_id, proxy_requests=1)
 
 # Global Accessor
 proxy_manager = ProxyManager.get_instance()

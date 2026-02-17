@@ -1,0 +1,14 @@
+# Strategy Locks Configuration
+# Generated based on Production Training Run (RunID: 9c1cfd69-cd14-4c12-a838-e9b9a74697dc)
+# Criteria: >5 attempts AND (Headless Yield > HTTP Yield + 20% OR HTTP Yield == 0)
+
+locks:
+  openai_blog:
+    strategy: "headless_fallback"
+    rationale: "Production Training: HTTP Yield 0.0% vs Headless 100.0% (Lift 100.0%)"
+    created_at: "2026-02-16T14:20:00Z"
+
+  cell:
+    strategy: "headless_fallback"
+    rationale: "Production Training: HTTP Yield 0.0% vs Headless 100.0% (Lift 100.0%)"
+    created_at: "2026-02-16T14:20:00Z"

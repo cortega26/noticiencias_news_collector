@@ -1,0 +1,74 @@
+[32m18:11:35[0m | [1mINFO    [0m | 🎯 Sistema de logging configurado exitosamente
+======================================================================
+🧬 NEWS COLLECTOR SYSTEM - Recopilador Inteligente de Noticias Científicas
+======================================================================
+📅 Fecha: 2026-02-16 18:11:35
+🎯 Fuentes configuradas: 45
+======================================================================
+🔧 Inicializando sistema (RunID: 030bd45e-a0fb-415d-9766-6a5014ae0a24, Env: production)...
+🎯 Inicializando News Collector System (ID: a33eef94)
+[32m18:11:35[0m | [1mINFO    [0m | 🏥 ESTADO DEL SISTEMA:
+[32m18:11:35[0m | [1mINFO    [0m |   • Python: 3.13.11
+[32m18:11:35[0m | [1mINFO    [0m |   • Plataforma: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+[32m18:11:35[0m | [1mINFO    [0m |   • CPU cores: x86_64
+✅ 45 sources validated successfully against strict schema.
+[32m18:11:35[0m | [1mINFO    [0m | Base de datos configurada
+DEBUG: Dispatcher init health_tracker=SourceHealthTracker(sources={}) id=130020217250080
+DEBUG: Dispatcher set tracker on rss (<class 'news_collector.collectors.rss_collector.RSSCollector'>)
+DEBUG: Dispatcher set tracker on html (<class 'news_collector.collectors.html_collector.HtmlCollector'>)
+DEBUG: Dispatcher set tracker on headless (<class 'news_collector.collectors.headless_collector.HeadlessCollector'>)
+DEBUG: System created Dispatcher with health_tracker=SourceHealthTracker(sources={}) id=130020217250080
+[32m18:11:35[0m | [1mINFO    [0m | Dispatcher de colectores configurado
+[32m18:11:35[0m | [1mINFO    [0m | Sistema de validación configurado
+DEBUG: create_scorer selected_mode=cognitive (from config: cognitive)
+18:11:35 | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)
+[32m18:11:35[0m | [1mINFO    [0m | Sistema de scoring configurado
+[32m18:11:35[0m | [33m[1mWARNING [0m | {'event': 'database.health.warning', 'trace_id': None, 'session_id': None, 'source_id': 'database', 'latency': 0.0, 'details': {'failed_sources': 3}}
+[32m18:11:35[0m | [33m[1mWARNING [0m | {'event': 'system.initialize.warning', 'trace_id': '263eca95-b9c5-4025-a88e-4d16f44452c2', 'session_id': 'init-a33eef94', 'source_id': 'system', 'latency': 0.0, 'details': {'warnings': ['3 fuentes fallando']}}
+[32m18:11:35[0m | [1mINFO    [0m | ============================================================
+[32m18:11:35[0m | [1mINFO    [0m | 🚀 NEWS COLLECTOR SYSTEM INICIADO
+[32m18:11:35[0m | [1mINFO    [0m | ============================================================
+[32m18:11:35[0m | [1mINFO    [0m | Versión: 1.0.0
+[32m18:11:35[0m | [1mINFO    [0m | Modo debug: False
+[32m18:11:35[0m | [1mINFO    [0m | Configuración principal:
+[32m18:11:35[0m | [1mINFO    [0m |   sources_configured: 45
+[32m18:11:35[0m | [1mINFO    [0m |   database_type: sqlite
+[32m18:11:35[0m | [1mINFO    [0m |   collection_interval: 6
+[32m18:11:35[0m | [1mINFO    [0m |   min_score_threshold: 0.3
+[32m18:11:35[0m | [1mINFO    [0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log
+[32m18:11:35[0m | [1mINFO    [0m | ============================================================
+Lock Rejected for science: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+✅ Sistema inicializado correctamente
+🎯 Procesando 3 fuentes específicas: science, nejm, deepmind_blog
+
+🚀 Iniciando recolección...
+[32m18:11:35[0m | [33m[1mWARNING [0m | {'event': 'collector.prescorer.ranking_start', 'trace_id': '030bd45e-a0fb-415d-9766-6a5014ae0a24', 'session_id': 'a33eef94-20260216-211135', 'collector_type': 'RSSCollector', 'details': {'candidates': 16, 'limit': 5}}
+PreScorer: LLM skipped (not configured). Falling back to FIFO.
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+[32m18:11:36[0m | [33m[1mWARNING [0m | {'event': 'collector.prescorer.ranking_start', 'trace_id': '030bd45e-a0fb-415d-9766-6a5014ae0a24', 'session_id': 'a33eef94-20260216-211135', 'collector_type': 'RSSCollector', 'details': {'candidates': 20, 'limit': 5}}
+PreScorer: LLM skipped (not configured). Falling back to FIFO.
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2509807?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2509807?af=R&rss=currentIssue
+HttpEnricher fetch failed for https://science.org/doi/abs/10.1126/science.aeg3196?af=R: 403 Client Error: Forbidden for url: https://www.science.org/doi/abs/10.1126/science.aeg3196?af=R
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2511420?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2511420?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2514663?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2514663?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2515168?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2515168?af=R&rss=currentIssue
+Lock Rejected for nejm: Yield advantage 0.0% < 20%. (Target: 0.0%, HTTP: 0.0%)
+HttpEnricher fetch failed for https://nejm.org/doi/full/10.1056/NEJMoa2514661?af=R&rss=currentIssue: 403 Client Error: Forbidden for url: https://www.nejm.org:443/doi/full/10.1056/NEJMoa2514661?af=R&rss=currentIssue
+{'event': 'enrichment.headless.failed', 'details': {'source_id': 'science', 'url': 'https://science.org/doi/abs/10.1126/science.aeg3196?af=R', 'reason': 'Page.inner_text: Target page, context or browser has been closed\nCall log:\n  - waiting for locator("body")\n', 'duration': 25.047005891799927}}
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=science strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=science entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+DEBUG: Router source=nejm strategy=headless_fallback http_success=False len=0
+DEBUG: Router source=nejm entering headless block. headless_enabled=True
+
+⚠️  Proceso interrumpido por el usuario

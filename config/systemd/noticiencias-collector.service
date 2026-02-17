@@ -1,0 +1,17 @@
+[Unit]
+Description=Noticiencias News Collector (Continuous Mode)
+After=network.target
+
+[Service]
+Type=simple
+User=cortega26
+WorkingDirectory=/home/cortega26/noticiencias_news_collector
+ExecStart=/usr/bin/python3 scripts/run_collector_continuous.py
+Restart=on-failure
+RestartSec=10
+EnvironmentFile=/home/cortega26/noticiencias_news_collector/config/noticiencias-collector.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

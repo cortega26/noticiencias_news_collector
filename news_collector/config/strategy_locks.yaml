@@ -1,0 +1,24 @@
+# Strategy Locks Configuration
+# Generated automatically by StrategyLockManager
+
+locks:
+  cell:
+    created_at: '2026-02-16'
+    rationale: HTTP 0% yield, Headless 100% yield over 20+ attempts (Simulated Training)
+    strategy: headless_fallback
+  nature:
+    created_at: '2026-02-16'
+    rationale: Paywalled source requires metadata enrichment. (Training Policy)
+    strategy: scholarly
+  nejm:
+    created_at: '2026-02-16T21:07:07.929211+00:00'
+    rationale: 'Auto-Lock: Headless Yield 100.0% vs HTTP 0.0% (>5 attempts)'
+    strategy: headless_fallback
+  openai_blog:
+    created_at: '2026-02-16T18:40:13.868126+00:00'
+    rationale: 'Auto-Lock: Headless Yield 100.0% vs HTTP 0.0% (>5 attempts)'
+    strategy: headless_fallback
+  science:
+    created_at: '2026-02-16T21:04:06.017787+00:00'
+    rationale: 'Auto-Lock: Headless Yield 100.0% vs HTTP 0.0% (>5 attempts)'
+    strategy: headless_fallback

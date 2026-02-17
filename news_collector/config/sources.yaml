@@ -32,8 +32,8 @@ science:
   headers:
     User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-  enrichment_strategy: scholarly
-  headless_enabled: false
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -68,8 +68,8 @@ nejm:
   url: https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm
   fetch_mode: "rss_only" # Enforce robust fetcher
   content_mode: "summary_only" # RSS summary is short (~80 chars), bypass strict length check
-  enrichment_strategy: scholarly
-  headless_enabled: false
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
   credibility_score: 0.95
   update_frequency: weekly
   category: medicine
@@ -469,6 +469,8 @@ deepmind_blog:
   impact_factor: null
   description: News and stories from Google DeepMind
   content_mode: full_text
+  enrichment_strategy: headless_fallback
+  headless_enabled: true
   etag: null
   last_modified: null
   _group: AI_LABS
