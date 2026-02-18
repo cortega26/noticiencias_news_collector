@@ -14,6 +14,7 @@ PIP := $(VENV)/$(BIN_DIR)/pip
 PYTEST := $(VENV)/$(BIN_DIR)/pytest
 RUFF := $(VENV)/$(BIN_DIR)/ruff
 MYPY := $(VENV)/$(BIN_DIR)/mypy
+ALEMBIC := $(VENV)/$(BIN_DIR)/alembic
 BLACK := $(VENV)/$(BIN_DIR)/black
 ISORT := $(VENV)/$(BIN_DIR)/isort
 PRE_COMMIT := $(VENV)/$(BIN_DIR)/pre-commit
@@ -60,7 +61,7 @@ AUDIT_ISSUES_FLAGS ?=
 
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Creating virtual environment in $(VENV)"
-	@$(PYTHON) -m venv $(VENV)
+	@$(PYTHON) -m venv --copies $(VENV)
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
@@ -69,7 +70,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@echo "[bootstrap-refinery] Creating isolated environment in $(VENV_REFINERY)"
-	@$(PYTHON) -m venv $(VENV_REFINERY)
+	@$(PYTHON) -m venv --copies $(VENV_REFINERY)
 	@$(PIP_REFINERY) install --upgrade pip
 	@$(PIP_REFINERY) install --no-deps --require-hashes -r requirements-refinery.lock
 	@# Install app in editable mode, assuming refinery deps cover runtime needs
@@ -85,10 +86,11 @@ run-local: bootstrap ## Run the collector locally
 bootstrap-refinery: $(BOOTSTRAP_REFINERY_STAMP) ## Provision refinery environment
 
 migrate: bootstrap ## Run database migrations (up to head)
-	@$(PYTHON) scripts/migrate.py up
+	@$(PYTHON_BIN) scripts/migrate.py up
 
 refinery: bootstrap-refinery migrate ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
-	@$(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
+
 
 debug: bootstrap ## Run the collector in debug mode (verbose)
 	@$(PYTHON) scripts/run_collector.py --verbose
