@@ -1,0 +1,4999 @@
+{
+  "repo": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector",
+  "old_root": "/home/cortega26/noticiencias_news_collector",
+  "apply": true,
+  "include_systemd": false,
+  "backups": true,
+  "files": [
+    {
+      "file": "STRATEGY_LOCK_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "requirements.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "labels.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "router_debug.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "HEADLESS_BUDGET_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "gitleaks",
+      "changed": false,
+      "skipped_reason": "contains NUL byte (likely binary)",
+      "changes": []
+    },
+    {
+      "file": "run_output_2.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "ADAPTIVE_ENRICHMENT_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "canary_b_raw.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "sources_audit.csv",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .csv",
+      "changes": []
+    },
+    {
+      "file": "full_router_debug.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "requirements.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "test_output.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "path_fix_report.json",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": "requirements-security.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "run_output_3.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "pipeline_map.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "proof_evidence_nonblocking.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "RELEASE_NOTES.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "openai_debug.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "ENRICHMENT_ROUTING_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "benchmark_report_summary.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "CHANGELOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "canary_a_raw.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "headless_funnel_debug.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "benchmark_output_B_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "run_output_5.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": ".env.example",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .example",
+      "changes": []
+    },
+    {
+      "file": "METRICS_STORAGE_AUDIT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "requirements-refinery.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "training_run.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "benchmark_output_C_Speed.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "run_output.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "benchmark_output_D_Legacy.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "JOURNAL_ENRICHMENT_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": ".coverage",
+      "changed": false,
+      "skipped_reason": "contains NUL byte (likely binary)",
+      "changes": []
+    },
+    {
+      "file": "ENRICHMENT_FAILURE_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "CONTRIBUTING.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": ".env",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": "run_output_4.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "run_output_6.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "headless_funnel.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "analysis_output.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "SECURITY.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "data/news_v3.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/cache_cognitive.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/news_collector.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/mock_article.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "data/news.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "noticiencias_news_collector.egg-info/SOURCES.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "noticiencias_news_collector.egg-info/requires.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "noticiencias_news_collector.egg-info/top_level.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "noticiencias_news_collector.egg-info/dependency_links.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "scripts/open_pr.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "scripts/verification_run.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "scripts/publish_article_206.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "audit/02_readme_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/09_perf_findings.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/08_supply_chain.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/03_config_matrix.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/04_cli_behaviors.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/11_ci_cdpipeline.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/02_readme_fix.patch",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .patch",
+      "changes": []
+    },
+    {
+      "file": "audit/07_security_report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/01_docs_fixes.patch",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .patch",
+      "changes": []
+    },
+    {
+      "file": "audit/12_dx_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/06_test_quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/13_release_notes.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/01_docs_code_diff.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/14_editorial_quality_audit.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/07_asvs_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/10_ops.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/05_gui_findings.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "audit/00_inventory.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "perf/bench.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "config/noticiencias-collector.env",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .env",
+      "changes": []
+    },
+    {
+      "file": "tests/test_ai_editor_tags.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "reports/.gitkeep",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "alembic/script.py.mako",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .mako",
+      "changes": []
+    },
+    {
+      "file": ".github/pull_request_template.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/collector_runbook.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/contracts_inventory.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/common_output_format.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/fixtures.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/runbook.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/placeholder_policy.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/release-checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/CHANGELOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/editorial_quality_system.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/testing.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/strategic_features.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/performance_baselines.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/operations.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/ci.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/database_deployment.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/AGENTS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/api_examples.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/config_fields.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/faq.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/SOURCE_OF_TRUTH.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/security.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/PIPELINE_CONTRACTS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/security_removal_plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/tools_audit_issues.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/release_notes.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/EDITORIAL_MODES.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "tools/portability_path_fix.py",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": "tools/ci/coverage_contracts.rc",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .rc",
+      "changes": []
+    },
+    {
+      "file": "tools/ci/coverage_system.rc",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .rc",
+      "changes": []
+    },
+    {
+      "file": "docs/api/news_collector.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "docs/api/index.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "docs/api/search.js",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .js",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A5_Ops_DevEx.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A3_Data_AI.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A-1_Context_Pack.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/Audit_Master_Plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/Findings_Ledger.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A0_Structure_Modularity.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/Audit_Backlog.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A6_Release_Change_Safety.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A2_Quick_Scan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A4a_Engineering_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A0_Site_Structure.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A1_Site_Correctness.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A4b_Site_UX_Accessibility.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A4a_Site_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/audits/A1_Correctness_Report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/prompts/quickest5.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/prompts/5_new_features.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/ops/RUNBOOK.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/pr_plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/REFACTOR_PLAN.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/QUALITY.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/QUALITY_BASELINE.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/TEST_GAPS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/BACKLOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/dev/STATIC_ANALYSIS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/reports/AUDIT_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/reports/DEDUPLICATION_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/runbooks/healthcheck.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/archive/s1_refactor/S1C_AUDIT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "docs/archive/s1_refactor/historical_walkthrough.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/feature_request.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "news_collector/taxonomy/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/coverage.xml",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .xml",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/style_cb_9ff733b0.css",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .css",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_enrichment_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_validation_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_common_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_url_canonicalizer_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/keybd_closed_cb_900cfef5.png",
+      "changed": false,
+      "skipped_reason": "binary extension: .png",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/index.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_pydantic_compat_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_mock_article_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_full_text_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_411ed459ec5e5b7d_reranker_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_dedupe_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/coverage_html_cb_dd2e7eb5.js",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .js",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_411ed459ec5e5b7d___init___py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/function_index.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_export_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_scoring_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_security_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/favicon_32_cb_c827f16f.png",
+      "changed": false,
+      "skipped_reason": "binary extension: .png",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/class_index.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_refinery_helper_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_adapters_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8_collector_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40___init___py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_7c54fc5087295fd8___init___py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "reports/coverage/html/z_1acc6a834d26ed40_text_cleaner_py.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/snapshots/02_printing/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/snapshots/03_battery/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/snapshots/01_frog/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/golden/02_printing/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/golden/03_battery/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "quality_gate/golden/01_frog/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/requirements.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/refinery.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/.env.example",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .example",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/.env",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/data/news_v3.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "apps/refinery/config/editor_formatting.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "tests/data/canary_rss.xml",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .xml",
+      "changes": []
+    },
+    {
+      "file": "tests/legacy/test_schema.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "tests/fixtures/xml/rss_sample.xml",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .xml",
+      "changes": []
+    },
+    {
+      "file": "tests/fixtures/html/article_simple.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "tests/data/perf/rss_load_sample.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "tests/placeholder_audit/fixtures/doc_page.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "config/systemd/noticiencias-collector.service",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "perf/fixtures/rss_peak_hour.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "perf/fixtures/rss_mixed_latency.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "scripts/debugging/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "scripts/ops/purge_short_articles.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/requirements.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "temp/source/labels.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/gitleaks",
+      "changed": false,
+      "skipped_reason": "contains NUL byte (likely binary)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/sources_audit.csv",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .csv",
+      "changes": []
+    },
+    {
+      "file": "temp/source/requirements.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/requirements-security.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "temp/source/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/pipeline_map.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/proof_evidence_nonblocking.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/RELEASE_NOTES.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/openai_debug.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "temp/source/benchmark_report_summary.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/CHANGELOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/benchmark_output_B_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/.env.example",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .example",
+      "changes": []
+    },
+    {
+      "file": "temp/source/requirements-refinery.lock",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .lock",
+      "changes": []
+    },
+    {
+      "file": "temp/source/benchmark_output_C_Speed.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/benchmark_output_D_Legacy.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/CONTRIBUTING.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/SECURITY.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/252_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/unknown_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/349_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/252_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/677_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/657_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/250_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/520_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/432_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/677_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/250_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/235_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/657_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/unknown_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/432_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/279_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/279_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/235_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/349_stage1_translation.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/cache/520_stage2_editorial.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/data/mock_article.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/scripts/open_pr.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/scripts/publish_article_206.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/02_readme_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/09_perf_findings.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/08_supply_chain.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/03_config_matrix.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/04_cli_behaviors.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/11_ci_cdpipeline.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/02_readme_fix.patch",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .patch",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/07_security_report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/01_docs_fixes.patch",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .patch",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/12_dx_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/06_test_quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/13_release_notes.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/01_docs_code_diff.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/14_editorial_quality_audit.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/07_asvs_checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/10_ops.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/05_gui_findings.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/audit/00_inventory.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/perf/bench.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/test_ai_editor_tags.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/reports/.gitkeep",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/alembic/script.py.mako",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .mako",
+      "changes": []
+    },
+    {
+      "file": "temp/source/.github/pull_request_template.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/collector_runbook.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/contracts_inventory.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/common_output_format.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/fixtures.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/runbook.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/placeholder_policy.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/release-checklist.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/ARCHITECTURE.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/CHANGELOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/editorial_quality_system.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/testing.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/strategic_features.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/performance_baselines.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/operations.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/ci.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/database_deployment.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/AGENTS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/api_examples.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/config_fields.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/faq.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/SOURCE_OF_TRUTH.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/security.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/PIPELINE_CONTRACTS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/security_removal_plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/tools_audit_issues.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/release_notes.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/EDITORIAL_MODES.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tools/ci/coverage_contracts.rc",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .rc",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tools/ci/coverage_system.rc",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .rc",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/api/news_collector.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/api/index.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/api/search.js",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .js",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A5_Ops_DevEx.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A3_Data_AI.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A-1_Context_Pack.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/Audit_Master_Plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/Findings_Ledger.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A0_Structure_Modularity.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/Audit_Backlog.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A6_Release_Change_Safety.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A2_Quick_Scan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A4a_Engineering_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A0_Site_Structure.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A1_Site_Correctness.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A4b_Site_UX_Accessibility.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A4a_Site_Quality.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/audits/A1_Correctness_Report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/prompts/quickest5.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/prompts/5_new_features.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/ops/RUNBOOK.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/pr_plan.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/REFACTOR_PLAN.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/QUALITY.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/QUALITY_BASELINE.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/TEST_GAPS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/BACKLOG.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/dev/STATIC_ANALYSIS.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/reports/AUDIT_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/reports/DEDUPLICATION_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/runbooks/healthcheck.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/archive/s1_refactor/S1C_AUDIT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/docs/archive/s1_refactor/historical_walkthrough.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/.github/ISSUE_TEMPLATE/feature_request.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/.github/ISSUE_TEMPLATE/bug_report.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/news_collector/taxonomy/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/snapshots/02_printing/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/snapshots/03_battery/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/snapshots/01_frog/output.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/golden/02_printing/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/golden/03_battery/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/quality_gate/golden/01_frog/input.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/apps/refinery/requirements.txt",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/apps/refinery/.env.example",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .example",
+      "changes": []
+    },
+    {
+      "file": "temp/source/apps/refinery/config/editor_formatting.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/data/canary_rss.xml",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .xml",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/legacy/test_schema.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/fixtures/xml/rss_sample.xml",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .xml",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/fixtures/html/article_simple.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/data/perf/rss_load_sample.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/tests/placeholder_audit/fixtures/doc_page.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/perf/fixtures/rss_peak_hour.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/perf/fixtures/rss_mixed_latency.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/scripts/debugging/README.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "temp/source/scripts/ops/purge_short_articles.py.bak",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .bak",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/139190487873728/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/138631653896752/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/137870496119312/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/131001705188720/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/137870704732080/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/129561710149120/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/127981104823808/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/140387797811280/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/123771573059664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/137870708044672/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/125796265666816/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/131001704744000/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/127981013729360/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/125796285872320/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/139190487875072/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/129561685214608/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/123771480440912/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/129561708986448/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/124142812839088/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/124142813281792/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/124142809903664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/127981105218624/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/132997520701632/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/138631674673344/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/140387798941184/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/132997540380160/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/132997540807744/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/138631674674352/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/139190465226336/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/138631673069056/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/127981103644752/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/137870703159552/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/129561710147776/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/125796285873664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/123771575090688/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/131001706529856/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/124142812838080/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/123771574634880/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/131001706324256/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/140387707128864/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/132997539217488/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/139190486728784/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/140387797288000/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/MagicMock/mock.paths.data_dir/125796284743760/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "temp/source/logs/archive/debug_headless.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-01-24_20-28-43_822075.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-01-21_23-15-25_514102.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-02-14_20-27-13_475060.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-01-17_11-13-50_328295.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-02-14_20-27-13_651524.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-01-31_20-22-32_233347.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/logs/collector.2026-01-17_11-13-50_444446.log.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "data/reports/PRODUCTION_TRAINING_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "data/reports/PRODUCTION_AUTONOMOUS_OPERATION_REPORT.md",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "data/metrics/dry_run/enrichment_metrics.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/metrics/development/enrichment_metrics.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/metrics/test/enrichment_metrics.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/metrics/production/enrichment_metrics.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": "data/metrics/legacy/enrichment_metrics.db",
+      "changed": false,
+      "skipped_reason": "binary extension: .db",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5218d96018679a70",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/db2efe90c3d01163",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2700523784c3ec4d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d048a48f39daa61d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6de2be025f89380d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/845c6478c574ca2d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3e55ca0fa04aabca",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e5ea6f74992aa0cc",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4b052872ecb054a2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7356b02cdc136dd9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/33df7fa1e5995050",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a06733f78d2b7037",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1a2ce9eb242c2ae6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c69bcb97826f21cc",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/01cafc4ea7e430ea",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/20d3faefd95c4a1d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/845158c7567acceb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b2742de63f7c3eab",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ab08798cbfd58e30",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/54b024f88b47318d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/253bc53f6d22f2ab",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/864ee358022f12dd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/56495b227256a9a7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a01b717752f99765",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8356db068f6ba262",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b092ad31c6b5f328",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/93a3a7107106464c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c20fce789c2171d2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4f79a1d87e585d13",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4330651461646794",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/17c1cab7ca873fd5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/21b63006c86864f6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7cc5d335d71f66fe",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f4c669912e7fa98f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6bf705493a267843",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/13855b7ad3651259",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d270dbe9d8315218",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4832f026e0f9a617",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/12ca5759a9efea86",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4a2dc08c0591d6b0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d218d3cbd4dfb435",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f37ad07b870a51cd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/165f2d6692e35b38",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/939b3ef78a0222ca",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/29f0c18c851de57d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9aed262fc4beb004",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/62b1e2419135ed4e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8700bc6a48fa6be4",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/48326b21515f1714",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e10755604f6c9011",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/286d8e1f183a6216",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/83302136ec02a21c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/88ab8b1e1141c43b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/299d8a01e433e559",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d11450ab861ff261",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4db1425a53d3e63e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/daccf046c730858d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/77d7f24f6358829a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b7616d429fbbf84e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4c2c45a7af48e401",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cceecd9c618381f5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/753be8de8897e27c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d48fc5090881df7b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d59ae9e8c2f854dd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/afe1ced2b94d2ff1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e54898956e864c66",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1c9d26199312f007",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2fb30d554de15e60",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/faceb01a9750da33",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1b29a012dd9cf323",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/22be4f05efe6577f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d24df3895cf90a76",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3ccfea14e000cf7a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/77fd68811686137c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9ba034dd3c268398",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/bc5ddf98a8f2b11d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5eb8636c63e68271",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e63c024089ca8c26",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2c9753ddf20df75c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/50df013c05ffc606",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a6863251152278ea",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/58705501d0ac6177",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e0dbfd717f8ea5fa",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2690b9f35ce90e99",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/80afb9d99555e688",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/177a40b097d826f0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/92e86ee8909dffdb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6c1f33b2d5bb3bb0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cdeebd6a62558da1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e1c8dc87b2de0464",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d3edef98706c7833",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5b141efcbeb5ed77",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/bad551c2b7c3e49b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dd4d491ec46b1046",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/472a1743a0b3addd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2c86fb3d86e05416",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/828b6c87432db5ce",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ac4bc6009618a894",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f97ca18277943b4b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/50d394f073327410",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f183e5f12bfc8539",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/24f77ba53a1e6a26",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/50ecb27f699dc763",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/94db6a6e90539786",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/85c205b5d7ef9326",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/431484ab8123be7b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/28e74a5807f94ce5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2bf7b3ba87f2a2be",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cdbdb1127dba66a9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4dbe37bd7ff1ce3a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/296ccd31bf5befc4",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0a8e2b1480fb11b3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cd4d0f6343b8d955",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e58b0708a3825f21",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e2496e57785c7301",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dbbb15d4a21b1ba6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/467e1933bd498e8b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/855e9dac4d352ecb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/bfebc9c93f8d4f3e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ac5b3fda620fec5d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/02e8ff24306f411a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c828954b1ce6b7bd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cab6035bea0b6bf6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/23bfdebd9631fef2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9848558b6aff8562",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/70a14bb96786aef8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dbed89a59991cd35",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/84f9c9474c161bfd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e10066422717ac44",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e0619859a5203be5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8abc2de43b463d3b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1ed93ebff601c3ec",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7988d09dd0cbf88a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/86e990995b29aba0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fbf62e45a56206fa",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/877ad472eff3795f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b740d820b4eedb0a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a74ac4cbdd3faa9a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6a34d438d4f20d48",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3c64564ea39c26e1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dbb6f67e412204cc",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/15759da3690016de",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/facb28f4ecb51244",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/71102b9d33cb6ae2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4dea0861929fbb75",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/bcb6d4f48c9afb66",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/605b3cf61fb96106",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f4ec8fa9c8905e93",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cef7e53a7cfa9454",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d97073f85a2a14be",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/08bbe78da4ab0bc5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d1bac5ce4c55cd2e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9c9e94f806b704e7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0b130711e6db7c5e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dc1338474503472e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5fcf737eacb51a96",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/16b099f31d9ec11b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c22c50671dc7d24d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c622d6f3d5974777",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7e03186b3a58fe83",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5042004491abbc64",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6a2f0c5d7f5e6339",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b6b5ef7306359f60",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/905b91d4b479526f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/81d055fd3b227ff8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d222641860404c9a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a57d7104980845f3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4e96419c4d20a075",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4fea250d540293cb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/97f76a3da392574e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c4701ea172541f21",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b3810a5630ba8fc9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b927e70e776abc2f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1dcdee4e44395077",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/45715710be7dc393",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ceca19980679baf1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/784fec7e0c83cbc8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8bb6a2189a692e4a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/38bf2e65d525834e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2c501cb7054d5376",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/66e45cdfedffea09",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9155c22b59c85a8c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f1d280bc58594389",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7df47ebdbaff0681",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/07d857f041042eed",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3bbcc9518b08668b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8544db2acc85277f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/cc6fc64f9765da45",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f9aa10e921d3afd7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/82dc4d793d2e7233",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/de0d8c36839c48ed",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ae9f9a85c2118b24",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1f114f42199d6364",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/da75ed32f9dccc16",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5827ddde9643b724",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f23f14ac4335dc1f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/65dcbc0b05fdb226",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b4a88d044567bdc5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6c463619ebf40397",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d5edd266a0d7943b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fae3b7389df98342",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fa94149b51cd425a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5eb35946e0a1d6ca",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/73068a124a2b8132",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8e37e035d293bbb3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a3f4bbdd84488268",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/35dc174b9529de9d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0b285494985253a0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/09f9f5f1240949de",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c2a1dd48934657e9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d922224f1c0a1869",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/174f1d7062bb6103",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/257fd4302b33d34f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7757ca222a7d1678",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/30939c815c58d388",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5ba973ba2a4df563",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7654b7fb6dac148c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/babc6f01efbf97f4",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c9a13f710871ed9d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9725046ae3c6489f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ae311002f68ab7ad",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/178a5b649e06dd22",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5d64ea963adbd9c7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/12dea34a641336d2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/06f4a86599a7acef",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8fa905fab8650119",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a59613b4cad276d6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/160453f6f81dd872",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b3293930cce8ce71",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/56ba9914ce774b70",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6691240b76620075",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0a3287f92bba3e47",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/87d1276fb343e8e0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ae6c3b09589ada48",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fca555fcafb0f8a5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a29318bd09c1802d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d85cec316760b9dd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c3d2a5271035054b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f6241ea546397921",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/255ac2fc289092a9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fed1888b850c6ff0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/302de243b311bbe0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e2c77d206c74c454",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d9a793401596afdc",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a1d10493600d33f5",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5a20e08229f2ee66",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1f9a55627ff6bec7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6598664c041d4a63",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7c41861524928998",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0854357f61a2e9bd",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/388c05a41f49cacf",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/97727da5167426c9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d426e175eb7d470a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f103912f18889148",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/326e63df093a6cf2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b4c709f1893617e8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4e2eba0f08f80270",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5edd3065ad58bd2d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6d38ec4da9789e7d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f3f6fb0f72c11602",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/85230b1369da1826",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6ff192f660f80954",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2b9f75106d00cb33",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/979532baf03a3c26",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b78d314f320889d8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d5aa537ce3e69678",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/872971b24892ea0b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7737bd4a355c84d1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/db8af0511a5d66f3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/37513598ebdf3c1b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4a3e3685277c8601",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/24d11baa6aa79c52",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/807a53954ffc263f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f84413c3396eec5e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/04d0a441bead8d46",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ed4cd2cc8b39c117",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a1f54bf3e483d131",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5925e1e95b77c35e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/36d4da85741b7597",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e85ad917f431ccf1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a28fb468da3df275",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2535f8fd6a2150ea",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c6c6de1c35d4bd24",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/35ed43c490b81c2f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/279d7e48756f2a5e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6c993f8e27355cf8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c6ce1bfbc0adcbac",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ae1eda17984ae14c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1059c5c389db6b95",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3ed4e07a585a2f3b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/be31f3c7f5ea848d",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a0e5be7133a56703",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/7a7826a11bfa42d4",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2204299dfa6daa39",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/036eabf8bb04bd76",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b2ecde078c3c64b6",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a323a4b153d8c337",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/fa91c7ea8b047c5e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c3b260e18dfffb87",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ef4c993da34bc823",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5e090dcafd4761bc",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0fa3410428b5f9b1",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/41c44e0d404a4e15",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/2e84ef43bb436f38",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/0c2f0b6239eca3fb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/22ddb4a7b5517f63",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/616f9a045fd3ebde",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ffc66becd0e3fce3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/deae6ff683d70cee",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d837b3b775b5e260",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/1e777aa5edf6205a",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/c017a8c008f81921",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5591b2c63b28a58e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/64051eae854ec087",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/aa39fbce6fe3bae3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/909cf7f93e7b7d93",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e33a5ef635d2d511",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8fe937f82a65a092",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4a05e53fc67be2d3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a65188c5ad476359",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/5a0fb1f4664f3aed",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/9d97aa4441de9861",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b7607b1c05584406",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ced453b71822ce78",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/80d0106a4d3d1e92",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e91eb897678bcf24",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/a463151ce4235779",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/61e7a7b9f7166525",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b1858f560d0103b7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/121b1606db4a0fde",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6072c2fc7548513b",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b666d5786f950ec7",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6f16d7eeb9e20505",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/388a37c40b665432",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/d057a7ec8a35698e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/beb09224bf7ef0ec",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/01b33a33755ac3bb",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e8991d849a93b670",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/201c5afb752b4fe4",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e0a1ea5a768195f8",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/43c40915f8a4844e",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/3515ee86cfa1c00f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/dfa14be335be0f23",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/61df611512ad9ee3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b9341f20c0455fe2",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/ddeae8e6b8b96035",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6087614922cde203",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/785f58cf7bba8c1f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/20bc4ca10c4e8a0f",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/b8e1931f67ce8652",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/58c2ed0d87dc3aa0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8003c5302331d9c9",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/6f6e096334ad5490",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/4e9114c66c6482a3",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/484f32c2522ad232",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/8ba393c7dacf439c",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/459d727a91c14a67",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/e5b6137462d0b7c0",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/constants/f8bddeb47769a099",
+      "changed": false,
+      "skipped_reason": "matched old_root but no safe rule applied (manual review needed)",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/unicode_data/15.0.0/charmap.json.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/unicode_data/15.0.0/codec-utf-8.json.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/unicode_data/15.1.0/charmap.json.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": ".hypothesis/unicode_data/15.1.0/codec-utf-8.json.gz",
+      "changed": false,
+      "skipped_reason": "binary extension: .gz",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/139190487873728/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/138631653896752/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/137870496119312/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/131001705188720/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/137870704732080/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/129561710149120/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/127981104823808/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/140387797811280/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/123771573059664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/137870708044672/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/125796265666816/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/131001704744000/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/127981013729360/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/125796285872320/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/139190487875072/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/129561685214608/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/123771480440912/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/129561708986448/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/124142812839088/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/124142813281792/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/124142809903664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/127981105218624/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/132997520701632/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/138631674673344/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/140387798941184/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/132997540380160/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/132997540807744/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/138631674674352/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/139190465226336/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/138631673069056/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/127981103644752/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/137870703159552/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/129561710147776/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/125796285873664/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/123771575090688/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/131001706529856/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/124142812838080/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/123771574634880/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/131001706324256/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/140387707128864/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/132997539217488/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/139190486728784/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/140387797288000/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "MagicMock/mock.paths.data_dir/125796284743760/editorial_policy_enforcement_log.jsonl",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .jsonl",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/verification_final.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/output.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/recovery_phase2_v2.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/verification_headless_final.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/audit_output.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/final_audit.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/recovery_phase2_broad.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/verification_headless.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/debug_nature.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/recovery_phase2.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/refinery.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/debug_cell.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/debug_headless.html",
+      "changed": false,
+      "skipped_reason": "unhandled extension: .html",
+      "changes": []
+    },
+    {
+      "file": "logs/archive/recovery_verification.log",
+      "changed": false,
+      "skipped_reason": "excluded glob (default)",
+      "changes": []
+    }
+  ],
+  "summary": {
+    "files_touched_or_flagged": 831,
+    "files_with_changes": 0
+  }
+}
