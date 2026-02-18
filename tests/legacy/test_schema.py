@@ -1,7 +1,12 @@
 import sys
 
 # Add project root
-sys.path.append("/home/cortega26/noticiencias_news_collector")
+from pathlib import Path
+import os
+import sys
+
+BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+sys.path.insert(0, str(BASE_DIR))
 
 try:
     from noticiencias.config_schema import Config

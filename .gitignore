@@ -45,6 +45,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+run_output*.txt
 
 # Translations
 *.mo
@@ -143,3 +144,5 @@ final_lint_log.txt
 *.db-shm
 data/**/dlq/*.json
 log*.md
+# portability_path_fix: generated temp artifacts
+temp/

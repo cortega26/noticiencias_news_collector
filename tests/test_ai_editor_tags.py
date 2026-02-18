@@ -4,7 +4,12 @@ import unittest
 from unittest.mock import MagicMock
 
 # Add project root to path
-sys.path.insert(0, os.path.abspath("/home/cortega26/noticiencias_news_collector"))
+from pathlib import Path
+import os
+import sys
+
+BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+sys.path.insert(0, str(BASE_DIR))
 
 # Now import
 try:

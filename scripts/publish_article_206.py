@@ -3,7 +3,12 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, "/home/cortega26/noticiencias_news_collector")
+from pathlib import Path
+import os
+import sys
+
+BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+sys.path.insert(0, str(BASE_DIR))
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 

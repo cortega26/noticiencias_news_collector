@@ -1,5 +1,7 @@
 import sqlite3
 from pathlib import Path
+import os
+import sys
 
 # Adjust path if needed
 DB_PATH = Path("data/news_v3.db")
@@ -10,7 +12,8 @@ def purge():
     if not DB_PATH.exists():
         print(f"Error: Database not found at {DB_PATH.absolute()}")
         # Try absolute path based on user info
-        DB_PATH_ABS = Path("/home/cortega26/noticiencias_news_collector/data/news.db")
+        ROOT = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path.cwd())).resolve()
+        DB_PATH_ABS = ROOT / 'data' / 'news.db'
         if DB_PATH_ABS.exists():
             conn = sqlite3.connect(DB_PATH_ABS)
             print(f"Connected to {DB_PATH_ABS}")
