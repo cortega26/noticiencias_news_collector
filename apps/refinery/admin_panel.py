@@ -262,6 +262,7 @@ with tab1:
         # API URL First
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
         new_api_url = st.text_input("Endpoint de Ollama", current_api)
+        config_data.setdefault("ollama", {})
         config_data["ollama"]["api_url"] = new_api_url
 
         # Fetch Available Models
