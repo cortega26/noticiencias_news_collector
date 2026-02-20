@@ -143,6 +143,5 @@ final_lint_log.txt
 *.db-wal
 *.db-shm
 data/**/dlq/*.json
-log*.md
 # portability_path_fix: generated temp artifacts
 temp/
