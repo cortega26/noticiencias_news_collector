@@ -101,7 +101,7 @@ except Exception as e:
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
 # Load environment variables into os.environ for main.py to see them
-dotenv.load_dotenv(ENV_FILE, override=True)
+dotenv.load_dotenv(ENV_FILE, override=False)
 
 REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"  # noqa: S105  # noqa: S105 # nosec
 REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
@@ -184,7 +184,7 @@ DEFAULT_COLLECTOR_PATH = BASE_DIR.parent.parent
 # We need to load TOML early to find PATH?
 # Chicken and egg. NEWS_COLLECTOR_PATH is expected in .env usually for bootstrapping.
 # We will keep NEWS_COLLECTOR_PATH in .env/secrets for now as it defines WHERE config.toml is.
-collector_path_str = secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))
+collector_path_str = os.getenv("NEWS_COLLECTOR_PATH") or secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH))  # env overrides
 NEWS_COLLECTOR_PATH = Path(collector_path_str).resolve()
 
 COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
@@ -247,6 +247,10 @@ with tab1:
     # Load both sources
     secrets = dict(load_secrets())
     config_data = load_toml_config() or {}
+
+    # Defensive defaults: config.toml may be missing/partial during first run or after OS migration.
+    config_data.setdefault("ollama", {})
+    config_data.setdefault("github", {})
 
     if not config_data:
         st.error("No se pudo cargar config.toml. Verifica la ruta.")
@@ -425,12 +429,13 @@ with tab1:
 
     with col2:
         st.subheader("📂 Repositorios")
-        github_cfg = config_data.get("github", {})
+        config_data.setdefault("github", {})  # avoid KeyError when config.toml is missing or lacks [github]
+        github_cfg = config_data["github"]
 
-        config_data["github"]["source_repo_url"] = st.text_input(
+        github_cfg["source_repo_url"] = st.text_input(
             "Repo Origen", github_cfg.get("source_repo_url", "")
         )
-        config_data["github"]["target_repo_url"] = st.text_input(
+        github_cfg["target_repo_url"] = st.text_input(
             "Repo Destino", github_cfg.get("target_repo_url", "")
         )
 

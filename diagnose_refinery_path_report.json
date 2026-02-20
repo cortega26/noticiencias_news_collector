@@ -1,0 +1,1990 @@
+{
+  "env_snapshot_seen_by_this_process": {
+    "PWD": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector",
+    "NEWS_COLLECTOR_PATH": null,
+    "STREAMLIT_SERVER_HEADLESS": null,
+    "STREAMLIT_BROWSER_GATHER_USAGE_STATS": null,
+    "HOME": "/home/carlos",
+    "XDG_CONFIG_HOME": null,
+    "XDG_CACHE_HOME": null,
+    "XDG_DATA_HOME": null,
+    "USER": "carlos",
+    "SHELL": "/bin/bash",
+    "PYTHON": null,
+    "VIRTUAL_ENV": null
+  },
+  "repo": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector",
+  "needle_old_root": "/home/cortega26/noticiencias_news_collector",
+  "total_matches": 383,
+  "likely_sources": [
+    "repo_source_or_generated_files",
+    "user_config_in_~/.config"
+  ],
+  "results": [
+    {
+      "root": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.streamlit",
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "matches": []
+    },
+    {
+      "root": "/home/carlos/.streamlit",
+      "scanned_files": 2,
+      "skipped_files": 0,
+      "matches": []
+    },
+    {
+      "root": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector",
+      "scanned_files": 2804,
+      "skipped_files": 61657,
+      "matches": [
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output_2.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:09:43\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/test_output.txt",
+          "line": 11,
+          "excerpt": "File \"/home/cortega26/noticiencias_news_collector/tests/integration/test_headless_funnel.py\", line 150, in test_end_to_end_headless_fallback"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/test_output.txt",
+          "line": 13,
+          "excerpt": "File \"/home/cortega26/noticiencias_news_collector/tests/integration/test_headless_funnel.py\", line 144, in test_end_to_end_headless_fallback"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/path_fix_report.json",
+          "line": 3,
+          "excerpt": "\"old_root\": \"/home/cortega26/noticiencias_news_collector\","
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output_3.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:11:35\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output_5.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:12:45\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:08:28\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.env",
+          "line": 9,
+          "excerpt": "NEWS_COLLECTOR_PATH=/home/cortega26/noticiencias_news_collector"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output_4.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:12:02\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/run_output_6.txt",
+          "line": 38,
+          "excerpt": "\u001b[32m18:13:42\u001b[0m | \u001b[1mINFO    \u001b[0m | Logs guardándose en: /home/cortega26/noticiencias_news_collector/data/logs/collector.log"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/tools/diagnose_refinery_path.py",
+          "line": 17,
+          "excerpt": "--old \"/home/cortega26/noticiencias_news_collector\" \\"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/tools/portability_path_fix.py",
+          "line": 23,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/tools/portability_path_fix.py",
+          "line": 26,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector --apply"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/tools/portability_path_fix.py",
+          "line": 29,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector --apply --include-systemd"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/reports/coverage/coverage.xml",
+          "line": 6,
+          "excerpt": "<source>/home/cortega26/noticiencias_news_collector/news_collector/contracts</source>"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/reports/coverage/coverage.xml",
+          "line": 7,
+          "excerpt": "<source>/home/cortega26/noticiencias_news_collector/news_collector/reranker</source>"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/reports/coverage/coverage.xml",
+          "line": 8,
+          "excerpt": "<source>/home/cortega26/noticiencias_news_collector/news_collector/utils</source>"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/apps/refinery/.env",
+          "line": 9,
+          "excerpt": "NEWS_COLLECTOR_PATH=/home/cortega26/noticiencias_news_collector"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/config/systemd/noticiencias-collector.service",
+          "line": 8,
+          "excerpt": "WorkingDirectory=/home/cortega26/noticiencias_news_collector"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/config/systemd/noticiencias-collector.service",
+          "line": 12,
+          "excerpt": "EnvironmentFile=/home/cortega26/noticiencias_news_collector/config/noticiencias-collector.env"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5218d96018679a70",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/text_cleaner.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/db2efe90c3d01163",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2700523784c3ec4d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d048a48f39daa61d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6de2be025f89380d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/845c6478c574ca2d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3e55ca0fa04aabca",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/logger.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e5ea6f74992aa0cc",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/logger.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4b052872ecb054a2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/scoring.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7356b02cdc136dd9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/33df7fa1e5995050",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/url_canonicalizer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a06733f78d2b7037",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1a2ce9eb242c2ae6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/reranker/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c69bcb97826f21cc",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/01cafc4ea7e430ea",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/metrics.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/20d3faefd95c4a1d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/security_gate.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/845158c7567acceb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/apps/refinery/main.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b2742de63f7c3eab",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ab08798cbfd58e30",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/scan_placeholders.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/54b024f88b47318d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/253bc53f6d22f2ab",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/basic_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/864ee358022f12dd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/56495b227256a9a7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/basic_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a01b717752f99765",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8356db068f6ba262",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b092ad31c6b5f328",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/run_secret_scan.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/93a3a7107106464c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c20fce789c2171d2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/headless_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4f79a1d87e585d13",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4330651461646794",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/17c1cab7ca873fd5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/21b63006c86864f6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7cc5d335d71f66fe",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/auditor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f4c669912e7fa98f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/editorial/classifier.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6bf705493a267843",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_manager.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/13855b7ad3651259",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d270dbe9d8315218",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/serving/api.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4832f026e0f9a617",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/12ca5759a9efea86",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4a2dc08c0591d6b0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/editorial/council.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d218d3cbd4dfb435",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f37ad07b870a51cd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/165f2d6692e35b38",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/maintenance.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/939b3ef78a0222ca",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/enrichment/nlp_stack.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/29f0c18c851de57d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9aed262fc4beb004",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/62b1e2419135ed4e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8700bc6a48fa6be4",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/48326b21515f1714",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e10755604f6c9011",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/export.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/286d8e1f183a6216",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/83302136ec02a21c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/88ab8b1e1141c43b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/299d8a01e433e559",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d11450ab861ff261",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4db1425a53d3e63e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/security.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/daccf046c730858d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/77d7f24f6358829a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b7616d429fbbf84e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/validation/rules.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4c2c45a7af48e401",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/apps/refinery/src/utils/logger.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cceecd9c618381f5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/753be8de8897e27c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d48fc5090881df7b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d59ae9e8c2f854dd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/cognitive_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/afe1ced2b94d2ff1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/validation.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e54898956e864c66",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/serving/api.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1c9d26199312f007",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/enrichment.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2fb30d554de15e60",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/faceb01a9750da33",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/activity_monitor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1b29a012dd9cf323",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/22be4f05efe6577f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/main.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d24df3895cf90a76",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/requests_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3ccfea14e000cf7a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/77fd68811686137c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/pipeline.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9ba034dd3c268398",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/scoring.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/bc5ddf98a8f2b11d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/full_text.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5eb8636c63e68271",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/fix_makefile_tabs.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e63c024089ca8c26",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2c9753ddf20df75c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/50df013c05ffc606",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a6863251152278ea",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/58705501d0ac6177",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e0dbfd717f8ea5fa",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2690b9f35ce90e99",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/async_rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/80afb9d99555e688",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/177a40b097d826f0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/92e86ee8909dffdb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/apps/refinery/src/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6c1f33b2d5bb3bb0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/sources.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cdeebd6a62558da1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e1c8dc87b2de0464",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d3edef98706c7833",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5b141efcbeb5ed77",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/llm_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/bad551c2b7c3e49b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/editorial/classifier.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dd4d491ec46b1046",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/472a1743a0b3addd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2c86fb3d86e05416",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/828b6c87432db5ce",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ac4bc6009618a894",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/serving/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f97ca18277943b4b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/security.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/50d394f073327410",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f183e5f12bfc8539",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/enrichment.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/24f77ba53a1e6a26",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/refinery_helper.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/50ecb27f699dc763",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/94db6a6e90539786",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/85c205b5d7ef9326",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/dedupe.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/431484ab8123be7b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/reporting.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/28e74a5807f94ce5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/heuristic_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2bf7b3ba87f2a2be",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/sources.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cdbdb1127dba66a9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4dbe37bd7ff1ce3a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/export.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/296ccd31bf5befc4",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/prompts.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0a8e2b1480fb11b3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cd4d0f6343b8d955",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/enrichment.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e58b0708a3825f21",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e2496e57785c7301",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dbbb15d4a21b1ba6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/467e1933bd498e8b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/855e9dac4d352ecb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/bfebc9c93f8d4f3e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/async_rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ac5b3fda620fec5d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/02e8ff24306f411a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/enrichment/pipeline.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c828954b1ce6b7bd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cab6035bea0b6bf6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/headless_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/23bfdebd9631fef2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/http_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9848558b6aff8562",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/cognitive_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/70a14bb96786aef8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dbed89a59991cd35",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/84f9c9474c161bfd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e10066422717ac44",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rate_limit_utils.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e0619859a5203be5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/perf_thresholds.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8abc2de43b463d3b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/image_extractor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1ed93ebff601c3ec",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7988d09dd0cbf88a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/run_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/86e990995b29aba0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fbf62e45a56206fa",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/healthcheck.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/877ad472eff3795f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b740d820b4eedb0a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a74ac4cbdd3faa9a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/serving/api.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6a34d438d4f20d48",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3c64564ea39c26e1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dbb6f67e412204cc",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/pre_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/15759da3690016de",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/facb28f4ecb51244",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/71102b9d33cb6ae2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4dea0861929fbb75",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/bcb6d4f48c9afb66",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/text_cleaner.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/605b3cf61fb96106",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f4ec8fa9c8905e93",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/analytics.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cef7e53a7cfa9454",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d97073f85a2a14be",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/08bbe78da4ab0bc5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/diagnostics.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d1bac5ce4c55cd2e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9c9e94f806b704e7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0b130711e6db7c5e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dc1338474503472e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/enrichment/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5fcf737eacb51a96",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/16b099f31d9ec11b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/refinery_helper.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c22c50671dc7d24d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/validation/rules.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c622d6f3d5974777",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/enrichment/pipeline.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7e03186b3a58fe83",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/url_canonicalizer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5042004491abbc64",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/.venv/bin/pytest"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6a2f0c5d7f5e6339",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/pre_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b6b5ef7306359f60",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/url_canonicalizer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/905b91d4b479526f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/81d055fd3b227ff8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/common.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d222641860404c9a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a57d7104980845f3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/export.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4e96419c4d20a075",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/requests_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4fea250d540293cb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/analytics.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/97f76a3da392574e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/pre_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c4701ea172541f21",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/scoring.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b3810a5630ba8fc9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/frontend_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b927e70e776abc2f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/scan_placeholders.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1dcdee4e44395077",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/45715710be7dc393",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ceca19980679baf1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/784fec7e0c83cbc8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/observability.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8bb6a2189a692e4a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/basic_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/38bf2e65d525834e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2c501cb7054d5376",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/66e45cdfedffea09",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9155c22b59c85a8c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/text_cleaner.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f1d280bc58594389",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7df47ebdbaff0681",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/07d857f041042eed",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/requests_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3bbcc9518b08668b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/interfaces.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8544db2acc85277f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/cc6fc64f9765da45",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f9aa10e921d3afd7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/82dc4d793d2e7233",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/validation/rules.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/de0d8c36839c48ed",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/prompts.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ae9f9a85c2118b24",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1f114f42199d6364",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/da75ed32f9dccc16",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5827ddde9643b724",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f23f14ac4335dc1f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/enrichment/nlp_stack.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/65dcbc0b05fdb226",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/activity_monitor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b4a88d044567bdc5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6c463619ebf40397",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/common.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d5edd266a0d7943b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/adapters.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fae3b7389df98342",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fa94149b51cd425a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5eb35946e0a1d6ca",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/common.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/73068a124a2b8132",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/adapters.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8e37e035d293bbb3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/security_gate.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a3f4bbdd84488268",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/35dc174b9529de9d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0b285494985253a0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/datetime_utils.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/09f9f5f1240949de",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/heuristic_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c2a1dd48934657e9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d922224f1c0a1869",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/174f1d7062bb6103",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/257fd4302b33d34f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7757ca222a7d1678",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/30939c815c58d388",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5ba973ba2a4df563",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7654b7fb6dac148c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/maintenance.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/babc6f01efbf97f4",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c9a13f710871ed9d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/mock_article.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9725046ae3c6489f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ae311002f68ab7ad",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/178a5b649e06dd22",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/cognitive_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5d64ea963adbd9c7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/placeholder_audit.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/12dea34a641336d2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/06f4a86599a7acef",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/placeholder_audit.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8fa905fab8650119",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/sources.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a59613b4cad276d6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/security_gate.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/160453f6f81dd872",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b3293930cce8ce71",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/56ba9914ce774b70",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/enrichment.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6691240b76620075",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/run_secret_scan.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0a3287f92bba3e47",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/placeholder_audit.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/87d1276fb343e8e0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/editorial/policy.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ae6c3b09589ada48",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/requests_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fca555fcafb0f8a5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a29318bd09c1802d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d85cec316760b9dd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c3d2a5271035054b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/reranker/reranker.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f6241ea546397921",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/validation.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/255ac2fc289092a9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fed1888b850c6ff0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/302de243b311bbe0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/adapters.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e2c77d206c74c454",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d9a793401596afdc",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a1d10493600d33f5",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_manager.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5a20e08229f2ee66",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1f9a55627ff6bec7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/perf/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6598664c041d4a63",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7c41861524928998",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/detectors.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0854357f61a2e9bd",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/388c05a41f49cacf",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/97727da5167426c9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/io.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d426e175eb7d470a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f103912f18889148",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/feature_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/326e63df093a6cf2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b4c709f1893617e8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/validation.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4e2eba0f08f80270",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5edd3065ad58bd2d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/scoring.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6d38ec4da9789e7d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f3f6fb0f72c11602",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/85230b1369da1826",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/observability.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6ff192f660f80954",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2b9f75106d00cb33",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/pre_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/979532baf03a3c26",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/async_rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b78d314f320889d8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d5aa537ce3e69678",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/export.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/872971b24892ea0b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7737bd4a355c84d1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/db8af0511a5d66f3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/detectors.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/37513598ebdf3c1b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/version.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4a3e3685277c8601",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/24d11baa6aa79c52",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/bootstrap.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/807a53954ffc263f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f84413c3396eec5e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/canary.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/04d0a441bead8d46",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ed4cd2cc8b39c117",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_manager.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a1f54bf3e483d131",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/adapters.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5925e1e95b77c35e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/36d4da85741b7597",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/html_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e85ad917f431ccf1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/taxonomy/normalizer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a28fb468da3df275",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/validation/validator.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2535f8fd6a2150ea",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/run_secret_scan.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c6c6de1c35d4bd24",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/35ed43c490b81c2f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/279d7e48756f2a5e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6c993f8e27355cf8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/monitoring/detectors.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c6ce1bfbc0adcbac",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/cognitive_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ae1eda17984ae14c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/http_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1059c5c389db6b95",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/cognitive_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3ed4e07a585a2f3b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/be31f3c7f5ea848d",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/image_extractor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a0e5be7133a56703",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/7a7826a11bfa42d4",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/scoring.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2204299dfa6daa39",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/main.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/036eabf8bb04bd76",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b2ecde078c3c64b6",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/feature_scorer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a323a4b153d8c337",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/fa91c7ea8b047c5e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/logger.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c3b260e18dfffb87",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/settings.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ef4c993da34bc823",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5e090dcafd4761bc",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/run_secret_scan.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0fa3410428b5f9b1",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/check_makefile_tabs.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/41c44e0d404a4e15",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/2e84ef43bb436f38",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/0c2f0b6239eca3fb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/exceptions.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/22ddb4a7b5517f63",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/616f9a045fd3ebde",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ffc66becd0e3fce3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/validation/validator.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/deae6ff683d70cee",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/dispatcher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d837b3b775b5e260",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/pipeline.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/1e777aa5edf6205a",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/c017a8c008f81921",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5591b2c63b28a58e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/64051eae854ec087",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/common.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/aa39fbce6fe3bae3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/url_canonicalizer.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/909cf7f93e7b7d93",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e33a5ef635d2d511",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8fe937f82a65a092",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4a05e53fc67be2d3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a65188c5ad476359",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/diagnostics.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/5a0fb1f4664f3aed",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/9d97aa4441de9861",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/editorial/ai_editor.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b7607b1c05584406",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ced453b71822ce78",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/security.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/80d0106a4d3d1e92",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/taxonomy/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e91eb897678bcf24",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/a463151ce4235779",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/61e7a7b9f7166525",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_manager.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b1858f560d0103b7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/http_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/121b1606db4a0fde",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/tools/scan_placeholders.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6072c2fc7548513b",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b666d5786f950ec7",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6f16d7eeb9e20505",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/async_rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/388a37c40b665432",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/requests_client.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/d057a7ec8a35698e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/beb09224bf7ef0ec",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/parsers/rss_parser.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/01b33a33755ac3bb",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/models.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e8991d849a93b670",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/full_text.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/201c5afb752b4fe4",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/noticiencias/config_schema.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e0a1ea5a768195f8",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/scoring/interfaces.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/43c40915f8a4844e",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/reranker/reranker.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/3515ee86cfa1c00f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/pydantic_compat.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/dfa14be335be0f23",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/scripts/security_gate.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/61df611512ad9ee3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b9341f20c0455fe2",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/system/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/ddeae8e6b8b96035",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/base_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6087614922cde203",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/collectors/rss_collector.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/785f58cf7bba8c1f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/__init__.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/20bc4ca10c4e8a0f",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/editorial/council.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/b8e1931f67ce8652",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/logic/workflows/refinery_engine.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/58c2ed0d87dc3aa0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/config/sources.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8003c5302331d9c9",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/6f6e096334ad5490",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/validation.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/4e9114c66c6482a3",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/contracts/adapters.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/484f32c2522ad232",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/utils/text_cleaner.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/8ba393c7dacf439c",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/infrastructure/llm/provider.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/459d727a91c14a67",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/components/publishing/github_publisher.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/e5b6137462d0b7c0",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/storage/database.py"
+        },
+        {
+          "file": "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.hypothesis/constants/f8bddeb47769a099",
+          "line": 1,
+          "excerpt": "# file: /home/cortega26/noticiencias_news_collector/news_collector/perf/load_replay.py"
+        }
+      ]
+    },
+    {
+      "root": "/home/carlos/.config",
+      "scanned_files": 5054,
+      "skipped_files": 4009,
+      "matches": [
+        {
+          "file": "/home/carlos/.config/Antigravity/User/History/-2882f0a2/R4Ls.py",
+          "line": 17,
+          "excerpt": "--old \"/home/cortega26/noticiencias_news_collector\" \\"
+        },
+        {
+          "file": "/home/carlos/.config/Antigravity/User/History/38ca51fc/MOGb.py",
+          "line": 23,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector"
+        },
+        {
+          "file": "/home/carlos/.config/Antigravity/User/History/38ca51fc/MOGb.py",
+          "line": 26,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector --apply"
+        },
+        {
+          "file": "/home/carlos/.config/Antigravity/User/History/38ca51fc/MOGb.py",
+          "line": 29,
+          "excerpt": "python tools/portability_path_fix.py --repo . --old-root /home/cortega26/noticiencias_news_collector --apply --include-systemd"
+        }
+      ]
+    },
+    {
+      "root": "/home/carlos/.local/share",
+      "scanned_files": 13,
+      "skipped_files": 14,
+      "matches": []
+    },
+    {
+      "root": "/home/carlos/.cache",
+      "scanned_files": 360,
+      "skipped_files": 13208,
+      "matches": []
+    }
+  ],
+  "next_steps_if_env_is_missing": [
+    "If NEWS_COLLECTOR_PATH is null/empty here, then Streamlit is being launched without it.",
+    "Kill any existing Streamlit process and re-run `make refinery` from the same shell.",
+    "If launching from VS Code, ensure the integrated terminal inherits env or use Makefile inline env prefix."
+  ],
+  "next_steps_if_matches_found_in_streamlit": [
+    "If matches appear under ~/.streamlit or ./.streamlit, remove or update those secrets/config files.",
+    "Common files: ~/.streamlit/secrets.toml, ./.streamlit/secrets.toml, ~/.streamlit/config.toml"
+  ],
+  "next_steps_if_matches_only_in_cache": [
+    "If matches only appear in ~/.cache, you can delete the specific cache subtree related to the app safely."
+  ]
+}
