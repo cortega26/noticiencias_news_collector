@@ -1,4 +1,26 @@
-"""HTTP API surface for ranked articles and system health."""
+"""
+Module role: Provides a FastAPI HTTP surface for retrieving ranked articles and checking subsystem health.
+
+Inputs:
+- HTTP query parameters for filtering articles (source, topic, date bounds, pagination).
+- Database manager dependencies injected via FastAPI.
+
+Outputs:
+- JSON payloads structuring paginated article lists, filters, metadata, and cursors.
+- Readiness and health probe status dictionaries.
+
+Side effects:
+- Issues SQLAlchemy queries against the database for fetching articles, score logs, and health status.
+
+Invariants:
+- Uses deterministic sorting (descending score, collected date, and ID) enabling cursor-based pagination.
+- Validates date range logic consistently, ensuring the start date never exceeds the end date.
+- Employs base64 url-safe encoding and decoding for opaque cursor payload serialization.
+
+Failure modes:
+- Raises HTTP 400 exceptions if cursor formats are malformed.
+- Raises HTTP 503 if the database is unavailable during readiness probes.
+"""
 
 from __future__ import annotations
 

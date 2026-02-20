@@ -1,3 +1,28 @@
+"""
+Module role: Defines and validates Editorial Policy configurations, determining thresholds for criticism and hallucinations.
+
+Inputs:
+- Policy mode strings ("velocity", "strict", "standard").
+- On-disk JSON manifest files for integrity verification.
+
+Outputs:
+- Instantiated EditorialPolicy dataclasses representing thresholds and flags.
+- Computed SHA-256 hashes for canonical policy representations.
+
+Side effects:
+- Reads from the filesystem when verifying integrity against a manifest file.
+- Logs critical errors if integrity verification fails.
+
+Invariants:
+- Integrity check must deterministically hash core policy fields using a sorted key-value format.
+- Canonical policy strings must map boolean values strictly to "true" or "false".
+- Missing or malformed manifest files must strictly raise errors rather than failing silently.
+
+Failure modes:
+- Raises IntegrityError if manifest file is missing.
+- Raises IntegrityError if computed hash does not match expected hash in manifest.
+"""
+
 import hashlib
 import json
 from dataclasses import dataclass, asdict

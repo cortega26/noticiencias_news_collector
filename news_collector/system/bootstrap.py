@@ -1,6 +1,28 @@
 """
-Bootstrap module for NewsCollectorSystem.
-Encapsulates dependency construction and system startup logic.
+Module role: Encapsulates runtime dependency construction, system startup logic, and initial health checks.
+
+Inputs:
+- Configuration overrides and source configurations.
+- Environment variables and global config settings.
+
+Outputs:
+- Instantiated core components: logger, metrics reporter, database manager, collectors, validator, and scorer.
+- System health diagnostic reports.
+
+Side effects:
+- Initializes external database connections and ensures sources exist in DB.
+- Triggers HTTP calls for external LLM provider health checks.
+- Modifies global config state (disables LLM system) if LLM health check fails.
+
+Invariants:
+- LAW-3: System Layer Is Orchestration Only. Responsible for wiring dependencies safely, not processing data.
+- Must gracefully capture DB/Collector/Config setup errors and reflect them in the health report.
+- Must validate system configuration before wiring begins.
+
+Failure modes:
+- Database initialization failure surfaces in health report and logs as a critical error.
+- Invalid configuration raises validation exceptions and halts bootstrap.
+- LLM connectivity failures toggle offline mode instead of crashing out.
 """
 
 from datetime import datetime, timezone

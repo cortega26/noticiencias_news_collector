@@ -1,4 +1,25 @@
-"""Contracts for scoring requests passed to storage."""
+"""
+Module role: Defines the strict Pydantic data contracts required for article scoring payloads and inputs.
+
+Inputs:
+- Raw dictionaries or unvalidated objects representing article metadata, content, and scoring components.
+- Configuration dictionaries for source credibility.
+
+Outputs:
+- Validated `ScoringComponentsModel`, `ScoringRequestModel`, `ArticleScoringData`, and `ScoringInputModel` instances.
+- Serializable scoring dictionaries explicitly via `model_dump_for_storage`.
+
+Side effects:
+- None.
+
+Invariants:
+- Enforces strict data contracts for scoring data.
+- Numeric stability: `final_score` and component values must be between 0.0 and 1.0 inclusive.
+- Weight components in the payload must mathematically sum to approximately 1.0.
+
+Failure modes:
+- Raises Pydantic `ValueError` (or `ValidationError`) during model instantiation if numeric ranges are violated or if required metrics are missing.
+"""
 
 from __future__ import annotations
 

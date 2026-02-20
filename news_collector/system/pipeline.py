@@ -1,6 +1,27 @@
 """
-Pipeline module for NewsCollectorSystem.
-Encapsulates the execution logic of the collection cycle.
+Module role: Encapsulates the execution orchestration logic of the full news collection cycle.
+
+Inputs:
+- Initialized NewsCollectorSystem instance.
+- Optional lists of source filters, dry_run flags, and trace IDs.
+
+Outputs:
+- Dictionary containing final session reports, performance metrics, and summary.
+- Traces and metrics emitted to the observability system.
+
+Side effects:
+- Writes session logs and performance metrics.
+- Orchestrates external system calls (collection, validation, scoring) via system methods.
+- Generates global session identifiers.
+
+Invariants:
+- LAW-3: System Layer Is Orchestration Only. Must not embed business rules or data parsing.
+- Must execute stages in correct order: collection -> validation -> scoring -> selection -> report.
+- System must be fully initialized before pipeline execution starts.
+
+Failure modes:
+- Raises RuntimeError if system is not initialized prior to execution.
+- Propagates collection/scoring/validation exceptions but logs them with context and trace IDs first.
 """
 
 import time

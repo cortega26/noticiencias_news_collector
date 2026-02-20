@@ -3,15 +3,26 @@
 # ================================================
 
 """
-Este es el cerebro de nuestro sistema: el motor que decide qué noticias
-son realmente importantes y merecen la atención de nuestra audiencia.
+Module role: Evaluates articles across multiple dimensions (credibility, recency, quality, engagement) to compute a final importance score.
 
-Piensa en esto como tener un panel de expertos que evalúa cada noticia
-desde múltiples ángulos: ¿qué tan confiable es la fuente? ¿qué tan reciente
-es? ¿qué tan bien escrita está? ¿qué probabilidad tiene de interesar a la gente?
+Inputs:
+- `Article` representations (ORM models or mocked objects containing content, metadata, and dates).
+- Component weights and source configurations optionally provided to override defaults.
 
-El sistema está diseñado para ser transparente: no es una caja negra, sino
-que explica exactamente por qué cada artículo recibió cierto puntaje.
+Outputs:
+- A strictly validated scoring dictionary containing `final_score`, `should_include`, `components` breakdown, and a detailed human-readable `explanation`.
+
+Side effects:
+- None. (Uses a thread executor for async translation but performs no external IO).
+
+Invariants:
+- The output payload strictly conforms to the `ScoringRequestModel` contract.
+- Component weights are aggressively normalized if they do not sum to 1.0.
+- Final calculated scores are strictly clamped to the [0.0, 1.0] range.
+
+Failure modes:
+- Calculation exceptions are caught and explicitly result in a fallback safe payload (score 0.0, `should_include=False`, and an error explanation).
+- Validation errors during Pydantic schema enforcement raise a `ValueError` indicating a critical scoring failure.
 """
 
 import asyncio

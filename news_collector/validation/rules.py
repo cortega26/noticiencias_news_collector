@@ -1,9 +1,23 @@
 """
-Validation Rules for News Collector
-===================================
+Module role: Defines the abstract interface and concrete implementations for validation rules to filter articles before scoring.
 
-This module defines the interface and concrete implementations for validation rules
-used to filter articles before they enter the scoring phase.
+Inputs:
+- Configuration parameters for rules (e.g., minimum words, match ratios, blocklist patterns).
+- Raw article dictionaries containing fields like 'title', 'content', 'summary', and 'content_mode'.
+
+Outputs:
+- `ValidationResult` objects indicating whether the article passed (`is_valid`) and tracking the `reason` and `rule_name` if it failed.
+
+Side effects:
+- None.
+
+Invariants:
+- Concrete rules must implement the `name` property and `validate` method.
+- Rules do not mutate article dictionary payloads.
+- Permissive handling of missing fields: missing titles or content typically fail safely or pass gracefully depending on the specific rule logic.
+
+Failure modes:
+- Returns `ValidationResult(is_valid=False)` when an article fails the configured criteria (e.g., too short, low relevance, or matches a blocklist).
 """
 
 import re

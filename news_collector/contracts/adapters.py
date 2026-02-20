@@ -1,4 +1,25 @@
-"""Adapters to convert between system objects and contracts."""
+"""
+Module role: Adapters to safely convert between raw ORM/system objects and validated Pydantic contracts.
+
+Inputs:
+- ORM Article objects or raw dictionaries representing articles.
+- Source configuration dictionaries.
+
+Outputs:
+- Strictly validated Pydantic models (ExportArticleModel, ArticleScoringData, ArticleValidationPayload).
+
+Side effects:
+- None. This module is purely functional and performs no I/O.
+
+Invariants:
+- LAW-1: Data Contracts Are Mandatory. Must encapsulate all data crossing system boundaries.
+- LAW-2: Adapters Are the Only Conversion Layer. All transformations to contracts must occur here.
+- Must not perform external network calls or database writes.
+
+Failure modes:
+- Missing required fields in input will raise Pydantic validation errors.
+- Type mismatches will raise Pydantic validation errors.
+"""
 
 from typing import Any, Dict, List
 

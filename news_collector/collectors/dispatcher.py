@@ -1,3 +1,25 @@
+"""
+Module role: Routes collection requests to the appropriate collector implementation based on source configurations.
+
+Inputs:
+- Dictionaries of source configurations (mapping source IDs to settings).
+- Logger factories and health tracking dependencies injected during initialization.
+
+Outputs:
+- Aggregated dictionaries containing `source_details` and a `collection_summary` with overall article counts, errors, and success rates.
+
+Side effects:
+- Instantiates child collectors (RSS, HTML, Headless).
+- Invokes network calls by delegating execution to the underlying collectors.
+
+Invariants:
+- Fallbacks gracefully to the 'rss' collector type if an unrecognized collector type is specified.
+- Synthesizes and merges batch collection metrics from all underlying collectors into a single summary.
+
+Failure modes:
+- Collector initialization errors are caught and logged, omitting the failing collector from the registered mapping.
+- Individual collection task failures or exceptions are swallowed at the dispatcher level and excluded from the merged results to allow partial successes.
+"""
 import asyncio
 from typing import Any, Dict, Optional
 

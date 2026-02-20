@@ -3,13 +3,30 @@
 # ====================================================
 
 """
-Este archivo es el cerebro operativo de nuestro sistema de almacenamiento.
-Es como tener un bibliotecario súper eficiente que sabe exactamente dónde
-guardar cada pieza de información y cómo recuperarla rápidamente cuando
-la necesitemos.
+Module role: Manages database connections, connection pooling, and CRUD operations for articles and sources, abstracting SQLite and PostgreSQL backends.
 
-La filosofía aquí es crear una capa de abstracción que nos permita cambiar
-de SQLite a PostgreSQL en el futuro sin tocar el resto del código.
+Inputs:
+- Database configuration dictionaries (URL, type, pool settings).
+- Validated `CollectorArticleModel` instances or compatible dictionaries for saving articles.
+- Source IDs and states for circuit breaker updates.
+
+Outputs:
+- SQLAlchemy `Article` models representing persisted data.
+- Boolean flags indicating successful saves, existence checks, or canonical slug assignments.
+- Dictionaries describing source circuit breaker states.
+
+Side effects:
+- Writes and upserts data to the configured SQL database.
+- Updates circuit breaker tracking states for collection sources.
+- Generates and persists simhash/clustering metadata for duplicate detection.
+
+Invariants:
+- Canonical identity (slugs) persists immutably and cannot be overwritten once set (`set_canonical_slug`).
+- Gracefully ignores duplicate inserts using UPSERT/existence-check logic instead of crashing on `IntegrityError`.
+
+Failure modes:
+- SQLAlchemy exceptions (e.g., `IntegrityError`) are caught, rolled back, and typically return `None`.
+- Raises `ValueError` if an invalid `CollectorArticleModel` payload is passed to the save operations.
 """
 
 import contextlib
