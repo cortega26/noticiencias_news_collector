@@ -1,8 +1,25 @@
 """
-Content Validator Module
-========================
+Module role: Orchestrates the validation phase by applying a configured set of rules to collected articles.
 
-Orchestrates the validation phase by applying a set of rules to collected articles.
+Inputs:
+- Lists of validation rules (`ValidationRule` instances) provided at initialization.
+- Raw collected article data (dictionaries) representing single articles or batches.
+
+Outputs:
+- `ValidationResult` indicating success or the specific rule failure reason.
+- Dictionary categorizing batches into 'valid' lists and 'invalid' lists with rejection reasons.
+
+Side effects:
+- Emits log messages for article rejections during batch validation.
+
+Invariants:
+- Fails fast on the first rule violation for single articles.
+- Does not mutate the input article payloads during validation.
+- Operates on raw dictionary payloads.
+
+Failure modes:
+- Returns `ValidationResult(is_valid=False)` instead of raising exceptions when an article fails to meet criteria.
+- Missing article fields (e.g., title or content) result in rule-specific decisions (pass or fail) rather than crashes.
 """
 
 import logging

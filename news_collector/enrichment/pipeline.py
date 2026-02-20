@@ -1,4 +1,26 @@
-"""Deterministic article enrichment pipeline backed by configurable NLP models."""
+"""
+Module role: Deterministic article enrichment pipeline for extracting multilingual entities, topics, and sentiment.
+
+Inputs:
+- Article payloads (ArticleForEnrichmentModel or raw dictionaries).
+- Enrichment NLP configuration settings.
+
+Outputs:
+- Strictly validated ArticleEnrichmentModel dictionaries containing normalized text, entities, topics, sentiment, and model version.
+
+Side effects:
+- May cache computation results in an in-memory LRU cache to optimize repeated queries.
+- No network or database calls. Uses local NLP models for analysis.
+
+Invariants:
+- Must return deterministically identical outputs for identically normalized inputs across the same model version.
+- Must gracefully handle missing content by combining available title and summary fields.
+- Deduplication must utilize sha256 hashing of normalized input texts.
+
+Failure modes:
+- Unrecognized or improperly structured Pydantic input models will raise validation errors.
+- Unsupported detected languages fallback gracefully as determined by the NLP stack.
+"""
 
 from __future__ import annotations
 

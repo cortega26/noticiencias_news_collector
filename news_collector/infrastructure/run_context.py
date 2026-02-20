@@ -1,3 +1,24 @@
+"""
+Module role: Maintains a global singleton to manage execution run contexts, ensuring operations link to a specific environment and run ID.
+
+Inputs:
+- Environment variables (`RUN_ENVIRONMENT`, `CI`, `GITHUB_ACTIONS`).
+- Explicit environment override strings.
+
+Outputs:
+- A context dictionary containing the run ID, detected environment, and start timestamp.
+
+Side effects:
+- None (strictly in-memory state management dependent on environment configuration).
+
+Invariants:
+- Maintains exactly one instantiated singleton state per application runtime.
+- Constrains valid manual environment overrides to a predefined set of recognized environments.
+
+Failure modes:
+- Raises ValueError if an explicit environment assignment is not part of the recognized whitelist.
+- Silently defaults to 'development' if environment variables are absent or unrecognized during detection.
+"""
 
 import os
 import uuid

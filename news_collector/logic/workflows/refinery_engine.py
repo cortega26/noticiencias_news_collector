@@ -1,3 +1,33 @@
+"""
+Module role: Orchestrates the refinement pipeline to process articles using an editor agent, write them to a target repository, and manage Git operations.
+
+Inputs:
+- Dictionaries containing article data.
+- Git repository objects and target directory paths.
+- Configuration and database manager instances.
+
+Outputs:
+- Summary dictionaries of processed counts and errors.
+- Boolean success indicators for single article processing.
+
+Side effects:
+- Writes Markdown files and JSON manifests to the local filesystem.
+- Performs Git branching, committing, pushing, and creates pull requests on GitHub.
+- Updates database states (e.g., canonical slugs, publication marks).
+- Downloads images via HTTP.
+- Appends to an enforcement log file.
+
+Invariants:
+- Re-processing reuses the original canonical identity to ensure URL immutability.
+- Editorial policy is enforced before persistence, rejecting blocked articles.
+- The pipeline handles images, optionally downloading them or using defaults on failure.
+
+Failure modes:
+- Returns False if policy validation fails or the auditor rejects content.
+- Continues on individual article errors, recording them in the summary errors list.
+- Fallback behaviors trigger on missing data (e.g., generating fallback slugs or using current dates).
+"""
+
 import logging
 import re
 from datetime import datetime

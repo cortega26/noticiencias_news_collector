@@ -1,8 +1,23 @@
 """
-Editorial Council Module
-========================
+Module role: Implements the AI Editorial Council for evaluating and improving news articles using an LLM provider.
 
-Implements the AI Editorial Council for evaluating and improving news articles.
+Inputs:
+- Article titles, summaries, and optional content snippets.
+
+Outputs:
+- CouncilResult dataclasses containing approval decisions, average scores, role-based scores, and feedback.
+- Returns None if the external LLM provider fails.
+
+Side effects:
+- Issues synchronous text generation calls to the external or local LLM provider.
+
+Invariants:
+- Approval requires an average score >= 3.5, no individual score < 2.0, and explicit editor affirmation.
+- Input article content exceeding 1500 characters is consistently truncated before evaluation.
+
+Failure modes:
+- Returns None and logs warnings if the LLM response is invalid, empty, or fails JSON parsing.
+- Returns None and logs errors on general execution exceptions within the generation chain.
 """
 
 import json

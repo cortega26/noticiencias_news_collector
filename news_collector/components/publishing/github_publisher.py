@@ -1,3 +1,31 @@
+"""
+Module role: Handles interactions with Git and GitHub to safely publish articles to remote repositories.
+
+Inputs:
+- GitHub authentication tokens.
+- Repository URLs, target directories, branch names, and commit messages.
+
+Outputs:
+- Cloned Git repository objects.
+- Branch name strings and GitHub Pull Request URLs.
+
+Side effects:
+- Creates and manages temporary askpass scripts on the filesystem for Git authentication.
+- Modifies local filesystems by cloning repositories and cleaning up directories.
+- Executes Git commands (clone, checkout, pull, commit, push) and HTTP POST requests to GitHub APIs.
+
+Invariants:
+- Attempts to prevent authentication tokens from being persisted in logs or permanently on disk.
+- Branch names are deterministically generated when explicit names are provided.
+- Repositories are cleanly initialized by removing the target directory prior to cloning.
+
+Failure modes:
+- Raises RuntimeError if a GitHub token is missing when required.
+- Raises exceptions if GitHub Pull Request creation API calls fail with non-201 HTTP status.
+- Logs warnings and proceeds if merging origin/main fails during branch initialization.
+- Logs warnings if there are no untracked or modified files to commit.
+"""
+
 import os
 import shutil
 import tempfile

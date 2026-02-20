@@ -1,3 +1,27 @@
+"""
+Module role: Manages manual overrides acting as locks for particular enrichment strategies based on YAML configurations and production metrics.
+
+Inputs:
+- Source IDs and target strategies.
+- A YAML configuration file path (`news_collector/config/strategy_locks.yaml`).
+- Production observability metrics (attempts, successes, yield).
+
+Outputs:
+- Lock configuration dictionaries or None if a lock is rejected or undefined.
+
+Side effects:
+- Reads from and writes updates to the strategy locks YAML configuration file on disk.
+
+Invariants:
+- Evaluates locks by consulting production evidence to ensure sufficient prior attempts.
+- Rejects non-baseline target strategies if their measured yield advantage over the baseline is insufficient.
+- Refuses to overwrite existing locks with automated suggestions for the same strategy.
+
+Failure modes:
+- Defaults to returning empty or ignored locks if the configuration file is missing or unparseable.
+- Rejects lock requests and logs warnings when production metrics are unavailable or criteria are unmet.
+- Safely catches and logs exceptions when saving to the YAML file fails, leaving in-memory state intact.
+"""
 
 import yaml
 import logging

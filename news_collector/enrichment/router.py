@@ -1,5 +1,30 @@
-"""Enrichment Strategy Router orchestration logic."""
+"""
+Module role: Decides and executes the appropriate article enrichment strategy (HTTP, Headless, or Scholarly) for a given source.
+
+Inputs:
+- Source IDs and source configuration dictionaries (containing locked or hinted strategies, flags).
+- Article candidate dictionaries containing the target URL.
+
+Outputs:
+- Enrichment result dictionaries containing success status, extracted content, metadata, and reason codes.
+- Strategy utilized in the enrichment process.
+
+Side effects:
+- Performs external network calls depending on the selected enrichment strategy.
+- Emits enrichment attempts, successes, failures, and cost metrics to the observability store.
+
+Invariants:
+- Must honor explicit strategy locks mapped in overriding source configurations.
+- Must fallback safely (e.g., to headless fallback if HTTP fails and headless is enabled).
+- Must always return a standard dictionary with success boolean and strategy used.
+
+Failure modes:
+- Missing URLs immediately return failure without network activity.
+- Budget exhaustion for headless strategies returns a specific budget failure code.
+- Too short content (<500 chars) is rejected as a failure state ("content_too_short").
+"""
 from __future__ import annotations
+
 
 import logging
 import time
