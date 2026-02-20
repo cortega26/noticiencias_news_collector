@@ -86,7 +86,8 @@ run-local: bootstrap ## Run the collector locally
 bootstrap-refinery: $(BOOTSTRAP_REFINERY_STAMP) ## Provision refinery environment
 
 migrate: bootstrap ## Run database migrations (up to head)
-	@$(PYTHON_BIN) scripts/migrate.py up
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_BIN) scripts/migrate.py up
+
 
 refinery: bootstrap-refinery migrate ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
