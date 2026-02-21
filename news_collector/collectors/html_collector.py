@@ -143,7 +143,9 @@ class HtmlCollector(BaseCollector):
 
                 # Fetch full content
                 if raw.get("url"):
-                    async with httpx.AsyncClient(timeout=COLLECTION_CONFIG.get("request_timeout", 30)) as fetch_client:
+                    async with httpx.AsyncClient(
+                        timeout=COLLECTION_CONFIG.get("request_timeout", 30)
+                    ) as fetch_client:
                         full_text = await self._fetch_article_content(
                             fetch_client, raw["url"], source_config
                         )

@@ -1,5 +1,3 @@
-
-
 def test_source_config_strict_schema():
     """
     Test that the source configuration follows the strict schema:

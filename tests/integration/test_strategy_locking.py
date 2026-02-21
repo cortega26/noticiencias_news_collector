@@ -11,6 +11,7 @@ class TestStrategyLocking(unittest.TestCase):
         from news_collector.observability.enrichment_metrics_store import (
             production_metrics_view,
         )
+
         production_metrics_view.db_path = enrichment_metrics.db_path
         production_metrics_view.conn = None
 

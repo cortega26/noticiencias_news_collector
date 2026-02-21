@@ -528,6 +528,7 @@ class BaseCollector(ABC):
             return cached[1]
         try:
             from news_collector.utils.security import validate_url_safety
+
             robots_url = f"https://{domain}/robots.txt"
             validate_url_safety(robots_url)
             # Use a short timeout for robots.txt to avoid blocking
@@ -591,9 +592,7 @@ class BaseCollector(ABC):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        random.uniform(  # noqa: S311
-            0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
-        )
+        random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))  # noqa: S311
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
         # This prevents thundering herd better than "Equal Jitter" or constant jitter.
         # User requested: "Add jitter to exponential backoff (deterministic in tests)"
@@ -704,27 +703,30 @@ class BaseCollector(ABC):
                 return True
 
             # 1. Check Circuit Breaker Status
-            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false" and state.get("status") == "COOLDOWN":
-                    next_retry = state.get("next_retry_at")
-                    if next_retry:
-                        # Ensure timezone awareness
-                        if next_retry.tzinfo is None:
-                            next_retry = next_retry.replace(tzinfo=timezone.utc)
-                        else:
-                            next_retry = next_retry.astimezone(timezone.utc)
+            if (
+                os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false"
+                and state.get("status") == "COOLDOWN"
+            ):
+                next_retry = state.get("next_retry_at")
+                if next_retry:
+                    # Ensure timezone awareness
+                    if next_retry.tzinfo is None:
+                        next_retry = next_retry.replace(tzinfo=timezone.utc)
+                    else:
+                        next_retry = next_retry.astimezone(timezone.utc)
 
-                        now = datetime.now(timezone.utc)
-                        if now < next_retry:
-                            self._emit_log(
-                                "warning",
-                                "collector.circuit_breaker.skip",
-                                source_id=source_id,
-                                details={
-                                    "reason": "COOLDOWN",
-                                    "retry_at": next_retry.isoformat(),
-                                },
-                            )
-                            return False
+                    now = datetime.now(timezone.utc)
+                    if now < next_retry:
+                        self._emit_log(
+                            "warning",
+                            "collector.circuit_breaker.skip",
+                            source_id=source_id,
+                            details={
+                                "reason": "COOLDOWN",
+                                "retry_at": next_retry.isoformat(),
+                            },
+                        )
+                        return False
 
             if not state.get("last_checked"):
                 return True

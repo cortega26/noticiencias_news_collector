@@ -161,7 +161,9 @@ class HeadlessEnricher:
             "duration": duration,
         }
 
-    def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:  # noqa: C901
+    def enrich(
+        self, url: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:  # noqa: C901
         """
         Renders URL using headless browser, with Proxy Fallback.
         """
@@ -181,8 +183,11 @@ class HeadlessEnricher:
         proxy_settings = None
 
         # If policy is force, we start with proxy
-        if source_config.get("proxy_mode") == "force" and proxy_manager.budget_manager.can_afford():
-                proxy_settings = proxy_manager.get_proxy_settings(source_config)
+        if (
+            source_config.get("proxy_mode") == "force"
+            and proxy_manager.budget_manager.can_afford()
+        ):
+            proxy_settings = proxy_manager.get_proxy_settings(source_config)
 
         start_time = time.time()
 
@@ -221,50 +226,54 @@ class HeadlessEnricher:
                 }
 
             # Check if we should retry with proxy
-            if proxy_manager.should_retry_with_proxy(source_config, error=e) and budget_manager.can_attempt() and proxy_manager.budget_manager.can_afford():
+            if (
+                proxy_manager.should_retry_with_proxy(source_config, error=e)
+                and budget_manager.can_attempt()
+                and proxy_manager.budget_manager.can_afford()
+            ):
 
-                    proxy_settings = proxy_manager.get_proxy_settings(source_config)
-                    if proxy_settings:
-                        self.logger.info(
-                            {
-                                "event": "enrichment.headless.proxy.attempt",
-                                "details": {"url": url, "reason": str(e)},
-                            }
+                proxy_settings = proxy_manager.get_proxy_settings(source_config)
+                if proxy_settings:
+                    self.logger.info(
+                        {
+                            "event": "enrichment.headless.proxy.attempt",
+                            "details": {"url": url, "reason": str(e)},
+                        }
+                    )
+
+                    start_retry_time = time.time()
+                    try:
+                        # Attempt 2 (Proxy)
+                        result_2 = self._execute_enrich(
+                            url, source_config, proxy_settings
                         )
 
-                        start_retry_time = time.time()
-                        try:
-                            # Attempt 2 (Proxy)
-                            result_2 = self._execute_enrich(
-                                url, source_config, proxy_settings
-                            )
+                        # Record usage
+                        budget_manager.record_usage(result_2["duration"])
+                        proxy_manager.record_usage(result_2["duration"])
 
-                            # Record usage
-                            budget_manager.record_usage(result_2["duration"])
-                            proxy_manager.record_usage(result_2["duration"])
-
-                            self.logger.info(
-                                {
-                                    "event": "enrichment.headless.proxy.success",
-                                    "details": {"url": url},
-                                }
-                            )
-                            return result_2
-
-                        except Exception as e2:
-                            duration_2 = time.time() - start_retry_time
-                            # Record usage for failed retry
-                            budget_manager.record_usage(duration_2)
-                            proxy_manager.record_usage(duration_2)
-
-                            self.logger.warning(f"Headless (Proxy Retry) failed: {e2}")
-
-                            return {
-                                "success": False,
-                                "error": f"Proxy Retry Failed: {str(e2)}",
-                                "content": None,
-                                "duration": duration_attempt_1 + duration_2,
+                        self.logger.info(
+                            {
+                                "event": "enrichment.headless.proxy.success",
+                                "details": {"url": url},
                             }
+                        )
+                        return result_2
+
+                    except Exception as e2:
+                        duration_2 = time.time() - start_retry_time
+                        # Record usage for failed retry
+                        budget_manager.record_usage(duration_2)
+                        proxy_manager.record_usage(duration_2)
+
+                        self.logger.warning(f"Headless (Proxy Retry) failed: {e2}")
+
+                        return {
+                            "success": False,
+                            "error": f"Proxy Retry Failed: {str(e2)}",
+                            "content": None,
+                            "duration": duration_attempt_1 + duration_2,
+                        }
 
             # If we are here, retries exhausted or failed.
             return {

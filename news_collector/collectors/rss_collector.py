@@ -942,7 +942,9 @@ class RSSCollector(BaseCollector):
                     processed_article["article_metadata"]["enrichment"] = {
                         "language": processed_article.get("language", "en"),
                         "normalized_title": original_title[:500],
-                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "normalized_summary": processed_article.get("summary", "")[
+                            :2000
+                        ],
                         "sentiment": "neutral",
                         "entities": [],
                         "topics": [],
@@ -1008,7 +1010,9 @@ class RSSCollector(BaseCollector):
                     processed_article["article_metadata"]["enrichment"] = {
                         "language": processed_article.get("language", "en"),
                         "normalized_title": original_title[:500],
-                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "normalized_summary": processed_article.get("summary", "")[
+                            :2000
+                        ],
                         "sentiment": "neutral",
                         "entities": [],
                         "topics": [],

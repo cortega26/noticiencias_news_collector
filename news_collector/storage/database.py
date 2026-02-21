@@ -580,7 +580,9 @@ class DatabaseManager:
                 )
                 simhash_prefix = self._simhash_prefix_value(simhash_value)
                 cluster_id, confidence = self._assign_cluster(
-                    session, int(simhash_value) if simhash_value is not None else 0, payload.get("published_date")
+                    session,
+                    int(simhash_value) if simhash_value is not None else 0,
+                    payload.get("published_date"),
                 )
 
                 article_metadata = payload.get("article_metadata", {}) or {}
@@ -718,7 +720,9 @@ class DatabaseManager:
                     )
                     simhash_prefix = self._simhash_prefix_value(simhash_value)
                     cluster_id, confidence = self._assign_cluster(
-                        session, int(simhash_value) if simhash_value is not None else 0, payload.get("published_date")
+                        session,
+                        int(simhash_value) if simhash_value is not None else 0,
+                        payload.get("published_date"),
                     )
 
                     # 5. Model Construction
@@ -896,7 +900,9 @@ class DatabaseManager:
         for candidate in candidates:
             # candidate.simhash is expected to be int
             c_simhash = candidate.simhash  # type: ignore
-            candidate_simhash = self._simhash_from_storage(int(c_simhash) if c_simhash is not None else None)
+            candidate_simhash = self._simhash_from_storage(
+                int(c_simhash) if c_simhash is not None else None
+            )
             if candidate_simhash is None:
                 continue
             distance = hamming_distance(simhash_value, candidate_simhash)
@@ -997,7 +1003,11 @@ class DatabaseManager:
             if exclude_published:
                 query = query.filter(Article.published_at.is_(None))
 
-            return list(query.order_by(desc(Article.final_score), Article.collected_date.desc()).limit(limit).all())
+            return list(
+                query.order_by(desc(Article.final_score), Article.collected_date.desc())
+                .limit(limit)
+                .all()
+            )
 
     def get_articles_by_category(
         self, category: str, days_back: int = 7

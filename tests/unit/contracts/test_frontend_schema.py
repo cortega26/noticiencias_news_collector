@@ -16,7 +16,7 @@ def test_frontend_schema_instantiation():
         excerpt="This is a valid excerpt with more than 10 chars.",
         date=datetime.now(timezone.utc),
         image=ImageObject(src="a.jpg", width=10, height=10),
-        sources=[SourceItem(title="Src", url="http://example.com")]
+        sources=[SourceItem(title="Src", url="http://example.com")],
     )
     assert post.schema_version >= 1
     assert post.author == "Noticiencias"

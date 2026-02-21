@@ -44,6 +44,7 @@ def mock_article_payload():
         },
     }
 
+
 def pytest_sessionfinish(session, exitstatus):
     """Clean up global sqlite connections after all tests to prevent ResourceWarnings."""
     try:
@@ -51,6 +52,7 @@ def pytest_sessionfinish(session, exitstatus):
             enrichment_metrics,
             production_metrics_view,
         )
+
         enrichment_metrics.close()
         production_metrics_view.close()
     except Exception:

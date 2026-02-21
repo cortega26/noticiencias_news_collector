@@ -22,7 +22,9 @@ def test_parse_valid_line():
 
 
 def test_parse_fetching_category():
-    line = "2025-01-28 15:30:01 | INFO     | news_collector.rss:50 | Fetching RSS from BBC"
+    line = (
+        "2025-01-28 15:30:01 | INFO     | news_collector.rss:50 | Fetching RSS from BBC"
+    )
     evt = LogParser.parse_line(line)
 
     assert evt is not None
@@ -108,10 +110,11 @@ def test_activity_monitor_default_path():
     monitor = ActivityMonitor()
     assert isinstance(monitor.log_path, Path)
 
+
 def test_activity_monitor_exception(monkeypatch):
     def mock_open(*args, **kwargs):
         raise ValueError("Simulated error")
-    
+
     with tempfile.TemporaryDirectory() as td:
         log_path = Path(td) / "test.log"
         log_path.touch()
