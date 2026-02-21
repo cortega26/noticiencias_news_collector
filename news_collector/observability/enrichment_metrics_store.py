@@ -46,6 +46,11 @@ class EnrichmentMetricsStore:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._create_tables()
 
+    @property
+    def cursor(self):
+        """Backward compatibility shim for older tests expecting a direct cursor."""
+        return self.conn.cursor()
+
     def _create_tables(self):
         # 1. Aggregates Table (Existing)
         query_metrics = """
