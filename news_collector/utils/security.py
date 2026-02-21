@@ -23,7 +23,9 @@ def validate_url_safety(url: str) -> None:
         # 1. Explicit Scheme Validation
         scheme = parsed.scheme.lower()
         if scheme not in ("http", "https"):
-            raise ValueError(f"Invalid URL scheme: '{scheme}'. Only http and https are allowed.")
+            raise ValueError(
+                f"Invalid URL scheme: '{scheme}'. Only http and https are allowed."
+            )
 
         hostname = parsed.hostname
         if not hostname:
@@ -35,7 +37,9 @@ def validate_url_safety(url: str) -> None:
             ip_list = socket.getaddrinfo(hostname, None)
         except socket.gaierror as e:
             # We MUST fail closed on resolution errors to prevent TOCTOU or DNSrebinding bypasses
-            raise ValueError(f"SSRF Protection: Failed to resolve hostname '{hostname}' ({e})") from e
+            raise ValueError(
+                f"SSRF Protection: Failed to resolve hostname '{hostname}' ({e})"
+            ) from e
 
         for item in ip_list:
             # item is (family, type, proto, canonname, sockaddr)
@@ -57,4 +61,6 @@ def validate_url_safety(url: str) -> None:
         if isinstance(e, ValueError):
             raise
         # Fail closed on any other unexpected error during validation
-        raise ValueError(f"SSRF Protection: Validation failed due to unexpected error ({e})") from e
+        raise ValueError(
+            f"SSRF Protection: Validation failed due to unexpected error ({e})"
+        ) from e

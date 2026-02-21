@@ -50,9 +50,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
         ]
     )
 
-    collector.pre_scorer.select_top_candidates = MagicMock(
-        side_effect=lambda x, **k: x
-    )
+    collector.pre_scorer.select_top_candidates = MagicMock(side_effect=lambda x, **k: x)
 
     # Mock DB manager
     collector.db_manager = MagicMock()
@@ -125,9 +123,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
     article = saved_articles[0]
 
     # Crucial assertions
-    assert (
-        article.article_metadata.image_url == "https://example.com/og_extracted.jpg"
-    )
+    assert article.article_metadata.image_url == "https://example.com/og_extracted.jpg"
     assert article.article_metadata.image_status == "IMAGE_OK"
     assert article.article_metadata.image_source == "meta:og:image"
 
@@ -165,9 +161,7 @@ def test_rss_collector_image_missing_source(collector):
             }
         ]
     )
-    collector.pre_scorer.select_top_candidates = MagicMock(
-        side_effect=lambda x, **k: x
-    )
+    collector.pre_scorer.select_top_candidates = MagicMock(side_effect=lambda x, **k: x)
     collector.db_manager = MagicMock()
     collector.db_manager.article_exists.return_value = False
 

@@ -28,7 +28,10 @@ class TestMetricsEnvironmentIsolation(unittest.TestCase):
         from news_collector.observability.enrichment_metrics_store import (
             production_metrics_view,
         )
-        production_metrics_view.db_path = "data/metrics/production/enrichment_metrics.db"
+
+        production_metrics_view.db_path = (
+            "data/metrics/production/enrichment_metrics.db"
+        )
         production_metrics_view.conn = None
 
         # Re-init singleton (hacky but needed for tests)

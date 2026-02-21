@@ -146,19 +146,23 @@ class EnrichmentStrategyRouter:
                     }
                 )
 
-            elif proposed_strategy == "http" and original_strategy != "http" and original_strategy != "scholarly":
-                    source_config["enrichment_strategy"] = "http"
-                    reason = "lock_applied" if locked_strategy else "hint_applied"
-                    self.logger.info(
-                        {
-                            "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
-                            "details": {
-                                "source_id": source_id,
-                                "strategy": "http",
-                                "original": original_strategy,
-                            },
-                        }
-                    )
+            elif (
+                proposed_strategy == "http"
+                and original_strategy != "http"
+                and original_strategy != "scholarly"
+            ):
+                source_config["enrichment_strategy"] = "http"
+                reason = "lock_applied" if locked_strategy else "hint_applied"
+                self.logger.info(
+                    {
+                        "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
+                        "details": {
+                            "source_id": source_id,
+                            "strategy": "http",
+                            "original": original_strategy,
+                        },
+                    }
+                )
 
         strategy = source_config.get("enrichment_strategy", "http")
         self.logger.info(
@@ -231,7 +235,11 @@ class EnrichmentStrategyRouter:
                 self.logger.info(
                     {
                         "event": "enrichment.headless.skipped",
-                        "details": {"source_id": source_id, "url": url, "reason": "headless_disabled_config"},
+                        "details": {
+                            "source_id": source_id,
+                            "url": url,
+                            "reason": "headless_disabled_config",
+                        },
                     }
                 )
                 enrichment_metrics.record_failure(

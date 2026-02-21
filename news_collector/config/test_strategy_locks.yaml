@@ -3,10 +3,10 @@
 
 locks:
   source_needs_headless:
-    created_at: '2026-02-21T20:24:55.964916+00:00'
+    created_at: '2026-02-21T21:46:33.424966+00:00'
     rationale: 'Auto-Lock: Headless Yield 80.0% vs HTTP 10.0% (>5 attempts)'
     strategy: headless_fallback
   source_test_auto_lock:
-    created_at: '2026-02-21T20:21:00.318262+00:00'
+    created_at: '2026-02-21T21:42:36.266467+00:00'
     rationale: 'Auto-Lock: Headless Yield 80.0% vs HTTP 0.0% (>5 attempts)'
     strategy: headless_fallback
