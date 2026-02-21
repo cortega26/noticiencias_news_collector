@@ -476,11 +476,9 @@ with tab1:
             )
 
         c_col1, c_col2 = st.columns(2)
-        c_col1.metric(
-            "Umbral de Aprobación",
-            f"{critic_threshold}/100",
-            help="Puntuación mínima para pasar.",
-        )
+        # fmt: off
+        c_col1.metric("Umbral de Aprobación", f"{critic_threshold}/100", help="Puntuación mínima para pasar.")
+        # fmt: on
         c_col2.metric("Reintentos Máximos", "2", help="Hardcoded en pipeline.")
 
         st.caption(f"🤖 **Modelo**: Usa el mismo modelo que el **Editor** ({r_edit}).")

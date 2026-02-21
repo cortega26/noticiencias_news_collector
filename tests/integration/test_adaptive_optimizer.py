@@ -12,6 +12,10 @@ class TestAdaptiveOptimizerIntegration(unittest.TestCase):
         # Reset singleton state
         # We need to monkeypatch the underlying connection or just use a fresh memory DB?
         # The singleton is already alive. We can clear tables?
+        from news_collector.observability.enrichment_metrics_store import production_metrics_view
+        production_metrics_view.db_path = enrichment_metrics.db_path
+        production_metrics_view.conn = None
+
         with enrichment_metrics._lock:
             enrichment_metrics.cursor.execute("DELETE FROM enrichment_metrics")
             enrichment_metrics.conn.commit()

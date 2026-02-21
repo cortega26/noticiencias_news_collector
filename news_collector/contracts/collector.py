@@ -130,8 +130,10 @@ class CollectorArticleModel(BaseModel):
     @field_validator("content")
     @classmethod
     def validate_content_quality(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
+        if value is None or value == "":
+            return value
+        if len(value.strip()) < 10:
+            raise ValueError("Article too short")
         # Removed aggressive quote balancing check which was false-flagging valid articles.
         return value
 

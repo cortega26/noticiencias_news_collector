@@ -2,8 +2,8 @@ import os
 import shutil
 import sqlite3
 import unittest
-
-# from scripts.generate_autonomous_report import main as generate_report
+from unittest import mock
+import scripts.generate_autonomous_report
 
 
 class TestReportGeneration(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestReportGeneration(unittest.TestCase):
         # But we are in "production" mode for report generation usually.
 
         # Let's mock the DB_PATH in the script module
-        self.patcher = unittest.mock.patch(
+        self.patcher = mock.patch(
             "scripts.generate_autonomous_report.DB_PATH",
             "data/metrics/test_report/enrichment_metrics.db",
         )
@@ -85,12 +85,13 @@ class TestReportGeneration(unittest.TestCase):
     def test_report_generation(self):
         # Run script as subprocess with custom env
         import subprocess
+        import sys
 
         env = os.environ.copy()
         env["METRICS_DB_PATH"] = self.mock_db_path
 
         result = subprocess.run(
-            ["python3", "scripts/generate_autonomous_report.py"],
+            [sys.executable, "scripts/generate_autonomous_report.py"],
             capture_output=True,
             text=True,
             env=env,

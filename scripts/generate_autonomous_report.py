@@ -1,7 +1,6 @@
 import os
 import sqlite3
-
-import pandas as pd
+import json
 import yaml
 
 DB_PATH = os.getenv("METRICS_DB_PATH", "data/metrics/production/enrichment_metrics.db")
@@ -15,38 +14,51 @@ def main():
         return
 
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
 
     # 1. Enrichment Metrics
     try:
-        df = pd.read_sql_query("SELECT * FROM enrichment_metrics", conn)
+        cur.execute("SELECT * FROM enrichment_metrics")
+        rows = cur.fetchall()
     except Exception as e:
         print(f"Error reading metrics: {e}")
         return
 
-    # Calculate derived metrics
-    df["yield_pct"] = (
-        (df["total_publishable"] / df["total_enrichment_attempted"] * 100)
-        .fillna(0)
-        .round(1)
-    )
-    df["headless_rate"] = (
-        (df["headless_success"] / df["headless_attempts"] * 100).fillna(0).round(1)
-    )
-    df["proxy_rate"] = (
-        (df["proxy_success"] / df["proxy_attempts"] * 100).fillna(0).round(1)
-    )
+    # Process metrics
+    metrics = []
+    for row in rows:
+        d = dict(row)
+        total_attempt = d.get("total_enrichment_attempted") or 0
+        total_pub = d.get("total_publishable") or 0
+        h_succ = d.get("headless_success") or 0
+        h_att = d.get("headless_attempts") or 0
+        p_succ = d.get("proxy_success") or 0
+        p_att = d.get("proxy_attempts") or 0
+
+        yield_pct = round(total_pub / total_attempt * 100, 1) if total_attempt else 0.0
+        h_rate = round(h_succ / h_att * 100, 1) if h_att else 0.0
+        p_rate = round(p_succ / p_att * 100, 1) if p_att else 0.0
+
+        d["yield_pct"] = yield_pct
+        d["headless_rate"] = h_rate
+        d["proxy_rate"] = p_rate
+        metrics.append(d)
+
+    # Sort by yield DESC
+    metrics.sort(key=lambda x: x["yield_pct"], reverse=True)
 
     # 2. Strategy Locks
     locks = {}
     if os.path.exists(LOCKS_PATH):
         with open(LOCKS_PATH, "r") as f:
-            data = yaml.safe_load(f)
+            data = yaml.safe_load(f) or {}
             locks = data.get("locks", {})
 
     with open(REPORT_PATH, "w") as f:
         f.write("# Production Autonomous Operation Report\n\n")
         f.write("**Status:** Continuous Operation Active\n")
-        f.write(f"**Active Sources:** {len(df)}\n")
+        f.write(f"**Active Sources:** {len(metrics)}\n")
         f.write(f"**Strategy Locks Applied:** {len(locks)}\n\n")
 
         f.write("## 1. Strategy Locks (Automated)\n\n")
@@ -62,59 +74,44 @@ def main():
         f.write("\n")
 
         f.write("## 2. Source Performance (Yield & Strategy)\n\n")
-        cols = [
-            "source_id",
-            "total_enrichment_attempted",
-            "yield_pct",
-            "headless_rate",
-            "proxy_rate",
-            "avg_enrichment_time",
-        ]
-
-        # Sort by Yield DESC
-        f.write(
-            df[cols].sort_values("yield_pct", ascending=False).to_markdown(index=False)
-            if hasattr(df, "to_markdown") and False
-            else df[cols]
-            .sort_values("yield_pct", ascending=False)
-            .to_string(index=False)
-        )
+        f.write("| source_id | total_enrichment_attempted | yield_pct | headless_rate | proxy_rate | avg_enrichment_time |\n")
+        f.write("|---|---|---|---|---|---|\n")
+        for m in metrics:
+            f.write(f"| {m.get('source_id')} | {m.get('total_enrichment_attempted')} | {m.get('yield_pct')} | {m.get('headless_rate')} | {m.get('proxy_rate')} | {m.get('avg_enrichment_time')} |\n")
         f.write("\n\n")
 
         f.write("## 3. Resource Usage\n\n")
-        total_proxy = df["proxy_requests_used"].sum()
-        total_headless = df["headless_seconds_used"].sum()
+        total_proxy = sum((m.get("proxy_requests_used") or 0) for m in metrics)
+        total_headless = sum((m.get("headless_seconds_used") or 0.0) for m in metrics)
         f.write(f"- **Total Proxy Requests:** {total_proxy}\n")
         f.write(f"- **Total Headless Seconds:** {total_headless:.2f}s\n\n")
 
         f.write("## 4. Top Failure Reasons\n\n")
         try:
             # Parse failures from history
-            fail_df = pd.read_sql_query(
-                "SELECT strategy, metadata FROM enrichment_history WHERE event_type='failure'",
-                conn,
-            )
-            if not fail_df.empty:
-                # Extract reason from metadata JSON
-                import json
+            cur.execute("SELECT strategy, metadata FROM enrichment_history WHERE event_type='failure'")
+            fails = cur.fetchall()
+            
+            if fails:
+                summary = {}
+                for fail in fails:
+                    strat = fail["strategy"]
+                    meta_str = fail["metadata"]
+                    try:
+                        meta = json.loads(meta_str)
+                        reason = meta.get("reason", "unknown")
+                    except Exception:
+                        reason = "unknown"
+                    key = (strat, reason)
+                    summary[key] = summary.get(key, 0) + 1
+                
+                # Sort descending
+                sorted_summary = sorted(summary.items(), key=lambda x: x[1], reverse=True)[:10]
 
-                fail_df["reason"] = fail_df["metadata"].apply(
-                    lambda x: json.loads(x).get("reason", "unknown")
-                )
-
-                # Group by Strategy + Reason
-                summary = (
-                    fail_df.groupby(["strategy", "reason"])
-                    .size()
-                    .reset_index(name="count")
-                )
-                summary = summary.sort_values("count", ascending=False).head(10)
-
-                f.write(
-                    summary.to_markdown(index=False)
-                    if hasattr(summary, "to_markdown") and False
-                    else summary.to_string(index=False)
-                )
+                f.write("| strategy | reason | count |\n")
+                f.write("|---|---|---|\n")
+                for (strat, reason), count in sorted_summary:
+                    f.write(f"| {strat} | {reason} | {count} |\n")
             else:
                 f.write("No recorded failures.")
         except Exception as e:

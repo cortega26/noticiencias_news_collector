@@ -229,7 +229,12 @@ class EnrichmentStrategyRouter:
                 flush=True,
             )
             if not source_config.get("headless_enabled"):
-                # Log skipping...
+                self.logger.info(
+                    {
+                        "event": "enrichment.headless.skipped",
+                        "details": {"source_id": source_id, "url": url, "reason": "headless_disabled_config"},
+                    }
+                )
                 enrichment_metrics.record_failure(
                     source_id, "headless_fallback", "headless_disabled_config"
                 )

@@ -371,18 +371,21 @@ class RSSCollector(BaseCollector):
 
         return stats
 
-    def _fetch_feed(self, source_id: str, feed_url: str) -> tuple[Optional[bytes], int]:
+    def _fetch_feed(self, source_id: str, feed_url: str) -> tuple[Optional[str], int]:
         """
         Legacy integration shim for older tests and external callers.
         Delegates completely to `_fetch_feed_robust`.
         """
-        # Creemos un config temporal con la URL para satisfacer la nueva firma
         source_config = {"url": feed_url}
         result = self._fetch_feed_robust(source_id, source_config)
-        
-        # En el diseño legacy, _fetch_feed devolvía (content_bytes, status_code)
-        # Convertimos el resultado robusto a la firma antigua
-        return result.get("content"), result.get("status_code", 500)
+        content_bytes = result.get("content")
+        content_text = None
+        if content_bytes is not None:
+            try:
+                content_text = content_bytes.decode(result.get("encoding") or "utf-8")
+            except UnicodeDecodeError:
+                content_text = content_bytes.decode("utf-8", errors="replace")
+        return content_text, result.get("status_code", 500)
 
     def _fetch_feed_robust(
         self, source_id: str, source_config: Dict[str, Any]
@@ -434,11 +437,28 @@ class RSSCollector(BaseCollector):
             )
 
             # 2. Handle Status Codes
+            content_type = response.headers.get("Content-Type", "").lower()
+            if "text/html" in content_type:
+                self._emit_log(
+                    "warning",
+                    "collector.feed.suspicious_content_type",
+                    source_id=source_id,
+                    details={"content_type": content_type, "url": url},
+                )
+
             if response.status_code == 304:
                 run_304 = True
                 # Sometimes 304 is returned but we might want to force refresh if local cache invalid?
-                # For now optimize: 304 means success but no new content.
-                # Update last checked?
+                # Optimization: 304 means success but no new content. Update metadata timestamp.
+                try:
+                    self.db_manager.update_source_feed_metadata(
+                        source_id,
+                        etag=response.headers.get("ETag"),
+                        last_modified=response.headers.get("Last-Modified"),
+                        content_hash=cached_headers.get("content_hash"),
+                    )
+                except Exception:
+                    pass
                 return {
                     "success": True,
                     "status_code": 304,
@@ -509,12 +529,14 @@ class RSSCollector(BaseCollector):
                 "status_code": response.status_code,
                 "content": response.content,  # Return BYTES
                 "url": url,
-                "encoding": response.encoding,
+                "encoding": getattr(response, "encoding", None),
             }
 
         except requests.RequestException as e:
+            status = getattr(getattr(e, "response", None), "status_code", 500)
             return {
                 "success": False,
+                "status_code": status,
                 "error_message": f"Network Error: {str(e)}",
                 "url": url,
             }
@@ -923,6 +945,12 @@ class RSSCollector(BaseCollector):
                     )
                     # Fallthrough might leave content short, which gets caught by Stage B
                     processed_article["article_metadata"]["enrichment"] = {
+                        "language": processed_article.get("language", "en"),
+                        "normalized_title": original_title[:500],
+                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "sentiment": "neutral",
+                        "entities": [],
+                        "topics": [],
                         "model_version": "scholarly_failed",
                         "error": enrich_result.get("reason"),
                     }
@@ -943,9 +971,8 @@ class RSSCollector(BaseCollector):
                     )
 
                     if enrichment:
-                        processed_article["content"] = enrichment.get(
-                            "content", original_content
-                        )
+                        if enrichment.get("content"):
+                            processed_article["content"] = enrichment["content"]
                         # Only update fields if they are present in enrichment to avoid None overwrites
                         if enrichment.get("normalized_title"):
                             processed_article["normalized_title"] = enrichment.get(
@@ -984,6 +1011,12 @@ class RSSCollector(BaseCollector):
                         },
                     )
                     processed_article["article_metadata"]["enrichment"] = {
+                        "language": processed_article.get("language", "en"),
+                        "normalized_title": original_title[:500],
+                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "sentiment": "neutral",
+                        "entities": [],
+                        "topics": [],
                         "error": str(exc),
                         "model_version": "fallback_v1",
                     }
@@ -1020,6 +1053,7 @@ class RSSCollector(BaseCollector):
 
                 return article_model
             except ValidationError as exc:
+                print(f"DEBUG VALIDATION ERROR: {exc}", flush=True)
                 self._emit_log(
                     "warning",
                     "collector.article.validation_failed",

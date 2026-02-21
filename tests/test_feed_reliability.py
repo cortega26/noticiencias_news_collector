@@ -37,9 +37,10 @@ def test_fetch_feed_handles_html_content_type(mock_session):
     collector = RSSCollector()
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.headers = {"content-type": "text/html"}
+    mock_response.headers = {"Content-Type": "text/html"}
     mock_response.content = b"<html><body>Not a feed</body></html>"
     mock_response.text = "<html><body>Not a feed</body></html>"
+    mock_response.encoding = None
     # Ensure has no etag/last-modified to avoid extra logic branches if needed
 
     collector.session.get.return_value = mock_response
@@ -100,9 +101,9 @@ def test_malformed_xml_handling():
         mock_entry.bozo_exception = Exception("Mismatched tag")
         mock_parse.return_value = mock_entry
 
-        # We need to mock _fetch_feed to return this content
+        # We need to mock _fetch_feed_robust to return this content
         with patch.object(
-            collector, "_fetch_feed", return_value=(malformed_content, 200)
+            collector, "_fetch_feed_robust", return_value={"success": True, "status_code": 200, "content": malformed_content.encode("utf-8"), "url": "http://foo"}
         ):
             stats = collector.collect_from_source(
                 "test", {"url": "http://foo", "name": "Test"}

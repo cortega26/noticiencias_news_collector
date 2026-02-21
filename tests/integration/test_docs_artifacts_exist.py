@@ -11,7 +11,10 @@ class TestDocsArtifactsExist(unittest.TestCase):
         # I'll use the absolute path used in previous steps for now,
         # but ideally this should be relative to project root if artifacts were inside project.
         # Since artifacts are external, I'll use the specific path provided in user context.
-        self.artifact_dir = "/home/cortega26/.gemini/antigravity/brain/a8d070cf-df1a-49e7-a1cd-71de6800d261"
+        import glob
+        brain_dir = "/home/carlos/.gemini/antigravity/brain"
+        dirs = [d for d in glob.glob(os.path.join(brain_dir, "*")) if os.path.isdir(d) and os.path.exists(os.path.join(d, "walkthrough.md"))]
+        self.artifact_dir = max(dirs, key=os.path.getmtime) if dirs else "/tmp/fallback"
         self.task_md = os.path.join(self.artifact_dir, "task.md")
         self.walkthrough_md = os.path.join(self.artifact_dir, "walkthrough.md")
 

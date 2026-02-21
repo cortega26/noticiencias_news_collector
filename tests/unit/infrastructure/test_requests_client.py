@@ -10,7 +10,7 @@ class TestRobustRequestsClient(unittest.TestCase):
     def setUp(self):
         self.client = RobustRequestsClient(timeout=1.0)
         # Disable sleep during tests to speed up retries
-        self.client.get.retry.sleep = lambda x: None
+        self.client._execute_request.retry.sleep = lambda x: None
 
     def tearDown(self):
         self.client.close()
