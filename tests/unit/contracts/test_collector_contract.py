@@ -64,24 +64,23 @@ def test_collector_article_authors_normalization():
     assert model.authors == ["Real Person"]
 
 
-def test_collector_article_short_content():
-    """Verify content length check."""
+def test_collector_article_empty_content():
+    """Verify empty content check."""
     data = {
         "url": "http://example.com",
         "title": "Title sufficient length",
-        "summary": "Short",
-        "content": "Tiny",
+        "summary": "   ",
+        "content": "",
         "published_date": datetime.now(),
         "source_id": "src_id",
         "source_name": "SrcName",
         "category": "category",
-        "word_count": 10,
+        "word_count": 0,
         "reading_time_minutes": 1,
     }
     with pytest.raises(ValidationError) as exc:
         CollectorArticleModel(**data)
-    # Checks specific error about length, not source_id
-    assert "Article too short" in str(exc.value)
+    assert "Article content/summary empty" in str(exc.value)
 
 
 def test_collector_article_date_tz():

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
-import yaml
 import re
+
+import yaml
+from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
+
 
 def parse_frontmatter(content: str) -> dict:
     match = re.search(r"---\n(.*?)\n---", content, re.DOTALL)
@@ -42,11 +44,13 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
 
     assert "TL;DR Visual" not in result
     assert "⚡" not in result
-    
+
     fm = parse_frontmatter(result)
     fm = parse_frontmatter(result)
-    assert fm.get("source_url") == "https://example.com/source", f"Keys: {fm.keys()} \nYAML: {result[:300]}"
-    
+    assert (
+        fm.get("source_url") == "https://example.com/source"
+    ), f"Keys: {fm.keys()} \nYAML: {result[:300]}"
+
     # Check footer logic generally
     assert "https://example.com/source" in result and "Fuente" in result
 
@@ -54,10 +58,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
 def test_process_article_keeps_sections_with_image() -> None:
     agent = EditorAgent("http://example", "model")
     sample_output = (
-        "**TL;DR Visual**\n"
-        "- Punto uno\n\n"
-        "**El Impacto (Lead)**\n"
-        "Texto base.\n"
+        "**TL;DR Visual**\n" "- Punto uno\n\n" "**El Impacto (Lead)**\n" "Texto base.\n"
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
@@ -79,8 +80,8 @@ def test_process_article_keeps_sections_with_image() -> None:
     )
 
     assert "TL;DR Visual" in result
-    
+
     fm = parse_frontmatter(result)
     assert fm.get("source_url") == "https://example.com/source"
-    
+
     assert "https://example.com/source" in result and "Fuente" in result

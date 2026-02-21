@@ -23,20 +23,21 @@ Failure modes:
 - Safely catches and logs exceptions when saving to the YAML file fails, leaving in-memory state intact.
 """
 
-import yaml
 import logging
 import os
-from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import yaml
 
 logger = logging.getLogger(__name__)
+
 
 class StrategyLockManager:
     """
     Manages manual overrides ('locks') for enrichment strategies.
     Locks take precedence over Optimizer hints but respect safety flags.
     """
-    
+
     def __init__(self, config_path: str = "news_collector/config/strategy_locks.yaml"):
         self.config_path = config_path
         self._locks = self._load_locks()
@@ -48,7 +49,7 @@ class StrategyLockManager:
             # Assuming CWD is project root usually.
             logger.warning(f"Strategy locks file not found: {self.config_path}")
             return {}
-            
+
         try:
             with open(self.config_path, "r") as f:
                 data = yaml.safe_load(f)
@@ -64,47 +65,59 @@ class StrategyLockManager:
         lock = self._locks.get(source_id)
         if not lock:
             return None
-            
+
         # Integrity: Verify evidence from Production
-        from news_collector.observability.enrichment_metrics_store import production_metrics_view
-        
+        from news_collector.observability.enrichment_metrics_store import (
+            production_metrics_view,
+        )
+
         metrics = production_metrics_view.get_metrics(source_id)
         if not metrics:
-            logger.warning(f"Lock Rejected for {source_id}: No production metrics found.")
+            logger.warning(
+                f"Lock Rejected for {source_id}: No production metrics found."
+            )
             return None
-            
+
         total_attempts = metrics.get("total_enrichment_attempted", 0)
         if total_attempts < 5:
-            logger.warning(f"Lock Rejected for {source_id}: Insufficient attempts ({total_attempts} < 5).")
+            logger.warning(
+                f"Lock Rejected for {source_id}: Insufficient attempts ({total_attempts} < 5)."
+            )
             return None
-            
+
         target_strategy = lock.get("strategy")
-        if not target_strategy: 
+        if not target_strategy:
             return None
-            
+
         # Check Yield Advantage
         # Baseline (HTTP) Yield
         http_attempts = metrics.get("http_attempts", 0)
         http_success = metrics.get("http_success", 0)
-        http_yield = (http_success / http_attempts * 100.0) if http_attempts > 0 else 0.0
-        
+        http_yield = (
+            (http_success / http_attempts * 100.0) if http_attempts > 0 else 0.0
+        )
+
         # Target Strategy Yield
         target_attempts = metrics.get(f"{target_strategy}_attempts", 0)
         target_success = metrics.get(f"{target_strategy}_success", 0)
-        target_yield = (target_success / target_attempts * 100.0) if target_attempts > 0 else 0.0
-        
-        # Logic: If Target is HTTP, it's the baseline, so "advantage" is 0. 
+        target_yield = (
+            (target_success / target_attempts * 100.0) if target_attempts > 0 else 0.0
+        )
+
+        # Logic: If Target is HTTP, it's the baseline, so "advantage" is 0.
         # But maybe we lock to HTTP to prevent exploring?
         # If locking to non-HTTP, we need advantage.
-        
+
         if target_strategy != "http":
             advantage = target_yield - http_yield
             if advantage < 20.0:
-                 # Special Case: If HTTP yield is 0 and Target is > 20, advantage is met.
-                 # But if Target is 10% and HTTP is 0%, advantage is 10% (Reject).
-                 logger.warning(f"Lock Rejected for {source_id}: Yield advantage {advantage:.1f}% < 20%. (Target: {target_yield:.1f}%, HTTP: {http_yield:.1f}%)")
-                 return None
-        
+                # Special Case: If HTTP yield is 0 and Target is > 20, advantage is met.
+                # But if Target is 10% and HTTP is 0%, advantage is 10% (Reject).
+                logger.warning(
+                    f"Lock Rejected for {source_id}: Yield advantage {advantage:.1f}% < 20%. (Target: {target_yield:.1f}%, HTTP: {http_yield:.1f}%)"
+                )
+                return None
+
         return lock
 
     def suggest_lock(self, source_id: str, strategy: str, rationale: str):
@@ -113,23 +126,23 @@ class StrategyLockManager:
         Writes directly to the YAML configuration if safety checks pass.
         """
         import datetime
-        
+
         # 1. Safety Check: Don't overwrite existing manual locks?
         # Current policy: Automation can add or update, but maybe we should flag manual vs auto.
         # For now, we assume if it's running in production with ENABLE_STRATEGY_LOCKING, it's trusted.
-        
+
         current_lock = self._locks.get(source_id)
         if current_lock and current_lock.get("strategy") == strategy:
-            return # Already locked to this strategy
-            
+            return  # Already locked to this strategy
+
         # 2. Update In-Memory
         new_lock = {
             "strategy": strategy,
             "rationale": rationale,
-            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         self._locks[source_id] = new_lock
-        
+
         # 3. Persist to YAML
         try:
             self._save_locks()
@@ -142,7 +155,7 @@ class StrategyLockManager:
         data = {"locks": self._locks}
         # Write to temp string first
         yaml_content = yaml.dump(data, default_flow_style=False)
-        
+
         with open(self.config_path, "w") as f:
             f.write("# Strategy Locks Configuration\n")
             f.write("# Generated automatically by StrategyLockManager\n\n")

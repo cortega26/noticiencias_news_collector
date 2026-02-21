@@ -210,12 +210,14 @@ class RobustRequestsClient:
                 raise e
 
             from news_collector.infrastructure.proxy_manager import proxy_manager
-            
+
             response = getattr(e, "response", None)
-            
-            if proxy_manager.should_retry_with_proxy(source_config, error=e, response=response):
+
+            if proxy_manager.should_retry_with_proxy(
+                source_config, error=e, response=response
+            ):
                 proxy_settings = proxy_manager.get_proxy_settings(source_config)
-                
+
                 if proxy_settings:
                     logger.info(
                         {
@@ -223,49 +225,50 @@ class RobustRequestsClient:
                             "details": {
                                 "url": url,
                                 "source_id": source_config.get("name", "unknown"),
-                                "reason": str(e)
-                            }
+                                "reason": str(e),
+                            },
                         }
                     )
-                    
+
                     start_time = time.time()
                     try:
                         # Retry with proxy
                         # We use _execute_request again, but tenacity might retry *proxied* requests too, which is desired.
-                        resp = self._execute_request(url, params, headers, timeout, proxies=proxy_settings)
-                        
+                        resp = self._execute_request(
+                            url, params, headers, timeout, proxies=proxy_settings
+                        )
+
                         duration = time.time() - start_time
                         source_id = source_config.get("name") if source_config else None
                         proxy_manager.record_usage(duration, source_id=source_id)
-                        
+
                         logger.info(
                             {
                                 "event": "proxy.success",
-                                "details": {
-                                    "url": url,
-                                    "duration": duration
-                                }
+                                "details": {"url": url, "duration": duration},
                             }
                         )
                         return resp
-                        
+
                     except Exception as proxy_err:
                         duration = time.time() - start_time
                         source_id = source_config.get("name") if source_config else None
-                        proxy_manager.record_usage(duration, source_id=source_id) # Record usage even on failure
-                        
+                        proxy_manager.record_usage(
+                            duration, source_id=source_id
+                        )  # Record usage even on failure
+
                         logger.warning(
                             {
                                 "event": "proxy.failed",
                                 "details": {
                                     "url": url,
                                     "error": str(proxy_err),
-                                    "duration": duration
-                                }
+                                    "duration": duration,
+                                },
                             }
                         )
                         # Fall through to re-raise original error or proxy error?
-                        # Usually better to raise the proxy error if that was the last attempt, 
+                        # Usually better to raise the proxy error if that was the last attempt,
                         # OR raise the original if proxy was just a fallback that didn't work.
                         # Given strict requirements, let's raise the proxy error as it's the most recent state.
                         raise proxy_err

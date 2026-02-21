@@ -1,7 +1,8 @@
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
 
 @pytest.fixture
 def mock_refinery_engine(tmp_path):
@@ -9,35 +10,40 @@ def mock_refinery_engine(tmp_path):
     git_handler = MagicMock()
     editor_agent = MagicMock()
     # Mock process_article simply to return content with frontmatter
-    editor_agent.process_article.return_value = "---\ntitle: Test\nimage: ~/assets/images/test-slug.jpg\n---\nContent"
-    
+    editor_agent.process_article.return_value = (
+        "---\ntitle: Test\nimage: ~/assets/images/test-slug.jpg\n---\nContent"
+    )
+
     config = MagicMock()
     config.app.policy_integrity_mode = "disabled"
-    
+
     engine = RefineryEngine(db_manager, git_handler, editor_agent, config)
-    
+
     # Configure mock defaults to avoid TypeErrors
     db_manager.get_canonical_slug.return_value = None
-    
+
     return engine
+
 
 def test_download_image_integration(mock_refinery_engine, tmp_path):
     # Setup
     target_dir = tmp_path / "target_repo"
     target_dir.mkdir()
-    
+
     article = {
         "id": "test-123",
         "title": "Test Article",
         "published_date": "2024-01-01",
-        "image_url": "https://example.com/image.jpg"
+        "image_url": "https://example.com/image.jpg",
     }
 
     # Mock Requests Client
-    with patch("news_collector.infrastructure.requests_client.RobustRequestsClient") as MockClient:
+    with patch(
+        "news_collector.infrastructure.requests_client.RobustRequestsClient"
+    ) as MockClient:
         mock_instance = MockClient.return_value
         mock_instance.__enter__.return_value = mock_instance
-        
+
         # Mock Response
         mock_response = MagicMock()
         mock_response.content = b"fake-image-data"

@@ -1,6 +1,8 @@
 import asyncio
+import hashlib
 import json
 import time
+
 # Fixed imports
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -12,7 +14,6 @@ from bs4 import BeautifulSoup
 from news_collector.collectors.base_collector import BaseCollector
 from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.utils.security import validate_url_safety
-import hashlib
 
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
@@ -94,15 +95,21 @@ class HtmlCollector(BaseCollector):
 
             # 2. Fetch HTML
             # 2. Fetch HTML (Conditional)
-            html_content, status_code = await self._fetch_html_conditional(url, source_id, source_config)
-            
+            html_content, status_code = await self._fetch_html_conditional(
+                url, source_id, source_config
+            )
+
             if status_code == 304:
                 stats["success"] = True
                 stats["articles_found"] = 0
                 return stats
-                
+
             if not html_content:
-                stats["error_message"] = f"Error HTTP {status_code}" if status_code else "Error fetching content"
+                stats["error_message"] = (
+                    f"Error HTTP {status_code}"
+                    if status_code
+                    else "Error fetching content"
+                )
                 return stats
 
             # 3. Parse & Extract
@@ -325,6 +332,7 @@ class HtmlCollector(BaseCollector):
             return text
         except Exception:
             return None
+
     async def _fetch_html_conditional(
         self, url: str, source_id: str, source_config: Dict[str, Any]
     ) -> Tuple[Optional[str], Optional[int]]:
@@ -356,19 +364,25 @@ class HtmlCollector(BaseCollector):
                 headers=headers,
                 timeout=COLLECTION_CONFIG.get("request_timeout", 30),
             ) as client:
-                
+
                 max_retries = 3
                 for attempt in range(max_retries):
                     try:
                         response = await client.get(url)
-                        
+
                         if response.status_code == 304:
-                            self._emit_log("info", "collector.html.not_modified", source_id=source_id)
+                            self._emit_log(
+                                "info",
+                                "collector.html.not_modified",
+                                source_id=source_id,
+                            )
                             self.db_manager.update_source_feed_metadata(
                                 source_id,
-                                etag=response.headers.get("ETag") or cached_headers.get("etag"),
-                                last_modified=response.headers.get("Last-Modified") or cached_headers.get("last_modified"),
-                                content_hash=cached_headers.get("content_hash")
+                                etag=response.headers.get("ETag")
+                                or cached_headers.get("etag"),
+                                last_modified=response.headers.get("Last-Modified")
+                                or cached_headers.get("last_modified"),
+                                content_hash=cached_headers.get("content_hash"),
                             )
                             return None, 304
 
@@ -378,30 +392,32 @@ class HtmlCollector(BaseCollector):
                                 await self._backoff_sleep_async(attempt)
                                 continue
                             return None, response.status_code
-                        
+
                         if response.status_code == 429:
                             # 429 Too Many Requests - Respect Retry-After
                             retry_at = self._parse_retry_after(response)
                             if not retry_at:
                                 # Default to 15 minutes if no header provided
-                                retry_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-                            
+                                retry_at = datetime.now(timezone.utc) + timedelta(
+                                    minutes=15
+                                )
+
                             self._emit_log(
                                 "warning",
                                 "collector.rate_limit.exceeded",
                                 source_id=source_id,
                                 details={
                                     "retry_after": retry_at.isoformat(),
-                                    "header": response.headers.get("Retry-After")
-                                }
+                                    "header": response.headers.get("Retry-After"),
+                                },
                             )
-                            
+
                             # Force Circuit Breaker COOLDOWN
                             self.db_manager.update_source_circuit_state(
-                                source_id, 
-                                success=False, 
-                                error_message=f"HTTP 429: Rate Limit Exceeded",
-                                force_cooldown_until=retry_at
+                                source_id,
+                                success=False,
+                                error_message="HTTP 429: Rate Limit Exceeded",
+                                force_cooldown_until=retry_at,
                             )
                             return None, 429
 
@@ -414,22 +430,26 @@ class HtmlCollector(BaseCollector):
                         content_hash = hashlib.sha256(response.content).hexdigest()
 
                         if cached_headers.get("content_hash") == content_hash:
-                             self._emit_log("info", "collector.html.content_unchanged", source_id=source_id)
-                             self.db_manager.update_source_feed_metadata(
+                            self._emit_log(
+                                "info",
+                                "collector.html.content_unchanged",
+                                source_id=source_id,
+                            )
+                            self.db_manager.update_source_feed_metadata(
                                 source_id,
                                 etag=response.headers.get("ETag"),
                                 last_modified=response.headers.get("Last-Modified"),
-                                content_hash=content_hash
+                                content_hash=content_hash,
                             )
-                             return None, 304
+                            return None, 304
 
                         self.db_manager.update_source_feed_metadata(
                             source_id,
                             etag=response.headers.get("ETag"),
                             last_modified=response.headers.get("Last-Modified"),
-                            content_hash=content_hash
+                            content_hash=content_hash,
                         )
-                        
+
                         return content, response.status_code
 
                     except (httpx.TimeoutException, httpx.NetworkError):
@@ -439,5 +459,10 @@ class HtmlCollector(BaseCollector):
                         return None, None
 
         except Exception as e:
-            self._emit_log("error", "collector.fetch.exception", source_id=source_id, details={"error": str(e)})
+            self._emit_log(
+                "error",
+                "collector.fetch.exception",
+                source_id=source_id,
+                details={"error": str(e)},
+            )
             return None, None

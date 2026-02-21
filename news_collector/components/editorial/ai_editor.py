@@ -9,12 +9,11 @@ from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
-from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 import yaml
+from news_collector.config.settings import TEXT_PROCESSING_CONFIG
+from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariants
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
-
-from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariants
 
 
 class HeadlinesSchema(BaseModel):
@@ -592,28 +591,31 @@ class EditorAgent:
         # Sanitize and Validate Tags (Repo-Truth Implementation)
         try:
             from news_collector.taxonomy.normalizer import TagNormalizer
+
             normalizer = TagNormalizer()
-            
+
             raw_tags = headlines.get("tags") or []
             # Fallback if raw_tags is None or empty, use category if not 'other'
             if not raw_tags and raw_category.lower() != "other":
                 raw_tags = [raw_category]
-                
+
             # SANITIZE
             norm_result = normalizer.sanitize_tags(raw_tags)
             final_tags = norm_result.tags
-            
+
             # VALIDATE
             val_result = normalizer.validate_tags(final_tags)
             if val_result.needs_review:
                 logger.warning(f"⚠️ Tags require review: {val_result.errors}")
                 # We could add a frontmatter flag 'needs_tag_review: true' here if desired
                 # for now, we just log it.
-                
+
             # Audit log
             if norm_result.replaced or norm_result.removed or norm_result.merged:
-                logger.info(f"Tag Audit: {norm_result.model_dump_json(exclude={'tags', 'warnings'})}")
-                
+                logger.info(
+                    f"Tag Audit: {norm_result.model_dump_json(exclude={'tags', 'warnings'})}"
+                )
+
         except Exception as e:
             logger.error(f"Tag Normalization Failed: {e}")
             final_tags = headlines.get("tags") or []  # Fallback to raw
@@ -625,17 +627,17 @@ class EditorAgent:
             if headlines:
                 hl_variants = HeadlinesVariants(
                     question=headlines.get("question", ""),
-                    benefit=headlines.get("benefit", "")
+                    benefit=headlines.get("benefit", ""),
                 )
-            
+
             # Categories is a list in schema, but currently single string. Wrap it.
             # Schema expects list[str].
             categories_list = [final_category] if final_category else []
-            
+
             post = AstroPost(
                 title=final_title,
                 schema_version=2,
-                date=override_date or time.strftime('%Y-%m-%d'),
+                date=override_date or time.strftime("%Y-%m-%d"),
                 author="Noticiencias AI",
                 categories=categories_list,
                 tags=final_tags,
@@ -643,27 +645,27 @@ class EditorAgent:
                 image=image_url if image_url else None,
                 source_url=source_url if source_url else None,
                 refinery_id=article_id if article_id != "unknown" else None,
-                headlines_variants=hl_variants
+                headlines_variants=hl_variants,
             )
-            
+
             # Dump to YAML
             # We use distinct model_dump to exclude None values for cleaner output
             # mode='json' ensures complex types like HttpUrl are converted to strings
-            model_dict = post.model_dump(exclude_none=True, mode='json')
-            
+            model_dict = post.model_dump(exclude_none=True, mode="json")
+
             # Custom dumper to ensure correct formatting (e.g. no aliases)
             # Safe dump usually avoids complex tags
             yaml_frontmatter = yaml.dump(
-                model_dict, 
-                allow_unicode=True, 
-                default_flow_style=False, 
+                model_dict,
+                allow_unicode=True,
+                default_flow_style=False,
                 sort_keys=False,
-                width=1000  # Avoid wrapping long lines unnecessarily
+                width=1000,  # Avoid wrapping long lines unnecessarily
             ).strip()
-            
+
             # Prepare full article
             full_article = f"---\n{yaml_frontmatter}\n---\n\n{final_content}"
-            
+
         except ValidationError as ve:
             logger.error(f"❌ AstroPost Contract Validation Failed: {ve}")
             # Fallback to manual construction or raise?

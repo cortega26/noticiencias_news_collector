@@ -3,15 +3,14 @@
 # ==================================================
 
 
-
 import argparse
 import asyncio
-import sys
 import json
+import sys
 import traceback
 
+from news_collector.exceptions import EXIT_INTERNAL, EXIT_SUCCESS, NewsCollectorError
 from news_collector.system import create_system
-from news_collector.exceptions import NewsCollectorError, EXIT_INTERNAL, EXIT_SUCCESS
 
 
 def handle_exception(e: Exception) -> None:
@@ -45,7 +44,9 @@ def handle_exception(e: Exception) -> None:
     sys.stderr.write(f"   Categoría: {error_category}\n")
     sys.stderr.write(f"   Tipo: {type(e).__name__}\n")
     sys.stderr.write(f"   Detalle: {str(e)}\n")
-    sys.stderr.write("   Consulte los logs estructurados para el stack trace completo.\n")
+    sys.stderr.write(
+        "   Consulte los logs estructurados para el stack trace completo.\n"
+    )
 
     # 3. Salida con código de error decidido
     sys.exit(exit_code)

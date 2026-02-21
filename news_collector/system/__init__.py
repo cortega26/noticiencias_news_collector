@@ -730,6 +730,7 @@ class NewsCollectorSystem:
 
         # Consolidar estadísticas
         report = {
+            "schema_version": 2,
             "session_info": {
                 "session_id": session_id,
                 "system_id": self.system_id,

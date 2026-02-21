@@ -37,7 +37,6 @@ class ExportArticleModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
-
 class ExportContractV2(BaseModel):
     """
     Version 2 of the data export contract.

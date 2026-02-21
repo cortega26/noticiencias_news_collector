@@ -114,18 +114,16 @@ class CollectorArticleModel(BaseModel):
         # Validation: We relax the strict length check here to allow "Discovery" of candidates.
         # The strict 500-char limit will be enforced in the Enrichment stage (Stage B)
         # before marking an article as 'pending' (ready for publishing).
-        
+
         # We still enforce a sanity check to avoid empty garbage.
-        min_sanity_len = 1 
+        min_sanity_len = 1
 
         summary_len = len(self.summary.strip()) if self.summary else 0
         content_len = len(self.content.strip()) if self.content else 0
 
         if summary_len < min_sanity_len and content_len < min_sanity_len:
-             # Just a warning log in production, but here we raise if it's truly empty
-             raise ValueError(
-                f"Article content/summary empty. Likely extraction error."
-            )
+            # Just a warning log in production, but here we raise if it's truly empty
+            raise ValueError("Article content/summary empty. Likely extraction error.")
 
         return self
 

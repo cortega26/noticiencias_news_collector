@@ -14,11 +14,11 @@ import httpx
 import requests
 from news_collector.utils.logger import get_logger
 from tenacity import (
+    Retrying,
     before_sleep_log,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    Retrying,
 )
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
@@ -39,7 +39,7 @@ class OllamaProvider:
         api_url: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 3600,
-        max_retries: int = 2 # Default 2 retries (3 attempts total)
+        max_retries: int = 2,  # Default 2 retries (3 attempts total)
     ):
         self.api_url = api_url or "http://127.0.0.1:11434/api/generate"
         self.model = model
@@ -156,18 +156,22 @@ class OllamaProvider:
 
         # Configure Retry logic dynamically
         retry_config = Retrying(
-            stop=stop_after_attempt(self.max_retries + 1), # +1 because 0 retries = 1 attempt
+            stop=stop_after_attempt(
+                self.max_retries + 1
+            ),  # +1 because 0 retries = 1 attempt
             wait=wait_exponential(multiplier=1, min=2, max=10),
             retry=retry_if_exception_type(requests.RequestException),
             before_sleep=before_sleep_log(logger, logging.WARNING),
-            reraise=True
+            reraise=True,
         )
 
         # Execute with retries
         for attempt in retry_config:
             with attempt:
                 try:
-                    logger.debug(f"Sending sync prompt to Ollama ({payload['model']})... Attempt {attempt.retry_state.attempt_number}/{self.max_retries + 1}")
+                    logger.debug(
+                        f"Sending sync prompt to Ollama ({payload['model']})... Attempt {attempt.retry_state.attempt_number}/{self.max_retries + 1}"
+                    )
                     response = requests.post(
                         self.api_url, json=payload, stream=stream, timeout=self.timeout
                     )
@@ -185,7 +189,9 @@ class OllamaProvider:
                     return str(text)
 
                 except requests.RequestException as e:
-                    logger.error(f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}")
+                    logger.error(
+                        f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}"
+                    )
                     raise
 
     def _stream_generator(

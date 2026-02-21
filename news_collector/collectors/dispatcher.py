@@ -20,6 +20,7 @@ Failure modes:
 - Collector initialization errors are caught and logged, omitting the failing collector from the registered mapping.
 - Individual collection task failures or exceptions are swallowed at the dispatcher level and excluded from the merged results to allow partial successes.
 """
+
 import asyncio
 from typing import Any, Dict, Optional
 

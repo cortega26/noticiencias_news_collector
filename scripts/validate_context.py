@@ -30,6 +30,7 @@ def _check_duplicates(extracted_paths):
             print(f"  - {d}")
     return seen, has_errors
 
+
 def _validate_referenced_files(seen, existing_files_norm):
     missing_files = []
     has_errors = False
@@ -44,6 +45,7 @@ def _validate_referenced_files(seen, existing_files_norm):
             print(f"  - {m}")
     return has_errors
 
+
 def _validate_orphans(seen, existing_files_norm):
     orphans = []
     has_errors = False
@@ -53,10 +55,13 @@ def _validate_orphans(seen, existing_files_norm):
             has_errors = True
 
     if orphans:
-        print("Error: Orphaned context files found (not referenced in MODULE_INDEX.md):")
+        print(
+            "Error: Orphaned context files found (not referenced in MODULE_INDEX.md):"
+        )
         for o in sorted(orphans):
             print(f"  - {o}")
     return has_errors
+
 
 def main():
     has_errors = False
@@ -72,10 +77,16 @@ def main():
 
     # Extract Context: ... paths
     # Matches optional leading whitespace and optional "-" before "Context:"
-    extracted_paths = re.findall(r"^\s*(?:-\s*)?Context:\s*(context/modules/[\w\-\.]+\.md)", content, re.MULTILINE)
+    extracted_paths = re.findall(
+        r"^\s*(?:-\s*)?Context:\s*(context/modules/[\w\-\.]+\.md)",
+        content,
+        re.MULTILINE,
+    )
 
     if not extracted_paths:
-        print("Error: No Context paths found in MODULE_INDEX.md. Check the format or regex.")
+        print(
+            "Error: No Context paths found in MODULE_INDEX.md. Check the format or regex."
+        )
         sys.exit(1)
 
     # 2. Find all context/modules/*.md
@@ -100,6 +111,7 @@ def main():
         sys.exit(1)
 
     print("Context validation passed.")
+
 
 if __name__ == "__main__":
     main()

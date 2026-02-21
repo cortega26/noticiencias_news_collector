@@ -1,13 +1,13 @@
 import json
-import sys
-from pathlib import Path
 
 # Add project root to path
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
 
-BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+BASE_DIR = Path(
+    os.environ.get("NEWS_COLLECTOR_PATH", Path(__file__).resolve().parents[1])
+).resolve()
 sys.path.insert(0, str(BASE_DIR))
 
 from news_collector.components.editorial.ai_editor import EditorAgent

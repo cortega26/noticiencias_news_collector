@@ -288,11 +288,11 @@ class DatabaseManager:
             }
 
     def update_source_circuit_state(
-        self, 
-        source_id: str, 
-        success: bool, 
+        self,
+        source_id: str,
+        success: bool,
         error_message: str = None,
-        force_cooldown_until: Optional[datetime] = None
+        force_cooldown_until: Optional[datetime] = None,
     ) -> None:
         """
         Updates the circuit breaker state for a source.
@@ -331,7 +331,7 @@ class DatabaseManager:
                 )
 
                 if force_cooldown_until:
-                     # Explicit backoff (e.g. 429)
+                    # Explicit backoff (e.g. 429)
                     source.status = "COOLDOWN"
                     source.next_retry_at = force_cooldown_until
                     logger.warning(
@@ -591,7 +591,9 @@ class DatabaseManager:
                 )
 
                 # Use override status if provided (e.g. for rejected candidates), otherwise pending.
-                initial_status = getattr(model, "processing_status_override", None) or PENDING_STATUS
+                initial_status = (
+                    getattr(model, "processing_status_override", None) or PENDING_STATUS
+                )
 
                 # Crear nuevo artículo
                 article = Article(
@@ -754,7 +756,7 @@ class DatabaseManager:
                         cluster_id=cluster_id,
                         duplication_confidence=confidence,
                     )
-                    
+
                     # Apply processing status override if present
                     initial_status = getattr(model, "processing_status_override", None)
                     if initial_status:

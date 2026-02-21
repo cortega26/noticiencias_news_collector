@@ -1,8 +1,10 @@
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
+
 import yaml
 from news_collector.taxonomy.normalizer import TagNormalizer
+
 
 class TestTagNormalizer(unittest.TestCase):
 
@@ -11,30 +13,30 @@ class TestTagNormalizer(unittest.TestCase):
         self.test_dir = tempfile.TemporaryDirectory()
         self.config_path = Path(self.test_dir.name) / "test_tags.yml"
         self.ortho_path = Path(self.test_dir.name) / "orthography.yml"
-        
+
         config = {
             "stop_tags": ["other", "varios", "misc"],
             "alias_map": {
                 "ia": "inteligencia artificial",
-                "ai": "inteligencia artificial"
+                "ai": "inteligencia artificial",
             },
             "whitelist_short": ["ia"],
-            "max_tags_per_article": 5
+            "max_tags_per_article": 5,
         }
-        
+
         ortho_config = {
             "corrections": {
                 "salud publica": "salud pública",
-                "energia oscura": "energía oscura"
+                "energia oscura": "energía oscura",
             }
         }
-        
+
         with open(self.config_path, "w") as f:
             yaml.dump(config, f)
-            
+
         with open(self.ortho_path, "w") as f:
             yaml.dump(ortho_config, f)
-            
+
         self.normalizer = TagNormalizer(str(self.config_path))
 
     def tearDown(self):
@@ -69,7 +71,7 @@ class TestTagNormalizer(unittest.TestCase):
     def test_short_long_tags(self):
         long_tag = "a" * 41
         # 'sol' is 3 chars, kept. 'ok' is 2 chars, removed (not in whitelist).
-        tags = ["s", "ia", long_tag, "ok", "sol"] 
+        tags = ["s", "ia", long_tag, "ok", "sol"]
         result = self.normalizer.sanitize_tags(tags)
         # 'ia' -> 'inteligencia artificial' via alias
         self.assertIn("inteligencia artificial", result.tags)
@@ -89,6 +91,7 @@ class TestTagNormalizer(unittest.TestCase):
         result1 = self.normalizer.sanitize_tags(tags)
         result2 = self.normalizer.sanitize_tags(result1.tags)
         self.assertEqual(result1.tags, result2.tags)
+
 
 if __name__ == "__main__":
     unittest.main()

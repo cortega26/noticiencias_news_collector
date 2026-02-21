@@ -1,23 +1,22 @@
-
-
+import json
+import logging
+import os
 import sqlite3
 import threading
-import os
-import logging
-import json
-from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from news_collector.infrastructure.run_context import run_context
 
 logger = logging.getLogger(__name__)
 
+
 class EnrichmentMetricsStore:
     _instance = None
     _lock = threading.RLock()
-    
-    # DB Path is now instance-specific based on environment, but we still use singleton pattern 
+
+    # DB Path is now instance-specific based on environment, but we still use singleton pattern
     # effectively per-process.
-    
+
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
@@ -25,28 +24,28 @@ class EnrichmentMetricsStore:
                     cls._instance = super(EnrichmentMetricsStore, cls).__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
-            
+
         with self._lock:
             if self._initialized:
                 return
             self._init_db()
             self._initialized = True
-    
+
     def _init_db(self):
         # Determine Path based on Environment
         env = run_context.get_context().get("environment", "development")
         self.db_path = f"data/metrics/{env}/enrichment_metrics.db"
-        
+
         logger.info(f"Initializing Metrics Store for env='{env}' at '{self.db_path}'")
-        
+
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._create_tables()
-        
+
     def _create_tables(self):
         # 1. Aggregates Table (Existing)
         query_metrics = """
@@ -70,7 +69,7 @@ class EnrichmentMetricsStore:
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
-        
+
         # 2. Run History Table (New - For Attribution)
         query_history = """
         CREATE TABLE IF NOT EXISTS enrichment_history (
@@ -87,28 +86,40 @@ class EnrichmentMetricsStore:
             metadata JSON
         )
         """
-        
+
         with self._lock:
             cur = self.conn.cursor()
             cur.execute(query_metrics)
             cur.execute(query_history)
-            
+
             # Migrations for Aggregates (Idempotent)
             try:
-                cur.execute("ALTER TABLE enrichment_metrics ADD COLUMN http_attempts INTEGER DEFAULT 0")
-            except sqlite3.OperationalError: pass
-            
-            try:
-                cur.execute("ALTER TABLE enrichment_metrics ADD COLUMN headless_attempts INTEGER DEFAULT 0")
-            except sqlite3.OperationalError: pass
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN http_attempts INTEGER DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass
 
             try:
-                cur.execute("ALTER TABLE enrichment_metrics ADD COLUMN proxy_attempts INTEGER DEFAULT 0")
-            except sqlite3.OperationalError: pass
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN headless_attempts INTEGER DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass
 
             try:
-                cur.execute("ALTER TABLE enrichment_metrics ADD COLUMN scholarly_attempts INTEGER DEFAULT 0")
-            except sqlite3.OperationalError: pass
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN proxy_attempts INTEGER DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN scholarly_attempts INTEGER DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass
 
             self.conn.commit()
             cur.close()
@@ -118,14 +129,15 @@ class EnrichmentMetricsStore:
         ctx = run_context.get_context()
         valid_strategies = ["http", "headless", "proxy", "scholarly"]
         strategy_col_update = ""
-        
+
         if strategy and strategy in valid_strategies:
-             strategy_col_update = f", {strategy}_attempts = {strategy}_attempts + 1"
+            strategy_col_update = f", {strategy}_attempts = {strategy}_attempts + 1"
 
         with self._lock:
             cur = self.conn.cursor()
             # Update Aggregate
-            cur.execute(f"""
+            cur.execute(
+                f"""
                 INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted{', ' + strategy + '_attempts' if strategy and strategy in valid_strategies else ''})
                 VALUES (?, 1, 1{', 1' if strategy and strategy in valid_strategies else ''})
                 ON CONFLICT(source_id) DO UPDATE SET
@@ -133,22 +145,40 @@ class EnrichmentMetricsStore:
                 total_enrichment_attempted = total_enrichment_attempted + 1
                 {strategy_col_update},
                 last_updated = CURRENT_TIMESTAMP
-            """, (source_id,))
-            
+            """,
+                (source_id,),
+            )
+
             # Insert History
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO enrichment_history (run_id, environment, source_id, event_type, strategy, metadata)
                 VALUES (?, ?, ?, 'attempt', ?, ?)
-            """, (ctx["run_id"], ctx["environment"], source_id, strategy, json.dumps(ctx)))
-            
+            """,
+                (
+                    ctx["run_id"],
+                    ctx["environment"],
+                    source_id,
+                    strategy,
+                    json.dumps(ctx),
+                ),
+            )
+
             self.conn.commit()
             cur.close()
-            
-    def record_success(self, source_id: str, strategy: str, duration: float, content_length: int, is_publishable: bool):
+
+    def record_success(
+        self,
+        source_id: str,
+        strategy: str,
+        duration: float,
+        content_length: int,
+        is_publishable: bool,
+    ):
         ctx = run_context.get_context()
         strategy_col = f"{strategy}_success"
         valid_strategies = ["http", "headless", "proxy", "scholarly"]
-        
+
         if strategy not in valid_strategies:
             logger.warning(f"Invalid strategy recorded: {strategy}")
             return
@@ -156,26 +186,34 @@ class EnrichmentMetricsStore:
         with self._lock:
             cur = self.conn.cursor()
             # Update Aggregates (Existing Logic)
-            cur.execute("SELECT total_enrichment_attempted, avg_enrichment_time, avg_content_length FROM enrichment_metrics WHERE source_id = ?", (source_id,))
+            cur.execute(
+                "SELECT total_enrichment_attempted, avg_enrichment_time, avg_content_length FROM enrichment_metrics WHERE source_id = ?",
+                (source_id,),
+            )
             row = cur.fetchone()
-            
+
             if row:
                 total_attempts = row[0]
                 old_avg_time = row[1]
                 old_avg_len = row[2]
-                
+
                 # Careful with averaging logic - sticking to moving average approximation or simpler accumulation?
-                # The existing logic tries to recompute average. 
+                # The existing logic tries to recompute average.
                 # total_attempts was already incremented in record_attempt.
-                
+
                 if total_attempts > 1:
-                    new_avg_time = ((old_avg_time * (total_attempts - 1)) + duration) / total_attempts
-                    new_avg_len = ((old_avg_len * (total_attempts - 1)) + content_length) / total_attempts
+                    new_avg_time = (
+                        (old_avg_time * (total_attempts - 1)) + duration
+                    ) / total_attempts
+                    new_avg_len = (
+                        (old_avg_len * (total_attempts - 1)) + content_length
+                    ) / total_attempts
                 else:
                     new_avg_time = duration
                     new_avg_len = content_length
 
-                cur.execute(f"""
+                cur.execute(
+                    f"""
                     UPDATE enrichment_metrics
                     SET 
                         {strategy_col} = {strategy_col} + 1,
@@ -184,56 +222,92 @@ class EnrichmentMetricsStore:
                         avg_enrichment_time = ?,
                         last_updated = CURRENT_TIMESTAMP
                     WHERE source_id = ?
-                """, (1 if is_publishable else 0, new_avg_len, new_avg_time, source_id))
+                """,
+                    (1 if is_publishable else 0, new_avg_len, new_avg_time, source_id),
+                )
             else:
                 # Should have been created by record_attempt, but handle edge case
-                cur.execute(f"""
+                cur.execute(
+                    f"""
                     INSERT INTO enrichment_metrics (source_id, {strategy_col}, total_publishable, avg_content_length, avg_enrichment_time, total_discovered, total_enrichment_attempted)
                     VALUES (?, 1, ?, ?, ?, 1, 1)
-                """, (source_id, 1 if is_publishable else 0, content_length, duration))
-            
+                """,
+                    (source_id, 1 if is_publishable else 0, content_length, duration),
+                )
+
             # Insert History
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO enrichment_history (run_id, environment, source_id, event_type, strategy, duration, content_length, is_publishable, metadata)
                 VALUES (?, ?, ?, 'success', ?, ?, ?, ?, ?)
-            """, (ctx["run_id"], ctx["environment"], source_id, strategy, duration, content_length, 1 if is_publishable else 0, json.dumps(ctx)))
+            """,
+                (
+                    ctx["run_id"],
+                    ctx["environment"],
+                    source_id,
+                    strategy,
+                    duration,
+                    content_length,
+                    1 if is_publishable else 0,
+                    json.dumps(ctx),
+                ),
+            )
 
             self.conn.commit()
             cur.close()
 
-    def record_failure(self, source_id: str, strategy: str, reason: str, duration: float = 0.0):
+    def record_failure(
+        self, source_id: str, strategy: str, reason: str, duration: float = 0.0
+    ):
         ctx = run_context.get_context()
-        
+
         with self._lock:
             cur = self.conn.cursor()
             # Insert History
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO enrichment_history (run_id, environment, source_id, event_type, strategy, duration, metadata)
                 VALUES (?, ?, ?, 'failure', ?, ?, ?)
-            """, (ctx["run_id"], ctx["environment"], source_id, strategy, duration, json.dumps({"reason": reason, **ctx})))
+            """,
+                (
+                    ctx["run_id"],
+                    ctx["environment"],
+                    source_id,
+                    strategy,
+                    duration,
+                    json.dumps({"reason": reason, **ctx}),
+                ),
+            )
 
             self.conn.commit()
             cur.close()
 
-    def record_cost(self, source_id: str, proxy_requests: int = 0, headless_seconds: float = 0.0):
+    def record_cost(
+        self, source_id: str, proxy_requests: int = 0, headless_seconds: float = 0.0
+    ):
         with self._lock:
             cur = self.conn.cursor()
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE enrichment_metrics
                 SET 
                     proxy_requests_used = proxy_requests_used + ?,
                     headless_seconds_used = headless_seconds_used + ?,
                     last_updated = CURRENT_TIMESTAMP
                 WHERE source_id = ?
-            """, (proxy_requests, headless_seconds, source_id))
+            """,
+                (proxy_requests, headless_seconds, source_id),
+            )
             self.conn.commit()
             cur.close()
-            
+
     def get_metrics(self, source_id: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             cur = self.conn.cursor()
             try:
-                cur.execute("SELECT * FROM enrichment_metrics WHERE source_id = ?", (source_id,))
+                cur.execute(
+                    "SELECT * FROM enrichment_metrics WHERE source_id = ?", (source_id,)
+                )
                 row = cur.fetchone()
                 if row:
                     cols = [description[0] for description in cur.description]
@@ -241,7 +315,7 @@ class EnrichmentMetricsStore:
                 return None
             finally:
                 cur.close()
-            
+
     def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
         with self._lock:
             cur = self.conn.cursor()
@@ -262,8 +336,10 @@ class EnrichmentMetricsStore:
             self.conn.commit()
             cur.close()
 
+
 # Global instance
 enrichment_metrics = EnrichmentMetricsStore()
+
 
 class ProductionReadonlyStore:
     """
@@ -271,6 +347,7 @@ class ProductionReadonlyStore:
     Used by the StrategyOptimizer to ensure recommendations are based on real data,
     regardless of the current running environment (e.g. dry-run).
     """
+
     def __init__(self):
         # Force Production Path
         self.db_path = "data/metrics/production/enrichment_metrics.db"
@@ -291,10 +368,13 @@ class ProductionReadonlyStore:
         return False
 
     def get_metrics(self, source_id: str) -> Optional[Dict[str, Any]]:
-        if not self._connect(): return None
+        if not self._connect():
+            return None
         cur = self.conn.cursor()
         try:
-            cur.execute("SELECT * FROM enrichment_metrics WHERE source_id = ?", (source_id,))
+            cur.execute(
+                "SELECT * FROM enrichment_metrics WHERE source_id = ?", (source_id,)
+            )
             row = cur.fetchone()
             if row:
                 cols = [description[0] for description in cur.description]
@@ -306,7 +386,8 @@ class ProductionReadonlyStore:
         return None
 
     def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
-        if not self._connect(): return {}
+        if not self._connect():
+            return {}
         cur = self.conn.cursor()
         try:
             cur.execute("SELECT * FROM enrichment_metrics")
@@ -318,6 +399,6 @@ class ProductionReadonlyStore:
         finally:
             cur.close()
 
+
 # Global instance for optimizer
 production_metrics_view = ProductionReadonlyStore()
-
