@@ -548,7 +548,6 @@ class RefineryEngine:
         """
         decision = "allowed"
         reason = "Non-blocking check passed (Fail-Open) or Score Sufficient"
-        score_data = {}
 
         try:
             # Fail-Open if no score available (Non-Blocking Auditor)
@@ -558,7 +557,6 @@ class RefineryEngine:
                 reason = "No Auditor score available (Non-blocking default)"
                 return True
 
-            score_data = cached_score
             epistemic = float(cached_score.get("epistemic_rigor_score", 0.0))
 
             # 1. Check Threshold

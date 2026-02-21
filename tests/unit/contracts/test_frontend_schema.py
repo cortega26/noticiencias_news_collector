@@ -1,7 +1,13 @@
 """Tests for Frontend Schema Contract."""
 
 from datetime import datetime, timezone
-from news_collector.contracts.frontend_schema import AstroPost, ImageObject, SourceItem, FactCheckItem, HeadlinesVariants
+
+from news_collector.contracts.frontend_schema import (
+    AstroPost,
+    ImageObject,
+    SourceItem,
+)
+
 
 def test_frontend_schema_instantiation():
     """Test instantiating AstroPost pushes coverage."""

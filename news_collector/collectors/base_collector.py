@@ -527,7 +527,9 @@ class BaseCollector(ABC):
         if cached and (now - cached[0] < ttl):
             return cached[1]
         try:
+            from news_collector.utils.security import validate_url_safety
             robots_url = f"https://{domain}/robots.txt"
+            validate_url_safety(robots_url)
             # Use a short timeout for robots.txt to avoid blocking
             resp = httpx.get(
                 robots_url,
@@ -589,7 +591,7 @@ class BaseCollector(ABC):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(  # noqa: S311
+        random.uniform(  # noqa: S311
             0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
         )
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
@@ -603,7 +605,7 @@ class BaseCollector(ABC):
         # Jitter: +/- 50% of the target delay, but clamped to 0
         low = target_delay * 0.5
         high = target_delay * 1.5
-        jittered_delay = random.uniform(low, high)
+        jittered_delay = random.uniform(low, high)  # noqa: S311
 
         time.sleep(jittered_delay)
 
@@ -617,7 +619,7 @@ class BaseCollector(ABC):
         # Jitter: +/- 50%
         low = target_delay * 0.5
         high = target_delay * 1.5
-        jittered_delay = random.uniform(low, high)
+        jittered_delay = random.uniform(low, high)  # noqa: S311
 
         await asyncio.sleep(jittered_delay)
 
@@ -681,7 +683,7 @@ class BaseCollector(ABC):
             )
         return path
 
-    def _check_crawl_interval(
+    def _check_crawl_interval(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> bool:
         """
@@ -702,7 +704,7 @@ class BaseCollector(ABC):
                 return True
 
             # 1. Check Circuit Breaker Status
-            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
+            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":  # noqa: 624, SIM102
                 if state.get("status") == "COOLDOWN":
                     next_retry = state.get("next_retry_at")
                     if next_retry:

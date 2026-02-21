@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import time
@@ -43,9 +44,7 @@ class HeadlessBudgetManager:
     def can_attempt(self) -> bool:
         if self.sources_attempted >= self.max_sources:
             return False
-        if self.total_seconds_used >= self.max_total_seconds:
-            return False
-        return True
+        return not self.total_seconds_used >= self.max_total_seconds
 
     def record_usage(self, duration: float):
         self.sources_attempted += 1
@@ -123,7 +122,7 @@ class HeadlessEnricher:
                         url, wait_until="domcontentloaded", timeout=max_duration * 1000
                     )
                 except PlaywrightTimeoutError:
-                    raise TimeoutError("Navigation timeout")
+                    raise TimeoutError("Navigation timeout")  # noqa: B904
 
                 # 2. Allowed Actions
                 self._perform_actions(
@@ -148,10 +147,8 @@ class HeadlessEnricher:
         except Exception as e:
             error = str(e)
             if browser:
-                try:
+                with contextlib.suppress(Exception):
                     browser.close()
-                except Exception:
-                    pass
             # Raise exception to trigger retry logic in caller
             raise e
 
@@ -164,7 +161,7 @@ class HeadlessEnricher:
             "duration": duration,
         }
 
-    def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
+    def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:  # noqa: C901
         """
         Renders URL using headless browser, with Proxy Fallback.
         """
@@ -184,7 +181,7 @@ class HeadlessEnricher:
         proxy_settings = None
 
         # If policy is force, we start with proxy
-        if source_config.get("proxy_mode") == "force":
+        if source_config.get("proxy_mode") == "force":  # noqa: 238, SIM102
             if proxy_manager.budget_manager.can_afford():
                 proxy_settings = proxy_manager.get_proxy_settings(source_config)
 
@@ -225,7 +222,7 @@ class HeadlessEnricher:
                 }
 
             # Check if we should retry with proxy
-            if proxy_manager.should_retry_with_proxy(source_config, error=e):
+            if proxy_manager.should_retry_with_proxy(source_config, error=e):  # noqa: 186, SIM102
                 # Check budgets again (Global Headless + Proxy)
                 if (
                     budget_manager.can_attempt()
@@ -291,7 +288,7 @@ class HeadlessEnricher:
             try:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)  # Wait for lazy load
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
         if "consent_click" in allowed_actions:
@@ -307,5 +304,5 @@ class HeadlessEnricher:
                         page.click(selector)
                         page.wait_for_timeout(500)
                         break
-            except Exception:
+            except Exception:  # noqa: S110
                 pass

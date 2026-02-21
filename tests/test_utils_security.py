@@ -38,13 +38,15 @@ class TestSecurity(unittest.TestCase):
     def test_missing_hostname(self):
         with self.assertRaises(ValueError) as cm:
             validate_url_safety("file:///etc/passwd")
-        self.assertIn("missing hostname", str(cm.exception))
+        self.assertIn("Invalid URL scheme", str(cm.exception))
 
     @patch("socket.getaddrinfo")
     def test_dns_resolution_error(self, mock_getaddrinfo):
         mock_getaddrinfo.side_effect = socket.gaierror("Name or service not known")
-        # Should silently return (feature: allow fetch failure later)
-        validate_url_safety("http://nonexistent.domain")
+        # Should fail closed on resolution error per new security contract
+        with self.assertRaises(ValueError) as cm:
+            validate_url_safety("http://nonexistent.domain")
+        self.assertIn("Failed to resolve hostname", str(cm.exception))
 
 
 if __name__ == "__main__":

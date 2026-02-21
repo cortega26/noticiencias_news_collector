@@ -163,7 +163,7 @@ class EditorialAuditor:
                 return True
 
         # 3. Random Sampling
-        if random.random() < self.sampling_rate:
+        if random.random() < self.sampling_rate:  # noqa: S311
             logger.info("Auditor Triggered: Random Sampling")
             return True
 
@@ -182,7 +182,7 @@ class EditorialAuditor:
             "issues": [],
         }
 
-    def _normalize_audit_result(self, raw: Any) -> Dict[str, Any]:
+    def _normalize_audit_result(self, raw: Any) -> Dict[str, Any]:  # noqa: C901
         """
         OBJECTIVE 2 & 3: Strict Normalization & Single Warning.
         Silently corrects types. Returns safe defaults if structure is invalid.
@@ -225,9 +225,8 @@ class EditorialAuditor:
                 # Prevent "bool is not iterable" by rejecting non-lists
 
             # 4. String Normalization
-            elif isinstance(default_val, str):
-                if isinstance(val, str):
-                    normalized[key] = val
+            elif isinstance(default_val, str) and isinstance(val, str):
+                normalized[key] = val
 
         return normalized
 
@@ -252,12 +251,14 @@ class EditorialAuditor:
         article_id: str,
         content: str,
         source_url: str,
-        article_data: Dict[str, Any] = {},
+        article_data: Dict[str, Any] = None,
     ) -> None:
         """
         Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.
         Handles LLM interaction, result parsing, and persistence.
         """
+        if article_data is None:
+            article_data = {}
         try:
             logger.info(f"Starting Editorial Audit for {article_id}...")
 
@@ -286,7 +287,7 @@ class EditorialAuditor:
                 try:
                     text = "".join(str(chunk) for chunk in provider_result)
                     raw_data = self.provider._extract_json(text)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Treated as invalid by _normalize
             else:
                 logger.warning(

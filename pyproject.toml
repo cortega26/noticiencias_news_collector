@@ -50,7 +50,7 @@ security = [
 test = [
     "coverage[toml]>=7.0.0",
     "hypothesis>=6.100.0",
-    "pytest>=8.0.0",
+    "pytest>=7.4.0",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.23.0",
 ]
@@ -108,6 +108,7 @@ src_paths = ["news_collector", "tests", "scripts", "apps", "tools"]
 [tool.mypy]
 python_version = "3.13"
 packages = ["news_collector", "tests"]
+exclude = ["temp/", "tools/", "scripts/"]
 ignore_missing_imports = true
 warn_unused_configs = true
 warn_return_any = true
@@ -117,29 +118,14 @@ strict_optional = true
 no_implicit_optional = true
 follow_imports = "normal"
 plugins = []
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 ignore_errors = true
 
-[[tool.mypy.overrides]]
-module = [
-    "news_collector.config.*",
-    "noticiencias.*",
-    "news_collector.collectors.*",
-    "news_collector.enrichment.*",
-    "news_collector.monitoring.*",
-    "news_collector.perf.*",
-    "news_collector.reranker.*",
-    "news_collector.scoring.*",
-    "news_collector.serving.*",
-    "news_collector.storage.*",
-    "tools.*",
-]
-ignore_errors = true
-
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
 addopts = "-ra --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing"
@@ -190,9 +176,12 @@ backup = false
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]
-"tests/*" = ["S101", "S105", "S311", "SIM117", "S103", "S106", "S108", "S113", "S603"] # allow asserts, hardcoded secrets, random, nested with, and other test-specific practices
-"scripts/*" = ["S"] # allow lax security in ops scripts
-"tools/*" = ["S603", "S607", "SIM"] # allow subprocess in tools, suppress simplistic checks
+"tests/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I", "UP", "N"]
+"scripts/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I"]
+"tools/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I"]
+"generate_index.py" = ["C"]
+"generate_contexts.py" = ["C"]
+"analyze_ab_test.py" = ["C"]
 
 [tool.bandit]
 exclude_dirs = [

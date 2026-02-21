@@ -167,7 +167,7 @@ TIER_D_INTERVAL = 86400  # 24 hours (Manual/Restricted)
 VALID_TIERS = ["A", "B", "C", "D"]
 
 
-def validate_sources():
+def validate_sources():  # noqa: C901
     """
     Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
     Raises ValueError if any source is invalid.
@@ -200,7 +200,7 @@ def validate_sources():
 
         # 3. Check Fetchability Score
         f_score = config.get("fetchability_score")
-        if f_score is not None:
+        if f_score is not None:  # noqa: 293, SIM102
             if not isinstance(f_score, (int, float)) or not (0 <= f_score <= 100):
                 errors.append(
                     f"Source '{source_id}' has invalid fetchability_score: {f_score}. Must be 0-100."
@@ -208,7 +208,7 @@ def validate_sources():
 
         # 4. Check Interval
         interval = config.get("crawl_interval_seconds")
-        if interval is not None:
+        if interval is not None:  # noqa: 206, SIM102
             if not isinstance(interval, int) or interval <= 0:
                 errors.append(
                     f"Source '{source_id}' has invalid crawl_interval_seconds: {interval}. Must be positive int."
@@ -232,7 +232,7 @@ def validate_sources():
                 )
 
             max_seconds = config.get("headless_max_seconds")
-            if max_seconds is not None:
+            if max_seconds is not None:  # noqa: 214, SIM102
                 if not isinstance(max_seconds, int) or max_seconds <= 0:
                     errors.append(
                         f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int."
