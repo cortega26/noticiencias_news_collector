@@ -704,8 +704,7 @@ class BaseCollector(ABC):
                 return True
 
             # 1. Check Circuit Breaker Status
-            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":  # noqa: 624, SIM102
-                if state.get("status") == "COOLDOWN":
+            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false" and state.get("status") == "COOLDOWN":
                     next_retry = state.get("next_retry_at")
                     if next_retry:
                         # Ensure timezone awareness

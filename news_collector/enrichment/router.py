@@ -146,8 +146,7 @@ class EnrichmentStrategyRouter:
                     }
                 )
 
-            elif proposed_strategy == "http":  # noqa: 308, SIM102
-                if original_strategy != "http" and original_strategy != "scholarly":
+            elif proposed_strategy == "http" and original_strategy != "http" and original_strategy != "scholarly":
                     source_config["enrichment_strategy"] = "http"
                     reason = "lock_applied" if locked_strategy else "hint_applied"
                     self.logger.info(
