@@ -1,3 +1,4 @@
+import contextlib
 import json
 import logging
 import os
@@ -98,33 +99,25 @@ class EnrichmentMetricsStore:
             cur.execute(query_history)
 
             # Migrations for Aggregates (Idempotent)
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(
                     "ALTER TABLE enrichment_metrics ADD COLUMN http_attempts INTEGER DEFAULT 0"
                 )
-            except sqlite3.OperationalError:
-                pass
 
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(
                     "ALTER TABLE enrichment_metrics ADD COLUMN headless_attempts INTEGER DEFAULT 0"
                 )
-            except sqlite3.OperationalError:
-                pass
 
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(
                     "ALTER TABLE enrichment_metrics ADD COLUMN proxy_attempts INTEGER DEFAULT 0"
                 )
-            except sqlite3.OperationalError:
-                pass
 
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(
                     "ALTER TABLE enrichment_metrics ADD COLUMN scholarly_attempts INTEGER DEFAULT 0"
                 )
-            except sqlite3.OperationalError:
-                pass
 
             self.conn.commit()
             cur.close()
@@ -141,8 +134,7 @@ class EnrichmentMetricsStore:
         with self._lock:
             cur = self.conn.cursor()
             # Update Aggregate
-            cur.execute(
-                f"""
+            query_1 = f"""
                 INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted{', ' + strategy + '_attempts' if strategy and strategy in valid_strategies else ''})
                 VALUES (?, 1, 1{', 1' if strategy and strategy in valid_strategies else ''})
                 ON CONFLICT(source_id) DO UPDATE SET
@@ -150,9 +142,8 @@ class EnrichmentMetricsStore:
                 total_enrichment_attempted = total_enrichment_attempted + 1
                 {strategy_col_update},
                 last_updated = CURRENT_TIMESTAMP
-            """,
-                (source_id,),
-            )
+            """  # noqa: S608
+            cur.execute(query_1, (source_id,))
 
             # Insert History
             cur.execute(
@@ -217,26 +208,28 @@ class EnrichmentMetricsStore:
                     new_avg_time = duration
                     new_avg_len = content_length
 
-                cur.execute(
-                    f"""
+                query_2 = f"""
                     UPDATE enrichment_metrics
-                    SET 
+                    SET
                         {strategy_col} = {strategy_col} + 1,
                         total_publishable = total_publishable + ?,
                         avg_content_length = ?,
                         avg_enrichment_time = ?,
                         last_updated = CURRENT_TIMESTAMP
                     WHERE source_id = ?
-                """,
+                """  # noqa: S608
+                cur.execute(
+                    query_2,
                     (1 if is_publishable else 0, new_avg_len, new_avg_time, source_id),
                 )
             else:
                 # Should have been created by record_attempt, but handle edge case
-                cur.execute(
-                    f"""
+                query_3 = f"""
                     INSERT INTO enrichment_metrics (source_id, {strategy_col}, total_publishable, avg_content_length, avg_enrichment_time, total_discovered, total_enrichment_attempted)
                     VALUES (?, 1, ?, ?, ?, 1, 1)
-                """,
+                """  # noqa: S608
+                cur.execute(
+                    query_3,
                     (source_id, 1 if is_publishable else 0, content_length, duration),
                 )
 
@@ -295,7 +288,7 @@ class EnrichmentMetricsStore:
             cur.execute(
                 """
                 UPDATE enrichment_metrics
-                SET 
+                SET
                     proxy_requests_used = proxy_requests_used + ?,
                     headless_seconds_used = headless_seconds_used + ?,
                     last_updated = CURRENT_TIMESTAMP
@@ -316,7 +309,7 @@ class EnrichmentMetricsStore:
                 row = cur.fetchone()
                 if row:
                     cols = [description[0] for description in cur.description]
-                    return dict(zip(cols, row))
+                    return dict(zip(cols, row, strict=False))
                 return None
             finally:
                 cur.close()
@@ -328,7 +321,7 @@ class EnrichmentMetricsStore:
                 cur.execute("SELECT * FROM enrichment_metrics")
                 rows = cur.fetchall()
                 cols = [description[0] for description in cur.description]
-                return {row[0]: dict(zip(cols, row)) for row in rows}
+                return {row[0]: dict(zip(cols, row, strict=False)) for row in rows}
             finally:
                 cur.close()
 
@@ -340,6 +333,13 @@ class EnrichmentMetricsStore:
             cur.execute("DELETE FROM enrichment_history")
             self.conn.commit()
             cur.close()
+
+    def close(self):
+        """Closes the database connection."""
+        with self._lock:
+            if hasattr(self, "conn") and self.conn:
+                self.conn.close()
+                self.conn = None
 
 
 # Global instance
@@ -383,7 +383,7 @@ class ProductionReadonlyStore:
             row = cur.fetchone()
             if row:
                 cols = [description[0] for description in cur.description]
-                return dict(zip(cols, row))
+                return dict(zip(cols, row, strict=False))
         except Exception as e:
             logger.error(f"Error reading prod metrics: {e}")
         finally:
@@ -398,11 +398,17 @@ class ProductionReadonlyStore:
             cur.execute("SELECT * FROM enrichment_metrics")
             rows = cur.fetchall()
             cols = [description[0] for description in cur.description]
-            return {row[0]: dict(zip(cols, row)) for row in rows}
+            return {row[0]: dict(zip(cols, row, strict=False)) for row in rows}
         except Exception:
             return {}
         finally:
             cur.close()
+
+    def close(self):
+        # Closes the production database connection.
+        if hasattr(self, "conn") and self.conn:
+            self.conn.close()
+            self.conn = None
 
 
 # Global instance for optimizer

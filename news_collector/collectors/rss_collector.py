@@ -27,6 +27,8 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
+import contextlib
+
 from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
@@ -387,7 +389,7 @@ class RSSCollector(BaseCollector):
                 content_text = content_bytes.decode("utf-8", errors="replace")
         return content_text, result.get("status_code", 500)
 
-    def _fetch_feed_robust(
+    def _fetch_feed_robust(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -402,7 +404,7 @@ class RSSCollector(BaseCollector):
             meta = self.db_manager.get_source_feed_metadata(source_id)
             if meta:
                 cached_headers = meta
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         request_headers = self.FEED_REQUEST_headers.copy()
@@ -447,18 +449,15 @@ class RSSCollector(BaseCollector):
                 )
 
             if response.status_code == 304:
-                run_304 = True
                 # Sometimes 304 is returned but we might want to force refresh if local cache invalid?
                 # Optimization: 304 means success but no new content. Update metadata timestamp.
-                try:
+                with contextlib.suppress(Exception):
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=cached_headers.get("content_hash"),
                     )
-                except Exception:
-                    pass
                 return {
                     "success": True,
                     "status_code": 304,
@@ -497,15 +496,13 @@ class RSSCollector(BaseCollector):
                     "info", "collector.feed.content_unchanged", source_id=source_id
                 )
                 # Update metadata timestamp even if 304-equivalent
-                try:
+                with contextlib.suppress(Exception):
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=content_hash,
                     )
-                except Exception:
-                    pass
                 return {
                     "success": True,
                     "status_code": 304,
@@ -514,15 +511,13 @@ class RSSCollector(BaseCollector):
                 }  # Treat as 304 logic upstream
 
             # Save metadata
-            try:
+            with contextlib.suppress(Exception):
                 self.db_manager.update_source_feed_metadata(
                     source_id,
                     etag=response.headers.get("ETag"),
                     last_modified=response.headers.get("Last-Modified"),
                     content_hash=content_hash,
                 )
-            except Exception:
-                pass
 
             return {
                 "success": True,
@@ -648,7 +643,7 @@ class RSSCollector(BaseCollector):
 
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
-        recent_threshold = datetime.now(timezone.utc) - timedelta(
+        datetime.now(timezone.utc) - timedelta(
             days=COLLECTION_CONFIG["recent_days_threshold"]
         )
 
@@ -829,7 +824,7 @@ class RSSCollector(BaseCollector):
             return False
         return True
 
-    def _process_article(
+    def _process_article(  # noqa: C901
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]
     ) -> Optional[CollectorArticleModel]:
         """

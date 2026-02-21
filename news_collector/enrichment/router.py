@@ -60,14 +60,14 @@ class EnrichmentStrategyRouter:
         # HeadlessEnricher also needs logger
         self.headless = HeadlessEnricher(logger_factory=logger_factory)
 
-    def route_enrichment(
+    def route_enrichment(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any], candidate: Dict[str, Any]
     ) -> Dict[str, Any]:
 
         # Record generic attempt (discovery)
         enrichment_metrics.record_attempt(source_id)
 
-        ctx = run_context.get_context()
+        run_context.get_context()
 
         # 1. Strategy Locking (Highest Priority after Config)
         # Check against source_config hard overrides?
@@ -146,7 +146,7 @@ class EnrichmentStrategyRouter:
                     }
                 )
 
-            elif proposed_strategy == "http":
+            elif proposed_strategy == "http":  # noqa: 308, SIM102
                 if original_strategy != "http" and original_strategy != "scholarly":
                     source_config["enrichment_strategy"] = "http"
                     reason = "lock_applied" if locked_strategy else "hint_applied"

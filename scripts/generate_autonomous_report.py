@@ -1,6 +1,7 @@
+import json
 import os
 import sqlite3
-import json
+
 import yaml
 
 DB_PATH = os.getenv("METRICS_DB_PATH", "data/metrics/production/enrichment_metrics.db")
@@ -91,7 +92,7 @@ def main():
             # Parse failures from history
             cur.execute("SELECT strategy, metadata FROM enrichment_history WHERE event_type='failure'")
             fails = cur.fetchall()
-            
+
             if fails:
                 summary = {}
                 for fail in fails:
@@ -104,7 +105,7 @@ def main():
                         reason = "unknown"
                     key = (strat, reason)
                     summary[key] = summary.get(key, 0) + 1
-                
+
                 # Sort descending
                 sorted_summary = sorted(summary.items(), key=lambda x: x[1], reverse=True)[:10]
 

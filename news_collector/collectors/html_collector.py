@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import json
 import time
@@ -334,7 +335,7 @@ class HtmlCollector(BaseCollector):
         except Exception:
             return None
 
-    async def _fetch_html_conditional(
+    async def _fetch_html_conditional(  # noqa: C901
         self, url: str, source_id: str, source_config: Dict[str, Any]
     ) -> Tuple[Optional[str], Optional[int]]:
         """
@@ -346,12 +347,10 @@ class HtmlCollector(BaseCollector):
             "last_modified": None,
             "content_hash": None,
         }
-        try:
+        with contextlib.suppress(Exception):
             cached_headers = (
                 self.db_manager.get_source_feed_metadata(source_id) or cached_headers
             )
-        except Exception:
-            pass
 
         headers = self.headers.copy()
         if cached_headers.get("etag"):

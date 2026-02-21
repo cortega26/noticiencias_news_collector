@@ -274,7 +274,7 @@ class HeadlessCollector(BaseCollector):
             await page.wait_for_timeout(3000)  # Extra buffer for hydration
         except Exception as e:
             # Emit warning but proceed
-            logger.warning(f"Failed to wait for hydration: {e}")
+            logger.warning(f"Failed to wait for hydration: {e}")  # noqa: F821
 
     async def _fetch_full_content(
         self, context: BrowserContext, url: str

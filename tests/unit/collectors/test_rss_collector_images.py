@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from news_collector.collectors.rss_collector import RSSCollector
@@ -17,10 +17,10 @@ def test_rss_collector_image_fallback_to_dom(collector):
     collector.router.route_enrichment.return_value = {
         "success": True,
         "content": "Long enough summary to pass validation for testing",
-        "raw_content": f"""
+        "raw_content": """
         <html>
             <meta property="og:image" content="https://example.com/og_extracted.jpg" />
-            <body><article><p>{{long_content}}</p></article></body>
+            <body><article><p>{long_content}</p></article></body>
         </html>
         """,
         "strategy_used": "http",
@@ -138,7 +138,7 @@ def test_rss_collector_image_missing_source(collector):
     collector.router.route_enrichment.return_value = {
         "success": True,
         "content": "Long enough summary to pass validation for testing",
-        "raw_content": f"<html><body>{{long_content}}</body></html>",
+        "raw_content": "<html><body>{long_content}</body></html>",
         "strategy_used": "http",
     }
 

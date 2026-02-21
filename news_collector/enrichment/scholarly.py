@@ -100,7 +100,7 @@ class ScholarlyMetadataEnricher:
                 author_names.append(name)
         if len(authors) > 5:
             author_names.append("et al.")
-        author_str = ", ".join(author_names) if author_names else "Unknown Authors"
+        ", ".join(author_names) if author_names else "Unknown Authors"
 
         # Journal & Date
         container = metadata.get("container-title", ["Unknown Journal"])

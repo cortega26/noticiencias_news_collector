@@ -39,9 +39,7 @@ class ProxyBudgetManager:
         """Checks if budget allows for another proxy request."""
         if self.requests_attempted >= self.max_requests:
             return False
-        if self.total_seconds_used >= self.max_total_seconds:
-            return False
-        return True
+        return not self.total_seconds_used >= self.max_total_seconds
 
     def record_usage(self, duration: float):
         """Records a completed proxy request."""
@@ -129,10 +127,9 @@ class ProxyManager:
         reason = "unknown"
 
         # Check StatusCode (403, 429, 503 often mean blocking/throttling)
-        if response is not None:
-            if response.status_code in [403, 429, 503]:
-                should_retry = True
-                reason = f"status_{response.status_code}"
+        if response is not None and response.status_code in [403, 429, 503]:
+            should_retry = True
+            reason = f"status_{response.status_code}"
 
         # Check Exception (Connection Refused, Timeout, Reset)
         if error:
