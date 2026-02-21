@@ -16,7 +16,9 @@ def get_changed_files():
         # Try comparing against origin/main first
         result = subprocess.run(
             ["git", "diff", "--name-only", "--diff-filter=d", "origin/main...HEAD"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )
         files = result.stdout.strip().split("\n")
 
@@ -28,22 +30,40 @@ def get_changed_files():
         # Fallback to local unstaged/staged changes combined
         try:
             # Staged changes
-            staged = subprocess.run(
-                ["git", "diff", "--name-only", "--cached", "--diff-filter=d"],
-                capture_output=True, text=True, check=True
-            ).stdout.strip().split("\n")
+            staged = (
+                subprocess.run(
+                    ["git", "diff", "--name-only", "--cached", "--diff-filter=d"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                .stdout.strip()
+                .split("\n")
+            )
 
             # Unstaged changes
-            unstaged = subprocess.run(
-                ["git", "diff", "--name-only", "--diff-filter=d"],
-                capture_output=True, text=True, check=True
-            ).stdout.strip().split("\n")
+            unstaged = (
+                subprocess.run(
+                    ["git", "diff", "--name-only", "--diff-filter=d"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                .stdout.strip()
+                .split("\n")
+            )
 
             # Untracked files (but not ignored)
-            untracked = subprocess.run(
-                ["git", "ls-files", "--others", "--exclude-standard"],
-                capture_output=True, text=True, check=True
-            ).stdout.strip().split("\n")
+            untracked = (
+                subprocess.run(
+                    ["git", "ls-files", "--others", "--exclude-standard"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                .stdout.strip()
+                .split("\n")
+            )
 
             files = list(set(staged + unstaged + untracked))
         except subprocess.CalledProcessError as e:
@@ -51,6 +71,7 @@ def get_changed_files():
             sys.exit(1)
 
     return [f for f in files if f.endswith(".py") and os.path.exists(f)]
+
 
 def main():
     changed_python_files = get_changed_files()
@@ -65,15 +86,20 @@ def main():
     ruff_cmd = [sys.executable, "-m", "ruff", "check"] + changed_python_files
 
     try:
-        result = subprocess.run(ruff_cmd, capture_output=False) # Let it print to stdout/stderr directly
+        result = subprocess.run(
+            ruff_cmd, capture_output=False
+        )  # Let it print to stdout/stderr directly
         if result.returncode != 0:
-            print(f"\nRuff found issues in changed files. (Exit code: {result.returncode})")
+            print(
+                f"\nRuff found issues in changed files. (Exit code: {result.returncode})"
+            )
             sys.exit(result.returncode)
     except FileNotFoundError:
         print("Error: ruff is not installed or not found in the current environment.")
         sys.exit(1)
 
     print("Linting passed for changed files.")
+
 
 if __name__ == "__main__":
     main()

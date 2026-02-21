@@ -26,9 +26,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List
 
 DEFAULT_SKIP_GLOBS = [
     "*.log",
@@ -88,7 +88,16 @@ def _should_skip(path: Path, skip_globs: List[str]) -> bool:
     p = str(path)
     for g in skip_globs:
         # directory-like glob entries
-        if g in {"__pycache__", ".git", ".venv", ".venv-refinery", "node_modules", ".mypy_cache", ".pytest_cache", ".ruff_cache"}:
+        if g in {
+            "__pycache__",
+            ".git",
+            ".venv",
+            ".venv-refinery",
+            "node_modules",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+        }:
             if f"/{g}/" in p or p.endswith(f"/{g}"):
                 return True
         if path.match(g):
@@ -155,15 +164,21 @@ def scan_root(
             skipped += 1
             continue
 
-    return ScanResult(root=str(root), scanned_files=scanned, skipped_files=skipped, matches=matches)
+    return ScanResult(
+        root=str(root), scanned_files=scanned, skipped_files=skipped, matches=matches
+    )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True, help="Repo root to scan")
     ap.add_argument("--old", required=True, help="Old root path string to find")
-    ap.add_argument("--out", default="diagnose_refinery_path_report.json", help="Report JSON path")
-    ap.add_argument("--max-bytes", type=int, default=MAX_BYTES_DEFAULT, help="Max file size to scan")
+    ap.add_argument(
+        "--out", default="diagnose_refinery_path_report.json", help="Report JSON path"
+    )
+    ap.add_argument(
+        "--max-bytes", type=int, default=MAX_BYTES_DEFAULT, help="Max file size to scan"
+    )
     ap.add_argument("--include-logs", action="store_true", help="Also scan *.log files")
     args = ap.parse_args()
 
@@ -175,7 +190,9 @@ def main() -> int:
         "PWD": os.getcwd(),
         "NEWS_COLLECTOR_PATH": os.getenv("NEWS_COLLECTOR_PATH"),
         "STREAMLIT_SERVER_HEADLESS": os.getenv("STREAMLIT_SERVER_HEADLESS"),
-        "STREAMLIT_BROWSER_GATHER_USAGE_STATS": os.getenv("STREAMLIT_BROWSER_GATHER_USAGE_STATS"),
+        "STREAMLIT_BROWSER_GATHER_USAGE_STATS": os.getenv(
+            "STREAMLIT_BROWSER_GATHER_USAGE_STATS"
+        ),
         "HOME": os.getenv("HOME"),
         "XDG_CONFIG_HOME": os.getenv("XDG_CONFIG_HOME"),
         "XDG_CACHE_HOME": os.getenv("XDG_CACHE_HOME"),
@@ -211,7 +228,9 @@ def main() -> int:
 
     results: List[ScanResult] = []
     for r in scan_roots:
-        results.append(scan_root(r, needle, skip_globs=skip_globs, max_bytes=args.max_bytes))
+        results.append(
+            scan_root(r, needle, skip_globs=skip_globs, max_bytes=args.max_bytes)
+        )
 
     # Summaries
     total_matches = sum(len(r.matches) for r in results)

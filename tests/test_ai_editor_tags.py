@@ -1,14 +1,14 @@
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock
 
 # Add project root to path
 from pathlib import Path
-import os
-import sys
+from unittest.mock import MagicMock
 
-BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+BASE_DIR = Path(
+    os.environ.get("NEWS_COLLECTOR_PATH", Path(__file__).resolve().parents[1])
+).resolve()
 sys.path.insert(0, str(BASE_DIR))
 
 # Now import
@@ -53,11 +53,14 @@ class TestEditorAgentTags(unittest.TestCase):
         result = self.agent.process_article(raw_text)
 
         # Parse YAML
-        import re, yaml
+        import re
+
+        import yaml
+
         match = re.search(r"^---\n(.*?)\n---", result, re.DOTALL)
         assert match, "Frontmatter not found"
         fm = yaml.safe_load(match.group(1))
-        
+
         # Check tags list is empty
         self.assertEqual(fm.get("tags"), [])
 
@@ -75,19 +78,22 @@ class TestEditorAgentTags(unittest.TestCase):
         result = self.agent.process_article(raw_text)
 
         # Parse YAML
-        import re, yaml
+        import re
+
+        import yaml
+
         match = re.search(r"^---\n(.*?)\n---", result, re.DOTALL)
         assert match, "Frontmatter not found"
         fm = yaml.safe_load(match.group(1))
 
         # Check tag matches semantic term "inteligencia artificial" OR "AI" depending on normalizer
-        # Since we can't easily mock normalizer unless we mock import, 
+        # Since we can't easily mock normalizer unless we mock import,
         # we check if ONE of expected values is present.
-        # Actually, if normalizer is not mocked, it uses real logic? 
+        # Actually, if normalizer is not mocked, it uses real logic?
         # The test does not mock normalizer import.
         # So it uses real TagNormalizer.
         # Assuming "AI" -> "inteligencia artificial".
-        
+
         tags = fm.get("tags", [])
         assert len(tags) > 0
         # Check loosely

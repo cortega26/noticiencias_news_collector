@@ -17,6 +17,7 @@ Invariants:
 Failure modes:
 - Implementation specific; the interface itself guarantees no specific failure modes beyond signature enforcement.
 """
+
 from typing import Any, Dict, Protocol, runtime_checkable
 
 

@@ -37,7 +37,12 @@ def _resolve_alembic_executable() -> str:
     bin_dir = "Scripts" if os.name == "nt" else "bin"
 
     # Default venv location used by the Makefile
-    candidate = repo_root / ".venv" / bin_dir / ("alembic.exe" if os.name == "nt" else "alembic")
+    candidate = (
+        repo_root
+        / ".venv"
+        / bin_dir
+        / ("alembic.exe" if os.name == "nt" else "alembic")
+    )
     if candidate.exists():
         return str(candidate)
 
@@ -104,5 +109,3 @@ def run_alembic(args: List[str]) -> None:
 
 if __name__ == "__main__":
     cli()
-
-

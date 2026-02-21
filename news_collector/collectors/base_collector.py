@@ -14,6 +14,7 @@ el mantenimiento y la extensión del sistema.
 """
 
 import asyncio
+import email.utils
 import hashlib
 import json
 import os
@@ -27,8 +28,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import httpx
-import email.utils
-from dateutil import parser as date_parser
 
 from news_collector.collectors.rate_limit_utils import calculate_effective_delay
 from news_collector.config.settings import (
@@ -237,12 +236,12 @@ class BaseCollector(ABC):
             if not self._check_crawl_interval(source_id, source_config):
                 return {
                     "source_id": source_id,
-                    "success": True, # Using True to not count as error, but 0 articles found
+                    "success": True,  # Using True to not count as error, but 0 articles found
                     "articles_found": 0,
                     "articles_saved": 0,
                     "error_message": None,
                     "processing_time": 0.0,
-                    "skipped": True
+                    "skipped": True,
                 }
 
             self._pre_process_source(source_id, source_config)
@@ -264,7 +263,7 @@ class BaseCollector(ABC):
                     "articles_saved": 0,
                     "error_message": None,
                     "processing_time": 0.0,
-                    "skipped": True
+                    "skipped": True,
                 }
 
             # Note: _pre_process_source might be sync, but it's usually fast.
@@ -596,30 +595,30 @@ class BaseCollector(ABC):
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
         # This prevents thundering herd better than "Equal Jitter" or constant jitter.
         # User requested: "Add jitter to exponential backoff (deterministic in tests)"
-        # We will use random.uniform(0.5 * delay, 1.5 * delay) to respect the exponential growth 
+        # We will use random.uniform(0.5 * delay, 1.5 * delay) to respect the exponential growth
         # but smear it out.
-        
+
         target_delay = min(max_b, (base * (2**attempt)))
-        
+
         # Jitter: +/- 50% of the target delay, but clamped to 0
         low = target_delay * 0.5
         high = target_delay * 1.5
         jittered_delay = random.uniform(low, high)
-        
+
         time.sleep(jittered_delay)
 
     async def _backoff_sleep_async(self, attempt: int):
         """Async version of backoff sleep to avoid blocking the event loop."""
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        
+
         target_delay = min(max_b, (base * (2**attempt)))
-        
+
         # Jitter: +/- 50%
         low = target_delay * 0.5
         high = target_delay * 1.5
         jittered_delay = random.uniform(low, high)
-        
+
         await asyncio.sleep(jittered_delay)
 
     def _parse_retry_after(self, response: httpx.Response) -> Optional[datetime]:
@@ -630,7 +629,7 @@ class BaseCollector(ABC):
         header = response.headers.get("Retry-After")
         if not header:
             return None
-        
+
         try:
             # Try seconds first
             seconds = int(header)
@@ -682,7 +681,9 @@ class BaseCollector(ABC):
             )
         return path
 
-    def _check_crawl_interval(self, source_id: str, source_config: Dict[str, Any]) -> bool:
+    def _check_crawl_interval(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> bool:
         """
         Check if the source is ready to be crawled based on its interval.
         Returns True if ready, False otherwise.
@@ -710,7 +711,7 @@ class BaseCollector(ABC):
                             next_retry = next_retry.replace(tzinfo=timezone.utc)
                         else:
                             next_retry = next_retry.astimezone(timezone.utc)
-                        
+
                         now = datetime.now(timezone.utc)
                         if now < next_retry:
                             self._emit_log(
@@ -719,8 +720,8 @@ class BaseCollector(ABC):
                                 source_id=source_id,
                                 details={
                                     "reason": "COOLDOWN",
-                                    "retry_at": next_retry.isoformat()
-                                }
+                                    "retry_at": next_retry.isoformat(),
+                                },
                             )
                             return False
 
@@ -733,11 +734,11 @@ class BaseCollector(ABC):
                 last_checked = last_checked.replace(tzinfo=timezone.utc)
             else:
                 last_checked = last_checked.astimezone(timezone.utc)
-            
+
             now = datetime.now(timezone.utc)
-            
+
             if (now - last_checked).total_seconds() < interval:
-                 self._emit_log(
+                self._emit_log(
                     "info",
                     "collector.source.skipped_interval",
                     source_id=source_id,
@@ -745,19 +746,19 @@ class BaseCollector(ABC):
                         "reason": "interval_not_met",
                         "interval": interval,
                         "last_checked": last_checked.isoformat(),
-                        "wait_time": interval - (now - last_checked).total_seconds()
-                    }
+                        "wait_time": interval - (now - last_checked).total_seconds(),
+                    },
                 )
-                 return False
-            
+                return False
+
             return True
         except Exception as e:
             # Fail open on error to avoid permanent stalling
             self._emit_log(
-                "warning", 
+                "warning",
                 "collector.interval_check.failed",
                 source_id=source_id,
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
             return True
 

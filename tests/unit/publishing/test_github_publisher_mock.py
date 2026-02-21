@@ -23,7 +23,9 @@ def test_clone_repo(publisher):
     # Patch where it is used primarily, if possible, or global git.Repo
     # Use string path that matches implementation import if "from git import Repo"
     # But implementation uses "import git", then "git.Repo.clone_from"
-    with patch("news_collector.components.publishing.github_publisher.git.Repo.clone_from") as mock_clone:
+    with patch(
+        "news_collector.components.publishing.github_publisher.git.Repo.clone_from"
+    ) as mock_clone:
         with patch.object(publisher, "_cleanup_dir") as mock_clean:
             target_dir = Path("/tmp/test_repo")
             publisher.clone_repo("https://github.com/org/repo.git", target_dir)

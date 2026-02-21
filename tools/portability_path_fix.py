@@ -39,14 +39,12 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
-import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
-
 
 # ----------------------------
 # Configuration defaults
@@ -71,22 +69,46 @@ DEFAULT_EXCLUDE_GLOBS = [
     "*.log",
     "*.txt",
     "run_output*.txt",
-    "*.md",                  # we skip markdown by default (docs often mention old paths historically)
+    "*.md",  # we skip markdown by default (docs often mention old paths historically)
     "docs/*",
     "reports/*",
-    "config/systemd/*",      # deployment config: don't touch unless explicitly included
+    "config/systemd/*",  # deployment config: don't touch unless explicitly included
 ]
 
 # Binary-ish extensions to skip
 BINARY_EXTS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
-    ".pdf", ".zip", ".tar", ".gz", ".xz", ".7z",
-    ".woff", ".woff2", ".ttf", ".otf",
-    ".sqlite", ".db",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".xz",
+    ".7z",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".sqlite",
+    ".db",
 }
 
 TEXT_EXT_WHITELIST = {
-    ".py", ".pyi", ".toml", ".yml", ".yaml", ".json", ".ini", ".cfg", ".service", ".sh", ".bash"
+    ".py",
+    ".pyi",
+    ".toml",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".ini",
+    ".cfg",
+    ".service",
+    ".sh",
+    ".bash",
 }
 
 
@@ -109,7 +131,9 @@ class FileReport:
 
 
 def run(cmd: List[str], cwd: Path) -> Tuple[int, str, str]:
-    p = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    p = subprocess.Popen(
+        cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     out, err = p.communicate()
     return p.returncode, out, err
 
@@ -132,7 +156,9 @@ def matches_any_glob(path: Path, globs: Iterable[str], repo: Path) -> bool:
     return False
 
 
-def should_consider_file(path: Path, repo: Path, include_systemd: bool) -> Tuple[bool, Optional[str]]:
+def should_consider_file(
+    path: Path, repo: Path, include_systemd: bool
+) -> Tuple[bool, Optional[str]]:
     if not path.is_file():
         return False, "not a file"
 
@@ -151,7 +177,9 @@ def should_consider_file(path: Path, repo: Path, include_systemd: bool) -> Tuple
             return False, "excluded glob (default)"
     else:
         # If include_systemd, we still skip docs/logs by default but not systemd
-        globs = [g for g in DEFAULT_EXCLUDE_GLOBS if not g.startswith("config/systemd/")]
+        globs = [
+            g for g in DEFAULT_EXCLUDE_GLOBS if not g.startswith("config/systemd/")
+        ]
         if matches_any_glob(path, globs, repo):
             return False, "excluded glob (default)"
 
@@ -191,7 +219,9 @@ def ensure_imports_block(lines: List[str], imports: List[str]) -> List[str]:
             continue
 
         # Detect module docstring start/end (triple quotes)
-        if not in_docstring and (line.strip().startswith('"""') or line.strip().startswith("'''")):
+        if not in_docstring and (
+            line.strip().startswith('"""') or line.strip().startswith("'''")
+        ):
             in_docstring = True
             docstring_delim = line.strip()[:3]
             # single-line docstring
@@ -212,7 +242,11 @@ def ensure_imports_block(lines: List[str], imports: List[str]) -> List[str]:
             continue
 
         # Stop scanning once we hit code after import block
-        if import_block_end and line.strip() and not (line.startswith("import ") or line.startswith("from ")):
+        if (
+            import_block_end
+            and line.strip()
+            and not (line.startswith("import ") or line.startswith("from "))
+        ):
             break
 
     # Insert missing imports
@@ -244,7 +278,9 @@ def ensure_imports_block(lines: List[str], imports: List[str]) -> List[str]:
     return new_lines
 
 
-def apply_rule_sys_path_hardcode(content: str, old_root: str) -> Tuple[str, List[Change]]:
+def apply_rule_sys_path_hardcode(
+    content: str, old_root: str
+) -> Tuple[str, List[Change]]:
     """
     Replace:
       sys.path.insert(0, "/home/.../repo")
@@ -258,7 +294,7 @@ def apply_rule_sys_path_hardcode(content: str, old_root: str) -> Tuple[str, List
     lines = content.splitlines(keepends=True)
 
     pattern = re.compile(
-        rf"""
+        r"""
         ^(?P<indent>\s*)
         sys\.path\.(?P<method>insert|append)\(
             (?P<args>.*?)
@@ -292,19 +328,23 @@ def apply_rule_sys_path_hardcode(content: str, old_root: str) -> Tuple[str, List
         # We'll mark replacement later; to avoid shifting indices, store then apply.
         new_lines[idx] = after
 
-        changes.append(Change(
-            file="",
-            line_start=idx + 1,
-            line_end=idx + 1,
-            before=before.rstrip("\n"),
-            after=after.rstrip("\n"),
-            rule="sys.path hardcoded -> BASE_DIR from env/__file__",
-        ))
+        changes.append(
+            Change(
+                file="",
+                line_start=idx + 1,
+                line_end=idx + 1,
+                before=before.rstrip("\n"),
+                after=after.rstrip("\n"),
+                rule="sys.path hardcoded -> BASE_DIR from env/__file__",
+            )
+        )
 
     return "".join(new_lines), changes
 
 
-def apply_rule_db_path_hardcode(content: str, old_root: str) -> Tuple[str, List[Change]]:
+def apply_rule_db_path_hardcode(
+    content: str, old_root: str
+) -> Tuple[str, List[Change]]:
     """
     Replace:
       Path("/home/.../repo/data/news.db")
@@ -347,19 +387,23 @@ def apply_rule_db_path_hardcode(content: str, old_root: str) -> Tuple[str, List[
         after = replacement
         new_lines[idx] = after
 
-        changes.append(Change(
-            file="",
-            line_start=idx + 1,
-            line_end=idx + 1,
-            before=before.rstrip("\n"),
-            after=after.rstrip("\n"),
-            rule="Path('/home/.../data/*.db') -> ROOT / 'data' / db",
-        ))
+        changes.append(
+            Change(
+                file="",
+                line_start=idx + 1,
+                line_end=idx + 1,
+                before=before.rstrip("\n"),
+                after=after.rstrip("\n"),
+                rule="Path('/home/.../data/*.db') -> ROOT / 'data' / db",
+            )
+        )
 
     return "".join(new_lines), changes
 
 
-def apply_rule_systemd_workdir(content: str, old_root: str, repo_hint_name: str) -> Tuple[str, List[Change]]:
+def apply_rule_systemd_workdir(
+    content: str, old_root: str, repo_hint_name: str
+) -> Tuple[str, List[Change]]:
     """
     For systemd unit files, replace:
       WorkingDirectory=/home/.../repo
@@ -381,30 +425,34 @@ def apply_rule_systemd_workdir(content: str, old_root: str, repo_hint_name: str)
             before = line.rstrip("\n")
             after = f"WorkingDirectory=%h/{repo_hint_name}\n".rstrip("\n")
             new_lines[idx] = after + "\n"
-            changes.append(Change(
-                file="",
-                line_start=idx + 1,
-                line_end=idx + 1,
-                before=before,
-                after=after,
-                rule="systemd WorkingDirectory -> %h/repo",
-            ))
+            changes.append(
+                Change(
+                    file="",
+                    line_start=idx + 1,
+                    line_end=idx + 1,
+                    before=before,
+                    after=after,
+                    rule="systemd WorkingDirectory -> %h/repo",
+                )
+            )
 
         if line.startswith("EnvironmentFile=") and old_root in line:
             # preserve trailing relative portion
             rel = line.split("=", 1)[1].strip()
-            suffix = rel[len(old_root):].lstrip("/")
+            suffix = rel[len(old_root) :].lstrip("/")
             before = line.rstrip("\n")
             after = f"EnvironmentFile=%h/{repo_hint_name}/{suffix}".rstrip("\n")
             new_lines[idx] = after + "\n"
-            changes.append(Change(
-                file="",
-                line_start=idx + 1,
-                line_end=idx + 1,
-                before=before,
-                after=after,
-                rule="systemd EnvironmentFile -> %h/repo/...",
-            ))
+            changes.append(
+                Change(
+                    file="",
+                    line_start=idx + 1,
+                    line_end=idx + 1,
+                    before=before,
+                    after=after,
+                    rule="systemd EnvironmentFile -> %h/repo/...",
+                )
+            )
 
     return "".join(new_lines), changes
 
@@ -419,17 +467,37 @@ def process_file(
 ) -> FileReport:
     consider, reason = should_consider_file(path, repo, include_systemd=include_systemd)
     if not consider:
-        return FileReport(file=str(path.relative_to(repo)), changed=False, skipped_reason=reason, changes=[])
+        return FileReport(
+            file=str(path.relative_to(repo)),
+            changed=False,
+            skipped_reason=reason,
+            changes=[],
+        )
 
     try:
         original = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
-        return FileReport(file=str(path.relative_to(repo)), changed=False, skipped_reason="non-utf8 text", changes=[])
+        return FileReport(
+            file=str(path.relative_to(repo)),
+            changed=False,
+            skipped_reason="non-utf8 text",
+            changes=[],
+        )
     except Exception as e:
-        return FileReport(file=str(path.relative_to(repo)), changed=False, skipped_reason=f"read error: {e}", changes=[])
+        return FileReport(
+            file=str(path.relative_to(repo)),
+            changed=False,
+            skipped_reason=f"read error: {e}",
+            changes=[],
+        )
 
     if old_root not in original:
-        return FileReport(file=str(path.relative_to(repo)), changed=False, skipped_reason=None, changes=[])
+        return FileReport(
+            file=str(path.relative_to(repo)),
+            changed=False,
+            skipped_reason=None,
+            changes=[],
+        )
 
     updated = original
     all_changes: List[Change] = []
@@ -445,13 +513,17 @@ def process_file(
         # Ensure imports if we injected Path/os/sys lines
         if any("BASE_DIR" in c.after or "ROOT = Path(" in c.after for c in all_changes):
             lines = updated.splitlines(keepends=True)
-            lines = ensure_imports_block(lines, imports=["import os", "import sys", "from pathlib import Path"])
+            lines = ensure_imports_block(
+                lines, imports=["import os", "import sys", "from pathlib import Path"]
+            )
             updated = "".join(lines)
 
     # Rule 2: systemd (only if enabled)
     if include_systemd and path.suffix.lower() == ".service":
         repo_hint_name = repo.name
-        updated, changes3 = apply_rule_systemd_workdir(updated, old_root=old_root, repo_hint_name=repo_hint_name)
+        updated, changes3 = apply_rule_systemd_workdir(
+            updated, old_root=old_root, repo_hint_name=repo_hint_name
+        )
         all_changes.extend(changes3)
 
     # If no changes actually created, report as not changed (but found old_root)
@@ -477,7 +549,12 @@ def process_file(
                 shutil.copy2(path, bak)
         path.write_text(updated, encoding="utf-8")
 
-    return FileReport(file=rel, changed=(apply and updated != original), skipped_reason=None, changes=all_changes)
+    return FileReport(
+        file=rel,
+        changed=(apply and updated != original),
+        skipped_reason=None,
+        changes=all_changes,
+    )
 
 
 def scan_repo(repo: Path) -> List[Path]:
@@ -499,12 +576,31 @@ def scan_repo(repo: Path) -> List[Path]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", type=str, default=".", help="Repository root path")
-    ap.add_argument("--old-root", type=str, required=True, help="Old absolute repo root to eliminate")
-    ap.add_argument("--apply", action="store_true", help="Apply changes (otherwise dry-run)")
-    ap.add_argument("--report", type=str, default="path_fix_report.json", help="JSON report output")
-    ap.add_argument("--no-backups", action="store_true", help="Disable .bak backups when applying")
-    ap.add_argument("--allow-dirty", action="store_true", help="Allow running even if git status is dirty")
-    ap.add_argument("--include-systemd", action="store_true", help="Allow modifications in config/systemd/*.service")
+    ap.add_argument(
+        "--old-root",
+        type=str,
+        required=True,
+        help="Old absolute repo root to eliminate",
+    )
+    ap.add_argument(
+        "--apply", action="store_true", help="Apply changes (otherwise dry-run)"
+    )
+    ap.add_argument(
+        "--report", type=str, default="path_fix_report.json", help="JSON report output"
+    )
+    ap.add_argument(
+        "--no-backups", action="store_true", help="Disable .bak backups when applying"
+    )
+    ap.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow running even if git status is dirty",
+    )
+    ap.add_argument(
+        "--include-systemd",
+        action="store_true",
+        help="Allow modifications in config/systemd/*.service",
+    )
     args = ap.parse_args()
 
     repo = Path(args.repo).expanduser().resolve()
@@ -515,7 +611,10 @@ def main() -> int:
         return 1
 
     if not args.allow_dirty and is_repo_dirty(repo):
-        print("ERROR: repo has uncommitted changes. Commit/stash first, or use --allow-dirty.", file=sys.stderr)
+        print(
+            "ERROR: repo has uncommitted changes. Commit/stash first, or use --allow-dirty.",
+            file=sys.stderr,
+        )
         return 2
 
     files = scan_repo(repo)
@@ -557,7 +656,9 @@ def main() -> int:
             "files_with_changes": sum(1 for r in results if r.changes),
         },
     }
-    report_path.write_text(json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
     print(f"Report written to: {report_path}")
     if not args.apply:
@@ -579,7 +680,10 @@ def main() -> int:
             leftovers.append(r.file)
 
     if leftovers:
-        print("ERROR: Verification failed. old_root still present in files:", file=sys.stderr)
+        print(
+            "ERROR: Verification failed. old_root still present in files:",
+            file=sys.stderr,
+        )
         for lf in leftovers:
             print(f"  - {lf}", file=sys.stderr)
         print("Check report JSON and review those files manually.", file=sys.stderr)

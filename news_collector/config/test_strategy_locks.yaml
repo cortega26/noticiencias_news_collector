@@ -1,0 +1,12 @@
+# Strategy Locks Configuration
+# Generated automatically by StrategyLockManager
+
+locks:
+  source_needs_headless:
+    created_at: '2026-02-21T00:53:04.614317+00:00'
+    rationale: 'Auto-Lock: Headless Yield 80.0% vs HTTP 10.0% (>5 attempts)'
+    strategy: headless_fallback
+  source_test_auto_lock:
+    created_at: '2026-02-21T00:48:58.445086+00:00'
+    rationale: 'Auto-Lock: Headless Yield 80.0% vs HTTP 0.0% (>5 attempts)'
+    strategy: headless_fallback

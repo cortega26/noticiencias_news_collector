@@ -1,8 +1,8 @@
+import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Set, TypedDict, Optional, Tuple
-import logging
+from typing import Dict, List
 
 import yaml
 from pydantic import BaseModel, Field
@@ -10,16 +10,20 @@ from pydantic import BaseModel, Field
 # Setup logger
 logger = logging.getLogger(__name__)
 
+
 class NormalizeResult(BaseModel):
     """Result of a tag normalization operation."""
+
     tags: List[str] = Field(default_factory=list)
     removed: List[str] = Field(default_factory=list)
     replaced: List[Dict[str, str]] = Field(default_factory=list)
     merged: List[Dict[str, str]] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)
 
+
 class ValidationResult(BaseModel):
     """Result of a tag validation operation."""
+
     is_valid: bool
     needs_review: bool
     warnings: List[str] = Field(default_factory=list)
@@ -42,10 +46,10 @@ class TagNormalizer:
             config_p = Path(config_path)
             config_path = str(config_p)
             ortho_path = str(config_p.parent / "orthography.yml")
-        
+
         self.config = self._load_config(config_path)
         self.ortho_config = self._load_config(ortho_path)
-        
+
         self.stop_tags = set(self.config.get("stop_tags", []))
         self.alias_map = self.config.get("alias_map", {})
         self.orthography = self.ortho_config.get("corrections", {})
@@ -53,7 +57,7 @@ class TagNormalizer:
         self.max_tags = self.config.get("max_tags_per_article", 8)
         self.min_length = self.config.get("min_tag_length", 3)
         self.max_length = self.config.get("max_tag_length", 40)
-        
+
         # Regex for allowed chars: lowercase, numbers, accents, spaces
         # Corresponds to: "^[a-z0-9áéíóúüñ\s]+$"
         self.allowed_chars_pattern = re.compile(
@@ -70,9 +74,10 @@ class TagNormalizer:
 
     def _strip_accents(self, text: str) -> str:
         """Remove accents from text (for dedupe key generation)."""
-        return ''.join(
-            c for c in unicodedata.normalize('NFD', text)
-            if unicodedata.category(c) != 'Mn'
+        return "".join(
+            c
+            for c in unicodedata.normalize("NFD", text)
+            if unicodedata.category(c) != "Mn"
         )
 
     def _basic_sanitize(self, tag: str) -> str:
@@ -85,7 +90,7 @@ class TagNormalizer:
         """
         if not isinstance(tag, str):
             tag = str(tag)
-            
+
         tag = tag.strip().lower()
         tag = re.sub(r"[-_]", " ", tag)
         tag = re.sub(r"\s+", " ", tag)
@@ -94,7 +99,7 @@ class TagNormalizer:
     def sanitize_tags(self, tags: List[str]) -> NormalizeResult:
         """
         Main entry point for sanitization.
-        Follows the contract: 
+        Follows the contract:
         1. Sanitize string (lower, trim, replace)
         2. Orthography correction
         3. Semantic aliasing
@@ -111,7 +116,7 @@ class TagNormalizer:
         for t in tags:
             original = t
             t_sanitized = self._basic_sanitize(t)
-            
+
             # Empty check
             if not t_sanitized:
                 removed.append(original)
@@ -136,23 +141,23 @@ class TagNormalizer:
                 if new_t != t_sanitized:
                     replaced.append({"from": t_sanitized, "to": new_t})
                     t_sanitized = new_t
-            
+
             cleaned.append(t_sanitized)
 
         # Pass 2: Deduplication
         # Strategy: Use a canonical key (stripped accents) to find collisions.
         # If collision, prefer the one that is already in 'cleaned' (first wins? or specific rule?)
         # Actually, if we have "energía oscura" and "energia oscura", we want "energía oscura" if it exists.
-        # Current logic: First occurrence wins unless a "better" one is found later? 
+        # Current logic: First occurrence wins unless a "better" one is found later?
         # Simpler: First occurrence wins. The input order matters.
-        
-        unique_map: Dict[str, str] = {} # Key -> Tag
+
+        unique_map: Dict[str, str] = {}  # Key -> Tag
         final_list: List[str] = []
-        
+
         for t in cleaned:
             # Dedupe key: strictly lower char (already lower), no accents
             key = self._strip_accents(t)
-            
+
             if key in unique_map:
                 existing = unique_map[key]
                 if existing != t:
@@ -161,7 +166,7 @@ class TagNormalizer:
             else:
                 unique_map[key] = t
                 final_list.append(t)
-        
+
         # Pass 3: Final Filtering (Length constraints)
         result_tags = []
         for t in final_list:
@@ -174,20 +179,20 @@ class TagNormalizer:
                 warnings.append(f"removed long tag: {t}")
                 continue
             result_tags.append(t)
-            
+
         # Max tags Limit
         if len(result_tags) > self.max_tags:
             warnings.append(f"truncated tags to max {self.max_tags}")
-            result_tags = result_tags[:self.max_tags]
+            result_tags = result_tags[: self.max_tags]
 
         return NormalizeResult(
             tags=result_tags,
             removed=removed,
             replaced=replaced,
             merged=merged,
-            warnings=warnings
+            warnings=warnings,
         )
-        
+
     def validate_tags(self, tags: List[str]) -> ValidationResult:
         """
         Validates a list of tags against the strict contract.
@@ -200,27 +205,27 @@ class TagNormalizer:
         needs_review = False
 
         if len(tags) > self.max_tags:
-             # This should have been handled by sanitizer, but if not, it's a warning
-             warnings.append(f"Tag count ({len(tags)}) exceeds limit ({self.max_tags})")
-        
+            # This should have been handled by sanitizer, but if not, it's a warning
+            warnings.append(f"Tag count ({len(tags)}) exceeds limit ({self.max_tags})")
+
         for t in tags:
             # Check characters (Must be strictly allowed regex)
             if not self.allowed_chars_pattern.match(t):
                 errors.append(f"Invalid characters in tag: '{t}'")
                 needs_review = True
                 is_valid = False
-            
+
             # Check forbidden words (Redundant check but safety)
             if t in self.stop_tags:
                 errors.append(f"Forbidden stop tag found: '{t}'")
                 needs_review = True
                 is_valid = False
-                
+
             # Check length (Redundant)
             if len(t) < self.min_length and t not in self.whitelist_short:
                 errors.append(f"Tag too short: '{t}'")
                 is_valid = False
-            
+
             if len(t) > self.max_length:
                 errors.append(f"Tag too long: '{t}'")
                 is_valid = False
@@ -229,5 +234,5 @@ class TagNormalizer:
             is_valid=is_valid,
             needs_review=needs_review,
             warnings=warnings,
-            errors=errors
+            errors=errors,
         )

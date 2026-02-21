@@ -3,10 +3,10 @@ import sys
 
 # Add project root to path
 from pathlib import Path
-import os
-import sys
 
-BASE_DIR = Path(os.environ.get('NEWS_COLLECTOR_PATH', Path(__file__).resolve().parents[1])).resolve()
+BASE_DIR = Path(
+    os.environ.get("NEWS_COLLECTOR_PATH", Path(__file__).resolve().parents[1])
+).resolve()
 sys.path.insert(0, str(BASE_DIR))
 
 from dotenv import load_dotenv

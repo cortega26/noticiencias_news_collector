@@ -8,7 +8,12 @@ from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 def test_export_contract_v2_valid():
     """Verify standard export payload construction."""
     article = ExportArticleModel(
-        id=1, title="Valid Export", url="http://test.com", source_name="Test", source_id="test_id", score=0.9
+        id=1,
+        title="Valid Export",
+        url="http://test.com",
+        source_name="Test",
+        source_id="test_id",
+        score=0.9,
     )
 
     contract = ExportContractV2(
@@ -28,7 +33,11 @@ def test_export_contract_v2_valid():
 def test_export_contract_defaults():
     """Verify default values in export contract."""
     article = ExportArticleModel(
-        id=1, title="Defaults", url="http://def.com", source_name="Source", source_id="def_id"
+        id=1,
+        title="Defaults",
+        url="http://def.com",
+        source_name="Source",
+        source_id="def_id",
     )
     contract = ExportContractV2(
         generated_at="2025-01-01T00:00:00Z", article_count=1, articles=[article]

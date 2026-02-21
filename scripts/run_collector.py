@@ -112,21 +112,24 @@ def run_simple_collection(args):  # noqa: C901
 
         # Context Initialization
         from news_collector.infrastructure.run_context import run_context
+
         if args.dry_run:
             run_context.set_environment("dry_run")
         else:
-             # Default is development or production based on env var, can be overridden here if needed
-             pass
-             
+            # Default is development or production based on env var, can be overridden here if needed
+            pass
+
         ctx = run_context.get_context()
-        print(f"🔧 Inicializando sistema (RunID: {ctx['run_id']}, Env: {ctx['environment']})...")
-        
+        print(
+            f"🔧 Inicializando sistema (RunID: {ctx['run_id']}, Env: {ctx['environment']})..."
+        )
+
         tracker = SourceHealthTracker()
         system = create_system(config_override=config_override, health_tracker=tracker)
 
         logger_factory = setup_logging()
         run_logger = logger_factory.create_module_logger("cli.run")
-        trace_id = ctx['run_id'] # Use RunID as TraceID for consistency
+        trace_id = ctx["run_id"]  # Use RunID as TraceID for consistency
 
         if not system.initialize():
             print("❌ Error durante inicialización del sistema")

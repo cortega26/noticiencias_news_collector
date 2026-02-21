@@ -76,8 +76,10 @@ def validate_export(file_path: Path) -> bool:  # noqa: C901
 
     # Check Schema Version
     if data.get("schema_version") != EXPECTED_SCHEMA_VERSION:
-         print(f"❌ Error: Schema version mismatch. Expected {EXPECTED_SCHEMA_VERSION}, got {data.get('schema_version')}")
-         return False
+        print(
+            f"❌ Error: Schema version mismatch. Expected {EXPECTED_SCHEMA_VERSION}, got {data.get('schema_version')}"
+        )
+        return False
 
     # Depending on export format, articles might be in a key like 'articles' or 'selection_results' -> 'articles'
     # Based on main.py: results["summary"]["articles_found"] etc.
