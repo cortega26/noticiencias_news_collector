@@ -126,7 +126,7 @@ quality-fix: bootstrap ## Run auto-fixers then quality checks
 	@$(MAKE) lint-fix
 	@$(MAKE) quality
 
-quality-ci: bootstrap ## Run strict quality checks for CI (no fix, fail on error)
+quality-ci: bootstrap context-validate ## Run strict quality checks for CI (no fix, fail on error)
 	@echo "[quality-ci] Running Ruff..."
 	@$(RUFF) check . --output-format=github
 	@echo "[quality-ci] Running Mypy..."
@@ -140,6 +140,14 @@ quality-ci: bootstrap ## Run strict quality checks for CI (no fix, fail on error
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running Semgrep..."
 	@$(SEMGREP) scan --config auto --error
+
+context-validate: bootstrap ## Validate context files against MODULE_INDEX.md
+	@$(PYTHON_BIN) scripts/validate_context.py
+
+lint-changed: bootstrap ## Run ruff only on changed Python files
+	@$(PYTHON_BIN) scripts/lint_changed.py
+
+quality-ci-diff: context-validate lint-changed ## Run context validation and lint changed files for CI
 
 docs-api: bootstrap ## Generate API reference documentation with pdoc
 	@$(PYTHON_BIN) scripts/generate_api_docs.py
