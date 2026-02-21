@@ -122,7 +122,7 @@ class EnrichmentMetricsStore:
             self.conn.commit()
             cur.close()
 
-    def record_attempt(self, source_id: str, strategy: str = None):
+    def record_attempt(self, source_id: str, strategy: Optional[str] = None):
         """Records attempt in both aggregate and history tables."""
         ctx = run_context.get_context()
         valid_strategies = ["http", "headless", "proxy", "scholarly"]

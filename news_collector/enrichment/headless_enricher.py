@@ -181,8 +181,7 @@ class HeadlessEnricher:
         proxy_settings = None
 
         # If policy is force, we start with proxy
-        if source_config.get("proxy_mode") == "force":  # noqa: 238, SIM102
-            if proxy_manager.budget_manager.can_afford():
+        if source_config.get("proxy_mode") == "force" and proxy_manager.budget_manager.can_afford():
                 proxy_settings = proxy_manager.get_proxy_settings(source_config)
 
         start_time = time.time()
@@ -222,12 +221,7 @@ class HeadlessEnricher:
                 }
 
             # Check if we should retry with proxy
-            if proxy_manager.should_retry_with_proxy(source_config, error=e):  # noqa: 186, SIM102
-                # Check budgets again (Global Headless + Proxy)
-                if (
-                    budget_manager.can_attempt()
-                    and proxy_manager.budget_manager.can_afford()
-                ):
+            if proxy_manager.should_retry_with_proxy(source_config, error=e) and budget_manager.can_attempt() and proxy_manager.budget_manager.can_afford():
 
                     proxy_settings = proxy_manager.get_proxy_settings(source_config)
                     if proxy_settings:

@@ -186,7 +186,7 @@ check-coverage: bootstrap ## Check if coverage meets the required threshold (fai
 
 test-system: bootstrap ## Run S1-scoped verification (Contract + Coverage Gate)
 	@echo "[test-system] Running S1 Refactor Verification..."
-	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py
+	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py tests/unit/system/test_activity_monitor.py
 
 test-contracts: bootstrap ## Run D1 Contract enforcement tests (Contract + Coverage Gate)
 	@echo "[test-contracts] Running D1 Contract Enforcement..."
