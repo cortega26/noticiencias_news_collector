@@ -61,7 +61,7 @@ AUDIT_ISSUES_FLAGS ?=
 
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Creating virtual environment in $(VENV)"
-	@$(PYTHON) -m venv --copies $(VENV)
+	@test -d $(VENV) || $(PYTHON) -m venv --copies $(VENV)
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
@@ -70,7 +70,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@echo "[bootstrap-refinery] Creating isolated environment in $(VENV_REFINERY)"
-	@$(PYTHON) -m venv --copies $(VENV_REFINERY)
+	@test -d $(VENV_REFINERY) || $(PYTHON) -m venv --copies $(VENV_REFINERY)
 	@$(PIP_REFINERY) install --upgrade pip
 	@$(PIP_REFINERY) install --no-deps --require-hashes -r requirements-refinery.lock
 	@# Install app in editable mode, assuming refinery deps cover runtime needs
