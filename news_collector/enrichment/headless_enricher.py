@@ -13,6 +13,7 @@ PlaywrightTimeoutError: type[Exception]
 try:
     from playwright.sync_api import TimeoutError as _PlaywrightTimeoutError
     from playwright.sync_api import sync_playwright as _sync_playwright
+
     PlaywrightTimeoutError = _PlaywrightTimeoutError
     sync_playwright: Any = _sync_playwright
 except ImportError:

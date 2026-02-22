@@ -99,9 +99,7 @@ def daily_stats(
     else:
         day = date
 
-    start_date = datetime.combine(day, datetime.min.time()).replace(
-        tzinfo=timezone.utc
-    )
+    start_date = datetime.combine(day, datetime.min.time()).replace(tzinfo=timezone.utc)
     end_date = start_date + timedelta(days=1)
 
     articles_collected = (

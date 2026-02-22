@@ -5,7 +5,15 @@ from __future__ import annotations
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, MutableMapping, Optional, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+)
 
 from news_collector.utils.dedupe import sha256_hex
 from news_collector.utils.text_cleaner import normalize_text
@@ -301,12 +309,8 @@ class ConfigurableNLPStack:
             lang_neg = lang_lexicon.get("negative", [])
             if isinstance(lang_neg, Iterable):
                 negatives.update(str(word).lower() for word in lang_neg)
-        pos_hits = sum(
-            self._keyword_present(text_lower, word) for word in positives
-        )
-        neg_hits = sum(
-            self._keyword_present(text_lower, word) for word in negatives
-        )
+        pos_hits = sum(self._keyword_present(text_lower, word) for word in positives)
+        neg_hits = sum(self._keyword_present(text_lower, word) for word in negatives)
         if pos_hits > neg_hits:
             return "positive"
         if neg_hits > pos_hits:
