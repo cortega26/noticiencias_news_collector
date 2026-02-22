@@ -109,9 +109,7 @@ class TestRefineryEngine(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             target_dir = Path(tmpdir)
-            expected_file = (
-                target_dir / "src/content/posts/2026-01-01-test-slug.md"
-            )
+            expected_file = target_dir / "src/content/posts/2026-01-01-test-slug.md"
             with patch("pathlib.Path.write_text") as write_mock:
                 with self.assertRaises(RuntimeError):
                     self.engine.process_single_article(article, mock_repo, target_dir)

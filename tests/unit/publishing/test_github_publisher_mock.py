@@ -96,9 +96,7 @@ def test_create_branch_remote_exists(publisher, mock_repo):
     mock_repo.git.checkout.assert_called_once_with(
         "-B", "feat/test-slug-123", "origin/feat/test-slug-123", env=ANY
     )
-    mock_repo.git.rebase.assert_called_once_with(
-        "origin/feat/test-slug-123", env=ANY
-    )
+    mock_repo.git.rebase.assert_called_once_with("origin/feat/test-slug-123", env=ANY)
 
 
 def test_create_branch_fetch_failure_triggers_cleanup(publisher, mock_repo):

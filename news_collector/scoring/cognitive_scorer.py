@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from news_collector.config.settings import CONFIG
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.storage.models import Article
 
@@ -56,7 +58,11 @@ class CognitiveScorer(BasicScorer):
 
         # 2. Components
         # Use provider directly
-        self.llm = llm_client or OllamaProvider()
+        if llm_client is None:
+            model = get_model_for_stage("scoring", config=CONFIG, logger=logger)
+            self.llm = OllamaProvider(api_url=CONFIG.ollama.api_url, model=model)
+        else:
+            self.llm = llm_client
         self.heuristic = HeuristicScorer()
         self.version = "2.2-hybrid-unified"
 

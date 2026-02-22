@@ -18,6 +18,7 @@ import asyncio
 
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.infrastructure.llm.model_registry import resolve_ollama_stage_models
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 # from news_collector.components.editorial import EditorAgent # Removed duplicate
@@ -289,12 +290,13 @@ def main(  # noqa: C901
     db_manager = DatabaseManager()
 
     git_handler = GitHubPublisher(config.github.token)
+    resolved_models = resolve_ollama_stage_models(config, logger=logger)
     editor_agent = EditorAgent(
         api_url=config.ollama.api_url,
-        model=config.ollama.model,
-        translator_model=config.ollama.translator_model,
-        editor_model=config.ollama.editor_model,
-        headlines_model=config.ollama.headlines_model,
+        model=resolved_models["default"],
+        translator_model=resolved_models["translator"],
+        editor_model=resolved_models["editor"],
+        headlines_model=resolved_models["headlines"],
     )
 
     # Initialize Engine

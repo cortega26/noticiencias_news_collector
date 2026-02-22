@@ -128,7 +128,10 @@ class GitHubPublisher:
             return True
         if "tip of your current branch is behind" in combined:
             return True
-        if "updates were rejected" in combined and "failed to push some refs" in combined:
+        if (
+            "updates were rejected" in combined
+            and "failed to push some refs" in combined
+        ):
             return True
         return "fetch first" in combined
 
@@ -192,9 +195,7 @@ class GitHubPublisher:
             )
 
         if repo.is_dirty(untracked_files=True):
-            raise RuntimeError(
-                "Repository working tree is dirty after cleanup."
-            )
+            raise RuntimeError("Repository working tree is dirty after cleanup.")
 
     @contextlib.contextmanager
     def _cleanup_on_failure(
@@ -284,7 +285,9 @@ class GitHubPublisher:
                 repo.git.checkout("-B", branch_name, remote_ref, env=env or None)
                 repo.git.rebase(remote_ref, env=env or None)
             else:
-                selected_base = (base_branch or self.base_branch).strip() or self.base_branch
+                selected_base = (
+                    base_branch or self.base_branch
+                ).strip() or self.base_branch
                 deterministic_base_ref = f"origin/{selected_base}"
                 if not any(ref.name == deterministic_base_ref for ref in repo.refs):
                     raise RuntimeError(
