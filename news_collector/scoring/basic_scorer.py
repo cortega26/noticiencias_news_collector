@@ -30,7 +30,7 @@ import logging
 import math
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from pydantic import ValidationError
 
@@ -78,12 +78,12 @@ class BasicScorer(AsyncScorer):
                 self.weights[key] /= weight_sum
 
         # Cache para optimizar cálculos repetitivos
-        self._keyword_cache = {}
+        self._keyword_cache: Dict[str, float] = {}
 
         logger.info(f"🧠 Scorer inicializado con pesos: {self.weights}")
 
     def score_article(
-        self, article: Article, source_config: Dict[str, Any] = None
+        self, article: Article, source_config: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
         """
         Calcula el score completo de un artículo.
@@ -200,9 +200,15 @@ class BasicScorer(AsyncScorer):
         """
         # Extract article data and config
         article_dict = article_data.get("article", article_data)
-        source_config = article_data.get("source_config")
+        source_config_obj = article_data.get("source_config")
+        source_config = (
+            source_config_obj if isinstance(source_config_obj, dict) else None
+        )
 
         class SafeNamespace:
+            collected_date: datetime | None
+            article_metadata: Dict[str, Any] | None
+
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
 
@@ -235,13 +241,16 @@ class BasicScorer(AsyncScorer):
         # Run the synchronous scoring logic in a separate thread to avoid blocking the event loop
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
-            None, self.score_article, article_obj, source_config  # Use default executor
+            None,
+            self.score_article,
+            cast(Article, article_obj),
+            source_config,  # Use default executor
         )
 
         return result
 
     def _calculate_source_credibility_score(
-        self, article: Article, source_config: Dict[str, Any] = None
+        self, article: Article, source_config: Dict[str, Any] | None = None
     ) -> float:
         """
         Evalúa la credibilidad de la fuente.
@@ -259,11 +268,15 @@ class BasicScorer(AsyncScorer):
 
         # Score base de la fuente (del archivo de configuración)
         if source_config:
-            base_credibility = source_config.get("credibility_score", 0.5)
+            base_credibility_raw = source_config.get("credibility_score", 0.5)
         else:
             # Fallback: extraer de metadatos del artículo
             meta = getattr(article, "article_metadata", None) or {}
-            base_credibility = meta.get("credibility_score", 0.5)
+            base_credibility_raw = meta.get("credibility_score", 0.5)
+        try:
+            base_credibility = float(base_credibility_raw)
+        except (TypeError, ValueError):
+            base_credibility = 0.5
 
         score += base_credibility * 0.6  # 60% del score viene de la fuente
 
@@ -397,7 +410,15 @@ class BasicScorer(AsyncScorer):
     # Métodos auxiliares para evaluaciones específicas
     # ===============================================
 
-    def _evaluate_journal_reputation(self, journal_name: str) -> float:
+    @staticmethod
+    def _as_text(value: object | None) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        return str(value)
+
+    def _evaluate_journal_reputation(self, journal_name: object | None) -> float:
         """
         Evalúa la reputación de un journal científico.
 
@@ -405,10 +426,11 @@ class BasicScorer(AsyncScorer):
         En una versión más avanzada, podríamos conectar con APIs
         de impact factors reales.
         """
-        if not journal_name:
+        journal_text = self._as_text(journal_name)
+        if not journal_text:
             return 0.0
 
-        journal_lower = journal_name.lower()
+        journal_lower = journal_text.lower()
 
         # Journals de élite (impact factor > 30)
         elite_journals = [
@@ -479,18 +501,19 @@ class BasicScorer(AsyncScorer):
         else:
             return 0.5  # Muy largo
 
-    def _evaluate_title_quality(self, title: str) -> float:
+    def _evaluate_title_quality(self, title: object | None) -> float:
         """
         Evalúa la calidad del título del artículo.
 
         Un buen título científico debe ser descriptivo, específico,
         y libre de clickbait.
         """
-        if not title:
+        title_text = self._as_text(title)
+        if not title_text:
             return 0.0
 
         score = 0.5
-        title_lower = title.lower()
+        title_lower = title_text.lower()
 
         # Penalizar clickbait
         clickbait_indicators = [
@@ -524,34 +547,35 @@ class BasicScorer(AsyncScorer):
                 score += 0.1
 
         # Bonificar especificidad (números, nombres de instituciones)
-        if re.search(r"\d+", title):  # Contiene números
+        if re.search(r"\d+", title_text):  # Contiene números
             score += 0.1
 
         if re.search(r"university|institute|lab", title_lower):  # Instituciones
             score += 0.1
 
         # Penalizar títulos muy cortos o muy largos
-        if len(title) < 30:
+        if len(title_text) < 30:
             score -= 0.2
-        elif len(title) > 150:
+        elif len(title_text) > 150:
             score -= 0.1
 
         return max(0.0, min(1.0, score))
 
-    def _evaluate_text_quality(self, text: str) -> float:
+    def _evaluate_text_quality(self, text: object | None) -> float:
         """
         Evalúa la calidad general del texto.
 
         Considera factores como diversidad de vocabulario,
         estructura de oraciones, y presencia de información técnica.
         """
-        if not text or len(text) < 50:
+        text_value = self._as_text(text)
+        if not text_value or len(text_value) < 50:
             return 0.0
 
         score = 0.5
 
         # Evaluar diversidad de vocabulario
-        words = re.findall(r"\w+", text.lower())
+        words = re.findall(r"\w+", text_value.lower())
         if len(words) > 0:
             unique_words = len(set(words))
             diversity = unique_words / len(words)
@@ -575,7 +599,7 @@ class BasicScorer(AsyncScorer):
             "treatment",
         ]
 
-        technical_count = sum(1 for term in technical_terms if term in text.lower())
+        technical_count = sum(1 for term in technical_terms if term in text_value.lower())
         score += min(0.2, technical_count * 0.05)  # Máximo 0.2 por términos técnicos
 
         return max(0.0, min(1.0, score))
@@ -602,17 +626,18 @@ class BasicScorer(AsyncScorer):
 
         return score
 
-    def _evaluate_title_engagement_potential(self, title: str) -> float:
+    def _evaluate_title_engagement_potential(self, title: object | None) -> float:
         """
         Evalúa el potencial de engagement del título.
 
         Busca elementos que hacen títulos más compartibles en redes sociales.
         """
-        if not title:
+        title_text = self._as_text(title)
+        if not title_text:
             return 0.0
 
         score = 0.5
-        title_lower = title.lower()
+        title_lower = title_text.lower()
 
         # Palabras que aumentan engagement
         engaging_words = [
@@ -633,11 +658,11 @@ class BasicScorer(AsyncScorer):
                 score += 0.1
 
         # Números específicos tienden a ser más engaging
-        if re.search(r"\d+%|\d+ times|\d+ years", title):
+        if re.search(r"\d+%|\d+ times|\d+ years", title_text):
             score += 0.1
 
         # Preguntas pueden ser engaging
-        if "?" in title:
+        if "?" in title_text:
             score += 0.05
 
         return max(0.0, min(1.0, score))
@@ -924,7 +949,7 @@ class BasicScorer(AsyncScorer):
 
 
 def score_multiple_articles(
-    articles: List[Article], scorer: BasicScorer = None
+    articles: List[Article], scorer: BasicScorer | None = None
 ) -> Dict[str, Any]:
     """
     Aplica scoring a múltiples artículos y genera estadísticas.
@@ -934,19 +959,15 @@ def score_multiple_articles(
     if not scorer:
         scorer = BasicScorer()
 
-    results = []
-    stats = {
-        "total_articles": len(articles),
-        "included_articles": 0,
-        "excluded_articles": 0,
-        "average_score": 0.0,
-        "score_distribution": {
-            "excellent": 0,
-            "very_good": 0,
-            "good": 0,
-            "fair": 0,
-            "poor": 0,
-        },
+    results: List[Dict[str, Any]] = []
+    included_articles = 0
+    excluded_articles = 0
+    score_distribution: Dict[str, int] = {
+        "excellent": 0,
+        "very_good": 0,
+        "good": 0,
+        "fair": 0,
+        "poor": 0,
     }
 
     total_score = 0.0
@@ -962,33 +983,38 @@ def score_multiple_articles(
                 }
             )
 
-            final_score = score_result["final_score"]
+            final_score = float(score_result.get("final_score", 0.0))
             total_score += final_score
 
-            if score_result["should_include"]:
-                stats["included_articles"] += 1
+            if bool(score_result.get("should_include")):
+                included_articles += 1
             else:
-                stats["excluded_articles"] += 1
+                excluded_articles += 1
 
             # Actualizar distribución
             if final_score >= 0.8:
-                stats["score_distribution"]["excellent"] += 1
+                score_distribution["excellent"] += 1
             elif final_score >= 0.6:
-                stats["score_distribution"]["very_good"] += 1
+                score_distribution["very_good"] += 1
             elif final_score >= 0.4:
-                stats["score_distribution"]["good"] += 1
+                score_distribution["good"] += 1
             elif final_score >= 0.2:
-                stats["score_distribution"]["fair"] += 1
+                score_distribution["fair"] += 1
             else:
-                stats["score_distribution"]["poor"] += 1
+                score_distribution["poor"] += 1
 
         except Exception as e:
             logger.error(f"Error scoring artículo {article.id}: {e}")
             continue
 
-    if len(articles) > 0:
-        stats["average_score"] = total_score / len(articles)
-
+    average_score = (total_score / len(articles)) if articles else 0.0
+    stats: Dict[str, Any] = {
+        "total_articles": len(articles),
+        "included_articles": included_articles,
+        "excluded_articles": excluded_articles,
+        "average_score": average_score,
+        "score_distribution": score_distribution,
+    }
     return {"results": results, "statistics": stats}
 
 

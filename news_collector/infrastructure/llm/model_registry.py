@@ -449,16 +449,16 @@ def resolve_ollama_model_map(  # noqa: C901
                 )
 
         if resolved_map[stage].inherited:
-            log_key = (stage, resolved_map[stage].model_id)
+            inheritance_log_key = (stage, resolved_map[stage].model_id)
             resolved_logger = logger or LOGGER
-            if log_key not in _INHERITANCE_LOGGED:
+            if inheritance_log_key not in _INHERITANCE_LOGGED:
                 resolved_logger.info(
                     "Inherited Ollama model for stage '%s' from '%s': '%s'",
                     stage,
                     DEFAULT_STAGE,
                     resolved_map[stage].model_id,
                 )
-                _INHERITANCE_LOGGED.add(log_key)
+                _INHERITANCE_LOGGED.add(inheritance_log_key)
 
     missing_stages = [stage for stage in ALL_STAGES if stage not in resolved_map]
     if missing_stages:

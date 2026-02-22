@@ -53,7 +53,12 @@ class StrategyLockManager:
         try:
             with open(self.config_path, "r") as f:
                 data = yaml.safe_load(f)
-                return data.get("locks", {})
+                if not isinstance(data, dict):
+                    return {}
+                locks = data.get("locks", {})
+                if isinstance(locks, dict):
+                    return {str(key): value for key, value in locks.items()}
+                return {}
         except Exception as e:
             logger.error(f"Failed to load strategy locks: {e}")
             return {}
@@ -118,7 +123,14 @@ class StrategyLockManager:
                 )
                 return None
 
-        return lock
+        if isinstance(lock, dict):
+            normalized: Dict[str, str] = {}
+            for key, value in lock.items():
+                if isinstance(key, str) and isinstance(value, str):
+                    normalized[key] = value
+            if "strategy" in normalized:
+                return normalized
+        return None
 
     def suggest_lock(self, source_id: str, strategy: str, rationale: str):
         """

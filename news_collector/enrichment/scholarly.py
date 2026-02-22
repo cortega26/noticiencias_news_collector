@@ -57,7 +57,10 @@ class ScholarlyMetadataEnricher:
             resp = self.session.get(f"{self.CROSSREF_API_URL}{doi}")
             if resp.status_code == 200:
                 data = resp.json()
-                return data.get("message", {})
+                message = data.get("message", {})
+                if isinstance(message, dict):
+                    return {str(key): value for key, value in message.items()}
+                return {}
             return None
         except Exception:
             return None
