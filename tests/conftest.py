@@ -55,5 +55,6 @@ def pytest_sessionfinish(session, exitstatus):
 
         enrichment_metrics.close()
         production_metrics_view.close()
-    except Exception:
-        pass
+    except (ImportError, AttributeError) as e:
+        import logging
+        logging.warning("Skipped cleanup of metrics DB: %s", e)

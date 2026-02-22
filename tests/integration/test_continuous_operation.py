@@ -18,7 +18,7 @@ class TestContinuousOperation(unittest.TestCase):
         # Setup specific test environment
         self.test_dir = "data/metrics/test_continuous"
         os.makedirs(self.test_dir, exist_ok=True)
-        self.lock_file = "news_collector/config/test_strategy_locks.yaml"
+        self.lock_file = f"{self.test_dir}/test_strategy_locks.yaml"
 
         # Reset Singleton
         strategy_lock_manager._locks = {}

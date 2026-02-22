@@ -358,7 +358,15 @@ class RefineryEngine:
             )
             return False
 
-        # 4. Save File
+        # 4. Create Branch
+        # Create/sync the branch before writing files so branch collisions or
+        # remote sync failures do not leave uncommitted content edits behind.
+        branch_slug = output_filename.replace(".md", "")
+        branch_name = self.git.create_branch(
+            target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
+        )
+
+        # 5. Save File
         posts_dir.mkdir(parents=True, exist_ok=True)
         target_file_path = posts_dir / output_filename
 
@@ -369,13 +377,6 @@ class RefineryEngine:
         self._update_manifest(posts_dir, article_id, output_filename)
 
         # (Auditor checking validation block removed from here as it is done above)
-
-        # 5. Create Branch
-        # Use a deterministic branch name based on ID or filename to allow updates to same PR
-        branch_slug = output_filename.replace(".md", "")
-        branch_name = self.git.create_branch(
-            target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
-        )
 
         # 6. Commit & Push
         self.git.commit_and_push(
