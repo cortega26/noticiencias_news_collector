@@ -257,45 +257,54 @@ class OllamaProvider:
 
     # --- HELPERS ---
 
+    @staticmethod
+    def _try_parse_json_dict(candidate: str) -> tuple[bool, Dict[str, Any]]:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            return False, {}
+
+        if isinstance(parsed, dict):
+            return True, {str(key): value for key, value in parsed.items()}
+        return True, {}
+
+    @staticmethod
+    def _extract_braced_segment(text: str) -> Optional[str]:
+        start_idx = text.find("{")
+        if start_idx == -1:
+            return None
+
+        nesting = 0
+        for i, char in enumerate(text[start_idx:], start=start_idx):
+            if char == "{":
+                nesting += 1
+            elif char == "}":
+                nesting -= 1
+
+            if nesting == 0:
+                return text[start_idx : i + 1]
+        return None
+
     def _extract_json(self, text: str) -> Dict[str, Any]:
         """Robust JSON extraction from mixed text."""
         text = text.strip()
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, dict):
-                return {str(key): value for key, value in parsed.items()}
-            return {}
-        except json.JSONDecodeError:
-            pass
+        parsed_ok, parsed_json = self._try_parse_json_dict(text)
+        if parsed_ok:
+            return parsed_json
 
         # Try finding outer braces
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            try:
-                parsed = json.loads(match.group(0))
-                if isinstance(parsed, dict):
-                    return {str(key): value for key, value in parsed.items()}
-                return {}
-            except json.JSONDecodeError:
-                pass
+            parsed_ok, parsed_json = self._try_parse_json_dict(match.group(0))
+            if parsed_ok:
+                return parsed_json
 
-        # Try bracket counting (from ai_editor.py)
-        start_idx = text.find("{")
-        if start_idx != -1:
-            nesting = 0
-            for i, char in enumerate(text[start_idx:], start=start_idx):
-                if char == "{":
-                    nesting += 1
-                elif char == "}":
-                    nesting -= 1
-                if nesting == 0:
-                    try:
-                        parsed = json.loads(text[start_idx : i + 1])
-                        if isinstance(parsed, dict):
-                            return {str(key): value for key, value in parsed.items()}
-                        return {}
-                    except (json.JSONDecodeError, ValueError):
-                        pass
+        # Try bracket counting fallback (from ai_editor.py)
+        bracket_segment = self._extract_braced_segment(text)
+        if bracket_segment:
+            parsed_ok, parsed_json = self._try_parse_json_dict(bracket_segment)
+            if parsed_ok:
+                return parsed_json
 
         logger.warning(f"Failed to extract JSON from: {text[:100]}...")
         return {}
