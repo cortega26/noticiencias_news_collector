@@ -79,10 +79,8 @@ jobs:
         run: make bootstrap
       - name: Validate configuration
         run: make config-validate
-      - name: Regenerate field documentation
-        run: make config-docs
-      - name: Ensure documentation up to date
-        run: git diff --exit-code docs/config_fields.md
+      - name: Ensure config field documentation is up to date
+        run: make config-docs-check
 
   test:
     name: test
