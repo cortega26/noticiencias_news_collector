@@ -393,6 +393,10 @@ def load_config(  # noqa: C901
         "TARGET_REPO_URL": "github.target_repo_url",
         "OLLAMA_API_URL": "ollama.api_url",
         "OLLAMA_MODEL": "ollama.model",
+        "OLLAMA_TRANSLATOR_MODEL": "ollama.translator_model",
+        "OLLAMA_EDITOR_MODEL": "ollama.editor_model",
+        "OLLAMA_HEADLINES_MODEL": "ollama.headlines_model",
+        "SCORING_LLM_MODEL": "scoring.llm_model",
     }
 
     # Check both raw env and .env file data for these keys

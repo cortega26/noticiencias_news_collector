@@ -213,10 +213,38 @@ def check_system_health(
 
 def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
     """Internal helper to verify Ollama availability."""
+    disable_llm = False
+    strict_llm_mode = False
     try:
         import requests
 
         from news_collector.config.settings import CONFIG
+        from news_collector.infrastructure.llm.model_registry import (
+            ModelRegistryError,
+            is_no_warn_mode_enabled,
+            is_strict_mode_enabled,
+            resolve_ollama_stage_models,
+        )
+
+        strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
+        stage_models = {}
+        try:
+            stage_models = resolve_ollama_stage_models(
+                CONFIG,
+                logger=logger.create_module_logger("system") if logger else None,
+            )
+        except ModelRegistryError as cfg_error:
+            warning_msg = f"Ollama model configuration error: {cfg_error}"
+            warnings.append(warning_msg)
+            disable_llm = True
+            if logger:
+                logger.create_module_logger("system").warning(warning_msg)
+            import news_collector.config.settings
+
+            news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
+            if strict_llm_mode:
+                raise RuntimeError(warning_msg) from cfg_error
+            return
 
         ollama_url = CONFIG.ollama.api_url
         # If /api/generate is in the URL, strip it to check base health
@@ -230,38 +258,54 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                     f"Ollama health check returned {resp.status_code} at {health_url}"
                 )
                 warnings.append(warning_msg)
+                disable_llm = True
                 if logger:
                     logger.create_module_logger("system").warning(warning_msg)
+                if strict_llm_mode:
+                    raise RuntimeError(warning_msg)
             else:
-                # Check if configured model exists
                 models = resp.json().get("models", [])
-                model_name = CONFIG.ollama.model
-                if not any(  # noqa: SIM102
-                    m.get("name") == model_name or m.get("model") == model_name
+                available_models = {
+                    m.get("name")
                     for m in models
-                ):
-                    # Try fuzzy match (e.g. 'llama3.2:latest' vs 'llama3.2')
-                    if not any(model_name in (m.get("name") or "") for m in models):
-                        warning_msg = f"Model '{model_name}' not found in Ollama. Available: {[m.get('name') for m in models[:3]]}..."
-                        warnings.append(warning_msg)
-                        if logger:
-                            logger.create_module_logger("system").warning(warning_msg)
+                    if isinstance(m, dict) and m.get("name")
+                }
+                required_models = sorted(set(stage_models.values()))
+                missing = [
+                    model_name
+                    for model_name in required_models
+                    if model_name not in available_models
+                ]
+                if missing:
+                    warning_msg = (
+                        "Configured Ollama model(s) not found: "
+                        f"{missing}. Available sample: {sorted(available_models)[:3]}"
+                    )
+                    warnings.append(warning_msg)
+                    disable_llm = True
+                    if logger:
+                        logger.create_module_logger("system").warning(warning_msg)
+                    if strict_llm_mode:
+                        raise RuntimeError(warning_msg)
 
         except Exception as conn_err:
             warning_msg = f"LLM Provider unreachable at {base_url}: {conn_err}"
             warnings.append(warning_msg)
+            disable_llm = True
             # Do not mark as critical to avoid stopping the collector, but log warning
             if logger:
                 logger.create_module_logger("system").warning(warning_msg)
+            if strict_llm_mode:
+                raise RuntimeError(warning_msg) from conn_err
 
     except Exception as e:
+        if strict_llm_mode and isinstance(e, RuntimeError):
+            raise
         if logger:
             logger.create_module_logger("system").warning(f"Skipping LLM check: {e}")
 
     # Update global state if LLM issues found
-    if any("LLM Provider unreachable" in w for w in warnings) or any(
-        "Ollama health check returned" in w for w in warnings
-    ):
+    if disable_llm:
         import news_collector.config.settings
 
         news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False

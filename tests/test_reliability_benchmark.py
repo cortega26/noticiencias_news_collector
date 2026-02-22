@@ -92,7 +92,9 @@ async def test_reliability_benchmark_200_cycles():
         planned_get_calls_by_cycle[cycle_id] = len(plan)
 
     expected_5xx_cycles = sum(
-        1 for scenario in scenario_by_cycle.values() if scenario == "transient_5xx_recovered"
+        1
+        for scenario in scenario_by_cycle.values()
+        if scenario == "transient_5xx_recovered"
     )
     expected_429_cycles = sum(
         1 for scenario in scenario_by_cycle.values() if scenario == "rate_limited_429"
