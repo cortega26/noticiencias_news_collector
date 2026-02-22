@@ -34,7 +34,7 @@ class TestPublicEntrypoints:
         # We need to mock requests to avoid actual network calls and potential failures if offline
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
             with patch("requests.get") as mock_get:
-            # Mock successful response
+                # Mock successful response
                 mock_response = MagicMock()
                 mock_response.status_code = 200
                 mock_response.json.return_value = {
