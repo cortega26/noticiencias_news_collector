@@ -1,4 +1,6 @@
+import os
 import random
+import time
 from collections import Counter
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -6,30 +8,34 @@ import pytest
 from news_collector.collectors.html_collector import HtmlCollector
 
 # Benchmark Parameters
-CYCLES = 200
+DEFAULT_CYCLES = 80
 SUCCESS_THRESHOLD = 0.95
+DEFAULT_MAX_RUNTIME_SECONDS = 3.0
+
+
+def _build_response(status_code, text="", content=None, headers=None):
+    response = MagicMock()
+    response.status_code = status_code
+    response.headers = headers or {}
+    response.text = text
+    response.content = content if content is not None else text.encode("utf-8")
+    return response
 
 
 @pytest.mark.asyncio
+@pytest.mark.perf
 async def test_reliability_benchmark_200_cycles():
     """
     Quantitative Benchmark:
-    - Runs 200 cycles of fetching.
+    - Runs N deterministic cycles of fetching (default 80, opt-in 200+ via env var).
     - Mix of response types: 200 (Success), 304 (Success), 403, 404, 429, 500, Timeout.
     - Measures Success Rate.
     """
-    print(f"\n\n🚀 STARTING RELIABILITY BENCHMARK ({CYCLES} cycles)...")
-
-    # 1. Deterministic Randomness
-    rng = random.Random(42)  # Seed 42
-
-    # Traffic Mix Probability
-    # 200 OK: 70%
-    # 304 Not Modified: 10%
-    # 5xx Server Error: 10% (Transient, should retry and mostly succeed or fail) - We will simulate transient success on retry
-    # 429 Too Many Requests: 5% (Should Cooldown)
-    # 403 Forbidden: 3% (Fail Fast)
-    # 404 Not Found: 2% (Fail Fast)
+    cycles = int(os.getenv("NOTICIENCIAS_BENCH_CYCLES", str(DEFAULT_CYCLES)))
+    max_runtime_seconds = float(
+        os.getenv("NOTICIENCIAS_BENCH_MAX_SECONDS", str(DEFAULT_MAX_RUNTIME_SECONDS))
+    )
+    rng = random.Random(42)
 
     results = {
         "total": 0,
@@ -41,137 +47,122 @@ async def test_reliability_benchmark_200_cycles():
 
     collector = HtmlCollector()
     collector.db_manager = MagicMock()
-    # Mock DB state: Always active initially
     collector.db_manager.get_source_circuit_state.return_value = {"status": "ACTIVE"}
-    # Mock feed metadata empty
     collector.db_manager.get_source_feed_metadata.return_value = {}
+    collector.db_manager.update_source_feed_metadata = MagicMock()
+    collector.db_manager.update_source_circuit_state = MagicMock()
 
-    # We need to simulate the AsyncClient behavior per cycle based on the RNG
-
-    async def run_cycle(cycle_id):
+    call_plan = {}
+    scenario_by_cycle = {}
+    terminal_status_by_cycle = {}
+    planned_get_calls_by_cycle = Counter()
+    for cycle_id in range(cycles):
         case = rng.random()
-
-        # Setup Response Mock
-        mock_response = MagicMock()
-        mock_response.headers = {}
-        side_effect = None
-
-        expected_status = 200
-
         if case < 0.70:
-            # 200 OK
-            mock_response.status_code = 200
-            mock_response.text = "<html>Success</html>"
-            mock_response.content = b"<html>Success</html>"
+            scenario = "ok_200"
+            plan = [_build_response(200, text="<html>Success</html>")]
+            terminal_status = 200
         elif case < 0.80:
-            # 304 Not Modified
-            mock_response.status_code = 304
-            expected_status = 304
+            scenario = "not_modified_304"
+            plan = [_build_response(304)]
+            terminal_status = 304
         elif case < 0.90:
-            # 5xx -> eventual success or fail?
-            # Let's verify retry logic by having it fail twice then succeed
-            mock_500 = MagicMock(status_code=500)
-            mock_200 = MagicMock(
-                status_code=200, text="Recovered", content=b"Recovered", headers={}
-            )
-            side_effect = [mock_500, mock_200, mock_200]
-            # Note: side_effect consumed by client.get calls
-            # IMPORTANT: Set status_code to 200 for metrics because it should recover
-            mock_response.status_code = 200
+            scenario = "transient_5xx_recovered"
+            plan = [
+                _build_response(500),
+                _build_response(200, text="Recovered", content=b"Recovered"),
+            ]
+            terminal_status = 200
         elif case < 0.95:
-            # 429
-            mock_response.status_code = 429
-            mock_response.headers = {"Retry-After": "60"}
+            scenario = "rate_limited_429"
+            plan = [_build_response(429, headers={"Retry-After": "60"})]
+            terminal_status = 429
         elif case < 0.98:
-            # 403
-            mock_response.status_code = 403
+            scenario = "forbidden_403"
+            plan = [_build_response(403)]
+            terminal_status = 403
         else:
-            # 404
-            mock_response.status_code = 404
+            scenario = "not_found_404"
+            plan = [_build_response(404)]
+            terminal_status = 404
 
-        # Patch Client
-        with patch("httpx.AsyncClient") as mock_client_cls:
-            mock_instance = mock_client_cls.return_value
-            mock_instance.__aenter__.return_value = mock_instance
+        call_plan[cycle_id] = plan
+        scenario_by_cycle[cycle_id] = scenario
+        terminal_status_by_cycle[cycle_id] = terminal_status
+        planned_get_calls_by_cycle[cycle_id] = len(plan)
 
-            if side_effect:
-                mock_instance.get = AsyncMock(side_effect=side_effect)
+    expected_5xx_cycles = sum(
+        1 for scenario in scenario_by_cycle.values() if scenario == "transient_5xx_recovered"
+    )
+    expected_429_cycles = sum(
+        1 for scenario in scenario_by_cycle.values() if scenario == "rate_limited_429"
+    )
+    assert (
+        expected_5xx_cycles > 0
+    ), "Benchmark mix produced no 5xx retries; increase NOTICIENCIAS_BENCH_CYCLES."
+    assert (
+        expected_429_cycles > 0
+    ), "Benchmark mix produced no 429 cooldowns; increase NOTICIENCIAS_BENCH_CYCLES."
+
+    get_calls_by_cycle = Counter()
+
+    async def mock_get(url, *args, **kwargs):
+        del args, kwargs
+        cycle_id = int(str(url).rsplit("/", 1)[-1])
+        get_calls_by_cycle[cycle_id] += 1
+        responses = call_plan.get(cycle_id)
+        assert responses is not None, f"Unexpected URL requested by collector: {url}"
+        assert responses, f"No responses remaining for cycle_id={cycle_id}, url={url}"
+        return responses.pop(0)
+
+    with (
+        patch("httpx.AsyncClient") as mock_client_cls,
+        patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        patch("random.uniform", return_value=0.1),
+        patch.object(collector, "_respect_robots", return_value=(True, 0)),
+        patch.object(collector, "_enforce_domain_rate_limit", return_value=None),
+    ):
+        mock_instance = mock_client_cls.return_value
+        mock_instance.__aenter__.return_value = mock_instance
+        mock_instance.get = AsyncMock(side_effect=mock_get)
+
+        start = time.monotonic()
+        for cycle_id in range(cycles):
+            source_config = {
+                "url": f"http://bench.com/{cycle_id}",
+                "crawl_interval_seconds": 60,
+            }
+            stats = await collector.collect_from_source_async(
+                f"src_{cycle_id}", source_config
+            )
+            scenario = scenario_by_cycle[cycle_id]
+            expected_success = scenario in {
+                "ok_200",
+                "not_modified_304",
+                "transient_5xx_recovered",
+            }
+            assert (
+                stats["success"] is expected_success
+            ), f"Unexpected success state for cycle {cycle_id} ({scenario}): {stats}"
+
+            status_code = terminal_status_by_cycle[cycle_id]
+            results["total"] += 1
+            if stats["success"]:
+                results["success"] += 1
             else:
-                mock_instance.get = AsyncMock(return_value=mock_response)
+                if status_code == 429:
+                    results["cooldowns_triggered"] += 1
+                results["errors"][status_code] += 1
 
-            # Patch sleep to fail fast in tests
-            with patch("asyncio.sleep", new_callable=AsyncMock):
-                with patch("random.uniform", return_value=0.1):  # Fix jitter
-                    source_config = {
-                        "url": f"http://bench.com/{cycle_id}",
-                        "crawl_interval_seconds": 60,
-                    }
+        elapsed = time.monotonic() - start
 
-                    # Run
-                    # Mock robots check
-                    with patch.object(
-                        collector, "_respect_robots", return_value=(True, 0)
-                    ):
-                        stats = await collector.collect_from_source_async(
-                            f"src_{cycle_id}", source_config
-                        )
+    results["retry_loops"] = sum(
+        1
+        for cycle_id, scenario in scenario_by_cycle.items()
+        if scenario == "transient_5xx_recovered" and get_calls_by_cycle[cycle_id] > 1
+    )
 
-                    return stats, mock_response.status_code
-
-    # Run Benchmark
-    for i in range(CYCLES):
-        if i % 20 == 0:
-            print(f"   ... Cycle {i}/{CYCLES}")
-        stats, status_code = await run_cycle(i)
-
-        results["total"] += 1
-
-        if stats["success"]:
-            results["success"] += 1
-        else:
-            if status_code == 429:
-                results["cooldowns_triggered"] += 1
-            results["errors"][status_code] += 1
-
-    # Analysis
     success_rate = results["success"] / results["total"]
-
-    print("\n📊 Benchmark Results:")
-    print(f"   Total Cycles: {results['total']}")
-    print(f"   Successes: {results['success']} ({success_rate:.2%})")
-    print(f"   Cooldowns (429): {results['cooldowns_triggered']}")
-    print(f"   Errors Breakdown: {dict(results['errors'])}")
-
-    # Allow 429/403/404 to count as "Handled" reliability-wise?
-    # The user asked for "success rate". Usually 4xx is a "successful fetch but client error".
-    # BUT `collect_from_source_async` returns success=True for 304.
-    # It returns success=True for parsed articles (200).
-    # It returns success=False for 403, 404, 429, 500.
-
-    # "Soft Success" = Success OR (403/404/429 handled correctly).
-    # User said: "Output must compute: a) overall success rate... Define a hard pass threshold: >= 95% successful stable cycles"
-
-    # If the mix includes 5% 429 and 5% 403/404, we expect ~10% "failures" in strict terms.
-    # BUT reliability means "did the system crash or behave unexpectedly?".
-    # If 429 correctly triggers cooldown, that is a "Reliability Success" even if ingestion failed.
-
-    # Let's define "Stable Cycle" as:
-    # - Ingestion Success (200, 304, Recovered 5xx)
-    # - OR Graceful Rejection (403, 404, 429 with correct DB state update)
-
-    # For this synthetic benchmark, we count "Stable" as "stats['success'] OR handled error".
-    # Failures would be unhandled exceptions or crashes (which would fail the test).
-
-    # However, to be strict:
-    # 200/304/Recovered 5xx -> stats['success'] == True
-    # 403/404/429 -> stats['success'] == False (but expected)
-
-    # The metrics requested are "success rate", "success rate per error class".
-    # We will print them.
-
-    # But for the THRESHOLD >= 95%, we should probably exclude expected 4xx from the denominator or count them as stable.
-    # Let's count them as stable for the purpose of "Reliability".
-
     stable_count = (
         results["success"]
         + results["cooldowns_triggered"]
@@ -180,7 +171,28 @@ async def test_reliability_benchmark_200_cycles():
     )
     stability_rate = stable_count / results["total"]
 
-    print(f"   Stability Rate: {stability_rate:.2%}")
+    assert (
+        elapsed <= max_runtime_seconds
+    ), f"Benchmark runtime {elapsed:.3f}s exceeded {max_runtime_seconds:.3f}s for {cycles} cycles."
+    assert (
+        results["retry_loops"] == expected_5xx_cycles
+    ), "5xx retries were not executed for all transient failures."
+    assert (
+        mock_sleep.await_count == expected_5xx_cycles
+    ), "Backoff sleep should be awaited exactly once per transient 5xx cycle."
+    assert (
+        collector.db_manager.update_source_circuit_state.call_count
+        == expected_429_cycles
+    ), "Cooldown updates must match the number of 429 cycles."
+    for call in collector.db_manager.update_source_circuit_state.call_args_list:
+        assert call.kwargs.get("force_cooldown_until") is not None
+    for cycle_id, scenario in scenario_by_cycle.items():
+        expected_calls = planned_get_calls_by_cycle[cycle_id]
+        assert (
+            get_calls_by_cycle[cycle_id] == expected_calls
+        ), f"Unexpected number of HTTP calls for cycle {cycle_id} ({scenario})."
+    assert sum(get_calls_by_cycle.values()) == sum(planned_get_calls_by_cycle.values())
+    assert success_rate >= 0.80, f"Success rate unexpectedly low: {success_rate:.2%}"
 
     assert (
         stability_rate >= SUCCESS_THRESHOLD
