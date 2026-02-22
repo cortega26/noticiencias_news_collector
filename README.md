@@ -125,6 +125,13 @@ docker-compose up --build
 - **Operations Runbook**: [`docs/ops/RUNBOOK.md`](docs/ops/RUNBOOK.md)
 - **Configuration Schema**: [`docs/config_fields.md`](docs/config_fields.md)
 
+After changing config schema fields, run:
+
+```bash
+make config-docs
+make config-docs-check
+```
+
 ## Quality Gate (Editorial Regression Protection)
 
 To prevent silent degradations in editorial quality, we maintain a set of "Golden Cases" that define structural and semantic invariants.

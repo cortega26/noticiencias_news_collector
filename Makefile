@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -277,6 +277,18 @@ config-dump: bootstrap ## Print the built-in default configuration
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
+docs-config-fields: config-docs ## Alias for regenerating docs/config_fields.md
+
+config-docs-check: bootstrap ## Ensure docs/config_fields.md matches schema output
+	@TMP_FILE="$$(mktemp)"; \
+	$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > "$$TMP_FILE"; \
+	if ! diff -u docs/config_fields.md "$$TMP_FILE" >/dev/null; then \
+		echo "docs/config_fields.md is out of date. Run 'make config-docs' and commit the result."; \
+		rm -f "$$TMP_FILE"; \
+		exit 1; \
+	fi; \
+	rm -f "$$TMP_FILE"
+
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) .pytest_cache .mypy_cache
 
@@ -304,4 +316,3 @@ check-deprecated: ## Check for deprecated Streamlit arguments
 		echo "Error: usage of deprecated 'use_container_width' found in apps/refinery."; \
 		exit 1; \
 	fi
-
