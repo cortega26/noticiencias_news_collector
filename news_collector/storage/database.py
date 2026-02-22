@@ -32,12 +32,13 @@ Failure modes:
 import contextlib
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
 
 from sqlalchemy import create_engine, desc
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only, sessionmaker
+from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.pool import QueuePool
 
 from news_collector.utils.pydantic_compat import get_pydantic_module
@@ -519,7 +520,9 @@ class DatabaseManager:
         with self.get_session() as session:
             try:
                 # Verificar si ya existe por URL
-                existing = session.query(Article).filter_by(url=payload["url"]).first()
+                existing: Article | None = session.query(Article).filter_by(
+                    url=payload["url"]
+                ).first()
                 if existing:
                     logger.warning(
                         f"🔍 [DEBUG] Found existing article by URL: {payload['url']} (ID: {existing.id})"
@@ -539,13 +542,12 @@ class DatabaseManager:
                             logger.warning(
                                 f"✨ [HEALING] Upgrading article {existing.id} content ({old_len} -> {new_len})"
                             )
-                            existing.content = new_content
-                            existing.summary = payload.get(
-                                "summary"
-                            )  # Update summary too if needed
+                            setattr(existing, "content", new_content)
+                            # Update summary too if needed
+                            setattr(existing, "summary", payload.get("summary"))
                             session.add(existing)
                             session.flush()
-                            return existing  # type: ignore
+                            return existing
                         else:
                             logger.warning(
                                 f"🚫 [DEBUG] Old content sufficient ({old_len} >= 1000)"
@@ -648,7 +650,7 @@ class DatabaseManager:
 
     def save_articles_bulk(  # noqa: C901
         self,
-        articles_data: List[Union[Dict[str, Any], CollectorArticleModel]],
+        articles_data: Sequence[Union[Dict[str, Any], CollectorArticleModel]],
         batch_size: int = 50,
     ) -> int:
         """
@@ -841,6 +843,18 @@ class DatabaseManager:
 
         candidates: List[Article] = []
         remaining = self.simhash_candidate_window
+        article_id_attr = cast(QueryableAttribute[Any], Article.id)
+        article_simhash_attr = cast(QueryableAttribute[Any], Article.simhash)
+        article_cluster_id_attr = cast(QueryableAttribute[Any], Article.cluster_id)
+        article_published_date_attr = cast(
+            QueryableAttribute[Any], Article.published_date
+        )
+        article_dup_conf_attr = cast(
+            QueryableAttribute[Any], Article.duplication_confidence
+        )
+        article_collected_date_attr = cast(
+            QueryableAttribute[Any], Article.collected_date
+        )
 
         for pref in sorted(
             dict.fromkeys(candidate_prefixes), key=lambda p: abs(p - prefix)
@@ -849,12 +863,12 @@ class DatabaseManager:
                 session.query(Article)
                 .options(
                     load_only(
-                        Article.id,  # type: ignore
-                        Article.simhash,  # type: ignore
-                        Article.cluster_id,  # type: ignore
-                        Article.published_date,  # type: ignore
-                        Article.duplication_confidence,  # type: ignore
-                        Article.collected_date,  # type: ignore
+                        article_id_attr,
+                        article_simhash_attr,
+                        article_cluster_id_attr,
+                        article_published_date_attr,
+                        article_dup_conf_attr,
+                        article_collected_date_attr,
                     )
                 )
                 .filter(Article.simhash_prefix == pref)
@@ -873,12 +887,12 @@ class DatabaseManager:
                 session.query(Article)
                 .options(
                     load_only(
-                        Article.id,  # type: ignore
-                        Article.simhash,  # type: ignore
-                        Article.cluster_id,  # type: ignore
-                        Article.published_date,  # type: ignore
-                        Article.duplication_confidence,  # type: ignore
-                        Article.collected_date,  # type: ignore
+                        article_id_attr,
+                        article_simhash_attr,
+                        article_cluster_id_attr,
+                        article_published_date_attr,
+                        article_dup_conf_attr,
+                        article_collected_date_attr,
                     )
                 )
                 .filter(Article.simhash.isnot(None))
@@ -898,8 +912,7 @@ class DatabaseManager:
 
         hits: List[Tuple[Article, int]] = []
         for candidate in candidates:
-            # candidate.simhash is expected to be int
-            c_simhash = candidate.simhash  # type: ignore
+            c_simhash = getattr(candidate, "simhash", None)
             candidate_simhash = self._simhash_from_storage(
                 int(c_simhash) if c_simhash is not None else None
             )
@@ -915,9 +928,10 @@ class DatabaseManager:
         def sort_key(item: Tuple[Article, int]):
             candidate, distance = item
             time_delta = self._time_distance_seconds(
-                published_date, candidate.published_date  # type: ignore
+                published_date, getattr(candidate, "published_date", None)
             )
-            return (distance, time_delta, -int(candidate.id))  # type: ignore
+            candidate_id = getattr(candidate, "id", 0)
+            return (distance, time_delta, -int(candidate_id))
 
         hits.sort(key=sort_key)
         best_candidate, best_distance = hits[0]
@@ -925,9 +939,16 @@ class DatabaseManager:
         target_cluster = best_candidate.cluster_id or generate_cluster_id()
         if best_candidate.cluster_id is None:
             best_candidate.cluster_id = target_cluster
-        best_candidate.duplication_confidence = max(
-            float(best_candidate.duplication_confidence or 0.0),  # type: ignore
+        current_confidence = float(
+            getattr(best_candidate, "duplication_confidence", 0.0) or 0.0
+        )
+        setattr(
+            best_candidate,
+            "duplication_confidence",
+            max(
+            current_confidence,
             float(duplication_confidence(best_distance)),
+            ),
         )
 
         other_clusters = {
@@ -956,9 +977,18 @@ class DatabaseManager:
     def _revalidate_cluster(self, session: Session, cluster_id: Optional[str]) -> None:
         if not cluster_id:
             return
+        article_id_attr = cast(QueryableAttribute[Any], Article.id)
+        article_simhash_attr = cast(QueryableAttribute[Any], Article.simhash)
+        article_cluster_id_attr = cast(QueryableAttribute[Any], Article.cluster_id)
         articles = (
             session.query(Article)
-            .options(load_only(Article.id, Article.simhash, Article.cluster_id))  # type: ignore
+            .options(
+                load_only(
+                    article_id_attr,
+                    article_simhash_attr,
+                    article_cluster_id_attr,
+                )
+            )
             .filter(Article.cluster_id == cluster_id)
             .all()
         )
@@ -967,20 +997,24 @@ class DatabaseManager:
         anchor = next((a for a in articles if a.simhash is not None), None)
         if anchor is None or anchor.simhash is None:
             return
-        anchor_simhash = self._simhash_from_storage(int(anchor.simhash) if anchor.simhash is not None else None)  # type: ignore
+        anchor_simhash = self._simhash_from_storage(
+            int(anchor.simhash) if anchor.simhash is not None else None
+        )
         if anchor_simhash is None:
             return
         for article in articles:
             if article.id == anchor.id or article.simhash is None:
                 continue
-            article_simhash = self._simhash_from_storage(int(article.simhash) if article.simhash is not None else None)  # type: ignore
+            article_simhash = self._simhash_from_storage(
+                int(article.simhash) if article.simhash is not None else None
+            )
             if article_simhash is None:
                 continue
             distance = hamming_distance(article_simhash, anchor_simhash)
             if distance > self.simhash_threshold * 2:
                 new_cluster = generate_cluster_id()
-                article.cluster_id = new_cluster  # type: ignore
-                article.duplication_confidence = 0.0  # type: ignore
+                setattr(article, "cluster_id", new_cluster)
+                setattr(article, "duplication_confidence", 0.0)
 
     def get_articles_by_score(
         self,
@@ -1167,9 +1201,13 @@ class DatabaseManager:
     def get_source_feed_metadata(self, source_id: str) -> Dict[str, Optional[str]]:
         """Devuelve los encabezados HTTP cacheados para una fuente."""
         with self.get_session() as session:
+            source_etag_attr = cast(QueryableAttribute[Any], Source.feed_etag)
+            source_last_modified_attr = cast(
+                QueryableAttribute[Any], Source.feed_last_modified
+            )
             source = (
                 session.query(Source)
-                .options(load_only(Source.feed_etag, Source.feed_last_modified))  # type: ignore
+                .options(load_only(source_etag_attr, source_last_modified_attr))
                 .filter_by(id=source_id)
                 .first()
             )
@@ -1324,7 +1362,7 @@ class DatabaseManager:
                 logger.info(
                     f"🚨 CACHÉ VACIADA: {deleted_articles} artículos y {deleted_logs} logs eliminados."
                 )
-                return int(deleted_articles)  # type: ignore
+                return int(deleted_articles)
             except Exception as e:
                 logger.error(f"Error vaciando caché: {e}")
                 raise

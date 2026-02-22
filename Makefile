@@ -65,7 +65,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests semgrep
+	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
 	@touch $(BOOTSTRAP_STAMP)
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock

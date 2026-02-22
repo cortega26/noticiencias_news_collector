@@ -358,7 +358,9 @@ class EnrichmentStrategyRouter:
             "strategy_used": "none",
         }
 
-    def _execute_http(self, url: str, source_id: str = None) -> Dict[str, Any]:
+    def _execute_http(
+        self, url: str, source_id: str | None = None
+    ) -> Dict[str, Any]:
         """Helper to run HTTP enrichment and validate length."""
         start = time.time()
         res = self.http.enrich(url)

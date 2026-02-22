@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
@@ -87,12 +88,18 @@ def score_distribution(session: Session, buckets: int = 10) -> Dict[str, int]:
     return distribution
 
 
-def daily_stats(session: Session, date: datetime | None = None) -> Dict[str, Any]:
+def daily_stats(
+    session: Session, date: datetime | date_type | None = None
+) -> Dict[str, Any]:
     """Return collection stats for a single day."""
-    if not date:
-        date = datetime.now(timezone.utc).date()
+    if date is None:
+        day = datetime.now(timezone.utc).date()
+    elif isinstance(date, datetime):
+        day = date.date()
+    else:
+        day = date
 
-    start_date = datetime.combine(date, datetime.min.time()).replace(
+    start_date = datetime.combine(day, datetime.min.time()).replace(
         tzinfo=timezone.utc
     )
     end_date = start_date + timedelta(days=1)
@@ -120,19 +127,25 @@ def daily_stats(session: Session, date: datetime | None = None) -> Dict[str, Any
         .scalar()
     )
 
-    category_distribution = dict(
+    category_rows = (
         session.query(Article.category, func.count(Article.id))
         .filter(Article.collected_date >= start_date)
         .filter(Article.collected_date < end_date)
         .group_by(Article.category)
         .all()
     )
+    category_distribution: Dict[str, int] = {}
+    for category, count in category_rows:
+        category_distribution[str(category or "unknown")] = int(count)
+
+    collected_count = int(articles_collected or 0)
+    processed_count = int(articles_processed or 0)
 
     return {
-        "date": date.isoformat(),
-        "articles_collected": articles_collected or 0,
-        "articles_processed": articles_processed or 0,
-        "processing_rate": (articles_processed / max(articles_collected, 1)) * 100,
+        "date": day.isoformat(),
+        "articles_collected": collected_count,
+        "articles_processed": processed_count,
+        "processing_rate": (processed_count / max(collected_count, 1)) * 100,
         "average_score": round(avg_score or 0.0, 3),
         "category_distribution": category_distribution,
     }

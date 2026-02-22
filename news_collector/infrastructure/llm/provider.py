@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, Generator, Optional, Union, cast
+from typing import Any, Dict, Generator, Optional, Union
 
 import httpx
 import requests
@@ -240,6 +240,7 @@ class OllamaProvider:
                         f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}"
                     )
                     raise
+        raise RuntimeError("Retry loop exited without producing a response")
 
     def _stream_generator(
         self, response: requests.Response
@@ -260,7 +261,10 @@ class OllamaProvider:
         """Robust JSON extraction from mixed text."""
         text = text.strip()
         try:
-            return cast(Dict[str, Any], json.loads(text))
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                return {str(key): value for key, value in parsed.items()}
+            return {}
         except json.JSONDecodeError:
             pass
 
@@ -268,7 +272,10 @@ class OllamaProvider:
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             try:
-                return cast(Dict[str, Any], json.loads(match.group(0)))
+                parsed = json.loads(match.group(0))
+                if isinstance(parsed, dict):
+                    return {str(key): value for key, value in parsed.items()}
+                return {}
             except json.JSONDecodeError:
                 pass
 
@@ -283,7 +290,10 @@ class OllamaProvider:
                     nesting -= 1
                 if nesting == 0:
                     try:
-                        return cast(Dict[str, Any], json.loads(text[start_idx : i + 1]))
+                        parsed = json.loads(text[start_idx : i + 1])
+                        if isinstance(parsed, dict):
+                            return {str(key): value for key, value in parsed.items()}
+                        return {}
                     except (json.JSONDecodeError, ValueError):
                         pass
 

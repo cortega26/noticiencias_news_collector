@@ -6,18 +6,18 @@ import contextlib
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
+
+PlaywrightTimeoutError: type[Exception]
 
 try:
-    from playwright.sync_api import (
-        TimeoutError as PlaywrightTimeoutError,
-    )
-    from playwright.sync_api import (
-        sync_playwright,
-    )
+    from playwright.sync_api import TimeoutError as _PlaywrightTimeoutError
+    from playwright.sync_api import sync_playwright as _sync_playwright
+    PlaywrightTimeoutError = _PlaywrightTimeoutError
+    sync_playwright: Any = _sync_playwright
 except ImportError:
     sync_playwright = None  # Handle missing dependency gracefully
-    PlaywrightTimeoutError = Exception
+    PlaywrightTimeoutError = TimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class HeadlessEnricher:
             else logging.getLogger(__name__)
         )
 
-        if self.enabled and not sync_playwright:
+        if self.enabled and sync_playwright is None:
             self.logger.error("Headless enabled but playwright not installed.")
             self.enabled = False
 
@@ -76,13 +76,15 @@ class HeadlessEnricher:
         self,
         url: str,
         source_config: Dict[str, Any],
-        proxy_settings: Optional[Dict[str, str]] = None,
+        proxy_settings: Optional[Mapping[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Internal method to execute a single enrichment attempt.
         """
         # Per-source timeout
         max_duration = source_config.get("headless_max_seconds", 30)
+        if sync_playwright is None:
+            raise RuntimeError("playwright is not installed")
 
         start_time = time.time()
         error = None
@@ -96,12 +98,14 @@ class HeadlessEnricher:
                 # Launch browser
                 # Note: Playwright proxy is set at browser or context level
                 # For sync_playwright, we usually launch a browser instance
-                launch_options = {"headless": True}
+                launch_options: dict[str, Any] = {"headless": True}
                 if proxy_settings:
                     # Requests dict is {'http': url, 'https': url}
                     # Playwright expects {'server': url, 'username': ..., 'password': ...}
                     # We assume the URL in proxy_settings['http'] is the server URL
-                    launch_options["proxy"] = {"server": proxy_settings["http"]}
+                    proxy_url = proxy_settings.get("http")
+                    if proxy_url:
+                        launch_options["proxy"] = {"server": proxy_url}
 
                 browser = p.chromium.launch(**launch_options)
 
@@ -283,7 +287,7 @@ class HeadlessEnricher:
                 "duration": duration_attempt_1,
             }
 
-    def _perform_actions(self, page, allowed_actions: list):
+    def _perform_actions(self, page: Any, allowed_actions: list[str]) -> None:
         """Executes limited user interactions."""
         # TODO: Implement scrolling, consent clicking based on allowed_actions
         # For now, minimal implementation

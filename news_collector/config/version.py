@@ -14,6 +14,9 @@ class VersionMetadata:
     """Immutable container for semantic version information."""
 
     __slots__ = ("major", "minor", "patch")
+    major: int
+    minor: int
+    patch: int
 
     def __init__(self, major: int, minor: int, patch: int) -> None:
         for attribute_name, value in (
@@ -44,9 +47,19 @@ class VersionMetadata:
 
 _VERSION_FILE = Path(__file__).resolve().parent / "VERSION"
 PROJECT_VERSION: Final[str] = _VERSION_FILE.read_text(encoding="utf-8").strip()
-_VERSION_PARTS: Tuple[int, int, int] = tuple(
-    int(part) for part in PROJECT_VERSION.split(".")
-)
+
+
+def _parse_version_parts(version_text: str) -> Tuple[int, int, int]:
+    parts = tuple(int(part) for part in version_text.split("."))
+    if len(parts) != 3:
+        raise ValueError(
+            f"Expected semantic version with 3 numeric parts, got {version_text!r}"
+        )
+    major, minor, patch = parts
+    return major, minor, patch
+
+
+_VERSION_PARTS: Tuple[int, int, int] = _parse_version_parts(PROJECT_VERSION)
 VERSION_INFO: Final[VersionMetadata] = VersionMetadata(*_VERSION_PARTS)
 __version__: Final[str] = PROJECT_VERSION
 

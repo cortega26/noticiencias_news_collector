@@ -5,19 +5,22 @@ from __future__ import annotations
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Iterable, Mapping, MutableMapping, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, MutableMapping, Optional, Sequence
 
 from news_collector.utils.dedupe import sha256_hex
 from news_collector.utils.text_cleaner import normalize_text
 
 try:  # pragma: no cover - optional dependency
     import spacy
+except ImportError:  # pragma: no cover - spaCy is optional at runtime
+    spacy = None
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only import
     from spacy.language import Language
     from spacy.pipeline import EntityRuler
-except ImportError:  # pragma: no cover - spaCy is optional at runtime
-    spacy = None  # type: ignore[assignment]
-    Language = None  # type: ignore[assignment]
-    EntityRuler = None  # type: ignore[assignment]
+else:
+    Language = Any
+    EntityRuler = Any
 
 
 @dataclass(frozen=True)
@@ -89,9 +92,15 @@ class ConfigurableNLPStack:
         self._supported_languages = {str(language).lower() for language in languages}
         self._supported_languages.add(default_language.lower())
         self._default_language = default_language.lower()
-        self._analysis_cache = LRUCache(
-            maxsize=int(config.get("analysis_cache_size", 512))
-        )
+        cache_size_raw = config.get("analysis_cache_size", 512)
+        if isinstance(cache_size_raw, (int, float, str, bytes, bytearray)):
+            try:
+                cache_size = int(cache_size_raw)
+            except (TypeError, ValueError):
+                cache_size = 512
+        else:
+            cache_size = 512
+        self._analysis_cache = LRUCache(maxsize=cache_size)
         self._nlp_models: MutableMapping[str, Language] = {}
 
     @property
@@ -276,8 +285,8 @@ class ConfigurableNLPStack:
         lexicon_cfg = sentiment_cfg.get("lexicon", {})
         if not isinstance(lexicon_cfg, Mapping):
             return str(sentiment_cfg.get("default", "neutral"))
-        positives = set()
-        negatives = set()
+        positives: set[str] = set()
+        negatives: set[str] = set()
         shared_positive = lexicon_cfg.get("shared_positive", [])
         if isinstance(shared_positive, Iterable):
             positives.update(str(word).lower() for word in shared_positive)
@@ -293,10 +302,10 @@ class ConfigurableNLPStack:
             if isinstance(lang_neg, Iterable):
                 negatives.update(str(word).lower() for word in lang_neg)
         pos_hits = sum(
-            1 for word in positives if self._keyword_present(text_lower, word)
+            self._keyword_present(text_lower, word) for word in positives
         )
         neg_hits = sum(
-            1 for word in negatives if self._keyword_present(text_lower, word)
+            self._keyword_present(text_lower, word) for word in negatives
         )
         if pos_hits > neg_hits:
             return "positive"

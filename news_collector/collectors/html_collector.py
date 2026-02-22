@@ -193,7 +193,10 @@ class HtmlCollector(BaseCollector):
         ld_scripts = soup.find_all("script", type="application/ld+json")
         for script in ld_scripts:
             try:
-                data = json.loads(script.string)
+                script_payload = script.string
+                if not script_payload:
+                    continue
+                data = json.loads(script_payload)
                 if "@type" in data and data["@type"] in [
                     "ItemList",
                     "Blog",
@@ -344,7 +347,7 @@ class HtmlCollector(BaseCollector):
         Fetches HTML content using conditional GET (ETag/Last-Modified).
         Returns (content, status_code). Content is None if 304 or error.
         """
-        cached_headers = {
+        cached_headers: Dict[str, Optional[str]] = {
             "etag": None,
             "last_modified": None,
             "content_hash": None,
@@ -468,3 +471,4 @@ class HtmlCollector(BaseCollector):
                 details={"error": str(e)},
             )
             return None, None
+        return None, None
