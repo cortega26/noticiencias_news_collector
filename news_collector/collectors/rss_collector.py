@@ -17,7 +17,7 @@ import hashlib
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 from urllib.parse import urlparse
 
 import feedparser
@@ -1094,10 +1094,12 @@ class RSSCollector(BaseCollector):
         return {
             **self.session_stats,
             "session_duration_minutes": session_duration.total_seconds() / 60,
-            "articles_per_minute": articles_found / max(session_duration.total_seconds() / 60, 1),
+            "articles_per_minute": articles_found
+            / max(session_duration.total_seconds() / 60, 1),
             "success_rate": (articles_saved / max(articles_found, 1)) * 100,
             "end_time": current_time.isoformat(),
         }
+
     class _SessionStats(TypedDict):
         sources_checked: int
         articles_found: int

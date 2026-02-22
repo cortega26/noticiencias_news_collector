@@ -520,9 +520,9 @@ class DatabaseManager:
         with self.get_session() as session:
             try:
                 # Verificar si ya existe por URL
-                existing: Article | None = session.query(Article).filter_by(
-                    url=payload["url"]
-                ).first()
+                existing: Article | None = (
+                    session.query(Article).filter_by(url=payload["url"]).first()
+                )
                 if existing:
                     logger.warning(
                         f"🔍 [DEBUG] Found existing article by URL: {payload['url']} (ID: {existing.id})"
@@ -542,9 +542,9 @@ class DatabaseManager:
                             logger.warning(
                                 f"✨ [HEALING] Upgrading article {existing.id} content ({old_len} -> {new_len})"
                             )
-                            setattr(existing, "content", new_content)
+                            existing.content = new_content
                             # Update summary too if needed
-                            setattr(existing, "summary", payload.get("summary"))
+                            existing.summary = payload.get("summary")
                             session.add(existing)
                             session.flush()
                             return existing
@@ -942,13 +942,8 @@ class DatabaseManager:
         current_confidence = float(
             getattr(best_candidate, "duplication_confidence", 0.0) or 0.0
         )
-        setattr(
-            best_candidate,
-            "duplication_confidence",
-            max(
-            current_confidence,
-            float(duplication_confidence(best_distance)),
-            ),
+        best_candidate.duplication_confidence = max(
+            current_confidence, float(duplication_confidence(best_distance))
         )
 
         other_clusters = {
@@ -1013,8 +1008,8 @@ class DatabaseManager:
             distance = hamming_distance(article_simhash, anchor_simhash)
             if distance > self.simhash_threshold * 2:
                 new_cluster = generate_cluster_id()
-                setattr(article, "cluster_id", new_cluster)
-                setattr(article, "duplication_confidence", 0.0)
+                article.cluster_id = new_cluster
+                article.duplication_confidence = 0.0
 
     def get_articles_by_score(
         self,

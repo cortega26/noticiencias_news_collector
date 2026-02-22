@@ -599,7 +599,9 @@ class BasicScorer(AsyncScorer):
             "treatment",
         ]
 
-        technical_count = sum(1 for term in technical_terms if term in text_value.lower())
+        technical_count = sum(
+            1 for term in technical_terms if term in text_value.lower()
+        )
         score += min(0.2, technical_count * 0.05)  # Máximo 0.2 por términos técnicos
 
         return max(0.0, min(1.0, score))
