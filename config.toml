@@ -5,16 +5,14 @@ timezone = "UTC"
 editorial_mode = "standard"
 
 [github]
-source_repo_url = ""
-target_repo_url = ""
+source_repo_url = "https://github.com/cortega26/noticiencias_news_collector"
+target_repo_url = "https://github.com/cortega26/noticiencias"
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
 model = "llama3.3:latest"
 timeout = 300
 headlines_model = "llama3.2:latest"
-translator_model = "qwen2.5:14b"
-editor_model = "qwen2.5:14b"
 
 [editorial_auditor]
 enabled = true

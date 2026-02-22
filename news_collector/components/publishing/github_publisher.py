@@ -22,10 +22,10 @@ Invariants:
 Failure modes:
 - Raises RuntimeError if a GitHub token is missing when required.
 - Raises exceptions if GitHub Pull Request creation API calls fail with non-201 HTTP status.
-- Logs warnings and proceeds if merging origin/main fails during branch initialization.
 - Logs warnings if there are no untracked or modified files to commit.
 """
 
+import contextlib
 import os
 import shutil
 import tempfile
@@ -37,6 +37,8 @@ import requests
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("components.publishing.github_publisher")
+DEFAULT_BASE_BRANCH = "main"
+MAX_NON_FAST_FORWARD_RETRIES = 1
 
 
 class GitHubPublisher:
@@ -45,8 +47,9 @@ class GitHubPublisher:
     Formerly 'GitHandler' in the refinery app.
     """
 
-    def __init__(self, github_token: str):
+    def __init__(self, github_token: str, base_branch: str = DEFAULT_BASE_BRANCH):
         self.github_token = github_token
+        self.base_branch = base_branch or DEFAULT_BASE_BRANCH
         self._askpass_path: Path | None = None
         self.headers = {
             "Authorization": f"token {self.github_token}",
@@ -111,6 +114,113 @@ class GitHubPublisher:
         env["GIT_ASKPASS_REQUIRE"] = "force"
         return env
 
+    @staticmethod
+    def _remote_branch_exists(repo: git.Repo, branch_name: str) -> bool:
+        remote_ref = f"origin/{branch_name}"
+        return any(ref.name == remote_ref for ref in repo.refs)
+
+    @staticmethod
+    def _is_non_fast_forward(error: git.GitCommandError) -> bool:
+        stderr = (error.stderr or "").lower()
+        stdout = (error.stdout or "").lower()
+        combined = f"{stderr}\n{stdout}"
+        if "non-fast-forward" in combined:
+            return True
+        if "tip of your current branch is behind" in combined:
+            return True
+        if "updates were rejected" in combined and "failed to push some refs" in combined:
+            return True
+        return "fetch first" in combined
+
+    @staticmethod
+    def _get_conflict_files(repo: git.Repo) -> list[str]:
+        try:
+            conflicted = repo.git.diff("--name-only", "--diff-filter=U")
+        except git.GitCommandError:
+            return []
+        return [line.strip() for line in conflicted.splitlines() if line.strip()]
+
+    @staticmethod
+    def _get_git_state_markers(repo: git.Repo) -> list[str]:
+        markers: list[str] = []
+        try:
+            git_dir = Path(str(repo.git_dir))
+        except Exception:  # noqa: BLE001
+            return markers
+
+        marker_names = (
+            "REBASE_HEAD",
+            "rebase-apply",
+            "rebase-merge",
+            "MERGE_HEAD",
+            "CHERRY_PICK_HEAD",
+            "REVERT_HEAD",
+        )
+        for marker in marker_names:
+            if (git_dir / marker).exists():
+                markers.append(marker)
+        return markers
+
+    def _ensure_clean_exit_state(
+        self,
+        repo: git.Repo,
+        branch_name: str,
+        env: dict[str, str] | None,
+    ) -> None:
+        for abort_command in ("rebase", "merge", "cherry_pick", "revert"):
+            with contextlib.suppress(git.GitCommandError):
+                getattr(repo.git, abort_command)("--abort", env=env or None)
+
+        active_branch = None
+        try:
+            active_branch = repo.active_branch.name
+        except Exception:  # noqa: BLE001
+            active_branch = None
+
+        if active_branch != branch_name:
+            try:
+                repo.git.checkout(branch_name, env=env or None)
+            except git.GitCommandError:
+                # Deterministic recovery fallback when target branch is unavailable.
+                repo.git.checkout(self.base_branch, env=env or None)
+
+        markers = self._get_git_state_markers(repo)
+        if markers:
+            marker_list = ", ".join(markers)
+            raise RuntimeError(
+                f"Repository still has in-progress git state after cleanup: {marker_list}"
+            )
+
+        if repo.is_dirty(untracked_files=True):
+            raise RuntimeError(
+                "Repository working tree is dirty after cleanup."
+            )
+
+    @contextlib.contextmanager
+    def _cleanup_on_failure(
+        self,
+        *,
+        repo: git.Repo,
+        branch_name: str,
+        env: dict[str, str] | None,
+        operation: str,
+    ):
+        failure: Exception | None = None
+        try:
+            yield
+        except Exception as exc:  # noqa: BLE001
+            failure = exc
+            raise
+        finally:
+            if failure is not None:
+                try:
+                    self._ensure_clean_exit_state(repo, branch_name, env)
+                except Exception as cleanup_error:  # noqa: BLE001
+                    raise RuntimeError(
+                        f"{operation} failed for branch {branch_name}. "
+                        f"Cleanup verification failed: {cleanup_error}"
+                    ) from failure
+
     def _cleanup_dir(self, path: Path):
         """Removes a directory if it exists."""
         if path.exists():
@@ -137,6 +247,7 @@ class GitHubPublisher:
         repo: git.Repo,
         branch_prefix: str = "news/article",
         explicit_name: str | None = None,
+        base_branch: str | None = None,
     ) -> str:
         """
         Creates a new branch.
@@ -156,45 +267,107 @@ class GitHubPublisher:
         else:
             branch_name = f"{branch_prefix}-{uuid.uuid4().hex[:8]}"
 
-        # Check if branch exists to avoid error?
-        # git.Repo.create_head will raise if it exists.
-        # For idempotency, we should check.
-        if branch_name in repo.heads:
-            logger.info(f"Branch {branch_name} already exists. Checking it out.")
-            new_branch = repo.heads[branch_name]
-            new_branch.checkout()
+        env = self._auth_env()
+        with self._cleanup_on_failure(
+            repo=repo,
+            branch_name=branch_name,
+            env=env,
+            operation="Branch setup",
+        ):
+            repo.git.fetch("origin", "--prune", env=env or None)
 
-            # AUTO-UPDATE: Merge origin/main to get latest CI/App fixes
-            try:
+            remote_ref = f"origin/{branch_name}"
+            if self._remote_branch_exists(repo, branch_name):
                 logger.info(
-                    f"Merging origin/main into {branch_name} to ensure freshness..."
+                    f"Remote branch {remote_ref} exists. Checking out local branch from remote tip."
                 )
-                repo.git.pull("origin", "main", "--no-rebase")
-                logger.info("Successfully merged origin/main.")
-            except Exception as e:
-                logger.warning(f"Failed to merge origin/main into {branch_name}: {e}")
-                # We don't fail hard here, as the user might resolve conflicts manually or just push force later
-                # But it's better to warn.
-        else:
-            new_branch = repo.create_head(branch_name)
-            new_branch.checkout()
+                repo.git.checkout("-B", branch_name, remote_ref, env=env or None)
+                repo.git.rebase(remote_ref, env=env or None)
+            else:
+                selected_base = (base_branch or self.base_branch).strip() or self.base_branch
+                deterministic_base_ref = f"origin/{selected_base}"
+                if not any(ref.name == deterministic_base_ref for ref in repo.refs):
+                    raise RuntimeError(
+                        f"Deterministic base ref {deterministic_base_ref} not found. "
+                        "Refusing to reuse potential stale local branch state."
+                    )
+                logger.info(
+                    f"Remote branch {remote_ref} does not exist. Resetting {branch_name} "
+                    f"to deterministic base {deterministic_base_ref}."
+                )
+                # Deterministic invariant: when origin/<branch> is absent, we always
+                # reset/create the local branch from the deterministic base ref.
+                repo.git.checkout(
+                    "-B", branch_name, deterministic_base_ref, env=env or None
+                )
 
         logger.info(f"Checked out branch: {branch_name}")
         return branch_name
 
     def commit_and_push(self, repo: git.Repo, message: str, branch_name: str):
         """Commits all changes and pushes to the remote."""
-        if not repo.is_dirty(untracked_files=True):
-            logger.warning("No changes to commit.")
-            return
-
-        repo.git.add(A=True)
-        repo.index.commit(message)
-        logger.info(f"Committed changes: {message}")
-
         env = self._auth_env()
-        repo.git.push("origin", branch_name, env=env or None)
-        logger.info(f"Pushed branch {branch_name} to origin.")
+        remote_ref = f"origin/{branch_name}"
+        retry_attempts = 0
+
+        with self._cleanup_on_failure(
+            repo=repo,
+            branch_name=branch_name,
+            env=env,
+            operation="Commit/push",
+        ):
+            if not repo.is_dirty(untracked_files=True):
+                logger.warning("No changes to commit.")
+                return
+
+            repo.git.add(A=True)
+            repo.index.commit(message)
+            logger.info(f"Committed changes: {message}")
+
+            while True:
+                try:
+                    repo.git.push("origin", branch_name, env=env or None)
+                    if retry_attempts == 0:
+                        logger.info(f"Pushed branch {branch_name} to origin.")
+                    else:
+                        logger.info(
+                            f"Pushed branch {branch_name} to origin after rebase retry."
+                        )
+                    return
+                except git.GitCommandError as push_error:
+                    if not self._is_non_fast_forward(push_error):
+                        raise RuntimeError(
+                            f"Push failed for branch {branch_name}. "
+                            "No force push was attempted."
+                        ) from push_error
+
+                    if retry_attempts >= MAX_NON_FAST_FORWARD_RETRIES:
+                        raise RuntimeError(
+                            f"Push failed for branch {branch_name}: remote advanced again "
+                            "during retry. No force push was attempted."
+                        ) from push_error
+
+                    retry_attempts += 1
+                    logger.warning(
+                        f"Push rejected for {branch_name} (non-fast-forward). "
+                        "Retrying once with fetch + rebase; no force push will be used."
+                    )
+
+                    try:
+                        repo.git.fetch("origin", "--prune", env=env or None)
+                        # Remote history is never rewritten: we only rebase local commits
+                        # onto origin/<branch> and retry push exactly once.
+                        repo.git.rebase(remote_ref, env=env or None)
+                    except git.GitCommandError as rebase_error:
+                        conflict_files = self._get_conflict_files(repo)
+                        conflict_list = (
+                            ", ".join(conflict_files) if conflict_files else "(unknown)"
+                        )
+                        raise RuntimeError(
+                            f"Push failed for branch {branch_name}: remote branch advanced "
+                            f"and automatic rebase conflicted. Conflicting files: {conflict_list}. "
+                            "No force push was attempted."
+                        ) from rebase_error
 
     def create_pull_request(
         self,
@@ -202,7 +375,7 @@ class GitHubPublisher:
         branch_name: str,
         title: str,
         body: str,
-        base_branch: str = "main",
+        base_branch: str | None = None,
     ) -> str:
         """Creates a Pull Request via GitHub API."""
         # Extract owner and repo from URL
@@ -217,7 +390,7 @@ class GitHubPublisher:
             "title": title,
             "body": body,
             "head": branch_name,
-            "base": base_branch,
+            "base": (base_branch or self.base_branch).strip() or self.base_branch,
         }
 
         response = requests.post(  # noqa: S113

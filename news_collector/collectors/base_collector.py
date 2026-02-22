@@ -592,7 +592,6 @@ class BaseCollector(ABC):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        random.uniform(0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3))  # noqa: S311
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
         # This prevents thundering herd better than "Equal Jitter" or constant jitter.
         # User requested: "Add jitter to exponential backoff (deterministic in tests)"

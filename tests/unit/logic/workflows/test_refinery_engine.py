@@ -1,5 +1,7 @@
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 # Import moved to test/setup to allow patching
@@ -93,6 +95,54 @@ class TestRefineryEngine(unittest.TestCase):
         self.engine.process_single_article = MagicMock(side_effect=Exception("Boom"))
         summary = self.engine.process_articles([{"id": "3"}], MagicMock(), MagicMock())
         self.assertEqual(len(summary["errors"]), 1)
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_no_file_write_if_branch_setup_fails(self, mock_dt):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        article = {"id": "123", "title": "Test Title"}
+        mock_repo = MagicMock()
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: test-slug\n---\nContent"
+        )
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_git.create_branch.side_effect = RuntimeError("fetch failed")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            expected_file = (
+                target_dir / "src/content/posts/2026-01-01-test-slug.md"
+            )
+            with patch("pathlib.Path.write_text") as write_mock:
+                with self.assertRaises(RuntimeError):
+                    self.engine.process_single_article(article, mock_repo, target_dir)
+
+            write_mock.assert_not_called()
+            self.assertFalse(expected_file.exists())
+            self.mock_git.commit_and_push.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_no_file_write_if_branch_sync_rebase_fails(self, mock_dt):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        article = {"id": "124", "title": "Test Title 2"}
+        mock_repo = MagicMock()
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: test-slug-sync\n---\nContent"
+        )
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_git.create_branch.side_effect = RuntimeError("rebase failed")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            expected_file = (
+                target_dir / "src/content/posts/2026-01-01-test-slug-sync.md"
+            )
+            with patch("pathlib.Path.write_text") as write_mock:
+                with self.assertRaises(RuntimeError):
+                    self.engine.process_single_article(article, mock_repo, target_dir)
+
+            write_mock.assert_not_called()
+            self.assertFalse(expected_file.exists())
+            self.mock_git.commit_and_push.assert_not_called()
 
 
 if __name__ == "__main__":
