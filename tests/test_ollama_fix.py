@@ -124,7 +124,9 @@ class TestOllamaFix:
         ):
             with pytest.raises(NonCanonicalModelIdError) as excinfo:
                 OllamaProvider(model="llama3.3")
-            assert "NO_WARN mode forbids provider canonicalization" in str(excinfo.value)
+            assert "NO_WARN mode forbids provider canonicalization" in str(
+                excinfo.value
+            )
 
     def test_provider_raises_on_non_canonical_model_in_strict_mode(self):
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "1"}, clear=False):
