@@ -64,6 +64,29 @@ class TestEnrichmentMetricsStore(unittest.TestCase):
         self.assertEqual(metrics["proxy_requests_used"], 7)
         self.assertEqual(metrics["headless_seconds_used"], 40.5)
 
+    def test_record_attempt_ignores_untrusted_strategy_text(self):
+        self.store.record_attempt("source_d", strategy="http_attempts = 999")
+        metrics = self.store.get_metrics("source_d")
+
+        self.assertIsNotNone(metrics)
+        self.assertEqual(metrics["total_enrichment_attempted"], 1)
+        self.assertEqual(metrics["http_attempts"], 0)
+        self.assertEqual(metrics["headless_attempts"], 0)
+        self.assertEqual(metrics["proxy_attempts"], 0)
+        self.assertEqual(metrics["scholarly_attempts"], 0)
+
+    def test_record_success_updates_proxy_column(self):
+        self.store.record_attempt("source_e", strategy="proxy")
+        self.store.record_success(
+            "source_e", "proxy", duration=8.0, content_length=800, is_publishable=True
+        )
+
+        metrics = self.store.get_metrics("source_e")
+        self.assertEqual(metrics["proxy_success"], 1)
+        self.assertEqual(metrics["http_success"], 0)
+        self.assertEqual(metrics["headless_success"], 0)
+        self.assertEqual(metrics["scholarly_success"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
