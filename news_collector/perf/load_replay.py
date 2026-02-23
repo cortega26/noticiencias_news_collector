@@ -191,9 +191,7 @@ class ReplayFeedSource:
             )
             published = ""
             if article.published:
-                published = (
-                    f"<pubDate>{ReplayFeedSource._to_rfc2822(article.published)}</pubDate>"
-                )
+                published = f"<pubDate>{ReplayFeedSource._to_rfc2822(article.published)}</pubDate>"
             items.append(
                 "<item>"
                 f"<title>{escape(article.title)}</title>"
@@ -208,7 +206,7 @@ class ReplayFeedSource:
 
         return (
             '<?xml version="1.0" encoding="UTF-8"?>'
-            "<rss version=\"2.0\">"
+            '<rss version="2.0">'
             "<channel>"
             f"<title>{escape(event.feed_title)}</title>"
             f"<link>{escape(event.url)}</link>"
