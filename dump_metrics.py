@@ -25,9 +25,9 @@ try:
     for r in rows_fail:
         d = dict(r)
         if d["metadata"]:
-            try:
+            try:  # noqa: SIM105
                 d["metadata"] = json.loads(d["metadata"])
-            except:
+            except:  # noqa: E722, S110
                 pass
         failures.append(d)
 

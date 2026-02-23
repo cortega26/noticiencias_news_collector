@@ -24,6 +24,12 @@
 - System orchestration code (`news_collector/system/`) may never construct payloads.
 - Adapters SHOULD be side-effect minimal and avoid I/O; conversion remains their primary responsibility.
 
+## SmartHttpClient URL Scheme Contract
+
+- Only `http` and `https` schemas are allowed.
+- All other non-HTTP schemes (e.g., `ftp`, `file`, `gopher`, `smb`) are strictly rejected.
+- SSRF validation via `validate_url_safety` is mandatory and must be executed before any HTTP dispatch.
+
 ## Commands
 
 - make test-contracts

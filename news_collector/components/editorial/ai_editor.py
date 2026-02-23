@@ -4,6 +4,7 @@ import re
 import time
 from pathlib import Path
 
+from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.utils.logger import get_logger
 
@@ -34,7 +35,7 @@ class EditorAgent:
         headlines_model: str = None,
     ):
         self.api_url = api_url
-        self.model = model  # This is the "Legacy Default"
+        self.model = model
         self._translator_model_cfg = translator_model
         self._editor_model_cfg = editor_model
         self._headlines_model_cfg = headlines_model
@@ -55,66 +56,35 @@ class EditorAgent:
 
         self.prompts = self._load_prompts()
 
+        resolved = resolve_ollama_model_map(
+            {
+                "ollama": {
+                    "model": self.model,
+                    "translator_model": self._translator_model_cfg,
+                    "editor_model": self._editor_model_cfg,
+                    "headlines_model": self._headlines_model_cfg,
+                },
+                "scoring": {},
+            },
+            logger=logger,
+        )
+        self.model = resolved["default"].model_id
+        self.translator_model = resolved["translator"].model_id
+        self.editor_model = resolved["editor"].model_id
+        self.headlines_model = resolved["headlines"].model_id
+
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
         self.provider = OllamaProvider(
             api_url=self.api_url, model=self.model, timeout=3600
         )
-
-        # Cache for verified models
-        self._available_models = None
-
-        # Resolve models eagerly or lazily? Eager allows warning early.
-        # But we need provider to be ready.
-        # let's just resolve on demand or in init.
-        # We will resolve them now.
-        self.translator_model = self._resolve_model(
-            self._translator_model_cfg, "Translator"
+        logger.info(
+            "EditorAgent model routing resolved: default=%s, translator=%s, editor=%s, headlines=%s",
+            self.model,
+            self.translator_model,
+            self.editor_model,
+            self.headlines_model,
         )
-        self.editor_model = self._resolve_model(self._editor_model_cfg, "Editor")
-        self.headlines_model = self._resolve_model(
-            self._headlines_model_cfg, "Headlines"
-        )
-
-    def _get_available_models(self):
-        if self._available_models is None:
-            self._available_models = self.provider.list_models()
-        return self._available_models
-
-    def _resolve_model(self, specific_model: str, phase_name: str) -> str:
-        """
-        Resolves the model to use for a phase.
-        1. If specific_model is None/Empty -> Use check legacy (self.model).
-        2. If specific_model is set -> Check existence.
-           - If exists -> Use it.
-           - If missing -> Log warning, Fallback to legacy.
-        """
-        target = specific_model
-        if not target:
-            return self.model
-
-        # Check existence
-        available = self._get_available_models()
-        # available has names.
-
-        # Normalize target for check
-        check_target = target
-        if ":" not in check_target:
-            check_target = f"{check_target}:latest"
-
-        # Simple check: direct or in list
-        # If check_target is in list OR target is in list
-        is_available = (check_target in available) or (target in available)
-
-        if is_available:
-            logger.info(f"[{phase_name}] using specialized model: {target}")
-            return target
-
-        logger.warning(
-            f"[{phase_name}] Model '{target}' not found in Ollama. "
-            f"Falling back to legacy default: {self.model}"
-        )
-        return self.model
 
     def _load_prompts(self) -> dict:
         """Loads prompt templates from yaml config."""

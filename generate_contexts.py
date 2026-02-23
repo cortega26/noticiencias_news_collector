@@ -49,7 +49,7 @@ def analyze_ast(filepath):
                         elif isinstance(ann, ast.Subscript):
                             try:
                                 inputs.add(f"{arg.arg}: {ast.unparse(ann)}")
-                            except:
+                            except:  # noqa: E722
                                 inputs.add(arg.arg)
                         else:
                             inputs.add(arg.arg)
@@ -58,9 +58,9 @@ def analyze_ast(filepath):
                     if isinstance(node.returns, ast.Name):
                         outputs.add(node.returns.id)
                     elif isinstance(node.returns, ast.Subscript):
-                        try:
+                        try:  # noqa: SIM105
                             outputs.add(ast.unparse(node.returns))
-                        except:
+                        except:  # noqa: E722, S110
                             pass
 
             elif isinstance(node, ast.Raise):
@@ -83,7 +83,7 @@ def analyze_ast(filepath):
                                 failures.add(elt.id)
 
             elif isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute):
+                if isinstance(node.func, ast.Attribute):  # noqa: SIM102
                     if isinstance(node.func.value, ast.Name):
                         if node.func.value.id in ["logger", "log"]:
                             side_effects.add("Logging")

@@ -27,7 +27,7 @@ class StrategyOptimizer:
             # Force Production Read
             self.metrics_store = production_metrics_view
 
-    def analyze_source(self, source_id: str) -> Dict[str, Any]:
+    def analyze_source(self, source_id: str) -> Dict[str, Any]:  # noqa: C901
         """
         Computes performance metrics for a source.
         """
@@ -78,23 +78,22 @@ class StrategyOptimizer:
 
         # Check for Auto-Lock Opportunities (Phase 36)
         # Criteria: Headless Yield >= 70% AND HTTP Yield <= 10% AND Attempts >= 5
-        if total_attempts >= 5:
-            if headless_rate >= 70.0 and http_rate <= 10.0:
-                from news_collector.enrichment.strategy_lock_manager import (
-                    strategy_lock_manager,
-                )
+        if total_attempts >= 5 and headless_rate >= 70.0 and http_rate <= 10.0:
+            from news_collector.enrichment.strategy_lock_manager import (
+                strategy_lock_manager,
+            )
 
-                try:
-                    strategy_lock_manager.suggest_lock(
-                        source_id,
-                        "headless_fallback",
-                        f"Auto-Lock: Headless Yield {headless_rate:.1f}% vs HTTP {http_rate:.1f}% (>5 attempts)",
-                    )
-                    logger.info(
-                        f"🔒 Auto-Lock suggested for {source_id}: headless_fallback"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to suggest auto-lock for {source_id}: {e}")
+            try:
+                strategy_lock_manager.suggest_lock(
+                    source_id,
+                    "headless_fallback",
+                    f"Auto-Lock: Headless Yield {headless_rate:.1f}% vs HTTP {http_rate:.1f}% (>5 attempts)",
+                )
+                logger.info(
+                    f"🔒 Auto-Lock suggested for {source_id}: headless_fallback"
+                )
+            except Exception as e:
+                logger.error(f"Failed to suggest auto-lock for {source_id}: {e}")
 
         # Recommendations Logic
         recommendation = "http"  # Default baseline

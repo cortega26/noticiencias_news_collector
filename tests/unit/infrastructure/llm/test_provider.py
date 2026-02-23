@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -6,7 +7,20 @@ from news_collector.infrastructure.llm.provider import OllamaProvider
 
 class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        self._env_patcher = patch.dict(
+            os.environ,
+            {
+                "NOTICIENCIAS_LLM_STRICT": "0",
+                "NOTICIENCIAS_LLM_PINNED": "0",
+                "NOTICIENCIAS_LLM_NO_WARN": "0",
+            },
+            clear=False,
+        )
+        self._env_patcher.start()
         self.provider = OllamaProvider(timeout=1)
+
+    def tearDown(self):
+        self._env_patcher.stop()
 
     async def asyncTearDown(self):
         await self.provider.close()

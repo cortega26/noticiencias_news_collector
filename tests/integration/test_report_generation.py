@@ -3,7 +3,6 @@ import shutil
 import sqlite3
 import unittest
 from unittest import mock
-import scripts.generate_autonomous_report
 
 
 class TestReportGeneration(unittest.TestCase):

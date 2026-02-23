@@ -217,13 +217,13 @@ def _serialize_for_toml(value: Any) -> Any:  # noqa: C901
             rendered_items.append(rendered)
         return rendered_items
     if isinstance(value, tuple):
-        rendered_items: list[Any] = []
+        rendered_tuple_items: list[Any] = []
         for item in value:
             rendered = _serialize_for_toml(item)
             if rendered is _UNSET:
                 continue
-            rendered_items.append(rendered)
-        return rendered_items
+            rendered_tuple_items.append(rendered)
+        return rendered_tuple_items
     if isinstance(value, Path):
         return str(value)
     return value
@@ -393,6 +393,10 @@ def load_config(  # noqa: C901
         "TARGET_REPO_URL": "github.target_repo_url",
         "OLLAMA_API_URL": "ollama.api_url",
         "OLLAMA_MODEL": "ollama.model",
+        "OLLAMA_TRANSLATOR_MODEL": "ollama.translator_model",
+        "OLLAMA_EDITOR_MODEL": "ollama.editor_model",
+        "OLLAMA_HEADLINES_MODEL": "ollama.headlines_model",
+        "SCORING_LLM_MODEL": "scoring.llm_model",
     }
 
     # Check both raw env and .env file data for these keys
@@ -493,14 +497,19 @@ def _format_schema_table() -> str:
             default = _safe_repr(entry["default"])
         description = entry.get("description", "")
         constraints = entry.get("constraints", "")
-        sample_values = entry.get("examples", []) or []
+        examples = entry.get("examples")
+        sample_values: Sequence[object]
+        if isinstance(examples, Sequence) and not isinstance(examples, (str, bytes)):
+            sample_values = examples
+        else:
+            sample_values = ()
         sample_text = ", ".join(str(item) for item in sample_values)
-        row = [
-            entry["name"],
+        row: list[str] = [
+            str(entry["name"]),
             str(entry["type"]),
             default,
-            description,
-            constraints,
+            str(description),
+            str(constraints),
             sample_text,
         ]
         lines.append("| " + " | ".join(row) + " |")

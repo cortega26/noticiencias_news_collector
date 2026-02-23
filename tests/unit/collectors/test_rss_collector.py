@@ -60,7 +60,16 @@ def test_collect_sync_mock(rss_collector):
 
     with (
         patch("news_collector.collectors.rss_collector.feedparser.parse") as mock_parse,
-        patch.object(rss_collector, "_fetch_feed_robust", return_value={"success": True, "status_code": 200, "content": b"xml-content", "url": "http://feed.com"}),
+        patch.object(
+            rss_collector,
+            "_fetch_feed_robust",
+            return_value={
+                "success": True,
+                "status_code": 200,
+                "content": b"xml-content",
+                "url": "http://feed.com",
+            },
+        ),
     ):
 
         mock_parse.return_value.entries = []

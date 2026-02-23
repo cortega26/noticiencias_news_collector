@@ -26,22 +26,25 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from dateutil import parser as date_parser
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import aliased
 
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.pydantic_compat import get_pydantic_module
 
-_pydantic = get_pydantic_module()
-BaseModel = _pydantic.BaseModel
-Field = _pydantic.Field
-field_validator = _pydantic.field_validator
-model_validator = _pydantic.model_validator
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from pydantic import BaseModel, Field, field_validator, model_validator
+else:
+    _pydantic = get_pydantic_module()
+    BaseModel = _pydantic.BaseModel
+    Field = _pydantic.Field
+    field_validator = _pydantic.field_validator
+    model_validator = _pydantic.model_validator
 
 
 class ArticleListParams(BaseModel):
@@ -144,12 +147,15 @@ def _encode_cursor(article: Article) -> str:
 
 
 def _extract_topics(article: Article) -> List[str]:
-    metadata = article.article_metadata or {}
+    metadata: Dict[str, Any] = (
+        article.article_metadata if isinstance(article.article_metadata, dict) else {}
+    )
     enrichment = metadata.get("enrichment") if isinstance(metadata, dict) else {}
     topics = enrichment.get("topics") if isinstance(enrichment, dict) else None
     if isinstance(topics, (list, tuple)):
         return [str(topic) for topic in topics]
-    keywords = article.keywords or []
+    keywords_obj = article.keywords
+    keywords: List[Any] = keywords_obj if isinstance(keywords_obj, list) else []
     return [str(keyword) for keyword in keywords] if keywords else []
 
 
@@ -172,7 +178,9 @@ def _summarize_why_ranked(  # noqa: C901
                     factors.extend(str(factor) for factor in component_factors)
         if factors:
             return factors[:3]
-    components = article.score_components or {}
+    components: Dict[str, Any] = (
+        article.score_components if isinstance(article.score_components, dict) else {}
+    )
     if isinstance(components, dict) and components:
         ordered = sorted(
             components.items(),
@@ -236,8 +244,8 @@ def create_app(  # noqa: C901
     def get_params(
         source: Optional[List[str]] = Query(None, alias="source"),
         topic: Optional[List[str]] = Query(None, alias="topic"),
-        date_from: Optional[str] = Query(None, alias="date_from"),
-        date_to: Optional[str] = Query(None, alias="date_to"),
+        date_from: Optional[Any] = Query(None, alias="date_from"),
+        date_to: Optional[Any] = Query(None, alias="date_to"),
         page_size: int = Query(20, alias="page_size"),
         cursor: Optional[str] = Query(None, alias="cursor"),
     ) -> ArticleListParams:
@@ -276,8 +284,7 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
     ) -> ArticlesEnvelope:
         score_column = func.coalesce(Article.final_score, 0.0)
-        session: Session = manager.SessionLocal()  # type: ignore[attr-defined]
-        try:
+        with manager.get_session() as session:
             latest_log_subquery = (
                 session.query(
                     ScoreLog.article_id.label("article_id"),
@@ -371,8 +378,6 @@ def create_app(  # noqa: C901
                 },
                 meta={"generated_at": datetime.now(timezone.utc).isoformat()},
             )
-        finally:
-            session.close()
 
     return app
 

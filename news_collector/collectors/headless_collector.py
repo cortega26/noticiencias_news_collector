@@ -68,9 +68,12 @@ class HeadlessCollector(BaseCollector):
                 raise ValueError(f"Source {source_id} missing 'url' config")
 
             # Record attempt
-            self.health_tracker.record_attempt(source_id)
+            if self.health_tracker:
+                self.health_tracker.record_attempt(source_id)
 
             await self._ensure_browser()
+            if self.browser is None:
+                raise RuntimeError("Playwright browser failed to initialize")
 
             # Create a context with a realistic user agent
             context = await self.browser.new_context(
@@ -274,7 +277,11 @@ class HeadlessCollector(BaseCollector):
             await page.wait_for_timeout(3000)  # Extra buffer for hydration
         except Exception as e:
             # Emit warning but proceed
-            logger.warning(f"Failed to wait for hydration: {e}")
+            self._emit_log(
+                "warning",
+                "collector.headless.hydration_wait_failed",
+                details={"error": str(e)},
+            )
 
     async def _fetch_full_content(
         self, context: BrowserContext, url: str

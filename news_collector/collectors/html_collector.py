@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import json
 import time
@@ -142,7 +143,9 @@ class HtmlCollector(BaseCollector):
 
                 # Fetch full content
                 if raw.get("url"):
-                    async with httpx.AsyncClient(timeout=COLLECTION_CONFIG.get("request_timeout", 30)) as fetch_client:
+                    async with httpx.AsyncClient(
+                        timeout=COLLECTION_CONFIG.get("request_timeout", 30)
+                    ) as fetch_client:
                         full_text = await self._fetch_article_content(
                             fetch_client, raw["url"], source_config
                         )
@@ -190,7 +193,10 @@ class HtmlCollector(BaseCollector):
         ld_scripts = soup.find_all("script", type="application/ld+json")
         for script in ld_scripts:
             try:
-                data = json.loads(script.string)
+                script_payload = script.string
+                if not script_payload:
+                    continue
+                data = json.loads(script_payload)
                 if "@type" in data and data["@type"] in [
                     "ItemList",
                     "Blog",
@@ -334,24 +340,22 @@ class HtmlCollector(BaseCollector):
         except Exception:
             return None
 
-    async def _fetch_html_conditional(
+    async def _fetch_html_conditional(  # noqa: C901
         self, url: str, source_id: str, source_config: Dict[str, Any]
     ) -> Tuple[Optional[str], Optional[int]]:
         """
         Fetches HTML content using conditional GET (ETag/Last-Modified).
         Returns (content, status_code). Content is None if 304 or error.
         """
-        cached_headers = {
+        cached_headers: Dict[str, Optional[str]] = {
             "etag": None,
             "last_modified": None,
             "content_hash": None,
         }
-        try:
+        with contextlib.suppress(Exception):
             cached_headers = (
                 self.db_manager.get_source_feed_metadata(source_id) or cached_headers
             )
-        except Exception:
-            pass
 
         headers = self.headers.copy()
         if cached_headers.get("etag"):
@@ -467,3 +471,4 @@ class HtmlCollector(BaseCollector):
                 details={"error": str(e)},
             )
             return None, None
+        return None, None

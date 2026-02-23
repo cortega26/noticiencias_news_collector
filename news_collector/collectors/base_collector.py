@@ -24,7 +24,7 @@ import urllib.robotparser as robotparser
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
 import httpx
@@ -74,7 +74,7 @@ class BaseCollector(ABC):
             "total_articles_found": 0,
             "total_articles_saved": 0,
             "total_errors": 0,
-            "processing_time_seconds": 0,
+            "processing_time_seconds": 0.0,
         }
 
         self.logger_factory: "NewsCollectorLogger" = logger_factory or get_logger()
@@ -188,7 +188,7 @@ class BaseCollector(ABC):
 
         source_results = {}
         for source_id, result in zip(sources_config.keys(), results, strict=False):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 # Fallback for unexpected task failures
                 error_res = self._create_error_result(source_id, result)
                 source_results[source_id] = error_res
@@ -200,7 +200,7 @@ class BaseCollector(ABC):
 
     # --- Internal Helpers for Code Reuse ---
 
-    def _emit_initial_batch_log(self, count):
+    def _emit_initial_batch_log(self, count: int) -> None:
         self._emit_log(
             "info",
             "collector.batch.start",
@@ -208,7 +208,9 @@ class BaseCollector(ABC):
             details={"sources": count},
         )
 
-    def _finalize_collection_cycle(self, source_results):
+    def _finalize_collection_cycle(
+        self, source_results: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, Any]:
         end_time = datetime.now(timezone.utc)
         self.stats["processing_time_seconds"] = (
             end_time - (self.start_time or end_time)
@@ -231,7 +233,9 @@ class BaseCollector(ABC):
         self._reset_runtime_context()
         return final_report
 
-    def _process_single_source_sync(self, source_id, source_config):
+    def _process_single_source_sync(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         try:
             if not self._check_crawl_interval(source_id, source_config):
                 return {
@@ -253,7 +257,9 @@ class BaseCollector(ABC):
         except Exception as exc:
             return self._handle_source_exception(source_id, exc)
 
-    async def _process_single_source_async(self, source_id, source_config):
+    async def _process_single_source_async(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         try:
             if not self._check_crawl_interval(source_id, source_config):
                 return {
@@ -298,7 +304,9 @@ class BaseCollector(ABC):
             },
         )
 
-    def _handle_source_exception(self, source_id, exc):
+    def _handle_source_exception(
+        self, source_id: str, exc: BaseException
+    ) -> Dict[str, Any]:
         error_result = self._create_error_result(source_id, exc)
         self.stats["total_errors"] += 1
         self._emit_log(
@@ -309,7 +317,9 @@ class BaseCollector(ABC):
         )
         return error_result
 
-    def _create_error_result(self, source_id, exc):
+    def _create_error_result(
+        self, source_id: str, exc: BaseException
+    ) -> Dict[str, Any]:
         return {
             "source_id": source_id,
             "success": False,
@@ -410,7 +420,7 @@ class BaseCollector(ABC):
             "total_articles_found": 0,
             "total_articles_saved": 0,
             "total_errors": 0,
-            "processing_time_seconds": 0,
+            "processing_time_seconds": 0.0,
         }
 
     def _update_global_stats(self, source_result: Dict[str, Any]):
@@ -437,14 +447,14 @@ class BaseCollector(ABC):
         aconteció durante la expedición de recolección de información.
         """
         # Calcular métricas derivadas
-        success_rate = 0
+        success_rate = 0.0
         if self.stats["total_sources_processed"] > 0:
             successful_sources = sum(1 for r in source_results.values() if r["success"])
             success_rate = (
                 successful_sources / self.stats["total_sources_processed"]
             ) * 100
 
-        save_rate = 0
+        save_rate = 0.0
         if self.stats["total_articles_found"] > 0:
             save_rate = (
                 self.stats["total_articles_saved"] / self.stats["total_articles_found"]
@@ -468,10 +478,11 @@ class BaseCollector(ABC):
         ]
 
         # Generar reporte final
+        report_start_time = self.start_time or datetime.now(timezone.utc)
         report = {
             "collection_summary": {
                 "collector_type": self.collector_type,
-                "start_time": self.start_time.isoformat(),
+                "start_time": report_start_time.isoformat(),
                 "end_time": datetime.now(timezone.utc).isoformat(),
                 "duration_seconds": self.stats["processing_time_seconds"],
                 "sources_processed": self.stats["total_sources_processed"],
@@ -527,7 +538,10 @@ class BaseCollector(ABC):
         if cached and (now - cached[0] < ttl):
             return cached[1]
         try:
+            from news_collector.utils.security import validate_url_safety
+
             robots_url = f"https://{domain}/robots.txt"
+            validate_url_safety(robots_url)
             # Use a short timeout for robots.txt to avoid blocking
             resp = httpx.get(
                 robots_url,
@@ -561,7 +575,16 @@ class BaseCollector(ABC):
                 delay = rp.crawl_delay(ua)
             except Exception:
                 delay = None
-            return (allowed, delay)
+            if isinstance(delay, (int, float)):
+                parsed_delay: Optional[float] = float(delay)
+            elif isinstance(delay, str):
+                try:
+                    parsed_delay = float(delay)
+                except ValueError:
+                    parsed_delay = None
+            else:
+                parsed_delay = None
+            return (allowed, parsed_delay)
         except Exception:
             # Fail open if URL parsing fails
             return (True, None)
@@ -589,9 +612,6 @@ class BaseCollector(ABC):
     def _backoff_sleep(self, attempt: int):
         base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
         max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
-        jitter = random.uniform(  # noqa: S311
-            0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
-        )
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
         # This prevents thundering herd better than "Equal Jitter" or constant jitter.
         # User requested: "Add jitter to exponential backoff (deterministic in tests)"
@@ -603,7 +623,7 @@ class BaseCollector(ABC):
         # Jitter: +/- 50% of the target delay, but clamped to 0
         low = target_delay * 0.5
         high = target_delay * 1.5
-        jittered_delay = random.uniform(low, high)
+        jittered_delay = random.uniform(low, high)  # noqa: S311
 
         time.sleep(jittered_delay)
 
@@ -617,7 +637,7 @@ class BaseCollector(ABC):
         # Jitter: +/- 50%
         low = target_delay * 0.5
         high = target_delay * 1.5
-        jittered_delay = random.uniform(low, high)
+        jittered_delay = random.uniform(low, high)  # noqa: S311
 
         await asyncio.sleep(jittered_delay)
 
@@ -639,6 +659,10 @@ class BaseCollector(ABC):
             try:
                 # email.utils.parsedate_to_datetime handles RFC 2822
                 dt = email.utils.parsedate_to_datetime(header)
+                if dt is None:
+                    return None
+                if not isinstance(dt, datetime):
+                    return None
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=timezone.utc)
                 return dt
@@ -681,7 +705,7 @@ class BaseCollector(ABC):
             )
         return path
 
-    def _check_crawl_interval(
+    def _check_crawl_interval(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> bool:
         """
@@ -702,28 +726,30 @@ class BaseCollector(ABC):
                 return True
 
             # 1. Check Circuit Breaker Status
-            if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
-                if state.get("status") == "COOLDOWN":
-                    next_retry = state.get("next_retry_at")
-                    if next_retry:
-                        # Ensure timezone awareness
-                        if next_retry.tzinfo is None:
-                            next_retry = next_retry.replace(tzinfo=timezone.utc)
-                        else:
-                            next_retry = next_retry.astimezone(timezone.utc)
+            if (
+                os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false"
+                and state.get("status") == "COOLDOWN"
+            ):
+                next_retry = state.get("next_retry_at")
+                if next_retry:
+                    # Ensure timezone awareness
+                    if next_retry.tzinfo is None:
+                        next_retry = next_retry.replace(tzinfo=timezone.utc)
+                    else:
+                        next_retry = next_retry.astimezone(timezone.utc)
 
-                        now = datetime.now(timezone.utc)
-                        if now < next_retry:
-                            self._emit_log(
-                                "warning",
-                                "collector.circuit_breaker.skip",
-                                source_id=source_id,
-                                details={
-                                    "reason": "COOLDOWN",
-                                    "retry_at": next_retry.isoformat(),
-                                },
-                            )
-                            return False
+                    now = datetime.now(timezone.utc)
+                    if now < next_retry:
+                        self._emit_log(
+                            "warning",
+                            "collector.circuit_breaker.skip",
+                            source_id=source_id,
+                            details={
+                                "reason": "COOLDOWN",
+                                "retry_at": next_retry.isoformat(),
+                            },
+                        )
+                        return False
 
             if not state.get("last_checked"):
                 return True
@@ -768,14 +794,20 @@ class BaseCollector(ABC):
         """
         Guarda un artículo procesado en la base de datos.
         """
+        url_value: str | None
         if isinstance(article_data, CollectorArticleModel):
             title = article_data.title
-            source_id = article_data.source_id
+            source_id: str | None = article_data.source_id
             url_value = str(article_data.url)
         else:
-            title = article_data.get("title", "sin título")
-            source_id = article_data.get("source_id")
-            url_value = article_data.get("url")
+            title = str(article_data.get("title", "sin título"))
+            source_id = (
+                str(article_data.get("source_id"))
+                if article_data.get("source_id") is not None
+                else None
+            )
+            url_obj = article_data.get("url")
+            url_value = str(url_obj) if url_obj is not None else None
 
         try:
             saved_article = self.db_manager.save_article(article_data)
@@ -876,7 +908,10 @@ class BaseCollector(ABC):
         return True
 
     def _filter_and_save_articles(  # noqa: C901
-        self, source_id: str, articles_data: List[Dict[str, Any]], limit: int = 5
+        self,
+        source_id: str,
+        articles_data: Sequence[CollectorArticleModel | Dict[str, Any]],
+        limit: int = 5,
     ) -> int:
         """
         Apply strict sequential filters:
@@ -945,7 +980,7 @@ class BaseCollector(ABC):
                 continue
 
         # Filter 2: Duplicate Check (Already Published) - BULK OPTIMIZATION (QW4)
-        unique_candidates = []
+        unique_candidates: list[CollectorArticleModel] = []
         if valid_candidates:
             candidate_urls = [str(a.url) for a in valid_candidates]
             existing_urls = self.db_manager.articles_exist(candidate_urls)
@@ -1164,7 +1199,8 @@ def create_collector(collector_type: str) -> BaseCollector:
     elif collector_type.lower() == "async_rss":
         from .async_rss_collector import AsyncRSSCollector
 
-        return AsyncRSSCollector()
+        collector: BaseCollector = AsyncRSSCollector()
+        return collector
     elif collector_type.lower() == "headless":
         from .headless_collector import HeadlessCollector
 

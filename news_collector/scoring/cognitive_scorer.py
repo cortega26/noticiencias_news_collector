@@ -4,8 +4,10 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
+from news_collector.config.settings import CONFIG
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.storage.models import Article
 
@@ -31,7 +33,7 @@ class CognitiveScorer(BasicScorer):
     def __init__(
         self,
         weights: Optional[Dict[str, float]] = None,
-        llm_client: OllamaProvider = None,
+        llm_client: OllamaProvider | None = None,
     ):
         print(
             f"{datetime.now().strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)"
@@ -56,7 +58,13 @@ class CognitiveScorer(BasicScorer):
 
         # 2. Components
         # Use provider directly
-        self.llm = llm_client or OllamaProvider()
+        if llm_client is None:
+            model = get_model_for_stage("scoring", config=CONFIG, logger=logger)
+            self.llm: OllamaProvider = OllamaProvider(
+                api_url=CONFIG.ollama.api_url, model=model
+            )
+        else:
+            self.llm = llm_client
         self.heuristic = HeuristicScorer()
         self.version = "2.2-hybrid-unified"
 
@@ -93,7 +101,7 @@ class CognitiveScorer(BasicScorer):
         except Exception as e:
             logger.error(f"Failed to init cognitive cache: {e}")
 
-    def _get_cache_key(self, article: Article) -> str:
+    def _get_cache_key(self, article: Any) -> str:
         # Simple key: Title + URL hash.
         # In prod, maybe hash inputs. For now, string concat is fine for uniqueness.
         safe_url = article.url or "no_url"
@@ -173,10 +181,10 @@ class CognitiveScorer(BasicScorer):
 
             # Simple wrapper
             class Wrapper:
-                def __init__(self, d):
+                def __init__(self, d: Dict[str, Any]) -> None:
                     self.__dict__ = d
 
-                def __getattr__(self, k):
+                def __getattr__(self, k: str) -> Any:
                     return self.__dict__.get(k)
 
             # Ensure dates are parsed/defaulted
@@ -248,7 +256,7 @@ class CognitiveScorer(BasicScorer):
                         continue
 
                     self.heuristic_used_count += 1
-                    h_score = self.heuristic.calculate_score(art)
+                    h_score = self.heuristic.calculate_score(cast(Article, art))
                     res = {
                         "score": h_score,
                         "details": {"heuristic": True},
@@ -312,11 +320,14 @@ class CognitiveScorer(BasicScorer):
                 joined_inputs, system=system_prompt, json_mode=True
             )
 
-            if not resp or "results" not in resp:
+            if not isinstance(resp, dict) or "results" not in resp:
                 return None
 
             outputs = []
-            res_list = resp["results"]
+            res_list_obj = resp["results"]
+            if not isinstance(res_list_obj, list):
+                return None
+            res_list = res_list_obj
             res_map = {r.get("item_index", i + 1): r for i, r in enumerate(res_list)}
 
             for i in range(len(inputs)):
@@ -486,7 +497,7 @@ class CognitiveScorer(BasicScorer):
 
     # Override single score for compatibility (if called directly)
     def score_article(
-        self, article: Article, source_config: Dict[str, Any] = None
+        self, article: Article, source_config: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
         # Synchronous single item score - usually NOT used if batching enabled
         # But implemented for safety.

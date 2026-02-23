@@ -1,5 +1,8 @@
+import os
 from unittest.mock import MagicMock, patch
 
+import pytest
+from news_collector.infrastructure.llm.model_registry import NonCanonicalModelIdError
 from news_collector.infrastructure.llm.provider import OllamaProvider
 
 
@@ -7,15 +10,34 @@ class TestOllamaFix:
 
     def test_model_normalization_adds_latest_tag_if_missing(self):
         """Step E.1: When model is `llama3.3` (no tag), it should become `llama3.3:latest`."""
-        provider = OllamaProvider(model="llama3.3")
+        with patch.dict(
+            os.environ,
+            {
+                "NOTICIENCIAS_LLM_STRICT": "0",
+                "NOTICIENCIAS_LLM_PINNED": "0",
+                "NOTICIENCIAS_LLM_NO_WARN": "0",
+            },
+            clear=False,
+        ):
+            provider = OllamaProvider(model="llama3.3")
         assert provider.model == "llama3.3:latest"
 
     def test_model_normalization_preserves_existing_tag(self):
         """Step E.2: When model is `llama3.3:latest`, it should stay `llama3.3:latest`."""
-        provider = OllamaProvider(model="llama3.3:latest")
+        with patch.dict(
+            os.environ,
+            {
+                "NOTICIENCIAS_LLM_STRICT": "0",
+                "NOTICIENCIAS_LLM_PINNED": "0",
+                "NOTICIENCIAS_LLM_NO_WARN": "0",
+            },
+            clear=False,
+        ):
+            provider = OllamaProvider(model="llama3.3:latest")
         assert provider.model == "llama3.3:latest"
 
-        provider_custom = OllamaProvider(model="mistral:instruct")
+        with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
+            provider_custom = OllamaProvider(model="mistral:instruct")
         assert provider_custom.model == "mistral:instruct"
 
     def test_api_url_normalization_handles_base_url(self):
@@ -38,10 +60,11 @@ class TestOllamaFix:
         mock_post.return_value = mock_response
 
         # Init with "bad" values
-        provider = OllamaProvider(
-            api_url="http://127.0.0.1:9999",  # Base URL. Using 9999 port for test
-            model="llama3.3",  # Missing tag
-        )
+        with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
+            provider = OllamaProvider(
+                api_url="http://127.0.0.1:9999",  # Base URL. Using 9999 port for test
+                model="llama3.3",  # Missing tag
+            )
 
         # We need to bypass the strict system check mocking locally.
         # Since `settings` is imported inside `generate_sync`, we must patch it at the source: `news_collector.config.settings`.
@@ -67,3 +90,45 @@ class TestOllamaFix:
 
         assert args[0] == expected_url
         assert kwargs["json"] == expected_payload
+
+    def test_provider_warns_on_non_canonical_model_in_default_mode(self):
+        with patch.dict(
+            os.environ,
+            {
+                "NOTICIENCIAS_LLM_STRICT": "0",
+                "NOTICIENCIAS_LLM_PINNED": "0",
+                "NOTICIENCIAS_LLM_NO_WARN": "0",
+            },
+            clear=False,
+        ):
+            with patch(
+                "news_collector.infrastructure.llm.provider._NON_CANONICAL_WARNED",
+                new=set(),
+            ):
+                with patch(
+                    "news_collector.infrastructure.llm.provider.logger.warning"
+                ) as warn_mock:
+                    provider = OllamaProvider(model="llama3.3")
+                    assert provider.model == "llama3.3:latest"
+                    warn_mock.assert_called()
+
+    def test_provider_no_warn_mode_raises_on_non_canonical_model(self):
+        with patch.dict(
+            os.environ,
+            {
+                "NOTICIENCIAS_LLM_STRICT": "0",
+                "NOTICIENCIAS_LLM_PINNED": "0",
+                "NOTICIENCIAS_LLM_NO_WARN": "1",
+            },
+            clear=False,
+        ):
+            with pytest.raises(NonCanonicalModelIdError) as excinfo:
+                OllamaProvider(model="llama3.3")
+            assert "NO_WARN mode forbids provider canonicalization" in str(
+                excinfo.value
+            )
+
+    def test_provider_raises_on_non_canonical_model_in_strict_mode(self):
+        with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "1"}, clear=False):
+            with pytest.raises(NonCanonicalModelIdError):
+                OllamaProvider(model="llama3.3")

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from news_collector.collectors.rss_collector import RSSCollector
@@ -17,10 +17,10 @@ def test_rss_collector_image_fallback_to_dom(collector):
     collector.router.route_enrichment.return_value = {
         "success": True,
         "content": "Long enough summary to pass validation for testing",
-        "raw_content": f"""
+        "raw_content": """
         <html>
             <meta property="og:image" content="https://example.com/og_extracted.jpg" />
-            <body><article><p>{{long_content}}</p></article></body>
+            <body><article><p>{long_content}</p></article></body>
         </html>
         """,
         "strategy_used": "http",
@@ -50,9 +50,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
         ]
     )
 
-    collector.pre_scorer.select_top_candidates = MagicMock(
-        side_effect=lambda x, **k: x
-    )
+    collector.pre_scorer.select_top_candidates = MagicMock(side_effect=lambda x, **k: x)
 
     # Mock DB manager
     collector.db_manager = MagicMock()
@@ -125,9 +123,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
     article = saved_articles[0]
 
     # Crucial assertions
-    assert (
-        article.article_metadata.image_url == "https://example.com/og_extracted.jpg"
-    )
+    assert article.article_metadata.image_url == "https://example.com/og_extracted.jpg"
     assert article.article_metadata.image_status == "IMAGE_OK"
     assert article.article_metadata.image_source == "meta:og:image"
 
@@ -138,7 +134,7 @@ def test_rss_collector_image_missing_source(collector):
     collector.router.route_enrichment.return_value = {
         "success": True,
         "content": "Long enough summary to pass validation for testing",
-        "raw_content": f"<html><body>{{long_content}}</body></html>",
+        "raw_content": "<html><body>{long_content}</body></html>",
         "strategy_used": "http",
     }
 
@@ -165,9 +161,7 @@ def test_rss_collector_image_missing_source(collector):
             }
         ]
     )
-    collector.pre_scorer.select_top_candidates = MagicMock(
-        side_effect=lambda x, **k: x
-    )
+    collector.pre_scorer.select_top_candidates = MagicMock(side_effect=lambda x, **k: x)
     collector.db_manager = MagicMock()
     collector.db_manager.article_exists.return_value = False
 

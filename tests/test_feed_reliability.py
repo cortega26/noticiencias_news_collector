@@ -103,7 +103,14 @@ def test_malformed_xml_handling():
 
         # We need to mock _fetch_feed_robust to return this content
         with patch.object(
-            collector, "_fetch_feed_robust", return_value={"success": True, "status_code": 200, "content": malformed_content.encode("utf-8"), "url": "http://foo"}
+            collector,
+            "_fetch_feed_robust",
+            return_value={
+                "success": True,
+                "status_code": 200,
+                "content": malformed_content.encode("utf-8"),
+                "url": "http://foo",
+            },
         ):
             stats = collector.collect_from_source(
                 "test", {"url": "http://foo", "name": "Test"}

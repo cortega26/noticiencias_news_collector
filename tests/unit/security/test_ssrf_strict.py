@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from news_collector.infrastructure.http_client import SmartHttpClient
-from tenacity import RetryError
 
 
 @pytest.mark.asyncio
@@ -18,13 +17,40 @@ async def test_ssrf_protection_rejects_private_ips():
         "http://127.0.0.1/admin",
         "http://192.168.1.1/router",
         "http://169.254.169.254/metadata",  # AWS Metadata
-        "ftp://example.com",  # Scheme check
     ]
 
-    for url in unsafe_urls:
-        # SmartHttpClient retries RequestError, so we eventually get RetryError
-        with pytest.raises((ValueError, httpx.RequestError, RetryError)):
-            await client.get(url)
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        for url in unsafe_urls:
+            # SSRF validation happens BEFORE _get_with_retry, so it raises RequestError immediately without retrying.
+            with pytest.raises((ValueError, httpx.RequestError)):
+                await client.get(url)
+
+            # Critical absolute proof: request dispatch MUST NEVER BE CALLED
+            mock_get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_ssrf_protection_rejects_unsupported_schemes():
+    """
+    REG-02: Verify that accessing non-http/https schemes raises an error immediately.
+    """
+    client = SmartHttpClient()
+
+    unsupported_urls = [
+        "ftp://example.com/file",
+        "file:///etc/passwd",
+        "gopher://internal-service/1",
+        "smb://fileserver/share",
+    ]
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        for url in unsupported_urls:
+            with pytest.raises((ValueError, httpx.RequestError)) as excinfo:
+                await client.get(url)
+
+            assert "Invalid URL scheme" in str(excinfo.value)
+            # Critical absolute proof: request dispatch MUST NEVER BE CALLED
+            mock_get.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -9,7 +9,7 @@ def parse_log_line(line):
     if match:
         try:
             return ast.literal_eval(match.group(1))
-        except:
+        except:  # noqa: E722
             return None
     return None
 
@@ -162,7 +162,7 @@ def main():
 
     try:
         b_data, _ = parse_logs(baseline_log)
-    except:
+    except:  # noqa: E722
         b_data = {}
 
     try:

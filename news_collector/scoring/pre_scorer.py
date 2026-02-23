@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Dict, List, Optional
 
+from news_collector.config.settings import CONFIG
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
@@ -13,7 +15,14 @@ class PreScorer:
     """
 
     def __init__(self, llm_client: Optional[OllamaProvider] = None):
-        self.llm = llm_client or OllamaProvider()
+        if llm_client is None:
+            model = get_model_for_stage("pre_scorer", config=CONFIG, logger=logger)
+            self.llm = OllamaProvider(
+                api_url=CONFIG.ollama.api_url,
+                model=model,
+            )
+        else:
+            self.llm = llm_client
         self.model_name = self.llm.model
 
     def select_top_candidates(  # noqa: C901
@@ -35,12 +44,6 @@ class PreScorer:
                 f"PreScorer: Solicitados {limit}, disponibles {len(candidates)}. Retornando todos."
             )
             return candidates
-
-        if not self.model_name or self.model_name == "ollama":
-            # "ollama" is sometimes default placeholder. Check if specific model is set?
-            # Actually, if we want to silence it, better to try/except specific error or check config.
-            # Assuming OllamaProvider raises the error we saw.
-            pass
 
         logger.info(
             f"🤖 PreScorer: Analizando {len(candidates)} candidatos para seleccionar Top {limit}..."

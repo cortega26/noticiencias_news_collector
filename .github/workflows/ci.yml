@@ -79,10 +79,8 @@ jobs:
         run: make bootstrap
       - name: Validate configuration
         run: make config-validate
-      - name: Regenerate field documentation
-        run: make config-docs
-      - name: Ensure documentation up to date
-        run: git diff --exit-code docs/config_fields.md
+      - name: Ensure config field documentation is up to date
+        run: make config-docs-check
 
   test:
     name: test
@@ -435,7 +433,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reports
-          docker run --rm local/noticiencias-news-collector:ci > reports/docker-smoke.log
+          # Explicit bounded smoke mode: one deterministic cycle, no continuous sleep.
+          docker run --rm -e NOTICIENCIAS_SMOKE=1 local/noticiencias-news-collector:ci > reports/docker-smoke.log
       - name: Upload smoke test log
         if: always()
         uses: actions/upload-artifact@v4

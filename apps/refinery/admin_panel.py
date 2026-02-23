@@ -961,7 +961,7 @@ with tab3:
                 import json
 
                 with open(CLONED_PATH, "w", encoding="utf-8") as f:
-                    json.dump({"articles": temp_articles}, f, indent=2)
+                    json.dump({"articles": temp_articles}, f, indent=2)  # noqa: F821
 
                 JSON_PATH = CLONED_PATH
                 st.toast(
@@ -1530,7 +1530,7 @@ with tab5:
                                         )
                                 else:
                                     st.caption("⏳ No audit yet")
-                            except Exception:
+                            except Exception:  # noqa: S110
                                 pass
 
                     with c3:

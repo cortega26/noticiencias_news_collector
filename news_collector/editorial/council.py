@@ -26,6 +26,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from news_collector.config.prompts import EDITORIAL_COUNCIL_SYSTEM_PROMPT
+from news_collector.config.settings import CONFIG
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
@@ -47,7 +49,11 @@ class EditorialCouncil:
     """
 
     def __init__(self, llm_client: Optional[OllamaProvider] = None):
-        self.llm = llm_client or OllamaProvider()
+        if llm_client is None:
+            model = get_model_for_stage("council", config=CONFIG, logger=logger)
+            self.llm = OllamaProvider(api_url=CONFIG.ollama.api_url, model=model)
+        else:
+            self.llm = llm_client
 
     def evaluate_article(
         self, title: str, summary: str, content: str = ""

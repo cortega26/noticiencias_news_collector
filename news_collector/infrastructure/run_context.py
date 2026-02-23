@@ -22,7 +22,7 @@ Failure modes:
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class RunContextManager:
@@ -44,7 +44,7 @@ class RunContextManager:
             return
 
         self.run_id = str(uuid.uuid4())
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         self.environment = self._detect_environment()
         self._initialized = True
 
