@@ -91,7 +91,9 @@ def main() -> int:
 
         if smoke_mode:
             if cycle_succeeded:
-                logger.info("🧪 Smoke mode finished after one bounded cycle (no sleep).")
+                logger.info(
+                    "🧪 Smoke mode finished after one bounded cycle (no sleep)."
+                )
                 return 0
             logger.error("🧪 Smoke mode cycle failed.")
             return 1

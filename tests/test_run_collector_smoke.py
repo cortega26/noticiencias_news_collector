@@ -19,7 +19,9 @@ SPEC.loader.exec_module(MODULE)
 
 
 def test_smoke_contract_requires_fixture_output() -> None:
-    assert MODULE._smoke_contract_satisfied({"sources_processed": 1, "articles_found": 1})
+    assert MODULE._smoke_contract_satisfied(
+        {"sources_processed": 1, "articles_found": 1}
+    )
     assert not MODULE._smoke_contract_satisfied(
         {"sources_processed": 1, "articles_found": 0}
     )
@@ -42,7 +44,9 @@ def test_run_collector_smoke_replay_contract() -> None:
     assert result.returncode == 0, result.stdout + "\n" + result.stderr
 
     smoke_payload_line = next(
-        line for line in reversed(result.stdout.splitlines()) if '"mode": "smoke"' in line
+        line
+        for line in reversed(result.stdout.splitlines())
+        if '"mode": "smoke"' in line
     )
     payload = json.loads(smoke_payload_line)
     assert payload["sources_processed"] == 1

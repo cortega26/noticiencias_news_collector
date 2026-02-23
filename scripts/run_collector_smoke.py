@@ -21,7 +21,9 @@ from news_collector.config import ALL_SOURCES
 from news_collector.perf import CollectorReplaySession, load_replay_fixture
 
 SMOKE_SOURCE_ID = "smoke_replay_source"
-SMOKE_FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "replay" / "docker_smoke.jsonl"
+SMOKE_FIXTURE_PATH = (
+    PROJECT_ROOT / "tests" / "fixtures" / "replay" / "docker_smoke.jsonl"
+)
 
 
 def _load_smoke_source() -> Tuple[CollectorReplaySession, Dict[str, Any]]:
@@ -46,7 +48,10 @@ def _load_smoke_source() -> Tuple[CollectorReplaySession, Dict[str, Any]]:
 
 
 def _smoke_contract_satisfied(payload: Dict[str, Any]) -> bool:
-    return payload.get("sources_processed", 0) == 1 and payload.get("articles_found", 0) >= 1
+    return (
+        payload.get("sources_processed", 0) == 1
+        and payload.get("articles_found", 0) >= 1
+    )
 
 
 async def _run_smoke_cycle() -> int:
