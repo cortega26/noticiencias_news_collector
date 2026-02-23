@@ -40,8 +40,7 @@ class EditorAgent:
         self._editor_model_cfg = editor_model
         self._headlines_model_cfg = headlines_model
 
-        self.cache_dir = Path("temp/cache")
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Configure regex early; cache directory will be resolved after config
         self._emoji_re = re.compile(
             r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U00002600-\U000026FF]",
             flags=re.UNICODE,
@@ -49,8 +48,21 @@ class EditorAgent:
         try:
             cfg = load_config()
             self.min_content_length = cfg.text_processing.min_content_length
+            # Resolve persistent data directory for stable checkpointing across runs
+            paths = getattr(cfg, "paths", None) or {}
+            if isinstance(paths, dict):
+                data_dir = paths.get("data_dir", "./data")
+            else:
+                data_dir = getattr(paths, "data_dir", "./data")
         except Exception:
-            self.min_content_length = 750  # Fallback
+            # Fallbacks if config is unavailable early in boot
+            self.min_content_length = 750
+            data_dir = "./data"
+
+        # Anchor cache to the configured data directory to avoid CWD-dependent paths
+        # Use a dedicated subfolder to avoid collisions with other caches
+        self.cache_dir = Path(data_dir) / "cache" / "editor"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.critic_threshold = TEXT_PROCESSING_CONFIG.get("critic_score_threshold", 70)
 
@@ -510,26 +522,36 @@ class EditorAgent:
         # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
         print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
 
-        max_retries = 2
-        for attempt in range(max_retries + 1):
-            # We run this on the adapted content to be sure.
-            is_valid, reason = self._critic_pass(final_content)
+        # Checkpoint: If we already passed the critic gate for this article, skip re-evaluation
+        cache_s2_5 = self._get_cache_path(article_id, "stage2_5_critic_ok")
+        if cache_s2_5.exists():
+            print(f"(Loaded from cache: {cache_s2_5})")
+        else:
+            max_retries = 2
+            for attempt in range(max_retries + 1):
+                # We run this on the adapted content to be sure.
+                is_valid, reason = self._critic_pass(final_content)
 
-            if is_valid:
-                break
+                if is_valid:
+                    # Persist critic pass checkpoint to avoid re-running on resume
+                    try:
+                        cache_s2_5.write_text("ok", encoding="utf-8")
+                    except Exception as _e:
+                        logger.warning(f"Failed to persist critic checkpoint: {_e}")
+                    break
 
-            if attempt < max_retries:
-                print(
-                    f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
-                )
-                print(f"   Reason: {reason}")
-                # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
-                final_content = self._repair_editorial(translated_text, reason)
-                final_content = self._extract_markdown_content(final_content)  # Cleanup
-            else:
-                raise ValueError(
-                    f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
-                )
+                if attempt < max_retries:
+                    print(
+                        f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
+                    )
+                    print(f"   Reason: {reason}")
+                    # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
+                    final_content = self._repair_editorial(translated_text, reason)
+                    final_content = self._extract_markdown_content(final_content)  # Cleanup
+                else:
+                    raise ValueError(
+                        f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
+                    )
 
         # --- STAGE 3: Metadata & Headlines ---
         print("\n--- STAGE 3: Metadata & Headlines ---")

@@ -384,8 +384,25 @@ class RefineryEngine:
         )
 
         # 7. Create PR
+        # Resolve target repo URL with backward-compatible lookup
+        repo_url = None
+        github_cfg = getattr(self.config, "github", None)
+        if github_cfg:
+            # github may be an object or a dict depending on how config is passed in
+            repo_url = getattr(github_cfg, "target_repo_url", None) or (
+                github_cfg.get("target_repo_url") if isinstance(github_cfg, dict) else None
+            )
+        if repo_url is None:
+            # Legacy flat attribute support (older code paths/tests)
+            repo_url = getattr(self.config, "target_repo_url", None)
+            if repo_url is None and isinstance(self.config, dict):
+                repo_url = self.config.get("target_repo_url")
+
+        if not repo_url:
+            raise AttributeError("Invalid configuration: missing github.target_repo_url")
+
         pr_url = self.git.create_pull_request(
-            repo_url=self.config.target_repo_url,
+            repo_url=repo_url,
             branch_name=branch_name,
             title=f"News: {output_filename.replace('.md', '')}",
             body=f"Automated submission for {article_id}.\n\nProcessed by Noticiencias Refinery.",
