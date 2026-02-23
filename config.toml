@@ -13,6 +13,8 @@ api_url = "http://localhost:11434/api/generate"
 model = "llama3.3:latest"
 timeout = 300
 headlines_model = "llama3.2:latest"
+translator_model = "qwen2.5:32b"
+editor_model = "qwen2.5:32b"
 
 [editorial_auditor]
 enabled = true
