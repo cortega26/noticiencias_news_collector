@@ -433,7 +433,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reports
-          docker run --rm local/noticiencias-news-collector:ci > reports/docker-smoke.log
+          # Explicit bounded smoke mode: one deterministic cycle, no continuous sleep.
+          docker run --rm -e NOTICIENCIAS_SMOKE=1 local/noticiencias-news-collector:ci > reports/docker-smoke.log
       - name: Upload smoke test log
         if: always()
         uses: actions/upload-artifact@v4

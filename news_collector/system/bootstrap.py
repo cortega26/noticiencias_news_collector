@@ -25,12 +25,19 @@ Failure modes:
 - LLM connectivity failures toggle offline mode instead of crashing out.
 """
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from news_collector import get_database_manager, get_metrics_reporter, setup_logging
 from news_collector.config import ALL_SOURCES, validate_config, validate_sources
 from news_collector.validation.validator import ContentValidator
+
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+
+
+def _is_smoke_mode_enabled() -> bool:
+    return os.getenv("NOTICIENCIAS_SMOKE", "").strip().lower() in _TRUTHY_VALUES
 
 
 def build_logging(system_id: str):
@@ -213,6 +220,16 @@ def check_system_health(
 
 def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
     """Internal helper to verify Ollama availability."""
+    if _is_smoke_mode_enabled():
+        import news_collector.config.settings
+
+        news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
+        if logger:
+            logger.create_module_logger("system").info(
+                "Smoke mode enabled: skipping external LLM health check."
+            )
+        return
+
     disable_llm = False
     strict_llm_mode = False
     try:

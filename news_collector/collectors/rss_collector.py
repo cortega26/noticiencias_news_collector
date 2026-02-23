@@ -97,6 +97,8 @@ class RSSCollector(BaseCollector):
         from news_collector.enrichment.router import EnrichmentStrategyRouter
 
         self.router = EnrichmentStrategyRouter(logger_factory=logger_factory)
+        # Stable replay seam for deterministic fixture-driven smoke/profile runs.
+        self._feed_replay_source = None
 
         # Estadísticas de la sesión actual
         self.session_stats: RSSCollector._SessionStats = {
@@ -110,6 +112,13 @@ class RSSCollector(BaseCollector):
     def _create_session(self):
         """Deprecated: Internal session is managed by RobustRequestsClient."""
         pass
+
+    def set_feed_replay_source(self, replay_source: Any | None) -> None:
+        """
+        Stable replay seam to inject deterministic feed fetch responses.
+        When set, collect_from_source bypasses robots/rate-limit network checks.
+        """
+        self._feed_replay_source = replay_source
 
     def _fetch_feed_content(
         self, feed_url: str, request_headers: Dict[str, str]
@@ -206,22 +215,25 @@ class RSSCollector(BaseCollector):
                 },
             )
 
-            allowed, robots_delay = self._respect_robots(source_config["url"])
-            if not allowed:
-                stats["error_message"] = "Bloqueado por robots.txt"
-                self._emit_log(
-                    "warning",
-                    "collector.fetch.blocked_robots",
-                    source_id=source_id,
-                    details={"url": source_config.get("url")},
-                )
-                self._send_to_dlq(source_id, source_config["url"], "robots_disallowed")
-                return stats
+            if self._feed_replay_source is None:
+                allowed, robots_delay = self._respect_robots(source_config["url"])
+                if not allowed:
+                    stats["error_message"] = "Bloqueado por robots.txt"
+                    self._emit_log(
+                        "warning",
+                        "collector.fetch.blocked_robots",
+                        source_id=source_id,
+                        details={"url": source_config.get("url")},
+                    )
+                    self._send_to_dlq(
+                        source_id, source_config["url"], "robots_disallowed"
+                    )
+                    return stats
 
-            domain = urlparse(source_config["url"]).netloc
-            self._enforce_domain_rate_limit(
-                domain, robots_delay, source_config.get("min_delay_seconds")
-            )
+                domain = urlparse(source_config["url"]).netloc
+                self._enforce_domain_rate_limit(
+                    domain, robots_delay, source_config.get("min_delay_seconds")
+                )
 
             # 1. Robust Fetch
             feed_response = self._fetch_feed_robust(source_id, source_config)
@@ -412,6 +424,22 @@ class RSSCollector(BaseCollector):
 
         if source_config.get("headers"):
             request_headers.update(source_config["headers"])
+
+        if self._feed_replay_source is not None:
+            try:
+                return self._feed_replay_source.fetch_feed(
+                    source_id=source_id,
+                    source_config=source_config,
+                    cached_headers=cached_headers,
+                    request_headers=request_headers,
+                    db_manager=self.db_manager,
+                )
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error_message": f"Replay Error: {str(e)}",
+                    "url": url,
+                }
 
         try:
             start_t = time.perf_counter()
