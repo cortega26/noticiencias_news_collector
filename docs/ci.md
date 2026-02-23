@@ -41,3 +41,9 @@ python scripts/generate_inventory.py \
 ```
 
 Review the diff and update `audit/00_inventory.json` when intentional changes occur.
+
+## Dependency lockfiles and pip-audit
+
+- Lockfile drift is checked with `python scripts/sync_lockfiles.py --check --install-pip-tools`.
+- When dependency inputs change, regenerate and commit lockfiles with `python scripts/sync_lockfiles.py --install-pip-tools`.
+- Runtime pip-audit suppressions are managed in `scripts/security_gate.py` and must include an `expires_on` date. Expired suppressions fail CI by design.

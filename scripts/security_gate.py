@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
@@ -28,11 +29,47 @@ SEVERITY_RANK = {
 SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
-# Document the rationale and review cadence in SECURITY.md under the Suppression Policy table.
-PIP_AUDIT_ALLOWLIST: dict[str, str] = {
-    "CVE-2026-0994": "Protobuf vulnerability with no fix available (version 6.33.4)",
-    "GHSA-7p94-766c-hgjp": "NLTK vulnerability with no fix available in 3.9.2; tracked for dependency removal.",
+# Each entry must include an expiry date so suppressions cannot become permanent.
+PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
+    "CVE-2026-0994": {
+        "reason": "Protobuf vulnerability with no fix available (version 6.33.4).",
+        "expires_on": "2026-06-30",
+    },
+    "GHSA-7p94-766c-hgjp": {
+        "reason": "NLTK vulnerability with no upstream fix published for 3.9.2.",
+        "expires_on": "2026-06-30",
+    },
 }
+
+
+def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
+    active: dict[str, str] = {}
+    today = today or date.today()
+    expired: list[str] = []
+    for vuln_id, payload in PIP_AUDIT_ALLOWLIST.items():
+        expires_raw = payload.get("expires_on", "").strip()
+        reason = payload.get("reason", "").strip()
+        if not expires_raw or not reason:
+            raise ValueError(
+                f"pip-audit allowlist entry {vuln_id} must define reason/expires_on."
+            )
+        try:
+            expires_on = date.fromisoformat(expires_raw)
+        except ValueError as exc:
+            raise ValueError(
+                f"pip-audit allowlist entry {vuln_id} has invalid expires_on: {expires_raw}"
+            ) from exc
+        if expires_on < today:
+            expired.append(f"{vuln_id} (expired {expires_on.isoformat()})")
+            continue
+        active[vuln_id] = reason
+
+    if expired:
+        raise ValueError(
+            "Expired pip-audit allowlist entries detected: " + ", ".join(expired)
+        )
+
+    return active
 
 
 def load_status(status_path: Path) -> Dict[str, Any]:
@@ -108,12 +145,13 @@ def load_allowlist(config_path: Path) -> tuple[list[str], list[str]]:
 def pip_audit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
     data = _load_json(report_path, {})
     findings: List[Dict[str, Any]] = []
+    allowlist = _active_pip_audit_allowlist()
     for dependency in data.get("dependencies", []):
         name = dependency.get("name")
         version = dependency.get("version")
         for vuln in dependency.get("vulns", []):
             vuln_id = (vuln.get("id") or "").strip()
-            if vuln_id in PIP_AUDIT_ALLOWLIST:
+            if vuln_id in allowlist:
                 continue
             severity = (vuln.get("severity") or "UNKNOWN").upper()
             if SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK[threshold]:
@@ -247,7 +285,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     threshold = args.severity.upper()
-    findings = evaluate(args.tool, args.report, threshold)
+    try:
+        findings = evaluate(args.tool, args.report, threshold)
+    except ValueError as exc:
+        print(f"[{args.tool}] {exc}")
+        return 1
 
     status = load_status(args.status)
     status[args.tool] = {

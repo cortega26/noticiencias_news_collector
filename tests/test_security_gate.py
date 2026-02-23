@@ -76,7 +76,9 @@ def test_pip_audit_findings_honors_allowlist(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setitem(
-        security_gate.PIP_AUDIT_ALLOWLIST, "GHSA-q2x7-8rv6-6q7h", "Test suppression"
+        security_gate.PIP_AUDIT_ALLOWLIST,
+        "GHSA-q2x7-8rv6-6q7h",
+        {"reason": "Test suppression", "expires_on": "2099-01-01"},
     )
 
     report = tmp_path / "pip-audit.json"
@@ -108,3 +110,19 @@ def test_pip_audit_findings_honors_allowlist(
             "fix_versions": [],
         }
     ]
+
+
+def test_pip_audit_allowlist_entries_are_not_expired() -> None:
+    active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
+    assert "GHSA-7p94-766c-hgjp" in active
+
+
+def test_pip_audit_allowlist_expiry_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(
+        security_gate.PIP_AUDIT_ALLOWLIST,
+        "TEST-EXPIRED",
+        {"reason": "Temporary test", "expires_on": "2000-01-01"},
+    )
+
+    with pytest.raises(ValueError, match="Expired pip-audit allowlist entries"):
+        security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]

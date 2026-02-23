@@ -125,25 +125,74 @@ class EnrichmentMetricsStore:
     def record_attempt(self, source_id: str, strategy: Optional[str] = None):
         """Records attempt in both aggregate and history tables."""
         ctx = run_context.get_context()
-        valid_strategies = ["http", "headless", "proxy", "scholarly"]
-        strategy_col_update = ""
-
-        if strategy and strategy in valid_strategies:
-            strategy_col_update = f", {strategy}_attempts = {strategy}_attempts + 1"
 
         with self._lock:
             cur = self.conn.cursor()
-            # Update Aggregate
-            query_1 = f"""
-                INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted{', ' + strategy + '_attempts' if strategy and strategy in valid_strategies else ''})
-                VALUES (?, 1, 1{', 1' if strategy and strategy in valid_strategies else ''})
-                ON CONFLICT(source_id) DO UPDATE SET
-                total_discovered = total_discovered + 1,
-                total_enrichment_attempted = total_enrichment_attempted + 1
-                {strategy_col_update},
-                last_updated = CURRENT_TIMESTAMP
-            """  # noqa: S608
-            cur.execute(query_1, (source_id,))
+            # Use fixed SQL statements per strategy to avoid runtime SQL composition.
+            if strategy == "http":
+                cur.execute(
+                    """
+                    INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, http_attempts)
+                    VALUES (?, 1, 1, 1)
+                    ON CONFLICT(source_id) DO UPDATE SET
+                    total_discovered = total_discovered + 1,
+                    total_enrichment_attempted = total_enrichment_attempted + 1,
+                    http_attempts = http_attempts + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                """,
+                    (source_id,),
+                )
+            elif strategy == "headless":
+                cur.execute(
+                    """
+                    INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, headless_attempts)
+                    VALUES (?, 1, 1, 1)
+                    ON CONFLICT(source_id) DO UPDATE SET
+                    total_discovered = total_discovered + 1,
+                    total_enrichment_attempted = total_enrichment_attempted + 1,
+                    headless_attempts = headless_attempts + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                """,
+                    (source_id,),
+                )
+            elif strategy == "proxy":
+                cur.execute(
+                    """
+                    INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, proxy_attempts)
+                    VALUES (?, 1, 1, 1)
+                    ON CONFLICT(source_id) DO UPDATE SET
+                    total_discovered = total_discovered + 1,
+                    total_enrichment_attempted = total_enrichment_attempted + 1,
+                    proxy_attempts = proxy_attempts + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                """,
+                    (source_id,),
+                )
+            elif strategy == "scholarly":
+                cur.execute(
+                    """
+                    INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, scholarly_attempts)
+                    VALUES (?, 1, 1, 1)
+                    ON CONFLICT(source_id) DO UPDATE SET
+                    total_discovered = total_discovered + 1,
+                    total_enrichment_attempted = total_enrichment_attempted + 1,
+                    scholarly_attempts = scholarly_attempts + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                """,
+                    (source_id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted)
+                    VALUES (?, 1, 1)
+                    ON CONFLICT(source_id) DO UPDATE SET
+                    total_discovered = total_discovered + 1,
+                    total_enrichment_attempted = total_enrichment_attempted + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                """,
+                    (source_id,),
+                )
 
             # Insert History
             cur.execute(
@@ -172,7 +221,6 @@ class EnrichmentMetricsStore:
         is_publishable: bool,
     ):
         ctx = run_context.get_context()
-        strategy_col = f"{strategy}_success"
         valid_strategies = ["http", "headless", "proxy", "scholarly"]
 
         if strategy not in valid_strategies:
@@ -208,29 +256,23 @@ class EnrichmentMetricsStore:
                     new_avg_time = duration
                     new_avg_len = content_length
 
-                query_2 = f"""
-                    UPDATE enrichment_metrics
-                    SET
-                        {strategy_col} = {strategy_col} + 1,
-                        total_publishable = total_publishable + ?,
-                        avg_content_length = ?,
-                        avg_enrichment_time = ?,
-                        last_updated = CURRENT_TIMESTAMP
-                    WHERE source_id = ?
-                """  # noqa: S608
-                cur.execute(
-                    query_2,
-                    (1 if is_publishable else 0, new_avg_len, new_avg_time, source_id),
+                self._execute_success_update(
+                    cur=cur,
+                    strategy=strategy,
+                    source_id=source_id,
+                    publishable_increment=1 if is_publishable else 0,
+                    new_avg_len=new_avg_len,
+                    new_avg_time=new_avg_time,
                 )
             else:
                 # Should have been created by record_attempt, but handle edge case
-                query_3 = f"""
-                    INSERT INTO enrichment_metrics (source_id, {strategy_col}, total_publishable, avg_content_length, avg_enrichment_time, total_discovered, total_enrichment_attempted)
-                    VALUES (?, 1, ?, ?, ?, 1, 1)
-                """  # noqa: S608
-                cur.execute(
-                    query_3,
-                    (source_id, 1 if is_publishable else 0, content_length, duration),
+                self._execute_success_insert(
+                    cur=cur,
+                    strategy=strategy,
+                    source_id=source_id,
+                    publishable_increment=1 if is_publishable else 0,
+                    content_length=content_length,
+                    duration=duration,
                 )
 
             # Insert History
@@ -253,6 +295,146 @@ class EnrichmentMetricsStore:
 
             self.conn.commit()
             cur.close()
+
+    def _execute_success_update(
+        self,
+        cur: sqlite3.Cursor,
+        strategy: str,
+        source_id: str,
+        publishable_increment: int,
+        new_avg_len: float,
+        new_avg_time: float,
+    ) -> None:
+        if strategy == "http":
+            cur.execute(
+                """
+                UPDATE enrichment_metrics
+                SET
+                    http_success = http_success + 1,
+                    total_publishable = total_publishable + ?,
+                    avg_content_length = ?,
+                    avg_enrichment_time = ?,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE source_id = ?
+            """,
+                (publishable_increment, new_avg_len, new_avg_time, source_id),
+            )
+        elif strategy == "headless":
+            cur.execute(
+                """
+                UPDATE enrichment_metrics
+                SET
+                    headless_success = headless_success + 1,
+                    total_publishable = total_publishable + ?,
+                    avg_content_length = ?,
+                    avg_enrichment_time = ?,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE source_id = ?
+            """,
+                (publishable_increment, new_avg_len, new_avg_time, source_id),
+            )
+        elif strategy == "proxy":
+            cur.execute(
+                """
+                UPDATE enrichment_metrics
+                SET
+                    proxy_success = proxy_success + 1,
+                    total_publishable = total_publishable + ?,
+                    avg_content_length = ?,
+                    avg_enrichment_time = ?,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE source_id = ?
+            """,
+                (publishable_increment, new_avg_len, new_avg_time, source_id),
+            )
+        elif strategy == "scholarly":
+            cur.execute(
+                """
+                UPDATE enrichment_metrics
+                SET
+                    scholarly_success = scholarly_success + 1,
+                    total_publishable = total_publishable + ?,
+                    avg_content_length = ?,
+                    avg_enrichment_time = ?,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE source_id = ?
+            """,
+                (publishable_increment, new_avg_len, new_avg_time, source_id),
+            )
+
+    def _execute_success_insert(
+        self,
+        cur: sqlite3.Cursor,
+        strategy: str,
+        source_id: str,
+        publishable_increment: int,
+        content_length: int,
+        duration: float,
+    ) -> None:
+        if strategy == "http":
+            cur.execute(
+                """
+                INSERT INTO enrichment_metrics (
+                    source_id,
+                    http_success,
+                    total_publishable,
+                    avg_content_length,
+                    avg_enrichment_time,
+                    total_discovered,
+                    total_enrichment_attempted
+                )
+                VALUES (?, 1, ?, ?, ?, 1, 1)
+            """,
+                (source_id, publishable_increment, content_length, duration),
+            )
+        elif strategy == "headless":
+            cur.execute(
+                """
+                INSERT INTO enrichment_metrics (
+                    source_id,
+                    headless_success,
+                    total_publishable,
+                    avg_content_length,
+                    avg_enrichment_time,
+                    total_discovered,
+                    total_enrichment_attempted
+                )
+                VALUES (?, 1, ?, ?, ?, 1, 1)
+            """,
+                (source_id, publishable_increment, content_length, duration),
+            )
+        elif strategy == "proxy":
+            cur.execute(
+                """
+                INSERT INTO enrichment_metrics (
+                    source_id,
+                    proxy_success,
+                    total_publishable,
+                    avg_content_length,
+                    avg_enrichment_time,
+                    total_discovered,
+                    total_enrichment_attempted
+                )
+                VALUES (?, 1, ?, ?, ?, 1, 1)
+            """,
+                (source_id, publishable_increment, content_length, duration),
+            )
+        elif strategy == "scholarly":
+            cur.execute(
+                """
+                INSERT INTO enrichment_metrics (
+                    source_id,
+                    scholarly_success,
+                    total_publishable,
+                    avg_content_length,
+                    avg_enrichment_time,
+                    total_discovered,
+                    total_enrichment_attempted
+                )
+                VALUES (?, 1, ?, ?, ?, 1, 1)
+            """,
+                (source_id, publishable_increment, content_length, duration),
+            )
 
     def record_failure(
         self, source_id: str, strategy: str, reason: str, duration: float = 0.0
