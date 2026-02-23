@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
+import contextlib
 import json
 import time
 from collections import defaultdict, deque
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from itertools import count
 from pathlib import Path
-from types import MethodType
 from typing import Any, Deque, Dict, Iterator, List, MutableMapping, Optional, Sequence
-
-import feedparser
+from xml.sax.saxutils import escape
 
 
 @dataclass(frozen=True)
@@ -79,20 +76,6 @@ class ReplayEvent:
         )
 
 
-class ReplayParsedFeed:
-    """Lightweight feedparser replacement used during replay."""
-
-    __slots__ = ("bozo", "bozo_exception", "feed", "entries", "_event")
-
-    def __init__(self, event: ReplayEvent):
-        self.bozo = 0
-        self.bozo_exception = None
-        self.feed = type("FeedInfo", (), {"title": event.feed_title})()
-        # We do not rely on feedparser entries because we patch extractor.
-        self.entries: list[Any] = []
-        self._event = event
-
-
 class MemoryFeedStore:
     """In-memory stand-in for the database manager used in tests and profiling."""
 
@@ -136,6 +119,118 @@ class MemoryFeedStore:
         return article
 
 
+class ReplayFeedSource:
+    """
+    Stable replay seam consumed by RSSCollector via set_feed_replay_source().
+    It returns synthetic feed bytes for deterministic, network-free runs.
+    """
+
+    def __init__(self, session: "CollectorReplaySession"):
+        self._session = session
+
+    def fetch_feed(
+        self,
+        *,
+        source_id: str,
+        source_config: Dict[str, Any],  # noqa: ARG002 - reserved for future use
+        cached_headers: Dict[str, Optional[str]],  # noqa: ARG002
+        request_headers: Dict[str, str],  # noqa: ARG002
+        db_manager: Any,
+    ) -> Dict[str, Any]:
+        event = self._session._pop_event(source_id)
+        self._session._log_request(source_id, event)
+
+        if event.latency_ms:
+            time.sleep(event.latency_ms / 1000.0)
+
+        with contextlib.suppress(Exception):
+            db_manager.update_source_feed_metadata(
+                source_id,
+                etag=event.etag,
+                last_modified=event.last_modified,
+                content_hash=event.content_hash,
+            )
+
+        if event.status_code == 304:
+            return {
+                "success": True,
+                "status_code": 304,
+                "content": None,
+                "url": event.url,
+            }
+
+        if event.status_code >= 400:
+            return {
+                "success": False,
+                "status_code": event.status_code,
+                "content": None,
+                "url": event.url,
+                "error_message": f"HTTP {event.status_code}",
+            }
+
+        content = self._render_feed(event).encode("utf-8")
+        return {
+            "success": True,
+            "status_code": event.status_code,
+            "content": content,
+            "url": event.url,
+            "encoding": "utf-8",
+        }
+
+    @staticmethod
+    def _render_feed(event: ReplayEvent) -> str:
+        items: list[str] = []
+        for article in event.articles:
+            categories = "".join(
+                f"<category>{escape(tag)}</category>" for tag in article.tags
+            )
+            author = (
+                f"<author>{escape(', '.join(article.authors))}</author>"
+                if article.authors
+                else ""
+            )
+            published = ""
+            if article.published:
+                published = (
+                    f"<pubDate>{ReplayFeedSource._to_rfc2822(article.published)}</pubDate>"
+                )
+            items.append(
+                "<item>"
+                f"<title>{escape(article.title)}</title>"
+                f"<link>{escape(article.link)}</link>"
+                f"<guid>{escape(article.link)}</guid>"
+                f"{author}"
+                f"<description>{escape(article.summary)}</description>"
+                f"{published}"
+                f"{categories}"
+                "</item>"
+            )
+
+        return (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<rss version=\"2.0\">"
+            "<channel>"
+            f"<title>{escape(event.feed_title)}</title>"
+            f"<link>{escape(event.url)}</link>"
+            f"<description>Replay feed for {escape(event.source_id)}</description>"
+            f"{''.join(items)}"
+            "</channel>"
+            "</rss>"
+        )
+
+    @staticmethod
+    def _to_rfc2822(value: str) -> str:
+        normalized = value.replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(normalized)
+        except ValueError:
+            return value
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.astimezone(timezone.utc)
+        return dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+
 class CollectorReplaySession:
     """Manage deterministic replay of feed fetches for collectors."""
 
@@ -148,8 +243,6 @@ class CollectorReplaySession:
             if event.source_id not in self._sources:
                 self._sources[event.source_id] = event
             self._queues[event.source_id].append(event)
-        self._token_map: dict[str, ReplayEvent] = {}
-        self._token_counter = count()
         self.requests: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------ utilities --
@@ -166,6 +259,9 @@ class CollectorReplaySession:
             }
         return config
 
+    def create_replay_source(self) -> ReplayFeedSource:
+        return ReplayFeedSource(self)
+
     def _pop_event(self, source_id: str) -> ReplayEvent:
         try:
             queue = self._queues[source_id]
@@ -176,177 +272,6 @@ class CollectorReplaySession:
                 f"Replay event queue exhausted for source {source_id}; add more samples"
             )
         return queue.popleft()
-
-    def _register_token(self, event: ReplayEvent) -> str:
-        token = f"replay://{event.source_id}/{next(self._token_counter)}"
-        self._token_map[token] = event
-        return token
-
-    def _pop_token(self, token: str) -> ReplayEvent:
-        event = self._token_map.pop(token, None)
-        if event is None:
-            raise RuntimeError(f"No replay event registered for token {token}")
-        return event
-
-    @contextmanager
-    def _patch_feedparser(self) -> Iterator[None]:
-        original_parse = feedparser.parse
-
-        def fake_parse(content: Any, *args: Any, **kwargs: Any):
-            if isinstance(content, str) and content.startswith("replay://"):
-                event = self._pop_token(content)
-                return ReplayParsedFeed(event)
-            return original_parse(content, *args, **kwargs)
-
-        feedparser.parse = fake_parse  # type: ignore[assignment]
-        try:
-            yield
-        finally:
-            feedparser.parse = original_parse  # type: ignore[assignment]
-
-    def _patch_rate_limits(self, collector: Any, stack: ExitStack) -> None:
-        if hasattr(collector, "_enforce_domain_rate_limit"):
-            stack.enter_context(
-                _patch_method(collector, "_enforce_domain_rate_limit", _noop_rate_limit)
-            )
-        if hasattr(collector, "_a_enforce_domain_rate_limit"):
-            stack.enter_context(
-                _patch_method(
-                    collector,
-                    "_a_enforce_domain_rate_limit",
-                    _noop_async_rate_limit,
-                )
-            )
-        if hasattr(collector, "_respect_robots"):
-            stack.enter_context(
-                _patch_method(collector, "_respect_robots", _allow_all_robots)
-            )
-        if hasattr(collector, "_arespect_robots"):
-            stack.enter_context(
-                _patch_method(collector, "_arespect_robots", _allow_all_robots_async)
-            )
-
-    def _patch_extractor(self, collector: Any, stack: ExitStack) -> None:
-        original_extract = collector._extract_articles_from_feed
-
-        def fake_extract(self: Any, parsed_feed: Any, source_config: Dict[str, Any]):
-            if hasattr(parsed_feed, "_event"):
-                event: ReplayEvent = parsed_feed._event
-                articles: List[Dict[str, Any]] = []
-                for article in event.articles:
-                    payload = {
-                        "url": article.link,
-                        "title": article.title,
-                        "summary": article.summary,
-                        "authors": list(article.authors),
-                        "source_metadata": {
-                            "feed_title": event.feed_title,
-                            "tags": list(article.tags),
-                        },
-                        "original_url": article.link,
-                    }
-                    if article.doi:
-                        payload["source_metadata"]["doi"] = article.doi
-                    articles.append(payload)
-                return articles
-            return original_extract(parsed_feed, source_config)
-
-        stack.enter_context(
-            _patch_method(collector, "_extract_articles_from_feed", fake_extract)
-        )
-
-    def _patch_process(self, collector: Any, stack: ExitStack) -> None:
-        def fake_process(
-            self: Any,
-            raw_article: Dict[str, Any],
-            source_id: str,
-            source_config: Dict[str, Any],
-        ) -> Dict[str, Any]:
-            document = {
-                "url": raw_article["url"],
-                "title": raw_article["title"],
-                "summary": raw_article.get("summary", ""),
-                "source_id": source_id,
-                "source_name": source_config["name"],
-                "category": source_config["category"],
-                "language": "en",
-                "published_date": raw_article.get("published_date"),
-                "published_tz_offset_minutes": raw_article.get(
-                    "published_tz_offset_minutes"
-                ),
-                "published_tz_name": raw_article.get("published_tz_name"),
-                "authors": raw_article.get("authors", []),
-                "article_metadata": {
-                    "source_metadata": raw_article.get("source_metadata", {}),
-                    "credibility_score": source_config["credibility_score"],
-                    "processing_timestamp": datetime.now(timezone.utc).isoformat(),
-                    "original_url": raw_article.get("original_url", raw_article["url"]),
-                    "replay": True,
-                },
-            }
-            return document
-
-        stack.enter_context(_patch_method(collector, "_process_article", fake_process))
-
-    def _patch_fetch(
-        self, collector: Any, stack: ExitStack, *, asynchronous: bool
-    ) -> None:
-        if asynchronous:
-
-            async def fake_fetch_async(
-                self: Any, client: Any, source_id: str, feed_url: str
-            ) -> tuple[Optional[str], Optional[int]]:
-                event = self._replay_session._pop_event(source_id)
-                self._replay_session._log_request(source_id, event)
-                if event.status_code == 304:
-                    self.db_manager.update_source_feed_metadata(
-                        source_id,
-                        etag=event.etag,
-                        last_modified=event.last_modified,
-                        content_hash=event.content_hash,
-                    )
-                    await asyncio.sleep(event.latency_ms / 1000.0)
-                    return (None, 304)
-                token = self._replay_session._register_token(event)
-                await asyncio.sleep(event.latency_ms / 1000.0)
-                self.db_manager.update_source_feed_metadata(
-                    source_id,
-                    etag=event.etag,
-                    last_modified=event.last_modified,
-                    content_hash=event.content_hash,
-                )
-                return (token, event.status_code)
-
-            stack.enter_context(
-                _patch_method(collector, "_fetch_feed_async", fake_fetch_async)
-            )
-        else:
-
-            def fake_fetch(
-                self: Any, source_id: str, feed_url: str
-            ) -> tuple[Optional[str], Optional[int]]:
-                event = self._replay_session._pop_event(source_id)
-                self._replay_session._log_request(source_id, event)
-                if event.latency_ms:
-                    time.sleep(event.latency_ms / 1000.0)
-                if event.status_code == 304:
-                    self.db_manager.update_source_feed_metadata(
-                        source_id,
-                        etag=event.etag,
-                        last_modified=event.last_modified,
-                        content_hash=event.content_hash,
-                    )
-                    return (None, 304)
-                token = self._replay_session._register_token(event)
-                self.db_manager.update_source_feed_metadata(
-                    source_id,
-                    etag=event.etag,
-                    last_modified=event.last_modified,
-                    content_hash=event.content_hash,
-                )
-                return (token, event.status_code)
-
-            stack.enter_context(_patch_method(collector, "_fetch_feed", fake_fetch))
 
     def _log_request(self, source_id: str, event: ReplayEvent) -> None:
         self.requests.append(
@@ -359,22 +284,21 @@ class CollectorReplaySession:
 
     @contextmanager
     def patch_collector(
-        self, collector: Any, *, asynchronous: bool = False
+        self, collector: Any, *, asynchronous: bool = False  # noqa: ARG002
     ) -> Iterator[None]:
-        """Patch a collector instance so it replays events instead of hitting the network."""
-
-        collector._replay_session = self  # type: ignore[attr-defined]
-        stack = ExitStack()
+        """
+        Attach replay source through the collector's stable public seam.
+        No private monkey-patching is performed.
+        """
+        if not hasattr(collector, "set_feed_replay_source"):
+            raise TypeError(
+                "Collector does not expose set_feed_replay_source() replay seam."
+            )
+        collector.set_feed_replay_source(self.create_replay_source())
         try:
-            stack.enter_context(self._patch_feedparser())
-            self._patch_rate_limits(collector, stack)
-            self._patch_extractor(collector, stack)
-            self._patch_process(collector, stack)
-            self._patch_fetch(collector, stack, asynchronous=asynchronous)
             yield
         finally:
-            stack.close()
-            delattr(collector, "_replay_session")
+            collector.set_feed_replay_source(None)
 
 
 def load_replay_fixture(path: str | Path) -> List[ReplayEvent]:
@@ -389,43 +313,10 @@ def load_replay_fixture(path: str | Path) -> List[ReplayEvent]:
     return events
 
 
-# --------------------------------------------------------------------------- helpers
-
-
-def _patch_method(obj: Any, name: str, func: Any) -> contextmanager[None]:
-    @contextmanager
-    def _inner() -> Iterator[None]:
-        original = getattr(obj, name)
-        setattr(obj, name, MethodType(func, obj))
-        try:
-            yield
-        finally:
-            setattr(obj, name, original)
-
-    return _inner()
-
-
-def _noop_rate_limit(self: Any, *args: Any, **kwargs: Any) -> None:
-    return None
-
-
-async def _noop_async_rate_limit(self: Any, *args: Any, **kwargs: Any) -> None:
-    return None
-
-
-def _allow_all_robots(self: Any, url: str) -> tuple[bool, Optional[float]]:
-    return (True, None)
-
-
-async def _allow_all_robots_async(
-    self: Any, client: Any, url: str
-) -> tuple[bool, Optional[float]]:
-    return (True, None)
-
-
 __all__ = [
     "CollectorReplaySession",
     "MemoryFeedStore",
     "ReplayEvent",
+    "ReplayFeedSource",
     "load_replay_fixture",
 ]

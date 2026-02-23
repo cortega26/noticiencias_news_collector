@@ -1,6 +1,7 @@
 """HTTP Enricher module for standard HTML fetching and extraction."""
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 import requests
@@ -9,6 +10,11 @@ from bs4 import BeautifulSoup
 from news_collector.infrastructure.requests_client import RobustRequestsClient
 
 logger = logging.getLogger(__name__)
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+
+
+def _is_smoke_mode_enabled() -> bool:
+    return os.getenv("NOTICIENCIAS_SMOKE", "").strip().lower() in _TRUTHY_VALUES
 
 
 class HttpEnricher:
@@ -93,6 +99,20 @@ class HttpEnricher:
                 "status_code": (
                     getattr(e.response, "status_code", None) if e.response else None
                 ),
+            }
+        except ValueError as e:
+            # URL safety validation errors (e.g., relative URLs) are expected inputs,
+            # not runtime faults.
+            if _is_smoke_mode_enabled():
+                logger.warning(f"HttpEnricher skipped invalid URL for {url}: {e}")
+            else:
+                logger.error(f"HttpEnricher invalid URL for {url}: {e}")
+            return {
+                "success": False,
+                "content": None,
+                "raw_content": None,
+                "error": f"Unexpected: {str(e)}",
+                "status_code": None,
             }
         except Exception as e:
             logger.error(f"HttpEnricher unexpected error for {url}: {e}")
