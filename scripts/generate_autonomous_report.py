@@ -1,6 +1,7 @@
+import json
 import os
 import sqlite3
-import json
+
 import yaml
 
 DB_PATH = os.getenv("METRICS_DB_PATH", "data/metrics/production/enrichment_metrics.db")
@@ -74,10 +75,14 @@ def main():
         f.write("\n")
 
         f.write("## 2. Source Performance (Yield & Strategy)\n\n")
-        f.write("| source_id | total_enrichment_attempted | yield_pct | headless_rate | proxy_rate | avg_enrichment_time |\n")
+        f.write(
+            "| source_id | total_enrichment_attempted | yield_pct | headless_rate | proxy_rate | avg_enrichment_time |\n"
+        )
         f.write("|---|---|---|---|---|---|\n")
         for m in metrics:
-            f.write(f"| {m.get('source_id')} | {m.get('total_enrichment_attempted')} | {m.get('yield_pct')} | {m.get('headless_rate')} | {m.get('proxy_rate')} | {m.get('avg_enrichment_time')} |\n")
+            f.write(
+                f"| {m.get('source_id')} | {m.get('total_enrichment_attempted')} | {m.get('yield_pct')} | {m.get('headless_rate')} | {m.get('proxy_rate')} | {m.get('avg_enrichment_time')} |\n"
+            )
         f.write("\n\n")
 
         f.write("## 3. Resource Usage\n\n")
@@ -89,9 +94,11 @@ def main():
         f.write("## 4. Top Failure Reasons\n\n")
         try:
             # Parse failures from history
-            cur.execute("SELECT strategy, metadata FROM enrichment_history WHERE event_type='failure'")
+            cur.execute(
+                "SELECT strategy, metadata FROM enrichment_history WHERE event_type='failure'"
+            )
             fails = cur.fetchall()
-            
+
             if fails:
                 summary = {}
                 for fail in fails:
@@ -104,9 +111,11 @@ def main():
                         reason = "unknown"
                     key = (strat, reason)
                     summary[key] = summary.get(key, 0) + 1
-                
+
                 # Sort descending
-                sorted_summary = sorted(summary.items(), key=lambda x: x[1], reverse=True)[:10]
+                sorted_summary = sorted(
+                    summary.items(), key=lambda x: x[1], reverse=True
+                )[:10]
 
                 f.write("| strategy | reason | count |\n")
                 f.write("|---|---|---|\n")

@@ -60,14 +60,14 @@ class EnrichmentStrategyRouter:
         # HeadlessEnricher also needs logger
         self.headless = HeadlessEnricher(logger_factory=logger_factory)
 
-    def route_enrichment(
+    def route_enrichment(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any], candidate: Dict[str, Any]
     ) -> Dict[str, Any]:
 
         # Record generic attempt (discovery)
         enrichment_metrics.record_attempt(source_id)
 
-        ctx = run_context.get_context()
+        run_context.get_context()
 
         # 1. Strategy Locking (Highest Priority after Config)
         # Check against source_config hard overrides?
@@ -146,20 +146,23 @@ class EnrichmentStrategyRouter:
                     }
                 )
 
-            elif proposed_strategy == "http":
-                if original_strategy != "http" and original_strategy != "scholarly":
-                    source_config["enrichment_strategy"] = "http"
-                    reason = "lock_applied" if locked_strategy else "hint_applied"
-                    self.logger.info(
-                        {
-                            "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
-                            "details": {
-                                "source_id": source_id,
-                                "strategy": "http",
-                                "original": original_strategy,
-                            },
-                        }
-                    )
+            elif (
+                proposed_strategy == "http"
+                and original_strategy != "http"
+                and original_strategy != "scholarly"
+            ):
+                source_config["enrichment_strategy"] = "http"
+                reason = "lock_applied" if locked_strategy else "hint_applied"
+                self.logger.info(
+                    {
+                        "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
+                        "details": {
+                            "source_id": source_id,
+                            "strategy": "http",
+                            "original": original_strategy,
+                        },
+                    }
+                )
 
         strategy = source_config.get("enrichment_strategy", "http")
         self.logger.info(
@@ -232,7 +235,11 @@ class EnrichmentStrategyRouter:
                 self.logger.info(
                     {
                         "event": "enrichment.headless.skipped",
-                        "details": {"source_id": source_id, "url": url, "reason": "headless_disabled_config"},
+                        "details": {
+                            "source_id": source_id,
+                            "url": url,
+                            "reason": "headless_disabled_config",
+                        },
                     }
                 )
                 enrichment_metrics.record_failure(
@@ -351,7 +358,7 @@ class EnrichmentStrategyRouter:
             "strategy_used": "none",
         }
 
-    def _execute_http(self, url: str, source_id: str = None) -> Dict[str, Any]:
+    def _execute_http(self, url: str, source_id: str | None = None) -> Dict[str, Any]:
         """Helper to run HTTP enrichment and validate length."""
         start = time.time()
         res = self.http.enrich(url)

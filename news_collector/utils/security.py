@@ -19,6 +19,14 @@ def validate_url_safety(url: str) -> None:
     """
     try:
         parsed = urlparse(url)
+
+        # 1. Explicit Scheme Validation
+        scheme = parsed.scheme.lower()
+        if scheme not in ("http", "https"):
+            raise ValueError(
+                f"Invalid URL scheme: '{scheme}'. Only http and https are allowed."
+            )
+
         hostname = parsed.hostname
         if not hostname:
             raise ValueError("Invalid URL: missing hostname")
@@ -27,11 +35,11 @@ def validate_url_safety(url: str) -> None:
         # Note: socket.getaddrinfo is blocking. In async contexts, run this in a thread executor.
         try:
             ip_list = socket.getaddrinfo(hostname, None)
-        except socket.gaierror:
-            # If we can't resolve it, functionality might fail later, but it's not strictly an SSRF risk
-            # unless the resolution changes between now and fetch (TOCTOU).
-            # For strictness, we could fail here, but let's allow requests to handle resolution errors.
-            return
+        except socket.gaierror as e:
+            # We MUST fail closed on resolution errors to prevent TOCTOU or DNSrebinding bypasses
+            raise ValueError(
+                f"SSRF Protection: Failed to resolve hostname '{hostname}' ({e})"
+            ) from e
 
         for item in ip_list:
             # item is (family, type, proto, canonname, sockaddr)
@@ -50,8 +58,9 @@ def validate_url_safety(url: str) -> None:
                 )
 
     except Exception as e:
-        if "SSRF" in str(e) or "missing hostname" in str(e):
+        if isinstance(e, ValueError):
             raise
-        # Log or re-raise? For safety, if we can't validate, we should arguably block.
-        # But let's assume validation failure is blocked.
-        pass
+        # Fail closed on any other unexpected error during validation
+        raise ValueError(
+            f"SSRF Protection: Validation failed due to unexpected error ({e})"
+        ) from e

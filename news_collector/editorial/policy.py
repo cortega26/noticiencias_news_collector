@@ -125,7 +125,7 @@ class EditorialPolicy:
         except Exception as e:
             if isinstance(e, IntegrityError):
                 raise e
-            raise IntegrityError(f"Failed to verify manifest: {e}")
+            raise IntegrityError(f"Failed to verify manifest: {e}") from e
 
     @classmethod
     def from_mode(cls, mode: str) -> "EditorialPolicy":

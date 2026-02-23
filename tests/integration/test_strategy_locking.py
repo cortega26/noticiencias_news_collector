@@ -8,7 +8,10 @@ from news_collector.observability.enrichment_metrics_store import enrichment_met
 class TestStrategyLocking(unittest.TestCase):
     def setUp(self):
         # Clean DB state
-        from news_collector.observability.enrichment_metrics_store import production_metrics_view
+        from news_collector.observability.enrichment_metrics_store import (
+            production_metrics_view,
+        )
+
         production_metrics_view.db_path = enrichment_metrics.db_path
         production_metrics_view.conn = None
 

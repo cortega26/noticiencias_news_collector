@@ -96,7 +96,7 @@ class TagNormalizer:
         tag = re.sub(r"\s+", " ", tag)
         return tag
 
-    def sanitize_tags(self, tags: List[str]) -> NormalizeResult:
+    def sanitize_tags(self, tags: List[str]) -> NormalizeResult:  # noqa: C901
         """
         Main entry point for sanitization.
         Follows the contract:

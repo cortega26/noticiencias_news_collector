@@ -4,6 +4,8 @@
 | app.environment | str | "development" | Normalized deployment environment name. |  | production |
 | app.debug | bool | false | When true, enables verbose logging and relaxed guards. |  |  |
 | app.timezone | str | "UTC" | Default timezone for user-facing timestamps. |  | America/Santiago |
+| app.editorial_mode | str | "standard" | Editorial rigor level: velocity, standard, or strict. |  | standard |
+| app.policy_integrity_mode | str | "enforced" | Policy integrity check behavior: enforced, warn, or disabled. |  | enforced, disabled |
 | paths | PathsConfig |  |  |  |  |
 | paths.data_dir | Path | data | Root directory for persistent runtime artefacts. |  | /var/lib/noticiencias |
 | paths.logs_dir | Path | logs | Directory where operational logs are written. |  | /var/log/noticiencias |
@@ -121,3 +123,7 @@
 | ollama.translator_model | Optional |  | Model override for translation phase. |  |  |
 | ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
 | ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
+| editorial_auditor | EditorialAuditorConfig |  |  |  |  |
+| editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |
+| editorial_auditor.sampling_rate | float | 0.2 | Probability of auditing an article. |  |  |
+| editorial_auditor.blocking | bool | false | If true, blocks publication on audit failure. |  |  |

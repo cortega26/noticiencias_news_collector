@@ -57,7 +57,10 @@ class ScholarlyMetadataEnricher:
             resp = self.session.get(f"{self.CROSSREF_API_URL}{doi}")
             if resp.status_code == 200:
                 data = resp.json()
-                return data.get("message", {})
+                message = data.get("message", {})
+                if isinstance(message, dict):
+                    return {str(key): value for key, value in message.items()}
+                return {}
             return None
         except Exception:
             return None
@@ -100,7 +103,7 @@ class ScholarlyMetadataEnricher:
                 author_names.append(name)
         if len(authors) > 5:
             author_names.append("et al.")
-        author_str = ", ".join(author_names) if author_names else "Unknown Authors"
+        ", ".join(author_names) if author_names else "Unknown Authors"
 
         # Journal & Date
         container = metadata.get("container-title", ["Unknown Journal"])

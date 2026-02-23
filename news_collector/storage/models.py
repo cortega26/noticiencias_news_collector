@@ -28,10 +28,15 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Base para todos los modelos
-Base = declarative_base()
+
+
+class Base(DeclarativeBase):
+    pass
+
+
 PENDING_STATUS = "pen" + "ding"
 PROCESSING_STATUS_VALUES = (
     PENDING_STATUS,

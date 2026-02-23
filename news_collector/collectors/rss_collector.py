@@ -17,7 +17,7 @@ import hashlib
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 from urllib.parse import urlparse
 
 import feedparser
@@ -27,10 +27,12 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
+import contextlib
+
 from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
-from news_collector.logic.parsers.image_extractor import ImageExtractor
+from news_collector.logic.parsers.image_extractor import ImageCandidate, ImageExtractor
 from news_collector.logic.parsers.rss_parser import RssParser
 from news_collector.scoring.pre_scorer import PreScorer
 from news_collector.utils.url_canonicalizer import configure_canonicalization_cache
@@ -95,9 +97,11 @@ class RSSCollector(BaseCollector):
         from news_collector.enrichment.router import EnrichmentStrategyRouter
 
         self.router = EnrichmentStrategyRouter(logger_factory=logger_factory)
+        # Stable replay seam for deterministic fixture-driven smoke/profile runs.
+        self._feed_replay_source = None
 
         # Estadísticas de la sesión actual
-        self.session_stats = {
+        self.session_stats: RSSCollector._SessionStats = {
             "sources_checked": 0,
             "articles_found": 0,
             "articles_saved": 0,
@@ -108,6 +112,13 @@ class RSSCollector(BaseCollector):
     def _create_session(self):
         """Deprecated: Internal session is managed by RobustRequestsClient."""
         pass
+
+    def set_feed_replay_source(self, replay_source: Any | None) -> None:
+        """
+        Stable replay seam to inject deterministic feed fetch responses.
+        When set, collect_from_source bypasses robots/rate-limit network checks.
+        """
+        self._feed_replay_source = replay_source
 
     def _fetch_feed_content(
         self, feed_url: str, request_headers: Dict[str, str]
@@ -204,22 +215,25 @@ class RSSCollector(BaseCollector):
                 },
             )
 
-            allowed, robots_delay = self._respect_robots(source_config["url"])
-            if not allowed:
-                stats["error_message"] = "Bloqueado por robots.txt"
-                self._emit_log(
-                    "warning",
-                    "collector.fetch.blocked_robots",
-                    source_id=source_id,
-                    details={"url": source_config.get("url")},
-                )
-                self._send_to_dlq(source_id, source_config["url"], "robots_disallowed")
-                return stats
+            if self._feed_replay_source is None:
+                allowed, robots_delay = self._respect_robots(source_config["url"])
+                if not allowed:
+                    stats["error_message"] = "Bloqueado por robots.txt"
+                    self._emit_log(
+                        "warning",
+                        "collector.fetch.blocked_robots",
+                        source_id=source_id,
+                        details={"url": source_config.get("url")},
+                    )
+                    self._send_to_dlq(
+                        source_id, source_config["url"], "robots_disallowed"
+                    )
+                    return stats
 
-            domain = urlparse(source_config["url"]).netloc
-            self._enforce_domain_rate_limit(
-                domain, robots_delay, source_config.get("min_delay_seconds")
-            )
+                domain = urlparse(source_config["url"]).netloc
+                self._enforce_domain_rate_limit(
+                    domain, robots_delay, source_config.get("min_delay_seconds")
+                )
 
             # 1. Robust Fetch
             feed_response = self._fetch_feed_robust(source_id, source_config)
@@ -247,18 +261,13 @@ class RSSCollector(BaseCollector):
             parsed_feed = parse_result["parsed_feed"]
 
             # 3. Extract Articles
-            try:
-                raw_articles = self._extract_articles_from_feed(
-                    parsed_feed, source_config, source_id
-                )
-                print(
-                    f"DEBUG: RSSCollector source={source_id} raw_articles={len(raw_articles)}",
-                    flush=True,
-                )
-            except TypeError:
-                raw_articles = self._extract_articles_from_feed(  # type: ignore[misc]
-                    parsed_feed, source_config  # backwards compatibility for overrides
-                )
+            raw_articles = self._extract_articles_from_feed(
+                parsed_feed, source_config, source_id
+            )
+            print(
+                f"DEBUG: RSSCollector source={source_id} raw_articles={len(raw_articles)}",
+                flush=True,
+            )
             stats["articles_found"] = len(raw_articles)
 
             if not raw_articles:
@@ -387,7 +396,7 @@ class RSSCollector(BaseCollector):
                 content_text = content_bytes.decode("utf-8", errors="replace")
         return content_text, result.get("status_code", 500)
 
-    def _fetch_feed_robust(
+    def _fetch_feed_robust(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -397,22 +406,40 @@ class RSSCollector(BaseCollector):
         url = source_config["url"]
 
         # 1. Check Metadata for Conditional Get
-        cached_headers = {}
+        cached_headers: Dict[str, Optional[str]] = {}
         try:
             meta = self.db_manager.get_source_feed_metadata(source_id)
             if meta:
                 cached_headers = meta
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         request_headers = self.FEED_REQUEST_headers.copy()
-        if cached_headers.get("etag"):
-            request_headers["If-None-Match"] = cached_headers["etag"]
-        if cached_headers.get("last_modified"):
-            request_headers["If-Modified-Since"] = cached_headers["last_modified"]
+        etag = cached_headers.get("etag")
+        if etag:
+            request_headers["If-None-Match"] = etag
+        last_modified = cached_headers.get("last_modified")
+        if last_modified:
+            request_headers["If-Modified-Since"] = last_modified
 
         if source_config.get("headers"):
             request_headers.update(source_config["headers"])
+
+        if self._feed_replay_source is not None:
+            try:
+                return self._feed_replay_source.fetch_feed(
+                    source_id=source_id,
+                    source_config=source_config,
+                    cached_headers=cached_headers,
+                    request_headers=request_headers,
+                    db_manager=self.db_manager,
+                )
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error_message": f"Replay Error: {str(e)}",
+                    "url": url,
+                }
 
         try:
             start_t = time.perf_counter()
@@ -447,18 +474,15 @@ class RSSCollector(BaseCollector):
                 )
 
             if response.status_code == 304:
-                run_304 = True
                 # Sometimes 304 is returned but we might want to force refresh if local cache invalid?
                 # Optimization: 304 means success but no new content. Update metadata timestamp.
-                try:
+                with contextlib.suppress(Exception):
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=cached_headers.get("content_hash"),
                     )
-                except Exception:
-                    pass
                 return {
                     "success": True,
                     "status_code": 304,
@@ -497,15 +521,13 @@ class RSSCollector(BaseCollector):
                     "info", "collector.feed.content_unchanged", source_id=source_id
                 )
                 # Update metadata timestamp even if 304-equivalent
-                try:
+                with contextlib.suppress(Exception):
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=content_hash,
                     )
-                except Exception:
-                    pass
                 return {
                     "success": True,
                     "status_code": 304,
@@ -514,15 +536,13 @@ class RSSCollector(BaseCollector):
                 }  # Treat as 304 logic upstream
 
             # Save metadata
-            try:
+            with contextlib.suppress(Exception):
                 self.db_manager.update_source_feed_metadata(
                     source_id,
                     etag=response.headers.get("ETag"),
                     last_modified=response.headers.get("Last-Modified"),
                     content_hash=content_hash,
                 )
-            except Exception:
-                pass
 
             return {
                 "success": True,
@@ -648,7 +668,7 @@ class RSSCollector(BaseCollector):
 
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
-        recent_threshold = datetime.now(timezone.utc) - timedelta(
+        datetime.now(timezone.utc) - timedelta(
             days=COLLECTION_CONFIG["recent_days_threshold"]
         )
 
@@ -765,7 +785,7 @@ class RSSCollector(BaseCollector):
                 if feed_image:
                     # Validate it
                     if self.image_extractor.validate_image(
-                        type("Candidate", (), {"url": feed_image})()
+                        ImageCandidate(url=str(feed_image), source="feed")
                     ):
                         image_status = "IMAGE_OK"
                         image_source = "feed"
@@ -779,10 +799,10 @@ class RSSCollector(BaseCollector):
 
                 # 2. If no valid feed image, try extraction from HTML
                 if not feed_image and html_content:
-                    candidates = self.image_extractor.extract_candidates(
+                    image_candidates = self.image_extractor.extract_candidates(
                         html_content, cand["url"]
                     )
-                    for img_cand in candidates:
+                    for img_cand in image_candidates:
                         if self.image_extractor.validate_image(img_cand):
                             cand["image_url"] = img_cand.url
                             image_status = "IMAGE_OK"
@@ -790,7 +810,7 @@ class RSSCollector(BaseCollector):
                             break
 
                     if image_status != "IMAGE_OK":
-                        if candidates:
+                        if image_candidates:
                             image_status = "IMAGE_VALIDATION_FAILED"  # Found candidates but none valid
                         else:
                             image_status = "IMAGE_MISSING_SOURCE"  # No candidates found
@@ -829,7 +849,7 @@ class RSSCollector(BaseCollector):
             return False
         return True
 
-    def _process_article(
+    def _process_article(  # noqa: C901
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]
     ) -> Optional[CollectorArticleModel]:
         """
@@ -947,7 +967,9 @@ class RSSCollector(BaseCollector):
                     processed_article["article_metadata"]["enrichment"] = {
                         "language": processed_article.get("language", "en"),
                         "normalized_title": original_title[:500],
-                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "normalized_summary": processed_article.get("summary", "")[
+                            :2000
+                        ],
                         "sentiment": "neutral",
                         "entities": [],
                         "topics": [],
@@ -1013,7 +1035,9 @@ class RSSCollector(BaseCollector):
                     processed_article["article_metadata"]["enrichment"] = {
                         "language": processed_article.get("language", "en"),
                         "normalized_title": original_title[:500],
-                        "normalized_summary": processed_article.get("summary", "")[:2000],
+                        "normalized_summary": processed_article.get("summary", "")[
+                            :2000
+                        ],
                         "sentiment": "neutral",
                         "entities": [],
                         "topics": [],
@@ -1092,16 +1116,21 @@ class RSSCollector(BaseCollector):
         """
         current_time = datetime.now(timezone.utc)
         session_duration = current_time - self.session_stats["start_time"]
+        articles_found = self.session_stats["articles_found"]
+        articles_saved = self.session_stats["articles_saved"]
 
         return {
             **self.session_stats,
             "session_duration_minutes": session_duration.total_seconds() / 60,
-            "articles_per_minute": self.session_stats["articles_found"]
+            "articles_per_minute": articles_found
             / max(session_duration.total_seconds() / 60, 1),
-            "success_rate": (
-                self.session_stats["articles_saved"]
-                / max(self.session_stats["articles_found"], 1)
-            )
-            * 100,
+            "success_rate": (articles_saved / max(articles_found, 1)) * 100,
             "end_time": current_time.isoformat(),
         }
+
+    class _SessionStats(TypedDict):
+        sources_checked: int
+        articles_found: int
+        articles_saved: int
+        errors_encountered: int
+        start_time: datetime

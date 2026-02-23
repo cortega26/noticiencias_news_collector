@@ -53,10 +53,74 @@ class StrategyLockManager:
         try:
             with open(self.config_path, "r") as f:
                 data = yaml.safe_load(f)
-                return data.get("locks", {})
+                if not isinstance(data, dict):
+                    return {}
+                locks = data.get("locks", {})
+                if isinstance(locks, dict):
+                    return {str(key): value for key, value in locks.items()}
+                return {}
         except Exception as e:
             logger.error(f"Failed to load strategy locks: {e}")
             return {}
+
+    @staticmethod
+    def _calculate_yield(attempts: int, successes: int) -> float:
+        if attempts <= 0:
+            return 0.0
+        return successes / attempts * 100.0
+
+    @staticmethod
+    def _normalize_lock(lock: Any) -> Optional[Dict[str, str]]:
+        if not isinstance(lock, dict):
+            return None
+
+        normalized: Dict[str, str] = {}
+        for key, value in lock.items():
+            if isinstance(key, str) and isinstance(value, str):
+                normalized[key] = value
+
+        if "strategy" not in normalized:
+            return None
+        return normalized
+
+    @staticmethod
+    def _validate_metrics(source_id: str, metrics: Optional[Dict[str, Any]]) -> bool:
+        if not metrics:
+            logger.warning(
+                f"Lock Rejected for {source_id}: No production metrics found."
+            )
+            return False
+
+        total_attempts = metrics.get("total_enrichment_attempted", 0)
+        if total_attempts < 5:
+            logger.warning(
+                f"Lock Rejected for {source_id}: Insufficient attempts ({total_attempts} < 5)."
+            )
+            return False
+        return True
+
+    def _has_required_yield_advantage(
+        self, source_id: str, target_strategy: str, metrics: Dict[str, Any]
+    ) -> bool:
+        if target_strategy == "http":
+            return True
+
+        http_yield = self._calculate_yield(
+            int(metrics.get("http_attempts", 0)),
+            int(metrics.get("http_success", 0)),
+        )
+        target_yield = self._calculate_yield(
+            int(metrics.get(f"{target_strategy}_attempts", 0)),
+            int(metrics.get(f"{target_strategy}_success", 0)),
+        )
+        advantage = target_yield - http_yield
+        if advantage >= 20.0:
+            return True
+
+        logger.warning(
+            f"Lock Rejected for {source_id}: Yield advantage {advantage:.1f}% < 20%. (Target: {target_yield:.1f}%, HTTP: {http_yield:.1f}%)"
+        )
+        return False
 
     def get_lock(self, source_id: str) -> Optional[Dict[str, str]]:
         """
@@ -66,59 +130,27 @@ class StrategyLockManager:
         if not lock:
             return None
 
+        normalized_lock = self._normalize_lock(lock)
+        if not normalized_lock:
+            return None
+
         # Integrity: Verify evidence from Production
         from news_collector.observability.enrichment_metrics_store import (
             production_metrics_view,
         )
 
         metrics = production_metrics_view.get_metrics(source_id)
-        if not metrics:
-            logger.warning(
-                f"Lock Rejected for {source_id}: No production metrics found."
-            )
+        if not self._validate_metrics(source_id, metrics):
             return None
 
-        total_attempts = metrics.get("total_enrichment_attempted", 0)
-        if total_attempts < 5:
-            logger.warning(
-                f"Lock Rejected for {source_id}: Insufficient attempts ({total_attempts} < 5)."
-            )
+        target_strategy = normalized_lock["strategy"]
+        metrics_dict = metrics if isinstance(metrics, dict) else {}
+        if not self._has_required_yield_advantage(
+            source_id, target_strategy, metrics_dict
+        ):
             return None
 
-        target_strategy = lock.get("strategy")
-        if not target_strategy:
-            return None
-
-        # Check Yield Advantage
-        # Baseline (HTTP) Yield
-        http_attempts = metrics.get("http_attempts", 0)
-        http_success = metrics.get("http_success", 0)
-        http_yield = (
-            (http_success / http_attempts * 100.0) if http_attempts > 0 else 0.0
-        )
-
-        # Target Strategy Yield
-        target_attempts = metrics.get(f"{target_strategy}_attempts", 0)
-        target_success = metrics.get(f"{target_strategy}_success", 0)
-        target_yield = (
-            (target_success / target_attempts * 100.0) if target_attempts > 0 else 0.0
-        )
-
-        # Logic: If Target is HTTP, it's the baseline, so "advantage" is 0.
-        # But maybe we lock to HTTP to prevent exploring?
-        # If locking to non-HTTP, we need advantage.
-
-        if target_strategy != "http":
-            advantage = target_yield - http_yield
-            if advantage < 20.0:
-                # Special Case: If HTTP yield is 0 and Target is > 20, advantage is met.
-                # But if Target is 10% and HTTP is 0%, advantage is 10% (Reject).
-                logger.warning(
-                    f"Lock Rejected for {source_id}: Yield advantage {advantage:.1f}% < 20%. (Target: {target_yield:.1f}%, HTTP: {http_yield:.1f}%)"
-                )
-                return None
-
-        return lock
+        return normalized_lock
 
     def suggest_lock(self, source_id: str, strategy: str, rationale: str):
         """

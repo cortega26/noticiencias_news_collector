@@ -43,3 +43,19 @@ def mock_article_payload():
             "original_url": "https://example.com/test-article",
         },
     }
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Clean up global sqlite connections after all tests to prevent ResourceWarnings."""
+    try:
+        from news_collector.observability.enrichment_metrics_store import (
+            enrichment_metrics,
+            production_metrics_view,
+        )
+
+        enrichment_metrics.close()
+        production_metrics_view.close()
+    except (ImportError, AttributeError) as e:
+        import logging
+
+        logging.warning("Skipped cleanup of metrics DB: %s", e)

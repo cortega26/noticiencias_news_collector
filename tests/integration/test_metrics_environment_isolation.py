@@ -25,8 +25,13 @@ class TestMetricsEnvironmentIsolation(unittest.TestCase):
         if os.path.exists(self.prod_db_dir):
             shutil.rmtree(self.prod_db_dir)
 
-        from news_collector.observability.enrichment_metrics_store import production_metrics_view
-        production_metrics_view.db_path = "data/metrics/production/enrichment_metrics.db"
+        from news_collector.observability.enrichment_metrics_store import (
+            production_metrics_view,
+        )
+
+        production_metrics_view.db_path = (
+            "data/metrics/production/enrichment_metrics.db"
+        )
         production_metrics_view.conn = None
 
         # Re-init singleton (hacky but needed for tests)

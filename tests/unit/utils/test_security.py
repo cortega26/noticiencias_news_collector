@@ -27,5 +27,5 @@ def test_validate_url_safety_loopback():
 
 
 def test_validate_url_safety_no_hostname():
-    with pytest.raises(ValueError, match="missing hostname"):
+    with pytest.raises(ValueError, match="Invalid URL scheme: 'file'"):
         validate_url_safety("file:///etc/passwd")

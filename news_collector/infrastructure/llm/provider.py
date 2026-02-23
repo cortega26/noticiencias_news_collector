@@ -8,10 +8,16 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, Generator, Optional, Union, cast
+from typing import Any, Dict, Generator, Optional, Union
 
 import httpx
 import requests
+from news_collector.infrastructure.llm.model_registry import (
+    NonCanonicalModelIdError,
+    canonicalize_model_id,
+    is_no_warn_mode_enabled,
+    is_strict_mode_enabled,
+)
 from news_collector.utils.logger import get_logger
 from tenacity import (
     Retrying,
@@ -22,6 +28,7 @@ from tenacity import (
 )
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
+_NON_CANONICAL_WARNED: set[tuple[str, str, str]] = set()
 
 
 class OllamaProvider:
@@ -46,10 +53,16 @@ class OllamaProvider:
         self.timeout = timeout
         self.max_retries = max_retries
 
-        # --- Fix C: Deterministic Normalization ---
-        # 1. Model Tag: Ensure it has a tag (default to :latest if missing)
-        if self.model and ":" not in self.model:
-            self.model = f"{self.model}:latest"
+        if self.model is not None:
+            raw_model = str(self.model)
+            self.model = canonicalize_model_id(
+                raw_model, stage="provider_default", logger=logger
+            )
+            self._warn_non_canonical(
+                stage="provider_default",
+                raw_value=raw_model,
+                canonical_value=self.model,
+            )
 
         # 2. API URL: Handle base vs endpoint mismatch
         clean_url = self.api_url.rstrip("/")
@@ -63,6 +76,34 @@ class OllamaProvider:
 
     async def close(self):
         await self.async_client.aclose()
+
+    @staticmethod
+    def _warn_non_canonical(
+        *,
+        stage: str,
+        raw_value: str,
+        canonical_value: str,
+    ) -> None:
+        if raw_value == canonical_value:
+            return
+        if is_no_warn_mode_enabled():
+            raise NonCanonicalModelIdError(
+                "NO_WARN mode forbids provider canonicalization for "
+                f"{stage}: {raw_value!r} -> {canonical_value!r}. "
+                "Pass a canonical '<model>:<tag>' from the registry."
+            )
+        if is_strict_mode_enabled():
+            return
+        key = (stage, raw_value, canonical_value)
+        if key in _NON_CANONICAL_WARNED:
+            return
+        logger.warning(
+            "Non-canonical Ollama model id in %s: '%s' -> '%s' (registry normalized).",
+            stage,
+            raw_value,
+            canonical_value,
+        )
+        _NON_CANONICAL_WARNED.add(key)
 
     def _prepare_payload(
         self,
@@ -78,9 +119,15 @@ class OllamaProvider:
                 "Ollama model is not configured. Provide a model in config or pass model=..."
             )
 
-        # Normalization again just in case override is raw
-        if ":" not in use_model:
-            use_model = f"{use_model}:latest"
+        raw_model = str(use_model)
+        use_model = canonicalize_model_id(
+            raw_model, stage="provider_runtime_override", logger=logger
+        )
+        self._warn_non_canonical(
+            stage="provider_runtime_override",
+            raw_value=raw_model,
+            canonical_value=use_model,
+        )
 
         payload = {
             "model": use_model,
@@ -193,6 +240,7 @@ class OllamaProvider:
                         f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}"
                     )
                     raise
+        raise RuntimeError("Retry loop exited without producing a response")
 
     def _stream_generator(
         self, response: requests.Response
@@ -209,36 +257,54 @@ class OllamaProvider:
 
     # --- HELPERS ---
 
+    @staticmethod
+    def _try_parse_json_dict(candidate: str) -> tuple[bool, Dict[str, Any]]:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            return False, {}
+
+        if isinstance(parsed, dict):
+            return True, {str(key): value for key, value in parsed.items()}
+        return True, {}
+
+    @staticmethod
+    def _extract_braced_segment(text: str) -> Optional[str]:
+        start_idx = text.find("{")
+        if start_idx == -1:
+            return None
+
+        nesting = 0
+        for i, char in enumerate(text[start_idx:], start=start_idx):
+            if char == "{":
+                nesting += 1
+            elif char == "}":
+                nesting -= 1
+
+            if nesting == 0:
+                return text[start_idx : i + 1]
+        return None
+
     def _extract_json(self, text: str) -> Dict[str, Any]:
         """Robust JSON extraction from mixed text."""
         text = text.strip()
-        try:
-            return cast(Dict[str, Any], json.loads(text))
-        except json.JSONDecodeError:
-            pass
+        parsed_ok, parsed_json = self._try_parse_json_dict(text)
+        if parsed_ok:
+            return parsed_json
 
         # Try finding outer braces
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            try:
-                return cast(Dict[str, Any], json.loads(match.group(0)))
-            except json.JSONDecodeError:
-                pass
+            parsed_ok, parsed_json = self._try_parse_json_dict(match.group(0))
+            if parsed_ok:
+                return parsed_json
 
-        # Try bracket counting (from ai_editor.py)
-        start_idx = text.find("{")
-        if start_idx != -1:
-            nesting = 0
-            for i, char in enumerate(text[start_idx:], start=start_idx):
-                if char == "{":
-                    nesting += 1
-                elif char == "}":
-                    nesting -= 1
-                if nesting == 0:
-                    try:
-                        return cast(Dict[str, Any], json.loads(text[start_idx : i + 1]))
-                    except (json.JSONDecodeError, ValueError):
-                        pass
+        # Try bracket counting fallback (from ai_editor.py)
+        bracket_segment = self._extract_braced_segment(text)
+        if bracket_segment:
+            parsed_ok, parsed_json = self._try_parse_json_dict(bracket_segment)
+            if parsed_ok:
+                return parsed_json
 
         logger.warning(f"Failed to extract JSON from: {text[:100]}...")
         return {}
@@ -272,17 +338,13 @@ class OllamaProvider:
         Checks if a specific model exists in local Ollama instance.
         """
         available = self.list_models()
-        # Direct match or partial match logic?
-        # Ollama usually needs exact match (maybe without :latest implicit)
-
-        # normalize input
-        target = model_name
-        if ":" not in target:
-            target = f"{target}:latest"
-
-        if target in available:
-            return True
-
-        # fallback for raw names if available list has them differently
-        # e.g. input "llama3.2" might match "llama3.2:latest"
-        return model_name in available
+        raw_model = str(model_name)
+        target = canonicalize_model_id(
+            raw_model, stage="provider_existence_check", logger=logger
+        )
+        self._warn_non_canonical(
+            stage="provider_existence_check",
+            raw_value=raw_model,
+            canonical_value=target,
+        )
+        return target in available

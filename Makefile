@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -65,7 +65,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests semgrep
+	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
 	@touch $(BOOTSTRAP_STAMP)
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
@@ -186,7 +186,7 @@ check-coverage: bootstrap ## Check if coverage meets the required threshold (fai
 
 test-system: bootstrap ## Run S1-scoped verification (Contract + Coverage Gate)
 	@echo "[test-system] Running S1 Refactor Verification..."
-	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py
+	@PYTHONPATH=$(CURDIR) $(PYTEST) -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py tests/unit/system/test_activity_monitor.py
 
 test-contracts: bootstrap ## Run D1 Contract enforcement tests (Contract + Coverage Gate)
 	@echo "[test-contracts] Running D1 Contract Enforcement..."
@@ -277,6 +277,18 @@ config-dump: bootstrap ## Print the built-in default configuration
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
+docs-config-fields: config-docs ## Alias for regenerating docs/config_fields.md
+
+config-docs-check: bootstrap ## Ensure docs/config_fields.md matches schema output
+	@TMP_FILE="$$(mktemp)"; \
+	$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > "$$TMP_FILE"; \
+	if ! diff -u docs/config_fields.md "$$TMP_FILE" >/dev/null; then \
+		echo "docs/config_fields.md is out of date. Run 'make config-docs' and commit the result."; \
+		rm -f "$$TMP_FILE"; \
+		exit 1; \
+	fi; \
+	rm -f "$$TMP_FILE"
+
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) .pytest_cache .mypy_cache
 
@@ -304,4 +316,3 @@ check-deprecated: ## Check for deprecated Streamlit arguments
 		echo "Error: usage of deprecated 'use_container_width' found in apps/refinery."; \
 		exit 1; \
 	fi
-

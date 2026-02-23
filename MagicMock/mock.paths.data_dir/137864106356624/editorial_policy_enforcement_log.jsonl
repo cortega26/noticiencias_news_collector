@@ -1,0 +1,1 @@
+{"timestamp": "2026-02-21T15:53:08.841428", "article_id": "test-123", "mode": "standard", "thresholds": {"critic": 80.0, "auditor": 8.0}, "score": null, "result": "allowed", "reason": "No Auditor score available (Non-blocking default)", "policy_sha256": ""}

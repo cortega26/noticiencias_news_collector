@@ -7,8 +7,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from news_collector.infrastructure.llm.model_registry import (
+    ModelRegistryError,
+    get_model_for_stage,
+)
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.utils.logger import get_logger
+from noticiencias.config_manager import load_config
 
 # Use centralized logger
 logger = get_logger().create_module_logger("components.editorial.auditor")
@@ -82,15 +87,29 @@ class EditorialAuditor:
 
         # LLM Setup
         ollama_cfg = getattr(config, "ollama", None) or {}
-        api_url = "http://localhost:11434/api/generate"
-        model = "llama3.2"
-
+        fallback_config = None
         if isinstance(ollama_cfg, dict):
-            api_url = ollama_cfg.get("api_url", api_url)
-            model = ollama_cfg.get("model", model)
+            api_url = ollama_cfg.get("api_url")
         else:
-            api_url = getattr(ollama_cfg, "api_url", api_url)
-            model = getattr(ollama_cfg, "model", model)
+            api_url = getattr(ollama_cfg, "api_url", None)
+        if not api_url:
+            fallback_config = load_config()
+            api_url = fallback_config.ollama.api_url
+            logger.warning(
+                "Auditor initialized with config missing ollama.api_url; using load_config() fallback."
+            )
+
+        try:
+            model = get_model_for_stage("auditor", config=config, logger=logger)
+        except ModelRegistryError as exc:
+            if fallback_config is None:
+                fallback_config = load_config()
+            logger.warning(
+                "Auditor model resolution fallback due to invalid config: %s", exc
+            )
+            model = get_model_for_stage(
+                "auditor", config=fallback_config, logger=logger
+            )
 
         self.api_url = api_url
         self.model = model
@@ -163,7 +182,7 @@ class EditorialAuditor:
                 return True
 
         # 3. Random Sampling
-        if random.random() < self.sampling_rate:
+        if random.random() < self.sampling_rate:  # noqa: S311
             logger.info("Auditor Triggered: Random Sampling")
             return True
 
@@ -182,7 +201,7 @@ class EditorialAuditor:
             "issues": [],
         }
 
-    def _normalize_audit_result(self, raw: Any) -> Dict[str, Any]:
+    def _normalize_audit_result(self, raw: Any) -> Dict[str, Any]:  # noqa: C901
         """
         OBJECTIVE 2 & 3: Strict Normalization & Single Warning.
         Silently corrects types. Returns safe defaults if structure is invalid.
@@ -225,9 +244,8 @@ class EditorialAuditor:
                 # Prevent "bool is not iterable" by rejecting non-lists
 
             # 4. String Normalization
-            elif isinstance(default_val, str):
-                if isinstance(val, str):
-                    normalized[key] = val
+            elif isinstance(default_val, str) and isinstance(val, str):
+                normalized[key] = val
 
         return normalized
 
@@ -252,12 +270,14 @@ class EditorialAuditor:
         article_id: str,
         content: str,
         source_url: str,
-        article_data: Dict[str, Any] = {},
+        article_data: Dict[str, Any] = None,
     ) -> None:
         """
         Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.
         Handles LLM interaction, result parsing, and persistence.
         """
+        if article_data is None:
+            article_data = {}
         try:
             logger.info(f"Starting Editorial Audit for {article_id}...")
 
@@ -286,7 +306,7 @@ class EditorialAuditor:
                 try:
                     text = "".join(str(chunk) for chunk in provider_result)
                     raw_data = self.provider._extract_json(text)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Treated as invalid by _normalize
             else:
                 logger.warning(
