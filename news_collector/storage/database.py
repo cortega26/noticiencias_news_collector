@@ -544,7 +544,8 @@ class DatabaseManager:
                             )
                             existing.content = new_content
                             # Update summary too if needed
-                            existing.summary = payload.get("summary")
+                            existing_record = cast(Any, existing)
+                            existing_record.summary = payload.get("summary")
                             session.add(existing)
                             session.flush()
                             return existing
@@ -942,7 +943,8 @@ class DatabaseManager:
         current_confidence = float(
             getattr(best_candidate, "duplication_confidence", 0.0) or 0.0
         )
-        best_candidate.duplication_confidence = max(
+        best_candidate_record = cast(Any, best_candidate)
+        best_candidate_record.duplication_confidence = max(
             current_confidence, float(duplication_confidence(best_distance))
         )
 
@@ -1008,8 +1010,9 @@ class DatabaseManager:
             distance = hamming_distance(article_simhash, anchor_simhash)
             if distance > self.simhash_threshold * 2:
                 new_cluster = generate_cluster_id()
-                article.cluster_id = new_cluster
-                article.duplication_confidence = 0.0
+                article_record = cast(Any, article)
+                article_record.cluster_id = new_cluster
+                article_record.duplication_confidence = 0.0
 
     def get_articles_by_score(
         self,
