@@ -200,7 +200,7 @@ class RefineryEngine:
             req_logger = logging.getLogger("RefineryEngine")
             req_logger.warning(
                 f"Data Contract Validation failure: Article {article_id} rejected: {e}",
-                exc_info=True
+                exc_info=True,
             )
             return False
 

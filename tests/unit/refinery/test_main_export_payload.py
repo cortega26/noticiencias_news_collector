@@ -38,7 +38,7 @@ def test_load_export_articles_backfills_source_id_from_source_name(tmp_path):
                         "category": "science",
                         "published_date": datetime.now(timezone.utc).isoformat(),
                     }
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -74,7 +74,7 @@ def test_streamlit_like_payload_validates_contract_after_loading(tmp_path):
                         "category": "science",
                         "published_date": "2026-02-20T14:00:00",
                     }
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -168,7 +168,8 @@ def test_schema_v2_missing_source_id_is_rejected_without_legacy_fallback(tmp_pat
 
 def test_adapter_rejects_payload_without_deterministic_source_identity():
     with pytest.raises(
-        ValueError, match="Missing source_id in export payload and deterministic fallback failed"
+        ValueError,
+        match="Missing source_id in export payload and deterministic fallback failed",
     ):
         adapt_export_article_to_collector_payload(
             {

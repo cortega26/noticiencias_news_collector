@@ -1085,9 +1085,7 @@ class DatabaseManager:
             session.expunge_all()
             return list(pending_articles)
 
-    def update_validation_status_bulk(
-        self, mappings: List[Dict[str, Any]]
-    ) -> bool:
+    def update_validation_status_bulk(self, mappings: List[Dict[str, Any]]) -> bool:
         """
         Actualiza el estado de validación de múltiples artículos en bulk.
         `mappings` debe ser una lista de dicts con la clave "id" y los campos a actualizar:
@@ -1124,30 +1122,38 @@ class DatabaseManager:
                 try:
                     score_model = ScoringRequestModel.model_validate(score_data)
                 except ValidationError as exc:
-                    logger.error(f"Invalid scoring payload para artículo {article_id}: {exc}")
+                    logger.error(
+                        f"Invalid scoring payload para artículo {article_id}: {exc}"
+                    )
                     continue
 
             payload = score_model.model_dump_for_storage()
             components_model = score_model.components
 
-            article_mappings.append({
-                "id": article_id,
-                "final_score": payload["final_score"],
-                "score_components": payload.get("components", {}),
-                "processing_status": "completed"
-            })
+            article_mappings.append(
+                {
+                    "id": article_id,
+                    "final_score": payload["final_score"],
+                    "score_components": payload.get("components", {}),
+                    "processing_status": "completed",
+                }
+            )
 
-            score_logs.append(ScoreLog(
-                article_id=article_id,
-                score_version=payload.get("version", "1.0"),
-                source_credibility_score=payload["components"].get("source_credibility"),
-                recency_score=payload["components"].get("recency"),
-                content_quality_score=payload["components"].get("content_quality"),
-                engagement_score=components_model.get_engagement_value(),
-                final_score=payload["final_score"],
-                score_explanation=payload.get("explanation", {}),
-                algorithm_weights=payload.get("weights", {}),
-            ))
+            score_logs.append(
+                ScoreLog(
+                    article_id=article_id,
+                    score_version=payload.get("version", "1.0"),
+                    source_credibility_score=payload["components"].get(
+                        "source_credibility"
+                    ),
+                    recency_score=payload["components"].get("recency"),
+                    content_quality_score=payload["components"].get("content_quality"),
+                    engagement_score=components_model.get_engagement_value(),
+                    final_score=payload["final_score"],
+                    score_explanation=payload.get("explanation", {}),
+                    algorithm_weights=payload.get("weights", {}),
+                )
+            )
 
         with self.get_session() as session:
             try:

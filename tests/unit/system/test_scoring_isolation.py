@@ -83,7 +83,7 @@ async def test_scoring_fail_all_behavior(
 
     # Assertions
     bulk_calls = system.db_manager.update_articles_score_bulk.call_args_list
-    
+
     # Bulk update should be called exactly once
     assert len(bulk_calls) == 1, "Expected one bulk update call"
 
@@ -102,9 +102,11 @@ async def test_scoring_fail_all_behavior(
     # Extract the payload passed to the bulk update
     bulk_payload = bulk_calls[0][0][0]  # The first positional argument
     updated_ids = [item[0] for item in bulk_payload]
-    
+
     # STRICT ASSERTION: Only 2 successful updates (Article 1 and 3)
-    assert len(updated_ids) == 2, f"Expected 2 successful scores, got {len(updated_ids)}"
+    assert (
+        len(updated_ids) == 2
+    ), f"Expected 2 successful scores, got {len(updated_ids)}"
 
     # Verify EXACTLY which articles were updated (1 and 3)
     assert 1 in updated_ids

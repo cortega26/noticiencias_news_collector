@@ -52,7 +52,7 @@ class NewsCollectorSystem:
                 ).model_dump(exclude_none=True)
             except ValidationError as e:
                 print(f"⚠️ Invalid system configuration override provided: {e}")
-                self.config_override = {} # Fallback to empty if validation fails
+                self.config_override = {}  # Fallback to empty if validation fails
         else:
             self.config_override = {}
         self.health_tracker = health_tracker
@@ -234,6 +234,7 @@ class NewsCollectorSystem:
             Lista de artículos con mejor score
         """
         from news_collector.system.reporting import get_top_articles as _get_top
+
         return _get_top(self, limit, category)
 
     def export_latest_articles(
@@ -250,6 +251,7 @@ class NewsCollectorSystem:
             The export dictionary payload.
         """
         from news_collector.system.reporting import export_latest_articles as _export
+
         return _export(self, file_path, limit)
 
     def get_system_statistics(self) -> Dict[str, Any]:
@@ -260,6 +262,7 @@ class NewsCollectorSystem:
             Diccionario con estadísticas detalladas
         """
         from news_collector.system.reporting import get_system_statistics as _get_stats
+
         return _get_stats(self)
 
     async def shutdown(self):
@@ -391,11 +394,13 @@ class NewsCollectorSystem:
 
                     article_id = article_data["id"]
 
-                    invalid_mappings.append({
-                        "id": article_id,
-                        "processing_status": "rejected",
-                        "error_message": f"Validation failed: {rule_name} - {reason}"
-                    })
+                    invalid_mappings.append(
+                        {
+                            "id": article_id,
+                            "processing_status": "rejected",
+                            "error_message": f"Validation failed: {rule_name} - {reason}",
+                        }
+                    )
 
                 # Accumulate results for report
                 validation_results["invalid"].extend(batch_results["invalid"])
@@ -411,10 +416,9 @@ class NewsCollectorSystem:
                 for valid_item in batch_results.get("valid", []):
                     article_id = valid_item.get("id")
                     if article_id:
-                        valid_mappings.append({
-                            "id": article_id,
-                            "processing_status": "validated"
-                        })
+                        valid_mappings.append(
+                            {"id": article_id, "processing_status": "validated"}
+                        )
 
             all_mappings = invalid_mappings + valid_mappings
             if all_mappings:
@@ -542,7 +546,9 @@ class NewsCollectorSystem:
                         scoring_stats["articles_excluded"] += 1
 
                 if bulk_score_updates:
-                    success = self.db_manager.update_articles_score_bulk(bulk_score_updates)
+                    success = self.db_manager.update_articles_score_bulk(
+                        bulk_score_updates
+                    )
                     if not success:
                         self.logger.create_module_logger("scoring").error(
                             "Failed to perform bulk score updates."
@@ -615,7 +621,10 @@ class NewsCollectorSystem:
     ) -> Dict[str, Any]:
         """Genera reporte completo de la sesión."""
         from news_collector.system.reporting import generate_session_report
-        return generate_session_report(self, collection_results, scoring_results, selection_results, session_id)
+
+        return generate_session_report(
+            self, collection_results, scoring_results, selection_results, session_id
+        )
 
     def _simulate_collection(
         self, sources: Dict[str, Dict[str, Any]]

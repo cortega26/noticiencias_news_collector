@@ -2,6 +2,7 @@
 Modulo de Reporting.
 Desacoplado de NewsCollectorSystem para reducir acoplamiento y tamaño de objeto Dios ("God Module").
 """
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,9 +90,7 @@ def export_latest_articles(
         return export_payload
 
     except Exception as e:
-        system.logger.log_error_with_context(
-            e, {"operation": "export_latest_articles"}
-        )
+        system.logger.log_error_with_context(e, {"operation": "export_latest_articles"})
         raise
 
 
@@ -103,9 +102,7 @@ def get_system_statistics(system) -> Dict[str, Any]:
         db_health = system.db_manager.get_health_status()
         daily_stats = system.db_manager.get_daily_stats()
 
-        system_uptime = (
-            datetime.now(timezone.utc) - system.start_time
-        ).total_seconds()
+        system_uptime = (datetime.now(timezone.utc) - system.start_time).total_seconds()
 
         return {
             "system_info": {
@@ -119,9 +116,7 @@ def get_system_statistics(system) -> Dict[str, Any]:
             "performance_summary": {},
         }
     except Exception as e:
-        system.logger.log_error_with_context(
-            e, {"operation": "get_system_statistics"}
-        )
+        system.logger.log_error_with_context(e, {"operation": "get_system_statistics"})
         raise
 
 
@@ -166,9 +161,9 @@ def generate_session_report(
             ).get("success_rate_percent", 0),
         },
         "summary": {
-            "sources_processed": collection_results.get(
-                "collection_summary", {}
-            ).get("sources_processed", 0),
+            "sources_processed": collection_results.get("collection_summary", {}).get(
+                "sources_processed", 0
+            ),
             "articles_found": collection_results.get("collection_summary", {}).get(
                 "articles_found", 0
             ),

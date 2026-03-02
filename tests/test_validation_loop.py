@@ -42,7 +42,9 @@ def test_validation_loop_terminates_and_updates_status():
                 if article.id == mapping["id"]:
                     article.processing_status = mapping["processing_status"]
 
-    system.db_manager.update_validation_status_bulk.side_effect = update_bulk_side_effect
+    system.db_manager.update_validation_status_bulk.side_effect = (
+        update_bulk_side_effect
+    )
 
     # Mock DB Session
     session_mock = MagicMock()

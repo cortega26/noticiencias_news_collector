@@ -1,0 +1,84 @@
+### Extrinsic Hallucinations in Large Language Models
+
+Large language models (LLMs) occasionally produce responses that diverge from reality, a phenomenon known as *hallucination*. This issue can be categorized into intrinsic and extrinsic hallucinations; while intrinsic hallucinations arise due to biases within the model itself, extrinsic hallucinations are influenced by external factors like prompt design, domain-specific knowledge gaps, and retrieval methods.
+
+### The Curiosity Gap
+
+Imagine you ask an LLM a straightforward question, only to receive a detailed but factually incorrect answer. What causes such discrepancies? This article explores how these *extrinsic hallucinations* occur and the strategies developed to mitigate them.
+
+### Understanding Extrinsics Hallucinations
+
+Extrinsic hallucinations emerge when an LLM generates responses that do not align with reality or context due to external factors:
+
+- **Prompt Engineering**: How the question is framed can subtly guide or mislead the model.
+- **Domain-Specific Knowledge Gaps**: Areas where the model lacks extensive training data, leading to errors.
+- **Retrieval Mechanisms**: Integration of external knowledge through methods like retrieval-augmented generation.
+
+### Mitigation Techniques
+
+Researchers have developed several techniques to reduce extrinsic hallucinations:
+
+1. **Prompt Engineering**:
+   - Crafting prompts that guide the model toward generating more accurate responses can mitigate factual inaccuracies.
+
+2. **Domain-Specific Training**:
+   - Fine-tuning models on domain-specific datasets helps reduce errors specific to those areas.
+
+3. **Retrieval-Augmented Methods**:
+   - **RARR (Research and Revise)**: The model retrieves relevant information, revises its response, and rephrases it.
+   - **Self-RAG**: A self-reflection mechanism that iteratively learns to retrieve, generate, and critique responses.
+
+### Evaluation Benchmarks
+
+Several benchmarks have been developed to measure the factuality of LLMs:
+
+- **TruthfulQA (Lin et al., 2021)**: Assesses the model's ability to generate truthful responses across various topics.
+- **FactualityPrompt (Lee et al., 2022)**: Uses Wikipedia documents as a knowledge base for grounding factual accuracy.
+- **SelfAware (Yin et al., 2023)**: Contains questions with human annotations, distinguishing between answerable and unanswerable queries.
+- **LongFact (Wei et al., 2024)**: Evaluates the factuality of long-form responses across multiple topics.
+
+### Techniques to Detect and Mitigate Hallucinations
+
+1. **Retrieval-Augmented Generative Models**:
+   - **RARR**: Combines retrieval, revision, and rephrasing to refine responses.
+   - **Self-RAG**: Iteratively learns to retrieve, generate, and critique through self-reflection.
+
+2. **Chain-of-Verification (Dhuliawala et al., 2023)**:
+   - Breaks down response generation into smaller steps, verifying each step for accuracy before proceeding.
+
+3. **Recitation-Augmented Language Models (Sun et al., 2023)**:
+   - Reinforces factual grounding in generated text through recitation techniques.
+
+4. **Inference-Time Intervention (Li et al., 2023)**:
+   - Modifies the inference process to elicit more truthful responses from LLMs.
+
+5. **Fine-tuning for Factuality**:
+   - Techniques like **FActScore** (Min et al., 2023) and **FLAME** (Lin et al., 2024) fine-tune models on datasets emphasizing factual accuracy.
+
+### Case Studies
+
+1. **WebGPT (Nakano et al., 2022)**:
+   - Combines web search with a fine-tuned GPT model to generate more factually accurate responses by leveraging external references.
+
+2. **GopherCite (Menick et al., 2022)**:
+   - Similar to WebGPT, it teaches models to provide high-quality attributions using few-shot prompting and reinforcement learning from human preferences.
+
+### Empirical Results
+
+- Both **WebGPT** and **GopherCite** demonstrate improvements in factual accuracy through the integration of external knowledge. However, they show limited gains when combined with RL training alone.
+
+### Conclusion
+
+Extrinsic hallucinations can be mitigated using various techniques such as prompt engineering, domain-specific fine-tuning, and retrieval-augmented methods. These approaches leverage both supervised and reinforcement learning to enhance the factual accuracy of LLM responses.
+
+#### References:
+
+- Ji et al., 2022: Survey on hallucination in natural language generation.
+- Lin et al., 2021: TruthfulQA for measuring model-generated falsehoods.
+- Yin et al., 2023: Evaluating the knowledge and uncertainty of LLMs.
+- Gao et al., 2023: RARR method for refining responses.
+- Dhuliawala et al., 2023: Chain-of-Verification technique.
+- Sun et al., 2023: Recitation-Augmented Language Models.
+- Li et al., 2023: Inference-Time Intervention for truthful responses.
+- Nakano et al., 2022: WebGPT combining web search with GPT.
+- Menick et al., 2022: Teaching models to provide verified quotes.
