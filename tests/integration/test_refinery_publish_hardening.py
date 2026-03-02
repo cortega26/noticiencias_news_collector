@@ -29,7 +29,9 @@ def _build_engine_with_mocks(data_dir: Path):
     )
 
     config = SimpleNamespace(
-        app=SimpleNamespace(policy_integrity_mode="disabled", editorial_mode="standard"),
+        app=SimpleNamespace(
+            policy_integrity_mode="disabled", editorial_mode="standard"
+        ),
         github=SimpleNamespace(target_repo_url="https://github.com/org/repo"),
         paths=SimpleNamespace(data_dir=str(data_dir)),
     )

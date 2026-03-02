@@ -69,7 +69,9 @@ def test_content_length_validation():
 
 def test_published_date_type_error():
     """Ensure invalid date strings raise a clear validation error."""
-    with pytest.raises(ValidationError, match="published_date has invalid ISO-8601 value"):
+    with pytest.raises(
+        ValidationError, match="published_date has invalid ISO-8601 value"
+    ):
         CollectorArticleModel(
             title="Valid Title length > 10",
             url="https://example.com/bad-date",
@@ -141,7 +143,9 @@ def test_published_date_normalization(value, expected):
 
 
 def test_published_date_none_rejected_with_clear_error():
-    with pytest.raises(ValidationError, match="published_date is required and cannot be None"):
+    with pytest.raises(
+        ValidationError, match="published_date is required and cannot be None"
+    ):
         CollectorArticleModel(
             title="Valid Title length > 10",
             url="https://example.com/bad-none-date",

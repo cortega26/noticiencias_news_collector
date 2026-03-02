@@ -9,25 +9,27 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 def test_process_single_article_enforces_contract(tmp_path):
     engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), MagicMock())
-    
+
     # Track side effects
     engine.db.set_canonical_slug = MagicMock()
     engine.editor = MagicMock()
     engine.editor.process_article = MagicMock()
 
     invalid_article = {"id": "123"}
-    
-    result = engine.process_single_article(
-        invalid_article, MagicMock(), tmp_path
-    )
-    
-    assert result is False, "Expected process_single_article to return False for invalid article"
-    
+
+    result = engine.process_single_article(invalid_article, MagicMock(), tmp_path)
+
+    assert (
+        result is False
+    ), "Expected process_single_article to return False for invalid article"
+
     # Assert no side effects
-    assert engine.db.set_canonical_slug.call_count == 0, "DB persist should not be called"
+    assert (
+        engine.db.set_canonical_slug.call_count == 0
+    ), "DB persist should not be called"
     assert engine.editor.process_article.call_count == 0, "Editor should not be called"
     assert list(tmp_path.rglob("*.md")) == [], "No files should be written"
-    
+
     valid_article = {
         "id": "123",
         "title": "Valid title 123",

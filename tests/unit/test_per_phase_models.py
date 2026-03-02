@@ -113,7 +113,9 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
 
     monkeypatch.setattr(agent, "_translate_scientific", lambda _: "Texto traducido")
-    monkeypatch.setattr(agent, "_adapt_editorial", lambda _: "## Apertura\nTexto final.")
+    monkeypatch.setattr(
+        agent, "_adapt_editorial", lambda _: "## Apertura\nTexto final."
+    )
     monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
     monkeypatch.setattr(
         agent,

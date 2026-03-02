@@ -8,4 +8,5 @@ def test_log():
     invalid_article = {"id": "123"}
     engine.process_single_article(invalid_article, MagicMock(), MagicMock())
 
+
 test_log()

@@ -78,6 +78,7 @@ $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@touch $(BOOTSTRAP_REFINERY_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
+	@$(PYTHON_BIN) -c "import pytest_timeout" >/dev/null 2>&1 || $(PIP) install "pytest-timeout>=2.3.0"
 	@echo "Environment ready at $(VENV)"
 
 run-local: bootstrap ## Run the collector locally
