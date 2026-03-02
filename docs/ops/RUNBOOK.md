@@ -271,6 +271,18 @@ El proyecto incluye un `Makefile` para tareas de calidad de código:
 | "Config file not found"           | Ruta incorrecta en `.env`.                 | Verifica `NEWS_COLLECTOR_PATH` en el `.env` o Admin Panel.            |
 | "No articles found"               | Base de datos vacía o intervalo muy corto. | Ejecuta `run_collector.py` sin flags o aumenta `collection_interval`. |
 
+### 7.4 Legacy Schema Governance
+
+Legacy Schema Governance (derived from `docs/AGENTS.md` LAW-1A):
+
+- `schema_version: 1` -> adapter fallback allowed (warning).
+- `schema_version: 2+` -> strict contract enforcement.
+- Any extension of legacy support requires `docs/AGENTS.md` update.
+
+Deprecation checkpoint:
+
+- `TODO[owner=@backend-governance; checkpoint=2026-06-30; issue=#legacy-schema-cutoff]: Decide v1 cutoff date or explicitly ratify indefinite compatibility in AGENTS amendment.`
+
 ---
 
 ## 8. Referencia de Herramientas y Scripts

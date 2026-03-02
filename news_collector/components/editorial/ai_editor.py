@@ -16,6 +16,11 @@ from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariant
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
+SOURCE_IDENTITY_COMMENT_RE = re.compile(
+    r"<!--\s*source_identity:[\s\S]*?-->",
+    flags=re.IGNORECASE,
+)
+
 
 class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
@@ -157,6 +162,28 @@ class EditorAgent:
         if match:
             return match.group(1)
         return text
+
+    def _upsert_source_identity_comment(
+        self, markdown: str, source_id: str | None, source_name: str | None
+    ) -> str:
+        """Ensure a single canonical source_identity comment is present."""
+        cleaned = SOURCE_IDENTITY_COMMENT_RE.sub("", markdown).strip()
+        source_id_text = str(source_id).strip() if source_id is not None else ""
+        source_name_text = str(source_name).strip() if source_name is not None else ""
+
+        if not source_id_text and not source_name_text:
+            return cleaned
+
+        safe_source_id = source_id_text.replace("--", "-").replace("\n", " ")
+        safe_source_name = source_name_text.replace("--", "-").replace("\n", " ")
+        canonical_comment = (
+            f"<!-- source_identity: source_id={safe_source_id}; "
+            f"source_name={safe_source_name} -->"
+        )
+
+        if not cleaned:
+            return canonical_comment
+        return f"{cleaned}\n\n{canonical_comment}"
 
     def _send_prompt(self, prompt: str, system: str = None, model: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
@@ -444,6 +471,8 @@ class EditorAgent:
         content = ""
         image_url = None
         source_url = None
+        source_id = None
+        source_name = None
         article_id = "unknown"
 
         if isinstance(raw_text, dict):
@@ -456,6 +485,8 @@ class EditorAgent:
                 content = summary
 
             image_url = raw_text.get("image_url")
+            source_id = raw_text.get("source_id")
+            source_name = raw_text.get("source_name")
             source_url = (
                 raw_text.get("url")
                 or (raw_text.get("metadata") or {}).get("original_url")
@@ -674,6 +705,12 @@ class EditorAgent:
         footer_link = f"Fuente original: [{source_url}]({source_url})"
         if source_url and footer_link not in full_article:
             full_article += f"\n\n{footer_link}"
+
+        # Persist source identity metadata as a hidden comment to keep provenance
+        # without widening the frontmatter schema contract.
+        full_article = self._upsert_source_identity_comment(
+            full_article, source_id=source_id, source_name=source_name
+        )
 
         # Logic to strip Visual planning section if no image is present (Rule from tests)
         if not image_url:

@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.infrastructure.llm.model_registry import InvalidModelIdError
@@ -83,3 +85,136 @@ def test_invalid_stage_override_fails_fast(monkeypatch):
     assert "translator" in message
     assert "bad model" in message
     assert "Use '<model>:<tag>'" in message
+
+
+def test_translation_pipeline_preserves_payload_shape_and_provenance(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+    )
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.load_config",
+        _mock_min_length_config,
+    )
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.EditorAgent._load_prompts",
+        lambda self: {},
+    )
+
+    agent = EditorAgent(
+        api_url="http://mock",
+        model="llama3.3:latest",
+        translator_model="mistral:7b",
+        editor_model="qwen2.5:14b",
+        headlines_model="llama3.2:latest",
+    )
+    agent.cache_dir = tmp_path / "cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(agent, "_translate_scientific", lambda _: "Texto traducido")
+    monkeypatch.setattr(agent, "_adapt_editorial", lambda _: "## Apertura\nTexto final.")
+    monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
+    monkeypatch.setattr(
+        agent,
+        "_generate_headlines",
+        lambda _: {
+            "direct": "Título auditado",
+            "question": "¿Por qué importa?",
+            "benefit": "Contexto para tomar decisiones informadas.",
+            "excerpt": "Resumen auditado suficientemente largo para metadatos.",
+            "tags": ["inteligencia_artificial"],
+        },
+    )
+    monkeypatch.setattr(agent, "_repair_output", lambda c, h, _i: (c, h))
+
+    article = {
+        "id": "160",
+        "title": "Legacy payload identity check title",
+        "summary": "Resumen inicial",
+        "content": "Contenido base " * 30,
+        "url": "https://example.com/article-160",
+        "source_id": "lilian_weng",
+        "source_name": "Lil'Log",
+        "metadata": {"category": "technology"},
+    }
+    before_keys = sorted(article.keys())
+
+    output = agent.process_article(article, override_date="2024-07-07")
+    after_keys = sorted(article.keys())
+
+    assert before_keys == after_keys
+    assert "source_identity: source_id=lilian_weng; source_name=Lil'Log" in output
+
+
+def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+    )
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.load_config",
+        _mock_min_length_config,
+    )
+    monkeypatch.setattr(
+        "news_collector.components.editorial.ai_editor.EditorAgent._load_prompts",
+        lambda self: {},
+    )
+
+    agent = EditorAgent(
+        api_url="http://mock",
+        model="llama3.3:latest",
+        translator_model="mistral:7b",
+        editor_model="qwen2.5:14b",
+        headlines_model="llama3.2:latest",
+    )
+    agent.cache_dir = tmp_path / "cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(agent, "_translate_scientific", lambda _: "Texto traducido")
+    monkeypatch.setattr(
+        agent,
+        "_adapt_editorial",
+        lambda _: (
+            "## Apertura\nTexto final.\n\n"
+            "<!-- source_identity: source_id=legacy_source; source_name=Legacy Name -->"
+        ),
+    )
+    monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
+    monkeypatch.setattr(
+        agent,
+        "_generate_headlines",
+        lambda _: {
+            "direct": "Título auditado",
+            "question": "¿Por qué importa?",
+            "benefit": "Contexto para tomar decisiones informadas.",
+            "excerpt": "Resumen auditado suficientemente largo para metadatos.",
+            "tags": ["inteligencia_artificial"],
+        },
+    )
+    monkeypatch.setattr(agent, "_repair_output", lambda c, h, _i: (c, h))
+
+    article = {
+        "id": "160",
+        "title": "Legacy payload identity check title",
+        "summary": "Resumen inicial",
+        "content": "Contenido base " * 30,
+        "url": "https://example.com/article-160",
+        "source_id": "lilian_weng",
+        "source_name": "Lil'Log",
+        "metadata": {"category": "technology"},
+    }
+
+    output_first = agent.process_article(article, override_date="2024-07-07")
+    output_second = agent.process_article(article, override_date="2024-07-07")
+
+    canonical_comment = (
+        "<!-- source_identity: source_id=lilian_weng; source_name=Lil'Log -->"
+    )
+    canonical_pattern = re.compile(
+        r"<!-- source_identity: source_id=[^;]+; source_name=[^\n>]+ -->"
+    )
+
+    assert output_first == output_second
+    assert output_second.count("<!-- source_identity:") == 1
+    assert canonical_comment in output_second
+    assert canonical_pattern.search(output_second)

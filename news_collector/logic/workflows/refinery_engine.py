@@ -444,11 +444,20 @@ class RefineryEngine:
                 "Invalid configuration: missing github.target_repo_url"
             )
 
+        source_id = str(article.get("source_id", "")).strip() or "unknown"
+        source_name = str(article.get("source_name", "")).strip() or "unknown"
+        pr_body = (
+            f"Automated submission for {article_id}.\n\n"
+            f"Source ID: {source_id}\n"
+            f"Source Name: {source_name}\n\n"
+            "Processed by Noticiencias Refinery."
+        )
+
         pr_url = self.git.create_pull_request(
             repo_url=repo_url,
             branch_name=branch_name,
             title=f"News: {output_filename.replace('.md', '')}",
-            body=f"Automated submission for {article_id}.\n\nProcessed by Noticiencias Refinery.",
+            body=pr_body,
         )
 
         if pr_url:

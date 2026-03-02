@@ -18,6 +18,7 @@ import asyncio
 
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_stage_models
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
@@ -97,31 +98,138 @@ def _safe_clone_source_repo(
         raise
 
 
-def _load_export_articles(
+def _load_export_articles(  # noqa: C901
     export_path: Path,
     db_manager: DatabaseManager,
     process_id: Optional[str],
 ) -> List[Dict[str, Any]]:
     try:
         with open(export_path, "r", encoding="utf-8") as f:
-            header_articles = json.load(f)
+            export_payload = json.load(f)
     except Exception as exc:
         logger.error(f"Failed to load collector export at {export_path}: {exc}")
         return []
 
-    if isinstance(header_articles, dict):
-        header_articles = header_articles.get("articles", [])
+    schema_version_raw: Any = None
+    contract_name = ""
+
+    header_articles = export_payload
+    if isinstance(export_payload, dict):
+        schema_version_raw = export_payload.get("schema_version")
+        contract_name = str(export_payload.get("contract", "")).strip()
+        header_articles = export_payload.get("articles", [])
+    elif isinstance(export_payload, list):
+        # Legacy exports may be a raw list without a header object.
+        schema_version_raw = 1
+
     if not isinstance(header_articles, list):
         logger.error(
             f"Export payload has unexpected format at {export_path}: {type(header_articles)}"
         )
         return []
 
+    try:
+        schema_version = (
+            int(schema_version_raw) if schema_version_raw is not None else None
+        )
+    except (TypeError, ValueError):
+        logger.warning(
+            "Export payload schema_version is invalid (%r). Treating payload as legacy v1.",
+            schema_version_raw,
+        )
+        schema_version = 1
+
+    is_legacy_export = schema_version == 1 or contract_name.endswith(".v1")
+    if schema_version is None:
+        logger.warning(
+            "Export payload at %s has no schema_version. Assuming legacy v1 compatibility path.",
+            export_path,
+        )
+        is_legacy_export = True
+    elif is_legacy_export:
+        logger.warning(
+            "Legacy export schema detected at %s (schema_version=%s, contract=%s). "
+            "Applying source_name->source_id compatibility mapping.",
+            export_path,
+            schema_version,
+            contract_name or "n/a",
+        )
+
+    source_name_fallback_enabled = is_legacy_export
+
+    # Deterministic source identity resolver (source_name -> source_id).
+    # Duplicate display names are excluded to avoid ambiguous mappings.
+    from news_collector.config.sources import ALL_SOURCES
+
+    source_name_to_id: Dict[str, str] = {}
+    ambiguous_names: set[str] = set()
+    for source_id, source_cfg in ALL_SOURCES.items():
+        name = str(source_cfg.get("name", "")).strip()
+        if not name:
+            continue
+        key = name.casefold()
+        existing = source_name_to_id.get(key)
+        if existing and existing != source_id:
+            ambiguous_names.add(key)
+            source_name_to_id.pop(key, None)
+            continue
+        source_name_to_id[key] = source_id
+
+    if ambiguous_names:
+        logger.warning(
+            "Detected ambiguous source display names in config; "
+            "fallback source_name->source_id mapping disabled for %d names.",
+            len(ambiguous_names),
+        )
+
     articles = []
     for art in header_articles:
         art_id = str(art.get("id", art.get("title")))
         if process_id and str(art_id) != str(process_id):
             continue
+
+        try:
+            art = adapt_export_article_to_collector_payload(
+                art,
+                source_name_to_id=(
+                    source_name_to_id if source_name_fallback_enabled else None
+                ),
+            )
+        except ValueError as exc:
+            logger.error(
+                "Invalid export payload for article %s: %s | keys=%s | source_id=%r | "
+                "source=%r | sourceId=%r | source_url=%r | source_name=%r | source_slug=%r",
+                art_id,
+                exc,
+                sorted(art.keys()),
+                art.get("source_id"),
+                art.get("source"),
+                art.get("sourceId"),
+                art.get("source_url"),
+                art.get("source_name"),
+                art.get("source_slug"),
+            )
+            continue
+
+        # Canonicalize source_name from the registry to avoid identity drift.
+        resolved_source_id = str(art.get("source_id", "")).strip()
+        canonical_source_cfg = ALL_SOURCES.get(resolved_source_id)
+        canonical_source_name = ""
+        if canonical_source_cfg:
+            canonical_source_name = str(canonical_source_cfg.get("name", "")).strip()
+            if canonical_source_name:
+                incoming_name = str(art.get("source_name", "")).strip()
+                if incoming_name != canonical_source_name:
+                    logger.warning(
+                        "Normalizing source_name for article %s from %r to canonical %r "
+                        "(source_id=%s).",
+                        art_id,
+                        incoming_name or None,
+                        canonical_source_name,
+                        resolved_source_id,
+                    )
+                art["source_name"] = canonical_source_name
+
         # Check if already processed using Main DB
         try:
             numeric_id = int(art_id)

@@ -1,6 +1,6 @@
 # Noticiencias System Architecture
 
-Version: 2.1 (Aligned to AGENTS v2.3) Status: Active & Binding
+Version: 2.2 (Aligned to AGENTS v2.4) Status: Active & Binding
 Authority: Subservient to `SOURCE_OF_TRUTH.md` and `AGENTS.md`
 
 ---
@@ -147,6 +147,67 @@ No dict-based boundary crossing is allowed at sealed boundaries.
 
 ---
 
+### B1. SourceRegistry Identity Boundary Model (LAW-1A)
+
+Canonical source identity is governed by `source_id` and the registry
+`news_collector.config.sources.ALL_SOURCES`.
+
+Boundary behavior:
+
+- For schema_version >= 2 payloads, `source_id` is mandatory.
+- `source_name` is treated as display metadata and canonicalized from
+  registry after `source_id` resolution.
+- Registry source names must be casefold-unique for deterministic
+  fallback behavior.
+- Missing `source_id` in schema_version >= 2 fails at boundary
+  validation before domain processing.
+
+Legacy-only compatibility:
+
+- Adapter fallback `source_name -> source_id` is available only for
+  schema_version `1` compatibility path.
+- Fallback uses casefold lookup against registry names and must remain
+  deterministic.
+- Non-legacy payloads must never use fallback.
+
+---
+
+### B2. Schema Version Governance Model (LAW-1A)
+
+Ingress/export payload handling at adapter boundary:
+
+- `schema_version: 1`: legacy path enabled, warning emitted.
+- `schema_version: 2+`: strict path enabled; `source_id` required.
+- Missing/invalid `schema_version`: treated as legacy compatibility path
+  with warning.
+
+Containment rule:
+
+- Legacy branching is isolated to adapter/input-normalization boundary.
+- Contract models, domain logic, and orchestration consume normalized
+  shape only.
+
+Deprecation governance:
+
+- No hard cutoff date is currently approved.
+- CI minimum enforcement until cutoff is approved:
+  - test that legacy path emits warning and deterministic mapping.
+  - test that non-legacy payloads without `source_id` fail hard.
+
+---
+
+### B3. Publication Provenance Model (LAW-1A)
+
+Publication artifacts include `source_identity` metadata for audit
+traceability.
+
+- This metadata is auxiliary provenance, not canonical identity storage.
+- Canonical identity remains contract-level `source_id` validated at
+  boundary.
+- Provenance persistence must be idempotent across reprocessing.
+
+---
+
 ## 4.2 Structural Invariants
 
 ### A. System Layer Purity (Orchestration Only)
@@ -234,6 +295,9 @@ Pull Requests must be blocked if:
 - Contract boundaries are broken
 - Deterministic identity is compromised
 - Canonical ID protection is violated
+- Source identity strictness (`source_id` in schema_version >= 2) is
+  weakened
+- Non-legacy fallback identity mapping is introduced
 - Protected tests are removed
 - Invariant coverage is reduced
 
@@ -292,7 +356,9 @@ Allowed outside identity path:
 # 7. Contract Flow Model
 
 External Input → Dirty Data
-Dirty Data → Adapter → Contract
+Dirty Data → Adapter Normalization
+Adapter Normalization (legacy-only fallback + source canonicalization) →
+Contract
 Contract → Domain Logic
 Domain Logic → Adapter → Contract
 Contract → Storage or UI
@@ -331,4 +397,4 @@ Architecture is durable but evolvable.
 
 ---
 
-End of `ARCHITECTURE.md` --- Version 2.1 (Aligned to AGENTS v2.3)
+End of `ARCHITECTURE.md` --- Version 2.2 (Aligned to AGENTS v2.4)
