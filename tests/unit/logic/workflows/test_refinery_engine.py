@@ -45,40 +45,53 @@ class TestRefineryEngine(unittest.TestCase):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
 
         # Setup Inputs
-        article = {"id": "123", "title": "Test Title"}
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
         mock_repo = MagicMock()
-        mock_target_dir = MagicMock()
-        mock_target_dir / "src/content/posts"
 
-        # Setup Editor
-        self.mock_editor.process_article.return_value = (
-            "---\nslug: test-slug\n---\nContent"
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            target_dir / "src/content/posts"
 
-        # Setup Git
-        self.mock_git.create_branch.return_value = "content/add/test-branch"
-        self.mock_git.create_pull_request.return_value = "http://pr.url"
+            # Setup Editor
+            self.mock_editor.process_article.return_value = (
+                "---\nslug: test-slug\n---\nContent"
+            )
 
-        # Configure DB to simulate no existing slug
-        self.mock_db.get_canonical_slug.return_value = None
+            # Setup Git
+            self.mock_git.create_branch.return_value = "content/add/test-branch"
+            self.mock_git.create_pull_request.return_value = "http://pr.url"
 
-        # Run
-        result = self.engine.process_single_article(article, mock_repo, mock_target_dir)
+            # Configure DB to simulate no existing slug
+            self.mock_db.get_canonical_slug.return_value = None
 
-        # Assertions
-        self.assertTrue(result)
-        # We now pass override_date="2026-01-01" because src date is not provided, so it uses now()
-        self.mock_editor.process_article.assert_called_with(
-            article, override_date="2026-01-01"
-        )
-        self.mock_git.create_branch.assert_called()
-        self.mock_git.commit_and_push.assert_called()
-        self.mock_git.create_pull_request.assert_called()
+            # Run
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
 
-        # Check output file write (indirectly via mock path)
-        # Note: mocking pathlib iterface is tricky, usually we trust write_text works or use tmp_path fixture.
-        # Here we just check logical flow.
-        self.mock_db.mark_article_published.assert_called_with(123, "http://pr.url")
+            # Assertions
+            self.assertTrue(result)
+            # We now pass override_date="2026-01-01" because src date is not provided, so it uses now()
+            self.assertEqual(
+                self.mock_editor.process_article.call_args.kwargs["override_date"],
+                "2024-01-01",
+            )
+            self.mock_git.create_branch.assert_called()
+            self.mock_git.commit_and_push.assert_called()
+            self.mock_git.create_pull_request.assert_called()
+
+            # Check output file write (indirectly via mock path)
+            # Note: mocking pathlib iterface is tricky, usually we trust write_text works or use tmp_path fixture.
+            # Here we just check logical flow.
+            self.mock_db.mark_article_published.assert_called_with(123, "http://pr.url")
 
     def test_process_articles_batch(self):
         articles = [{"id": "1"}, {"id": "2"}]
@@ -99,7 +112,17 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_no_file_write_if_branch_setup_fails(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
-        article = {"id": "123", "title": "Test Title"}
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
         mock_repo = MagicMock()
         self.mock_editor.process_article.return_value = (
             "---\nslug: test-slug\n---\nContent"
@@ -109,7 +132,7 @@ class TestRefineryEngine(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             target_dir = Path(tmpdir)
-            expected_file = target_dir / "src/content/posts/2026-01-01-test-slug.md"
+            expected_file = target_dir / "src/content/posts/2024-01-01-test-slug.md"
             with patch("pathlib.Path.write_text") as write_mock:
                 with self.assertRaises(RuntimeError):
                     self.engine.process_single_article(article, mock_repo, target_dir)
@@ -121,7 +144,17 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_no_file_write_if_branch_sync_rebase_fails(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
-        article = {"id": "124", "title": "Test Title 2"}
+        article = {
+            "id": "124",
+            "title": "Test Title 2",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
         mock_repo = MagicMock()
         self.mock_editor.process_article.return_value = (
             "---\nslug: test-slug-sync\n---\nContent"
@@ -132,7 +165,7 @@ class TestRefineryEngine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             target_dir = Path(tmpdir)
             expected_file = (
-                target_dir / "src/content/posts/2026-01-01-test-slug-sync.md"
+                target_dir / "src/content/posts/2024-01-01-test-slug-sync.md"
             )
             with patch("pathlib.Path.write_text") as write_mock:
                 with self.assertRaises(RuntimeError):
@@ -141,6 +174,41 @@ class TestRefineryEngine(unittest.TestCase):
             write_mock.assert_not_called()
             self.assertFalse(expected_file.exists())
             self.mock_git.commit_and_push.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_override_date_strictly_follows_payload_published_date(self, mock_dt):
+        # We mock system time to 2050 to prove it is IGNORED in favor of payload
+        mock_dt.now.return_value.strftime.return_value = "2050-01-01"
+
+        article = {
+            "id": "1999-id",
+            "title": "A vintage article",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(1999, 12, 31),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            target_dir / "src/content/posts"
+
+            self.mock_editor.process_article.return_value = (
+                "---\nslug: test-slug\n---\nContent"
+            )
+            self.mock_db.get_canonical_slug.return_value = None
+
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+            self.assertTrue(result)
+            self.assertEqual(
+                self.mock_editor.process_article.call_args.kwargs["override_date"],
+                "1999-12-31",
+            )
 
 
 if __name__ == "__main__":

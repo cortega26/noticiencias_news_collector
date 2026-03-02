@@ -1085,6 +1085,80 @@ class DatabaseManager:
             session.expunge_all()
             return list(pending_articles)
 
+    def update_validation_status_bulk(
+        self, mappings: List[Dict[str, Any]]
+    ) -> bool:
+        """
+        Actualiza el estado de validación de múltiples artículos en bulk.
+        `mappings` debe ser una lista de dicts con la clave "id" y los campos a actualizar:
+        [{"id": 1, "processing_status": "validated", "error_message": None}, ...]
+        """
+        if not mappings:
+            return True
+
+        with self.get_session() as session:
+            try:
+                session.bulk_update_mappings(Article, mappings)
+                session.commit()
+                return True
+            except Exception as e:
+                logger.error(f"Error en update_validation_status_bulk: {e}")
+                return False
+
+    def update_articles_score_bulk(
+        self, score_data_list: List[Tuple[int, ScoringRequestModel | Dict[str, Any]]]
+    ) -> bool:
+        """
+        Actualiza el score de múltiples artículos y registra los cálculos en ScoreLog en bulk.
+        """
+        if not score_data_list:
+            return True
+
+        article_mappings = []
+        score_logs = []
+
+        for article_id, score_data in score_data_list:
+            if isinstance(score_data, ScoringRequestModel):
+                score_model = score_data
+            else:
+                try:
+                    score_model = ScoringRequestModel.model_validate(score_data)
+                except ValidationError as exc:
+                    logger.error(f"Invalid scoring payload para artículo {article_id}: {exc}")
+                    continue
+
+            payload = score_model.model_dump_for_storage()
+            components_model = score_model.components
+
+            article_mappings.append({
+                "id": article_id,
+                "final_score": payload["final_score"],
+                "score_components": payload.get("components", {}),
+                "processing_status": "completed"
+            })
+
+            score_logs.append(ScoreLog(
+                article_id=article_id,
+                score_version=payload.get("version", "1.0"),
+                source_credibility_score=payload["components"].get("source_credibility"),
+                recency_score=payload["components"].get("recency"),
+                content_quality_score=payload["components"].get("content_quality"),
+                engagement_score=components_model.get_engagement_value(),
+                final_score=payload["final_score"],
+                score_explanation=payload.get("explanation", {}),
+                algorithm_weights=payload.get("weights", {}),
+            ))
+
+        with self.get_session() as session:
+            try:
+                session.bulk_update_mappings(Article, article_mappings)
+                session.add_all(score_logs)
+                session.commit()
+                return True
+            except Exception as e:
+                logger.error(f"Error en update_articles_score_bulk: {e}")
+                return False
+
     def update_article_score(
         self, article_id: int, score_data: ScoringRequestModel | Dict[str, Any]
     ) -> bool:

@@ -188,6 +188,22 @@ class RefineryEngine:
         """
         article_id = str(article.get("id", article.get("title")))
 
+        # --- S1 GUARD: Enforce Content Contract ---
+        from news_collector.contracts.collector import CollectorArticleModel
+
+        try:
+            validated_model = CollectorArticleModel.model_validate(article)
+            article = validated_model.model_dump()
+        except Exception as e:
+            # Requisito explícito: logger.warning(..., exc_info=True)
+            # Y asegurar propagación en pruebas para caplog
+            req_logger = logging.getLogger("RefineryEngine")
+            req_logger.warning(
+                f"Data Contract Validation failure: Article {article_id} rejected: {e}",
+                exc_info=True
+            )
+            return False
+
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
 
@@ -239,7 +255,7 @@ class RefineryEngine:
                 src_date = article.get("published_date")
 
                 if src_date:
-                    if isinstance(src_date, datetime):
+                    if hasattr(src_date, "strftime"):
                         canonical_date = src_date.strftime("%Y-%m-%d")
                     else:
                         s_date = str(src_date).strip()
@@ -251,7 +267,7 @@ class RefineryEngine:
                 # If still no date, use collected_date or NOW as absolute last resort
                 if not canonical_date:
                     collected = article.get("collected_date")
-                    if collected and isinstance(collected, datetime):
+                    if collected and hasattr(collected, "strftime"):
                         canonical_date = collected.strftime("%Y-%m-%d")
                     else:
                         canonical_date = datetime.now().strftime("%Y-%m-%d")
@@ -338,6 +354,17 @@ class RefineryEngine:
             final_slug = f"{canonical_date}-{slug_part}"
             output_filename = f"{final_slug}.md"
 
+            # --- NC-BE-015: Collision Check ---
+            # If target exists but priority 2 (_find_existing_file) didn't catch it,
+            # it belongs to a different article. Append deterministic counter to prevent overwrite.
+            target_file_path = posts_dir / output_filename
+            iteration = 1
+            while target_file_path.exists():
+                final_slug = f"{canonical_date}-{slug_part}-{iteration}"
+                output_filename = f"{final_slug}.md"
+                target_file_path = posts_dir / output_filename
+                iteration += 1
+
             # CRITICAL: Persist immediately
             if hasattr(self.db, "set_canonical_slug"):
                 try:
@@ -370,6 +397,18 @@ class RefineryEngine:
         posts_dir.mkdir(parents=True, exist_ok=True)
         target_file_path = posts_dir / output_filename
 
+        resolved_target = target_file_path.resolve()
+        resolved_posts = posts_dir.resolve()
+
+        # --- NC-BE-015 S0 GUARD: Path Traversal Check ---
+        try:
+            resolved_target.relative_to(resolved_posts)
+        except ValueError:
+            logger.error(
+                f"🚨 S0 GUARD: Path traversal detected. {resolved_target} is outside {resolved_posts}"
+            )
+            return False
+
         target_file_path.write_text(refined_content, encoding="utf-8")
         logger.info(f"Written content to {target_file_path}")
 
@@ -390,7 +429,9 @@ class RefineryEngine:
         if github_cfg:
             # github may be an object or a dict depending on how config is passed in
             repo_url = getattr(github_cfg, "target_repo_url", None) or (
-                github_cfg.get("target_repo_url") if isinstance(github_cfg, dict) else None
+                github_cfg.get("target_repo_url")
+                if isinstance(github_cfg, dict)
+                else None
             )
         if repo_url is None:
             # Legacy flat attribute support (older code paths/tests)
@@ -399,7 +440,9 @@ class RefineryEngine:
                 repo_url = self.config.get("target_repo_url")
 
         if not repo_url:
-            raise AttributeError("Invalid configuration: missing github.target_repo_url")
+            raise AttributeError(
+                "Invalid configuration: missing github.target_repo_url"
+            )
 
         pr_url = self.git.create_pull_request(
             repo_url=repo_url,
@@ -509,11 +552,26 @@ class RefineryEngine:
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
         """Extracts slug from frontmatter or generates fallback."""
+        import unicodedata
+
         slug = f"article-{fallback_id}"
         if "slug:" in content:
             match = re.search(r'slug:\s*"?([^"\n]+)"?', content)
             if match:
                 slug = match.group(1).strip()
+
+        # --- NC-BE-015 S0 GUARD: Strict sanitize ---
+        slug = (
+            unicodedata.normalize("NFKD", slug)
+            .encode("ASCII", "ignore")
+            .decode("utf-8")
+        )
+        slug = re.sub(r"[^a-zA-Z0-9\-_]", "-", slug)
+        slug = re.sub(r"-+", "-", slug).strip("-").lower()
+
+        if not slug:
+            raise ValueError("empty string")
+
         return slug
 
     def _download_image(self, url: str, slug: str, target_dir: Path) -> str | None:

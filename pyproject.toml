@@ -55,6 +55,7 @@ test = [
     "pytest>=7.4.0",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-timeout>=2.3.0",
 ]
 
 [build-system]
@@ -130,7 +131,7 @@ ignore_errors = true
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing"
+addopts = "-ra --timeout=10 --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",

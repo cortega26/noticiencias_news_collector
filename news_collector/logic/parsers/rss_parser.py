@@ -14,6 +14,48 @@ class RssParser:
     Decoupled from network I/O and database storage.
     """
 
+    def __init__(self):
+        import collections
+
+        self.error_counts = collections.defaultdict(
+            lambda: collections.defaultdict(int)
+        )
+        self.success_counts = collections.defaultdict(int)
+
+    def _log_throttled_error(
+        self, source_id: str, error_type: str, msg: str, limit: int = 50
+    ):
+        import logging
+
+        logger = logging.getLogger(__name__)
+        count = self.error_counts[source_id][error_type]
+        if count < limit:
+            logger.warning(f"[{source_id}] {msg}", exc_info=True)
+        elif count == limit:
+            logger.warning(
+                f"[{source_id}] Throttling further '{error_type}' errors for this source."
+            )
+        self.error_counts[source_id][error_type] += 1
+
+    def print_batch_summary(self):
+        import logging
+
+        logger = logging.getLogger(__name__)
+        for source_id in self.error_counts:
+            total_success = self.success_counts[source_id]
+            errors = self.error_counts[source_id]
+            total_errors = sum(errors.values())
+            logger.info(f"--- RSS Parser Summary [{source_id}] ---")
+            logger.info(f"Total Parsed: {total_success + total_errors}")
+            logger.info(f"Failed Items: {total_errors}")
+            if total_errors > 0:
+                top_errors = sorted(errors.items(), key=lambda x: x[1], reverse=True)[
+                    :3
+                ]
+                logger.info("Top 3 Error Types:")
+                for err, count in top_errors:
+                    logger.info(f" - {err}: {count}")
+
     def parse_feed_content(self, content: Union[str, bytes]) -> Any:
         """Parses raw content into a feed object."""
         return feedparser.parse(content)
@@ -39,13 +81,17 @@ class RssParser:
         # However, to match legacy behavior, we can handle slicing in the collector.
         # But wait, looking at legacy code: for entry in parsed_feed.entries[:fetch_limit]
 
+        source_id = source_config.get("id", str(source_config.get("url", "unknown")))
+
         for entry in parsed_feed.entries:
             try:
                 original_url = entry.get("link", "")
                 if not original_url:
                     continue
 
-                pub_dt, pub_off_min, pub_tz_name = self._parse_timestamp(entry)
+                pub_dt, pub_off_min, pub_tz_name = self._parse_timestamp(
+                    entry, source_id
+                )
 
                 candidate = {
                     "title": self._clean_title(entry.get("title", "Sin título")),
@@ -66,13 +112,21 @@ class RssParser:
                 if len(candidate["title"]) < 5:
                     continue
 
+                self.success_counts[source_id] += 1
                 candidates.append(candidate)
-            except Exception:  # noqa: S112
+            except Exception as e:
+                self._log_throttled_error(
+                    source_id,
+                    type(e).__name__,
+                    f"Failed to extract item from feed '{source_id}': {e}",
+                )
                 continue
 
         return candidates
 
-    def _parse_timestamp(self, entry) -> Tuple[datetime, int, str]:
+    def _parse_timestamp(
+        self, entry, source_id: str = "unknown"
+    ) -> Tuple[datetime, int, str]:
         date_fields = ["published_parsed", "updated_parsed", "published", "updated"]
         for field in date_fields:
             if hasattr(entry, field):
@@ -80,7 +134,13 @@ class RssParser:
                 if val:
                     try:
                         return parse_to_utc_with_tzinfo(val)
-                    except Exception:  # noqa: S112
+                    except Exception as e:
+                        if hasattr(self, "_log_throttled_error"):
+                            self._log_throttled_error(
+                                source_id,
+                                "TimestampParseError",
+                                f"Failed to parse timestamp field '{field}': {e}",
+                            )
                         continue
         return parse_to_utc_with_tzinfo(None)
 

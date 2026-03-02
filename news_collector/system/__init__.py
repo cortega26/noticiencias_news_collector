@@ -6,11 +6,9 @@ Este módulo define la clase central `NewsCollectorSystem` y sus utilidades.
 """
 
 import asyncio
-import json
 import time
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from news_collector import get_database_manager as get_database_manager
@@ -33,25 +31,37 @@ class NewsCollectorSystem:
     def __init__(
         self,
         config_override: Optional[Dict[str, Any]] = None,
+        db_path: Optional[str] = None,
+        skip_initialization: bool = False,
+        system_id: Optional[str] = None,
         health_tracker: Optional[Any] = None,
     ):
-        """
-        Inicializa el sistema completo.
+        """Inicializa los componentes base del sistema."""
+        self.system_id = system_id or str(uuid.uuid4())[:8]
+        self.start_time = datetime.now(timezone.utc)
+        self.current_session: Optional[str] = None
 
-        Args:
-            config_override: Configuración opcional para override de defaults
-        """
-        self.system_id = str(uuid.uuid4())[:8]
-        self.start_time = datetime.now(timezone.utc)
-        self.start_time = datetime.now(timezone.utc)
-        self.config_override = config_override or {}
+        from pydantic import ValidationError
+
+        from news_collector.contracts.system import SystemConfigOverrideModel
+
+        if config_override is not None:
+            try:
+                self.config_override = SystemConfigOverrideModel.model_validate(
+                    config_override
+                ).model_dump(exclude_none=True)
+            except ValidationError as e:
+                print(f"⚠️ Invalid system configuration override provided: {e}")
+                self.config_override = {} # Fallback to empty if validation fails
+        else:
+            self.config_override = {}
         self.health_tracker = health_tracker
 
         # Componentes principales
         self.db_manager = None
         self.collector = None
         self.scorer = None
-        self.logger = None
+        self.logger: Any = None
         self.system_logger = None
         self.metrics = None
         self.validator = None
@@ -223,35 +233,8 @@ class NewsCollectorSystem:
         Returns:
             Lista de artículos con mejor score
         """
-        if not self.is_initialized:
-            raise RuntimeError("Sistema no inicializado")
-
-        try:
-            if category:
-                articles = self.db_manager.get_articles_by_category(category)
-            else:
-                articles = self.db_manager.get_articles_by_score(limit)
-
-            articles_dicts = [article.to_dict() for article in articles]
-
-            from news_collector.reranker import rerank_articles
-
-            reranked = rerank_articles(
-                articles_dicts,
-                limit=limit,
-                source_cap_percentage=SCORING_CONFIG.get("source_cap_percentage", 0.5),
-                topic_cap_percentage=SCORING_CONFIG.get("topic_cap_percentage", 0.5),
-                seed=SCORING_CONFIG.get("reranker_seed", 42),
-            )
-
-            return reranked
-
-        except Exception as e:
-            self.logger.log_error_with_context(
-                e,
-                {"operation": "get_top_articles", "limit": limit, "category": category},
-            )
-            raise
+        from news_collector.system.reporting import get_top_articles as _get_top
+        return _get_top(self, limit, category)
 
     def export_latest_articles(
         self, file_path: Optional[str] = None, limit: int = 50
@@ -266,57 +249,8 @@ class NewsCollectorSystem:
         Returns:
             The export dictionary payload.
         """
-        if not self.is_initialized:
-            raise RuntimeError("Sistema no inicializado")
-
-        try:
-            # Get articles
-            # Note: exclude_published=True allows Refinery to only see what needs work
-            articles = self.db_manager.get_articles_by_score(
-                limit=limit, exclude_published=True
-            )
-
-            from news_collector.contracts.adapters import adapt_article_to_export
-            from news_collector.contracts.export import ExportContractV2
-
-            # Transform via adapter
-            export_models = [adapt_article_to_export(art) for art in articles]
-
-            # Create contract
-            contract = ExportContractV2(
-                generated_at=datetime.now(timezone.utc).isoformat(),
-                article_count=len(export_models),
-                articles=export_models,
-            )
-
-            # Serialize
-            export_payload = contract.model_dump()
-
-            if file_path:
-                path_obj = (
-                    Path(json.dumps(file_path).strip('"'))
-                    if not isinstance(file_path, Path)
-                    else file_path
-                )
-                # Ensure we handle the path correctly whether string or Path
-                path_obj = Path(file_path)
-                path_obj.parent.mkdir(parents=True, exist_ok=True)
-
-                with open(path_obj, "w", encoding="utf-8") as f:
-                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
-
-                if self.logger:
-                    self.logger.create_module_logger("system").info(
-                        f"Exported {len(export_models)} articles to {path_obj}"
-                    )
-
-            return export_payload
-
-        except Exception as e:
-            self.logger.log_error_with_context(
-                e, {"operation": "export_latest_articles"}
-            )
-            raise
+        from news_collector.system.reporting import export_latest_articles as _export
+        return _export(self, file_path, limit)
 
     def get_system_statistics(self) -> Dict[str, Any]:
         """
@@ -325,45 +259,8 @@ class NewsCollectorSystem:
         Returns:
             Diccionario con estadísticas detalladas
         """
-        if not self.is_initialized:
-            raise RuntimeError("Sistema no inicializado")
-
-        try:
-            # Estadísticas de base de datos
-            db_health = self.db_manager.get_health_status()
-            daily_stats = self.db_manager.get_daily_stats()
-            source_performance = self.db_manager.get_top_sources_performance()
-
-            # Estadísticas del sistema
-            system_uptime = (
-                datetime.now(timezone.utc) - self.start_time
-            ).total_seconds()
-
-            return {
-                "system_info": {
-                    "system_id": self.system_id,
-                    "start_time": self.start_time.isoformat(),
-                    "uptime_seconds": system_uptime,
-                    "is_healthy": db_health.get("status") == "healthy",
-                },
-                "database_health": db_health,
-                "daily_statistics": daily_stats,
-                "source_performance": source_performance,
-                "configuration": {
-                    "total_sources": len(ALL_SOURCES),
-                    "collection_interval_hours": COLLECTION_CONFIG[
-                        "collection_interval"
-                    ],
-                    "minimum_score": SCORING_CONFIG["minimum_score"],
-                    "daily_target": SCORING_CONFIG["daily_top_count"],
-                },
-            }
-
-        except Exception as e:
-            self.logger.log_error_with_context(
-                e, {"operation": "get_system_statistics"}
-            )
-            raise
+        from news_collector.system.reporting import get_system_statistics as _get_stats
+        return _get_stats(self)
 
     async def shutdown(self):
         """Cierra ordenadamente los componentes del sistema."""
@@ -483,55 +380,45 @@ class NewsCollectorSystem:
             current_rejected = 0  # Count rejected in this batch
 
             # Process invalid articles
+            invalid_mappings = []
             if batch_results["invalid"]:
-                from news_collector.storage.models import Article
+                for invalid_item in batch_results["invalid"]:
+                    current_rejected += 1
+                    total_rejected += 1
+                    article_data = invalid_item["article"]
+                    reason = invalid_item["reason"]
+                    rule_name = invalid_item["rule"]
 
-                with self.db_manager.get_session() as session:
-                    for invalid_item in batch_results["invalid"]:
-                        current_rejected += 1
-                        total_rejected += 1
-                        article_data = invalid_item["article"]
-                        reason = invalid_item["reason"]
-                        rule_name = invalid_item["rule"]
+                    article_id = article_data["id"]
 
-                        article_id = article_data["id"]
-
-                        article = (
-                            session.query(Article).filter_by(id=article_id).first()
-                        )
-                        if article:
-                            article.processing_status = "rejected"
-                            article.error_message = (
-                                f"Validation failed: {rule_name} - {reason}"
-                            )
+                    invalid_mappings.append({
+                        "id": article_id,
+                        "processing_status": "rejected",
+                        "error_message": f"Validation failed: {rule_name} - {reason}"
+                    })
 
                 # Accumulate results for report
                 validation_results["invalid"].extend(batch_results["invalid"])
 
+            valid_mappings = []
             if batch_results.get("valid"):
                 # Accumulate valid results for report if validator returns them
                 if "valid" not in validation_results:
                     validation_results["valid"] = []
                 validation_results["valid"].extend(batch_results.get("valid", []))
 
-                # FIX: Update valid articles to 'validated' so they exit the pending loop
-                from news_collector.storage.models import Article
+                # Update valid articles to 'validated' so they exit the pending loop
+                for valid_item in batch_results.get("valid", []):
+                    article_id = valid_item.get("id")
+                    if article_id:
+                        valid_mappings.append({
+                            "id": article_id,
+                            "processing_status": "validated"
+                        })
 
-                with self.db_manager.get_session() as session:
-                    for valid_item in batch_results.get("valid", []):
-                        # valid_item might be the article dict itself or a wrapper
-                        # Assuming it mimics structure of invalid items or is the article dict
-                        # Contract Adapter usually returns list of models or dicts for batch
-                        # Check validator implementation if possible, but safely assuming we can find by ID
-
-                        # In validate_batch, 'valid' usually contains the input payload for valid items
-                        article_id = valid_item.get("id")
-                        if article_id:
-                            article = (
-                                session.query(Article).filter_by(id=article_id).first()
-                            )
-                            if article:
-                                article.processing_status = "validated"
+            all_mappings = invalid_mappings + valid_mappings
+            if all_mappings:
+                self.db_manager.update_validation_status_bulk(all_mappings)
 
         self.logger.create_module_logger("validation").info(
             {
@@ -634,6 +521,7 @@ class NewsCollectorSystem:
             if results:
                 # results populated above by batch or legacy gathering
 
+                bulk_score_updates = []
                 for article, score_result in zip(
                     pending_articles, results, strict=False
                 ):
@@ -643,20 +531,21 @@ class NewsCollectorSystem:
                         )
                         continue
 
-                    try:
-                        self.db_manager.update_article_score(article.id, score_result)
+                    bulk_score_updates.append((article.id, score_result))
 
-                        scoring_stats["articles_scored"] += 1
-                        total_score += score_result["final_score"]
+                    scoring_stats["articles_scored"] += 1
+                    total_score += score_result["final_score"]
 
-                        if score_result["should_include"]:
-                            scoring_stats["articles_included"] += 1
-                        else:
-                            scoring_stats["articles_excluded"] += 1
+                    if score_result["should_include"]:
+                        scoring_stats["articles_included"] += 1
+                    else:
+                        scoring_stats["articles_excluded"] += 1
 
-                    except Exception as e:
+                if bulk_score_updates:
+                    success = self.db_manager.update_articles_score_bulk(bulk_score_updates)
+                    if not success:
                         self.logger.create_module_logger("scoring").error(
-                            f"Error saving score for article {article.id}: {str(e)}"
+                            "Failed to perform bulk score updates."
                         )
 
             if scoring_stats["articles_scored"] > 0:
@@ -725,85 +614,8 @@ class NewsCollectorSystem:
         session_id: str,
     ) -> Dict[str, Any]:
         """Genera reporte completo de la sesión."""
-        end_time = datetime.now(timezone.utc)
-        duration = (end_time - self.start_time).total_seconds()
-
-        # Consolidar estadísticas
-        report = {
-            "schema_version": 2,
-            "session_info": {
-                "session_id": session_id,
-                "system_id": self.system_id,
-                "start_time": self.start_time.isoformat(),
-                "end_time": end_time.isoformat(),
-                "duration_seconds": duration,
-            },
-            "collection_results": collection_results,
-            "scoring_results": scoring_results,
-            "selection_results": selection_results,
-            "performance_metrics": {
-                "total_duration_seconds": duration,
-                "articles_per_second": (
-                    collection_results.get("collection_summary", {}).get(
-                        "articles_found", 0
-                    )
-                    / max(duration, 1)
-                ),
-                "sources_per_minute": (
-                    collection_results.get("collection_summary", {}).get(
-                        "sources_processed", 0
-                    )
-                    / max(duration / 60, 1)
-                ),
-                "success_rate_percent": collection_results.get(
-                    "collection_summary", {}
-                ).get("success_rate_percent", 0),
-            },
-            "summary": {
-                "sources_processed": collection_results.get(
-                    "collection_summary", {}
-                ).get("sources_processed", 0),
-                "articles_found": collection_results.get("collection_summary", {}).get(
-                    "articles_found", 0
-                ),
-                "articles_saved": collection_results.get("collection_summary", {}).get(
-                    "articles_saved", 0
-                ),
-                "articles_scored": scoring_results.get("statistics", {}).get(
-                    "articles_scored", 0
-                ),
-                "final_selection_count": selection_results.get("selected_count", 0),
-            },
-        }
-
-        # Export source health data
-        try:
-            health_data = {}
-            source_details = collection_results.get("source_details", {})
-            for source_id, result in source_details.items():
-                success = result.get("success", False)
-                saved = result.get("articles_saved", 0)
-
-                health_data[source_id] = {
-                    "last_run": datetime.now(timezone.utc).isoformat(),
-                    "feed_ok": success,
-                    "pipeline_ok": True,  # If we have a result here, pipeline ran
-                    "content_ok": saved > 0,
-                    "content_mode": result.get("content_mode", "unknown"),
-                    "articles_found": result.get("articles_found", 0),
-                    "articles_saved": saved,
-                    "last_error_message": result.get("error_message"),
-                    "latency": result.get("processing_time", 0),
-                }
-
-            export_path = Path("data/exports/source_health.json")
-            export_path.parent.mkdir(parents=True, exist_ok=True)
-            export_path.write_text(json.dumps(health_data, indent=2))
-        except Exception:  # noqa: S110
-            # Fail silently to avoid crashing report generation
-            pass
-
-        return report
+        from news_collector.system.reporting import generate_session_report
+        return generate_session_report(self, collection_results, scoring_results, selection_results, session_id)
 
     def _simulate_collection(
         self, sources: Dict[str, Dict[str, Any]]
