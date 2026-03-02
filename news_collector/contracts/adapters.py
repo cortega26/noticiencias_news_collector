@@ -21,7 +21,7 @@ Failure modes:
 - Type mismatches will raise Pydantic validation errors.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 from news_collector.contracts.export import ExportArticleModel
 from news_collector.contracts.scoring import ArticleScoringData, ScoringInputModel
@@ -62,6 +62,58 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
         category=article.category,
         components=article.score_components or {},
     )
+
+
+def adapt_export_article_to_collector_payload(
+    article: Mapping[str, Any],
+    *,
+    source_name_to_id: Mapping[str, str] | None = None,
+) -> Dict[str, Any]:
+    """
+    Normalizes legacy/export payloads so CollectorArticleModel can validate them.
+
+    Enforces source identity deterministically:
+    - Keep canonical `source_id` when present.
+    - Accept equivalent key spellings from legacy payloads.
+    - Optionally resolve from `source_name` via an explicit deterministic map.
+    """
+
+    payload = dict(article)
+
+    def _clean(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    source_id = (
+        _clean(payload.get("source_id"))
+        or _clean(payload.get("sourceId"))
+        or _clean(payload.get("source_slug"))
+    )
+
+    if not source_id:
+        metadata = payload.get("metadata")
+        if isinstance(metadata, dict):
+            source_meta = metadata.get("source_metadata")
+            source_id = _clean(metadata.get("source_id"))
+            if not source_id and isinstance(source_meta, dict):
+                source_id = _clean(source_meta.get("source_id")) or _clean(
+                    source_meta.get("id")
+                )
+
+    if not source_id and source_name_to_id:
+        source_name = _clean(payload.get("source_name"))
+        if source_name:
+            source_id = source_name_to_id.get(source_name.casefold())
+
+    if not source_id:
+        raise ValueError(
+            "Missing source_id in export payload and deterministic fallback failed"
+        )
+
+    payload["source_id"] = source_id
+    return payload
 
 
 def adapt_article_to_scoring(article: Any) -> ArticleScoringData:  # Updated return type

@@ -1,5 +1,10 @@
 # CONTRACTS.md — Boundary & Contract Registry
 
+> ⚠️ NON-AUTHORITATIVE DOCUMENT
+> This file is a derived registry for reference purposes only.
+> If any conflict exists, `docs/AGENTS.md` prevails.
+> This document must NOT introduce or redefine architectural law (per `docs/AGENTS.md`).
+
 ## Authority
 
 - SOURCE_OF_TRUTH.md overrides all
@@ -12,23 +17,24 @@
 | :--------- | :----------------------- | :----------------------------------- | :------------------------------------------------------------------------------- | :--------------------------------- | :--------------------- |
 | Validation | `_execute_validation`    | `ArticleValidationPayload`           | `news_collector/contracts/adapters.py` (function: `adapt_to_validation_payload`) | Pydantic schema validation         | `make test-boundaries` |
 | Scoring    | `_execute_scoring`       | `ScoringInputModel`                  | `news_collector/contracts/adapters.py` (function: `adapt_to_scoring_input`)      | Pydantic schema validation         | `make test-boundaries` |
-| Export     | `export_latest_articles` | Unverified: ExportContractV1 missing | `news_collector/contracts/adapters.py` (function: `adapt_article_to_export`)     | `ExportContractV2` present instead | `make test-boundaries` |
+| Export     | `export_latest_articles` | `ExportContractV2` (legacy v1 normalized at adapter boundary) | `news_collector/contracts/adapters.py` (functions: `adapt_article_to_export`, `adapt_export_article_to_collector_payload`) | Legacy `source_name -> source_id` fallback allowed only for schema_version `1` | `make test-boundaries` |
 
 ## Adapter Rules Summary
 
-- Adapters are the absolute exclusive conversion layer.
-- All data crossing any system boundary MUST be encapsulated in Pydantic models.
-- Passing raw dictionaries across system boundaries is strictly forbidden.
-- Creating ad-hoc schemas inline is prohibited.
-- Mutating payloads after validation is strictly forbidden.
-- System orchestration code (`news_collector/system/`) may never construct payloads.
-- Adapters SHOULD be side-effect minimal and avoid I/O; conversion remains their primary responsibility.
+- Derived from `docs/AGENTS.md` LAW-1 and LAW-2:
+- Adapters are the exclusive conversion layer.
+- Cross-boundary payloads use Pydantic models.
+- Raw dictionaries are not used for sealed boundary transfer.
+- Inline ad-hoc schemas are not used at boundaries.
+- Payload mutation after validation is avoided.
+- System orchestration code does not construct boundary payloads.
+- Adapters stay side-effect-light and avoid I/O where practical.
 
 ## SmartHttpClient URL Scheme Contract
 
 - Only `http` and `https` schemas are allowed.
-- All other non-HTTP schemes (e.g., `ftp`, `file`, `gopher`, `smb`) are strictly rejected.
-- SSRF validation via `validate_url_safety` is mandatory and must be executed before any HTTP dispatch.
+- Non-HTTP schemes (e.g., `ftp`, `file`, `gopher`, `smb`) are rejected.
+- SSRF validation is performed through `validate_url_safety` before HTTP dispatch.
 
 ## Commands
 

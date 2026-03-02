@@ -1,7 +1,7 @@
 # AGENTS.md --- Noticiencias Backend (News Collector)
 
-Version: 2.3 (Tightened Exceptions, Canonical ID Protection, Doc Roles)
-Status: Active & Binding Supersedes: Version 2.2
+Version: 2.4 (SourceRegistry Governance, Legacy Schema Policy, Provenance Law)
+Status: Active & Binding Supersedes: Version 2.3
 
 ---
 
@@ -76,6 +76,41 @@ Forbidden:
 - Inline schema definitions
 - Post-validation mutation
 - Implicit structural assumptions
+
+---
+
+## LAW-1A: SourceRegistry Identity & Schema Governance (Critical)
+
+`source_id` is the canonical identity key for news sources.
+
+Mandatory:
+
+- `source_id` MUST be present in all schema_version >= 2 payloads that cross sealed boundaries.
+- `source_name` is display metadata only and MUST be canonicalized from the registry at the adapter boundary.
+- The canonical registry is `news_collector.config.sources.ALL_SOURCES`, keyed by `source_id`.
+- Registry `source_name` values MUST be casefold-unique.
+- Adapter fallback `source_name -> source_id` is allowed only for legacy schema_version `1`.
+- Missing `source_id` in schema_version >= 2 is a hard contract failure.
+
+Legacy governance:
+
+- Legacy schema detection MUST emit warning logs.
+- Legacy compatibility logic MUST be isolated to adapter/input-normalization boundaries.
+- Contract, domain, and system layers MUST NOT branch on legacy schema behavior.
+
+Provenance persistence policy:
+
+- Markdown `source_identity` metadata is auxiliary audit trace, not canonical identity storage.
+- Canonical source identity remains the validated contract field `source_id`.
+- Canonical provenance line format is `<!-- source_identity: source_id=<ID>; source_name=<NAME> -->`.
+- Provenance metadata in publication artifacts MUST be idempotent (update/replace; never duplicate).
+- Publication artifacts MUST persist this provenance trace for auditability.
+
+Forbidden:
+
+- Weakening `source_id` requirement for schema_version >= 2.
+- Silent fallback identity resolution for non-legacy payloads.
+- Implicit identity derivation without registry validation.
 
 ---
 
@@ -209,9 +244,9 @@ database, network, or LLM dependencies.
 
 # 4) Invariant Classification
 
-Critical Invariants: - Contract boundaries - Canonical identity
-determinism (including canonical ID generation protection) - Adapters
-exclusivity
+Critical Invariants: - Contract boundaries - SourceRegistry identity
+and schema governance (LAW-1A) - Canonical identity determinism
+(including canonical ID generation protection) - Adapters exclusivity
 
 Structural Invariants: - Orchestration purity - Observability
 separation - Domain purity (dependency direction inward)
@@ -233,6 +268,11 @@ Rules:
     laws.
 3.  No new non-compliant surface area may be introduced.
 4.  Transitional status cannot expand; it can only shrink.
+5.  Legacy export support (schema_version 1) is transitional compatibility debt, not a permanent contract.
+6.  Until an explicit cutoff date is approved through amendment, CI MUST enforce:
+    - Legacy path emits warning logs.
+    - schema_version >= 2 payloads without `source_id` fail hard.
+7.  Introducing or removing a legacy cutoff date requires explicit architectural amendment.
 
 ---
 
@@ -249,6 +289,7 @@ Agents MUST add tests when:
 - Modifying identity path logic
 - Introducing or altering domain rules
 - Touching canonical ID generation logic (LAW-4A)
+- Changing SourceRegistry mapping rules or legacy schema compatibility logic (LAW-1A)
 
 ---
 
@@ -278,6 +319,14 @@ The following MUST exist in CI:
     - Validate schema integrity and transformation correctness.
 6.  Import Guard Test (Domain Purity):
     - Fails if domain/components imports `system/` or `contracts/`.
+7.  Source Identity Strictness Test:
+    - `schema_version >= 2` payload missing `source_id` fails contract/boundary validation.
+8.  Legacy Adapter Compatibility Test:
+    - `schema_version: 1` path emits warning and allows deterministic `source_name -> source_id` mapping.
+9.  SourceRegistry Uniqueness Test:
+    - Fails if two registry sources share the same `source_name` under casefold comparison.
+10. Provenance Idempotency Test:
+    - Publication artifact keeps a single canonical `source_identity` trace after repeated processing.
 
 Without these, architectural law is considered partially unenforced.
 
@@ -297,6 +346,9 @@ Domain Rule Changes ⚠️ Must add tests
 Canonical ID Generation Logic ❌ Human Approval
 Scoring Logic ❌ Human Approval
 Validation Rules ❌ Human Approval
+Source Identity Rules (`source_id`, fallback, registry mapping) ❌ Human Review
+Legacy Schema Compatibility Window ❌ Human Approval
+Provenance Persistence Semantics ⚠️ With Regression Tests
 Test Addition ✅ Required
 Contract Test Modification ❌ Human Review
 Test Deletion ❌ Human Review
@@ -316,6 +368,8 @@ Agents MUST refuse if task:
 - Introduces identity nondeterminism
 - Violates domain purity dependency rules
 - Changes canonical ID generation without approval (LAW-4A)
+- Weakens `source_id` strictness or enables non-legacy fallback (LAW-1A)
+- Introduces implicit identity derivation without registry validation (LAW-1A)
 
 Refusal must state: - Violated law - Explanation - Compliant alternative
 

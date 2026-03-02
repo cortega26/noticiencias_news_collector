@@ -498,6 +498,7 @@ Ejemplos de uso:
                         "summary": art.summary,
                         "content": art.content,
                         "source_name": art.source_name,
+                        "source_id": art.source_id,
                         "published_date": (
                             art.published_date.isoformat()
                             if art.published_date
