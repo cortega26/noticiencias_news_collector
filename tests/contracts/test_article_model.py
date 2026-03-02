@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 from news_collector.contracts import ArticleMetadataModel, CollectorArticleModel
@@ -68,15 +68,87 @@ def test_content_length_validation():
 
 
 def test_published_date_type_error():
-    """Ensure invalid date types raise TypeError."""
-    with pytest.raises(TypeError, match="published_date must be a datetime instance"):
+    """Ensure invalid date strings raise a clear validation error."""
+    with pytest.raises(ValidationError, match="published_date has invalid ISO-8601 value"):
         CollectorArticleModel(
             title="Valid Title length > 10",
             url="https://example.com/bad-date",
             source_id="src",
             source_name="Source",
             category="gen",
-            published_date="not-a-datetime",  # Invalid type
+            published_date="not-a-datetime",
+            summary="Valid length " * 200,
+            word_count=50,
+            reading_time_minutes=1,
+        )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (
+            datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+            datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        (
+            datetime(2026, 1, 1, 12, 0),
+            datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        (
+            "2026-01-01T12:00:00Z",
+            datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        (
+            "2026-01-01T09:00:00-03:00",
+            datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        (
+            "2026-01-01",
+            datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc),
+        ),
+        (
+            date(2026, 1, 1),
+            datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc),
+        ),
+        (
+            1735689600,
+            datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc),
+        ),
+        (
+            1735689600.0,
+            datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc),
+        ),
+        (
+            1735689600000,
+            datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc),
+        ),
+    ],
+)
+def test_published_date_normalization(value, expected):
+    model = CollectorArticleModel(
+        title="Valid Title length > 10",
+        url="https://example.com/date-normalization",
+        source_id="src",
+        source_name="Source",
+        category="gen",
+        published_date=value,
+        summary="Valid length " * 200,
+        word_count=50,
+        reading_time_minutes=1,
+    )
+    assert model.published_date == expected
+    assert model.published_date.tzinfo == timezone.utc
+
+
+def test_published_date_none_rejected_with_clear_error():
+    with pytest.raises(ValidationError, match="published_date is required and cannot be None"):
+        CollectorArticleModel(
+            title="Valid Title length > 10",
+            url="https://example.com/bad-none-date",
+            source_id="src",
+            source_name="Source",
+            category="gen",
+            published_date=None,
             summary="Valid length " * 200,
             word_count=50,
             reading_time_minutes=1,
