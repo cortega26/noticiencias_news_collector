@@ -121,6 +121,7 @@ async def test_reliability_benchmark_200_cycles():
         patch("httpx.AsyncClient") as mock_client_cls,
         patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
         patch("random.uniform", return_value=0.1),
+        patch("news_collector.collectors.html_collector.validate_url_safety"),
         patch.object(collector, "_respect_robots", return_value=(True, 0)),
         patch.object(collector, "_enforce_domain_rate_limit", return_value=None),
     ):
