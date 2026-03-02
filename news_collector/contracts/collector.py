@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from typing import Any, Dict, List, TypedDict
 
 from pydantic import (
@@ -79,11 +79,56 @@ class CollectorArticleModel(BaseModel):
     @field_validator("published_date", mode="before")
     @classmethod
     def ensure_datetime(cls, value: Any) -> datetime:
+        if value is None:
+            raise ValueError("published_date is required and cannot be None")
+
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 return value.replace(tzinfo=timezone.utc)
             return value.astimezone(timezone.utc)
-        raise TypeError("published_date must be a datetime instance")
+
+        if isinstance(value, date):
+            return datetime.combine(value, time.min, tzinfo=timezone.utc)
+
+        if isinstance(value, str):
+            raw_value = value
+            normalized = raw_value.strip()
+            if not normalized:
+                raise ValueError("published_date cannot be empty")
+            if normalized.endswith(("Z", "z")):
+                normalized = f"{normalized[:-1]}+00:00"
+            try:
+                parsed = datetime.fromisoformat(normalized)
+            except ValueError as exc:
+                raise ValueError(
+                    f"published_date has invalid ISO-8601 value: {raw_value!r}"
+                ) from exc
+
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+
+        if isinstance(value, bool):
+            raise ValueError(
+                f"published_date must not be boolean: received {value!r}"
+            )
+
+        if isinstance(value, (int, float)):
+            epoch_seconds = float(value)
+            # Guard common JSON epoch-milliseconds payloads.
+            if abs(epoch_seconds) >= 1e11:
+                epoch_seconds /= 1000.0
+            try:
+                return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc)
+            except (OverflowError, OSError, ValueError) as exc:
+                raise ValueError(
+                    f"published_date epoch value is out of range: {value!r}"
+                ) from exc
+
+        raise ValueError(
+            "published_date must be datetime/date/ISO-8601 string/epoch seconds, "
+            f"got {type(value).__name__}: {value!r}"
+        )
 
     @field_validator("authors", mode="before")
     @classmethod
