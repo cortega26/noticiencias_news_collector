@@ -547,7 +547,9 @@ class EditorAgent:
                     print(f"   Reason: {reason}")
                     # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
                     final_content = self._repair_editorial(translated_text, reason)
-                    final_content = self._extract_markdown_content(final_content)  # Cleanup
+                    final_content = self._extract_markdown_content(
+                        final_content
+                    )  # Cleanup
                 else:
                     raise ValueError(
                         f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"

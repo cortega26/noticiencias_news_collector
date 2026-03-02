@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-02T10:19:05.967909", "article_id": "123", "mode": "standard", "thresholds": {"critic": 80.0, "auditor": 0.0}, "score": {"epistemic_rigor_score": 10.0}, "result": "allowed", "reason": "Non-blocking check passed (Fail-Open) or Score Sufficient", "policy_sha256": "b6e90727ac9dab40c9c01d05d71bbafdc3d42f157cf4b8c715147f402febd3e8"}

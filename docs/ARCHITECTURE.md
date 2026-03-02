@@ -1,165 +1,334 @@
 # Noticiencias System Architecture
 
-> **Authority**: This document defines the technical structure of the Noticiencias ecosystem. It is subservient to [`SOURCE_OF_TRUTH.md`](SOURCE_OF_TRUTH.md) and [`AGENTS.md`](AGENTS.md).
+Version: 2.1 (Aligned to AGENTS v2.3) Status: Active & Binding
+Authority: Subservient to `SOURCE_OF_TRUTH.md` and `AGENTS.md`
 
-## 1. High-Level Design
+---
 
-The Noticiencias architecture is a **Hybrid Monorepo** designed to decouple "Inference/Logic" (Backend) from "Presentation" (Frontend).
+# Purpose of This Document
 
-### Global Topology
+This document explains **how** architectural law is implemented
+technically.
 
-| Component                      | Responsibility                             | Tech Stack                        | Location          |
-| :----------------------------- | :----------------------------------------- | :-------------------------------- | :---------------- |
-| **Brain (`news_collector`)**   | Ingestion, NLP, Scoring, Orchestration     | Python 3.13, Pydantic, SQLAlchemy | `news_collector/` |
-| **Refinery (`apps/refinery`)** | Editorial UI, Human-in-the-Loop, AI Assist | Streamlit, Ollama                 | `apps/refinery/`  |
-| **Face (`noticiencias`)**      | SEO, Static Rendering, Presentation        | Astro 5, Tailwind                 | _External Repo_   |
+If:
 
-### Data Flow Diagram
+- `SOURCE_OF_TRUTH.md` defines constitutional principles
+- `AGENTS.md` defines enforceable backend law (what is
+  mandatory/forbidden)
+
+Then this document defines the **engineering implementation model**
+(diagrams, flows, and code-to-law mapping).
+
+It must never contradict higher-authority documents.
+
+---
+
+# 1. Institutional Hierarchy
+
+Order of authority:
+
+1.  `SOURCE_OF_TRUTH.md` (Constitution)
+2.  `AGENTS.md` (Backend Law)
+3.  `ARCHITECTURE.md` (Implementation Model --- this document)
+4.  `RUNBOOK.md` (Operational Procedures)
+5.  Inline documentation
+
+---
+
+# 2. System Topology
+
+The ecosystem is a Hybrid Monorepo separating inference logic from
+presentation.
+
+---
+
+Component Role Tech Location
+
+---
+
+Brain Ingestion, NLP, Python 3.13+, `news_collector/`
+(`news_collector`) Contracts, Pydantic,  
+ Orchestration SQLAlchemy
+
+Refinery Human-in-the-loop Streamlit, Ollama `apps/refinery/`
+(`apps/refinery`) editorial system
+
+Face Static publishing & Astro 5, Tailwind External repo
+(`noticiencias`) SEO
+
+---
+
+Separation ensures presentation cannot mutate canonical backend
+identity.
+
+---
+
+# 3. Global Data Flow (Deterministic Model)
 
 ```mermaid
 graph TD
-    subgraph "The Brain (news_collector)"
-        Cron[Scheduler/CLI] --> Bootstrap[System Bootstrap]
-        Bootstrap --> Pipeline[Pipeline Orchestrator]
-        Pipeline --> Collector[RSS Collector]
-        Collector --> Contracts[Data Contracts]
-        Contracts --> Validation[Schema Validator]
-        Validation --> Storage[(Postgres/SQLite)]
-    end
-
-    subgraph "The Refinery (apps/)"
-        UI[Streamlit Admin Panel] <--> Storage
-        UI -->|AI Request| Editor[AI Editor Agent]
-        Editor -->|Inference| Ollama[Local LLM]
-        UI -->|Publish| GitOps[GitHub Publisher]
-    end
-
-    subgraph "The Face (Target Repo)"
-        GitOps -->|Commit/PR| AstroRepo[Astro Content Collection]
-        AstroRepo -->|CI/Build| Website[Noticiencias.com]
-    end
+    Cron --> Bootstrap
+    Bootstrap --> Pipeline
+    Pipeline --> Collector
+    Collector --> Contracts
+    Contracts --> Validation
+    Validation --> Storage
+    Storage <--> RefineryUI
+    RefineryUI --> Publisher
+    Publisher --> AstroRepo
+    AstroRepo --> Website
 ```
+
+Identity-critical paths must remain deterministic.
+
+Non-determinism is allowed only in logging/telemetry layers.
 
 ---
 
-## 2. Directory Structure (Current State)
+# 4. Invariant Classification & Enforcement Mapping
 
-The repository follows a strict modular design enforced by **Data Contracts**.
+This section maps constitutional/backend invariants to implementation.
+
+## 4.1 Critical Invariants
+
+### A. Canonical Identity Determinism
+
+Implemented via:
+
+- Canonical reuse scan in `RefineryEngine` (detect existing
+  `refinery_id`)
+- Upstream `published_date` binding (date must not come from runtime
+  clock)
+- Slug derivation independent of runtime and execution order
+- Persist-once identity: first publication locks canonical artifacts
+- Integration tests enforcing stability across reprocessing
+
+Reprocessing must produce identical canonical artifacts.
+
+#### A1. Canonical ID Protection Model (LAW-4A)
+
+If `refinery_id` is algorithmically derived (hash/derivation), then the
+**derivation algorithm is part of canonical identity**.
+
+Implementation requirements:
+
+- **Persisted identity wins:** once an artifact exists, `refinery_id`
+  is read from the canonical source (repo/frontmatter/DB) and reused.
+- **No retroactive rewrites:** code changes must not regenerate a
+  different `refinery_id` for existing artifacts.
+- **Versioned evolution:** if a new derivation is introduced, it must
+  be versioned (e.g., `refinery_id_v2`) and applied only to new
+  artifacts, while preserving existing IDs.
+
+Minimum tests (examples of intent):
+
+- "Existing artifact reprocessed after code change retains same
+  `refinery_id`."
+- "Two runs on same input yield identical canonical identity
+  (including ID)."
+
+> Note: If `refinery_id` is not derived (e.g., stored
+> UUID/DB-generated), the protection still applies: generation point is
+> fixed, and reprocessing must reuse the stored value.
+
+---
+
+### B. Contract-Driven Boundaries
+
+Implemented via:
+
+- Pydantic models in `news_collector/contracts/`
+- Boundary methods accept/return contract types only
+- Contract schema tests (shape + required fields)
+- Adapter mapping tests (external → contract; domain → contract;
+  contract → export)
+
+No dict-based boundary crossing is allowed at sealed boundaries.
+
+---
+
+## 4.2 Structural Invariants
+
+### A. System Layer Purity (Orchestration Only)
+
+`news_collector/system/` is orchestration-only.
+
+It may:
+
+- Wire dependencies
+- Control execution flow
+- Emit semantic events
+
+It may NOT:
+
+- Apply business rules
+- Shape contract payloads
+- Serialize artifacts
+- Embed scoring logic
+- Implement validation rules
+
+**Implementation pattern:** system orchestrates calls into
+domain/components and adapters; it does not "prepare" payloads by
+itself.
+
+---
+
+### B. Domain Purity & Dependency Direction (LAW-5)
+
+The domain is the semantic core. Dependency direction is inward:
+
+- `system/` depends on domain
+- `contracts/` depends on domain (via adapters)
+- domain depends on neither `system/` nor `contracts/`
+
+Implementation model:
+
+- Domain logic lives in `news_collector/components/` (or a dedicated
+  `news_collector/domain/` if you split later).
+- Domain defines "ports" (interfaces) where needed; outer layers
+  implement them.
+- Domain code must be unit-testable without DB/network/LLM.
+
+Enforcement model (examples):
+
+- Import-guard architecture test: fails if domain imports
+  `news_collector.system.*` or `news_collector.contracts.*`
+- Unit tests: validate domain rules without involving
+  adapters/contracts.
+
+---
+
+### C. Observability Isolation (S1-C)
+
+Logging/telemetry implemented in:
+
+- `news_collector/system/observability.py`
+
+Pipeline emits semantic events (e.g., `trace_cycle_start`,
+`trace_item_processed`) rather than direct logging calls inside business
+logic.
+
+This prevents cross-contamination of business logic and observability.
+
+---
+
+## 4.3 Policy Invariants
+
+### A. Coverage Protection
+
+Tests must protect invariant-bearing paths:
+
+- Contract logic
+- Adapter mappings
+- Identity path (slug/date/refinery_id persistence)
+- Boundary methods
+
+Numeric coverage is secondary to invariant protection.
+
+---
+
+### B. CI Enforcement
+
+Pull Requests must be blocked if:
+
+- Contract boundaries are broken
+- Deterministic identity is compromised
+- Canonical ID protection is violated
+- Protected tests are removed
+- Invariant coverage is reduced
+
+---
+
+# 5. Directory Structure (Law-Aligned)
 
 ```text
 noticiencias_news_collector/
-├── news_collector/                # 📦 CORE LIBRARY
-│   ├── contracts/                 # 🛡️ D1: Pydantic Models (The Law)
-│   ├── system/                    # 🧠 S1: Orchestration & Bootstrap
-│   │   ├── bootstrap.py           # Dependency Injection
-│   │   ├── pipeline.py            # Execution Logic
-│   │   └── observability.py       # S1-C: Logging/Metrics side-effects
-│   ├── collectors/                # I/O: RSS Fetchers
-│   ├── components/                # Agents: Editorial, Publishing
-│   ├── storage/                   # DB Layer (SQLAlchemy)
-│   └── utils/                     # Helpers
+├── news_collector/
+│   ├── contracts/                 # Critical invariant: typed boundaries
+│   │   ├── adapters/              # Exclusive transformation layer (package)
+│   │   │   ├── __init__.py        # Stable adapter API
+│   │   │   ├── validation.py
+│   │   │   ├── scoring.py
+│   │   │   └── export.py
+│   ├── system/                    # Structural invariant: orchestration only
+│   ├── collectors/                # External I/O (dirty inputs)
+│   ├── components/                # Domain logic (semantic core)
+│   ├── storage/                   # Persistence layer
+│   └── utils/                     # Non-domain helpers (avoid leaking into domain)
 │
-├── apps/                          # 🚀 APPLICATIONS
-│   └── refinery/                  # Streamlit UI
-│       ├── admin_panel.py         # Entry Point
-│       └── main.py                # App Logic
+├── apps/
+│   └── refinery/
 │
-├── data/                          # 💾 STATE
-│   ├── news.db                    # SQLite Database
-│   └── exports/                   # JSON Dumps
-│
-├── scripts/                       # 🛠️ OPS TOOLS
-│   ├── audit_duplicates.py        # S2-B: Canonical Integrity Audit
-│   └── verify_source.py           # Source Debugging
-│
-└── config.toml                    # ⚙️ CONFIGURATION
+├── data/
+├── scripts/
+└── config.toml
 ```
 
 ---
 
-## 3. Core Subsystems & Boundaries
+# 6. Determinism Model
 
-### 3.1 The Collector Engine
+Determinism applies to:
 
-**Goal**: Deterministic ingestion of content.
+- Slug generation
+- Canonical filename
+- Publication date binding
+- Canonical ID (`refinery_id`) persistence / protection
 
-- **Input**: RSS Feeds defined in `config.toml`.
-- **Output**: Validated `CollectedArticle` objects.
-- **Constraint**: Must respect `robots.txt` and rate limits.
-- **Key Module**: `news_collector.system.pipeline`
+Forbidden in identity path:
 
-### 3.2 The Refinery (Editorial)
+- `datetime.now()`
+- Random generators
+- Execution-order-dependent behavior
 
-**Goal**: Human-AI collaboration for quality control.
+Allowed outside identity path:
 
-- **Input**: Raw candidates from DB.
-- **AI Agent**: `EditorAgent` (uses Ollama).
-  - **Stage 1**: Translation (EN -> ES).
-  - **Stage 2**: Editorial Adaptation (Tone/Style).
-  - **Stage 3**: Metadata/Frontmatter generation.
-- **Output**: Markdown files with strictly typed Frontmatter.
-
-### 3.3 The Publisher (GitOps)
-
-**Goal**: Atomic content delivery.
-
-- **Action**: Clones the Target Repo (Astro), creates a deterministic branch, and opens a PR.
-- **Target**: `src/content/posts` in the Astro repository.
+- Logging timestamps
+- Metrics sampling
+- Telemetry counters
 
 ---
 
-## 4. Architectural Invariants
+# 7. Contract Flow Model
 
-These are hard constraints enforced by the system architecture.
+External Input → Dirty Data
+Dirty Data → Adapter → Contract
+Contract → Domain Logic
+Domain Logic → Adapter → Contract
+Contract → Storage or UI
+UI → Adapter → Export Contract → Publisher
 
-### 4.1 Canonical Asset Integrity (S2-A)
-
-> _Invariant: An article’s identity/URL must be stable and independent of processing time._
-
-- **Problem**: Re-running the pipeline on a different date used to generate new URLs (duplicates).
-- **Solution**: `RefineryEngine` scans the target repo for existing `refinery_id`.
-  - **If Found**: Reuse existing filename/date strictly.
-  - **If New**: Derive date from upstream `published_date`, NOT execution time.
-  - **Enforcement**: `tests/integration/test_refinery_canonical.py`.
-
-### 4.2 Data Contracts (D1)
-
-> _Invariant: No data enters the system without passing Pydantic validation._
-
-- All data moving between Collector, DB, and UI is encapsulated in models defined in `news_collector/contracts/`.
-- **Adapters** (`adapters.py`) mediate between dirty external data and clean internal contracts.
-
-### 4.3 Observability Separation (S1-C)
-
-> _Invariant: Business log (Pipeline) must not be polluted by logging logic._
-
-- All execution traces, metrics, and structured logs are delegated to `news_collector.system.observability`.
-- The pipeline issues semantic events (`trace_cycle_start`, `trace_item_processed`) rather than raw log calls.
+All transformations occur in the **adapters layer** (as a package), not
+scattered across system/domain.
 
 ---
 
-## 5. Operations & Verification
+# 8. Refinery & GitOps Model
 
-### 5.1 Verification Gates
+Publisher must:
 
-Code quality is enforced via Makefiles.
+- Clone target repo deterministically
+- Detect existing `refinery_id`
+- Reuse canonical identity if exists
+- Derive date from upstream metadata (not runtime)
+- Open PR atomically
 
-- **`make test`**: Runs unit tests.
-- **`make test-system`**: Runs integration/system tests (Gate for S1).
-- **`make lint`**: Enforces Ruff/Format standards.
-
-### 5.2 Manual Audits
-
-Specific scripts exist for architectural audits:
-
-- **Duplicate Check**: `python scripts/audit_duplicates.py`
-  - Ensures no two files share the same `refinery_id`.
-
-### 5.3 Deployment
-
-- **Backend**: Dockerized or running as system service.
-- **Frontend**: Built via GitHub Actions on the Target Repo.
+Publisher must never regenerate identity on update.
 
 ---
 
-_Last Updated: 2026-01-25 (Milestone S2-B/D1)_
+# 9. Evolution Protocol
+
+Architectural evolution must:
+
+1.  Respect invariant classification
+2.  Follow amendment review (per `AGENTS.md`)
+3.  Preserve determinism guarantees
+4.  Preserve contract boundaries
+5.  Preserve domain purity dependency direction
+
+Architecture is durable but evolvable.
+
+---
+
+End of `ARCHITECTURE.md` --- Version 2.1 (Aligned to AGENTS v2.3)

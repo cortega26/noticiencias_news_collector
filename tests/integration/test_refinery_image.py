@@ -33,7 +33,13 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
     article = {
         "id": "test-123",
         "title": "Test Article",
-        "published_date": "2024-01-01",
+        "url": "http://x",
+        "summary": "sum",
+        "source_id": "src",
+        "source_name": "src",
+        "category": "cat",
+        "source_metadata": {},
+        "published_date": __import__("datetime").datetime(2024, 1, 1),
         "image_url": "https://example.com/image.jpg",
     }
 

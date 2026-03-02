@@ -78,16 +78,32 @@ class TestEditorialPolicyEnforcement:
         score_missing = {"epistemic_rigor_score": 9.0}
         assert engine._enforce_editorial_policy("test_id", score_missing) is False
 
-    def test_persistence_prevention(self, engine):
+    def test_persistence_prevention(self, engine, tmp_path):
         """Test 5: manifest and file not created when blocked"""
         # Setup Blocked State
         score = {"epistemic_rigor_score": 5.0}  # Low score
         engine.auditor.get_cached_score.return_value = score
 
         # Mock process inputs
-        article = {"id": "test_persistence", "title": "Test"}
-        target_dir = MagicMock()
-        posts_dir = target_dir / "src/content/posts"
+        article = {
+            "id": "test_persistence",
+            "title": "Test with valid length",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        target_dir = tmp_path
 
         # Mock successful editor processing
         engine.editor.process_article.return_value = "Refined content"
@@ -110,14 +126,31 @@ class TestEditorialPolicyEnforcement:
         engine.git.create_branch.assert_not_called()
         engine.git.create_pull_request.assert_not_called()
 
-    def test_persistence_allowed(self, engine):
+    def test_persistence_allowed(self, engine, tmp_path):
         """Test 6: Persistence occurs when allowed"""
         # Setup Allowed State
         score = {"epistemic_rigor_score": 8.5, "has_proper_caveats": True}
         engine.auditor.get_cached_score.return_value = score
 
-        article = {"id": "test_allowed", "title": "Test"}
-        target_dir = MagicMock()
+        article = {
+            "id": "test_allowed",
+            "title": "Test with valid length",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        target_dir = tmp_path
         engine.editor.process_article.return_value = "Refined content"
 
         result = engine.process_single_article(article, MagicMock(), target_dir)

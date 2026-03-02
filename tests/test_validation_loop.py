@@ -36,6 +36,14 @@ def test_validation_loop_terminates_and_updates_status():
 
     system.db_manager.get_pending_articles.side_effect = get_pending_side_effect
 
+    def update_bulk_side_effect(mappings):
+        for mapping in mappings:
+            for article in pending_store:
+                if article.id == mapping["id"]:
+                    article.processing_status = mapping["processing_status"]
+
+    system.db_manager.update_validation_status_bulk.side_effect = update_bulk_side_effect
+
     # Mock DB Session
     session_mock = MagicMock()
     system.db_manager.get_session.return_value.__enter__.return_value = session_mock
