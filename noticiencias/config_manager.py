@@ -396,6 +396,9 @@ def load_config(  # noqa: C901
         "OLLAMA_TRANSLATOR_MODEL": "ollama.translator_model",
         "OLLAMA_EDITOR_MODEL": "ollama.editor_model",
         "OLLAMA_HEADLINES_MODEL": "ollama.headlines_model",
+        "OLLAMA_TIMEOUT_SECONDS": "editorial_auditor.timeout_seconds",
+        "OLLAMA_RETRY_ATTEMPTS": "editorial_auditor.max_retries",
+        "OLLAMA_HEALTH_TIMEOUT_SECONDS": "editorial_auditor.health_timeout_seconds",
         "SCORING_LLM_MODEL": "scoring.llm_model",
     }
 

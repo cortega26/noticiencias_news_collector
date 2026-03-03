@@ -720,6 +720,18 @@ class EditorialAuditorConfig(StrictModel):
     blocking: bool = Field(
         default=False, description="If true, blocks publication on audit failure."
     )
+    timeout_seconds: PositiveInt = Field(
+        default=45,
+        description="LLM request timeout for auditor calls.",
+    )
+    max_retries: NonNegativeInt = Field(
+        default=2,
+        description="Retry attempts after the first audit request (total attempts = retries + 1).",
+    )
+    health_timeout_seconds: PositiveInt = Field(
+        default=2,
+        description="Timeout used by preflight Ollama health checks.",
+    )
 
 
 class Config(StrictModel):

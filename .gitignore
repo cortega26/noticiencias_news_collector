@@ -116,9 +116,13 @@ dmypy.json
 *.db
 data/logs/
 data/dlq/
+data/runtime/
+data/cache/
+data/article_metadata/
 data/exports/*
 !data/exports/latest_articles.json
 temp/
+MagicMock/
 debug_output.txt
 test_output*.txt
 e2e_test_output.txt

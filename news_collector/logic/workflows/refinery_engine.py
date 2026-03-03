@@ -47,6 +47,9 @@ logger = logging.getLogger("RefineryEngine")
 # Removing duplicate import if it exists further down
 
 MANIFEST_FILENAME = "refinery_manifest.json"
+QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
+    r'(?m)^[A-Za-z_][A-Za-z0-9_-]*:\s*(["\'])\d{4}-\d{2}-\d{2}\1\s*$'
+)
 
 
 class RefineryEngine:
@@ -120,9 +123,9 @@ class RefineryEngine:
             data_dir = paths.get("data_dir", "./data")
         else:
             data_dir = getattr(paths, "data_dir", "./data")
-        self.enforcement_log_path = (
-            Path(data_dir) / "editorial_policy_enforcement_log.jsonl"
-        )
+        runtime_dir = Path(data_dir) / "runtime"
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        self.enforcement_log_path = runtime_dir / "editorial_policy_enforcement_log.jsonl"
 
         self.editor = editor_agent
 
@@ -320,29 +323,11 @@ class RefineryEngine:
                 return False
             raise ve
 
-        # --- AUDIT PHASE (True Non-Blocking & Backpressure) ---
-        # We audit the refined content to score it.
+        audit_should_run = False
         try:
-            # BACKPRESSURE GUARD (Objective 4):
-            # If a previous audit is still running/queued, skip this one to prevent unbounded growth.
-            # invalid/done futures are safe to overwrite.
-            if self._last_audit_future and not self._last_audit_future.done():
-                logger.warning(
-                    f"Auditor Backpressure: Skipping audit for {article_id} (Previous task still active)"
-                )
-            elif self.auditor.should_run_fast(article, refined_content):
-                logger.info(
-                    f"Submitting Auditor task for {article_id} (Non-blocking)..."
-                )
-                self._last_audit_future = self.executor.submit(
-                    self.auditor.audit_article_sync,
-                    article_id=article_id,
-                    content=refined_content,
-                    source_url=article.get("url") or article.get("source_url") or "",
-                    article_data=article,
-                )
+            audit_should_run = self.auditor.should_run_fast(article, refined_content)
         except Exception as e:
-            logger.error(f"Auditor submission failed for {article_id}: {e}")
+            logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
 
         # 3. Determine Output Filename (if not yet locked)
         if not output_filename:
@@ -382,6 +367,14 @@ class RefineryEngine:
         if not self._enforce_editorial_policy(article_id, cached_score):
             logger.warning(
                 f"⛔ Article {article_id} rejected by Editorial Policy (Auditor/Strictness)."
+            )
+            return False
+
+        if self._has_quoted_date_only_frontmatter(refined_content):
+            logger.error(
+                "Quoted date-only frontmatter detected for article %s. "
+                "Aborting before branch/commit/push.",
+                article_id,
             )
             return False
 
@@ -463,6 +456,7 @@ class RefineryEngine:
         if pr_url:
             logger.info(f"Pull Request created successfully: {pr_url}")
             # Mark processed in Main DB
+            numeric_id = None
             try:
                 numeric_id = int(article_id)
                 self.db.mark_article_published(numeric_id, pr_url)
@@ -471,10 +465,165 @@ class RefineryEngine:
                     f"Could not mark non-numeric ID {article_id} in main DB. Skipping state update."
                 )
 
+            source_url = article.get("url") or article.get("source_url") or ""
+            if audit_should_run:
+                self._record_audit_status(
+                    article_numeric_id=numeric_id,
+                    status="audit_pending",
+                    reason="Auditor task submitted after PR creation.",
+                    attempts=0,
+                )
+                self._schedule_optional_audit(
+                    article_id=article_id,
+                    article_numeric_id=numeric_id,
+                    content=refined_content,
+                    source_url=source_url,
+                    article_data=article,
+                )
+            else:
+                self._record_audit_status(
+                    article_numeric_id=numeric_id,
+                    status="audit_skipped",
+                    reason="Auditor trigger conditions not met.",
+                    attempts=0,
+                )
+
             return True
         else:
             logger.error("Failed to create PR.")
             return False
+
+    def _record_audit_status(
+        self,
+        article_numeric_id: int | None,
+        status: str,
+        reason: str,
+        attempts: int,
+        timeout_seconds: int | None = None,
+        model: str | None = None,
+        endpoint: str | None = None,
+    ) -> None:
+        if article_numeric_id is None:
+            return
+        update_status = getattr(self.db, "update_article_audit_status", None)
+        if not callable(update_status):
+            return
+        try:
+            update_status(
+                article_numeric_id,
+                status,
+                reason,
+                attempts=attempts,
+                timeout_seconds=timeout_seconds,
+                model=model,
+                endpoint=endpoint,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to persist audit status for article {article_numeric_id}: {e}"
+            )
+
+    def _schedule_optional_audit(
+        self,
+        *,
+        article_id: str,
+        article_numeric_id: int | None,
+        content: str,
+        source_url: str,
+        article_data: Dict[str, Any],
+    ) -> None:
+        try:
+            if self._last_audit_future and not self._last_audit_future.done():
+                logger.warning(
+                    f"Auditor Backpressure: Skipping audit for {article_id} (Previous task still active)"
+                )
+                self._record_audit_status(
+                    article_numeric_id=article_numeric_id,
+                    status="audit_skipped_backpressure",
+                    reason="Skipped because previous audit task is still running.",
+                    attempts=0,
+                )
+                return
+
+            logger.info(
+                f"Submitting optional auditor task for {article_id} after PR creation."
+            )
+            future = self.executor.submit(
+                self.auditor.audit_article_sync,
+                article_id=article_id,
+                content=content,
+                source_url=source_url,
+                article_data=article_data,
+            )
+            self._last_audit_future = future
+
+            def _on_done(done_future):
+                try:
+                    audit_result = done_future.result() or {}
+                except Exception as exc:
+                    message = (
+                        f"Optional auditor task crashed for article {article_id}: {exc}"
+                    )
+                    logger.warning(message)
+                    self._record_audit_status(
+                        article_numeric_id=article_numeric_id,
+                        status="audit_failed",
+                        reason=message,
+                        attempts=0,
+                    )
+                    return
+
+                if not isinstance(audit_result, dict):
+                    audit_result = {
+                        "status": "audit_failed",
+                        "reason": (
+                            f"invalid_audit_result_type:{type(audit_result).__name__}"
+                        ),
+                        "attempts": 0,
+                    }
+
+                status = str(audit_result.get("status", "audit_failed"))
+                reason = str(audit_result.get("reason", "unknown"))
+                attempts_raw = audit_result.get("attempts", 0)
+                try:
+                    attempts = int(attempts_raw or 0)
+                except (TypeError, ValueError):
+                    attempts = 0
+                timeout_seconds = audit_result.get("timeout_seconds")
+                try:
+                    timeout_int = int(timeout_seconds) if timeout_seconds else None
+                except (TypeError, ValueError):
+                    timeout_int = None
+                model = audit_result.get("model")
+                endpoint = audit_result.get("endpoint")
+
+                self._record_audit_status(
+                    article_numeric_id=article_numeric_id,
+                    status=status,
+                    reason=reason,
+                    attempts=attempts,
+                    timeout_seconds=timeout_int,
+                    model=str(model) if model else None,
+                    endpoint=str(endpoint) if endpoint else None,
+                )
+
+                if status != "audit_passed":
+                    logger.warning(
+                        "Optional auditor did not pass for article %s: %s",
+                        article_id,
+                        reason,
+                    )
+
+            future.add_done_callback(_on_done)
+
+        except Exception as e:
+            logger.warning(f"Auditor submission failed for {article_id}: {e}")
+            self._record_audit_status(
+                article_numeric_id=article_numeric_id,
+                status="audit_failed",
+                reason=f"submission_failed: {e}",
+                attempts=0,
+            )
 
     def _find_existing_file(self, posts_dir: Path, article_id: str) -> Path | None:
         """
@@ -582,6 +731,21 @@ class RefineryEngine:
             raise ValueError("empty string")
 
         return slug
+
+    def _has_quoted_date_only_frontmatter(self, content: str) -> bool:
+        """
+        Reject frontmatter when any key has a quoted date-only token (YYYY-MM-DD).
+        Generic by key name; does not special-case `date`.
+        """
+        if not isinstance(content, str) or not content.startswith("---\n"):
+            return False
+
+        end_marker_idx = content.find("\n---", 4)
+        if end_marker_idx == -1:
+            return False
+
+        frontmatter_block = content[4:end_marker_idx]
+        return bool(QUOTED_DATE_ONLY_FRONTMATTER_RE.search(frontmatter_block))
 
     def _download_image(self, url: str, slug: str, target_dir: Path) -> str | None:
         """

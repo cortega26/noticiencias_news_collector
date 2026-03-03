@@ -390,8 +390,8 @@ class DatabaseManager:
 
     def mark_article_published(self, article_id: int, pr_url: str) -> bool:
         """
-        Marks an article as published (or PR created) in the main database.
-        Updates status to 'completed' and sets published_at timestamp.
+        Records publication candidate state after PR creation.
+        This backend stage is PR_CREATED (candidate), not final website publication.
         """
         with self.get_session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
@@ -404,15 +404,74 @@ class DatabaseManager:
             article.processing_status = "completed"
             article.published_at = datetime.now(timezone.utc)
             article.published_url = pr_url
-            # We don't change 'published_date' (original source date), only 'published_at' (our publish date)
+            article_metadata = dict(article.article_metadata or {})
+            publication_meta = dict(article_metadata.get("publication") or {})
+            publication_meta.update(
+                {
+                    "state": "PR_CREATED",
+                    "pr_url": pr_url,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            article_metadata["publication"] = publication_meta
+            article.article_metadata = article_metadata
+            # We don't change 'published_date' (original source date), only 'published_at' (our publish date).
 
             session.add(article)
-            logger.info(f"Marked article {article_id} as published (PR: {pr_url})")
+            logger.info(f"Marked article {article_id} as PR_CREATED (PR: {pr_url})")
+            return True
+
+    def update_article_audit_status(
+        self,
+        article_id: int,
+        audit_status: str,
+        reason: str = "",
+        *,
+        attempts: int | None = None,
+        timeout_seconds: int | None = None,
+        model: str | None = None,
+        endpoint: str | None = None,
+    ) -> bool:
+        """
+        Persists auditor execution outcome without mutating publication stage.
+        """
+        with self.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if not article:
+                logger.warning(
+                    "Could not find article %s to update audit status.", article_id
+                )
+                return False
+
+            article_metadata = dict(article.article_metadata or {})
+            audit_meta = dict(article_metadata.get("audit") or {})
+            audit_meta.update(
+                {
+                    "state": str(audit_status),
+                    "reason": str(reason or ""),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            if attempts is not None:
+                audit_meta["attempts"] = int(attempts)
+            if timeout_seconds is not None:
+                audit_meta["timeout_seconds"] = int(timeout_seconds)
+            if model:
+                audit_meta["model"] = str(model)
+            if endpoint:
+                audit_meta["endpoint"] = str(endpoint)
+
+            article_metadata["audit"] = audit_meta
+            article.article_metadata = article_metadata
+            session.add(article)
+            logger.info(
+                "Updated audit state for article %s: %s", article_id, audit_status
+            )
             return True
 
     def is_article_published(self, article_id: int) -> bool:
         """
-        Checks if an article has already been published (PR created).
+        Checks if an article has already reached PR_CREATED state.
         """
         with self.get_session() as session:
             # We check for ID existence and status
