@@ -24,9 +24,12 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for Py <3.11
     import tomli as tomllib  # type: ignore[no-redef]
 
 try:
-    import tomli_w
+    import tomli_w as _tomli_w_imp
+    tomli_w: Any = _tomli_w_imp
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    tomli_w = None  # type: ignore[assignment]
+    tomli_w = None
+
+from typing import Any
 
 from noticiencias.config_schema import DEFAULT_CONFIG, Config, iter_field_docs
 
@@ -522,7 +525,7 @@ def _format_schema_table() -> str:
 def _dump_defaults() -> str:
     payload = _serialize_for_toml(DEFAULT_CONFIG)
     if tomli_w:
-        return tomli_w.dumps(payload)
+        return str(tomli_w.dumps(payload))
     buffer = io.StringIO()
     buffer.write(_encode_toml(payload))
     return buffer.getvalue()

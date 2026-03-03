@@ -263,7 +263,12 @@ class HeadlessCollector(BaseCollector):
 
                 extracted.append(article_data)
 
-            except Exception:  # noqa: S112
+            except Exception as e:
+                self._emit_log(
+                    "warning",
+                    "collector.headless.extract_item_failed",
+                    details={"error": str(e)},
+                )
                 continue
 
         return extracted
@@ -306,7 +311,7 @@ class HeadlessCollector(BaseCollector):
             if content_el:
                 # Use inner_text to get all visible text in the container
                 # logical and simple.
-                return await content_el.inner_text()
+                return str(await content_el.inner_text())
             return None
         except Exception as e:
             self._emit_log(

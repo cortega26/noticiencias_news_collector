@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 try:  # pragma: no cover - optional dependency
-    import yaml  # type: ignore[import-not-found]
+    import yaml
 except ModuleNotFoundError:  # pragma: no cover - exercised in tests
     yaml = None  # type: ignore[assignment]
 
@@ -102,7 +102,7 @@ class Finding:
     author: str = ""
     author_time: str = ""
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "tag": self.tag,
             "kind": self.kind,

@@ -199,8 +199,10 @@ def generate_session_report(
         export_path = Path("data/exports/source_health.json")
         export_path.parent.mkdir(parents=True, exist_ok=True)
         export_path.write_text(json.dumps(health_data, indent=2))
-    except Exception:  # noqa: S110
-        # Fail silently to avoid crashing report generation
-        pass
+    except (OSError, TypeError) as e:
+        # Log instead of failing silently, but don't crash report generation
+        system.logger.create_module_logger("system.reporting").warning(
+            f"Failed to export source health data: {e}"
+        )
 
     return report

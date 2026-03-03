@@ -296,8 +296,8 @@ class HeadlessEnricher:
             try:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)  # Wait for lazy load
-            except Exception:  # noqa: S110
-                pass
+            except Exception as e:
+                self.logger.debug(f"Headless scroll action failed: {e}")
 
         if "consent_click" in allowed_actions:
             # Heuristic for common consent buttons
@@ -312,5 +312,5 @@ class HeadlessEnricher:
                         page.click(selector)
                         page.wait_for_timeout(500)
                         break
-            except Exception:  # noqa: S110
-                pass
+            except Exception as e:
+                self.logger.debug(f"Headless consent click failed: {e}")

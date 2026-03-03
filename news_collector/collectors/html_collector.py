@@ -208,7 +208,7 @@ class HtmlCollector(BaseCollector):
                             art = self._parse_json_ld_article(item)
                             if art:
                                 articles.append(art)
-            except Exception:  # noqa: S112
+            except (json.JSONDecodeError, TypeError, ValueError):
                 continue
 
         if articles:
@@ -245,7 +245,7 @@ class HtmlCollector(BaseCollector):
                             "date": None,
                         }
                     )
-            except Exception:  # noqa: S112
+            except (AttributeError, TypeError, KeyError):
                 continue
 
         return articles

@@ -5,6 +5,7 @@ import time
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from pathlib import Path
+from typing import Any
 
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
 from news_collector.infrastructure.llm.provider import OllamaProvider
@@ -14,7 +15,6 @@ from news_collector.utils.logger import get_logger
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 import yaml
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
-from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariants
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
@@ -37,9 +37,9 @@ class EditorAgent:
         self,
         api_url: str,
         model: str,
-        translator_model: str = None,
-        editor_model: str = None,
-        headlines_model: str = None,
+        translator_model: str | None = None,
+        editor_model: str | None = None,
+        headlines_model: str | None = None,
     ):
         self.api_url = api_url
         self.model = model
@@ -117,7 +117,8 @@ class EditorAgent:
             import yaml
 
             if prompts_path.exists():
-                return yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
+                data = yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
+                return data if isinstance(data, dict) else {}
         except ImportError:
             logger.warning("PyYAML not installed, falling back to basic prompts.")
         except Exception as e:
@@ -207,7 +208,7 @@ class EditorAgent:
 
         return {str(key): normalize_value(val) for key, val in payload.items()}
 
-    def _send_prompt(self, prompt: str, system: str = None, model: str = None) -> str:
+    def _send_prompt(self, prompt: str, system: str | None = None, model: str | None = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
         use_model = model or self.model
         logger.info(f"Sending prompt to Ollama ({use_model})...")
@@ -481,7 +482,7 @@ class EditorAgent:
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
     def process_article(  # noqa: C901
-        self, raw_text: str | dict, override_date: str = None
+        self, raw_text: str | dict, override_date: str | None = None
     ) -> str:
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
@@ -599,7 +600,7 @@ class EditorAgent:
                     )
                     print(f"   Reason: {reason}")
                     # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
-                    final_content = self._repair_editorial(translated_text, reason)
+                    final_content = self._repair_editorial(translated_text, reason or "Unknown reason")
                     final_content = self._extract_markdown_content(
                         final_content
                     )  # Cleanup
@@ -671,34 +672,50 @@ class EditorAgent:
         try:
             # Prepare optional fields
             hl_variants = None
-            if headlines:
-                hl_variants = HeadlinesVariants(
-                    question=headlines.get("question", ""),
-                    benefit=headlines.get("benefit", ""),
-                )
+            if headlines and headlines.get("question") and headlines.get("benefit"):
+                hl_variants = {
+                    "question": headlines.get("question", ""),
+                    "benefit": headlines.get("benefit", ""),
+                }
 
             # Categories is a list in schema, but currently single string. Wrap it.
             # Schema expects list[str].
             categories_list = [final_category] if final_category else []
 
-            post = AstroPost(
-                title=final_title,
-                schema_version=2,
-                date=override_date or time.strftime("%Y-%m-%d"),
-                author="Noticiencias AI",
-                categories=categories_list,
-                tags=final_tags,
-                excerpt=final_excerpt,
-                image=image_url if image_url else None,
-                source_url=source_url if source_url else None,
-                refinery_id=article_id if article_id != "unknown" else None,
-                headlines_variants=hl_variants,
-            )
+            # Date parsing for PyYAML type coercion
+            date_str = override_date or time.strftime("%Y-%m-%d")
+            parsed_date_val: Any = date_str
+            if isinstance(date_str, str):
+                from datetime import datetime
+                try:
+                    if len(date_str) == 10:
+                        parsed_date_val = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    else:
+                        parsed_date_val = datetime.fromisoformat(date_str)
+                except ValueError:
+                    pass
+
+            model_dict = {
+                "title": final_title,
+                "schema_version": 2,
+                "date": parsed_date_val,
+                "author": "Noticiencias AI",
+                "categories": categories_list,
+                "tags": final_tags,
+                "excerpt": final_excerpt,
+            }
+            if image_url:
+                model_dict["image"] = image_url
+            if source_url:
+                model_dict["source_url"] = source_url
+            if article_id and article_id != "unknown":
+                model_dict["refinery_id"] = article_id
+            if hl_variants:
+                model_dict["headlines_variants"] = hl_variants
 
             # Dump to YAML
             # Use python mode to preserve native date types and emit
             # YAML date tokens without quotes for Astro z.date() compatibility.
-            model_dict = post.model_dump(exclude_none=True, mode="python")
             model_dict = self._normalize_frontmatter_for_yaml(model_dict)
 
             # Custom dumper to ensure correct formatting (e.g. no aliases)

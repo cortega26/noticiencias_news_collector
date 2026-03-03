@@ -27,7 +27,6 @@ from __future__ import annotations
 from typing import Mapping, MutableMapping
 
 from news_collector.config.settings import ENRICHMENT_CONFIG
-from news_collector.contracts import ArticleEnrichmentModel, ArticleForEnrichmentModel
 from news_collector.enrichment.nlp_stack import ConfigurableNLPStack, LRUCache
 from news_collector.utils.dedupe import normalize_article_text, sha256_hex
 from news_collector.utils.text_cleaner import detect_language_simple
@@ -53,16 +52,15 @@ class EnrichmentPipeline:
         return self._nlp_stack.model_version
 
     def enrich_article(
-        self, article: Mapping[str, object] | ArticleForEnrichmentModel
+        self, article: Mapping[str, object]
     ) -> MutableMapping[str, object]:
-        payload = (
-            article
-            if isinstance(article, ArticleForEnrichmentModel)
-            else ArticleForEnrichmentModel.model_validate(article)
-        )
+        payload_title = str(article.get("title") or "")
+        payload_summary = str(article.get("summary") or "")
+        payload_content = str(article.get("content") or "")
+        payload_language = article.get("language")
 
         normalized_title, normalized_summary, normalized_text = normalize_article_text(
-            payload.title, payload.summary or payload.content
+            payload_title, payload_summary or payload_content
         )
 
         cache_key = sha256_hex(
@@ -78,16 +76,18 @@ class EnrichmentPipeline:
         if isinstance(cached, dict):
             return dict(cached)
 
-        detected_language = payload.language or detect_language_simple(
-            f"{payload.title} {payload.summary}"
+        detected_language = payload_language or detect_language_simple(
+            f"{payload_title} {payload_summary}"
         )
-        language = self._nlp_stack.resolve_language(detected_language)
+        language = self._nlp_stack.resolve_language(
+            str(detected_language) if detected_language is not None else None
+        )
 
         combined_text = (
             normalized_text
             or " ".join(
                 part
-                for part in (payload.title, payload.summary, payload.content)
+                for part in (payload_title, payload_summary, payload_content)
                 if part
             ).strip()
         )
@@ -95,10 +95,11 @@ class EnrichmentPipeline:
         analysis = self._nlp_stack.analyze(
             language,
             combined_text,
-            extra_texts=(payload.title, payload.summary or "", payload.content or ""),
+            extra_texts=(payload_title, payload_summary or "", payload_content or ""),
         )
 
-        result = {
+        from typing import Any, MutableMapping
+        result: MutableMapping[str, Any] = {
             "language": language,
             "normalized_title": normalized_title,
             "normalized_summary": normalized_summary,
@@ -108,10 +109,8 @@ class EnrichmentPipeline:
             "model_version": self.model_version,
         }
 
-        validated = ArticleEnrichmentModel.model_validate(result)
-        result_dict = validated.model_dump()
-        self._cache.put(cache_key, result_dict)
-        return result_dict
+        self._cache.put(cache_key, result)
+        return result
 
 
 enrichment_pipeline = EnrichmentPipeline()

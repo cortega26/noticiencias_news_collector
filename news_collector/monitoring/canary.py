@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Mapping, Optional, Sequence
+from typing import Dict, List, Mapping, Optional, Sequence
 from zoneinfo import ZoneInfo
 
 from .common import Alert, Anomaly, Severity
@@ -97,7 +97,7 @@ class AutoSuppressionManager:
         anomalies: Sequence[Anomaly],
     ) -> List[SuppressionDecision]:
         decisions: List[SuppressionDecision] = []
-        by_source: Mapping[str, List[Anomaly]] = {}
+        by_source: Dict[str, List[Anomaly]] = {}
         for anomaly in anomalies:
             source_id = anomaly.labels.get("source_id") if anomaly.labels else None
             if not source_id:

@@ -195,7 +195,8 @@ class EditorialAuditor:
             import yaml
 
             if prompts_path.exists():
-                return yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
+                data = yaml.safe_load(prompts_path.read_text(encoding="utf-8"))
+                return data if isinstance(data, dict) else {}
         except Exception as e:
             logger.warning(f"Failed to load prompts: {e}")
         return {}
@@ -315,7 +316,9 @@ class EditorialAuditor:
 
             if score_file.exists():
                 data = json.loads(score_file.read_text(encoding="utf-8"))
-                return data.get("audit")  # Return inner audit object
+                if isinstance(data, dict):
+                    audit = data.get("audit")
+                    return audit if isinstance(audit, dict) else None
         except Exception as e:
             logger.warning(f"Failed to read cached score for {article_id}: {e}")
         return None
@@ -325,7 +328,7 @@ class EditorialAuditor:
         article_id: str,
         content: str,
         source_url: str,
-        article_data: Dict[str, Any] = None,
+        article_data: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """
         Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.
@@ -387,7 +390,7 @@ class EditorialAuditor:
                 try:
                     text = "".join(str(chunk) for chunk in provider_result)
                     raw_data = self.provider._extract_json(text)
-                except Exception:  # noqa: S110
+                except (ValueError, TypeError, json.JSONDecodeError):
                     pass  # Treated as invalid by _normalize
             else:
                 logger.warning(

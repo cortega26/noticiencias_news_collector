@@ -411,8 +411,13 @@ class RSSCollector(BaseCollector):
             meta = self.db_manager.get_source_feed_metadata(source_id)
             if meta:
                 cached_headers = meta
-        except Exception:  # noqa: S110
-            pass
+        except Exception as e:
+            self._emit_log(
+                "debug",
+                "collector.feed.metadata_fetch_failed",
+                source_id=source_id,
+                details={"error": str(e)},
+            )
 
         request_headers = self.FEED_REQUEST_headers.copy()
         etag = cached_headers.get("etag")

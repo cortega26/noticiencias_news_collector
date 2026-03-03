@@ -142,8 +142,8 @@ class CognitiveScorer(BasicScorer):
                         "details": json.loads(row[1]),
                         "reasoning": row[2] + " (Cached)",
                     }
-        except Exception:  # noqa: S110
-            pass
+        except sqlite3.Error as e:
+            logger.debug(f"Cache read failed or table missing: {e}")
         return None
 
     def _save_to_cache(self, key: str, result: Dict[str, Any]):

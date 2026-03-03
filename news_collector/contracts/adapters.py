@@ -21,7 +21,7 @@ Failure modes:
 - Type mismatches will raise Pydantic validation errors.
 """
 
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, cast
 
 from news_collector.contracts.export import ExportArticleModel
 from news_collector.contracts.scoring import ArticleScoringData, ScoringInputModel
@@ -36,31 +36,31 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
     """Safely converts an ORM Article to an ExportArticleModel."""
 
     return ExportArticleModel(
-        id=article.id,
-        title=article.title,
-        url=article.url,
-        summary=article.summary,
-        content=article.content,
-        source_name=article.source_name,
-        source_id=article.source_id,
+        id=cast(int, article.id),
+        title=cast(str, article.title),
+        url=cast(str, article.url),
+        summary=cast(str, article.summary),
+        content=cast(str, article.content),
+        source_name=cast(str, article.source_name),
+        source_id=cast(str, article.source_id),
         published_date=(
             article.published_date.isoformat() if article.published_date else None
         ),
         published_at=article.published_at.isoformat() if article.published_at else None,
-        published_url=article.published_url,
+        published_url=cast(str, article.published_url),
         collected_date=(
             article.collected_date.isoformat() if article.collected_date else None
         ),
-        score=article.final_score,
+        score=cast(float, article.final_score),
         image_url=(
             article.article_metadata.get("image_url")
             if article.article_metadata
             else None
         ),
-        metadata=article.article_metadata or {},
-        authors=article.authors or [],
-        category=article.category,
-        components=article.score_components or {},
+        metadata=cast(Dict[str, Any], article.article_metadata or {}),
+        authors=cast(List[str], article.authors or []),
+        category=cast(str, article.category),
+        components=cast(Dict[str, Any], article.score_components or {}),
     )
 
 

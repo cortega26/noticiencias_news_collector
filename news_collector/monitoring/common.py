@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 from enum import Enum
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 try:
-    UTC = ZoneInfo("UTC")
+    UTC: tzinfo = ZoneInfo("UTC")
 except ZoneInfoNotFoundError:
     UTC = timezone.utc
 

@@ -4,6 +4,7 @@ import os
 import sqlite3
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
 import dotenv
 import streamlit as st
@@ -535,11 +536,11 @@ with tab_prompts:
 
     import yaml
 
-    current_prompts = {}
+    current_prompts: Dict[str, Any] = {}
     if PROMPTS_YAML_PATH.exists():
         try:
-            with open(PROMPTS_YAML_PATH, "r", encoding="utf-8") as f:
-                current_prompts = yaml.safe_load(f) or {}
+            with open(PROMPTS_YAML_PATH, "r", encoding="utf-8") as f_yaml:
+                current_prompts = yaml.safe_load(f_yaml) or {}
         except Exception as e:
             st.error(f"Error leyendo prompts.yaml: {e}")
     else:
@@ -960,8 +961,8 @@ with tab3:
                 CLONED_PATH.parent.mkdir(parents=True, exist_ok=True)
                 import json
 
-                with open(CLONED_PATH, "w", encoding="utf-8") as f:
-                    json.dump({"articles": temp_articles}, f, indent=2)  # noqa: F821
+                with open(CLONED_PATH, "w", encoding="utf-8") as f_mock:
+                    json.dump({"articles": candidates}, f_mock, indent=2)
 
                 JSON_PATH = CLONED_PATH
                 st.toast(
@@ -1087,12 +1088,12 @@ with tab3:
                             ):
                                 st.write(f"**Título:** {selected_art.get('title')}")
                                 st.write(f"**Resumen:** {selected_art.get('summary')}")
-                        if selected_art.get("image_url"):
-                            st.image(
-                                selected_art.get("image_url"),
-                                caption="Imagen Extraída",
-                                width=300,
-                            )
+                            if selected_art.get("image_url"):
+                                st.image(
+                                    selected_art.get("image_url"),
+                                    caption="Imagen Extraída",
+                                    width=300,
+                                )
 
                         # Visual Settings
                         with st.expander("🎨 Configuración Visual", expanded=True):
@@ -1197,7 +1198,7 @@ with tab3:
                         # Standard Process Button (Always visible for force reprocessing or new items)
 
                         # Calculate estimate
-                        content_len = len(selected_art.get("content", "").split())
+                        content_len = len(selected_art.get("content", "").split()) if selected_art else 1000
                         active_model = env_vars.get("OLLAMA_MODEL", "unknown")
                         time_est = estimate_time(content_len, active_model)
 
@@ -1416,8 +1417,8 @@ with tab5:
 
         # 1. Ensure we have the latest state
         if st.button("🔄 Refrescar Lista de Artículos Publicados"):
-            gh_handler = GitHubPublisher(env_vars.get("GITHUB_TOKEN"))
-            target_url = env_vars.get("TARGET_REPO_URL")
+            gh_handler = GitHubPublisher(env_vars.get("GITHUB_TOKEN", ""))
+            target_url = env_vars.get("TARGET_REPO_URL", "")
 
             with st.spinner("Sincronizando repo destino..."):
                 try:
@@ -1457,12 +1458,12 @@ with tab5:
                 h4.markdown("**Acción 2**")
                 st.markdown("---")
 
-                for f in files:
+                for f_path in files:
                     # Parse metadata (Same logic as before)
                     refinery_id = None
-                    article_title = f.name
+                    article_title = f_path.name
                     try:
-                        content = f.read_text(encoding="utf-8", errors="ignore")
+                        content = f_path.read_text(encoding="utf-8", errors="ignore")
                         import re
 
                         match_id = re.search(
@@ -1492,7 +1493,7 @@ with tab5:
                     with c1:
                         st.write(article_title)
                     with c2:
-                        st.caption(f.name)
+                        st.caption(f_path.name)
                         if refinery_id:
                             st.caption(f"ID: `{refinery_id}`")
 
@@ -1563,23 +1564,23 @@ with tab5:
                     with c4:
                         if st.button(
                             "♻️ Reset",
-                            key=f"btn_rst_{f.name}",
+                            key=f"btn_rst_{f_path.name}",
                             width="stretch",
                         ):
                             # Copy-paste of reset logic
                             try:
                                 repo = git.Repo(TARGET_DIR)
-                                repo.index.remove([str(f.relative_to(TARGET_DIR))])
-                                f.unlink()
-                                repo.index.commit(f"Deleted (Reset) {f.name}")
+                                repo.index.remove([str(f_path.relative_to(TARGET_DIR))])
+                                f_path.unlink()
+                                repo.index.commit(f"Deleted (Reset) {f_path.name}")
                                 repo.remotes.origin.push()
 
                                 db_manager = RefineryDatabaseManager(
-                                    str(REFINERY_DB_PATH)
+                                    {"type": "sqlite", "path": str(REFINERY_DB_PATH)}
                                 )
                                 if refinery_id:
-                                    db_manager.delete_record(refinery_id)
-                                    db_manager.delete_record(f"{refinery_id}.md")
+                                    db_manager.delete_article(str(refinery_id))
+                                    db_manager.delete_article(f"{refinery_id}.md")
                                 st.success("Reset OK")
                                 st.rerun()
                             except Exception as e:

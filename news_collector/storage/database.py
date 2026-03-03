@@ -1478,6 +1478,25 @@ class DatabaseManager:
             )
             return result
 
+    def delete_article(self, article_id: Union[int, str]) -> bool:
+        """
+        Elimina un artículo específico de la base de datos por ID numérico.
+        """
+        try:
+            num_id = int(article_id)
+        except ValueError:
+            return False
+
+        with self.get_session() as session:
+            try:
+                article = session.query(Article).filter(Article.id == num_id).first()
+                if article:
+                    session.delete(article)
+                    return True
+            except Exception as e:
+                logger.error(f"Error borrando artículo {article_id}: {e}")
+        return False
+
     def clear_all_articles(self) -> int:
         """
         Elimina TODOS los artículos recolectados de la base de datos.
