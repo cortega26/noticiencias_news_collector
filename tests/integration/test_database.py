@@ -322,3 +322,43 @@ def test_mark_article_published_uses_original_url(test_db_manager) -> None:
         art = session.query(Article).filter_by(id=saved.id).first()
         assert art.published_url == "https://github.com/org/repo/pull/1"
         assert art.processing_status == "completed"  # Updated to match implementation
+        assert art.article_metadata["publication"]["state"] == "PR_CREATED"
+
+
+def test_update_article_audit_status_persists_reason(test_db_manager) -> None:
+    article_data = {
+        "title": "Audit status persistence",
+        "url": "https://example.com/audit-status",
+        "source_id": "test",
+        "source_name": "Test Source",
+        "category": "general",
+        "published_date": datetime.now(timezone.utc),
+        "summary": "Summary content.",
+        "content": "Content " * 200,
+        "word_count": 100,
+        "reading_time_minutes": 1,
+        "article_metadata": {},
+    }
+    saved = test_db_manager.save_article(article_data)
+    assert saved is not None
+
+    updated = test_db_manager.update_article_audit_status(
+        saved.id,
+        "audit_failed",
+        "timeout after 3 attempts",
+        attempts=3,
+        timeout_seconds=15,
+        model="llama3.3:latest",
+        endpoint="http://localhost:11434/api/generate",
+    )
+    assert updated is True
+
+    from news_collector.storage.models import Article
+
+    with test_db_manager.get_session() as session:
+        art = session.query(Article).filter_by(id=saved.id).first()
+        assert art is not None
+        audit_meta = art.article_metadata["audit"]
+        assert audit_meta["state"] == "audit_failed"
+        assert "timeout" in audit_meta["reason"]
+        assert audit_meta["attempts"] == 3

@@ -77,7 +77,7 @@ class TestPolicyIntegrity:
             engine._enforce_editorial_policy("test_audit_blocked", score)
 
             # Check Log
-            log_path = Path(tmpdir) / "editorial_policy_enforcement_log.jsonl"
+            log_path = Path(tmpdir) / "runtime" / "editorial_policy_enforcement_log.jsonl"
             assert log_path.exists()
 
             content = log_path.read_text()
@@ -110,7 +110,7 @@ class TestPolicyIntegrity:
             engine._enforce_editorial_policy("test_audit_allowed", score)
 
             # Check Log
-            log_path = Path(tmpdir) / "editorial_policy_enforcement_log.jsonl"
+            log_path = Path(tmpdir) / "runtime" / "editorial_policy_enforcement_log.jsonl"
             content = log_path.read_text()
             entry = json.loads(content.strip())
 

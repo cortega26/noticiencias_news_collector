@@ -196,6 +196,18 @@ If `refinery_id` is generated algorithmically (hash/derivation), then:
 - Any migration or rewrite of canonical IDs requires explicit human
   approval and must include a compatibility plan.
 
+### LAW-4B: Publication Stage Semantics (Critical)
+
+Backend publication state is staged:
+
+- `PR_CREATED`: The backend successfully created a Pull Request in the frontend repository.
+- `PUBLISHED`: Final site publication is downstream (merge + frontend deploy), not inferred at PR creation time.
+
+Auditor governance:
+
+- Default mode is optional (`editorial_auditor.blocking = false`).
+- Auditor failures (including LLM timeouts/unavailability) MUST be recorded as audit status metadata and MUST NOT silently corrupt publication state.
+
 ---
 
 ## LAW-5: Domain Purity & Dependency Direction (Structural)

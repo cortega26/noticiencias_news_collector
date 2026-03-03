@@ -85,3 +85,65 @@ def test_process_article_keeps_sections_with_image() -> None:
     assert fm.get("source_url") == "https://example.com/source"
 
     assert "https://example.com/source" in result and "Fuente" in result
+
+
+def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
+    agent = EditorAgent("http://example", "model")
+    agent.cache_dir = tmp_path / "editor-cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._generate_headlines = lambda *args: {
+        "direct": "Direct Headline",
+        "question": "Question Headline?",
+        "benefit": "Benefit Headline",
+        "excerpt": "This excerpt is long enough for metadata validation.",
+    }  # type: ignore[method-assign]
+
+    result = agent.process_article(
+        {
+            "id": "1087",
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/source",
+        },
+        override_date="2026-03-02",
+    )
+
+    assert "\ndate: 2026-03-02\n" in result
+    assert "date: '2026-03-02'" not in result
+    assert 'date: "2026-03-02"' not in result
+
+
+def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
+    agent = EditorAgent("http://example", "model")
+    agent.cache_dir = tmp_path / "editor-cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._generate_headlines = lambda *args: {
+        "direct": "Direct Headline",
+        "question": "Question Headline?",
+        "benefit": "Benefit Headline",
+        "excerpt": "This excerpt is long enough for metadata validation.",
+    }  # type: ignore[method-assign]
+
+    result = agent.process_article(
+        {
+            "id": "1087",
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/source",
+        },
+        override_date="2026-03-02T15:30:00+00:00",
+    )
+
+    assert "date: '2026-03-02T15:30:00+00:00'" not in result
+    assert 'date: "2026-03-02T15:30:00+00:00"' not in result
+    assert re.search(r"\ndate: 2026-03-02\s+15:30:00\+00:00\n", result)

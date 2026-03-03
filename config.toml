@@ -20,6 +20,9 @@ editor_model = "qwen2.5:32b"
 enabled = true
 sampling_rate = 0.2
 blocking = false
+timeout_seconds = 45
+max_retries = 2
+health_timeout_seconds = 2
 
 [paths]
 data_dir = "./data"

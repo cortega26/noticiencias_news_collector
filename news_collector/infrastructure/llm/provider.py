@@ -25,6 +25,7 @@ from tenacity import (
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    wait_random,
 )
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
@@ -73,6 +74,9 @@ class OllamaProvider:
 
         # Async client reused from infrastructure
         self.async_client = httpx.AsyncClient(timeout=timeout)
+
+    def _base_url(self) -> str:
+        return self.api_url.replace("/api/generate", "")
 
     async def close(self):
         await self.async_client.aclose()
@@ -187,6 +191,7 @@ class OllamaProvider:
         json_mode: bool = False,
         stream: bool = False,
         model: Optional[str] = None,
+        log_errors_as_warning: bool = False,
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
         """
         Sync generation with configurable retries.
@@ -206,7 +211,7 @@ class OllamaProvider:
             stop=stop_after_attempt(
                 self.max_retries + 1
             ),  # +1 because 0 retries = 1 attempt
-            wait=wait_exponential(multiplier=1, min=2, max=10),
+            wait=wait_exponential(multiplier=1, min=2, max=10) + wait_random(0, 1),
             retry=retry_if_exception_type(requests.RequestException),
             before_sleep=before_sleep_log(logger, logging.WARNING),
             reraise=True,
@@ -217,7 +222,8 @@ class OllamaProvider:
             with attempt:
                 try:
                     logger.debug(
-                        f"Sending sync prompt to Ollama ({payload['model']})... Attempt {attempt.retry_state.attempt_number}/{self.max_retries + 1}"
+                        f"Sending sync prompt to Ollama ({payload['model']}) at {self.api_url} "
+                        f"(timeout={self.timeout}s, attempt={attempt.retry_state.attempt_number}/{self.max_retries + 1})"
                     )
                     response = requests.post(
                         self.api_url, json=payload, stream=stream, timeout=self.timeout
@@ -236,11 +242,29 @@ class OllamaProvider:
                     return str(text)
 
                 except requests.RequestException as e:
-                    logger.error(
-                        f"Sync LLM Request Error (Attempt {attempt.retry_state.attempt_number}): {e}"
+                    message = (
+                        "Sync LLM Request Error "
+                        f"(Attempt {attempt.retry_state.attempt_number}): {e}"
                     )
+                    if log_errors_as_warning:
+                        logger.warning(message)
+                    else:
+                        logger.error(message)
                     raise
         raise RuntimeError("Retry loop exited without producing a response")
+
+    def check_health(self, timeout_seconds: float = 2.0) -> tuple[bool, str]:
+        """
+        Lightweight readiness check against Ollama tags endpoint.
+        """
+        tags_url = f"{self._base_url()}/api/tags"
+        try:
+            response = requests.get(tags_url, timeout=timeout_seconds)
+            if response.status_code == 200:
+                return True, "ok"
+            return False, f"http_{response.status_code}"
+        except requests.RequestException as exc:
+            return False, str(exc)
 
     def _stream_generator(
         self, response: requests.Response
@@ -314,11 +338,7 @@ class OllamaProvider:
         Fetches available models from Ollama /api/tags.
         Returns a list of model names (e.g. ['llama3:latest', ...]).
         """
-        # Construct tags endpoint based on api_url
-        # api_url typically ends in /api/generate
-        # We need /api/tags
-        base = self.api_url.replace("/api/generate", "")
-        tags_url = f"{base}/api/tags"
+        tags_url = f"{self._base_url()}/api/tags"
 
         try:
             resp = requests.get(tags_url, timeout=5)

@@ -210,6 +210,38 @@ class TestRefineryEngine(unittest.TestCase):
                 "1999-12-31",
             )
 
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_blocks_quoted_date_only_frontmatter_before_git(self, mock_dt):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+
+        article = {
+            "id": "125",
+            "title": "Quoted date should be blocked",
+            "url": "http://x",
+            "summary": "sum",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = (
+            "---\n"
+            "slug: test-slug\n"
+            "date: '2026-03-02'\n"
+            "---\n"
+            "Content"
+        )
+
+        result = self.engine.process_single_article(article, mock_repo, Path("/tmp"))
+
+        self.assertFalse(result)
+        self.mock_git.create_branch.assert_not_called()
+        self.mock_git.commit_and_push.assert_not_called()
+        self.mock_git.create_pull_request.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

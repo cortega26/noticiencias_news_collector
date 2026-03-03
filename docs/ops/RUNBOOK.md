@@ -179,6 +179,15 @@ make refinery
 4.  **Publicar**: Pulsa **"✨ Refine & Publish"**.
     - _Acción_: El sistema reescribe la noticia, genera posts para redes sociales y crea el PR en GitHub. Revisa la terminal o los logs para ver los borradores de Tweets/LinkedIn.
 
+### 5.1.1 Semántica de Estado de Publicación (Refinery)
+
+- **PR_CREATED**: estado persistido cuando el backend crea el Pull Request en el repositorio Astro.
+- **PUBLISHED**: no se marca desde backend al crear el PR; corresponde a publicación final del sitio tras merge/deploy del frontend.
+- **Auditor LLM**: verificación opcional post-PR por defecto (`editorial_auditor.blocking = false`).
+- Si el auditor falla (timeout/disponibilidad), el pipeline de publicación no se revierte:
+  - se conserva el estado **PR_CREATED**
+  - se registra `audit_failed` con razón y metadatos de timeout/reintentos.
+
 ### 5.2 Configuración de la IA ("Prompt Maestro")
 
 Puedes ajustar cómo "piensa" y "escribe" la IA sin tocar código.

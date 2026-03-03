@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import requests
 from news_collector.infrastructure.llm.model_registry import (
     ModelRegistryError,
     get_model_for_stage,
@@ -20,6 +21,27 @@ logger = get_logger().create_module_logger("components.editorial.auditor")
 
 
 class EditorialAuditor:
+    @staticmethod
+    def _resolve_positive_int(value: Any, default: int) -> int:
+        try:
+            parsed = int(str(value).strip())
+            return parsed if parsed > 0 else default
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _read_env_int(var_name: str) -> Optional[int]:
+        raw = os.getenv(var_name)
+        if raw is None:
+            return None
+        try:
+            parsed = int(raw.strip())
+            if parsed > 0:
+                return parsed
+        except ValueError:
+            return None
+        return None
+
     def __init__(self, config: Any):
         """
         Initialize the Auditor with configuration.
@@ -44,6 +66,25 @@ class EditorialAuditor:
         self.enabled = get_cfg(audit_cfg, "enabled", True)
         self.sampling_rate = get_cfg(audit_cfg, "sampling_rate", 0.2)
         self.blocking = get_cfg(audit_cfg, "blocking", False)
+        self.optional = not self.blocking
+
+        ci_default_timeout = 20 if str(os.getenv("CI", "")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        } else 45
+        cfg_timeout = get_cfg(audit_cfg, "timeout_seconds", ci_default_timeout)
+        cfg_retries = get_cfg(audit_cfg, "max_retries", 2)
+        cfg_health_timeout = get_cfg(audit_cfg, "health_timeout_seconds", 2)
+        self.timeout_seconds = self._read_env_int("OLLAMA_TIMEOUT_SECONDS") or (
+            self._resolve_positive_int(cfg_timeout, ci_default_timeout)
+        )
+        self.max_retries = self._read_env_int("OLLAMA_RETRY_ATTEMPTS") or (
+            self._resolve_positive_int(cfg_retries, 2)
+        )
+        self.health_timeout_seconds = self._read_env_int(
+            "OLLAMA_HEALTH_TIMEOUT_SECONDS"
+        ) or self._resolve_positive_int(cfg_health_timeout, 2)
 
         # Triggers
         self.trigger_keywords = [
@@ -118,8 +159,17 @@ class EditorialAuditor:
         self.provider = OllamaProvider(
             api_url=self.api_url,
             model=self.model,
-            timeout=15,  # Recommended 15s max
-            max_retries=0,  # STRICT ONE-SHOT: Auditor is non-critical, do not retry.
+            timeout=self.timeout_seconds,
+            max_retries=self.max_retries,
+        )
+        logger.info(
+            "Auditor configured: endpoint=%s model=%s timeout=%ss retries=%s health_timeout=%ss optional=%s",
+            self.api_url,
+            self.model,
+            self.timeout_seconds,
+            self.max_retries,
+            self.health_timeout_seconds,
+            self.optional,
         )
 
         self.prompts = self._load_prompts()
@@ -271,7 +321,7 @@ class EditorialAuditor:
         content: str,
         source_url: str,
         article_data: Dict[str, Any] = None,
-    ) -> None:
+    ) -> Dict[str, Any]:
         """
         Synchronous worker method. SHOULD BE CALLED VIA EXECUTOR.
         Handles LLM interaction, result parsing, and persistence.
@@ -279,6 +329,28 @@ class EditorialAuditor:
         if article_data is None:
             article_data = {}
         try:
+            is_ready, readiness_reason = self.provider.check_health(
+                timeout_seconds=float(self.health_timeout_seconds)
+            )
+            if not is_ready:
+                reason = (
+                    f"Ollama unavailable before audit call ({readiness_reason}); "
+                    "audit skipped."
+                )
+                logger.warning("Auditor skipped for %s: %s", article_id, reason)
+                result = {
+                    "status": "audit_failed",
+                    "reason": reason,
+                    "model": self.model,
+                    "endpoint": self.api_url,
+                    "timeout_seconds": self.timeout_seconds,
+                    "max_retries": self.max_retries,
+                    "attempts": 0,
+                    "blocking": self.blocking,
+                }
+                self._save_audit_status(article_id, result)
+                return result
+
             logger.info(f"Starting Editorial Audit for {article_id}...")
 
             system_prompt = self.prompts.get("auditor", {}).get("system", "")
@@ -290,7 +362,11 @@ class EditorialAuditor:
             # Call LLM with Timeout (handled in provider init)
             # OBJECTIVE 1: Rename ambiguous variable
             provider_result = self.provider.generate_sync(
-                user_prompt, system=system_prompt, stream=False, model=self.model
+                user_prompt,
+                system=system_prompt,
+                stream=False,
+                model=self.model,
+                log_errors_as_warning=self.optional,
             )
 
             raw_data = {}
@@ -327,12 +403,29 @@ class EditorialAuditor:
             # SUCCESS: Reset Circuit Breaker
             self.failure_count = 0
 
+            result = {
+                "status": "audit_passed",
+                "reason": "",
+                "model": self.model,
+                "endpoint": self.api_url,
+                "timeout_seconds": self.timeout_seconds,
+                "max_retries": self.max_retries,
+                "attempts": 1,
+                "blocking": self.blocking,
+            }
+            self._save_audit_status(article_id, result)
+
             logger.info(
                 f"Audit Complete for {article_id}. Epistemic Score: {validated_result.get('epistemic_rigor_score')}"
             )
+            return result
 
         except Exception as e:
-            logger.error(f"Auditor Error for {article_id}: {e}")
+            msg = f"Auditor Error for {article_id}: {e}"
+            if self.optional:
+                logger.warning(msg)
+            else:
+                logger.error(msg)
 
             # FAILURE: Update Circuit Breaker
             self.failure_count += 1
@@ -341,6 +434,45 @@ class EditorialAuditor:
                 logger.critical(
                     f"Auditor Circuit Breaker TRIPPED. Pausing audits for 30 mins. Failure count: {self.failure_count}"
                 )
+            reason = str(e)
+            attempts = self.max_retries + 1
+            if isinstance(e, requests.Timeout):
+                reason = (
+                    f"timeout after {attempts} attempts "
+                    f"(timeout={self.timeout_seconds}s): {e}"
+                )
+            result = {
+                "status": "audit_failed",
+                "reason": reason,
+                "model": self.model,
+                "endpoint": self.api_url,
+                "timeout_seconds": self.timeout_seconds,
+                "max_retries": self.max_retries,
+                "attempts": attempts,
+                "blocking": self.blocking,
+            }
+            self._save_audit_status(article_id, result)
+            return result
+
+    def _save_audit_status(self, article_id: str, status_data: Dict[str, Any]) -> None:
+        try:
+            safe_id = str(article_id).replace("/", "_").replace("\\", "_")
+            article_meta_dir = self.metadata_dir / safe_id
+            article_meta_dir.mkdir(parents=True, exist_ok=True)
+
+            status_file = article_meta_dir / "auditor_status.json"
+            payload = {"timestamp": datetime.now().isoformat(), **status_data}
+            with tempfile.NamedTemporaryFile(
+                "w", dir=str(article_meta_dir), delete=False, encoding="utf-8"
+            ) as tf:
+                json.dump(payload, tf, indent=2)
+                temp_name = tf.name
+
+            os.replace(temp_name, status_file)
+        except Exception as exc:
+            logger.error(f"Failed to save auditor status: {exc}")
+            if "temp_name" in locals() and os.path.exists(temp_name):
+                os.unlink(temp_name)
 
     def _save_score(self, article_id: str, score_data: Dict[str, Any]):
         """

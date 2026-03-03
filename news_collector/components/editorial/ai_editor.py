@@ -2,6 +2,8 @@ import json
 import os
 import re
 import time
+from datetime import date as dt_date
+from datetime import datetime as dt_datetime
 from pathlib import Path
 
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
@@ -184,6 +186,26 @@ class EditorAgent:
         if not cleaned:
             return canonical_comment
         return f"{cleaned}\n\n{canonical_comment}"
+
+    def _normalize_frontmatter_for_yaml(self, payload: dict) -> dict:
+        """
+        Normalize frontmatter payload before YAML serialization.
+        Keeps date/datetime objects as native types so PyYAML emits
+        unquoted YAML timestamps for schema-aligned fields like `date`.
+        """
+
+        def normalize_value(value):
+            if isinstance(value, dict):
+                return {str(k): normalize_value(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [normalize_value(item) for item in value]
+            if isinstance(value, (dt_date, dt_datetime, bool, int, float, str)):
+                return value
+            if value is None:
+                return None
+            return str(value)
+
+        return {str(key): normalize_value(val) for key, val in payload.items()}
 
     def _send_prompt(self, prompt: str, system: str = None, model: str = None) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
@@ -674,13 +696,14 @@ class EditorAgent:
             )
 
             # Dump to YAML
-            # We use distinct model_dump to exclude None values for cleaner output
-            # mode='json' ensures complex types like HttpUrl are converted to strings
-            model_dict = post.model_dump(exclude_none=True, mode="json")
+            # Use python mode to preserve native date types and emit
+            # YAML date tokens without quotes for Astro z.date() compatibility.
+            model_dict = post.model_dump(exclude_none=True, mode="python")
+            model_dict = self._normalize_frontmatter_for_yaml(model_dict)
 
             # Custom dumper to ensure correct formatting (e.g. no aliases)
             # Safe dump usually avoids complex tags
-            yaml_frontmatter = yaml.dump(
+            yaml_frontmatter = yaml.safe_dump(
                 model_dict,
                 allow_unicode=True,
                 default_flow_style=False,

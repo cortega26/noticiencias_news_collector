@@ -69,6 +69,16 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
         result = self.provider.generate_sync("Hi", model="test-model")
         self.assertEqual(result, "Sync Hello")
 
+    @patch("requests.get")
+    def test_check_health(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_get.return_value = mock_resp
+
+        ok, reason = self.provider.check_health(timeout_seconds=1.0)
+        self.assertTrue(ok)
+        self.assertEqual(reason, "ok")
+
 
 if __name__ == "__main__":
     unittest.main()
