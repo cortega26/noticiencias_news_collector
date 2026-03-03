@@ -228,11 +228,7 @@ class TestRefineryEngine(unittest.TestCase):
         mock_repo = MagicMock()
         self.mock_db.get_canonical_slug.return_value = None
         self.mock_editor.process_article.return_value = (
-            "---\n"
-            "slug: test-slug\n"
-            "date: '2026-03-02'\n"
-            "---\n"
-            "Content"
+            "---\n" "slug: test-slug\n" "date: '2026-03-02'\n" "---\n" "Content"
         )
 
         result = self.engine.process_single_article(article, mock_repo, Path("/tmp"))

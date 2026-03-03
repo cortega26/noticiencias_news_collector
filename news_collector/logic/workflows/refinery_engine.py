@@ -125,7 +125,9 @@ class RefineryEngine:
             data_dir = getattr(paths, "data_dir", "./data")
         runtime_dir = Path(data_dir) / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
-        self.enforcement_log_path = runtime_dir / "editorial_policy_enforcement_log.jsonl"
+        self.enforcement_log_path = (
+            runtime_dir / "editorial_policy_enforcement_log.jsonl"
+        )
 
         self.editor = editor_agent
 
