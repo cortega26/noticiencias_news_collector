@@ -68,11 +68,16 @@ class EditorialAuditor:
         self.blocking = get_cfg(audit_cfg, "blocking", False)
         self.optional = not self.blocking
 
-        ci_default_timeout = 20 if str(os.getenv("CI", "")).strip().lower() in {
-            "1",
-            "true",
-            "yes",
-        } else 45
+        ci_default_timeout = (
+            20
+            if str(os.getenv("CI", "")).strip().lower()
+            in {
+                "1",
+                "true",
+                "yes",
+            }
+            else 45
+        )
         cfg_timeout = get_cfg(audit_cfg, "timeout_seconds", ci_default_timeout)
         cfg_retries = get_cfg(audit_cfg, "max_retries", 2)
         cfg_health_timeout = get_cfg(audit_cfg, "health_timeout_seconds", 2)
@@ -315,7 +320,7 @@ class EditorialAuditor:
             logger.warning(f"Failed to read cached score for {article_id}: {e}")
         return None
 
-    def audit_article_sync(
+    def audit_article_sync(  # noqa: C901
         self,
         article_id: str,
         content: str,
