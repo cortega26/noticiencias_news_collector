@@ -27,13 +27,13 @@ Failure modes:
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from news_collector.system import observability
 
 
 async def run_cycle_orchestration(
-    system,
+    system: Any,
     sources_filter: Optional[List[str]] = None,
     dry_run: bool = False,
     trace_id: Optional[str] = None,
@@ -122,7 +122,7 @@ async def run_cycle_orchestration(
             final_report["summary"],
         )
 
-        return final_report
+        return cast(Dict[str, Any], final_report)
 
     except Exception as e:
         latency = time.perf_counter() - cycle_start

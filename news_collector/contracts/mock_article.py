@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
+
+from pydantic import AnyHttpUrl
 
 from news_collector.contracts import CollectorArticleModel
 
@@ -11,7 +13,7 @@ class MockArticle(CollectorArticleModel):
     """
 
     id: int = 999999
-    url: str = "https://example.com/mock-article"
+    url: AnyHttpUrl = cast(AnyHttpUrl, "https://example.com/mock-article")
     title: str = "Mock Article for Simulation"
     summary: str = "This is a simulated article created during a dry-run or test."
     content: Optional[str] = (

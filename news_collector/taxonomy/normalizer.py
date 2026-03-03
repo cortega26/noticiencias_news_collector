@@ -2,7 +2,7 @@ import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -36,7 +36,7 @@ class TagNormalizer:
     Implements the 'Sanitizer' contract: low-level, mechanical fixes.
     """
 
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
             # Default to tags.yml in the same directory
             base_path = Path(__file__).parent

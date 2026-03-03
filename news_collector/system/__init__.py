@@ -9,7 +9,7 @@ import asyncio
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from news_collector import get_database_manager as get_database_manager
 from news_collector import get_metrics_reporter as get_metrics_reporter
@@ -58,13 +58,13 @@ class NewsCollectorSystem:
         self.health_tracker = health_tracker
 
         # Componentes principales
-        self.db_manager = None
-        self.collector = None
-        self.scorer = None
+        self.db_manager: Any = None
+        self.collector: Any = None
+        self.scorer: Any = None
         self.logger: Any = None
-        self.system_logger = None
-        self.metrics = None
-        self.validator = None
+        self.system_logger: Any = None
+        self.metrics: Any = None
+        self.validator: Any = None
 
         # Estado del sistema
         self.is_initialized = False
@@ -297,7 +297,7 @@ class NewsCollectorSystem:
             }
         else:
             # Procesar todas las fuentes
-            return ALL_SOURCES.copy()
+            return cast(Dict[str, Dict[str, Any]], ALL_SOURCES.copy())
 
     async def _execute_collection(
         self,
@@ -324,16 +324,16 @@ class NewsCollectorSystem:
             # Recolección real (incluso en dry_run, solo evitamos guardar)
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
                 # Ejecutar versión async si está disponible
-                return await self.collector.collect_from_multiple_sources_async(
+                return cast(Dict[str, Any], await self.collector.collect_from_multiple_sources_async(
                     sources,
                     session_id=session_id,
                     trace_id=trace_id,
-                )
-            return self.collector.collect_from_multiple_sources(
+                ))
+            return cast(Dict[str, Any], self.collector.collect_from_multiple_sources(
                 sources,
                 session_id=session_id,
                 trace_id=trace_id,
-            )
+            ))
         finally:
             if original_save:
                 self.db_manager.save_article = original_save
@@ -353,7 +353,7 @@ class NewsCollectorSystem:
         total_rejected = 0
         batch_count = 0
 
-        validation_results = {"invalid": [], "valid": []}
+        validation_results: Dict[str, List[Any]] = {"invalid": [], "valid": []}
 
         while True:
             if batch_count >= MAX_BATCHES:
@@ -474,11 +474,10 @@ class NewsCollectorSystem:
                 self.scorer.reset_cycle_metrics()
 
             # Prepare payloads for all articles
-            payloads = []
             # Prepare payloads using contract adapter
             from news_collector.contracts.adapters import adapt_to_scoring_input
 
-            payloads = []
+            payloads: List[Dict[str, Any]] = []
             for article in pending_articles:
                 source_config = ALL_SOURCES.get(article.source_id)
                 # Create strict model

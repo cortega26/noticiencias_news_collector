@@ -45,7 +45,7 @@ class ContentValidator:
     Orchestrates article validation using a configured set of rules.
     """
 
-    def __init__(self, rules: List[ValidationRule] = None):
+    def __init__(self, rules: List[ValidationRule] | None = None):
         self.logger = logging.getLogger("news_collector.validation")
         self.rules = rules or self._get_default_rules()
 

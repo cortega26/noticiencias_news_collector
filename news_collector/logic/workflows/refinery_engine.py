@@ -28,12 +28,13 @@ Failure modes:
 - Fallback behaviors trigger on missing data (e.g., generating fallback slugs or using current dates).
 """
 
+import concurrent.futures
 import json
 import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
@@ -67,9 +68,11 @@ class RefineryEngine:
         git_handler: GitHubPublisher,
         editor_agent: EditorAgent,
         config: Any,
+        contract_validator=None,
     ):
         self.db = db_manager
         self.config = config
+        self.contract_validator = contract_validator
         from news_collector.editorial.policy import EditorialPolicy
 
         # Load Policy
@@ -147,7 +150,7 @@ class RefineryEngine:
         from concurrent.futures import ThreadPoolExecutor
 
         self.executor = ThreadPoolExecutor(max_workers=1)
-        self._last_audit_future = None
+        self._last_audit_future: Optional[concurrent.futures.Future[Dict[str, Any]]] = None
 
         self._manifest_cache: Dict[str, str] = {}
         self._manifest_loaded = False
@@ -193,21 +196,19 @@ class RefineryEngine:
         """
         article_id = str(article.get("id", article.get("title")))
 
-        # --- S1 GUARD: Enforce Content Contract ---
-        from news_collector.contracts.collector import CollectorArticleModel
-
-        try:
-            validated_model = CollectorArticleModel.model_validate(article)
-            article = validated_model.model_dump()
-        except Exception as e:
-            # Requisito explícito: logger.warning(..., exc_info=True)
-            # Y asegurar propagación en pruebas para caplog
-            req_logger = logging.getLogger("RefineryEngine")
-            req_logger.warning(
-                f"Data Contract Validation failure: Article {article_id} rejected: {e}",
-                exc_info=True,
-            )
-            return False
+        # --- S1 GUARD: Enforce Content Contract via Injected Validator ---
+        if self.contract_validator:
+            try:
+                article = self.contract_validator(article)
+            except Exception as e:
+                # Requisito explícito: logger.warning(..., exc_info=True)
+                # Y asegurar propagación en pruebas para caplog
+                req_logger = logging.getLogger("RefineryEngine")
+                req_logger.warning(
+                    f"Data Contract Validation failure: Article {article_id} rejected: {e}",
+                    exc_info=True,
+                )
+                return False
 
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
@@ -665,7 +666,7 @@ class RefineryEngine:
                         # Self-heal manifest
                         self._update_manifest(posts_dir, article_id, file_path.name)
                         return file_path
-                except Exception:  # noqa: S112
+                except (OSError, UnicodeDecodeError):
                     continue
         except Exception as e:
             logger.error(f"Error scanning for existing files: {e}")

@@ -14,11 +14,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 try:  # pragma: no cover - optional dependency
-    import yaml as _pyyaml
+    import yaml as _yaml_imp
+    _pyyaml: Any = _yaml_imp
 except ModuleNotFoundError:  # pragma: no cover - executed in tests
     _pyyaml = None
 try:  # pragma: no cover - optional dependency
-    from ruamel.yaml import YAML as _RuamelYAML
+    from ruamel.yaml import YAML as _RuamelYAML_imp
+    _RuamelYAML: Any = _RuamelYAML_imp
 except ModuleNotFoundError:  # pragma: no cover - executed in tests
     _RuamelYAML = None
 
@@ -181,11 +183,11 @@ def run_git(args: Sequence[str], cwd: Optional[Path] = None) -> str:
 def load_yaml_config(path: Path) -> Dict[str, Any]:
     if _pyyaml is not None:
         with path.open("r", encoding="utf-8") as handle:
-            return _pyyaml.safe_load(handle)
+            return dict(_pyyaml.safe_load(handle) or {})
     if _RuamelYAML is not None:
         parser = _RuamelYAML(typ="safe")
         with path.open("r", encoding="utf-8") as handle:
-            return parser.load(handle)
+            return dict(parser.load(handle) or {})
     raise PlaceholderAuditError(
         "Install PyYAML or ruamel.yaml to load the audit configuration."
     )
@@ -304,7 +306,7 @@ def classify_context(path: Path, config: AuditConfig) -> str:
     posix = path.as_posix()
     preferred = ("tests", "docs")
     for name in preferred:
-        for pattern in config.contexts.get(name, ()):  # type: ignore[arg-type]
+        for pattern in config.contexts.get(name, ()):
             if fnmatch.fnmatch(posix, pattern):
                 return name
     for name, patterns in config.contexts.items():

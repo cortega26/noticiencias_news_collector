@@ -140,11 +140,11 @@ class ConfigEditor:
         for entry in iter_field_docs(DEFAULT_CONFIG):
             if entry.get("is_nested"):
                 continue
-            name = entry["name"]
+            name = str(entry["name"])
             default_value = entry.get("default")
             docs[name] = FieldDoc(
                 name=name,
-                description=entry.get("description", ""),
+                description=str(entry.get("description", "")),
                 default=default_value,
                 type_name=str(entry.get("type", "object")),
                 is_secret=_is_secret(name),
@@ -272,10 +272,9 @@ class ConfigEditor:
             lambda event: canvas.configure(scrollregion=canvas.bbox("all")),
         )
         window_id = canvas.create_window((0, 0), window=form, anchor="nw")
-        canvas.bind(
-            "<Configure>",
-            lambda event, item=window_id: canvas.itemconfigure(item, width=event.width),
-        )
+        def _resize_canvas(event: Any, item: int = window_id) -> None:
+            canvas.itemconfigure(item, width=event.width)
+        canvas.bind("<Configure>", _resize_canvas)
 
         for index, name in enumerate(names):
             self._create_field_row(form, index, name)
@@ -385,26 +384,32 @@ class ConfigEditor:
                     mapping[display_value] = raw_value
                     reverse[raw_value] = display_value
             values = list(mapping.keys())
-            var = tk.StringVar(value=display_value)
-            widget = ttk.Combobox(
-                parent, textvariable=var, values=values, state="readonly"
+            var1 = tk.StringVar(value=display_value)
+            widget1 = ttk.Combobox(
+                parent, textvariable=var1, values=values, state="readonly"
             )
-            widget.bind(
-                "<<ComboboxSelected>>",
-                lambda _event, name=doc.name: self._on_change(name),
-            )
+            def _on_combo_change(_event: Any, n: str = doc.name) -> None:
+                self._on_change(n)
+            widget1.bind("<<ComboboxSelected>>", _on_combo_change)
             self._choice_mappings[doc.name] = mapping
             self._choice_reverse[doc.name] = reverse
-            return widget, var
+            return widget1, var1
+
         if isinstance(value, bool):
-            var = tk.BooleanVar(value=value)
-            widget = ttk.Checkbutton(parent, variable=var)
+            var2 = tk.BooleanVar(value=value)
+            widget2 = ttk.Checkbutton(parent, variable=var2)
+            def _on_bool_change(_event: Any, n: str = doc.name) -> None:
+                self._on_change(n)
+            widget2.bind("<FocusOut>", _on_bool_change)
+            return widget2, var2
         else:
-            var = tk.StringVar(value=self._format_value(value))
+            var3 = tk.StringVar(value=self._format_value(value))
             show = "*" if doc.is_secret else ""
-            widget = ttk.Entry(parent, textvariable=var, show=show)
-        widget.bind("<FocusOut>", lambda _event, name=doc.name: self._on_change(name))
-        return widget, var
+            widget3 = ttk.Entry(parent, textvariable=var3, show=show)
+            def _on_entry_change(_event: Any, n: str = doc.name) -> None:
+                self._on_change(n)
+            widget3.bind("<FocusOut>", _on_entry_change)
+            return widget3, var3
 
     def _format_value(self, value: Any) -> str:
         if value is None:
@@ -437,15 +442,16 @@ class ConfigEditor:
     def _apply_filter(self) -> None:
         needle = self._search_var.get().strip().lower()
         for name, widget in self._widgets.items():
-            frame = widget.master  # type: ignore[assignment]
+            frame = widget.master
             visible = (
                 not needle
                 or needle in name.lower()
                 or needle in self._field_docs[name].description.lower()
             )
-            frame.grid_remove()
-            if visible:
-                frame.grid()
+            if hasattr(frame, "grid_remove") and hasattr(frame, "grid"):
+                frame.grid_remove()
+                if visible:
+                    frame.grid()
 
     def _on_change(self, name: str) -> None:
         try:

@@ -78,7 +78,9 @@ class SmartHttpClient:
         if not ignore_ssrf:
             await self._validate_ssrf(url)
 
-        return await self._get_with_retry(url, params, headers)
+        from typing import cast
+        result = await self._get_with_retry(url, params, headers)
+        return cast(httpx.Response, result)
 
     @retry(
         stop=stop_after_attempt(RATE_LIMITING_CONFIG.get("max_retries", 3)),

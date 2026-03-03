@@ -287,7 +287,7 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                     for m in models
                     if isinstance(m, dict) and m.get("name")
                 }
-                required_models = sorted(set(stage_models.values()))
+                required_models = sorted([str(m) for m in set(stage_models.values()) if m is not None])
                 missing = [
                     model_name
                     for model_name in required_models
@@ -296,7 +296,7 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                 if missing:
                     warning_msg = (
                         "Configured Ollama model(s) not found: "
-                        f"{missing}. Available sample: {sorted(available_models)[:3]}"
+                        f"{missing}. Available sample: {sorted(str(x) for x in available_models if x)[:3]}"
                     )
                     warnings.append(warning_msg)
                     disable_llm = True

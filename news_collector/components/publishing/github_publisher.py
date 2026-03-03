@@ -401,7 +401,7 @@ class GitHubPublisher:
         )
 
         if response.status_code == 201:
-            pr_url = response.json().get("html_url")
+            pr_url = str(response.json().get("html_url", ""))
             logger.info(f"Pull Request created successfully: {pr_url}")
             return pr_url
         else:

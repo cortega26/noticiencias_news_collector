@@ -14,7 +14,7 @@ from typing import Any, Dict, Iterable, List
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - fallback for Python < 3.11
-    import tomli as tomllib  # type: ignore[import]
+    import tomli as tomllib  # type: ignore[no-redef, unused-ignore, import-not-found, import-untyped]
 
 GITLEAKS_CONFIG = Path(".gitleaks.toml")
 
@@ -74,7 +74,8 @@ def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
 
 def load_status(status_path: Path) -> Dict[str, Any]:
     if status_path.exists():
-        return json.loads(status_path.read_text())
+        data = json.loads(status_path.read_text())
+        return data if isinstance(data, dict) else {}
     return {}
 
 

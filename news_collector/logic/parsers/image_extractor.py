@@ -1,7 +1,7 @@
 import logging
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -77,7 +77,7 @@ class ImageExtractor:
         seen: Set[str],
     ):
         """Extracts images from OpenGraph and Twitter meta tags."""
-        meta_tags = [
+        meta_tags: List[Dict[str, Any]] = [
             {"property": "og:image"},
             {"property": "og:image:secure_url"},
             {"name": "twitter:image"},
@@ -86,11 +86,11 @@ class ImageExtractor:
         ]
 
         for tag_query in meta_tags:
-            tag = soup.find("meta", attrs=tag_query)  # type: ignore
+            tag = soup.find("meta", attrs=tag_query)
             if tag:
                 content = tag.get("content")
                 if content:
-                    url = self._normalize_url(content, base_url)  # type: ignore
+                    url = self._normalize_url(str(content), base_url)
                     if url and url not in seen:
                         candidates.append(
                             ImageCandidate(
@@ -130,7 +130,7 @@ class ImageExtractor:
             # TODO: Handle srcset parsing if needed
 
             if src:
-                url = self._normalize_url(src, base_url)  # type: ignore
+                url = self._normalize_url(str(src), base_url)
                 if url and url not in seen:
                     # Filter out likely icons/logos based on filename
                     if self._is_blacklisted(url):
@@ -138,8 +138,10 @@ class ImageExtractor:
 
                     # basic heuristic scoring based on attributes
                     score = 1.0
-                    width = self._parse_dimension(img.get("width"))  # type: ignore
-                    height = self._parse_dimension(img.get("height"))  # type: ignore
+                    w_attr = img.get("width")
+                    h_attr = img.get("height")
+                    width = self._parse_dimension(str(w_attr) if w_attr is not None else None)
+                    height = self._parse_dimension(str(h_attr) if h_attr is not None else None)
 
                     if width and width < 150:
                         continue  # too small
@@ -150,9 +152,17 @@ class ImageExtractor:
                         score += 2.0
 
                     # Penalize if likely logo based on class/id
-                    classes = " ".join(img.get("class", []) or [])  # type: ignore
-                    ids = img.get("id", "")
-                    if "logo" in classes.lower() or "logo" in ids.lower():  # type: ignore
+                    c_attr = img.get("class")
+                    if isinstance(c_attr, list):
+                        classes = " ".join(str(c) for c in c_attr)
+                    else:
+                        classes = str(c_attr) if c_attr else ""
+                    i_attr = img.get("id")
+                    if isinstance(i_attr, list):
+                        ids = " ".join(str(i) for i in i_attr)
+                    else:
+                        ids = str(i_attr) if i_attr else ""
+                    if "logo" in classes.lower() or "logo" in ids.lower():
                         continue
 
                     candidates.append(

@@ -95,7 +95,9 @@ class EditorialCouncil:
                     logger.error("Failed to parse Council response as JSON")
                     return None
 
-            return self._parse_verdict(response)
+            if isinstance(response, dict):
+                return self._parse_verdict(response)
+            return None
 
         except Exception as e:
             logger.error(f"Error in Editorial Council execution: {e}")

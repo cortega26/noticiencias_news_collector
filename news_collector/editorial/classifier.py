@@ -44,11 +44,10 @@ class EditorialClassifier:
                 prompt=article_text,
                 system=EDITORIAL_CLASSIFICATION_SYSTEM_PROMPT,
                 json_mode=False,  # We expect a single string token
-                temperature=0.0,  # Deterministic
             )
 
-            if not response:
-                logger.warning("Editorial Classifier returned empty response.")
+            if not response or not isinstance(response, str):
+                logger.warning("Editorial Classifier returned empty or invalid response.")
                 return "CIENCIA"
 
             # Cleaning

@@ -156,7 +156,7 @@ class CollectorDispatcher:
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Merge results
-        final_results = {
+        final_results: Dict[str, Any] = {
             "source_details": {},
             "collection_summary": {
                 "sources_processed": 0,

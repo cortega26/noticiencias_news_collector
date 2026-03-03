@@ -33,7 +33,7 @@ def upgrade() -> None:
             existing_type=sa.INTEGER(),
             type_=sa.Boolean(),
             existing_nullable=True,
-            existing_server_default=sa.text("0"),
+            existing_server_default="0",
         )
         batch_op.alter_column(
             "last_canary_check",
@@ -99,7 +99,7 @@ def downgrade() -> None:
         existing_type=sa.Boolean(),
         type_=sa.INTEGER(),
         existing_nullable=True,
-        existing_server_default=sa.text("0"),
+        existing_server_default="0",
     )
     op.alter_column(
         "sources",

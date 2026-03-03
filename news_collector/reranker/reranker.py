@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from typing import Dict, List
+from typing import Any, DefaultDict, Dict, List
 
 
 def rerank_articles(
-    articles: List[Dict[str, object]],
+    articles: List[Dict[str, Any]],
     limit: int,
     source_cap_percentage: float,
     topic_cap_percentage: float,
     seed: int,
-) -> List[Dict[str, object]]:
+) -> List[Dict[str, Any]]:
     if not articles:
         return []
 
@@ -21,7 +21,7 @@ def rerank_articles(
     shuffled = articles[:]
     rng.shuffle(shuffled)
 
-    def tie_key(article: Dict[str, object]):
+    def tie_key(article: Dict[str, Any]):
         return (
             article.get("final_score", 0.0),
             article.get("published_date", ""),
@@ -32,10 +32,10 @@ def rerank_articles(
 
     max_source = max(1, int(limit * source_cap_percentage))
     max_topic = max(1, int(limit * topic_cap_percentage))
-    source_counts = defaultdict(int)
-    topic_counts = defaultdict(int)
+    source_counts: DefaultDict[str, int] = defaultdict(int)
+    topic_counts: DefaultDict[str, int] = defaultdict(int)
 
-    reranked: List[Dict[str, object]] = []
+    reranked: List[Dict[str, Any]] = []
     for article in shuffled:
         if len(reranked) >= limit:
             break
