@@ -145,7 +145,7 @@ class CollectorArticleModel(BaseModel):
     min_content_length_override: int | None = None
     processing_status_override: str | None = None
 
-    model_config = ConfigDict(from_attributes=True, extra="allow")
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     @field_validator("published_date", mode="before")
     @classmethod

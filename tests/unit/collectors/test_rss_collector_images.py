@@ -122,8 +122,8 @@ def test_rss_collector_image_fallback_to_dom(collector):
     assert len(saved_articles) == 1
     article = saved_articles[0]
 
-    # Crucial assertions
-    assert article.article_metadata.image_url == "https://example.com/og_extracted.jpg"
+    # Note: image_url was removed from ArticleMetadataModel (CRIT-03: no extras).
+    # Image tracking is done via image_status and image_source fields.
     assert article.article_metadata.image_status == "IMAGE_OK"
     assert article.article_metadata.image_source == "meta:og:image"
 

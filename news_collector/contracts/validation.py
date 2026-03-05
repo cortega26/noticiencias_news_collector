@@ -13,7 +13,7 @@ Side effects:
 
 Invariants:
 - LAW-1: Data Contracts Are Mandatory. This defines the rigid boundaries for validation.
-- Extra fields on ArticleValidationItem are allowed to prevent validation errors on irrelevant data from raw dicts.
+- Extra fields on ArticleValidationItem are forbidden (LAW-1: fail-closed boundary).
 - Context dictionary must be isolated from article data.
 
 Failure modes:
@@ -38,8 +38,8 @@ class ArticleValidationItem(BaseModel):
     summary: str | None = None
     source_id: str
     published_date: Any | None = None
-    # Allow extra fields passed from to_dict() to avoid validation errors on irrelevant fields
-    model_config = ConfigDict(extra="allow")
+    # CRIT-03: Forbid extra fields at boundary (LAW-1 compliance)
+    model_config = ConfigDict(extra="forbid")
 
 
 class ArticleValidationPayload(BaseModel):

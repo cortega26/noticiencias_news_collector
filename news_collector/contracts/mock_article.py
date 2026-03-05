@@ -27,7 +27,6 @@ class MockArticle(CollectorArticleModel):
     language: str = "en"
     word_count: int = 500
     reading_time_minutes: int = 5
-    score: float = 0.5
 
     def to_dict(self) -> Dict[str, Any]:
         return self.model_dump()

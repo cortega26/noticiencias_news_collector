@@ -160,7 +160,6 @@ class FeatureBasedScorer(AsyncScorer):
                 "engagement": self.weights.engagement,
             },
             "penalties": {"diversity_penalty": diversity_penalty},
-            "why_ranked": explanation,
             "explanation": explanation,
         }
 

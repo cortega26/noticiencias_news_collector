@@ -33,7 +33,7 @@ class ArticleMetadataModel(BaseModel):
     image_status: str | None = None
     image_source: str | None = None
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "ArticleMetadataModel":

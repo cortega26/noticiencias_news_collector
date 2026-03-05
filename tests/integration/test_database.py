@@ -208,7 +208,6 @@ def test_cleanup_methods(test_db_manager):
         "content": "Old content " * 100,
         "word_count": 100,
         "reading_time_minutes": 1,
-        "final_score": 0.1,  # Explicitly low score for cleanup
     }
     saved = test_db_manager.save_article(data)
 

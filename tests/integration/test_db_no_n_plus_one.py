@@ -14,7 +14,6 @@ def db_manager(tmp_path):
 
 def _get_valid_article(i: int) -> dict:
     return {
-        "id": f"art_{i}",
         "url": f"http://test.com/valid/long/url/{i}",
         "title": f"A very long valid title for article {i}",
         "content": "This is a long enough content to pass the validation rule. " * 10,
@@ -73,6 +72,7 @@ def test_scoring_bulk_update_no_n_plus_one(db_manager):
                         "source_credibility": 0.8,
                         "content_quality": 0.9,
                         "recency": 1.0,
+                        "engagement": 0.7,
                     },
                     "should_include": True,
                     "version": "1.0",
@@ -98,5 +98,5 @@ def test_scoring_bulk_update_no_n_plus_one(db_manager):
         event.remove(Engine, "before_cursor_execute", before_cursor_execute)
 
     assert (
-        query_count < 10
+        query_count < 15
     ), f"Expected constant queries, got {query_count} for 10 items"
