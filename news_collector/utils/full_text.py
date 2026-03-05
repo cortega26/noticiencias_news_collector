@@ -3,6 +3,7 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+from news_collector.utils.security import validate_url_safety
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,9 @@ def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> 
     }
 
     try:
+        # SSRF Protection: validate URL before any network request (CRIT-01)
+        validate_url_safety(url)
+
         if session:
             # Override session headers for this request
             response = session.get(url, timeout=15, headers=browser_headers)
