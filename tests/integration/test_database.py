@@ -2,7 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from news_collector.storage.database import DatabaseManager
-from news_collector.storage.models import Base
+from news_collector.storage.models import Article, Base
+from news_collector.utils.url_canonicalizer import canonicalize_url
 
 
 @pytest.fixture
@@ -47,14 +48,14 @@ def test_save_and_retrieve_article_full_flow(test_db_manager):
     assert saved is not None
     assert saved.id is not None
 
-    # API methods
+    # API methods — article_exists canonicalizes internally, so raw URL still works
     assert test_db_manager.article_exists(article_data["url"])
 
-    # Retrieve via internal session for assertion
-    from news_collector.storage.models import Article
+    # Retrieve via internal session — must use the canonical URL
+    canonical_url = canonicalize_url(article_data["url"])
 
     with test_db_manager.get_session() as session:
-        fetched = session.query(Article).filter_by(url=article_data["url"]).first()
+        fetched = session.query(Article).filter_by(url=canonical_url).first()
         assert fetched.title == article_data["title"]
 
 
@@ -87,13 +88,11 @@ def test_save_articles_bulk(test_db_manager):
     count_retry = test_db_manager.save_articles_bulk(articles)
     assert count_retry == 0
 
-    # Verify persistence
-    from news_collector.storage.models import Article
-
+    # Verify persistence — URLs are now canonical (https)
     with test_db_manager.get_session() as session:
         saved_count = (
             session.query(Article)
-            .filter(Article.url.like("http://test.com/bulk/%"))
+            .filter(Article.url.like("https://test.com/bulk/%"))
             .count()
         )
         assert saved_count == 5

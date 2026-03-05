@@ -72,6 +72,7 @@ from ..utils.dedupe import (
     sha256_hex,
     simhash64,
 )
+from ..utils.url_canonicalizer import canonicalize_url
 
 # Configurar logging para este módulo
 logger = logging.getLogger(__name__)
@@ -358,7 +359,10 @@ class DatabaseManager:
         """
         Check if an article with the given URL already exists in the database.
         Efficient query using exists().
+
+        Defense-in-depth: canonicalizes the URL before querying (LAW-4).
         """
+        url = canonicalize_url(url) or url
         with self.get_session() as session:
             result = session.query(
                 session.query(Article).filter_by(url=url).exists()
@@ -369,9 +373,13 @@ class DatabaseManager:
         """
         Batch check for existing articles by URL.
         Returns a set of URLs that already exist.
+
+        Defense-in-depth: canonicalizes all URLs before querying (LAW-4).
         """
         if not urls:
             return set()
+
+        urls = [canonicalize_url(u) or u for u in urls]
 
         # Split into chunks to avoid SQLite limits if necessary (999 variables)
         # SQLAlchemy usually handles IN clauses well, but safe chunking is better.

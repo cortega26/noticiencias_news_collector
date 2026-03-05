@@ -58,7 +58,7 @@ class TestQualityContract:
         model = collector._process_article(raw_article, "test_source", source_config)
 
         assert model is not None
-        assert str(model.url) == "http://example.com/short"
+        assert str(model.url) == "https://example.com/short"
         # However, it should be marked as FAILED STAGE B
         assert model.processing_status_override == "enrichment_failed"
 

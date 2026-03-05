@@ -124,6 +124,6 @@ def test_dump_for_storage():
     model = CollectorArticleModel(**data)
     dump = model.model_dump_for_storage()
     assert (
-        dump["url"] == "http://example.com/"
-    )  # Pydantic normalizes URL to include slash
+        dump["url"] == "https://example.com/"
+    )  # Canonicalized: http → https + trailing slash
     assert dump["article_metadata"]["credibility_score"] == 0.9

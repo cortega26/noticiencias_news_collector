@@ -15,6 +15,7 @@ from pydantic import (
 )
 
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
+from news_collector.utils.url_canonicalizer import canonicalize_url
 
 from .common import ArticleMetadata, ArticleMetadataModel
 
@@ -146,6 +147,20 @@ class CollectorArticleModel(BaseModel):
     processing_status_override: str | None = None
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def canonicalize_url_field(cls, value: Any) -> str:
+        """LAW-4: Canonical URL identity determinism.
+
+        Canonicalization MUST happen at the boundary contract so that
+        every persistence and dedup operation uses the canonical form.
+        """
+        raw = str(value).strip()
+        canonical = canonicalize_url(raw)
+        if not canonical:
+            raise ValueError("URL cannot be empty after canonicalization")
+        return canonical
 
     @field_validator("published_date", mode="before")
     @classmethod

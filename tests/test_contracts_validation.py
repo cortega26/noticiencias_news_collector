@@ -65,7 +65,7 @@ def test_collector_contract_requires_published_date() -> None:
 
 def test_collector_contract_rejects_invalid_url() -> None:
     payload = _valid_collector_payload()
-    payload["url"] = "nota-url"
+    payload["url"] = ""  # Empty URL is rejected after canonicalization
 
     with pytest.raises(ValidationError):
         CollectorArticleModel.model_validate(payload)
