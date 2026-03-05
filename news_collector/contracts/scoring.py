@@ -48,7 +48,7 @@ class ScoringComponentsModel(BaseModel):
     engagement: float | None = None
     engagement_potential: float | None = None
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def validate_component_ranges(self) -> "ScoringComponentsModel":
@@ -107,7 +107,7 @@ class ScoringRequestModel(BaseModel):
     penalties: Dict[str, Any] | None = None
     calculated_at: datetime | None = None
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "ScoringRequestModel":

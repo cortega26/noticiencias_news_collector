@@ -39,7 +39,7 @@ class ArticleForEnrichmentModel(BaseModel):
     content: str = ""
     language: str | None = None
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def ensure_text_present(self) -> "ArticleForEnrichmentModel":
@@ -61,8 +61,12 @@ class ArticleEnrichmentModel(BaseModel):
     sentiment: str = Field(min_length=3)
     model_version: str = Field(min_length=1)
     editorial_display_category: str | None = Field(default=None)
+    error: str | None = Field(
+        default=None,
+        description="Error message when enrichment fails (audit trace)",
+    )
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def normalize_fields(self) -> "ArticleEnrichmentModel":

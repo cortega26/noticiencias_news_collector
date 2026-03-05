@@ -76,7 +76,9 @@ def adapt_export_article_to_collector_payload(
     - Keep canonical `source_id` when present.
     - Accept equivalent key spellings from legacy payloads.
     - Optionally resolve from `source_name` via an explicit deterministic map.
+    - Strips keys not declared on CollectorArticleModel (CRIT-03 / LAW-1).
     """
+    from news_collector.contracts.collector import CollectorArticleModel
 
     payload = dict(article)
 
@@ -113,7 +115,9 @@ def adapt_export_article_to_collector_payload(
         )
 
     payload["source_id"] = source_id
-    return payload
+    # Strip keys not on CollectorArticleModel to comply with extra="forbid" (CRIT-03)
+    _ALLOWED = frozenset(CollectorArticleModel.model_fields.keys())
+    return {k: v for k, v in payload.items() if k in _ALLOWED}
 
 
 def adapt_article_to_scoring(article: Any) -> ArticleScoringData:  # Updated return type
@@ -148,13 +152,19 @@ def adapt_to_scoring_input(
 
 
 def adapt_to_validation_payload(articles: List[Any]) -> ArticleValidationPayload:
-    """Converts a list of ORM articles to validation payload."""
+    """Converts a list of ORM articles to validation payload.
+
+    Only declared ArticleValidationItem fields are forwarded to
+    enforce the sealed boundary contract (CRIT-03 / LAW-1).
+    """
+    _VALIDATION_FIELDS = frozenset(ArticleValidationItem.model_fields.keys())
     items = []
     for art in articles:
-        # We start with to_dict to capture generic fields
         base_data = art.to_dict()
         # Ensure content is present as per current logic
         base_data["content"] = art.content
-        items.append(ArticleValidationItem(**base_data))
+        # Only pass declared fields — extras are forbidden at boundary
+        filtered = {k: v for k, v in base_data.items() if k in _VALIDATION_FIELDS}
+        items.append(ArticleValidationItem(**filtered))
 
     return ArticleValidationPayload(articles=items)

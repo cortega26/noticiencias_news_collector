@@ -35,7 +35,6 @@ def test_process_single_article_enforces_contract(tmp_path):
     assert list(tmp_path.rglob("*.md")) == [], "No files should be written"
 
     valid_article = {
-        "id": "123",
         "title": "Valid title 123",
         "summary": "This is a sufficiently long summary for testing",
         "content": "Valid content",
@@ -44,7 +43,8 @@ def test_process_single_article_enforces_contract(tmp_path):
         "source_id": "test",
         "source_name": "test",
         "published_date": datetime(2024, 1, 1),
-        "source_metadata": {},
+        "word_count": 50,
+        "reading_time_minutes": 1,
     }
 
     engine.db.get_canonical_slug.return_value = None

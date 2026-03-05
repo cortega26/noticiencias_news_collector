@@ -891,7 +891,6 @@ class RSSCollector(BaseCollector):
                     "credibility_score": source_config["credibility_score"],
                     "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                     "original_url": raw_article.get("original_url", raw_article["url"]),
-                    "image_url": raw_article.get("image_url"),
                     "image_status": raw_article.get("_image_status"),
                     "image_source": raw_article.get("_image_source"),
                 },
@@ -1000,30 +999,13 @@ class RSSCollector(BaseCollector):
                     if enrichment:
                         if enrichment.get("content"):
                             processed_article["content"] = enrichment["content"]
-                        # Only update fields if they are present in enrichment to avoid None overwrites
-                        if enrichment.get("normalized_title"):
-                            processed_article["normalized_title"] = enrichment.get(
-                                "normalized_title"
-                            )
-                        if enrichment.get("normalized_summary"):
-                            processed_article["normalized_summary"] = enrichment.get(
-                                "normalized_summary"
-                            )
-                        if enrichment.get("topics"):
-                            processed_article["topics"] = enrichment.get("topics")
-                        if enrichment.get("entities"):
-                            processed_article["entities"] = enrichment.get("entities")
-                        if enrichment.get("sentiment"):
-                            processed_article["sentiment"] = enrichment.get("sentiment")
+                        # Enrichment metadata is already captured in article_metadata.enrichment;
+                        # do NOT set top-level extra keys (CRIT-03: extra="forbid").
                         if enrichment.get("language"):
                             processed_article["language"] = enrichment.get("language")
                         if enrichment.get("reading_time_minutes"):
                             processed_article["reading_time_minutes"] = enrichment.get(
                                 "reading_time_minutes"
-                            )
-                        if enrichment.get("model_version"):
-                            processed_article["model_version"] = enrichment.get(
-                                "model_version"
                             )
 
                         processed_article["article_metadata"]["enrichment"] = enrichment
@@ -1046,8 +1028,8 @@ class RSSCollector(BaseCollector):
                         "sentiment": "neutral",
                         "entities": [],
                         "topics": [],
-                        "error": str(exc),
                         "model_version": "fallback_v1",
+                        "error": str(exc),
                     }
 
             try:
