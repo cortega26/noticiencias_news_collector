@@ -6,7 +6,7 @@ from news_collector.collectors.rss_collector import RSSCollector
 
 @pytest.fixture
 def mock_session():
-    with patch("requests.Session") as mock:
+    with patch("news_collector.infrastructure.requests_client.SSRFSafeSession") as mock:
         yield mock
 
 

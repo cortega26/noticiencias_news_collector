@@ -270,9 +270,21 @@ class BasicScorer(AsyncScorer):
         if source_config:
             base_credibility_raw = source_config.get("credibility_score", 0.5)
         else:
-            # Fallback: extraer de metadatos del artículo
-            meta = getattr(article, "article_metadata", None) or {}
-            base_credibility_raw = meta.get("credibility_score", 0.5)
+            # Fallback: extraer de metadatos del artículo con validación fuerte
+            meta_raw = getattr(article, "article_metadata", None) or {}
+            from news_collector.contracts import ArticleMetadataModel
+            from pydantic import ValidationError
+            import logging
+            try:
+                if isinstance(meta_raw, ArticleMetadataModel):
+                    meta_model = meta_raw
+                else:
+                    meta_model = ArticleMetadataModel.model_validate(meta_raw)
+                base_credibility_raw = meta_model.credibility_score if meta_model.credibility_score is not None else 0.5
+            except ValidationError as e:
+                logging.getLogger(__name__).warning(f"Invalid article_metadata during scoring, falling back to defaults: {e}")
+                base_credibility_raw = 0.5
+                
         try:
             base_credibility = float(base_credibility_raw)
         except (TypeError, ValueError):

@@ -54,6 +54,7 @@ class SmartHttpClient:
             timeout=self.timeout,
             limits=limits,
             follow_redirects=True,
+            event_hooks={"request": [self._ssrf_hook]},
         )
 
     async def close(self):
@@ -75,11 +76,11 @@ class SmartHttpClient:
         """
         Executes GET request with safety checks and retries.
         """
-        if not ignore_ssrf:
-            await self._validate_ssrf(url)
-
+        # We pass ignore_ssrf via extensions so the hook can read it
+        extensions = {"ignore_ssrf": ignore_ssrf} if ignore_ssrf else None
+        
         from typing import cast
-        result = await self._get_with_retry(url, params, headers)
+        result = await self._get_with_retry(url, params, headers, extensions=extensions)
         return cast(httpx.Response, result)
 
     @retry(
@@ -99,9 +100,10 @@ class SmartHttpClient:
         url: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
+        extensions: Optional[Dict[str, Any]] = None,
     ) -> httpx.Response:
         try:
-            response = await self.client.get(url, params=params, headers=headers)
+            response = await self.client.get(url, params=params, headers=headers, extensions=extensions)
             response.raise_for_status()
             return response
         except httpx.HTTPStatusError as e:
@@ -110,7 +112,15 @@ class SmartHttpClient:
                 raise  # Let caller handle, don't retry permanent errors
             raise  # Retry 500s via decorator
 
-    async def _validate_ssrf(self, url: str):
+    async def _ssrf_hook(self, request: httpx.Request):
+        """
+        Hook executed before every request, including redirects.
+        """
+        if request.extensions.get("ignore_ssrf"):
+            return
+        await self._validate_ssrf(str(request.url), request=request)
+
+    async def _validate_ssrf(self, url: str, request: Optional[httpx.Request] = None):
         """
         Runs blocking DNS validation in a thread to avoid freezing the loop.
         """
@@ -118,7 +128,7 @@ class SmartHttpClient:
             await asyncio.to_thread(validate_url_safety, url)
         except ValueError as e:
             logger.error(f"SSRF Blocked: {e}")
-            raise httpx.RequestError(f"SSRF Blocked: {e}") from e
+            raise
 
     async def safe_fetch_text(self, url: str) -> Optional[str]:
         """

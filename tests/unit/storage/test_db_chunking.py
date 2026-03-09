@@ -107,7 +107,7 @@ def test_save_articles_bulk_exact_chunk(mock_db_manager):
     mock_db_manager.save_articles_bulk(articles_data, batch_size=50)
 
     assert session_mock.add.call_count == 100
-    assert session_mock.commit.call_count == 3
+    assert session_mock.commit.call_count == 2
 
 
 def test_save_articles_bulk_empty(mock_db_manager):

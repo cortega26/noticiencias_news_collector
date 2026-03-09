@@ -91,6 +91,29 @@ def _safe_retry_log(retry_state):
         )
 
 
+class SSRFSafeSession(requests.Session):
+    """
+    Hardened requests.Session that intercepts adapter selection
+    to validate SSRF constraints on every physical connection attempt,
+    including implicit cross-host redirects.
+    """
+    def __init__(self):
+        super().__init__()
+        import threading
+        self._local = threading.local()
+
+    def set_ignore_ssrf(self, ignore: bool):
+        self._local.ignore_ssrf = ignore
+
+    def get_adapter(self, url):
+        # We hook here because it is guaranteed to execute right before every HTTP request,
+        # perfectly catching any down-chain 3xx redirects to a new host.
+        ignore = getattr(self._local, "ignore_ssrf", False)
+        if not ignore:
+            validate_url_safety(url)
+        return super().get_adapter(url)
+
+
 class RobustRequestsClient:
     """
     Synchronous HTTP Client that enforces:
@@ -101,7 +124,7 @@ class RobustRequestsClient:
     """
 
     def __init__(self, timeout: float = 30.0):
-        self.session = requests.Session()
+        self.session = SSRFSafeSession()
         self.timeout = timeout
         self._configure_session()
 
@@ -197,17 +220,15 @@ class RobustRequestsClient:
         """
         Executes GET request with safety checks, retries, and Proxy Fallback.
         """
-        if not ignore_ssrf:
-            validate_url_safety(url)
-
-        # 1. Try Direct Connection
+        self.session.set_ignore_ssrf(ignore_ssrf)
         try:
-            return self._execute_request(url, params, headers, timeout)
-        except Exception as e:
-            # 2. Check Proxy Eligibility
-            # We need source_config to check proxy policy. If not provided, we can't proxy.
-            if not source_config:
-                raise e
+            # 1. Try Direct Connection
+            try:
+                return self._execute_request(url, params, headers, timeout)
+            except Exception as e:
+                # 2. Check Proxy Eligibility
+                if not source_config:
+                    raise e
 
             from news_collector.infrastructure.proxy_manager import proxy_manager
 
@@ -275,6 +296,8 @@ class RobustRequestsClient:
 
             # If not eligible or proxy failed logic, re-raise original
             raise e
+        finally:
+            self.session.set_ignore_ssrf(False)
 
     def close(self):
         self.session.close()
