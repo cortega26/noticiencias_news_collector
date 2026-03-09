@@ -115,6 +115,11 @@ def adapt_export_article_to_collector_payload(
         )
 
     payload["source_id"] = source_id
+    
+    # Map legacy export 'metadata' block to 'article_metadata' expected by collector payload
+    if "metadata" in payload and "article_metadata" not in payload:
+        payload["article_metadata"] = payload.pop("metadata")
+
     # Strip keys not on CollectorArticleModel to comply with extra="forbid" (CRIT-03)
     _ALLOWED = frozenset(CollectorArticleModel.model_fields.keys())
     return {k: v for k, v in payload.items() if k in _ALLOWED}

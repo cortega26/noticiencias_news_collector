@@ -44,6 +44,10 @@ def clean_html(html: str) -> str:  # noqa: C901
         for element in doc.xpath("//script|//style|//noscript"):
             element.drop_tree()
 
+        # R-10: Strip HTML Comments to prevent Prompt Injection
+        for comment in doc.xpath("//comment()"):
+            comment.drop_tree()
+
         # Extract text with spacing to avoid "0read more" concatenation issues
         # itertext() yields text chunks; joining with space ensures separation
         chunks = []

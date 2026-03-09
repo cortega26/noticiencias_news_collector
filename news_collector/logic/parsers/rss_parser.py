@@ -83,7 +83,11 @@ class RssParser:
 
         source_id = source_config.get("id", str(source_config.get("url", "unknown")))
 
-        for entry in parsed_feed.entries:
+        # R-09: Add Entry Count Cap to prevent CPU exhaustion from massive feeds
+        max_feed_entries = 500
+        entries_to_parse = parsed_feed.entries[:max_feed_entries]
+
+        for entry in entries_to_parse:
             try:
                 original_url = entry.get("link", "")
                 if not original_url:

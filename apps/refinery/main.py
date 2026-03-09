@@ -155,7 +155,7 @@ def _load_export_articles(  # noqa: C901
             contract_name or "n/a",
         )
 
-    source_name_fallback_enabled = is_legacy_export
+    source_name_fallback_enabled = True  # Always enable fallback to prevent syncing sync crashes from corrupted payloads
 
     # Deterministic source identity resolver (source_name -> source_id).
     # Duplicate display names are excluded to avoid ambiguous mappings.

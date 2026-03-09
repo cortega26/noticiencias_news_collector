@@ -542,6 +542,11 @@ class EditorAgent:
 
         final_category = category_map.get(raw_category, "Ciencia")
 
+        # R-12 Defense-in-depth: Sanitize Content Before LLM Processing
+        from news_collector.utils.text_cleaner import clean_html
+        title = clean_html(title) if title else ""
+        content = clean_html(content) if content else ""
+
         input_text = f"Title: {title}\nContent: {content}"
 
         # Validation: content length

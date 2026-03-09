@@ -63,6 +63,7 @@ class EnrichmentStrategyRouter:
     def route_enrichment(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any], candidate: Dict[str, Any]
     ) -> Dict[str, Any]:
+        source_config = dict(source_config)
 
         # Record generic attempt (discovery)
         enrichment_metrics.record_attempt(source_id)
