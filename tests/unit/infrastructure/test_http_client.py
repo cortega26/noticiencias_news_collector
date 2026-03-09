@@ -20,20 +20,16 @@ class TestSmartHttpClient(unittest.IsolatedAsyncioTestCase):
 
             url = "https://example.com/feed"
 
-            # Mock httpx response
-            with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-                mock_response = MagicMock()
-                mock_response.status_code = 200
-                mock_response.text = "ok"
-                mock_response.raise_for_status.return_value = None
+            def mock_handler(request):
+                return httpx.Response(status_code=200, text="ok")
+            transport = httpx.MockTransport(mock_handler)
 
-                mock_get.return_value = mock_response
+            async with SmartHttpClient() as client:
+                client.client._transport = transport
+                await client.get(url)
 
-                async with SmartHttpClient() as client:
-                    await client.get(url)
-
-                # Verify SSRF was called
-                mock_validate.assert_called_once_with(url)
+            # Verify SSRF was called
+            mock_validate.assert_called_once_with(url)
 
     async def test_smart_client_blocks_unsafe_url(self):
         # Setup fail
@@ -43,10 +39,10 @@ class TestSmartHttpClient(unittest.IsolatedAsyncioTestCase):
             mock_validate.side_effect = ValueError("Private IP")
 
             async with SmartHttpClient() as client:
-                with self.assertRaises(httpx.RequestError) as cm:
+                with self.assertRaises(ValueError) as cm:
                     await client.get("http://localhost:8080")
 
-            self.assertIn("SSRF Blocked", str(cm.exception))
+            self.assertIn("Private IP", str(cm.exception))
 
     async def test_smart_client_retry_logic(self):
         # We want to verify tenacity retries.

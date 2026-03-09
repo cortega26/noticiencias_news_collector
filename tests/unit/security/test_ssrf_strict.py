@@ -19,14 +19,15 @@ async def test_ssrf_protection_rejects_private_ips():
         "http://169.254.169.254/metadata",  # AWS Metadata
     ]
 
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        for url in unsafe_urls:
-            # SSRF validation happens BEFORE _get_with_retry, so it raises RequestError immediately without retrying.
-            with pytest.raises((ValueError, httpx.RequestError)):
-                await client.get(url)
+    def mock_handler(request):
+        raise Exception("SSRF Bypass: Reached network transport!")
+    transport = httpx.MockTransport(mock_handler)
+    client.client._transport = transport
 
-            # Critical absolute proof: request dispatch MUST NEVER BE CALLED
-            mock_get.assert_not_called()
+    for url in unsafe_urls:
+        # SSRF validation happens via event_hooks BEFORE transport is called.
+        with pytest.raises(ValueError):
+            await client.get(url)
 
 
 @pytest.mark.asyncio
@@ -43,14 +44,16 @@ async def test_ssrf_protection_rejects_unsupported_schemes():
         "smb://fileserver/share",
     ]
 
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        for url in unsupported_urls:
-            with pytest.raises((ValueError, httpx.RequestError)) as excinfo:
-                await client.get(url)
+    def mock_handler(request):
+        raise Exception("SSRF Bypass: Reached network transport!")
+    transport = httpx.MockTransport(mock_handler)
+    client.client._transport = transport
 
-            assert "Invalid URL scheme" in str(excinfo.value)
-            # Critical absolute proof: request dispatch MUST NEVER BE CALLED
-            mock_get.assert_not_called()
+    for url in unsupported_urls:
+        with pytest.raises(ValueError) as excinfo:
+            await client.get(url)
+
+        assert "Invalid URL scheme" in str(excinfo.value)
 
 
 @pytest.mark.asyncio
@@ -58,8 +61,10 @@ async def test_ssrf_allows_public_https():
     """Verify public HTTPS URLs are allowed."""
     client = SmartHttpClient()
 
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        mock_get.return_value = MagicMock(status_code=200)
+    def mock_handler(request):
+        return httpx.Response(status_code=200, text="ok")
+    transport = httpx.MockTransport(mock_handler)
+    client.client._transport = transport
 
-        response = await client.get("https://google.com")
-        assert response.status_code == 200
+    response = await client.get("https://google.com")
+    assert response.status_code == 200

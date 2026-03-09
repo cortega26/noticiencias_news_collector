@@ -63,7 +63,14 @@ from ..storage.analytics import (
     top_sources_performance,
 )
 from ..storage.maintenance import cleanup_old_data, health_status
-from ..storage.models import PENDING_STATUS, Article, Base, ScoreLog, Source
+from ..storage.models import (
+    PENDING_STATUS,
+    PROCESSING_STATUS_VALUES,
+    Article,
+    Base,
+    ScoreLog,
+    Source,
+)
 from ..utils.dedupe import (
     duplication_confidence,
     generate_cluster_id,
@@ -580,6 +587,10 @@ class DatabaseManager:
                 raise ValueError(f"Invalid collector payload: {exc}") from exc
 
         payload = model.model_dump_for_storage()
+        
+        # Defense-in-depth (LAW-4): enforce canonical URL immediately before DB operations
+        payload["url"] = canonicalize_url(payload["url"]) or payload["url"]
+        
         normalized_published = self._ensure_timezone(payload.get("published_date"))
         if normalized_published:
             payload["published_date"] = normalized_published
@@ -594,38 +605,6 @@ class DatabaseManager:
                     logger.warning(
                         f"🔍 [DEBUG] Found existing article by URL: {payload['url']} (ID: {existing.id})"
                     )
-                    # HEALING LOGIC: If existing content is missing/short but we found better content, update it.
-                    new_content = payload.get("content")
-                    old_content = existing.content
-
-                    new_len = len(new_content) if new_content else 0
-                    old_len = len(old_content) if old_content else 0
-                    logger.warning(
-                        f"📏 [DEBUG] Content lengths - New: {new_len}, Old: {old_len}"
-                    )
-
-                    if new_content and len(new_content) > 1000:
-                        if not old_content or len(old_content) < 1000:
-                            logger.warning(
-                                f"✨ [HEALING] Upgrading article {existing.id} content ({old_len} -> {new_len})"
-                            )
-                            existing.content = new_content
-                            # Update summary too if needed
-                            existing_record = cast(Any, existing)
-                            existing_record.summary = payload.get("summary")
-                            session.add(existing)
-                            session.flush()
-                            return existing
-                        else:
-                            logger.warning(
-                                f"🚫 [DEBUG] Old content sufficient ({old_len} >= 1000)"
-                            )
-                    else:
-                        logger.warning(
-                            f"🚫 [DEBUG] New content too short ({new_len} <= 1000)"
-                        )
-
-                    logger.debug(f"Artículo ya existe: {payload['url']}")
                     return None
 
                 norm_title, norm_summary, normalized_text = normalize_article_text(
@@ -667,6 +646,12 @@ class DatabaseManager:
                 initial_status = (
                     getattr(model, "processing_status_override", None) or PENDING_STATUS
                 )
+
+                if initial_status not in PROCESSING_STATUS_VALUES:
+                    raise ValueError(
+                        f"Invalid processing_status: {initial_status}. "
+                        f"Allowed: {PROCESSING_STATUS_VALUES}"
+                    )
 
                 # Crear nuevo artículo
                 article = Article(
@@ -710,8 +695,17 @@ class DatabaseManager:
 
             except IntegrityError as e:
                 session.rollback()
-                logger.warning(f"Intento de guardar artículo duplicado: {e}")
-                return None
+                # LAW-4/Race Condition Mitigation: 
+                # Concurrent saves might bypass the existence check.
+                # Only swallow the error if it's a genuine duplicate violation.
+                err_msg = str(e).lower()
+                if "unique" in err_msg or "duplicate" in err_msg:
+                    logger.warning(f"Concurrent duplicate insertion trapped by DB constraint: {e}")
+                    return None
+                
+                # Re-raise non-duplicate integrity errors (e.g. NOT NULL, CheckConstraints)
+                logger.error(f"Critical IntegrityError saving article: {e}")
+                raise
             except Exception as e:
                 logger.error(f"Error guardando artículo: {e}")
                 raise
@@ -728,13 +722,13 @@ class DatabaseManager:
             return 0
 
         saved_count = 0
-        batch_count = 0
+        pending_count = 0
         seen_urls = set()
 
         with self.get_session() as session:
             try:
                 for data in articles_data:
-                    # ... processing code ...
+                    # Validate payload to CollectorArticleModel if dict
                     if isinstance(data, CollectorArticleModel):
                         model = data
                     else:
@@ -745,6 +739,8 @@ class DatabaseManager:
                             continue
 
                     payload = model.model_dump_for_storage()
+                    # Defense-in-depth (LAW-4): enforce canonical URL immediately before DB operations
+                    payload["url"] = canonicalize_url(payload["url"]) or payload["url"]
                     url = payload["url"]
 
                     # 0. Internal Deduplication (Batch Scope)
@@ -834,21 +830,52 @@ class DatabaseManager:
 
                     # Apply processing status override if present
                     initial_status = getattr(model, "processing_status_override", None)
-                    if initial_status:
+                    if initial_status is not None:
+                        if initial_status not in PROCESSING_STATUS_VALUES:
+                            raise ValueError(
+                                f"Invalid processing_status: {initial_status}. "
+                                f"Allowed: {PROCESSING_STATUS_VALUES}"
+                            )
                         article.processing_status = initial_status
 
                     session.add(article)
-                    saved_count += 1
-                    batch_count += 1
+                    pending_count += 1
 
-                    if batch_count >= batch_size:
+                    if pending_count >= batch_size:
                         session.commit()
-                        batch_count = 0
+                        saved_count += pending_count
+                        pending_count = 0
 
-                session.commit()  # Commit leftovers
+                if pending_count > 0:
+                    session.commit()  # Commit leftovers
+                    saved_count += pending_count
+                    
                 logger.info(f"💾 Bulk save completed: {saved_count} articles")
                 return saved_count
 
+            except IntegrityError as e:
+                session.rollback()
+                err_msg = str(e).lower()
+                if "unique" in err_msg or "duplicate" in err_msg:
+                    logger.warning(
+                        f"Bulk insert collision ({str(e).splitlines()[0]}). "
+                        f"Falling back to single-item inserts to salvage batch."
+                    )
+                    # Fallback to individual inserts for this batch to save non-duplicates
+                    salvaged = 0
+                    for item in articles_data:
+                        try:
+                            if self.save_article(item):
+                                salvaged += 1
+                        except Exception as inner_e:
+                            logger.error(f"Failed to salvage item in bulk fallback: {inner_e}")
+                    
+                    logger.info(f"Salvaged {salvaged} articles from colliding batch")
+                    return saved_count + salvaged
+                
+                # Re-raise other IntegrityErrors (e.g., NOT NULL, FK constraint)
+                logger.error(f"Error de integridad en inserción masiva: {e}")
+                raise
             except Exception as e:
                 session.rollback()
                 logger.error(f"Error en bulk save: {e}")

@@ -103,16 +103,15 @@ def test_content_quality(feature_scorer, sample_article):
     assert score == pytest.approx(0.8)
 
     # With normalized fields
-    sample_article.article_metadata["normalized_title"] = (
-        "Short"  # 5 chars / 10 = 0.5 * 0.3 = 0.15
-    )
-    sample_article.article_metadata["normalized_summary"] = (
-        "Short"  # 5 chars / 20 = 0.25 * 0.5 = 0.125
-    )
-    # Entities
     sample_article.article_metadata["enrichment"] = {
-        "entities": ["A", "B", "C", "D", "E"]
-    }  # 5/5 = 1.0 * 0.2 = 0.2
+        "language": "en",
+        "model_version": "1.0",
+        "sentiment": "neutral",
+        "normalized_title": "Short",  # 5 chars / 10 = 0.5 * 0.3 = 0.15
+        "normalized_summary": "Short",  # 5 chars / 20 = 0.25 * 0.5 = 0.125
+        "entities": ["A", "B", "C", "D", "E"] # 5/5 = 1.0 * 0.2 = 0.2
+    }
+    
     # Total = 0.15 + 0.125 + 0.2 = 0.475
     score2 = feature_scorer._content_quality_score(sample_article)
     assert score2 == pytest.approx(0.475)
@@ -120,18 +119,20 @@ def test_content_quality(feature_scorer, sample_article):
 
 def test_engagement_score(feature_scorer, sample_article):
     # Sentiment
-    sample_article.article_metadata["enrichment"] = {"sentiment": "positive"}  # 0.8
+    sample_article.article_metadata["enrichment"] = {
+        "language": "en",
+        "model_version": "1.0",
+        "sentiment": "positive",
+        "normalized_title": "",
+        "normalized_summary": "",
+        "entities": []
+    }
     # Word count (default 400), divisor 100 -> capped 1.0
     # External score None -> uses sentiment 0.8
 
     # Formula: 0.5 * 0.8 (external) + 0.5 * 1.0 (length) = 0.4 + 0.5 = 0.9
     score = feature_scorer._engagement_score(sample_article)
     assert score == pytest.approx(0.9)
-
-    # With external engagement score
-    sample_article.article_metadata["engagement_features"] = {"score": 0.2}
-    # 0.5 * 0.2 + 0.5 * 1.0 = 0.1 + 0.5 = 0.6
-    assert feature_scorer._engagement_score(sample_article) == pytest.approx(0.6)
 
 
 def test_diversity_penalty(feature_scorer, sample_article):

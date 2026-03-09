@@ -18,7 +18,11 @@ from .interfaces import AsyncScorer
 
 
 def _get_attr(obj: Any, name: str, default=None):
-    return getattr(obj, name, default) if hasattr(obj, name) else obj.get(name, default)
+    if hasattr(obj, name):
+        return getattr(obj, name, default)
+    if isinstance(obj, dict):
+        return obj.get(name, default)
+    return default
 
 
 @dataclass
@@ -192,6 +196,19 @@ class FeatureBasedScorer(AsyncScorer):
             None, self.score_article, article, source_config
         )
 
+    def _parse_metadata(self, article: Any):
+        from news_collector.contracts import ArticleMetadataModel
+        from pydantic import ValidationError
+        import logging
+        try:
+            raw_meta = _get_attr(article, "article_metadata", {}) or {}
+            if isinstance(raw_meta, ArticleMetadataModel):
+                return raw_meta
+            return ArticleMetadataModel.model_validate(raw_meta)
+        except ValidationError as e:
+            logging.getLogger(__name__).warning(f"Invalid article_metadata during scoring, ignoring: {e}")
+            return None
+
     # Feature calculators -------------------------------------------------
 
     def _source_credibility(
@@ -200,10 +217,10 @@ class FeatureBasedScorer(AsyncScorer):
         if source_config:
             base_score = source_config.get("credibility_score", 0.5)
         else:
-            metadata = _get_attr(article, "article_metadata", {}) or {}
-            base_score = metadata.get("source_metadata", {}).get("credibility_score")
-            if base_score is None:
-                base_score = metadata.get("credibility_score", 0.5)
+            metadata = self._parse_metadata(article)
+            base_score = None
+            if metadata:
+                base_score = metadata.credibility_score
             if base_score is None:
                 base_score = _get_attr(article, "credibility_score", 0.5)
         return float(max(0.0, min(1.0, base_score)))
@@ -231,9 +248,15 @@ class FeatureBasedScorer(AsyncScorer):
         return max(0.0, min(1.0, decay))
 
     def _content_quality_score(self, article: Any) -> float:
-        metadata = _get_attr(article, "article_metadata", {}) or {}
-        normalized_title = metadata.get("normalized_title")
-        normalized_summary = metadata.get("normalized_summary")
+        metadata = self._parse_metadata(article)
+        normalized_title = None
+        normalized_summary = None
+        entities = None
+        if metadata and metadata.enrichment:
+            normalized_title = metadata.enrichment.normalized_title
+            normalized_summary = metadata.enrichment.normalized_summary
+            entities = metadata.enrichment.entities
+            
         if not normalized_title or not normalized_summary:
             title = _get_attr(article, "title", "") or ""
             summary = _get_attr(article, "summary", "") or ""
@@ -249,7 +272,6 @@ class FeatureBasedScorer(AsyncScorer):
         )
 
         richness = 0.0
-        entities = metadata.get("enrichment", {}).get("entities") if metadata else None
         if entities:
             richness = min(len(entities) / self.content_entity_target_count, 1.0)
 
@@ -261,9 +283,11 @@ class FeatureBasedScorer(AsyncScorer):
         return max(0.0, min(1.0, quality))
 
     def _engagement_score(self, article: Any) -> float:
-        metadata = _get_attr(article, "article_metadata", {}) or {}
-        enrichment = metadata.get("enrichment", {}) if metadata else {}
-        sentiment = enrichment.get("sentiment")
+        metadata = self._parse_metadata(article)
+        sentiment = None
+        if metadata and metadata.enrichment:
+            sentiment = metadata.enrichment.sentiment
+            
         sentiment_score = self.fallback_sentiment
         if isinstance(sentiment, str):
             sentiment_score = self.sentiment_scores.get(
@@ -276,10 +300,8 @@ class FeatureBasedScorer(AsyncScorer):
         word_count = _get_attr(article, "word_count", 400) or 400
         length_score = min(word_count / self.word_count_divisor, 1.0)
 
-        engagement_features = (
-            metadata.get("engagement_features", {}) if metadata else {}
-        )
-        external_score = engagement_features.get("score")
+        # We no longer accept unmodeled external elements like engagement_features
+        external_score = None
         if external_score is not None:
             external = max(0.0, min(1.0, float(external_score)))
         else:

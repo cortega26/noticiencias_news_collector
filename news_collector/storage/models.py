@@ -18,6 +18,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -165,6 +166,10 @@ class Article(Base):
     # Índices compuestos para optimizar consultas comunes
     # ==================================================
     __table_args__ = (
+        CheckConstraint(
+            processing_status.in_(PROCESSING_STATUS_VALUES),
+            name="ck_article_status"
+        ),
         Index(
             "idx_articles_completed_category_score_date",
             "category",

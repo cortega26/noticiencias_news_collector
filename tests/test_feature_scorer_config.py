@@ -23,12 +23,19 @@ from news_collector.scoring.feature_scorer import FeatureBasedScorer
 def _article_factory(**overrides):
     metadata_override = overrides.pop("article_metadata", {})
     metadata = {
-        "normalized_title": "baseline science title",  # ~24 chars
-        "normalized_summary": "baseline science summary" * 5,
-        "enrichment": {"entities": [], "sentiment": "neutral"},
         "source_metadata": {"credibility_score": 0.7},
-        "engagement_features": {},
+        "enrichment": {
+            "entities": [], 
+            "sentiment": "neutral",
+            "language": "en",
+            "model_version": "1.0",
+            "normalized_title": "baseline science title",
+            "normalized_summary": "baseline science summary" * 5
+        }
     }
+    
+    if "enrichment" in metadata_override:
+        metadata["enrichment"].update(metadata_override.pop("enrichment"))
     metadata.update(metadata_override)
 
     return SimpleNamespace(
@@ -55,9 +62,14 @@ def test_content_quality_weights_respected() -> None:
 
     article = _article_factory(
         article_metadata={
-            "normalized_title": "t" * 80,
-            "normalized_summary": "s" * 300,
-            "enrichment": {"entities": [{}, {}, {}, {}], "sentiment": "neutral"},
+            "enrichment": {
+                "entities": ["A", "B", "C", "D"], 
+                "sentiment": "neutral",
+                "language": "en",
+                "model_version": "1.0",
+                "normalized_title": "t" * 80,
+                "normalized_summary": "s" * 300
+            }
         }
     )
 
@@ -80,7 +92,14 @@ def test_engagement_heuristics_pull_from_config() -> None:
     article = _article_factory(
         word_count=500,
         article_metadata={
-            "enrichment": {"sentiment": "positive", "entities": []},
+            "enrichment": {
+                "sentiment": "positive", 
+                "entities": [],
+                "language": "en",
+                "model_version": "1.0",
+                "normalized_title": "",
+                "normalized_summary": ""
+            },
         },
     )
 
