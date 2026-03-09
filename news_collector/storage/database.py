@@ -842,43 +842,38 @@ class DatabaseManager:
                     pending_count += 1
 
                     if pending_count >= batch_size:
-                        session.commit()
-                        saved_count += pending_count
-                        pending_count = 0
+                        try:
+                            with session.begin_nested():
+                                session.flush()
+                            saved_count += pending_count
+                            pending_count = 0
+                        except IntegrityError as e:
+                            logger.warning(
+                                f"Bulk insert collision ({str(e).splitlines()[0]}). "
+                                f"Batch savepoint rolled back. "
+                                f"Please ensure distinct entries."
+                            )
+                            # The batch failed, but we can't easily salvage without breaking all-or-nothing of the batch 
+                            # inside a single overall transaction. 
+                            # Since R-11 requires all-or-nothing, we raise to abort the entire bulk operation.
+                            raise
 
                 if pending_count > 0:
-                    session.commit()  # Commit leftovers
-                    saved_count += pending_count
+                    try:
+                        with session.begin_nested():
+                            session.flush()
+                        saved_count += pending_count
+                    except IntegrityError as e:
+                        logger.warning(f"Bulk insert collision in final batch. Aborting bulk.")
+                        raise
                     
-                logger.info(f"💾 Bulk save completed: {saved_count} articles")
+                session.commit()  # Single commit for all-or-nothing
+                logger.info(f"💾 Bulk save completed atomically: {saved_count} articles")
                 return saved_count
 
-            except IntegrityError as e:
-                session.rollback()
-                err_msg = str(e).lower()
-                if "unique" in err_msg or "duplicate" in err_msg:
-                    logger.warning(
-                        f"Bulk insert collision ({str(e).splitlines()[0]}). "
-                        f"Falling back to single-item inserts to salvage batch."
-                    )
-                    # Fallback to individual inserts for this batch to save non-duplicates
-                    salvaged = 0
-                    for item in articles_data:
-                        try:
-                            if self.save_article(item):
-                                salvaged += 1
-                        except Exception as inner_e:
-                            logger.error(f"Failed to salvage item in bulk fallback: {inner_e}")
-                    
-                    logger.info(f"Salvaged {salvaged} articles from colliding batch")
-                    return saved_count + salvaged
-                
-                # Re-raise other IntegrityErrors (e.g., NOT NULL, FK constraint)
-                logger.error(f"Error de integridad en inserción masiva: {e}")
-                raise
             except Exception as e:
                 session.rollback()
-                logger.error(f"Error en bulk save: {e}")
+                logger.error(f"Error fatal en guardado masivo, transaccion abortada: {e}")
                 raise
 
     @staticmethod

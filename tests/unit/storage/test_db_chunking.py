@@ -66,8 +66,10 @@ def test_save_articles_bulk_chunking(mock_db_manager):
     # Assertions
     # Check that we actually added 105 items
     assert session_mock.add.call_count == 105
-    # Check 3 commits
-    assert session_mock.commit.call_count == 3
+    # Check 3 flushes
+    assert session_mock.flush.call_count == 3
+    # Check 1 commit
+    assert session_mock.commit.call_count == 1
 
 
 def test_save_articles_bulk_exact_chunk(mock_db_manager):
@@ -107,7 +109,8 @@ def test_save_articles_bulk_exact_chunk(mock_db_manager):
     mock_db_manager.save_articles_bulk(articles_data, batch_size=50)
 
     assert session_mock.add.call_count == 100
-    assert session_mock.commit.call_count == 2
+    assert session_mock.flush.call_count == 2
+    assert session_mock.commit.call_count == 1
 
 
 def test_save_articles_bulk_empty(mock_db_manager):
@@ -157,5 +160,6 @@ def test_save_articles_no_batch_argument(mock_db_manager):
     mock_db_manager.save_articles_bulk(articles_data)
 
     assert session_mock.add.call_count == 1
+    assert session_mock.flush.call_count == 1
     # Should commit once at end
     assert session_mock.commit.call_count == 1

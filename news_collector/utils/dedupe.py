@@ -14,7 +14,7 @@ SIMHASH_THRESHOLD_DEFAULT = 10  # Hamming distance threshold
 
 def normalize_article_text(title: str, summary: str) -> Tuple[str, str, str]:
     """Return normalized title, summary (HTML cleaned) and combined text."""
-    normalized_title = normalize_text(title or "")
+    normalized_title = normalize_text(clean_html(title or ""))
     normalized_summary = normalize_text(clean_html(summary or ""))
     combined = f"{normalized_title} {normalized_summary}".strip()
     return normalized_title, normalized_summary, combined
