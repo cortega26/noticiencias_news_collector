@@ -1,6 +1,5 @@
 """HTTP Enricher module for standard HTML fetching and extraction."""
 
-import logging
 import os
 from typing import Any, Dict, Optional
 
@@ -8,8 +7,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from news_collector.infrastructure.requests_client import RobustRequestsClient
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 _TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 

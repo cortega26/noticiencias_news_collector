@@ -45,14 +45,13 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-import logging
-
 from news_collector.config.settings import (
     COLLECTION_CONFIG,
     DATABASE_CONFIG,
     DEDUP_CONFIG,
 )
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
+from news_collector.utils.logger import get_logger
 
 from ..storage.analytics import (
     category_breakdown,
@@ -82,7 +81,7 @@ from ..utils.dedupe import (
 from ..utils.url_canonicalizer import canonicalize_url
 
 # Configurar logging para este módulo
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 SIMHASH_BITS = 64
 SIMHASH_MASK = (1 << SIMHASH_BITS) - 1

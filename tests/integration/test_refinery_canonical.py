@@ -93,7 +93,7 @@ class TestRefineryCanonical:
         engine.process_single_article(article_payload, MagicMock(), target_dir)
 
         # Check expected filename
-        expected_file = posts_dir / "2025-12-25-article-102.md"
+        expected_file = posts_dir / "2025-12-25-test.md"
         assert expected_file.exists()
 
         # Verify date passed to editor

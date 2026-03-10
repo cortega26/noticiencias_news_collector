@@ -26,7 +26,6 @@ Failure modes:
 """
 
 import asyncio
-import logging
 import math
 import re
 from datetime import datetime, timezone
@@ -36,11 +35,12 @@ from pydantic import ValidationError
 
 from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from news_collector.contracts import ScoringRequestModel
+from news_collector.utils.logger import get_logger
 
 from ..storage.models import Article
 from .interfaces import AsyncScorer
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class BasicScorer(AsyncScorer):
@@ -272,9 +272,10 @@ class BasicScorer(AsyncScorer):
         else:
             # Fallback: extraer de metadatos del artículo con validación fuerte
             meta_raw = getattr(article, "article_metadata", None) or {}
-            from news_collector.contracts import ArticleMetadataModel
             from pydantic import ValidationError
-            import logging
+
+            from news_collector.contracts import ArticleMetadataModel
+            from news_collector.utils.logger import get_logger
             try:
                 if isinstance(meta_raw, ArticleMetadataModel):
                     meta_model = meta_raw
@@ -282,7 +283,7 @@ class BasicScorer(AsyncScorer):
                     meta_model = ArticleMetadataModel.model_validate(meta_raw)
                 base_credibility_raw = meta_model.credibility_score if meta_model.credibility_score is not None else 0.5
             except ValidationError as e:
-                logging.getLogger(__name__).warning(f"Invalid article_metadata during scoring, falling back to defaults: {e}")
+                get_logger().create_module_logger(__name__).warning(f"Invalid article_metadata during scoring, falling back to defaults: {e}")
                 base_credibility_raw = 0.5
                 
         try:

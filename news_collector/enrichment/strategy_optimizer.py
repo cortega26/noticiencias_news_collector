@@ -1,9 +1,9 @@
-import logging
 from typing import Any, Dict, Optional
 
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class StrategyOptimizer:

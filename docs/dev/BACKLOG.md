@@ -6,7 +6,7 @@
 - [ ] **Model Deduplication**: `CollectorArticleModel` (Pydantic) and `Article` (SQLAlchemy) share 90% fields but drift. Use `sqlmodel` or automated mapping.
 - [ ] **Scorer Redundancy**: `PreScorer` (used in collectors) overlaps with `BasicScorer` (used in system). Unify into `ScoringService`.
 - [ ] **Logging Standardization**: Some modules use `logging.getLogger`, others use `NewsCollectorLogger` wrapper. Unify.
-- [ ] **Dependency Audit**: `requirements.txt` lists `pandas` and `streamlit` but they are only for auxiliary tools. Move to `dev` dependencies.
+- [x] **Dependency Audit**: `requirements.txt` lists `pandas` and `streamlit` but they are only for auxiliary tools. Move to `dev` dependencies.
 
 ## Wishlist
 

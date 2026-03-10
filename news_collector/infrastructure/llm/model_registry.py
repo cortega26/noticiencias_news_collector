@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Mapping
 
 import requests
+from news_collector.utils.logger import get_logger
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger().create_module_logger(__name__)
 
 DEFAULT_STAGE = "default"
 DEFAULT_BASE_MODEL = "llama3.3:latest"

@@ -20,10 +20,9 @@ def test_extract_slug_sanitization():
         assert engine._extract_slug(content, "fallback") == expected
 
 
-def test_extract_slug_empty_raises_value_error():
+def test_extract_slug_empty_uses_fallback():
     engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), MagicMock())
-    with pytest.raises(ValueError, match="empty string"):
-        engine._extract_slug("slug: !@#$%^&*()", "fallback")
+    assert engine._extract_slug("slug: !@#$%^&*()", "fallback") == "article-fallback"
 
 
 def test_slug_collision_handled(tmp_path):

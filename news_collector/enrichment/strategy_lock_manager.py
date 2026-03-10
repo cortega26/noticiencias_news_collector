@@ -23,13 +23,14 @@ Failure modes:
 - Safely catches and logs exceptions when saving to the YAML file fails, leaving in-memory state intact.
 """
 
-import logging
 import os
 from typing import Any, Dict, Optional
 
 import yaml
 
-logger = logging.getLogger(__name__)
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger(__name__)
 
 
 class StrategyLockManager:

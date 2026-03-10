@@ -7,11 +7,12 @@ budget enforcement, and retry eligibility heuristics.
 
 from __future__ import annotations
 
-import logging
 import os
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger(__name__)
 
 
 class ProxyBudgetManager:

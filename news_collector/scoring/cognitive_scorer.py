@@ -1,5 +1,4 @@
 import json
-import logging
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -10,11 +9,12 @@ from news_collector.config.settings import CONFIG
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.storage.models import Article
+from news_collector.utils.logger import get_logger
 
 from .basic_scorer import BasicScorer
 from .heuristic_scorer import HeuristicScorer
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 CACHE_DB_PATH = Path("data/cache_cognitive.db")
 
