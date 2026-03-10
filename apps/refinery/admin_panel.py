@@ -45,8 +45,8 @@ run_refinery = refinery_main.main
 import logging
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
-from news_collector.config.settings import DATABASE_CONFIG
-from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.config.settings import DATABASE_CONFIG, CONFIG
+from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.storage.database import DatabaseManager
 
 # Alias for compatibility if legacy code relies on this name
@@ -274,19 +274,23 @@ with tab1:
         config_data.setdefault("ollama", {})
         config_data["ollama"]["api_url"] = new_api_url
 
-        # Fetch Available Models
+        # Fetch Available Models (Only supported completely for Ollama right now, but fail gracefully for Gemini)
         available_models = []
         try:
-            temp_provider = OllamaProvider(api_url=new_api_url, timeout=5)
-            available_models = temp_provider.list_models()
+            temp_provider = get_provider(config=CONFIG, api_url=new_api_url, timeout=5)
+            if hasattr(temp_provider, "list_models"):
+                available_models = temp_provider.list_models()
         except Exception as e:
             st.warning(f"No se pudieron cargar modelos: {e}")
 
-        # Fallback list
+        # Fallback list + Gemini models
+        base_fallback_options = ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
+        gemini_options = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+        
         model_options = (
-            available_models
+            available_models + gemini_options
             if available_models
-            else ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
+            else base_fallback_options + gemini_options
         )
 
         # Helper index

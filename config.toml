@@ -10,11 +10,11 @@ target_repo_url = "https://github.com/cortega26/noticiencias"
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
-model = "qwen2.5-coder:14b"
+model = "llama3.3:latest"
 timeout = 300
-headlines_model = "llama3.2:latest"
-translator_model = "qwen2.5-coder:32b"
-editor_model = "qwen2.5-coder:32b"
+headlines_model = "gemini-2.5-flash"
+translator_model = "gemini-2.5-flash"
+editor_model = "gemini-2.5-flash"
 
 [editorial_auditor]
 enabled = true

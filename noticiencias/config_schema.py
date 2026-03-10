@@ -710,6 +710,29 @@ class OllamaConfig(StrictModel):
         return v
 
 
+class GeminiConfig(StrictModel):
+    """Gemini LLM settings."""
+
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Google AI Studio API Key.",
+    )
+    model: str = Field(
+        default="gemini-2.5-flash",
+        description="Model identifier to use for generation.",
+    )
+    timeout: PositiveInt = Field(
+        default=300,
+        description="Request timeout in seconds.",
+    )
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _blank_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
 class EditorialAuditorConfig(StrictModel):
     """Configuration for Editorial Auditor."""
 
@@ -751,6 +774,7 @@ class Config(StrictModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    gemini: GeminiConfig = Field(default_factory=GeminiConfig)
     editorial_auditor: EditorialAuditorConfig = Field(
         default_factory=EditorialAuditorConfig
     )

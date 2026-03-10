@@ -12,7 +12,7 @@ from news_collector.infrastructure.llm.model_registry import (
     ModelRegistryError,
     get_model_for_stage,
 )
-from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import load_config
 
@@ -161,7 +161,8 @@ class EditorialAuditor:
         self.model = model
 
         # OBJECTIVE 2: Strict Timeout Enforcement (15s)
-        self.provider = OllamaProvider(
+        self.provider = get_provider(
+            config=self.config,
             api_url=self.api_url,
             model=self.model,
             timeout=self.timeout_seconds,

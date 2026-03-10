@@ -102,6 +102,7 @@ def _normalize_enrichment(config: Config) -> Dict[str, Any]:
 
 ENRICHMENT_CONFIG: Dict[str, Any] = _normalize_enrichment(CONFIG)
 NEWS_CONFIG: Dict[str, Any] = CONFIG.news.model_dump(mode="python")
+GEMINI_CONFIG: Dict[str, Any] = CONFIG.gemini.model_dump(mode="python")
 
 import os
 
@@ -177,6 +178,7 @@ __all__ = [
     "TEXT_PROCESSING_CONFIG",
     "ENRICHMENT_CONFIG",
     "NEWS_CONFIG",
+    "GEMINI_CONFIG",
     "LOGGING_CONFIG",
     "LLM_SYSTEM_AVAILABLE",
     "validate_config",
