@@ -1,4 +1,3 @@
-import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set
@@ -6,8 +5,9 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 @dataclass

@@ -1,11 +1,12 @@
-import logging
 from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+
+from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 def fetch_full_article(url: str, session: Optional[requests.Session] = None) -> str:

@@ -22,9 +22,9 @@ Failure modes:
 - Missing article fields (e.g., title or content) result in rule-specific decisions (pass or fail) rather than crashes.
 """
 
-import logging
 from typing import Any, Dict, List
 
+from news_collector.utils.logger import get_logger
 from news_collector.validation.rules import (
     BlocklistPatternRule,
     MinContentLengthRule,
@@ -46,7 +46,7 @@ class ContentValidator:
     """
 
     def __init__(self, rules: List[ValidationRule] | None = None):
-        self.logger = logging.getLogger("news_collector.validation")
+        self.logger = get_logger().create_module_logger("news_collector.validation")
         self.rules = rules or self._get_default_rules()
 
     def _get_default_rules(self) -> List[ValidationRule]:

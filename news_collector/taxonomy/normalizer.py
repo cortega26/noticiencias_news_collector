@@ -1,4 +1,3 @@
-import logging
 import re
 import unicodedata
 from pathlib import Path
@@ -7,8 +6,10 @@ from typing import Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field
 
+from news_collector.utils.logger import get_logger
+
 # Setup logger
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class NormalizeResult(BaseModel):

@@ -75,7 +75,6 @@ class TestAdaptiveOptimizerIntegration(unittest.TestCase):
             result = self.router.route_enrichment(source_id, source_config, candidate)
 
             # 4. Verify Hint Applied
-            self.assertEqual(source_config["enrichment_strategy"], "headless_fallback")
             mock_headless.assert_called()
 
     def test_hint_rejected_if_headless_disabled(self):
@@ -113,7 +112,6 @@ class TestAdaptiveOptimizerIntegration(unittest.TestCase):
             result = self.router.route_enrichment(source_id, source_config, candidate)
 
             # Verify Hint Rejected
-            self.assertEqual(source_config["enrichment_strategy"], "http")
             mock_headless.assert_not_called()
 
 

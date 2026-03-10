@@ -7,8 +7,9 @@ import threading
 from typing import Any, Dict, Optional
 
 from news_collector.infrastructure.run_context import run_context
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class EnrichmentMetricsStore:

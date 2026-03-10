@@ -9,16 +9,19 @@ from typing import Any, Dict, Optional
 
 import httpx
 from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
 from tenacity import (
     before_sleep_log,
     retry,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    wait_random,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class SmartHttpClient:

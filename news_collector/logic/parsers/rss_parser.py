@@ -25,9 +25,9 @@ class RssParser:
     def _log_throttled_error(
         self, source_id: str, error_type: str, msg: str, limit: int = 50
     ):
-        import logging
+        from news_collector.utils.logger import get_logger
 
-        logger = logging.getLogger(__name__)
+        logger = get_logger().create_module_logger(__name__)
         count = self.error_counts[source_id][error_type]
         if count < limit:
             logger.warning(f"[{source_id}] {msg}", exc_info=True)
@@ -38,9 +38,9 @@ class RssParser:
         self.error_counts[source_id][error_type] += 1
 
     def print_batch_summary(self):
-        import logging
+        from news_collector.utils.logger import get_logger
 
-        logger = logging.getLogger(__name__)
+        logger = get_logger().create_module_logger(__name__)
         for source_id in self.error_counts:
             total_success = self.success_counts[source_id]
             errors = self.error_counts[source_id]

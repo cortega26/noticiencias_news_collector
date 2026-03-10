@@ -3,24 +3,17 @@
 from __future__ import annotations
 
 import contextlib
-import logging
 import os
 import time
-from typing import Any, Dict, Mapping, Optional
-
-PlaywrightTimeoutError: type[Exception]
 
 try:
-    from playwright.sync_api import TimeoutError as _PlaywrightTimeoutError
-    from playwright.sync_api import sync_playwright as _sync_playwright
-
-    PlaywrightTimeoutError = _PlaywrightTimeoutError
-    sync_playwright: Any = _sync_playwright
+    from playwright.sync_api import sync_playwright
 except ImportError:
-    sync_playwright = None  # Handle missing dependency gracefully
-    PlaywrightTimeoutError = TimeoutError
+    sync_playwright = None
 
-logger = logging.getLogger(__name__)
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger(__name__)
 
 
 class HeadlessBudgetManager:
@@ -66,7 +59,7 @@ class HeadlessEnricher:
         self.logger = (
             logger_factory.create_module_logger("enrichment.headless")
             if logger_factory
-            else logging.getLogger(__name__)
+            else get_logger().create_module_logger(__name__)
         )
 
         if self.enabled and sync_playwright is None:

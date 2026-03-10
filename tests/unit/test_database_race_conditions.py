@@ -108,8 +108,8 @@ def test_save_article_integrity_error_raised(mock_get_session, test_db_manager):
         test_db_manager.save_article(payload)
 
 
-def test_bulk_save_salvages_on_integrity_error(test_db_manager):
-    """Prove that save_articles_bulk recovers non-duplicate records on collision."""
+def test_bulk_save_aborts_on_integrity_error(test_db_manager):
+    """Prove that save_articles_bulk aborts the entire transaction on an IntegrityError (R-11)."""
     # Start by saving item A
     item_a_payload = _valid_payload(
         url="https://example.com/A", 
@@ -128,41 +128,34 @@ def test_bulk_save_salvages_on_integrity_error(test_db_manager):
         content="Here is a distinct article about marine biology and deep sea exploration." * 20
     )
     
-    # We will mock the bulk insert itself to raise an IntegrityError
-    # We can do this without patching by relying on the DB constraint if we force it.
-    # Actually, the python check in save_articles_bulk prevents duplicates.
-    # We must mock session.commit to raise IntegrityError on the bulk step.
-    
-    # We need the bulk insert to fail with IntegrityError, but normally the python check catches duplicates.
-    # To bypass the python exist-check specifically for the *bulk* phase, we can mock `session.query(Article).filter_by`.
     import sqlalchemy
     call_count = [0]
-    is_mocked = [True]
-    original_commit = sqlalchemy.orm.Session.commit
+    
+    original_flush = sqlalchemy.orm.Session.flush
     original_query = sqlalchemy.orm.Session.query
     
     def mock_query_func(self, *args, **kwargs):
-        if is_mocked[0]:
+        # We need to bypass the existence checks to trigger flush collision
+        if call_count[0] == 0:
             mock = MagicMock()
             mock.filter_by.return_value.with_entities.return_value.first.return_value = None
             mock.filter_by.return_value.first.return_value = None
             return mock
         return original_query(self, *args, **kwargs)
     
-    def mock_commit(self, *args, **kwargs):
+    def mock_flush(self, *args, **kwargs):
         if call_count[0] == 0:
             call_count[0] += 1
-            is_mocked[0] = False  # restore query for the fallback loop
             raise IntegrityError("UNIQUE constraint failed: articles.url", None, Exception())
-        return original_commit(self, *args, **kwargs)
+        return original_flush(self, *args, **kwargs)
         
     with patch("sqlalchemy.orm.Session.query", autospec=True, side_effect=mock_query_func), \
-         patch("sqlalchemy.orm.Session.commit", autospec=True, side_effect=mock_commit):
-        salvaged = test_db_manager.save_articles_bulk([item_a_payload, item_b_payload])
-        
-        assert salvaged == 1
+         patch("sqlalchemy.orm.Session.flush", autospec=True, side_effect=mock_flush):
+        with pytest.raises(IntegrityError):
+            test_db_manager.save_articles_bulk([item_a_payload, item_b_payload])
 
-    # Verify B is indeed the salvaged item
+    # Verify B is NOT salvaged due to atomic batch transaction
     with test_db_manager.get_session() as session:
         article = session.query(Article).filter_by(url="https://example.com/B").first()
-        assert article is not None
+        assert article is None
+

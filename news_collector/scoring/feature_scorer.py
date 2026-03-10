@@ -197,16 +197,18 @@ class FeatureBasedScorer(AsyncScorer):
         )
 
     def _parse_metadata(self, article: Any):
-        from news_collector.contracts import ArticleMetadataModel
         from pydantic import ValidationError
-        import logging
+
+        from news_collector.contracts import ArticleMetadataModel
+        from news_collector.utils.logger import get_logger
+        logger = get_logger().create_module_logger(__name__)
         try:
             raw_meta = _get_attr(article, "article_metadata", {}) or {}
             if isinstance(raw_meta, ArticleMetadataModel):
                 return raw_meta
             return ArticleMetadataModel.model_validate(raw_meta)
         except ValidationError as e:
-            logging.getLogger(__name__).warning(f"Invalid article_metadata during scoring, ignoring: {e}")
+            logger.warning(f"Invalid article_metadata during scoring, ignoring: {e}")
             return None
 
     # Feature calculators -------------------------------------------------

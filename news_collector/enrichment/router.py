@@ -26,7 +26,6 @@ Failure modes:
 
 from __future__ import annotations
 
-import logging
 import os
 import time
 from typing import Any, Dict
@@ -38,8 +37,9 @@ from news_collector.enrichment.strategy_lock_manager import strategy_lock_manage
 from news_collector.enrichment.strategy_optimizer import strategy_optimizer
 from news_collector.infrastructure.run_context import run_context
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class EnrichmentStrategyRouter:
@@ -52,7 +52,7 @@ class EnrichmentStrategyRouter:
         self.logger = (
             logger_factory.create_module_logger("enrichment.router")
             if logger_factory
-            else logging.getLogger(__name__)
+            else get_logger().create_module_logger(__name__)
         )
 
         self.scholarly = ScholarlyMetadataEnricher()
