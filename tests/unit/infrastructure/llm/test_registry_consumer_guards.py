@@ -24,12 +24,15 @@ def test_prescorer_uses_registry(monkeypatch):
             self.api_url = api_url
             self.model = model
 
+    def fake_get_provider(config=None, api_url=None, model=None, **kwargs):
+        return MockProvider(api_url, model)
+
     monkeypatch.setattr(
         "news_collector.scoring.pre_scorer.get_model_for_stage",
         fake_get_model_for_stage,
     )
     monkeypatch.setattr(
-        "news_collector.scoring.pre_scorer.OllamaProvider", MockProvider
+        "news_collector.scoring.pre_scorer.get_provider", fake_get_provider
     )
 
     scorer = PreScorer()
@@ -52,13 +55,16 @@ def test_cognitive_scorer_uses_registry(monkeypatch):
         async def generate_async(self, *args, **kwargs):
             return {"results": []}
 
+    def fake_get_provider(config=None, api_url=None, model=None, **kwargs):
+        return MockProvider(api_url, model)
+
     monkeypatch.setattr(
         "news_collector.scoring.cognitive_scorer.get_model_for_stage",
         fake_get_model_for_stage,
     )
     monkeypatch.setattr(
-        "news_collector.scoring.cognitive_scorer.OllamaProvider",
-        MockProvider,
+        "news_collector.scoring.cognitive_scorer.get_provider",
+        fake_get_provider,
     )
 
     scorer = CognitiveScorer()
@@ -78,13 +84,16 @@ def test_classifier_uses_registry(monkeypatch):
             self.api_url = api_url
             self.model = model
 
+    def fake_get_provider(config=None, api_url=None, model=None, **kwargs):
+        return MockProvider(api_url, model)
+
     monkeypatch.setattr(
         "news_collector.editorial.classifier.get_model_for_stage",
         fake_get_model_for_stage,
     )
     monkeypatch.setattr(
-        "news_collector.editorial.classifier.OllamaProvider",
-        MockProvider,
+        "news_collector.editorial.classifier.get_provider",
+        fake_get_provider,
     )
 
     classifier = EditorialClassifier()
@@ -104,13 +113,16 @@ def test_council_uses_registry(monkeypatch):
             self.api_url = api_url
             self.model = model
 
+    def fake_get_provider(config=None, api_url=None, model=None, **kwargs):
+        return MockProvider(api_url, model)
+
     monkeypatch.setattr(
         "news_collector.editorial.council.get_model_for_stage",
         fake_get_model_for_stage,
     )
     monkeypatch.setattr(
-        "news_collector.editorial.council.OllamaProvider",
-        MockProvider,
+        "news_collector.editorial.council.get_provider",
+        fake_get_provider,
     )
 
     council = EditorialCouncil()
@@ -132,13 +144,16 @@ def test_auditor_uses_registry(monkeypatch, tmp_path: Path):
             self.timeout = timeout
             self.max_retries = max_retries
 
+    def fake_get_provider(config=None, api_url=None, model=None, timeout=None, max_retries=None, **kwargs):
+        return MockProvider(api_url, model, timeout, max_retries)
+
     monkeypatch.setattr(
         "news_collector.components.editorial.auditor.get_model_for_stage",
         fake_get_model_for_stage,
     )
     monkeypatch.setattr(
-        "news_collector.components.editorial.auditor.OllamaProvider",
-        MockProvider,
+        "news_collector.components.editorial.auditor.get_provider",
+        fake_get_provider,
     )
 
     cfg = SimpleNamespace(

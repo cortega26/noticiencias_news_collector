@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
-from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
@@ -94,7 +94,7 @@ class EditorAgent:
 
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
-        self.provider = OllamaProvider(
+        self.provider = get_provider(
             api_url=self.api_url, model=self.model, timeout=3600
         )
         logger.info(

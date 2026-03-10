@@ -5,12 +5,12 @@ Editorial Classifier Module
 Determines the public-facing category (badge) for an article based on its content impact.
 """
 
-from typing import Optional
+from typing import Optional, Any
 
 from news_collector.config.prompts import EDITORIAL_CLASSIFICATION_SYSTEM_PROMPT
 from news_collector.config.settings import CONFIG
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
-from news_collector.infrastructure.llm.provider import OllamaProvider
+from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -22,10 +22,10 @@ class EditorialClassifier:
     Categories: CIENCIA, SALUD, TECNOLOGÍA, EDITORIAL.
     """
 
-    def __init__(self, llm_client: Optional[OllamaProvider] = None):
+    def __init__(self, llm_client: Optional[Any] = None):
         if llm_client is None:
             model = get_model_for_stage("classifier", config=CONFIG, logger=logger)
-            self.llm = OllamaProvider(api_url=CONFIG.ollama.api_url, model=model)
+            self.llm = get_provider(config=CONFIG, api_url=CONFIG.ollama.api_url, model=model)
         else:
             self.llm = llm_client
 
