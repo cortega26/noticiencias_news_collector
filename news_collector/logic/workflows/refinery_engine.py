@@ -318,7 +318,7 @@ class RefineryEngine:
 
         try:
             refined_content = self.editor.process_article(
-                article, override_date=canonical_date
+                article, override_date=canonical_date, explicit_article_id=article_id
             )
         except ValueError as ve:
             if "Translation Guardrail" in str(ve):
