@@ -235,12 +235,12 @@ def load_source_health():
 # --- Tabs ---
 tab1, tab_prompts, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
-        "🧠 IA & Refinería",
-        "📝 Prompts",
-        "📊 Scraper & Scoring",
-        "💼 Gestión",
+        "⚙️ Motor IA",
+        "📝 Prompts Editoriales",
+        "🕷️ Extractor & Scoring",
+        "💼 Tareas & PRs",
         "📈 Analítica",
-        "🚀 Publicados",
+        "🚀 Publicados (Live)",
         "📡 Fuentes",
     ]
 )
@@ -528,8 +528,8 @@ with tab1:
 
 # --- Tab Prompts ---
 with tab_prompts:
-    st.header("📝 Prompts del Sistema")
-    st.info("Define las instrucciones para cada fase del proceso de refinamiento.")
+    st.header("📝 Prompts Editoriales del Sistema")
+    st.info("Personaliza las instrucciones fundamentales que rigen el comportamiento de la IA en cada fase del pipeline editorial.")
 
     # Path to prompts.yaml
     PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
@@ -548,48 +548,79 @@ with tab_prompts:
             "⚠️ No se encontró config/prompts.yaml. Se crearán valores por defecto al guardar."
         )
 
-    # Translator Prompt
-    st.markdown("##### 1. Traductor (Fase 1)")
-    trans_sys = current_prompts.get("translator", {}).get("system", "")
-    new_trans_sys = st.text_area(
-        "Prompt Traductor", value=trans_sys, height=150, key="prompt_trans"
-    )
+    st.markdown("### ✨ Configuración Activa (v2.0)")
 
-    # Editor Prompt
-    st.markdown("##### 2. Editor (Fase 2)")
-    edit_sys = current_prompts.get("editor", {}).get("system", "")
-    new_edit_sys = st.text_area(
-        "Prompt Editor", value=edit_sys, height=200, key="prompt_edit"
-    )
+    col_trans, col_edit = st.columns(2)
+    
+    with col_trans:
+        st.markdown("##### 1. Traductor Científico (Fase 1)")
+        trans_sys = current_prompts.get("translator", {}).get("system", "")
+        new_trans_sys = st.text_area(
+            "Instrucciones de Traducción", value=trans_sys, height=450, key="prompt_trans"
+        )
+        
+    with col_edit:
+        st.markdown("##### 2. Editor Periodístico (Fase 2)")
+        edit_sys = current_prompts.get("editor", {}).get("system", "")
+        new_edit_sys = st.text_area(
+            "Instrucciones de Edición y Adaptación", value=edit_sys, height=450, key="prompt_edit"
+        )
 
-    # Headline Prompt
-    st.markdown("##### 3. Titulares (Fase 3)")
+    st.markdown("##### 3. Generador de Titulares (Fase 3)")
     head_sys = current_prompts.get("headline", {}).get("system", "")
     new_head_sys = st.text_area(
-        "Prompt Titulares", value=head_sys, height=100, key="prompt_head"
+        "Instrucciones de Titulares", value=head_sys, height=150, key="prompt_head"
     )
 
-    if st.button("💾 Guardar Prompts (YAML)"):
-        updated_prompts = current_prompts.copy()
-        if "translator" not in updated_prompts:
-            updated_prompts["translator"] = {}
-        if "editor" not in updated_prompts:
-            updated_prompts["editor"] = {}
-        if "headline" not in updated_prompts:
-            updated_prompts["headline"] = {}
+    col_btn, empty_col = st.columns([1, 3])
+    with col_btn:
+        if st.button("💾 Guardar Prompts (YAML)", use_container_width=True, type="primary"):
+            updated_prompts = current_prompts.copy()
+            if "translator" not in updated_prompts:
+                updated_prompts["translator"] = {}
+            if "editor" not in updated_prompts:
+                updated_prompts["editor"] = {}
+            if "headline" not in updated_prompts:
+                updated_prompts["headline"] = {}
 
-        updated_prompts["translator"]["system"] = new_trans_sys
-        updated_prompts["editor"]["system"] = new_edit_sys
-        updated_prompts["headline"]["system"] = new_head_sys
+            updated_prompts["translator"]["system"] = new_trans_sys
+            updated_prompts["editor"]["system"] = new_edit_sys
+            updated_prompts["headline"]["system"] = new_head_sys
 
-        try:
-            with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
-                yaml.dump(
-                    updated_prompts, f, allow_unicode=True, default_flow_style=False
-                )
-            st.success("¡Prompts actualizados en config/prompts.yaml!")
-        except Exception as e:
-            st.error(f"Error guardando prompts: {e}")
+            try:
+                with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
+                    yaml.dump(
+                        updated_prompts, f, allow_unicode=True, default_flow_style=False, sort_keys=False
+                    )
+                st.success("¡Prompts actualizados correctamente!")
+                
+                # Refresh variables to update UI immediately
+                trans_sys = new_trans_sys
+                edit_sys = new_edit_sys
+                head_sys = new_head_sys
+
+            except Exception as e:
+                st.error(f"Error guardando prompts: {e}")
+
+    st.markdown("---")
+    with st.expander("🕰️ Ver Prompts de Respaldo (Versión 1.0 - Pre-Auditoría)", expanded=False):
+        st.caption("Estos son los prompts originales por si necesitas consultar cómo operaba el sistema anteriormente.")
+        col_v1_trans, col_v1_edit = st.columns(2)
+        with col_v1_trans:
+            st.markdown("##### Traductor v1")
+            
+            trans_v1_content = current_prompts.get("translator_v1", {}).get("system")
+            if not trans_v1_content:
+                # Intento de lectura pura de línea si yaml_safe_load falló parcial
+                trans_v1_content = "No disponible. Revisa config/prompts.yaml"
+                
+            st.code(trans_v1_content, language="markdown")
+        with col_v1_edit:
+            st.markdown("##### Editor v1")
+            edit_v1_content = current_prompts.get("editor_v1", {}).get("system")
+            if not edit_v1_content:
+                edit_v1_content = "No disponible. Revisa config/prompts.yaml"
+            st.code(edit_v1_content, language="markdown")
 
 # --- Tab 2: Scraper Settings ---
 with tab2:
@@ -1096,12 +1127,39 @@ with tab3:
                                 )
 
                         # Visual Settings
-                        with st.expander("🎨 Configuración Visual", expanded=True):
+                        with st.expander("🎨 Configuración Visual / Caché", expanded=True):
                             visual_analysis_enabled = st.checkbox(
                                 "Activar Análisis Visual",
                                 value=True,
                                 help="Generar categorías y prompts para imágenes.",
                             )
+                            
+                            st.markdown("---")
+                            if st.button("🧹 Limpiar Caché IA", help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.", use_container_width=True):
+                                try:
+                                    import re
+                                    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(selected_id))
+                                    count = 0
+                                    
+                                    # NEWS_COLLECTOR_PATH is available globally in admin_panel.py
+                                    # Check both global cache and the cloned temp repo cache
+                                    cache_dirs = [
+                                        NEWS_COLLECTOR_PATH / "data" / "cache" / "editor",
+                                        NEWS_COLLECTOR_PATH / "temp" / "source" / "data" / "cache" / "editor"
+                                    ]
+                                    
+                                    for cache_dir in cache_dirs:
+                                        if cache_dir.exists():
+                                            for file_path in cache_dir.glob(f"{safe_id}_*.txt"):
+                                                file_path.unlink()
+                                                count += 1
+                                                
+                                    if count > 0:
+                                        st.success(f"✅ Caché eliminada ({count} archivos).")
+                                    else:
+                                        st.info("ℹ️ No se encontraron archivos de caché para este artículo.")
+                                except Exception as e:
+                                    st.error(f"Error al limpiar caché: {str(e)}")
 
                         # Process Button
                         is_pub = False

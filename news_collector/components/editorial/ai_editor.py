@@ -98,11 +98,9 @@ class EditorAgent:
             api_url=self.api_url, model=self.model, timeout=3600
         )
         logger.info(
-            "EditorAgent model routing resolved: default=%s, translator=%s, editor=%s, headlines=%s",
-            self.model,
-            self.translator_model,
-            self.editor_model,
-            self.headlines_model,
+            f"EditorAgent model routing resolved: default={self.model}, "
+            f"translator={self.translator_model}, editor={self.editor_model}, "
+            f"headlines={self.headlines_model}"
         )
 
     def _load_prompts(self) -> dict:
@@ -482,7 +480,7 @@ class EditorAgent:
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
     def process_article(  # noqa: C901
-        self, raw_text: str | dict, override_date: str | None = None
+        self, raw_text: str | dict, override_date: str | None = None, explicit_article_id: str | None = None
     ) -> str:
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
@@ -496,7 +494,7 @@ class EditorAgent:
         source_url = None
         source_id = None
         source_name = None
-        article_id = "unknown"
+        article_id = explicit_article_id or "unknown"
 
         if isinstance(raw_text, dict):
             title = raw_text.get("title", "") or ""
@@ -518,12 +516,13 @@ class EditorAgent:
                 )
             )
             raw_category = (raw_text.get("metadata") or {}).get("category", "other")
-            article_id = str(raw_text.get("id") or "unknown")
+            if article_id == "unknown":
+                article_id = str(raw_text.get("id") or "unknown")
         else:
             content = raw_text
             import hashlib
-
-            article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
+            if article_id == "unknown":
+                article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
             raw_category = "other"
 
         # Map source category to site category

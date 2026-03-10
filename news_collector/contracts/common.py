@@ -20,6 +20,9 @@ class ArticleMetadata(TypedDict, total=False):
     enrichment: ArticleEnrichment
     image_status: str
     image_source: str
+    image_url: str
+    normalized_title: str
+    normalized_summary: str
 
 
 class ArticleMetadataModel(BaseModel):
@@ -32,6 +35,9 @@ class ArticleMetadataModel(BaseModel):
     enrichment: ArticleEnrichmentModel | None = None
     image_status: str | None = None
     image_source: str | None = None
+    image_url: str | None = None
+    normalized_title: str | None = None
+    normalized_summary: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 

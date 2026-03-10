@@ -303,10 +303,7 @@ def canonicalize_model_id(
         log_key = (stage, raw, canonical)
         if log_key not in _NORMALIZATION_LOGGED:
             resolved_logger.info(
-                "Normalized Ollama model for stage '%s': '%s' -> '%s'",
-                stage,
-                raw,
-                canonical,
+                f"Normalized Ollama model for stage '{stage}': '{raw}' -> '{canonical}'"
             )
             _NORMALIZATION_LOGGED.add(log_key)
     return canonical
@@ -378,10 +375,7 @@ def resolve_ollama_model_map(  # noqa: C901
         resolved_logger = logger or LOGGER
         if log_key not in _NORMALIZATION_LOGGED:
             resolved_logger.info(
-                "Normalized Ollama model for stage '%s': '%s' -> '%s'",
-                DEFAULT_STAGE,
-                raw,
-                base_model,
+                f"Normalized Ollama model for stage '{DEFAULT_STAGE}': '{raw}' -> '{base_model}'"
             )
             _NORMALIZATION_LOGGED.add(log_key)
 
@@ -430,10 +424,7 @@ def resolve_ollama_model_map(  # noqa: C901
                     resolved_logger = logger or LOGGER
                     if log_key not in _NORMALIZATION_LOGGED:
                         resolved_logger.info(
-                            "Normalized Ollama model for stage '%s': '%s' -> '%s'",
-                            stage,
-                            raw,
-                            canonical,
+                            f"Normalized Ollama model for stage '{stage}': '{raw}' -> '{canonical}'"
                         )
                         _NORMALIZATION_LOGGED.add(log_key)
             else:
@@ -453,10 +444,7 @@ def resolve_ollama_model_map(  # noqa: C901
             resolved_logger = logger or LOGGER
             if inheritance_log_key not in _INHERITANCE_LOGGED:
                 resolved_logger.info(
-                    "Inherited Ollama model for stage '%s' from '%s': '%s'",
-                    stage,
-                    DEFAULT_STAGE,
-                    resolved_map[stage].model_id,
+                    f"Inherited Ollama model for stage '{stage}' from '{DEFAULT_STAGE}': '{resolved_map[stage].model_id}'"
                 )
                 _INHERITANCE_LOGGED.add(inheritance_log_key)
 
@@ -492,7 +480,7 @@ def resolve_ollama_model_map(  # noqa: C901
     serialized_map = _serialize_map_for_logging(resolved_map)
     signature = json.dumps(serialized_map, sort_keys=True, separators=(",", ":"))
     if signature not in _MODEL_MAP_LOGGED:
-        resolved_logger.info("Resolved Ollama model map: %s", signature)
+        resolved_logger.info(f"Resolved Ollama model map: {signature}")
         _MODEL_MAP_LOGGED.add(signature)
 
     return resolved_map

@@ -151,7 +151,7 @@ class EditorialAuditor:
             if fallback_config is None:
                 fallback_config = load_config()
             logger.warning(
-                "Auditor model resolution fallback due to invalid config: %s", exc
+                f"Auditor model resolution fallback due to invalid config: {exc}"
             )
             model = get_model_for_stage(
                 "auditor", config=fallback_config, logger=logger
@@ -168,13 +168,7 @@ class EditorialAuditor:
             max_retries=self.max_retries,
         )
         logger.info(
-            "Auditor configured: endpoint=%s model=%s timeout=%ss retries=%s health_timeout=%ss optional=%s",
-            self.api_url,
-            self.model,
-            self.timeout_seconds,
-            self.max_retries,
-            self.health_timeout_seconds,
-            self.optional,
+            f"Auditor configured: endpoint={self.api_url} model={self.model} timeout={self.timeout_seconds}s retries={self.max_retries} health_timeout={self.health_timeout_seconds}s optional={self.optional}"
         )
 
         self.prompts = self._load_prompts()
@@ -345,7 +339,7 @@ class EditorialAuditor:
                     f"Ollama unavailable before audit call ({readiness_reason}); "
                     "audit skipped."
                 )
-                logger.warning("Auditor skipped for %s: %s", article_id, reason)
+                logger.warning(f"Auditor skipped for {article_id}: {reason}")
                 result = {
                     "status": "audit_failed",
                     "reason": reason,
