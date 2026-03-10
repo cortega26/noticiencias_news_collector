@@ -300,6 +300,9 @@ class RefineryEngine:
             image_slug = f"{canonical_date}-{safe_id}"
 
         raw_image_url = article.get("image_url")
+        if isinstance(raw_image_url, str):
+            raw_image_url = raw_image_url.strip()
+        
         if raw_image_url and raw_image_url.startswith("http"):
             local_image_ref = self._download_image(
                 raw_image_url, image_slug, target_dir
