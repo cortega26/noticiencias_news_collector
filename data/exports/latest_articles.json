@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-12T07:06:11.202443+00:00",
+  "generated_at": "2026-03-13T07:05:01.456159+00:00",
   "contract": "news_collector.export.v1",
   "article_count": 0,
   "articles": []
