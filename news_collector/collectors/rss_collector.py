@@ -481,12 +481,19 @@ class RSSCollector(BaseCollector):
             if response.status_code == 304:
                 # Sometimes 304 is returned but we might want to force refresh if local cache invalid?
                 # Optimization: 304 means success but no new content. Update metadata timestamp.
-                with contextlib.suppress(Exception):
+                try:
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=cached_headers.get("content_hash"),
+                    )
+                except Exception as e:
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.metadata_update_failed",
+                        source_id=source_id,
+                        details={"error": str(e), "context": "304_response"},
                     )
                 return {
                     "success": True,
@@ -526,12 +533,19 @@ class RSSCollector(BaseCollector):
                     "info", "collector.feed.content_unchanged", source_id=source_id
                 )
                 # Update metadata timestamp even if 304-equivalent
-                with contextlib.suppress(Exception):
+                try:
                     self.db_manager.update_source_feed_metadata(
                         source_id,
                         etag=response.headers.get("ETag"),
                         last_modified=response.headers.get("Last-Modified"),
                         content_hash=content_hash,
+                    )
+                except Exception as e:
+                    self._emit_log(
+                        "warning",
+                        "collector.feed.metadata_update_failed",
+                        source_id=source_id,
+                        details={"error": str(e), "context": "content_unchanged"},
                     )
                 return {
                     "success": True,
@@ -541,12 +555,19 @@ class RSSCollector(BaseCollector):
                 }  # Treat as 304 logic upstream
 
             # Save metadata
-            with contextlib.suppress(Exception):
+            try:
                 self.db_manager.update_source_feed_metadata(
                     source_id,
                     etag=response.headers.get("ETag"),
                     last_modified=response.headers.get("Last-Modified"),
                     content_hash=content_hash,
+                )
+            except Exception as e:
+                self._emit_log(
+                    "warning",
+                    "collector.feed.metadata_update_failed",
+                    source_id=source_id,
+                    details={"error": str(e), "context": "new_content"},
                 )
 
             return {

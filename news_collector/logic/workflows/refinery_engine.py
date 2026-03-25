@@ -359,15 +359,6 @@ class RefineryEngine:
                 target_file_path = posts_dir / output_filename
                 iteration += 1
 
-            # CRITICAL: Persist immediately
-            if hasattr(self.db, "set_canonical_slug"):
-                try:
-                    self.db.set_canonical_slug(article_id, final_slug)
-                    logger.info(f"🔒 Identity Created: {final_slug}")
-                except Exception as e:
-                    logger.error(f"Failed to persist canonical slug: {e}")
-                    pass
-
         # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
         # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
         # Check cached score first.
@@ -386,6 +377,19 @@ class RefineryEngine:
                 article_id,
             )
             return False
+
+        # Persist canonical slug AFTER policy approval (B-02 / F-0018)
+        if hasattr(self.db, "set_canonical_slug"):
+            try:
+                persisted = self.db.set_canonical_slug(article_id, final_slug)
+                if persisted:
+                    logger.info(f"🔒 Identity Created: {final_slug}")
+                else:
+                    logger.info(
+                        f"🔒 Canonical slug already exists for article {article_id}: {final_slug}"
+                    )
+            except Exception as e:
+                logger.error(f"Failed to persist canonical slug: {e}")
 
         # 4. Create Branch
         # Create/sync the branch before writing files so branch collisions or
