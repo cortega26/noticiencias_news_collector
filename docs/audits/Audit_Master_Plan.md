@@ -44,7 +44,20 @@ Last updated: 2026-01-02
 - Focus on S0/S1 first; do not start UX churn (A4b) until A2/A6/A1 gates are met.
 - Evidence standard: file paths, line refs, logs, tests, or minimal PoC steps.
 
+## Completed audit rounds
+
+### 2026-Q1 (Jan) — Initial audit
+- Lanes 1 & 2 executed. Findings F-0001 through F-0011. All closed.
+
+### 2026-Q1 (Mar) — E2E deep audit
+- Full pipeline audit: backend, ingestion, enrichment, publication, Streamlit, frontend.
+- Findings F-0012 through F-0029 logged in [Findings_Ledger.md](Findings_Ledger.md).
+- Remediation tracked in [`remediation/`](remediation/README.md):
+  - [plan.md](remediation/plan.md) — Strategy, horizons, risks
+  - [backlog.md](remediation/backlog.md) — **Source of truth for work tracking**
+  - [test-plan.md](remediation/test-plan.md) — Required tests per fix
+
 ## Next actions
-1) Draft A-1 Context Pack (diagrams, trust boundaries, runtime topology, glossary).
-2) Log all A-1 discoveries that belong to other audits in Findings_Ledger.md.
-3) Begin A2 Quick Scan on noticiencias_news_collector and noticiencias.
+1) Execute Horizon A fixes (6 items, all `ready`). See [backlog.md](remediation/backlog.md).
+2) Unblock B-01 by merging A-04 first.
+3) After Horizon B, write C-01 and C-02 tests.

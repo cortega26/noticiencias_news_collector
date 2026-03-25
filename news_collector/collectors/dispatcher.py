@@ -22,9 +22,12 @@ Failure modes:
 """
 
 import asyncio
+import logging
 from typing import Any, Dict, Optional
 
 from news_collector.collectors.base_collector import BaseCollector, create_collector
+
+logger = logging.getLogger(__name__)
 
 
 class CollectorDispatcher:
@@ -37,8 +40,10 @@ class CollectorDispatcher:
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker
-        print(
-            f"DEBUG: Dispatcher init health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}"
+        logger.debug(
+            "Dispatcher init health_tracker=%s id=%s",
+            health_tracker,
+            id(health_tracker) if health_tracker else "None",
         )
 
         # Initialize collectors dynamically or lazily?
@@ -49,19 +54,18 @@ class CollectorDispatcher:
         try:
             self.collectors["rss"] = create_collector(rss_type)
         except Exception as e:
-            print(f"Error initializing RSS collector: {e}")
+            logger.error("Failed to initialize RSS collector: %s", e, exc_info=True)
 
         try:
             self.collectors["html"] = create_collector("html")
         except Exception as e:
-            print(f"Error initializing HTML collector: {e}")
+            logger.error("Failed to initialize HTML collector: %s", e, exc_info=True)
 
         try:
             self.collectors["headless"] = create_collector("headless")
         except Exception as e:
-            # Headless might fail if browsers not installed, that's okay, we log it
-            print(
-                f"Error initializing Headless collector (check playwright install): {e}"
+            logger.warning(
+                "Failed to initialize Headless collector (check playwright install): %s", e
             )
 
         if self.logger_factory:
@@ -73,11 +77,9 @@ class CollectorDispatcher:
             for name, c in self.collectors.items():
                 if hasattr(c, "health_tracker"):
                     c.health_tracker = self.health_tracker
-                    print(f"DEBUG: Dispatcher set tracker on {name} ({type(c)})")
+                    logger.debug("Dispatcher set tracker on %s (%s)", name, type(c))
                 else:
-                    print(
-                        f"DEBUG: Collector {name} ({type(c)}) bas NO health_tracker attr"
-                    )
+                    logger.debug("Collector %s (%s) has no health_tracker attr", name, type(c))
 
     def set_logger_factory(self, logger_factory):
         self.logger_factory = logger_factory
@@ -168,7 +170,7 @@ class CollectorDispatcher:
 
         for res in results_list:
             if isinstance(res, Exception):
-                # Log error
+                logger.error("Collector task failed: %s", res, exc_info=res)
                 continue
             if not isinstance(res, dict):
                 continue

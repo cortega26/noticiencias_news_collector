@@ -864,8 +864,11 @@ with tab3:
         if st.button(
             "🔄 Sincronizar y Recolectar",
             help="Ejecutar colector de noticias y traer nuevos artículos (puede tardar unos minutos).",
+            disabled=st.session_state.get("op_in_progress", False),
         ):
-            with st.spinner("Ejecutando recolección y análisis cognitivo..."):
+            st.session_state["op_in_progress"] = True
+            try:
+              with st.spinner("Ejecutando recolección y análisis cognitivo..."):
                 if not auth_ok:
                     st.warning("Autenticación requerida para sincronizar.")
                 else:
@@ -883,6 +886,8 @@ with tab3:
                             )
                     except Exception as e:
                         st.error(f"Error: {e}")
+            finally:
+                st.session_state["op_in_progress"] = False
 
     # Section 2: List Candidates
     # Look for the JSON file
@@ -1173,28 +1178,46 @@ with tab3:
                             pass  # noqa: SIM105
 
                         if is_pub:
-                            st.warning("⚠️ Artículo ya publicado/procesado.")
+                            st.error("⛔ Artículo ya publicado. Usa 'Forzar Reprocesamiento' si necesitas sobrescribir.")
 
                             col_pub1, col_pub2 = st.columns(2)
                             with col_pub1:
                                 if st.button(
                                     "🔄 Forzar Reprocesamiento (Sobrescribir)",
                                     key=f"reproc_{selected_id}",
+                                    disabled=st.session_state.get("op_in_progress", False),
                                 ):
-                                    with st.spinner(
-                                        f"Reprocesando ID {selected_id}..."
-                                    ):
-                                        # ... existing logic ...
-                                        # This needs refactoring to avoid duplication, but for now we copy the call logic
-                                        # or we assume the main button below handles force if we allow it fall through?
-                                        # No, let's keep one main action.
-                                        pass
+                                    st.session_state["op_in_progress"] = True
+                                    try:
+                                        with st.spinner(
+                                            f"Reprocesando ID {selected_id}..."
+                                        ):
+                                            if not auth_ok:
+                                                st.warning("Autenticación requerida para publicar.")
+                                            else:
+                                                skip_flag = not visual_analysis_enabled
+                                                result = run_refinery(
+                                                    process_id=str(selected_id),
+                                                    skip_visuals=skip_flag,
+                                                    export_path=str(JSON_PATH),
+                                                )
+                                                status = result.get("status")
+                                                if status == "success" and result.get("processed_count", 0) > 0:
+                                                    st.success("¡Reprocesamiento Completo!")
+                                                elif status == "error":
+                                                    st.error("Reprocesamiento Fallido.")
+                                                    st.expander("Detalles del Error").write(result.get("message"))
+                                                else:
+                                                    st.warning(f"Sin resultados: {result.get('message', 'Nada procesado.')}")
+                                    finally:
+                                        st.session_state["op_in_progress"] = False
 
                             with col_pub2:
                                 if st.button(
                                     "🗑️ Despublicar (Eliminar)",
                                     type="primary",
                                     key=f"del_{selected_id}",
+                                    disabled=st.session_state.get("op_in_progress", False),
                                 ):
                                     with st.spinner(
                                         f"Solicitando eliminación de {selected_id}..."
@@ -1257,61 +1280,67 @@ with tab3:
 
                             return f"~{est_min} mins ({model})"
 
-                        # Standard Process Button (Always visible for force reprocessing or new items)
+                        # Standard Process Button (hidden if already published — use Force Reprocess instead)
 
-                        # Calculate estimate
-                        content_len = len(selected_art.get("content", "").split()) if selected_art else 1000
-                        active_model = env_vars.get("OLLAMA_MODEL", "unknown")
-                        time_est = estimate_time(content_len, active_model)
+                        if not is_pub:
+                            # Calculate estimate
+                            content_len = len(selected_art.get("content", "").split()) if selected_art else 1000
+                            active_model = env_vars.get("OLLAMA_MODEL", "unknown")
+                            time_est = estimate_time(content_len, active_model)
 
-                        if st.button(
-                            f"✨ Refinar y Publicar (ID: {selected_id})",
-                            type="primary",
-                            help=f"Estimación de tiempo: {time_est}",
-                        ):
-                            with st.spinner(
-                                f"Procesando ID {selected_id}... Esto toma {time_est} en CPU."
+                            if st.button(
+                                f"✨ Refinar y Publicar (ID: {selected_id})",
+                                type="primary",
+                                help=f"Estimación de tiempo: {time_est}",
+                                disabled=st.session_state.get("op_in_progress", False),
                             ):
-                                # Direct call to main module
-                                if not auth_ok:
-                                    st.warning("Autenticación requerida para publicar.")
-                                else:
-                                    try:
-                                        # Reverse logic: enable means skip=False
-                                        skip_flag = not visual_analysis_enabled
-                                        result = run_refinery(
-                                            process_id=str(selected_id),
-                                            skip_visuals=skip_flag,
-                                            export_path=str(JSON_PATH),
-                                        )
-
-                                        status = result.get("status")
-                                        processed_count = result.get(
-                                            "processed_count", 0
-                                        )
-                                        if status == "success" and processed_count > 0:
-                                            st.success(
-                                                "¡Procesamiento Completo! Revisa el repo de tu web."
-                                            )
-                                            st.balloons()
-                                        elif status == "error":
-                                            st.error("Procesamiento Fallido.")
-                                            st.expander("Detalles del Error").write(
-                                                result.get("message")
-                                            )
-                                        elif status == "noop" or processed_count == 0:
-                                            message = result.get(
-                                                "message",
-                                                "No se encontraron artículos para procesar.",
-                                            )
-                                            st.warning(f"Sin resultados: {message}")
+                                st.session_state["op_in_progress"] = True
+                                try:
+                                    with st.spinner(
+                                        f"Procesando ID {selected_id}... Esto toma {time_est} en CPU."
+                                    ):
+                                        # Direct call to main module
+                                        if not auth_ok:
+                                            st.warning("Autenticación requerida para publicar.")
                                         else:
-                                            st.error("Procesamiento Fallido.")
-                                            st.expander("Detalles del Error").write(
-                                                result.get("message")
-                                            )
-                                    except Exception as e:
-                                        st.error(f"Error crítico de ejecución: {e}")
+                                            try:
+                                                # Reverse logic: enable means skip=False
+                                                skip_flag = not visual_analysis_enabled
+                                                result = run_refinery(
+                                                    process_id=str(selected_id),
+                                                    skip_visuals=skip_flag,
+                                                    export_path=str(JSON_PATH),
+                                                )
+
+                                                status = result.get("status")
+                                                processed_count = result.get(
+                                                    "processed_count", 0
+                                                )
+                                                if status == "success" and processed_count > 0:
+                                                    st.success(
+                                                        "¡Procesamiento Completo! Revisa el repo de tu web."
+                                                    )
+                                                    st.balloons()
+                                                elif status == "error":
+                                                    st.error("Procesamiento Fallido.")
+                                                    st.expander("Detalles del Error").write(
+                                                        result.get("message")
+                                                    )
+                                                elif status == "noop" or processed_count == 0:
+                                                    message = result.get(
+                                                        "message",
+                                                        "No se encontraron artículos para procesar.",
+                                                    )
+                                                    st.warning(f"Sin resultados: {message}")
+                                                else:
+                                                    st.error("Procesamiento Fallido.")
+                                                    st.expander("Detalles del Error").write(
+                                                        result.get("message")
+                                                    )
+                                            except Exception as e:
+                                                st.error(f"Error crítico de ejecución: {e}")
+                                finally:
+                                    st.session_state["op_in_progress"] = False
 
             else:
                 st.info("No se encontraron artículos en el archivo exportado.")
