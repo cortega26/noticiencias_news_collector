@@ -794,40 +794,47 @@ with tab2:
                         # 3. Clean Job History & Source Metadata to force re-fetch
                         # If we don't clear this, the collector will think it just ran
                         # and skip everything (304 Not Modified or "Duplicate Job")
+                        # B-06 / F-0029: All DELETEs + UPDATE wrapped in a single
+                        # transaction so partial failure leaves DB unchanged.
                         with sqlite3.connect(REFINERY_DB_PATH) as conn:
                             cursor = conn.cursor()
-
-                            # Wipe all article data
-                            tables_to_wipe = [
-                                "articles",
-                                "article_metrics",
-                                "score_logs",
-                            ]
-                            for table in tables_to_wipe:
-                                try:
-                                    # fmt: off
-                                    cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # nosemgrep # nosec
-                                    # fmt: on
-                                    st.write(f"  - Tabla `{table}` limpiada.")
-                                except Exception:  # noqa: S110, SIM105
-                                    pass  # Table might not exist yet
-
-                            # Reset Source Metadata (Force Re-fetch)
                             try:
-                                cursor.execute("""
-                                     UPDATE sources
-                                     SET last_checked = NULL,
-                                         last_successful_check = NULL,
-                                         feed_etag = NULL,
-                                         feed_last_modified = NULL
-                                 """)
-                                st.write(
-                                    "  - Metadatos de fuentes reiniciados (forzando re-colección)."
+                                # Pre-check which tables exist to avoid expected errors
+                                cursor.execute(
+                                    "SELECT name FROM sqlite_master WHERE type='table'"
                                 )
-                            except Exception as e:
-                                st.warning(f"No se pudieron reiniciar fuentes: {e}")
+                                existing_tables = {row[0] for row in cursor.fetchall()}
 
-                            conn.commit()
+                                # Wipe all article data
+                                tables_to_wipe = [
+                                    "articles",
+                                    "article_metrics",
+                                    "score_logs",
+                                ]
+                                for table in tables_to_wipe:
+                                    if table in existing_tables:
+                                        # fmt: off
+                                        cursor.execute(f"DELETE FROM {table}")  # noqa: S608  # nosemgrep # nosec
+                                        # fmt: on
+                                        st.write(f"  - Tabla `{table}` limpiada.")
+
+                                # Reset Source Metadata (Force Re-fetch)
+                                if "sources" in existing_tables:
+                                    cursor.execute("""
+                                         UPDATE sources
+                                         SET last_checked = NULL,
+                                             last_successful_check = NULL,
+                                             feed_etag = NULL,
+                                             feed_last_modified = NULL
+                                     """)
+                                    st.write(
+                                        "  - Metadatos de fuentes reiniciados (forzando re-colección)."
+                                    )
+
+                                conn.commit()
+                            except Exception:
+                                conn.rollback()
+                                raise
 
                         # Clear Streamlit Cache
                         st.cache_data.clear()
@@ -922,6 +929,25 @@ with tab3:
                 if isinstance(data, dict) and "articles" in data:
                     candidates = data["articles"]
                     candidates_source = f"Export JSON ({JSON_PATH.name})"
+                    # B-07 / F-0017: Warn if exported data is stale (> 30 min)
+                    _ts = data.get("exported_at") or data.get("generated_at")
+                    if _ts:
+                        try:
+                            from datetime import datetime as _dt, timezone as _tz
+
+                            _exported = _dt.fromisoformat(_ts)
+                            if _exported.tzinfo is None:
+                                _exported = _exported.replace(tzinfo=_tz.utc)
+                            _age_min = (
+                                _dt.now(_tz.utc) - _exported
+                            ).total_seconds() / 60
+                            if _age_min > 30:
+                                st.warning(
+                                    f"⚠️ Los datos del JSON tienen **{_age_min:.0f} minutos** "
+                                    "de antigüedad. Considera ejecutar Sync para obtener datos frescos."
+                                )
+                        except (ValueError, TypeError):
+                            pass  # Malformed timestamp — skip warning
                 elif isinstance(data, list):
                     candidates = data
                     candidates_source = f"Export JSON ({JSON_PATH.name}) - Legacy List"
@@ -1628,6 +1654,7 @@ with tab5:
                     with c3:
                         if st.button(
                             "🗑️ Despublicar",
+                            key=f"btn_despub_{f_path.name}",
                             width="stretch",
                         ):
                             if refinery_id:

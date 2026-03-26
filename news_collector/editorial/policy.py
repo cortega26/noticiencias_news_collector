@@ -139,7 +139,7 @@ class EditorialPolicy:
             return cls(
                 mode="velocity",
                 critic_threshold=70.0,
-                auditor_threshold=0.0,  # Advisory
+                auditor_threshold=3.0,  # B-01/C-03: Minimum quality floor in velocity mode
                 require_caveats=False,
             )
 

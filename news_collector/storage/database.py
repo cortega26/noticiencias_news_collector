@@ -496,6 +496,42 @@ class DatabaseManager:
 
             return article.published_url is not None or article.published_at is not None
 
+    def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
+        """
+        B-01 / F-0012: Marks article as 'publishing' before git operations.
+        Stores publishing_started_at and publishing_branch in article_metadata.
+        """
+        with self.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if not article:
+                return False
+
+            article.processing_status = "publishing"
+            article_metadata = dict(article.article_metadata or {})
+            article_metadata["publishing_started_at"] = datetime.now(
+                timezone.utc
+            ).isoformat()
+            article_metadata["publishing_branch"] = branch_name
+            article.article_metadata = article_metadata
+            session.add(article)
+            return True
+
+    def get_publishing_state(self, article_id: int) -> dict | None:
+        """
+        B-01 / F-0012: Returns publishing metadata if article is in 'publishing' state.
+        Returns None if article is not in publishing state or doesn't exist.
+        """
+        with self.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if not article or article.processing_status != "publishing":
+                return None
+
+            metadata = dict(article.article_metadata or {})
+            return {
+                "publishing_started_at": metadata.get("publishing_started_at"),
+                "publishing_branch": metadata.get("publishing_branch"),
+            }
+
     def is_processed(self, identifier: str | int) -> bool:
         """
         Backwards-compatible helper used by Refinery for file-based workflows.
@@ -596,7 +632,17 @@ class DatabaseManager:
 
         with self.get_session() as session:
             try:
-                # Verificar si ya existe por URL
+                # B-03 / F-0019: Compute content hash BEFORE URL check so both
+                # dedup checks run independently.  This catches syndicated
+                # articles that share content but arrive with different URLs.
+                norm_title, norm_summary, normalized_text = normalize_article_text(
+                    payload.get("title", ""),
+                    payload.get("summary", ""),
+                )
+                normalized_basis = normalized_text or payload["url"]
+                content_hash = sha256_hex(normalized_basis)
+
+                # Check 1: URL dedup
                 existing: Article | None = (
                     session.query(Article).filter_by(url=payload["url"]).first()
                 )
@@ -606,14 +652,7 @@ class DatabaseManager:
                     )
                     return None
 
-                norm_title, norm_summary, normalized_text = normalize_article_text(
-                    payload.get("title", ""),
-                    payload.get("summary", ""),
-                )
-                normalized_basis = normalized_text or payload["url"]
-                content_hash = sha256_hex(normalized_basis)
-
-                # Verificar duplicados exactos por hash
+                # Check 2: Content hash dedup (independent of URL check)
                 existing_by_content = (
                     session.query(Article).filter_by(content_hash=content_hash).first()
                 )
@@ -819,6 +858,7 @@ class DatabaseManager:
                         journal=payload.get("journal"),
                         is_preprint=payload.get("is_preprint", False),
                         language=payload.get("language", "en"),
+                        content_mode=payload.get("content_mode"),
                         processing_status=PENDING_STATUS,
                         article_metadata=article_metadata,
                         word_count=payload.get("word_count"),

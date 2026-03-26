@@ -131,7 +131,7 @@ ignore_errors = true
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --timeout=10 --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov-branch --cov-report=term-missing"
+addopts = "-ra --timeout=10 --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov=news_collector/storage --cov=news_collector/logic --cov-branch --cov-report=term-missing"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
@@ -142,7 +142,7 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
-source = ["news_collector/contracts", "news_collector/reranker", "news_collector/utils"]
+source = ["news_collector/contracts", "news_collector/reranker", "news_collector/utils", "news_collector/storage", "news_collector/logic"]
 omit = [
     "news_collector/utils/logger.py",
     "news_collector/utils/metrics.py",

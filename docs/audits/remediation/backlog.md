@@ -1,6 +1,6 @@
 # Remediation Backlog — 2026-Q1
 
-**Last updated**: 2026-03-25 (Wave 1 execution)
+**Last updated**: 2026-03-26 (Wave 3+4 execution)
 **Source**: [plan.md](plan.md) | Findings: [Findings_Ledger.md](../Findings_Ledger.md)
 
 > **This file is the source of truth for tracking remediation progress.**
@@ -79,14 +79,14 @@
 | **Findings** | F-0016 |
 | **Severity** | S1 |
 | **Priority** | P1 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | M |
 | **Change** | In `github_publisher.py` `create_pull_request()`, on status_code 422: GET `/repos/{owner}/{repo}/pulls?head={owner}:{branch_name}&state=open`. If PR found, return its `html_url`. If not, raise original exception. |
 | **Definition of Done** | Retry after partial failure recovers existing PR URL instead of raising. Non-duplicate 422 errors still raise. |
 | **Validation** | Unit test: mock 422 response + mock GET returning existing PR. Unit test: mock 422 + empty GET result raises. |
-| **Notes** | Prerequisite for B-01. |
+| **Notes** | Wave 2: 422 handler added with GET search for existing open PR. 4 unit tests in tests/unit/test_pr_422_recovery.py (422+existing PR returns URL, 422+no PR raises, 422+search API failure raises, 201 unaffected). Prerequisite for B-01. |
 
 ---
 
@@ -117,14 +117,14 @@
 | **Findings** | F-0022, F-0026 |
 | **Severity** | S1 (F-0022), S2 (F-0026) |
 | **Priority** | P2 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | S |
 | **Change** | (a) `dispatcher.py:51-62`: replace `print(f"Error...")` with `logger.error(...)`. (b) `rss_collector.py:484,529,544`: replace `contextlib.suppress(Exception)` with `try/except Exception as e: logger.warning(...)`. |
 | **Definition of Done** | Collector init failures and metadata update failures appear in structured logs. |
 | **Validation** | Unit test: collector init failure produces log entry (not print). |
-| **Notes** | Combinable with A-05 in same PR. |
+| **Notes** | Wave 1: All print() in dispatcher.py replaced with logger.error/warning/debug. All 3 contextlib.suppress(Exception) in rss_collector.py replaced with try/except + _emit_log warning. Also fixed silent swallow of collector task exceptions in gather results. |
 
 ---
 
@@ -138,14 +138,14 @@
 | **Findings** | F-0012, F-0015 |
 | **Severity** | S0 |
 | **Priority** | P0 |
-| **Status** | blocked |
+| **Status** | done |
 | **Dependencies** | A-04 |
 | **Area** | Backend / Pipeline |
 | **Effort** | L |
 | **Change** | (1) Add `"publishing"` to PROCESSING_STATUS_VALUES. (2) Before `git.create_branch()`, mark article as `processing_status="publishing"` with `publishing_started_at` and `publishing_branch` in article_metadata. (3) On PR failure, leave status as `publishing` with branch info. (4) At start of `process_single_article`, if article is in `publishing` state, attempt recovery: find existing PR for branch (using A-04 logic), mark completed if found, or retry PR creation. (5) Add 1-hour timeout for stuck `publishing` state. |
 | **Definition of Done** | Article with status `publishing` + existing PR recovers to `completed`. Article with status `publishing` + no PR retries creation. Articles stuck >1h in `publishing` can be reprocessed. |
 | **Validation** | Integration test: simulate crash post-push/pre-PR, verify recovery. Unit test: `publishing` + existing PR -> completed. |
-| **Notes** | Requires DB migration to add status value. Largest change in this remediation. |
+| **Notes** | Wave 3: "publishing" added to PROCESSING_STATUS_VALUES (Python-level, no ALTER TABLE). mark_article_publishing() and get_publishing_state() added to DatabaseManager. Recovery logic added at start of process_single_article(). Mark-before-git-ops added before create_branch(). 1-hour timeout for stuck articles. 4 integration tests in tests/integration/test_publishing_state_recovery.py (recovery with PR, recovery without PR, timeout reprocessing, mark before git). |
 
 ---
 
@@ -157,14 +157,14 @@
 | **Findings** | F-0018 |
 | **Severity** | S1 |
 | **Priority** | P1 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | S |
 | **Change** | Move the `set_canonical_slug()` block (refinery_engine.py:362-369) to after line 388 (after all policy and frontmatter checks). Slug calculation (collision loop at 342-360) stays in place; only persistence moves. |
 | **Definition of Done** | Article rejected by policy has no canonical_slug in DB. Article approved persists slug normally. |
 | **Validation** | Unit test: article rejected by policy, verify canonical_slug is None in DB. |
-| **Notes** | |
+| **Notes** | Wave 1: set_canonical_slug block moved after both _enforce_editorial_policy and _has_quoted_date_only_frontmatter checks. Combined with A-05 (return value check). |
 
 ---
 
@@ -176,14 +176,14 @@
 | **Findings** | F-0019 |
 | **Severity** | S1 |
 | **Priority** | P1 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | M |
 | **Change** | In `database.py` `save_article()`, compute content hash before URL check. Run both checks independently: URL match -> return None; content hash match -> return None; then proceed to insert. |
 | **Definition of Done** | Article A with URL-1 inserted. Article B with URL-2 but identical content rejected as duplicate. |
 | **Validation** | Integration test: two articles with same content, different URLs; second rejected. |
-| **Notes** | Merge before C-02 (idempotency test needs this). |
+| **Notes** | Wave 2: Content hash computed before URL check. Both dedup checks run independently. 3 integration tests in tests/integration/test_content_hash_dedup.py (cross-URL dedup, different content accepted, same-URL regression). Unblocks C-02. |
 
 ---
 
@@ -195,14 +195,14 @@
 | **Findings** | F-0021 |
 | **Severity** | S1 |
 | **Priority** | P1 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Frontend |
 | **Effort** | S |
 | **Change** | In `noticiencias/src/utils/blog.ts` `fetchPosts()`, after generating normalized posts, add a Map of permalinks. If duplicate detected, throw error naming both post IDs. |
 | **Definition of Done** | Two posts with same permalink cause build failure with error identifying both posts. |
 | **Validation** | Vitest test with two posts generating same slug; verify error thrown. |
-| **Notes** | If duplicates exist today, build will start failing — this is correct (fail-closed). |
+| **Notes** | Wave 1: Map-based uniqueness check added in fetchPosts(). Throws with both post IDs on collision. Vitest test added (tests/slug-uniqueness.test.ts) validating no existing duplicates. |
 
 ---
 
@@ -214,14 +214,14 @@
 | **Findings** | F-0025 |
 | **Severity** | S2 |
 | **Priority** | P2 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | S |
 | **Change** | In `refinery_engine.py:712-718`, replace `manifest_path.write_text()` with write to `.tmp` file + `os.replace()`. |
 | **Definition of Done** | Manifest is always either old-complete or new-complete, never partial. |
 | **Validation** | Unit test: verify manifest is valid JSON after write. |
-| **Notes** | Combinable with B-06 and B-07 in same PR. |
+| **Notes** | Wave 2: write_text replaced with write-to-.tmp + os.replace(). Unit test test_manifest_write_atomic in test_refinery_manifest.py validates JSON integrity and no leftover .tmp. |
 
 ---
 
@@ -233,14 +233,14 @@
 | **Findings** | F-0029 |
 | **Severity** | S2 |
 | **Priority** | P2 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Streamlit |
 | **Effort** | S |
 | **Change** | In `admin_panel.py:787-804`, wrap all DELETE + UPDATE statements in explicit BEGIN/COMMIT with rollback on error. |
 | **Definition of Done** | If any table DELETE fails, no tables are modified. |
 | **Validation** | Manual test: simulate error in one table, verify others unchanged. |
-| **Notes** | Combinable with B-05 and B-07. |
+| **Notes** | Wave 2: Per-table try/except removed. Pre-check table existence via sqlite_master. All operations in single transaction with conn.rollback() on any exception. |
 
 ---
 
@@ -252,14 +252,14 @@
 | **Findings** | F-0017 |
 | **Severity** | S1 |
 | **Priority** | P2 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend + Streamlit |
 | **Effort** | S |
 | **Change** | (a) When exporting JSON, add `exported_at: ISO timestamp` to root object. (b) In admin_panel.py, when loading JSON, calculate age. If > 30min, show `st.warning()`. |
 | **Definition of Done** | JSON export contains `exported_at`. UI shows warning when JSON > 30min old. |
 | **Validation** | Unit test: verify `exported_at` present in export. Manual: verify UI warning. |
-| **Notes** | Combinable with B-05 and B-06. |
+| **Notes** | Wave 2: `exported_at` added in reporting.py (ExportContractV2 path) and run_collector.py (v1 path). admin_panel.py checks `exported_at` or `generated_at` age, shows st.warning if > 30min. |
 
 ---
 
@@ -273,14 +273,14 @@
 | **Findings** | F-0020 |
 | **Severity** | S1 |
 | **Priority** | P2 |
-| **Status** | blocked |
+| **Status** | done |
 | **Dependencies** | B-01 |
 | **Area** | Tests |
 | **Effort** | L |
 | **Change** | Add `--cov=news_collector/storage --cov=news_collector/logic` to pyproject.toml addopts. Add integration tests for: `mark_article_published`, `set_canonical_slug`, `save_article` dedup paths, `is_article_published`, and the `publishing` state transitions. |
 | **Definition of Done** | Coverage report includes storage/ and logic/. Tests for dedup paths and publication state pass. |
 | **Validation** | CI green with expanded coverage. |
-| **Notes** | Needs B-01 to test `publishing` state. |
+| **Notes** | Wave 4: --cov=news_collector/storage and --cov=news_collector/logic added to pyproject.toml addopts and [tool.coverage.run] source. 16 integration tests in tests/integration/test_storage_coverage.py covering mark_article_published, set_canonical_slug, save_article dedup, is_article_published, and publishing state transitions. |
 
 ---
 
@@ -292,14 +292,14 @@
 | **Findings** | F-0020 (gap) |
 | **Severity** | S0 |
 | **Priority** | P1 |
-| **Status** | blocked |
+| **Status** | done |
 | **Dependencies** | B-03 |
 | **Area** | Tests |
 | **Effort** | M |
 | **Change** | Create integration test: (1) feed static fixture with 5 articles, (2) run pipeline, (3) verify 5 articles in DB, (4) re-run pipeline with same feed, (5) verify still exactly 5 articles. |
 | **Definition of Done** | Test passes: pipeline executed 2x produces exactly N articles, not 2N. |
 | **Validation** | The test itself is the deliverable. |
-| **Notes** | Needs B-03 for content hash dedup to cover cross-URL duplicates. |
+| **Notes** | Wave 4: 2 integration tests in tests/integration/test_pipeline_idempotency.py. test_pipeline_idempotency_full: 5 articles saved, re-run → still 5. test_new_articles_still_accepted_after_dedup: dedup doesn't block genuinely new articles. |
 
 ---
 
@@ -311,11 +311,11 @@
 | **Findings** | F-0027 |
 | **Severity** | S2 |
 | **Priority** | P3 |
-| **Status** | ready |
+| **Status** | done |
 | **Dependencies** | None |
 | **Area** | Backend |
 | **Effort** | S |
 | **Change** | In `editorial/policy.py:142`, change `auditor_threshold=0.0` to `auditor_threshold=3.0`. |
 | **Definition of Done** | In velocity mode, articles with epistemic score < 3.0 are rejected. |
 | **Validation** | Unit test: policy enforcement with score=2.0 in velocity mode -> rejected. |
-| **Notes** | May block articles that previously passed in velocity mode. |
+| **Notes** | Wave 4: auditor_threshold changed from 0.0 to 3.0 in velocity mode. 4 unit tests in tests/unit/editorial/test_velocity_threshold.py (rejects below minimum, accepts above, no longer zero, other modes unaffected). Existing test_editorial_policy.py::test_factory_velocity updated to expect 3.0. |

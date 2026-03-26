@@ -38,6 +38,7 @@ class ArticleValidationItem(BaseModel):
     summary: str | None = None
     source_id: str
     published_date: Any | None = None
+    content_mode: str | None = None
     # CRIT-03: Forbid extra fields at boundary (LAW-1 compliance)
     model_config = ConfigDict(extra="forbid")
 

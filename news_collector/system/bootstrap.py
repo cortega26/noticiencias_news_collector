@@ -219,7 +219,7 @@ def check_system_health(
 
 
 def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
-    """Internal helper to verify Ollama availability."""
+    """Internal helper to verify LLM provider availability (Gemini or Ollama)."""
     if _is_smoke_mode_enabled():
         import news_collector.config.settings
 
@@ -244,6 +244,56 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
         )
 
         strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
+
+        # Check if Gemini is the active provider (API key configured)
+        gemini_api_key = getattr(getattr(CONFIG, "gemini", None), "api_key", None)
+        if gemini_api_key:
+            # Gemini is the active provider — verify Gemini health, skip Ollama
+            try:
+                from news_collector.infrastructure.llm.gemini_provider import (
+                    GeminiProvider,
+                )
+
+                gemini_model = getattr(CONFIG.gemini, "model", "gemini-2.5-flash")
+                provider = GeminiProvider(
+                    api_key=gemini_api_key, model=gemini_model
+                )
+                healthy, reason = provider.check_health(timeout_seconds=5)
+                if healthy:
+                    if logger:
+                        logger.create_module_logger("system").info(
+                            f"Gemini health check passed (model={gemini_model})."
+                        )
+                else:
+                    warning_msg = f"Gemini health check failed: {reason}"
+                    warnings.append(warning_msg)
+                    disable_llm = True
+                    if logger:
+                        logger.create_module_logger("system").warning(warning_msg)
+                    if strict_llm_mode:
+                        raise RuntimeError(warning_msg)
+            except RuntimeError:
+                raise
+            except Exception as gemini_err:
+                warning_msg = f"Gemini health check error: {gemini_err}"
+                warnings.append(warning_msg)
+                disable_llm = True
+                if logger:
+                    logger.create_module_logger("system").warning(warning_msg)
+                if strict_llm_mode:
+                    raise RuntimeError(warning_msg) from gemini_err
+
+            if disable_llm:
+                import news_collector.config.settings
+
+                news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
+                if logger:
+                    logger.create_module_logger("system").warning(
+                        "LLM System Disabled: Gemini health check failed."
+                    )
+            return
+
+        # No Gemini API key — fall back to Ollama health check
         stage_models = {}
         try:
             stage_models = resolve_ollama_stage_models(
@@ -328,7 +378,7 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
         news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
         if logger:
             logger.create_module_logger("system").warning(
-                "⚠️ LLM System Disabled due to health check failure."
+                "LLM System Disabled: Ollama health check failed."
             )
 
 

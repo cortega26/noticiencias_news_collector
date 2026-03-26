@@ -29,9 +29,9 @@
 
 | Horizon | Items | Done | Blocked |
 |---------|-------|------|---------|
-| A (Immediate) | 6 | 0 | 0 |
-| B (Structural) | 7 | 0 | 1 (B-01 needs A-04) |
-| C (Maturity) | 3 | 0 | 2 (C-01 needs B-01, C-02 needs B-03) |
+| A (Immediate) | 6 | 6 (A-01, A-02, A-03, A-04, A-05, A-06) | 0 |
+| B (Structural) | 7 | 7 (B-01, B-02, B-03, B-04, B-05, B-06, B-07) | 0 |
+| C (Maturity) | 3 | 3 (C-01, C-02, C-03) | 0 |
 
 ## Deferred findings
 

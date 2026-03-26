@@ -36,7 +36,18 @@ from news_collector.validation.rules import (
 
 # Default patterns to block based on user feedback
 DEFAULT_BLOCKLIST = [
-    r"The Download:.*",  # Matches "The Download: cut through AI coding hype..."
+    # Newsletter digests
+    r"The Download:.*",
+    # Shopping, deals, and product promotions
+    r"(?i)(big spring sale|% off|deal:|best deals|price drop|coupon|voucher|discount code)",
+    # Product buying guides disguised as articles
+    r"(?i)(best .+ to buy|buying guide|vs\.\s)",
+    # University minutiae irrelevant to general audience
+    r"(?i)(named.*fellow|honorary degree|commencement address|class of \d{4}|admitted to the|divestment resolution|AAAS fellow)",
+    # Corporate PR / hiring / fundraising
+    r"(?i)(is hiring|is laying off|raises \$\d+[MB]|funding round|series [A-D]\b)",
+    # Paywalled stubs with no usable content
+    r"(?i)^STAT\+:",
 ]
 
 

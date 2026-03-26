@@ -5,7 +5,16 @@ from news_collector.system import bootstrap
 
 def test_ollama_health_check_graceful_failure():
     # Patch requests.get globally, since bootstrap.py imports it locally but uses the global module
-    with patch("requests.get", side_effect=Exception("Connection refused")):
+    # Also patch Gemini API key to None so the Ollama path is exercised
+    with patch("requests.get", side_effect=Exception("Connection refused")), \
+         patch("news_collector.config.settings.CONFIG") as mock_cfg, \
+         patch(
+             "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
+             return_value={"default": "llama3.3:latest"},
+         ):
+        mock_cfg.gemini.api_key = None
+        mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
+
         # Mock config
         mock_config = {"url": "http://foo"}  # dummy
 
@@ -23,10 +32,8 @@ def test_ollama_health_check_graceful_failure():
         )
 
         # Should return healthy=True (issues are handled as warnings for LLM to avoid blocking boot)
-        # Wait, the implementation I wrote adds to 'warnings' list, not 'critical_issues'
         assert "warnings" in res
         assert any("LLM Provider unreachable" in w for w in res["warnings"])
 
         # Ensure it didn't crash
-        assert res["healthy"]  # Or False if we decided it was critical?
-        # In my implementation: "Do not mark as critical to avoid stopping the collector"
+        assert res["healthy"]

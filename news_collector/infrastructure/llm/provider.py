@@ -2,10 +2,15 @@
 Unified Ollama Provider.
 Replaces legacy llm_client.py and ai_editor.py logic.
 Supports both Sync (legacy) and Async (pipeline) operations.
+
+Rate-limit aware:
+- Integrates with LLMRateLimiter for concurrency control.
+- Distinguishes 429 from other errors; feeds circuit breaker.
 """
 
 import json
 import logging
+import random
 import re
 import time
 from typing import Any, Dict, Generator, Optional, Union
@@ -18,18 +23,22 @@ from news_collector.infrastructure.llm.model_registry import (
     is_no_warn_mode_enabled,
     is_strict_mode_enabled,
 )
-from news_collector.utils.logger import get_logger
-from tenacity import (
-    Retrying,
-    before_sleep_log,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-    wait_random,
+from news_collector.infrastructure.llm.rate_limiter import (
+    LLMRateLimiter,
+    redact_message,
 )
+from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("infrastructure.llm.provider")
 _NON_CANONICAL_WARNED: set[tuple[str, str, str]] = set()
+
+
+class RateLimitError(Exception):
+    """Raised when the provider returns 429 and the circuit breaker is open."""
+
+    def __init__(self, message: str = "LLM rate limit exceeded", retry_after: Optional[float] = None):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class OllamaProvider:
@@ -40,6 +49,7 @@ class OllamaProvider:
     - Robust JSON extraction
     - Streaming support
     - Configurable timeouts & retries
+    - Rate-limiter integration (concurrency + circuit breaker)
     """
 
     def __init__(
@@ -144,6 +154,21 @@ class OllamaProvider:
             payload["format"] = "json"
         return payload
 
+    # ---- Retry helpers ----
+
+    @staticmethod
+    def _backoff_delay(attempt: int, base: float = 2.0, cap: float = 15.0, jitter: float = 1.5) -> float:
+        delay = min(cap, base * (2 ** attempt))
+        return delay + random.uniform(0, jitter)
+
+    @staticmethod
+    def _is_429_response(response: requests.Response) -> bool:
+        return response.status_code == 429
+
+    @staticmethod
+    def _is_429_httpx(response: httpx.Response) -> bool:
+        return response.status_code == 429
+
     # --- ASYNC API (Recommended) ---
 
     async def generate_async(
@@ -160,27 +185,61 @@ class OllamaProvider:
             prompt, system, stream=False, json_mode=json_mode, model=model
         )
 
-        try:
-            logger.debug(f"Sending async prompt to Ollama ({payload['model']})...")
-            start = time.time()
-            response = await self.async_client.post(
-                self.api_url, json=payload, timeout=self.timeout
-            )
-            response.raise_for_status()
-            data = response.json()
-            text = data.get("response", "")
+        limiter = LLMRateLimiter.get_instance()
 
-            logger.debug(f"Async LLM complete in {time.time() - start:.2f}s")
+        for attempt_num in range(1, self.max_retries + 2):  # max_retries + 1 total attempts
+            acquired = await limiter.acquire_async()
+            if not acquired:
+                raise RateLimitError("LLM circuit breaker is open — skipping request")
 
-            if json_mode:
-                return self._extract_json(str(text))
-            return str(text)
+            try:
+                logger.debug(
+                    "Sending async prompt to Ollama (%s) (attempt=%d/%d)",
+                    payload["model"], attempt_num, self.max_retries + 1,
+                )
+                start = time.time()
+                response = await self.async_client.post(
+                    self.api_url, json=payload, timeout=self.timeout
+                )
+                response.raise_for_status()
+                data = response.json()
+                text = data.get("response", "")
 
-        except httpx.RequestError as e:
-            logger.error(f"Async LLM Request Error: {e}")
-            raise
+                logger.debug("Async LLM complete in %.2fs", time.time() - start)
 
-    # --- SYNC API (Legacy/Compat) ---
+                limiter.circuit_breaker.record_success()
+
+                if json_mode:
+                    return self._extract_json(str(text))
+                return str(text)
+
+            except httpx.HTTPStatusError as e:
+                safe_msg = redact_message(str(e))
+                if self._is_429_httpx(e.response):
+                    limiter.circuit_breaker.record_rate_limit()
+                    logger.warning("Ollama 429 (attempt {}): {}", attempt_num, safe_msg)
+                    if attempt_num <= self.max_retries and not limiter.circuit_breaker.is_open:
+                        await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                        continue
+                    raise RateLimitError(safe_msg) from e
+                else:
+                    limiter.circuit_breaker.record_error()
+                    logger.error("Async LLM error (attempt {}): {}", attempt_num, safe_msg)
+                    if attempt_num <= self.max_retries:
+                        await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                        continue
+                    raise
+            except httpx.RequestError as e:
+                limiter.circuit_breaker.record_error()
+                logger.error("Async LLM Request Error (attempt {}): {}", attempt_num, e)
+                if attempt_num <= self.max_retries:
+                    await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                    continue
+                raise
+            finally:
+                limiter.release_async()
+
+        raise RuntimeError("Async retry loop exited without producing a response")
 
     # --- SYNC API (Legacy/Compat) ---
 
@@ -194,7 +253,7 @@ class OllamaProvider:
         log_errors_as_warning: bool = False,
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
         """
-        Sync generation with configurable retries.
+        Sync generation with configurable retries and rate-limiter integration.
         """
         payload = self._prepare_payload(
             prompt, system, stream=stream, json_mode=json_mode, model=model
@@ -206,51 +265,71 @@ class OllamaProvider:
         if not settings.LLM_SYSTEM_AVAILABLE:
             raise ValueError("LLM System is marked as unavailable (Disabled).")
 
-        # Configure Retry logic dynamically
-        retry_config = Retrying(
-            stop=stop_after_attempt(
-                self.max_retries + 1
-            ),  # +1 because 0 retries = 1 attempt
-            wait=wait_exponential(multiplier=1, min=2, max=10) + wait_random(0, 1),
-            retry=retry_if_exception_type(requests.RequestException),
-            before_sleep=before_sleep_log(logger, logging.WARNING),
-            reraise=True,
-        )
+        limiter = LLMRateLimiter.get_instance()
 
-        # Execute with retries
-        for attempt in retry_config:
-            with attempt:
-                try:
-                    logger.debug(
-                        f"Sending sync prompt to Ollama ({payload['model']}) at {self.api_url} "
-                        f"(timeout={self.timeout}s, attempt={attempt.retry_state.attempt_number}/{self.max_retries + 1})"
+        for attempt_num in range(1, self.max_retries + 2):  # max_retries + 1 total attempts
+            acquired = limiter.acquire_sync()
+            if not acquired:
+                raise RateLimitError("LLM circuit breaker is open — skipping request")
+
+            try:
+                logger.debug(
+                    "Sending sync prompt to Ollama (%s) at %s "
+                    "(timeout=%ds, attempt=%d/%d)",
+                    payload["model"], self.api_url, self.timeout,
+                    attempt_num, self.max_retries + 1,
+                )
+                response = requests.post(
+                    self.api_url, json=payload, stream=stream, timeout=self.timeout
+                )
+
+                # Check for 429 BEFORE raise_for_status so we can handle it specially
+                if self._is_429_response(response):
+                    limiter.circuit_breaker.record_rate_limit()
+                    logger.warning(
+                        "Ollama 429 (attempt %d/%d)",
+                        attempt_num, self.max_retries + 1,
                     )
-                    response = requests.post(
-                        self.api_url, json=payload, stream=stream, timeout=self.timeout
-                    )
-                    response.raise_for_status()
+                    if attempt_num <= self.max_retries and not limiter.circuit_breaker.is_open:
+                        time.sleep(self._backoff_delay(attempt_num))
+                        continue
+                    raise RateLimitError(f"Ollama returned 429 after {attempt_num} attempts")
 
-                    if stream:
-                        return self._stream_generator(response)
+                response.raise_for_status()
 
-                    # Non-streaming
-                    data = response.json()
-                    text = data.get("response", "")
+                if stream:
+                    return self._stream_generator(response)
 
-                    if json_mode:
-                        return self._extract_json(str(text))
-                    return str(text)
+                # Non-streaming
+                data = response.json()
+                text = data.get("response", "")
 
-                except requests.RequestException as e:
-                    message = (
-                        "Sync LLM Request Error "
-                        f"(Attempt {attempt.retry_state.attempt_number}): {e}"
-                    )
-                    if log_errors_as_warning:
-                        logger.warning(message)
-                    else:
-                        logger.error(message)
-                    raise
+                limiter.circuit_breaker.record_success()
+
+                if json_mode:
+                    return self._extract_json(str(text))
+                return str(text)
+
+            except RateLimitError:
+                raise  # already handled above
+            except requests.RequestException as e:
+                safe_msg = redact_message(str(e))
+                limiter.circuit_breaker.record_error()
+                message = (
+                    f"Sync LLM Request Error (Attempt {attempt_num}/{self.max_retries + 1}): {safe_msg}"
+                )
+                if log_errors_as_warning:
+                    logger.warning(message)
+                else:
+                    logger.error(message)
+
+                if attempt_num <= self.max_retries:
+                    time.sleep(self._backoff_delay(attempt_num))
+                    continue
+                raise
+            finally:
+                limiter.release_sync()
+
         raise RuntimeError("Retry loop exited without producing a response")
 
     def check_health(self, timeout_seconds: float = 2.0) -> tuple[bool, str]:
@@ -330,7 +409,7 @@ class OllamaProvider:
             if parsed_ok:
                 return parsed_json
 
-        logger.warning(f"Failed to extract JSON from: {text[:100]}...")
+        logger.warning("Failed to extract JSON from: {}...", text[:100])
         return {}
 
     def list_models(self) -> list[str]:
@@ -347,10 +426,10 @@ class OllamaProvider:
                 models = [m.get("name") for m in data.get("models", [])]
                 return models
             else:
-                logger.warning(f"Failed to list models: {resp.status_code}")
+                logger.warning("Failed to list models: {}", resp.status_code)
                 return []
         except Exception as e:
-            logger.warning(f"Error listing models: {e}")
+            logger.warning("Error listing models: {}", e)
             return []
 
     def check_model_exists(self, model_name: str) -> bool:

@@ -181,6 +181,25 @@ class EnrichmentStrategyRouter:
             )
             return {"success": False, "reason": "missing_url", "strategy_used": "none"}
 
+        # 0. Skip enrichment for rss_only sources
+        if source_config.get("fetch_mode") == "rss_only":
+            self.logger.info(
+                {
+                    "event": "enrichment.skipped",
+                    "details": {
+                        "source_id": source_id,
+                        "url": url,
+                        "reason": "fetch_mode_rss_only",
+                    },
+                }
+            )
+            return {
+                "success": True,
+                "content": candidate.get("summary", ""),
+                "strategy_used": "rss_only",
+                "content_mode": "summary_only",
+            }
+
         # 1. Scholarly Strategy
         if strategy == "scholarly":
             enrichment_metrics.record_attempt(source_id, "scholarly")

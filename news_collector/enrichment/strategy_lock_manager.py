@@ -87,15 +87,15 @@ class StrategyLockManager:
     @staticmethod
     def _validate_metrics(source_id: str, metrics: Optional[Dict[str, Any]]) -> bool:
         if not metrics:
-            logger.warning(
-                f"Lock Rejected for {source_id}: No production metrics found."
+            logger.debug(
+                f"Lock skipped for {source_id}: no production metrics yet."
             )
             return False
 
         total_attempts = metrics.get("total_enrichment_attempted", 0)
         if total_attempts < 5:
-            logger.warning(
-                f"Lock Rejected for {source_id}: Insufficient attempts ({total_attempts} < 5)."
+            logger.debug(
+                f"Lock skipped for {source_id}: insufficient attempts ({total_attempts} < 5)."
             )
             return False
         return True

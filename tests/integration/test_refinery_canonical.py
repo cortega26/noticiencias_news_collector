@@ -14,6 +14,7 @@ class TestRefineryCanonical:
         # Mock dependencies
         db = MagicMock()
         db.get_canonical_slug.return_value = None  # Default: No locked identity
+        db.get_publishing_state.return_value = None  # B-01: No publishing recovery
         git = MagicMock()
         editor = MagicMock()
         config = MagicMock()

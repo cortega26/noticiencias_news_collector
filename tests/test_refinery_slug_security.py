@@ -28,6 +28,7 @@ def test_extract_slug_empty_uses_fallback():
 def test_slug_collision_handled(tmp_path):
     engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), MagicMock())
     engine.db.get_canonical_slug.return_value = None
+    engine.db.get_publishing_state.return_value = None  # B-01: No publishing recovery
     engine.git = MagicMock()
     engine.editor = MagicMock()
     engine.editor.process_article.return_value = "content"

@@ -16,6 +16,16 @@ headlines_model = "gemini-2.5-flash"
 translator_model = "gemini-2.5-flash"
 editor_model = "gemini-2.5-flash"
 
+[llm_rate_limiting]
+max_concurrent_requests = 2
+min_delay_between_requests = 1.0
+circuit_breaker_threshold = 3
+circuit_breaker_cooldown = 60.0
+max_retries = 3
+retry_backoff_base = 2.0
+retry_backoff_max = 30.0
+retry_jitter_max = 2.0
+
 [editorial_auditor]
 enabled = true
 sampling_rate = 0.2
@@ -108,12 +118,18 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 "arxiv.org" = 20.0
 "www.reddit.com" = 30.0
 "reddit.com" = 30.0
+"medicalxpress.com" = 60.0
+"www.medicalxpress.com" = 60.0
+"techxplore.com" = 60.0
+"www.techxplore.com" = 60.0
+"phys.org" = 60.0
+"www.phys.org" = 60.0
 
 [scoring.weights]
-source_credibility = 0.1
-recency = 0.3
-content_quality = 0.1
-engagement_potential = 0.5
+source_credibility = 0.15
+recency = 0.15
+content_quality = 0.35
+engagement_potential = 0.35
 
 [scoring.feature_weights]
 source_credibility = 0.15

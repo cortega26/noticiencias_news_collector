@@ -165,7 +165,19 @@ class RSSCollector(BaseCollector):
         }
 
         try:
-            # 0. Circuit Breaker Check (MVS)
+            # 0a. Skip permanently blocked sources
+            if source_config.get("status") == "blocked":
+                self._emit_log(
+                    "info",
+                    "collector.source.blocked",
+                    source_id=source_id,
+                    details={"reason": "Source marked as blocked in config"},
+                )
+                stats["success"] = True
+                stats["error_message"] = "Source blocked in config"
+                return stats
+
+            # 0b. Circuit Breaker Check (MVS)
             # Feature Flag: Kill Switch
             if os.getenv("ENABLE_CIRCUIT_BREAKER", "true").lower() != "false":
                 circuit_state = self.db_manager.get_source_circuit_state(source_id)
@@ -731,7 +743,7 @@ class RSSCollector(BaseCollector):
 
         if len(candidates) > max_articles:
             self._emit_log(
-                "warning",
+                "info",
                 "collector.prescorer.ranking_start",
                 details={"candidates": len(candidates), "limit": max_articles},
             )

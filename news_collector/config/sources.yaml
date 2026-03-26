@@ -29,11 +29,12 @@ science:
   description: Revista insignia de la AAAS, rival histórico de Nature
   typical_delay: 0
   content_mode: summary_only
+  fetch_mode: rss_only
   headers:
     User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -52,9 +53,9 @@ cell:
   description: La revista más importante en biología celular y molecular
   typical_delay: 1
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: ELITE_JOURNALS
@@ -66,10 +67,10 @@ nejm:
   name: New England Journal of Medicine
   # UPDATED: eTOC RSS Feed (More reliable than Most Viewed)
   url: https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm
-  fetch_mode: "rss_only" # Enforce robust fetcher
-  content_mode: "summary_only" # RSS summary is short (~80 chars), bypass strict length check
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
+  fetch_mode: "rss_only"
+  content_mode: "summary_only"
+  enrichment_strategy: http
+  headless_enabled: false
   credibility_score: 0.95
   update_frequency: weekly
   category: medicine
@@ -168,11 +169,10 @@ scitechdaily:
   impact_factor: null
   description: Science and technology news and analysis
   typical_delay: 0
-  content_mode: summary_only # rss_only mode to avoid 403 blocks on HTML fetch
-  fetch_mode: rss_only # Explicit new flag
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  content_mode: summary_only
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -528,9 +528,9 @@ michigan_news:
   description: Research news from U-M
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -590,10 +590,11 @@ medicalxpress:
   impact_factor: null
   description: Medical and health news (Science X network)
   typical_delay: 0
+  min_delay_seconds: 60
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -611,10 +612,11 @@ techxplore:
   impact_factor: null
   description: Technology and electronics news (Science X network)
   typical_delay: 0
+  min_delay_seconds: 60
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: SCIENCE_MEDIA
@@ -694,10 +696,10 @@ openai_blog:
   impact_factor: null
   description: Announcements from OpenAI
   typical_delay: 0
-  content_mode: summary_only # Full text blocked (403), use summary to pass validation
-  enrichment_strategy: headless_fallback
-  headless_enabled: true
-  headless_max_seconds: 60
+  content_mode: summary_only
+  fetch_mode: rss_only
+  enrichment_strategy: http
+  headless_enabled: false
   etag: null
   last_modified: null
   _group: AI_LABS
@@ -707,7 +709,7 @@ openai_blog:
 
 nvidia_research:
   name: NVIDIA Deep Learning
-  url: https://blogs.nvidia.com/blog/category/deep-learning/feed/
+  url: https://blogs.nvidia.com/feed/
   credibility_score: 0.9
   update_frequency: weekly
   category: artificial_intelligence
@@ -777,24 +779,6 @@ bair_blog:
   fetchability_score: 95
   crawl_interval_seconds: 600
 
-stanford_ai_lab:
-  name: Stanford AI Lab
-  url: https://ai.stanford.edu/blog/feed.xml
-  credibility_score: 0.95
-  update_frequency: weekly
-  category: artificial_intelligence
-  language: en
-  impact_factor: null
-  description: SAIL Blog
-  typical_delay: 0
-  content_mode: full_text
-  etag: null
-  last_modified: null
-  _group: INSTITUTIONAL_SOURCES
-  tier: "A"
-  fetchability_score: 95
-  crawl_interval_seconds: 600
-
 hugging_face_blog:
   name: Hugging Face Blog
   url: https://huggingface.co/blog/feed.xml
@@ -812,24 +796,6 @@ hugging_face_blog:
   tier: "A"
   fetchability_score: 95
   crawl_interval_seconds: 600
-
-distill_pub:
-  name: Distill
-  url: https://distill.pub/rss.xml
-  credibility_score: 0.98
-  update_frequency: monthly
-  category: artificial_intelligence
-  language: en
-  impact_factor: null
-  description: Clarity in Machine Learning
-  typical_delay: 0
-  content_mode: full_text
-  etag: null
-  last_modified: null
-  _group: SCIENCE_MEDIA
-  tier: "A"
-  fetchability_score: 95
-  crawl_interval_seconds: 21600
 
 the_gradient:
   name: The Gradient
@@ -884,3 +850,85 @@ lilian_weng:
   tier: "B"
   fetchability_score: 90
   crawl_interval_seconds: 21600
+
+# ===== NEW HIGH-QUALITY SOURCES =====
+
+quanta_magazine:
+  name: Quanta Magazine
+  url: https://api.quantamagazine.org/feed/
+  credibility_score: 0.95
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Top-tier science journalism with engaging narratives
+  typical_delay: 0
+  content_mode: full_text
+  enrichment_strategy: http
+  headless_enabled: false
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 3600
+
+the_conversation:
+  name: The Conversation
+  url: https://theconversation.com/us/articles.atom
+  credibility_score: 0.9
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Academic-written journalism, accessible, frequently covers LatAm topics
+  typical_delay: 0
+  content_mode: full_text
+  enrichment_strategy: http
+  headless_enabled: false
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 3600
+
+science_news:
+  name: Science News
+  url: https://www.sciencenews.org/feed
+  credibility_score: 0.9
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Concise, engaging, well-written science coverage
+  typical_delay: 0
+  content_mode: full_text
+  enrichment_strategy: http
+  headless_enabled: false
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "A"
+  fetchability_score: 95
+  crawl_interval_seconds: 3600
+
+inverse_science:
+  name: Inverse Science
+  url: https://www.inverse.com/rss/science
+  credibility_score: 0.82
+  update_frequency: daily
+  category: popular_science
+  language: en
+  impact_factor: null
+  description: Engaging science content for general audience
+  typical_delay: 0
+  content_mode: full_text
+  enrichment_strategy: http
+  headless_enabled: false
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600

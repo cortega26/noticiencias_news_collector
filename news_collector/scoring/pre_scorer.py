@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from news_collector.config.settings import CONFIG
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -12,6 +13,11 @@ class PreScorer:
     """
     Evaluador preliminar que selecciona los mejores candidatos de un pool grande
     basándose en títulos y resúmenes antes de la extracción de texto completo.
+
+    Rate-limit aware:
+    - Checks the circuit breaker before attempting an LLM call.
+    - Falls back to FIFO immediately when the breaker is open, avoiding
+      wasted retries and blocking time.
     """
 
     def __init__(self, llm_client: Optional[Any] = None):
@@ -42,12 +48,23 @@ class PreScorer:
 
         if len(candidates) <= limit:
             logger.info(
-                f"PreScorer: Solicitados {limit}, disponibles {len(candidates)}. Retornando todos."
+                "PreScorer: Solicitados %d, disponibles %d. Retornando todos.",
+                limit, len(candidates),
             )
             return candidates
 
+        # --- Circuit breaker check: fail fast if provider is overloaded ---
+        limiter = LLMRateLimiter.get_instance()
+        if limiter.circuit_breaker.is_open:
+            logger.warning(
+                "PreScorer: Circuit breaker OPEN — falling back to FIFO for %d candidates.",
+                len(candidates),
+            )
+            return candidates[:limit]
+
         logger.info(
-            f"🤖 PreScorer: Analizando {len(candidates)} candidatos para seleccionar Top {limit}..."
+            "PreScorer: Analizando %d candidatos para seleccionar Top %d...",
+            len(candidates), limit,
         )
 
         # Construir prompt batch
@@ -92,7 +109,8 @@ class PreScorer:
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
                 logger.warning(
-                    f"PreScorer: LLM retornó {len(valid_indices)} válidos. Rellenando con FIFO."
+                    "PreScorer: LLM retornó %d válidos. Rellenando con FIFO.",
+                    len(valid_indices),
                 )
                 for i in range(len(candidates)):
                     if len(valid_indices) >= limit:
@@ -106,15 +124,19 @@ class PreScorer:
             # Construir resultado
             selected_candidates = [candidates[i] for i in valid_indices]
 
-            logger.info(f"✅ PreScorer: Selección completada. Indices: {valid_indices}")
+            logger.info("PreScorer: Selección completada. Indices: %s", valid_indices)
             return selected_candidates
 
         except Exception as e:
-            if "not configured" in str(e):
-                # Silence this specific error to avoid log spam
+            err_str = str(e)
+            if "not configured" in err_str or "unavailable" in err_str.lower():
                 logger.warning(
-                    "PreScorer: LLM skipped (not configured). Falling back to FIFO."
+                    "PreScorer: LLM not available. Falling back to FIFO. (%s)", err_str,
+                )
+            elif "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower():
+                logger.warning(
+                    "PreScorer: Rate limited — falling back to FIFO. (%s)", err_str,
                 )
             else:
-                logger.error(f"Error en PreScorer: {e}. Fallback a FIFO.")
+                logger.error("Error en PreScorer: %s. Fallback a FIFO.", e)
             return candidates[:limit]

@@ -30,8 +30,9 @@ Failure modes:
 
 import concurrent.futures
 import json
+import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -133,14 +134,6 @@ class RefineryEngine:
         )
 
         self.editor = editor_agent
-
-        # Original: self.editor = editor_agent
-        # Let's stick to original args where possible to avoid breaking other things
-        # But my previous edit replaced self.editor = editor_agent with self.editor = EditorAgent(self.config)
-        # If I want to be safe, I should use the passed args if they are valid.
-        # However, looking at imports, EditorAgent is imported.
-        # Let's assume the passed `editor_agent` is what we want.
-        self.editor = editor_agent
         self.git = git_handler
 
         # Auditor & Executor
@@ -173,6 +166,7 @@ class RefineryEngine:
         errors = []
 
         for article in articles:
+            article_id = "unknown"
             try:
                 # Identifier
                 article_id = str(article.get("id", article.get("title")))
@@ -213,6 +207,21 @@ class RefineryEngine:
                 )
                 return False
 
+        # --- B-01 / F-0012, F-0015: Publishing state recovery ---
+        _numeric_id: int | None = None
+        try:
+            _numeric_id = int(article_id)
+        except (ValueError, TypeError):
+            pass
+
+        if _numeric_id is not None:
+            recovery_result = self._attempt_publishing_recovery(
+                _numeric_id, article_id, article
+            )
+            if recovery_result is True:
+                return True
+            # recovery_result is None → no recovery needed, continue normal flow
+
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
 
@@ -225,12 +234,14 @@ class RefineryEngine:
 
         canonical_date = None
         output_filename = None
+        final_slug = None
 
         if db_canonical_slug:
             logger.info(
                 f"🔒 Identity: Locked to DB canonical slug: {db_canonical_slug}"
             )
             # The slug in DB includes the date prefix e.g. "2024-01-25-my-article"
+            final_slug = db_canonical_slug
             output_filename = f"{db_canonical_slug}.md"
 
             # Extract date from valid slug
@@ -247,16 +258,16 @@ class RefineryEngine:
             if existing_file:
                 logger.info(f"♻️ Idempotency: Found existing file {existing_file.name}")
                 output_filename = existing_file.name
+                final_slug = output_filename.replace(".md", "")
                 # Extract date
                 match = re.match(r"^(\d{4}-\d{2}-\d{2})-", output_filename)
                 if match:
                     canonical_date = match.group(1)
 
                 # SELF-HEALING: Backfill DB
-                slug_stem = output_filename.replace(".md", "")
-                if hasattr(self.db, "set_canonical_slug"):
-                    self.db.set_canonical_slug(article_id, slug_stem)
-                    logger.info(f"💾 Backfilled canonical slug to DB: {slug_stem}")
+                if hasattr(self.db, "set_canonical_slug") and final_slug:
+                    self.db.set_canonical_slug(article_id, final_slug)
+                    logger.info(f"💾 Backfilled canonical slug to DB: {final_slug}")
 
             else:
                 # Priority 3: Creation Mode (Strict Determinism)
@@ -379,7 +390,7 @@ class RefineryEngine:
             return False
 
         # Persist canonical slug AFTER policy approval (B-02 / F-0018)
-        if hasattr(self.db, "set_canonical_slug"):
+        if hasattr(self.db, "set_canonical_slug") and final_slug:
             try:
                 persisted = self.db.set_canonical_slug(article_id, final_slug)
                 if persisted:
@@ -394,7 +405,23 @@ class RefineryEngine:
         # 4. Create Branch
         # Create/sync the branch before writing files so branch collisions or
         # remote sync failures do not leave uncommitted content edits behind.
+        if not output_filename:
+            logger.error(f"Cannot proceed without output_filename for {article_id}")
+            return False
+
         branch_slug = output_filename.replace(".md", "")
+        expected_branch = f"content/update-{branch_slug}"
+
+        # B-01 / F-0012: Mark as "publishing" BEFORE git operations
+        if _numeric_id is not None and hasattr(self.db, "mark_article_publishing"):
+            try:
+                self.db.mark_article_publishing(_numeric_id, expected_branch)
+                logger.info(
+                    f"Marked article {article_id} as 'publishing' (branch: {expected_branch})"
+                )
+            except Exception as e:
+                logger.error(f"Failed to mark article as publishing: {e}")
+
         branch_name = self.git.create_branch(
             target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
         )
@@ -535,6 +562,125 @@ class RefineryEngine:
             logger.warning(
                 f"Failed to persist audit status for article {article_numeric_id}: {e}"
             )
+
+    # --- B-01 / F-0012, F-0015: Publishing state recovery ---
+    PUBLISHING_TIMEOUT_SECONDS = 3600  # 1 hour
+
+    def _attempt_publishing_recovery(
+        self,
+        numeric_id: int,
+        article_id: str,
+        article: Dict[str, Any],
+    ) -> bool | None:
+        """
+        B-01: If article is stuck in 'publishing' state, attempt recovery.
+
+        Returns:
+            True  – recovery succeeded (PR found or created), caller should return True.
+            None  – no recovery needed, caller should continue normal processing.
+        """
+        get_state = getattr(self.db, "get_publishing_state", None)
+        if not callable(get_state):
+            return None
+
+        publishing_info = get_state(numeric_id)
+        if publishing_info is None:
+            return None  # Not in publishing state
+
+        publishing_started_at = publishing_info.get("publishing_started_at")
+        publishing_branch = publishing_info.get("publishing_branch")
+
+        # Check timeout
+        if publishing_started_at:
+            try:
+                started = datetime.fromisoformat(publishing_started_at)
+                if started.tzinfo is None:
+                    started = started.replace(tzinfo=timezone.utc)
+                elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+                if elapsed > self.PUBLISHING_TIMEOUT_SECONDS:
+                    logger.warning(
+                        f"Article {article_id} stuck in 'publishing' for "
+                        f"{elapsed / 3600:.1f}h (>{self.PUBLISHING_TIMEOUT_SECONDS / 3600}h). "
+                        "Allowing reprocessing."
+                    )
+                    return None  # Let normal flow re-process
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse publishing_started_at: {e}")
+
+        if not publishing_branch:
+            logger.warning(
+                f"Article {article_id} in 'publishing' state but no branch info. "
+                "Allowing reprocessing."
+            )
+            return None
+
+        # Attempt recovery: resolve repo_url and try to create PR (422 recovery
+        # in create_pull_request will find an existing PR if one exists).
+        logger.info(
+            f"Attempting publishing recovery for article {article_id} "
+            f"(branch: {publishing_branch})"
+        )
+
+        repo_url = self._resolve_repo_url()
+        if not repo_url:
+            logger.warning("Cannot resolve repo URL for publishing recovery.")
+            return None
+
+        source_id = str(article.get("source_id", "")).strip() or "unknown"
+        source_name = str(article.get("source_name", "")).strip() or "unknown"
+        pr_body = (
+            f"Automated submission for {article_id}.\n\n"
+            f"Source ID: {source_id}\n"
+            f"Source Name: {source_name}\n\n"
+            "Processed by Noticiencias Refinery (recovered from publishing state)."
+        )
+
+        slug = publishing_branch.replace("content/update-", "", 1)
+        pr_title = f"News: {slug}"
+
+        try:
+            pr_url = self.git.create_pull_request(
+                repo_url=repo_url,
+                branch_name=publishing_branch,
+                title=pr_title,
+                body=pr_body,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Publishing recovery PR creation failed for {article_id}: {e}. "
+                "Article stays in 'publishing' for next retry."
+            )
+            return None  # Stay in publishing, will retry on next invocation
+
+        if pr_url:
+            logger.info(
+                f"Publishing recovery succeeded for article {article_id}: {pr_url}"
+            )
+            try:
+                self.db.mark_article_published(numeric_id, pr_url)
+            except Exception as e:
+                logger.error(
+                    f"Recovery PR found but failed to mark as published: {e}"
+                )
+            return True
+
+        return None
+
+    def _resolve_repo_url(self) -> str | None:
+        """Extracts target_repo_url from config (shared logic for recovery)."""
+        github_cfg = getattr(self.config, "github", None)
+        if github_cfg:
+            repo_url = getattr(github_cfg, "target_repo_url", None) or (
+                github_cfg.get("target_repo_url")
+                if isinstance(github_cfg, dict)
+                else None
+            )
+            if repo_url:
+                return repo_url
+        repo_url = getattr(self.config, "target_repo_url", None)
+        if repo_url is None and isinstance(self.config, dict):
+            repo_url = self.config.get("target_repo_url")
+        return repo_url
 
     def _schedule_optional_audit(
         self,
@@ -711,13 +857,16 @@ class RefineryEngine:
 
         self._manifest_cache[article_id] = filename
 
-        # Persist
+        # B-05 / F-0025: Atomic persist — write to .tmp then os.replace()
+        # so the manifest is always either old-complete or new-complete.
         try:
             manifest_path = posts_dir / MANIFEST_FILENAME
-            manifest_path.write_text(
+            tmp_path = manifest_path.with_suffix(".tmp")
+            tmp_path.write_text(
                 json.dumps(self._manifest_cache, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
+            os.replace(str(tmp_path), str(manifest_path))
         except Exception as e:
             logger.error(f"Failed to persist manifest: {e}")
 
