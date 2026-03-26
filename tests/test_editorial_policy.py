@@ -14,7 +14,7 @@ class TestEditorialPolicy:
         policy = EditorialPolicy.from_mode("velocity")
         assert policy.mode == "velocity"
         assert policy.critic_threshold == 70.0
-        assert policy.auditor_threshold == 0.0
+        assert policy.auditor_threshold == 3.0  # C-03 / F-0027: minimum quality floor
 
     def test_factory_strict(self):
         policy = EditorialPolicy.from_mode("strict")

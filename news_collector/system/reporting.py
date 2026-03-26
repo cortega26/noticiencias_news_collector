@@ -68,6 +68,8 @@ def export_latest_articles(
         )
 
         export_payload = contract.model_dump()
+        # B-07 / F-0017: Add exported_at so consumers can detect stale data
+        export_payload["exported_at"] = datetime.now(timezone.utc).isoformat()
 
         if file_path:
             path_obj = (

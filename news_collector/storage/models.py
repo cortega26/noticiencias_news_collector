@@ -42,6 +42,7 @@ PENDING_STATUS = "pen" + "ding"
 PROCESSING_STATUS_VALUES = (
     PENDING_STATUS,
     "processing",
+    "publishing",
     "validated",
     "completed",
     "error",
@@ -127,6 +128,7 @@ class Article(Base):
     # Procesamiento de texto y análisis
     # =================================
     language = Column(String(5), default="en")  # Código ISO del idioma
+    content_mode = Column(String(20))  # full_text, summary_only, summary_fallback
     word_count = Column(Integer)  # Número de palabras
     reading_time_minutes = Column(Integer)  # Tiempo estimado de lectura
     content_quality_score = Column(Float)  # Score de calidad del contenido (0-1)
@@ -232,6 +234,7 @@ class Article(Base):
             "doi": self.doi,
             "journal": self.journal,
             "components": self.score_components,
+            "content_mode": self.content_mode,
         }
 
 

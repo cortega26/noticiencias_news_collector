@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, cast
 from news_collector.config.settings import CONFIG, SCORING_CONFIG
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.storage.models import Article
 from news_collector.utils.logger import get_logger
 
@@ -121,8 +122,14 @@ class CognitiveScorer(BasicScorer):
         logger.info("CognitiveScorer Cycle Start.")
 
     def _check_budget(self) -> bool:
-        """Return True if we have budget left."""
+        """Return True if we have budget left and the circuit breaker is not open."""
         if not self.is_llm_healthy:
+            return False
+        # Check circuit breaker — skip LLM if provider is overloaded
+        limiter = LLMRateLimiter.get_instance()
+        if limiter.circuit_breaker.is_open:
+            logger.warning("CognitiveScorer: Circuit breaker OPEN — using heuristic fallback.")
+            self.is_llm_healthy = False
             return False
         elapsed = time.time() - self.cycle_start_time
         return elapsed < self.max_cycle_budget_sec
@@ -307,13 +314,23 @@ class CognitiveScorer(BasicScorer):
             joined_inputs += f"--- ITEM {k+1} ---\n{text}\n\n"
 
         system_prompt = (
-            "You are a Senior Editor at 'Noticiencias'. Evaluate these science news items for the Latin American audience.\n"
-            "For EACH item, output a JSON object with scores (0-5):\n"
-            "1. substance (Scientific rigor, data density, evidence depth)\n"
-            "2. narrative (Storytelling potential, tension, wow factor)\n"
-            "3. relevance (Relevance for LatAm, universal appeal, accessibility)\n"
-            "4. credibility (Trustworthiness, lack of hype)\n\n"
-            "Return a JSON Object: { 'results': [ { 'item_index': 1, 'scores': {...}, 'reasoning': '...' }, ... ] }"
+            "You are a Senior Editor at 'Noticiencias', a science news platform for Latin America.\n"
+            "Evaluate each item with scores (0-5):\n\n"
+            "1. substance — Scientific rigor, data density, evidence depth. "
+            "Peer-reviewed findings, novel data, or concrete results score high. "
+            "Vague announcements or rehashed press releases score low.\n\n"
+            "2. narrative — Storytelling potential, tension, wow factor. "
+            "Would a curious person stop scrolling to read this? "
+            "Breakthroughs, mysteries, surprising findings, and human-impact stories score high.\n\n"
+            "3. relevance — Universal human interest OR direct LatAm connection. "
+            "Health, environment, space, AI, and climate score high even without LatAm mentions. "
+            "Direct LatAm connection (researchers, institutions, geography) is a bonus. "
+            "Ask: 'Would a curious, educated person in Mexico City, Buenos Aires, or Bogotá want to share this?' "
+            "Hyper-local US campus news, niche academic awards, student government, product launches, and fundraising rounds score 0-1.\n\n"
+            "4. credibility — Trustworthiness, lack of hype. "
+            "Named institutions, DOIs, and measured language score high. "
+            "Clickbait, 'miracle cure', and unsourced claims score low.\n\n"
+            "Return a JSON Object: { \"results\": [ { \"item_index\": 1, \"scores\": {...}, \"reasoning\": \"...\" }, ... ] }"
         )
 
         try:

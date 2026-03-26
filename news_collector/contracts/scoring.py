@@ -37,6 +37,10 @@ class ScoringComponents(TypedDict, total=False):
     content_quality: float
     engagement: float
     engagement_potential: float
+    nqi_substance: float
+    nqi_narrative: float
+    nqi_relevance: float
+    nqi_credibility: float
 
 
 class ScoringComponentsModel(BaseModel):
@@ -47,6 +51,10 @@ class ScoringComponentsModel(BaseModel):
     content_quality: float
     engagement: float | None = None
     engagement_potential: float | None = None
+    nqi_substance: float | None = None
+    nqi_narrative: float | None = None
+    nqi_relevance: float | None = None
+    nqi_credibility: float | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -58,6 +66,10 @@ class ScoringComponentsModel(BaseModel):
             "content_quality",
             "engagement",
             "engagement_potential",
+            "nqi_substance",
+            "nqi_narrative",
+            "nqi_relevance",
+            "nqi_credibility",
         ):
             value = getattr(self, field_name)
             if value is None:
@@ -106,6 +118,8 @@ class ScoringRequestModel(BaseModel):
     explanation: Dict[str, Any] = Field(default_factory=dict)
     penalties: Dict[str, Any] | None = None
     calculated_at: datetime | None = None
+    decision_label: str | None = None
+    cognitive_details: Dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid")
 

@@ -531,6 +531,7 @@ Ejemplos de uso:
                 export_payload = {
                     "schema_version": 1,
                     "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "exported_at": datetime.now(timezone.utc).isoformat(),
                     "contract": "news_collector.export.v1",
                     "article_count": len(serialized_articles),
                     "articles": serialized_articles,

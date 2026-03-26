@@ -404,6 +404,30 @@ class GitHubPublisher:
             pr_url = str(response.json().get("html_url", ""))
             logger.info(f"Pull Request created successfully: {pr_url}")
             return pr_url
+        elif response.status_code == 422:
+            # A-04 / F-0016: PR might already exist for this branch — try to recover
+            logger.warning(
+                f"PR creation returned 422 for branch {branch_name}. "
+                "Checking for existing PR..."
+            )
+            search_url = f"https://api.github.com/repos/{owner}/{repo_name}/pulls"
+            search_params = {"head": f"{owner}:{branch_name}", "state": "open"}
+            search_response = requests.get(  # noqa: S113
+                search_url, params=search_params, headers=self.headers
+            )
+            if search_response.status_code == 200:
+                prs = search_response.json()
+                if prs:
+                    existing_url = str(prs[0].get("html_url", ""))
+                    logger.info(
+                        f"Recovered existing PR for branch {branch_name}: {existing_url}"
+                    )
+                    return existing_url
+            # No existing PR found — raise original error
+            logger.error(
+                f"Failed to create PR (422, no existing PR found): {response.text}"
+            )
+            raise Exception(f"PR Creation failed: {response.text}")
         else:
             logger.error(
                 f"Failed to create PR: {response.status_code} - {response.text}"

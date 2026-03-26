@@ -17,6 +17,9 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_config.target_repo_url = "http://github.com/target"
         self.mock_config.app.policy_integrity_mode = "disabled"
 
+        # B-01: Ensure publishing recovery does not interfere with normal tests
+        self.mock_db.get_publishing_state.return_value = None
+
         # Safe patching context
         self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
         self.git_patch.start()

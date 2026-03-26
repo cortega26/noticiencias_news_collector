@@ -733,6 +733,48 @@ class GeminiConfig(StrictModel):
             return None
         return v
 
+class LLMRateLimitingConfig(StrictModel):
+    """Rate limiting configuration for LLM API calls."""
+
+    max_concurrent_requests: PositiveInt = Field(
+        default=2,
+        description="Maximum number of concurrent in-flight LLM requests.",
+    )
+    min_delay_between_requests: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Minimum seconds between consecutive LLM requests.",
+    )
+    circuit_breaker_threshold: PositiveInt = Field(
+        default=3,
+        description="Consecutive 429 errors before the circuit breaker opens.",
+    )
+    circuit_breaker_cooldown: float = Field(
+        default=60.0,
+        gt=0.0,
+        description="Seconds the circuit breaker stays open before half-open probe.",
+    )
+    max_retries: NonNegativeInt = Field(
+        default=3,
+        description="Maximum retry attempts per LLM request.",
+    )
+    retry_backoff_base: float = Field(
+        default=2.0,
+        gt=0.0,
+        description="Base for exponential backoff between retries.",
+    )
+    retry_backoff_max: float = Field(
+        default=30.0,
+        gt=0.0,
+        description="Maximum backoff delay in seconds.",
+    )
+    retry_jitter_max: float = Field(
+        default=2.0,
+        ge=0.0,
+        description="Maximum jitter added to backoff delay.",
+    )
+
+
 class EditorialAuditorConfig(StrictModel):
     """Configuration for Editorial Auditor."""
 
@@ -775,6 +817,9 @@ class Config(StrictModel):
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     gemini: GeminiConfig = Field(default_factory=GeminiConfig)
+    llm_rate_limiting: LLMRateLimitingConfig = Field(
+        default_factory=LLMRateLimitingConfig
+    )
     editorial_auditor: EditorialAuditorConfig = Field(
         default_factory=EditorialAuditorConfig
     )
