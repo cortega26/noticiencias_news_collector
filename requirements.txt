@@ -1,4 +1,5 @@
 # Direct dependencies (sync with requirements.lock)
+alembic>=1.13.1
 beautifulsoup4>=4.12.0
 bleach>=6.0.0
 fastapi>=0.128.0

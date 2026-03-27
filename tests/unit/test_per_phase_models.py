@@ -37,7 +37,8 @@ def test_config_validation():
 
 def test_model_resolution_without_network(monkeypatch):
     monkeypatch.setattr(
-        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+        "news_collector.components.editorial.ai_editor.get_provider",
+        lambda api_url=None, model=None, timeout=300, **kw: MockProvider(api_url, model, timeout),
     )
     monkeypatch.setattr(
         "news_collector.components.editorial.ai_editor.load_config",
@@ -64,7 +65,8 @@ def test_model_resolution_without_network(monkeypatch):
 
 def test_invalid_stage_override_fails_fast(monkeypatch):
     monkeypatch.setattr(
-        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+        "news_collector.components.editorial.ai_editor.get_provider",
+        lambda api_url=None, model=None, timeout=300, **kw: MockProvider(api_url, model, timeout),
     )
     monkeypatch.setattr(
         "news_collector.components.editorial.ai_editor.load_config",
@@ -91,7 +93,8 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
     monkeypatch, tmp_path
 ):
     monkeypatch.setattr(
-        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+        "news_collector.components.editorial.ai_editor.get_provider",
+        lambda api_url=None, model=None, timeout=300, **kw: MockProvider(api_url, model, timeout),
     )
     monkeypatch.setattr(
         "news_collector.components.editorial.ai_editor.load_config",
@@ -151,7 +154,8 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
 
 def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "news_collector.components.editorial.ai_editor.OllamaProvider", MockProvider
+        "news_collector.components.editorial.ai_editor.get_provider",
+        lambda api_url=None, model=None, timeout=300, **kw: MockProvider(api_url, model, timeout),
     )
     monkeypatch.setattr(
         "news_collector.components.editorial.ai_editor.load_config",

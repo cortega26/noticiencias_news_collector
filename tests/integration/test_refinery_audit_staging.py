@@ -23,6 +23,7 @@ class _ImmediateExecutor:
 def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: Path):
     mock_db = MagicMock()
     mock_db.get_canonical_slug.return_value = None
+    mock_db.get_publishing_state.return_value = None
     mock_db.mark_article_published.return_value = True
     mock_db.update_article_audit_status.return_value = True
 
