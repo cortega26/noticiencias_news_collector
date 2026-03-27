@@ -126,8 +126,8 @@ format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 "www.phys.org" = 60.0
 
 [scoring.weights]
-source_credibility = 0.15
-recency = 0.15
+source_credibility = 0.1
+recency = 0.2
 content_quality = 0.35
 engagement_potential = 0.35
 

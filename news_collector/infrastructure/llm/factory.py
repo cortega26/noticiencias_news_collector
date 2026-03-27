@@ -13,15 +13,11 @@ from news_collector.infrastructure.llm.rate_limiter import (
 
 logger = logging.getLogger("news_collector.infrastructure.llm.factory")
 
-_LIMITER_INITIALIZED = False
-
 
 def _ensure_rate_limiter(cfg: Any) -> None:
     """Initialize the process-wide LLMRateLimiter singleton from config (once)."""
-    global _LIMITER_INITIALIZED
-    if _LIMITER_INITIALIZED:
+    if LLMRateLimiter._instance is not None:
         return
-    _LIMITER_INITIALIZED = True
 
     llm_rl = getattr(cfg, "llm_rate_limiting", None)
     if llm_rl is not None:
@@ -60,9 +56,10 @@ def get_provider(
     # Initialize rate limiter singleton from config (idempotent)
     _ensure_rate_limiter(cfg)
 
-    gemini_api_key = getattr(cfg.gemini, "api_key", None)
+    gemini_cfg = getattr(cfg, "gemini", None)
+    gemini_api_key = getattr(gemini_cfg, "api_key", None) if gemini_cfg else None
     if gemini_api_key:
-        use_model = getattr(cfg.gemini, "model", "gemini-2.5-flash")
+        use_model = getattr(gemini_cfg, "model", "gemini-2.5-flash")
 
         # Override with Gemini defaults if the provided model is Ollama-specific
         if model and ("llama" in model.lower() or "qwen" in model.lower() or ":" in model):

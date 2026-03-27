@@ -23,6 +23,83 @@ SOURCE_IDENTITY_COMMENT_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
+# Patterns matching LLM meta-instruction preambles (Spanish).
+# Self-referential lines the model prepends to article content, e.g.
+# "Aquí tienes el artículo, redactado con el enfoque de Editor Científico Senior en Noticiencias:"
+_LLM_PREAMBLE_LINE_RE = re.compile(
+    r"(?:"
+    r"(?:aquí|acá)\s+(?:tienes|está|te\s+\w+)"
+    r"|(?:te\s+)?(?:presento|dejo|comparto|envío|muestro)\s+(?:el|tu|un)\s+(?:artículo|texto|contenido)"
+    r"|a\s+continuación\s+(?:te\s+)?(?:presento|dejo|comparto|muestro|va)"
+    r"|redactado\s+(?:con|según|bajo)"
+    r"|editor\s+científico\s+senior"
+    r"|como\s+(?:editor|redactor)\s+científico"
+    r")",
+    re.IGNORECASE,
+)
+
+# Trailing LLM meta-instruction text, e.g. "¿Te gustaría que modifique algo?"
+_LLM_EPILOGUE_LINE_RE = re.compile(
+    r"(?:"
+    r"(?:te\s+)?gustaría\s+que\s+(?:modifique|cambie|ajuste)"
+    r"|espero\s+que\s+(?:te\s+)?(?:sea|resulte|guste|sirva)"
+    r"|si\s+(?:necesitas|quieres|deseas)\s+(?:algún|algo|que)"
+    r"|no\s+dudes\s+en"
+    r"|¿(?:algún|alguna)\s+(?:cambio|modificación|ajuste)"
+    r"|(?:quedo|estoy)\s+(?:a\s+(?:tu|su)\s+disposición|atento|pendiente)"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _strip_llm_preamble(text: str) -> str:
+    """Remove LLM meta-instruction preamble from the start of generated text."""
+    lines = text.split("\n")
+    start_idx = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue  # skip blank lines at the top
+        if _LLM_PREAMBLE_LINE_RE.search(stripped):
+            start_idx = i + 1
+            logger.warning("Stripped LLM preamble line: %s", stripped)
+        else:
+            break  # first non-blank, non-preamble line = article content
+
+    if start_idx > 0:
+        # Skip blank lines immediately after the last preamble line
+        while start_idx < len(lines) and not lines[start_idx].strip():
+            start_idx += 1
+        result = "\n".join(lines[start_idx:])
+        if result.strip():
+            return result
+        # If stripping would remove ALL content, keep original
+        logger.warning("Preamble stripping would remove all content; keeping original")
+
+    return text
+
+
+def _strip_llm_epilogue(text: str) -> str:
+    """Remove LLM meta-instruction epilogue from the end of generated text."""
+    lines = text.split("\n")
+    end_idx = len(lines)
+
+    for i in range(len(lines) - 1, -1, -1):
+        stripped = lines[i].strip()
+        if not stripped:
+            continue  # skip trailing blank lines
+        if _LLM_EPILOGUE_LINE_RE.search(stripped):
+            end_idx = i
+            logger.warning("Stripped LLM epilogue line: %s", stripped)
+        else:
+            break
+
+    if end_idx < len(lines):
+        return "\n".join(lines[:end_idx]).rstrip()
+
+    return text
+
 
 class HeadlinesSchema(BaseModel):
     direct: str = Field(..., min_length=5)
@@ -158,10 +235,16 @@ class EditorAgent:
         # If LLM wraps code in ```markdown ... ```
         match = re.search(r"```markdown\s*(.*?)\s*```", text, re.DOTALL)
         if match:
-            return match.group(1)
-        match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
-        if match:
-            return match.group(1)
+            text = match.group(1)
+        else:
+            match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
+            if match:
+                text = match.group(1)
+
+        # Strip LLM preamble / epilogue meta-instruction text
+        text = _strip_llm_preamble(text)
+        text = _strip_llm_epilogue(text)
+
         return text
 
     def _upsert_source_identity_comment(
