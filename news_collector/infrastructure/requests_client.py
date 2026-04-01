@@ -3,23 +3,20 @@ Synchronous HTTP Client for News Collector.
 Wraps requests.Session with retries, timeouts, and fail-fast logic for 403s.
 """
 
-import logging
 import secrets
+import time
 from typing import Any, Dict, Optional
 
 import requests
-from requests.adapters import HTTPAdapter
 from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
 from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
+from requests.adapters import HTTPAdapter
 from tenacity import (
-    before_sleep_log,
     retry,
     retry_if_exception,
-    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    wait_random,
 )
 
 logger = get_logger().create_module_logger(__name__)
@@ -100,9 +97,11 @@ class SSRFSafeSession(requests.Session):
     to validate SSRF constraints on every physical connection attempt,
     including implicit cross-host redirects.
     """
+
     def __init__(self):
         super().__init__()
         import threading
+
         self._local = threading.local()
 
     def set_ignore_ssrf(self, ignore: bool):
@@ -226,19 +225,21 @@ class RobustRequestsClient:
         self.session.set_ignore_ssrf(ignore_ssrf)
         try:
             # 1. Try Direct Connection
+            _direct_exc: Exception | None = None
             try:
                 return self._execute_request(url, params, headers, timeout)
             except Exception as e:
                 # 2. Check Proxy Eligibility
                 if not source_config:
-                    raise e
+                    raise
+                _direct_exc = e
 
             from news_collector.infrastructure.proxy_manager import proxy_manager
 
-            response = getattr(e, "response", None)
+            response = getattr(_direct_exc, "response", None)
 
             if proxy_manager.should_retry_with_proxy(
-                source_config, error=e, response=response
+                source_config, error=_direct_exc, response=response
             ):
                 proxy_settings = proxy_manager.get_proxy_settings(source_config)
 
@@ -249,7 +250,7 @@ class RobustRequestsClient:
                             "details": {
                                 "url": url,
                                 "source_id": source_config.get("name", "unknown"),
-                                "reason": str(e),
+                                "reason": str(_direct_exc),
                             },
                         }
                     )
@@ -298,7 +299,7 @@ class RobustRequestsClient:
                         raise proxy_err
 
             # If not eligible or proxy failed logic, re-raise original
-            raise e
+            raise _direct_exc  # type: ignore[misc]
         finally:
             self.session.set_ignore_ssrf(False)
 

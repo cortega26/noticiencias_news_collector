@@ -14,11 +14,9 @@ from news_collector.utils.security import validate_url_safety
 from tenacity import (
     before_sleep_log,
     retry,
-    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    wait_random,
 )
 
 logger = get_logger().create_module_logger(__name__)
@@ -81,8 +79,9 @@ class SmartHttpClient:
         """
         # We pass ignore_ssrf via extensions so the hook can read it
         extensions = {"ignore_ssrf": ignore_ssrf} if ignore_ssrf else None
-        
+
         from typing import cast
+
         result = await self._get_with_retry(url, params, headers, extensions=extensions)
         return cast(httpx.Response, result)
 
@@ -106,7 +105,9 @@ class SmartHttpClient:
         extensions: Optional[Dict[str, Any]] = None,
     ) -> httpx.Response:
         try:
-            response = await self.client.get(url, params=params, headers=headers, extensions=extensions)
+            response = await self.client.get(
+                url, params=params, headers=headers, extensions=extensions
+            )
             response.raise_for_status()
             return response
         except httpx.HTTPStatusError as e:

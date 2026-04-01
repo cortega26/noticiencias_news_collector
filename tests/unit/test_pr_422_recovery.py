@@ -35,7 +35,9 @@ class TestPR422Recovery:
             json_data=[{"html_url": existing_pr_url}],
         )
 
-        with patch("news_collector.components.publishing.github_publisher.requests") as mock_requests:
+        with patch(
+            "news_collector.components.publishing.github_publisher.requests"
+        ) as mock_requests:
             mock_requests.post.return_value = post_response
             mock_requests.get.return_value = get_response
 
@@ -58,7 +60,9 @@ class TestPR422Recovery:
         post_response = _FakeResponse(422, text="Validation Failed")
         get_response = _FakeResponse(200, json_data=[])  # No PRs found
 
-        with patch("news_collector.components.publishing.github_publisher.requests") as mock_requests:
+        with patch(
+            "news_collector.components.publishing.github_publisher.requests"
+        ) as mock_requests:
             mock_requests.post.return_value = post_response
             mock_requests.get.return_value = get_response
 
@@ -75,7 +79,9 @@ class TestPR422Recovery:
         post_response = _FakeResponse(422, text="Validation Failed")
         get_response = _FakeResponse(500, text="Internal Server Error")
 
-        with patch("news_collector.components.publishing.github_publisher.requests") as mock_requests:
+        with patch(
+            "news_collector.components.publishing.github_publisher.requests"
+        ) as mock_requests:
             mock_requests.post.return_value = post_response
             mock_requests.get.return_value = get_response
 
@@ -92,7 +98,9 @@ class TestPR422Recovery:
         pr_url = "https://github.com/owner/repo/pull/99"
         post_response = _FakeResponse(201, json_data={"html_url": pr_url})
 
-        with patch("news_collector.components.publishing.github_publisher.requests") as mock_requests:
+        with patch(
+            "news_collector.components.publishing.github_publisher.requests"
+        ) as mock_requests:
             mock_requests.post.return_value = post_response
 
             result = publisher.create_pull_request(

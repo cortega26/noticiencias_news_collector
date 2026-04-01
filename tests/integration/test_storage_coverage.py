@@ -29,8 +29,7 @@ def _make_article(url: str = "https://example.com/test", idx: int = 0) -> dict:
     """Build a minimal valid article payload."""
     unique_content = (
         f"Article {idx} about scientific discovery. "
-        f"This research explores novel methodology in depth. "
-        * 30
+        f"This research explores novel methodology in depth. " * 30
     )
     return {
         "url": url,

@@ -68,7 +68,9 @@ class TestRobustRequestsClient(unittest.TestCase):
         mock_send.return_value = mock_resp
 
         with patch("news_collector.infrastructure.requests_client.validate_url_safety"):
-            with self.assertRaises(requests.HTTPError):  # reraise=True raises the underlying exception
+            with self.assertRaises(
+                requests.HTTPError
+            ):  # reraise=True raises the underlying exception
                 self.client.get("http://example.com/error")
 
         # Should retry multiple times (default 3)

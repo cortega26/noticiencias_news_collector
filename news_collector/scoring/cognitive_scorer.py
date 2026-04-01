@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
-from news_collector.config.settings import CONFIG, SCORING_CONFIG
-from news_collector.infrastructure.llm.model_registry import get_model_for_stage
+from news_collector.config.settings import CONFIG
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.storage.models import Article
 from news_collector.utils.logger import get_logger
@@ -62,9 +62,7 @@ class CognitiveScorer(BasicScorer):
         if llm_client is None:
             model = get_model_for_stage("scoring", config=CONFIG, logger=logger)
             self.llm: Any = get_provider(
-                config=CONFIG,
-                api_url=CONFIG.ollama.api_url, 
-                model=model
+                config=CONFIG, api_url=CONFIG.ollama.api_url, model=model
             )
         else:
             self.llm = llm_client
@@ -128,7 +126,9 @@ class CognitiveScorer(BasicScorer):
         # Check circuit breaker — skip LLM if provider is overloaded
         limiter = LLMRateLimiter.get_instance()
         if limiter.circuit_breaker.is_open:
-            logger.warning("CognitiveScorer: Circuit breaker OPEN — using heuristic fallback.")
+            logger.warning(
+                "CognitiveScorer: Circuit breaker OPEN — using heuristic fallback."
+            )
             self.is_llm_healthy = False
             return False
         elapsed = time.time() - self.cycle_start_time
@@ -330,7 +330,7 @@ class CognitiveScorer(BasicScorer):
             "4. credibility — Trustworthiness, lack of hype. "
             "Named institutions, DOIs, and measured language score high. "
             "Clickbait, 'miracle cure', and unsourced claims score low.\n\n"
-            "Return a JSON Object: { \"results\": [ { \"item_index\": 1, \"scores\": {...}, \"reasoning\": \"...\" }, ... ] }"
+            'Return a JSON Object: { "results": [ { "item_index": 1, "scores": {...}, "reasoning": "..." }, ... ] }'
         )
 
         try:

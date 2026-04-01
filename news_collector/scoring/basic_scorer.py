@@ -276,16 +276,23 @@ class BasicScorer(AsyncScorer):
 
             from news_collector.contracts import ArticleMetadataModel
             from news_collector.utils.logger import get_logger
+
             try:
                 if isinstance(meta_raw, ArticleMetadataModel):
                     meta_model = meta_raw
                 else:
                     meta_model = ArticleMetadataModel.model_validate(meta_raw)
-                base_credibility_raw = meta_model.credibility_score if meta_model.credibility_score is not None else 0.5
+                base_credibility_raw = (
+                    meta_model.credibility_score
+                    if meta_model.credibility_score is not None
+                    else 0.5
+                )
             except ValidationError as e:
-                get_logger().create_module_logger(__name__).warning(f"Invalid article_metadata during scoring, falling back to defaults: {e}")
+                get_logger().create_module_logger(__name__).warning(
+                    f"Invalid article_metadata during scoring, falling back to defaults: {e}"
+                )
                 base_credibility_raw = 0.5
-                
+
         try:
             base_credibility = float(base_credibility_raw)
         except (TypeError, ValueError):

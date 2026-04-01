@@ -101,7 +101,7 @@ class ImageExtractor:
                         )
                         seen.add(url)
 
-    def _extract_from_dom(
+    def _extract_from_dom(  # noqa: C901
         self,
         soup: BeautifulSoup,
         base_url: str,
@@ -140,8 +140,12 @@ class ImageExtractor:
                     score = 1.0
                     w_attr = img.get("width")
                     h_attr = img.get("height")
-                    width = self._parse_dimension(str(w_attr) if w_attr is not None else None)
-                    height = self._parse_dimension(str(h_attr) if h_attr is not None else None)
+                    width = self._parse_dimension(
+                        str(w_attr) if w_attr is not None else None
+                    )
+                    height = self._parse_dimension(
+                        str(h_attr) if h_attr is not None else None
+                    )
 
                     if width and width < 150:
                         continue  # too small

@@ -25,11 +25,11 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for Py <3.11
 
 try:
     import tomli_w as _tomli_w_imp
+
     tomli_w: Any = _tomli_w_imp
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     tomli_w = None
 
-from typing import Any
 
 from noticiencias.config_schema import DEFAULT_CONFIG, Config, iter_field_docs
 

@@ -109,9 +109,9 @@ def test_content_quality(feature_scorer, sample_article):
         "sentiment": "neutral",
         "normalized_title": "Short",  # 5 chars / 10 = 0.5 * 0.3 = 0.15
         "normalized_summary": "Short",  # 5 chars / 20 = 0.25 * 0.5 = 0.125
-        "entities": ["A", "B", "C", "D", "E"] # 5/5 = 1.0 * 0.2 = 0.2
+        "entities": ["A", "B", "C", "D", "E"],  # 5/5 = 1.0 * 0.2 = 0.2
     }
-    
+
     # Total = 0.15 + 0.125 + 0.2 = 0.475
     score2 = feature_scorer._content_quality_score(sample_article)
     assert score2 == pytest.approx(0.475)
@@ -125,7 +125,7 @@ def test_engagement_score(feature_scorer, sample_article):
         "sentiment": "positive",
         "normalized_title": "",
         "normalized_summary": "",
-        "entities": []
+        "entities": [],
     }
     # Word count (default 400), divisor 100 -> capped 1.0
     # External score None -> uses sentiment 0.8

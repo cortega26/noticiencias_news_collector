@@ -51,7 +51,9 @@ class EditorialCouncil:
     def __init__(self, llm_client: Optional[Any] = None):
         if llm_client is None:
             model = get_model_for_stage("council", config=CONFIG, logger=logger)
-            self.llm = get_provider(config=CONFIG, api_url=CONFIG.ollama.api_url, model=model)
+            self.llm = get_provider(
+                config=CONFIG, api_url=CONFIG.ollama.api_url, model=model
+            )
         else:
             self.llm = llm_client
 

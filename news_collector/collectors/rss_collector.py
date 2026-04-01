@@ -27,7 +27,6 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 
 ValidationError = get_pydantic_module().ValidationError
 
-import contextlib
 
 from news_collector.config.settings import COLLECTION_CONFIG
 from news_collector.contracts import CollectorArticleModel

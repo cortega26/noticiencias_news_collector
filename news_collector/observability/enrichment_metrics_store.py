@@ -1,6 +1,5 @@
 import contextlib
 import json
-import logging
 import os
 import sqlite3
 import threading

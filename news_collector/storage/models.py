@@ -169,8 +169,7 @@ class Article(Base):
     # ==================================================
     __table_args__ = (
         CheckConstraint(
-            processing_status.in_(PROCESSING_STATUS_VALUES),
-            name="ck_article_status"
+            processing_status.in_(PROCESSING_STATUS_VALUES), name="ck_article_status"
         ),
         Index(
             "idx_articles_completed_category_score_date",

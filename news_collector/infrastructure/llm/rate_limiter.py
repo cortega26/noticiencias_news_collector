@@ -16,7 +16,7 @@ import asyncio
 import re
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from news_collector.utils.logger import get_logger
@@ -44,14 +44,15 @@ def redact_message(message: str) -> str:
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LLMRateLimitConfig:
     """Tunable knobs for LLM rate control.  Loaded once from config.toml."""
 
     max_concurrent_requests: int = 2
     min_delay_between_requests: float = 1.0  # seconds
-    circuit_breaker_threshold: int = 3        # consecutive 429s to trip
-    circuit_breaker_cooldown: float = 60.0    # seconds before half-open
+    circuit_breaker_threshold: int = 3  # consecutive 429s to trip
+    circuit_breaker_cooldown: float = 60.0  # seconds before half-open
     max_retries: int = 3
     retry_backoff_base: float = 2.0
     retry_backoff_max: float = 30.0
@@ -61,6 +62,7 @@ class LLMRateLimitConfig:
 # ---------------------------------------------------------------------------
 # Circuit breaker
 # ---------------------------------------------------------------------------
+
 
 class CircuitState:
     CLOSED = "closed"
@@ -82,12 +84,14 @@ class CircuitBreaker:
     @property
     def state(self) -> str:
         with self._lock:
-            if self._state == CircuitState.OPEN:
-                if time.monotonic() - self._opened_at >= self._cooldown:
-                    self._state = CircuitState.HALF_OPEN
-                    logger.info(
-                        "LLM circuit breaker -> HALF_OPEN (cooldown elapsed, allowing probe)"
-                    )
+            if (
+                self._state == CircuitState.OPEN
+                and time.monotonic() - self._opened_at >= self._cooldown
+            ):
+                self._state = CircuitState.HALF_OPEN
+                logger.info(
+                    "LLM circuit breaker -> HALF_OPEN (cooldown elapsed, allowing probe)"
+                )
             return self._state
 
     @property
@@ -105,7 +109,9 @@ class CircuitBreaker:
         with self._lock:
             self._consecutive_failures += 1
             if self._consecutive_failures >= self._threshold:
-                cooldown = retry_after if retry_after and retry_after > 0 else self._cooldown
+                cooldown = (
+                    retry_after if retry_after and retry_after > 0 else self._cooldown
+                )
                 self._state = CircuitState.OPEN
                 self._opened_at = time.monotonic()
                 logger.warning(
@@ -128,6 +134,7 @@ class CircuitBreaker:
 # ---------------------------------------------------------------------------
 # Global rate limiter singleton
 # ---------------------------------------------------------------------------
+
 
 class LLMRateLimiter:
     """
@@ -161,7 +168,9 @@ class LLMRateLimiter:
         )
 
     @classmethod
-    def get_instance(cls, config: Optional[LLMRateLimitConfig] = None) -> "LLMRateLimiter":
+    def get_instance(
+        cls, config: Optional[LLMRateLimitConfig] = None
+    ) -> "LLMRateLimiter":
         """Return (or create) the process-wide singleton."""
         if cls._instance is None:
             with cls._init_lock:
@@ -242,6 +251,7 @@ class LLMRateLimiter:
 # ---------------------------------------------------------------------------
 # Retry-after parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_retry_after(header_value: Optional[str]) -> Optional[float]:
     """Parse a Retry-After header into seconds. Returns None if unparseable."""

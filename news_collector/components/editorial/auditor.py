@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
+from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import (
     ModelRegistryError,
     get_model_for_stage,
 )
-from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import load_config
 

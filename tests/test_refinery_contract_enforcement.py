@@ -9,10 +9,18 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 def validate_collector_payload(payload):
     from news_collector.contracts.collector import CollectorArticleModel
+
     return CollectorArticleModel.model_validate(payload).model_dump()
 
+
 def test_process_single_article_enforces_contract(tmp_path):
-    engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), MagicMock(), contract_validator=validate_collector_payload)
+    engine = RefineryEngine(
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        contract_validator=validate_collector_payload,
+    )
 
     # Track side effects
     engine.db.set_canonical_slug = MagicMock()
@@ -61,7 +69,13 @@ def test_process_single_article_enforces_contract(tmp_path):
 
 
 def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
-    engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), MagicMock(), contract_validator=validate_collector_payload)
+    engine = RefineryEngine(
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        contract_validator=validate_collector_payload,
+    )
     engine.db.set_canonical_slug = MagicMock()
     engine.db.get_canonical_slug.return_value = None
     engine.editor = MagicMock()

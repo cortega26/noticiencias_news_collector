@@ -10,9 +10,7 @@ sample_export = {
     "source_name": "Test Source",
     "source_id": "test_script",
     "category": "science",
-    "metadata": {
-        "original_url": "https://example.com/test"
-    }
+    "metadata": {"original_url": "https://example.com/test"},
 }
 
 adapted = adapt_export_article_to_collector_payload(sample_export)
@@ -23,4 +21,3 @@ try:
     print("Validated successfully!")
 except Exception as e:
     print("Validation Error:", e)
-

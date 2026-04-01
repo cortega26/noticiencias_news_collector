@@ -16,10 +16,10 @@ import pytest
 
 from news_collector.utils.url_canonicalizer import canonicalize_url
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_payload(**overrides: Any) -> Dict[str, Any]:
     """Builds a minimal valid CollectorArticleModel payload."""
@@ -77,6 +77,7 @@ CANONICAL_FOR_VARIANTS = "https://example.com/story"
 # 1. Contract model canonicalizes URL
 # ---------------------------------------------------------------------------
 
+
 class TestCollectorModelCanonicalizes:
     """Prove CollectorArticleModel.url is always canonical after validation."""
 
@@ -128,6 +129,7 @@ class TestCollectorModelCanonicalizes:
 # 2. original_url preserved
 # ---------------------------------------------------------------------------
 
+
 class TestOriginalUrlPreserved:
     """original_url retains the pre-canonical value for audit."""
 
@@ -147,6 +149,7 @@ class TestOriginalUrlPreserved:
 # 3. All variants produce single identity
 # ---------------------------------------------------------------------------
 
+
 class TestUrlVariantsCollapse:
     """Multiple URL variants through the model yield the same canonical URL."""
 
@@ -158,7 +161,11 @@ class TestUrlVariantsCollapse:
         # ArticleMetadataModel validates original_url starts with http/https,
         # so we normalize it for the metadata field (the contract validator
         # handles the model-level url canonicalization which is what we test).
-        payload["article_metadata"]["original_url"] = variant.lower() if variant.lower().startswith("http") else f"https://{variant.lower()}"
+        payload["article_metadata"]["original_url"] = (
+            variant.lower()
+            if variant.lower().startswith("http")
+            else f"https://{variant.lower()}"
+        )
         model = CollectorArticleModel.model_validate(payload)
         assert str(model.url) == CANONICAL_FOR_VARIANTS, (
             f"Variant {variant!r} produced {str(model.url)!r}, "
@@ -170,6 +177,7 @@ class TestUrlVariantsCollapse:
 # 4. Canonicalization is idempotent
 # ---------------------------------------------------------------------------
 
+
 class TestCanonicalizationIdempotent:
     """Applying canonicalization twice yields the same result."""
 
@@ -177,14 +185,15 @@ class TestCanonicalizationIdempotent:
     def test_idempotent(self, variant: str) -> None:
         first = canonicalize_url(variant)
         second = canonicalize_url(first)
-        assert first == second, (
-            f"Not idempotent: {variant!r} -> {first!r} -> {second!r}"
-        )
+        assert (
+            first == second
+        ), f"Not idempotent: {variant!r} -> {first!r} -> {second!r}"
 
 
 # ---------------------------------------------------------------------------
 # 5. Scheme normalization
 # ---------------------------------------------------------------------------
+
 
 class TestSchemeNormalization:
     """http URLs become https."""
@@ -201,11 +210,14 @@ class TestSchemeNormalization:
 # 6. Trailing slash policy
 # ---------------------------------------------------------------------------
 
+
 class TestTrailingSlash:
     """Trailing slashes on paths are preserved (current policy)."""
 
     def test_trailing_slash_preserved(self) -> None:
-        assert canonicalize_url("https://example.com/path/") == "https://example.com/path/"
+        assert (
+            canonicalize_url("https://example.com/path/") == "https://example.com/path/"
+        )
 
     def test_root_slash(self) -> None:
         assert canonicalize_url("https://example.com") == "https://example.com/"
@@ -214,6 +226,7 @@ class TestTrailingSlash:
 # ---------------------------------------------------------------------------
 # 7. article_exists defense-in-depth (mock DB)
 # ---------------------------------------------------------------------------
+
 
 class TestArticleExistsCanonicalizes:
     """article_exists() and articles_exist() canonicalize before querying."""
@@ -253,6 +266,7 @@ class TestArticleExistsCanonicalizes:
 # 8. Dedup across URL variants (contract-level proof)
 # ---------------------------------------------------------------------------
 
+
 class TestDedupAcrossVariants:
     """Insert with variant A, attempt with variant B → same canonical identity."""
 
@@ -264,16 +278,12 @@ class TestDedupAcrossVariants:
         variant_a = "https://www.example.com/story?utm_source=twitter"
         variant_b = "https://m.example.com/story?fbclid=abc123"
 
-        model_a = CollectorArticleModel.model_validate(
-            _make_payload(url=variant_a)
-        )
-        model_b = CollectorArticleModel.model_validate(
-            _make_payload(url=variant_b)
-        )
+        model_a = CollectorArticleModel.model_validate(_make_payload(url=variant_a))
+        model_b = CollectorArticleModel.model_validate(_make_payload(url=variant_b))
 
-        assert str(model_a.url) == str(model_b.url), (
-            f"Dedup would fail: {str(model_a.url)!r} != {str(model_b.url)!r}"
-        )
+        assert str(model_a.url) == str(
+            model_b.url
+        ), f"Dedup would fail: {str(model_a.url)!r} != {str(model_b.url)!r}"
 
     def test_model_dump_url_is_canonical(self) -> None:
         """model_dump_for_storage() emits the canonical URL string."""

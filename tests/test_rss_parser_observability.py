@@ -25,9 +25,7 @@ def test_rss_parser_logs_corrupt_entry():
 
     assert len(items) == 0
     combined = "".join(messages)
-    assert (
-        "Failed to extract item from feed 'test_source': Corrupt entry!" in combined
-    )
+    assert "Failed to extract item from feed 'test_source': Corrupt entry!" in combined
 
 
 def test_rss_parser_logs_corrupt_timestamp():

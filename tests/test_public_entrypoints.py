@@ -71,10 +71,7 @@ class TestPublicEntrypoints:
                 assert isinstance(warnings, list)
                 assert len(warnings) > 0
                 # Provider-aware: message depends on whether Gemini or Ollama is active
-                assert any(
-                    "unreachable" in w or "health check" in w
-                    for w in warnings
-                )
+                assert any("unreachable" in w or "health check" in w for w in warnings)
 
     def test_bootstrap_strict_mode_fails_fast(self):
         from news_collector.system.bootstrap import bootstrap_system
@@ -110,7 +107,9 @@ class TestPublicEntrypoints:
                     "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
                     side_effect=ModelRegistryError("NO_WARN mode forbids inheritance"),
                 ):
-                    with patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True):
+                    with patch(
+                        "news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True
+                    ):
                         try:
                             bootstrap_system()
                             assert False, "Expected NO_WARN bootstrap failure"

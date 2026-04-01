@@ -65,7 +65,8 @@ class CollectorDispatcher:
             self.collectors["headless"] = create_collector("headless")
         except Exception as e:
             logger.warning(
-                "Failed to initialize Headless collector (check playwright install): %s", e
+                "Failed to initialize Headless collector (check playwright install): %s",
+                e,
             )
 
         if self.logger_factory:
@@ -79,7 +80,9 @@ class CollectorDispatcher:
                     c.health_tracker = self.health_tracker
                     logger.debug("Dispatcher set tracker on %s (%s)", name, type(c))
                 else:
-                    logger.debug("Collector %s (%s) has no health_tracker attr", name, type(c))
+                    logger.debug(
+                        "Collector %s (%s) has no health_tracker attr", name, type(c)
+                    )
 
     def set_logger_factory(self, logger_factory):
         self.logger_factory = logger_factory

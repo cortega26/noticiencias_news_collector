@@ -34,9 +34,9 @@ class TestVelocityModeMinimumThreshold:
         """Regression: velocity mode must NOT have auditor_threshold=0.0."""
         policy = EditorialPolicy.from_mode("velocity")
 
-        assert policy.auditor_threshold > 0.0, (
-            "Velocity mode auditor_threshold must not be 0.0 (F-0027)"
-        )
+        assert (
+            policy.auditor_threshold > 0.0
+        ), "Velocity mode auditor_threshold must not be 0.0 (F-0027)"
 
     def test_standard_and_strict_unaffected(self):
         """Other modes retain their original thresholds."""

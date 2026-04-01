@@ -27,8 +27,7 @@ def _make_article(idx: int) -> dict:
     """Build a unique, valid article payload for the given index."""
     unique_content = (
         f"Article {idx} content about scientific discovery number {idx}. "
-        f"This research explores topic {idx} in depth with novel methodology. "
-        * 30
+        f"This research explores topic {idx} in depth with novel methodology. " * 30
     )
     return {
         "url": f"https://test-source.com/article-{idx}",
@@ -71,9 +70,9 @@ class TestPipelineIdempotency:
         with db_manager.get_session() as session:
             count_after_run1 = session.query(Article).count()
 
-        assert count_after_run1 == FIXTURE_SIZE, (
-            f"Expected {FIXTURE_SIZE} articles after first run, got {count_after_run1}"
-        )
+        assert (
+            count_after_run1 == FIXTURE_SIZE
+        ), f"Expected {FIXTURE_SIZE} articles after first run, got {count_after_run1}"
 
         # --- Run 2: re-ingest same feed ---
         for article_data in fixture:
@@ -103,6 +102,6 @@ class TestPipelineIdempotency:
         with db_manager.get_session() as session:
             total = session.query(Article).count()
 
-        assert total == FIXTURE_SIZE + 3, (
-            f"Expected {FIXTURE_SIZE + 3} articles (original + new), got {total}"
-        )
+        assert (
+            total == FIXTURE_SIZE + 3
+        ), f"Expected {FIXTURE_SIZE + 3} articles (original + new), got {total}"

@@ -7,8 +7,8 @@ from datetime import datetime as dt_datetime
 from pathlib import Path
 from typing import Any
 
-from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
 from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
@@ -289,7 +289,9 @@ class EditorAgent:
 
         return {str(key): normalize_value(val) for key, val in payload.items()}
 
-    def _send_prompt(self, prompt: str, system: str | None = None, model: str | None = None) -> str:
+    def _send_prompt(
+        self, prompt: str, system: str | None = None, model: str | None = None
+    ) -> str:
         """Helper to send prompt to Ollama with streaming handling."""
         use_model = model or self.model
         logger.info(f"Sending prompt to Ollama ({use_model})...")
@@ -563,7 +565,10 @@ class EditorAgent:
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
     def process_article(  # noqa: C901
-        self, raw_text: str | dict, override_date: str | None = None, explicit_article_id: str | None = None
+        self,
+        raw_text: str | dict,
+        override_date: str | None = None,
+        explicit_article_id: str | None = None,
     ) -> str:
         """
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
@@ -604,6 +609,7 @@ class EditorAgent:
         else:
             content = raw_text
             import hashlib
+
             if article_id == "unknown":
                 article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
             raw_category = "other"
@@ -626,6 +632,7 @@ class EditorAgent:
 
         # R-12 Defense-in-depth: Sanitize Content Before LLM Processing
         from news_collector.utils.text_cleaner import clean_html
+
         title = clean_html(title) if title else ""
         content = clean_html(content) if content else ""
 
@@ -687,7 +694,9 @@ class EditorAgent:
                     )
                     print(f"   Reason: {reason}")
                     # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
-                    final_content = self._repair_editorial(translated_text, reason or "Unknown reason")
+                    final_content = self._repair_editorial(
+                        translated_text, reason or "Unknown reason"
+                    )
                     final_content = self._extract_markdown_content(
                         final_content
                     )  # Cleanup
@@ -774,6 +783,7 @@ class EditorAgent:
             parsed_date_val: Any = date_str
             if isinstance(date_str, str):
                 from datetime import datetime
+
                 try:
                     if len(date_str) == 10:
                         parsed_date_val = datetime.strptime(date_str, "%Y-%m-%d").date()

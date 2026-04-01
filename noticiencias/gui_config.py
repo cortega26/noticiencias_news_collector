@@ -272,8 +272,10 @@ class ConfigEditor:
             lambda event: canvas.configure(scrollregion=canvas.bbox("all")),
         )
         window_id = canvas.create_window((0, 0), window=form, anchor="nw")
+
         def _resize_canvas(event: Any, item: int = window_id) -> None:
             canvas.itemconfigure(item, width=event.width)
+
         canvas.bind("<Configure>", _resize_canvas)
 
         for index, name in enumerate(names):
@@ -388,8 +390,10 @@ class ConfigEditor:
             widget1 = ttk.Combobox(
                 parent, textvariable=var1, values=values, state="readonly"
             )
+
             def _on_combo_change(_event: Any, n: str = doc.name) -> None:
                 self._on_change(n)
+
             widget1.bind("<<ComboboxSelected>>", _on_combo_change)
             self._choice_mappings[doc.name] = mapping
             self._choice_reverse[doc.name] = reverse
@@ -398,16 +402,20 @@ class ConfigEditor:
         if isinstance(value, bool):
             var2 = tk.BooleanVar(value=value)
             widget2 = ttk.Checkbutton(parent, variable=var2)
+
             def _on_bool_change(_event: Any, n: str = doc.name) -> None:
                 self._on_change(n)
+
             widget2.bind("<FocusOut>", _on_bool_change)
             return widget2, var2
         else:
             var3 = tk.StringVar(value=self._format_value(value))
             show = "*" if doc.is_secret else ""
             widget3 = ttk.Entry(parent, textvariable=var3, show=show)
+
             def _on_entry_change(_event: Any, n: str = doc.name) -> None:
                 self._on_change(n)
+
             widget3.bind("<FocusOut>", _on_entry_change)
             return widget3, var3
 

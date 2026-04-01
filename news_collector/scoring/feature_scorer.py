@@ -201,6 +201,7 @@ class FeatureBasedScorer(AsyncScorer):
 
         from news_collector.contracts import ArticleMetadataModel
         from news_collector.utils.logger import get_logger
+
         logger = get_logger().create_module_logger(__name__)
         try:
             raw_meta = _get_attr(article, "article_metadata", {}) or {}
@@ -258,7 +259,7 @@ class FeatureBasedScorer(AsyncScorer):
             normalized_title = metadata.enrichment.normalized_title
             normalized_summary = metadata.enrichment.normalized_summary
             entities = metadata.enrichment.entities
-            
+
         if not normalized_title or not normalized_summary:
             title = _get_attr(article, "title", "") or ""
             summary = _get_attr(article, "summary", "") or ""
@@ -289,7 +290,7 @@ class FeatureBasedScorer(AsyncScorer):
         sentiment = None
         if metadata and metadata.enrichment:
             sentiment = metadata.enrichment.sentiment
-            
+
         sentiment_score = self.fallback_sentiment
         if isinstance(sentiment, str):
             sentiment_score = self.sentiment_scores.get(
