@@ -18,9 +18,11 @@ MODELS_TO_TEST = [
 
 NUM_ITERATIONS = 1
 
+
 def run_json_benchmark():
     # Silenciar logs masivos
     import logging
+
     logging.getLogger("news_collector").setLevel(logging.WARNING)
 
     print("==========================================================")
@@ -34,15 +36,15 @@ def run_json_benchmark():
 
     for model_name in MODELS_TO_TEST:
         print(f">>> Evaluando Modelo: {model_name}")
-        
+
         # Instantiate agent overriding the explicit models
         # We only care about headlines_model for this test, as it's the one doing the JSON/Pydantic validation
         agent = EditorAgent(
             api_url="http://localhost:11434/api/generate",
-            model="llama3.2:latest", # Dummy base
-            headlines_model=model_name
+            model="llama3.2:latest",  # Dummy base
+            headlines_model=model_name,
         )
-        
+
         success_count = 0
         error_count = 0
         total_time = 0.0
@@ -50,7 +52,7 @@ def run_json_benchmark():
         for i in range(1, NUM_ITERATIONS + 1):
             print(f"  [Iteración {i}/{NUM_ITERATIONS}] ", end="")
             start_t = time.time()
-            
+
             try:
                 # Stage 3 directly invokes Pydantic Validation on JSON generated
                 print("(procesando...) ", end="", flush=True)
@@ -58,9 +60,13 @@ def run_json_benchmark():
                 duration = time.time() - start_t
                 total_time += duration
                 success_count += 1
-                keys_str = ", ".join(result.keys()) if isinstance(result, dict) else "Formato devuelto no es dict"
+                keys_str = (
+                    ", ".join(result.keys())
+                    if isinstance(result, dict)
+                    else "Formato devuelto no es dict"
+                )
                 print(f"✅ OK ({duration:.2f}s) - Keys encontradas: {keys_str}")
-                
+
             except Exception as e:
                 duration = time.time() - start_t
                 total_time += duration
@@ -70,14 +76,18 @@ def run_json_benchmark():
         # Summary
         avg_time = total_time / NUM_ITERATIONS
         success_rate = (success_count / NUM_ITERATIONS) * 100
-        
-        results.append({
-            "model": model_name,
-            "success_rate": success_rate,
-            "avg_latency": avg_time,
-            "errors": error_count
-        })
-        print(f"\n✅ {model_name} -> Tasa de Éxito Pydantic: {success_rate:.1f}% | Latencia Media: {avg_time:.2f}s\n")
+
+        results.append(
+            {
+                "model": model_name,
+                "success_rate": success_rate,
+                "avg_latency": avg_time,
+                "errors": error_count,
+            }
+        )
+        print(
+            f"\n✅ {model_name} -> Tasa de Éxito Pydantic: {success_rate:.1f}% | Latencia Media: {avg_time:.2f}s\n"
+        )
 
     print("==========================================================")
     print("                     RESUMEN FINAL                        ")
@@ -85,7 +95,9 @@ def run_json_benchmark():
     print(f"{'Modelo':<15} | {'Éxito %':<10} | {'Latencia (s)':<15} | {'Errores JSON'}")
     print("-" * 60)
     for r in results:
-        print(f"{r['model']:<15} | {r['success_rate']:<10.1f} | {r['avg_latency']:<15.2f} | {r['errors']}")
+        print(
+            f"{r['model']:<15} | {r['success_rate']:<10.1f} | {r['avg_latency']:<15.2f} | {r['errors']}"
+        )
     print("==========================================================")
 
 

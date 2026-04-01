@@ -57,8 +57,7 @@ SHARED_CONTENT = (
     "reduces the overhead needed for fault-tolerant quantum computing. The team's paper, "
     "published today, describes a method that achieves error rates below the threshold "
     "needed for practical quantum computation. This breakthrough represents years of "
-    "collaborative research spanning multiple disciplines and institutions. "
-    * 20
+    "collaborative research spanning multiple disciplines and institutions. " * 20
 )
 
 
@@ -84,7 +83,9 @@ class TestContentHashDedupCrossURL:
         assert result_a is not None, "First article should be saved"
 
         result_b = db_manager.save_article(article_b)
-        assert result_b is None, "Second article with same content should be rejected as duplicate"
+        assert (
+            result_b is None
+        ), "Second article with same content should be rejected as duplicate"
 
     def test_different_content_different_urls_accepted(self, db_manager):
         """Two articles with different URLs AND different content are both saved."""
@@ -92,13 +93,15 @@ class TestContentHashDedupCrossURL:
             url="https://source-a.com/article-one",
             title="First Article About Biology",
             summary="A comprehensive study on marine biology and ocean ecosystems.",
-            content="Marine biology research content that is unique and different. " * 30,
+            content="Marine biology research content that is unique and different. "
+            * 30,
         )
         article_b = _make_article(
             url="https://source-b.com/article-two",
             title="Second Article About Chemistry",
             summary="An innovative approach to organic chemistry synthesis methods.",
-            content="Organic chemistry research content that is completely different. " * 30,
+            content="Organic chemistry research content that is completely different. "
+            * 30,
         )
 
         result_a = db_manager.save_article(article_a)

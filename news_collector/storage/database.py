@@ -622,10 +622,10 @@ class DatabaseManager:
                 raise ValueError(f"Invalid collector payload: {exc}") from exc
 
         payload = model.model_dump_for_storage()
-        
+
         # Defense-in-depth (LAW-4): enforce canonical URL immediately before DB operations
         payload["url"] = canonicalize_url(payload["url"]) or payload["url"]
-        
+
         normalized_published = self._ensure_timezone(payload.get("published_date"))
         if normalized_published:
             payload["published_date"] = normalized_published
@@ -733,14 +733,16 @@ class DatabaseManager:
 
             except IntegrityError as e:
                 session.rollback()
-                # LAW-4/Race Condition Mitigation: 
+                # LAW-4/Race Condition Mitigation:
                 # Concurrent saves might bypass the existence check.
                 # Only swallow the error if it's a genuine duplicate violation.
                 err_msg = str(e).lower()
                 if "unique" in err_msg or "duplicate" in err_msg:
-                    logger.warning(f"Concurrent duplicate insertion trapped by DB constraint: {e}")
+                    logger.warning(
+                        f"Concurrent duplicate insertion trapped by DB constraint: {e}"
+                    )
                     return None
-                
+
                 # Re-raise non-duplicate integrity errors (e.g. NOT NULL, CheckConstraints)
                 logger.error(f"Critical IntegrityError saving article: {e}")
                 raise
@@ -892,8 +894,8 @@ class DatabaseManager:
                                 f"Batch savepoint rolled back. "
                                 f"Please ensure distinct entries."
                             )
-                            # The batch failed, but we can't easily salvage without breaking all-or-nothing of the batch 
-                            # inside a single overall transaction. 
+                            # The batch failed, but we can't easily salvage without breaking all-or-nothing of the batch
+                            # inside a single overall transaction.
                             # Since R-11 requires all-or-nothing, we raise to abort the entire bulk operation.
                             raise
 
@@ -902,17 +904,23 @@ class DatabaseManager:
                         with session.begin_nested():
                             session.flush()
                         saved_count += pending_count
-                    except IntegrityError as e:
-                        logger.warning(f"Bulk insert collision in final batch. Aborting bulk.")
+                    except IntegrityError:
+                        logger.warning(
+                            "Bulk insert collision in final batch. Aborting bulk."
+                        )
                         raise
-                    
+
                 session.commit()  # Single commit for all-or-nothing
-                logger.info(f"💾 Bulk save completed atomically: {saved_count} articles")
+                logger.info(
+                    f"💾 Bulk save completed atomically: {saved_count} articles"
+                )
                 return saved_count
 
             except Exception as e:
                 session.rollback()
-                logger.error(f"Error fatal en guardado masivo, transaccion abortada: {e}")
+                logger.error(
+                    f"Error fatal en guardado masivo, transaccion abortada: {e}"
+                )
                 raise
 
     @staticmethod

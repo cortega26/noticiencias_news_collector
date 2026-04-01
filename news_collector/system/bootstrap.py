@@ -255,9 +255,7 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                 )
 
                 gemini_model = getattr(CONFIG.gemini, "model", "gemini-2.5-flash")
-                provider = GeminiProvider(
-                    api_key=gemini_api_key, model=gemini_model
-                )
+                provider = GeminiProvider(api_key=gemini_api_key, model=gemini_model)
                 healthy, reason = provider.check_health(timeout_seconds=5)
                 if healthy:
                     if logger:
@@ -337,7 +335,9 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                     for m in models
                     if isinstance(m, dict) and m.get("name")
                 }
-                required_models = sorted([str(m) for m in set(stage_models.values()) if m is not None])
+                required_models = sorted(
+                    [str(m) for m in set(stage_models.values()) if m is not None]
+                )
                 missing = [
                     model_name
                     for model_name in required_models

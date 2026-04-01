@@ -36,10 +36,17 @@ def _build_engine_with_mocks(data_dir: Path):
         paths=SimpleNamespace(data_dir=str(data_dir)),
     )
     from news_collector.contracts.collector import CollectorArticleModel
+
     def validate_collector_payload(payload):
         return CollectorArticleModel.model_validate(payload).model_dump()
 
-    engine = RefineryEngine(mock_db, mock_git, mock_editor, config, contract_validator=validate_collector_payload)
+    engine = RefineryEngine(
+        mock_db,
+        mock_git,
+        mock_editor,
+        config,
+        contract_validator=validate_collector_payload,
+    )
     engine.auditor = MagicMock()
     engine.auditor.get_cached_score.return_value = {
         "epistemic_rigor_score": 10.0,

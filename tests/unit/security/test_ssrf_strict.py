@@ -21,6 +21,7 @@ async def test_ssrf_protection_rejects_private_ips():
 
     def mock_handler(request):
         raise Exception("SSRF Bypass: Reached network transport!")
+
     transport = httpx.MockTransport(mock_handler)
     client.client._transport = transport
 
@@ -46,6 +47,7 @@ async def test_ssrf_protection_rejects_unsupported_schemes():
 
     def mock_handler(request):
         raise Exception("SSRF Bypass: Reached network transport!")
+
     transport = httpx.MockTransport(mock_handler)
     client.client._transport = transport
 
@@ -63,6 +65,7 @@ async def test_ssrf_allows_public_https():
 
     def mock_handler(request):
         return httpx.Response(status_code=200, text="ok")
+
     transport = httpx.MockTransport(mock_handler)
     client.client._transport = transport
 

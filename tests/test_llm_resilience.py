@@ -6,12 +6,14 @@ from news_collector.system import bootstrap
 def test_ollama_health_check_graceful_failure():
     # Patch requests.get globally, since bootstrap.py imports it locally but uses the global module
     # Also patch Gemini API key to None so the Ollama path is exercised
-    with patch("requests.get", side_effect=Exception("Connection refused")), \
-         patch("news_collector.config.settings.CONFIG") as mock_cfg, \
-         patch(
-             "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
-             return_value={"default": "llama3.3:latest"},
-         ):
+    with (
+        patch("requests.get", side_effect=Exception("Connection refused")),
+        patch("news_collector.config.settings.CONFIG") as mock_cfg,
+        patch(
+            "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
+            return_value={"default": "llama3.3:latest"},
+        ),
+    ):
         mock_cfg.gemini.api_key = None
         mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
 

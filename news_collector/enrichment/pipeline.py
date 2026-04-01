@@ -98,7 +98,8 @@ class EnrichmentPipeline:
             extra_texts=(payload_title, payload_summary or "", payload_content or ""),
         )
 
-        from typing import Any, MutableMapping
+        from typing import Any
+
         result: MutableMapping[str, Any] = {
             "language": language,
             "normalized_title": normalized_title,

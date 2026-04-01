@@ -59,9 +59,7 @@ class TestPublishingStateRecoveryWithExistingPR:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(
-                article, MagicMock(), Path(tmpdir)
-            )
+            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
 
         assert result is True
         # Recovery should have called create_pull_request with the publishing branch
@@ -98,9 +96,7 @@ class TestPublishingStateRecoveryWithoutPR:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(
-                article, MagicMock(), Path(tmpdir)
-            )
+            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
 
         assert result is True
         mock_git.create_pull_request.assert_called_once()
@@ -117,9 +113,7 @@ class TestPublishingStateTimeout:
         # Simulate: article stuck in publishing for 2 hours
         from datetime import timedelta
 
-        old_time = (
-            datetime.now(timezone.utc) - timedelta(hours=2)
-        ).isoformat()
+        old_time = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": old_time,
             "publishing_branch": "content/update-2024-01-01-old-article",
@@ -131,7 +125,9 @@ class TestPublishingStateTimeout:
             "---\nslug: old-article\n---\nContent"
         )
         mock_git.create_branch.return_value = "content/update-2024-01-01-old-article"
-        mock_git.create_pull_request.return_value = "https://github.com/owner/repo/pull/1"
+        mock_git.create_pull_request.return_value = (
+            "https://github.com/owner/repo/pull/1"
+        )
 
         article = {
             "id": "789",
@@ -143,9 +139,7 @@ class TestPublishingStateTimeout:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(
-                article, MagicMock(), Path(tmpdir)
-            )
+            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
 
         assert result is True
         # Editor SHOULD have been called (normal processing, not recovery)
@@ -162,11 +156,11 @@ class TestPublishingStateMarkBeforeGitOps:
         mock_db.get_publishing_state.return_value = None
         mock_db.get_canonical_slug.return_value = None
 
-        mock_editor.process_article.return_value = (
-            "---\nslug: test-slug\n---\nContent"
-        )
+        mock_editor.process_article.return_value = "---\nslug: test-slug\n---\nContent"
         mock_git.create_branch.return_value = "content/update-2024-01-01-test-slug"
-        mock_git.create_pull_request.return_value = "https://github.com/owner/repo/pull/1"
+        mock_git.create_pull_request.return_value = (
+            "https://github.com/owner/repo/pull/1"
+        )
 
         article = {
             "id": "100",
@@ -178,9 +172,7 @@ class TestPublishingStateMarkBeforeGitOps:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(
-                article, MagicMock(), Path(tmpdir)
-            )
+            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
 
         assert result is True
         # mark_article_publishing should have been called before git ops

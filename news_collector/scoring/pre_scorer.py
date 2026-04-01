@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional
 
 from news_collector.config.settings import CONFIG
-from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.utils.logger import get_logger
 
@@ -49,7 +49,8 @@ class PreScorer:
         if len(candidates) <= limit:
             logger.info(
                 "PreScorer: Solicitados %d, disponibles %d. Retornando todos.",
-                limit, len(candidates),
+                limit,
+                len(candidates),
             )
             return candidates
 
@@ -64,7 +65,8 @@ class PreScorer:
 
         logger.info(
             "PreScorer: Analizando %d candidatos para seleccionar Top %d...",
-            len(candidates), limit,
+            len(candidates),
+            limit,
         )
 
         # Construir prompt batch
@@ -131,11 +133,15 @@ class PreScorer:
             err_str = str(e)
             if "not configured" in err_str or "unavailable" in err_str.lower():
                 logger.warning(
-                    "PreScorer: LLM not available. Falling back to FIFO. (%s)", err_str,
+                    "PreScorer: LLM not available. Falling back to FIFO. (%s)",
+                    err_str,
                 )
-            elif "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower():
+            elif (
+                "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower()
+            ):
                 logger.warning(
-                    "PreScorer: Rate limited — falling back to FIFO. (%s)", err_str,
+                    "PreScorer: Rate limited — falling back to FIFO. (%s)",
+                    err_str,
                 )
             else:
                 logger.error("Error en PreScorer: %s. Fallback a FIFO.", e)

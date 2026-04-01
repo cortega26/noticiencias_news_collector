@@ -733,6 +733,7 @@ class GeminiConfig(StrictModel):
             return None
         return v
 
+
 class LLMRateLimitingConfig(StrictModel):
     """Rate limiting configuration for LLM API calls."""
 

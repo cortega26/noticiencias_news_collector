@@ -5,11 +5,14 @@ from __future__ import annotations
 import contextlib
 import os
 import time
+from typing import Any, Dict, Mapping, Optional
 
 try:
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     from playwright.sync_api import sync_playwright
 except ImportError:
     sync_playwright = None
+    PlaywrightTimeoutError = None  # type: ignore[assignment,misc]
 
 from news_collector.utils.logger import get_logger
 

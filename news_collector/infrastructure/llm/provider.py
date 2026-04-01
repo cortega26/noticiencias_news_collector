@@ -9,7 +9,6 @@ Rate-limit aware:
 """
 
 import json
-import logging
 import random
 import re
 import time
@@ -36,7 +35,11 @@ _NON_CANONICAL_WARNED: set[tuple[str, str, str]] = set()
 class RateLimitError(Exception):
     """Raised when the provider returns 429 and the circuit breaker is open."""
 
-    def __init__(self, message: str = "LLM rate limit exceeded", retry_after: Optional[float] = None):
+    def __init__(
+        self,
+        message: str = "LLM rate limit exceeded",
+        retry_after: Optional[float] = None,
+    ):
         super().__init__(message)
         self.retry_after = retry_after
 
@@ -157,9 +160,11 @@ class OllamaProvider:
     # ---- Retry helpers ----
 
     @staticmethod
-    def _backoff_delay(attempt: int, base: float = 2.0, cap: float = 15.0, jitter: float = 1.5) -> float:
-        delay = min(cap, base * (2 ** attempt))
-        return delay + random.uniform(0, jitter)
+    def _backoff_delay(
+        attempt: int, base: float = 2.0, cap: float = 15.0, jitter: float = 1.5
+    ) -> float:
+        delay = min(cap, base * (2**attempt))
+        return delay + random.uniform(0, jitter)  # noqa: S311
 
     @staticmethod
     def _is_429_response(response: requests.Response) -> bool:
@@ -187,7 +192,9 @@ class OllamaProvider:
 
         limiter = LLMRateLimiter.get_instance()
 
-        for attempt_num in range(1, self.max_retries + 2):  # max_retries + 1 total attempts
+        for attempt_num in range(
+            1, self.max_retries + 2
+        ):  # max_retries + 1 total attempts
             acquired = await limiter.acquire_async()
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
@@ -195,7 +202,9 @@ class OllamaProvider:
             try:
                 logger.debug(
                     "Sending async prompt to Ollama (%s) (attempt=%d/%d)",
-                    payload["model"], attempt_num, self.max_retries + 1,
+                    payload["model"],
+                    attempt_num,
+                    self.max_retries + 1,
                 )
                 start = time.time()
                 response = await self.async_client.post(
@@ -218,15 +227,24 @@ class OllamaProvider:
                 if self._is_429_httpx(e.response):
                     limiter.circuit_breaker.record_rate_limit()
                     logger.warning("Ollama 429 (attempt {}): {}", attempt_num, safe_msg)
-                    if attempt_num <= self.max_retries and not limiter.circuit_breaker.is_open:
-                        await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                    if (
+                        attempt_num <= self.max_retries
+                        and not limiter.circuit_breaker.is_open
+                    ):
+                        await __import__("asyncio").sleep(
+                            self._backoff_delay(attempt_num)
+                        )
                         continue
                     raise RateLimitError(safe_msg) from e
                 else:
                     limiter.circuit_breaker.record_error()
-                    logger.error("Async LLM error (attempt {}): {}", attempt_num, safe_msg)
+                    logger.error(
+                        "Async LLM error (attempt {}): {}", attempt_num, safe_msg
+                    )
                     if attempt_num <= self.max_retries:
-                        await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                        await __import__("asyncio").sleep(
+                            self._backoff_delay(attempt_num)
+                        )
                         continue
                     raise
             except httpx.RequestError as e:
@@ -243,7 +261,7 @@ class OllamaProvider:
 
     # --- SYNC API (Legacy/Compat) ---
 
-    def generate_sync(
+    def generate_sync(  # noqa: C901
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -267,7 +285,9 @@ class OllamaProvider:
 
         limiter = LLMRateLimiter.get_instance()
 
-        for attempt_num in range(1, self.max_retries + 2):  # max_retries + 1 total attempts
+        for attempt_num in range(
+            1, self.max_retries + 2
+        ):  # max_retries + 1 total attempts
             acquired = limiter.acquire_sync()
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
@@ -276,8 +296,11 @@ class OllamaProvider:
                 logger.debug(
                     "Sending sync prompt to Ollama (%s) at %s "
                     "(timeout=%ds, attempt=%d/%d)",
-                    payload["model"], self.api_url, self.timeout,
-                    attempt_num, self.max_retries + 1,
+                    payload["model"],
+                    self.api_url,
+                    self.timeout,
+                    attempt_num,
+                    self.max_retries + 1,
                 )
                 response = requests.post(
                     self.api_url, json=payload, stream=stream, timeout=self.timeout
@@ -288,12 +311,18 @@ class OllamaProvider:
                     limiter.circuit_breaker.record_rate_limit()
                     logger.warning(
                         "Ollama 429 (attempt %d/%d)",
-                        attempt_num, self.max_retries + 1,
+                        attempt_num,
+                        self.max_retries + 1,
                     )
-                    if attempt_num <= self.max_retries and not limiter.circuit_breaker.is_open:
+                    if (
+                        attempt_num <= self.max_retries
+                        and not limiter.circuit_breaker.is_open
+                    ):
                         time.sleep(self._backoff_delay(attempt_num))
                         continue
-                    raise RateLimitError(f"Ollama returned 429 after {attempt_num} attempts")
+                    raise RateLimitError(
+                        f"Ollama returned 429 after {attempt_num} attempts"
+                    )
 
                 response.raise_for_status()
 
@@ -315,9 +344,7 @@ class OllamaProvider:
             except requests.RequestException as e:
                 safe_msg = redact_message(str(e))
                 limiter.circuit_breaker.record_error()
-                message = (
-                    f"Sync LLM Request Error (Attempt {attempt_num}/{self.max_retries + 1}): {safe_msg}"
-                )
+                message = f"Sync LLM Request Error (Attempt {attempt_num}/{self.max_retries + 1}): {safe_msg}"
                 if log_errors_as_warning:
                     logger.warning(message)
                 else:

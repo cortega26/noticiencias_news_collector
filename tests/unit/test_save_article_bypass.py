@@ -12,7 +12,14 @@ def test_db_manager(tmp_path):
     manager = DatabaseManager(config)
     Base.metadata.create_all(manager.engine)
     # Init some sources
-    sources = {"src1": {"url": "http://a.com", "name": "Source A", "credibility_score": 1.0, "category": "general"}}
+    sources = {
+        "src1": {
+            "url": "http://a.com",
+            "name": "Source A",
+            "credibility_score": 1.0,
+            "category": "general",
+        }
+    }
     manager.initialize_sources(sources)
     yield manager
     manager.close()
@@ -36,17 +43,21 @@ def test_save_article_raw_dict_canonicalizes_url(test_db_manager):
     # First save
     saved1 = test_db_manager.save_article(payload1)
     assert saved1 is not None
-    assert str(saved1.url) == "https://example.com/story", "URL was not canonicalized at save!"
+    assert (
+        str(saved1.url) == "https://example.com/story"
+    ), "URL was not canonicalized at save!"
 
     # Second save with different raw variant
     payload2 = {
         **payload1,
         "url": "https://m.example.com/story",
     }
-    
+
     saved2 = test_db_manager.save_article(payload2)
     # Should return None indicating it already exists, avoiding deduplication failure
-    assert saved2 is None, "Identity collision! Second variant was inserted or not recognized."
+    assert (
+        saved2 is None
+    ), "Identity collision! Second variant was inserted or not recognized."
 
     # Direct DB verification
     with test_db_manager.get_session() as session:

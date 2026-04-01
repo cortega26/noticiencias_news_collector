@@ -25,15 +25,15 @@ def _article_factory(**overrides):
     metadata = {
         "source_metadata": {"credibility_score": 0.7},
         "enrichment": {
-            "entities": [], 
+            "entities": [],
             "sentiment": "neutral",
             "language": "en",
             "model_version": "1.0",
             "normalized_title": "baseline science title",
-            "normalized_summary": "baseline science summary" * 5
-        }
+            "normalized_summary": "baseline science summary" * 5,
+        },
     }
-    
+
     if "enrichment" in metadata_override:
         metadata["enrichment"].update(metadata_override.pop("enrichment"))
     metadata.update(metadata_override)
@@ -63,12 +63,12 @@ def test_content_quality_weights_respected() -> None:
     article = _article_factory(
         article_metadata={
             "enrichment": {
-                "entities": ["A", "B", "C", "D"], 
+                "entities": ["A", "B", "C", "D"],
                 "sentiment": "neutral",
                 "language": "en",
                 "model_version": "1.0",
                 "normalized_title": "t" * 80,
-                "normalized_summary": "s" * 300
+                "normalized_summary": "s" * 300,
             }
         }
     )
@@ -93,12 +93,12 @@ def test_engagement_heuristics_pull_from_config() -> None:
         word_count=500,
         article_metadata={
             "enrichment": {
-                "sentiment": "positive", 
+                "sentiment": "positive",
                 "entities": [],
                 "language": "en",
                 "model_version": "1.0",
                 "normalized_title": "",
-                "normalized_summary": ""
+                "normalized_summary": "",
             },
         },
     )

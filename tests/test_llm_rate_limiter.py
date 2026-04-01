@@ -19,7 +19,6 @@ from news_collector.infrastructure.llm.rate_limiter import (
     redact_url,
 )
 
-
 # ---------------------------------------------------------------------------
 # Secret redaction
 # ---------------------------------------------------------------------------
@@ -261,9 +260,12 @@ class TestPreScorerCircuitBreakerIntegration:
         mock_llm.model = "test-model:latest"
 
         from news_collector.scoring.pre_scorer import PreScorer
+
         scorer = PreScorer(llm_client=mock_llm)
 
-        candidates = [{"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)]
+        candidates = [
+            {"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)
+        ]
         result = scorer.select_top_candidates(candidates, limit=3)
 
         # LLM should not have been called
@@ -285,9 +287,12 @@ class TestPreScorerCircuitBreakerIntegration:
         mock_llm.generate_sync.return_value = {"selected_indices": [2, 0, 1]}
 
         from news_collector.scoring.pre_scorer import PreScorer
+
         scorer = PreScorer(llm_client=mock_llm)
 
-        candidates = [{"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(5)]
+        candidates = [
+            {"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(5)
+        ]
         result = scorer.select_top_candidates(candidates, limit=3)
 
         mock_llm.generate_sync.assert_called_once()
@@ -308,9 +313,12 @@ class TestPreScorerCircuitBreakerIntegration:
         mock_llm.generate_sync.side_effect = RateLimitError("circuit breaker open")
 
         from news_collector.scoring.pre_scorer import PreScorer
+
         scorer = PreScorer(llm_client=mock_llm)
 
-        candidates = [{"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)]
+        candidates = [
+            {"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)
+        ]
         result = scorer.select_top_candidates(candidates, limit=3)
 
         assert len(result) == 3
@@ -343,6 +351,7 @@ class TestCognitiveScorerCircuitBreakerIntegration:
         mock_llm.model = "test-model:latest"
 
         from news_collector.scoring.cognitive_scorer import CognitiveScorer
+
         scorer = CognitiveScorer(llm_client=mock_llm)
         scorer.is_llm_healthy = True
 
@@ -382,7 +391,10 @@ class TestGeminiProviderSecretRedaction:
         err = req_mod.ConnectionError(
             f"Connection refused: https://api.example.com?key=AIzaSyTOPSECRET"
         )
-        with patch("news_collector.infrastructure.llm.gemini_provider.requests.get", side_effect=err):
+        with patch(
+            "news_collector.infrastructure.llm.gemini_provider.requests.get",
+            side_effect=err,
+        ):
             healthy, msg = provider.check_health()
             assert not healthy
             assert "AIzaSyTOPSECRET" not in msg

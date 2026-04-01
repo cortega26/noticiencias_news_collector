@@ -29,6 +29,7 @@ Failure modes:
 """
 
 import concurrent.futures
+import contextlib
 import json
 import os
 import re
@@ -143,7 +144,9 @@ class RefineryEngine:
         from concurrent.futures import ThreadPoolExecutor
 
         self.executor = ThreadPoolExecutor(max_workers=1)
-        self._last_audit_future: Optional[concurrent.futures.Future[Dict[str, Any]]] = None
+        self._last_audit_future: Optional[concurrent.futures.Future[Dict[str, Any]]] = (
+            None
+        )
 
         self._manifest_cache: Dict[str, str] = {}
         self._manifest_loaded = False
@@ -198,6 +201,7 @@ class RefineryEngine:
                 # Requisito explícito: logger.warning(..., exc_info=True)
                 # Y asegurar propagación en pruebas para caplog
                 from news_collector.utils.logger import get_logger
+
                 req_logger = get_logger().create_module_logger("RefineryEngine")
                 req_logger.warning(
                     "Data Contract Validation failure: Article {article_id} rejected: {e}",
@@ -209,10 +213,8 @@ class RefineryEngine:
 
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
         _numeric_id: int | None = None
-        try:
+        with contextlib.suppress(ValueError, TypeError):
             _numeric_id = int(article_id)
-        except (ValueError, TypeError):
-            pass
 
         if _numeric_id is not None:
             recovery_result = self._attempt_publishing_recovery(
@@ -313,7 +315,7 @@ class RefineryEngine:
         raw_image_url = article.get("image_url")
         if isinstance(raw_image_url, str):
             raw_image_url = raw_image_url.strip()
-        
+
         if raw_image_url and raw_image_url.startswith("http"):
             local_image_ref = self._download_image(
                 raw_image_url, image_slug, target_dir
@@ -566,7 +568,7 @@ class RefineryEngine:
     # --- B-01 / F-0012, F-0015: Publishing state recovery ---
     PUBLISHING_TIMEOUT_SECONDS = 3600  # 1 hour
 
-    def _attempt_publishing_recovery(
+    def _attempt_publishing_recovery(  # noqa: C901
         self,
         numeric_id: int,
         article_id: str,
@@ -659,9 +661,7 @@ class RefineryEngine:
             try:
                 self.db.mark_article_published(numeric_id, pr_url)
             except Exception as e:
-                logger.error(
-                    f"Recovery PR found but failed to mark as published: {e}"
-                )
+                logger.error(f"Recovery PR found but failed to mark as published: {e}")
             return True
 
         return None
@@ -955,7 +955,15 @@ class RefineryEngine:
             ext = _CT_TO_EXT.get(ct)
             if not ext:
                 url_lower = url.lower().split("?")[0]
-                for candidate_ext in (".png", ".webp", ".avif", ".gif", ".svg", ".jpeg", ".jpg"):
+                for candidate_ext in (
+                    ".png",
+                    ".webp",
+                    ".avif",
+                    ".gif",
+                    ".svg",
+                    ".jpeg",
+                    ".jpg",
+                ):
                     if url_lower.endswith(candidate_ext):
                         ext = ".jpg" if candidate_ext == ".jpeg" else candidate_ext
                         break
@@ -965,7 +973,9 @@ class RefineryEngine:
             filename = f"{slug}{ext}"
             local_path = assets_dir / filename
             local_path.write_bytes(response.content)
-            logger.info(f"Image saved: {local_path} ({len(response.content) // 1024} KB, {ct})")
+            logger.info(
+                f"Image saved: {local_path} ({len(response.content) // 1024} KB, {ct})"
+            )
             return f"~/assets/images/{filename}"
         except Exception as e:
             logger.error(f"Failed to download image {url}: {e}")

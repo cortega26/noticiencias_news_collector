@@ -324,16 +324,22 @@ class NewsCollectorSystem:
             # Recolección real (incluso en dry_run, solo evitamos guardar)
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
                 # Ejecutar versión async si está disponible
-                return cast(Dict[str, Any], await self.collector.collect_from_multiple_sources_async(
+                return cast(
+                    Dict[str, Any],
+                    await self.collector.collect_from_multiple_sources_async(
+                        sources,
+                        session_id=session_id,
+                        trace_id=trace_id,
+                    ),
+                )
+            return cast(
+                Dict[str, Any],
+                self.collector.collect_from_multiple_sources(
                     sources,
                     session_id=session_id,
                     trace_id=trace_id,
-                ))
-            return cast(Dict[str, Any], self.collector.collect_from_multiple_sources(
-                sources,
-                session_id=session_id,
-                trace_id=trace_id,
-            ))
+                ),
+            )
         finally:
             if original_save:
                 self.db_manager.save_article = original_save

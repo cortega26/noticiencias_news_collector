@@ -26,10 +26,10 @@ from news_collector.contracts.enrichment import (
 from news_collector.contracts.scoring import ScoringComponentsModel, ScoringRequestModel
 from news_collector.contracts.validation import ArticleValidationItem
 
-
 # ---------------------------------------------------------------------------
 #  Helpers: minimal valid payloads per model
 # ---------------------------------------------------------------------------
+
 
 def _collector_payload(**overrides: Any) -> Dict[str, Any]:
     base = {
@@ -115,7 +115,11 @@ _EXTRAS_POISON = {"__admin_override__": True}
 BOUNDARY_MODELS = [
     ("CollectorArticleModel", CollectorArticleModel, _collector_payload),
     ("ArticleMetadataModel", ArticleMetadataModel, _metadata_payload),
-    ("ArticleForEnrichmentModel", ArticleForEnrichmentModel, lambda **kw: {"title": "Foo", **kw}),
+    (
+        "ArticleForEnrichmentModel",
+        ArticleForEnrichmentModel,
+        lambda **kw: {"title": "Foo", **kw},
+    ),
     ("ArticleEnrichmentModel", ArticleEnrichmentModel, _enrichment_output_payload),
     ("ArticleValidationItem", ArticleValidationItem, _validation_item_payload),
     ("ScoringComponentsModel", ScoringComponentsModel, _scoring_components_payload),
@@ -147,6 +151,7 @@ class TestExtrasRejected:
 # ---------------------------------------------------------------------------
 #  Integration-ish: adapter path strips extras from Article.to_dict()
 # ---------------------------------------------------------------------------
+
 
 class TestAdapterBoundary:
     """Verify adapt_to_validation_payload strips non-contract keys."""

@@ -1,5 +1,4 @@
 import json
-import logging
 import random
 import re
 import time
@@ -11,7 +10,6 @@ from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimiter,
     parse_retry_after,
     redact_message,
-    redact_url,
 )
 from news_collector.utils.logger import get_logger
 
@@ -21,7 +19,11 @@ logger = get_logger().create_module_logger("infrastructure.llm.gemini_provider")
 class RateLimitError(Exception):
     """Raised when the provider returns 429 and the circuit breaker is open."""
 
-    def __init__(self, message: str = "LLM rate limit exceeded", retry_after: Optional[float] = None):
+    def __init__(
+        self,
+        message: str = "LLM rate limit exceeded",
+        retry_after: Optional[float] = None,
+    ):
         super().__init__(message)
         self.retry_after = retry_after
 
@@ -63,7 +65,11 @@ class GeminiProvider:
     @staticmethod
     def _safe_model_name(model: str) -> str:
         """Strip Ollama-style tags and local model names before hitting Gemini."""
-        if "llama" in model.lower() or "qwen" in model.lower() or "mistral" in model.lower():
+        if (
+            "llama" in model.lower()
+            or "qwen" in model.lower()
+            or "mistral" in model.lower()
+        ):
             return None  # caller should fall back to self.model
         if ":" in model:
             return model.split(":")[0]
@@ -86,20 +92,18 @@ class GeminiProvider:
 
         contents = []
         if system:
-            contents.append({
-                "role": "user",
-                "parts": [{"text": f"System Instruction: {system}\n\nUser: {prompt}"}]
-            })
+            contents.append(
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": f"System Instruction: {system}\n\nUser: {prompt}"}
+                    ],
+                }
+            )
         else:
-            contents.append({
-                "role": "user",
-                "parts": [{"text": prompt}]
-            })
+            contents.append({"role": "user", "parts": [{"text": prompt}]})
 
-        payload: Dict[str, Any] = {
-            "contents": contents,
-            "generationConfig": {}
-        }
+        payload: Dict[str, Any] = {"contents": contents, "generationConfig": {}}
         if json_mode:
             payload["generationConfig"]["responseMimeType"] = "application/json"
         return payload
@@ -107,17 +111,21 @@ class GeminiProvider:
     # ---- Retry helpers ----
 
     @staticmethod
-    def _backoff_delay(attempt: int, base: float = 2.0, cap: float = 30.0, jitter: float = 2.0) -> float:
-        delay = min(cap, base * (2 ** attempt))
-        return delay + random.uniform(0, jitter)
+    def _backoff_delay(
+        attempt: int, base: float = 2.0, cap: float = 30.0, jitter: float = 2.0
+    ) -> float:
+        delay = min(cap, base * (2**attempt))
+        return delay + random.uniform(0, jitter)  # noqa: S311
 
     @staticmethod
     def _is_429(exc: BaseException) -> bool:
-        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
-            return True
-        if isinstance(exc, requests.HTTPError) and exc.response is not None and exc.response.status_code == 429:
-            return True
-        return False
+        return (
+            isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
+        ) or (
+            isinstance(exc, requests.HTTPError)
+            and exc.response is not None
+            and exc.response.status_code == 429
+        )
 
     @staticmethod
     def _get_retry_after_from_exc(exc: BaseException) -> Optional[float]:
@@ -157,10 +165,15 @@ class GeminiProvider:
             try:
                 logger.debug(
                     "Sending async prompt to Gemini ({}) (timeout={}s, attempt={}/{})",
-                    use_model, use_timeout, attempt_num, self.max_retries,
+                    use_model,
+                    use_timeout,
+                    attempt_num,
+                    self.max_retries,
                 )
                 start = time.time()
-                response = await self.async_client.post(url, json=payload, timeout=use_timeout)
+                response = await self.async_client.post(
+                    url, json=payload, timeout=use_timeout
+                )
                 response.raise_for_status()
 
                 data = response.json()
@@ -187,9 +200,14 @@ class GeminiProvider:
                     limiter.circuit_breaker.record_rate_limit(retry_after)
                     logger.warning(
                         "Gemini 429 (attempt {}/{}): {}",
-                        attempt_num, self.max_retries, safe_msg,
+                        attempt_num,
+                        self.max_retries,
+                        safe_msg,
                     )
-                    if attempt_num < self.max_retries and not limiter.circuit_breaker.is_open:
+                    if (
+                        attempt_num < self.max_retries
+                        and not limiter.circuit_breaker.is_open
+                    ):
                         delay = retry_after or self._backoff_delay(attempt_num)
                         await __import__("asyncio").sleep(delay)
                         continue
@@ -198,7 +216,9 @@ class GeminiProvider:
                     limiter.circuit_breaker.record_error()
                     logger.error(
                         "Async Gemini error (attempt {}/{}): {}",
-                        attempt_num, self.max_retries, safe_msg,
+                        attempt_num,
+                        self.max_retries,
+                        safe_msg,
                     )
                     if attempt_num < self.max_retries:
                         delay = self._backoff_delay(attempt_num)
@@ -212,7 +232,7 @@ class GeminiProvider:
 
     # ---- SYNC API ----
 
-    def generate_sync(
+    def generate_sync(  # noqa: C901
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -233,6 +253,7 @@ class GeminiProvider:
             url += "&alt=sse"
 
         from news_collector.config import settings
+
         if not settings.LLM_SYSTEM_AVAILABLE:
             raise ValueError("LLM System is marked as unavailable (Disabled).")
 
@@ -246,9 +267,14 @@ class GeminiProvider:
             try:
                 logger.debug(
                     "Sending sync prompt to Gemini ({}) (timeout={}s, attempt={}/{})",
-                    use_model, use_timeout, attempt_num, self.max_retries,
+                    use_model,
+                    use_timeout,
+                    attempt_num,
+                    self.max_retries,
                 )
-                response = requests.post(url, json=payload, stream=stream, timeout=use_timeout)
+                response = requests.post(
+                    url, json=payload, stream=stream, timeout=use_timeout
+                )
                 response.raise_for_status()
 
                 if stream:
@@ -282,7 +308,9 @@ class GeminiProvider:
                 log_fn(
                     "Sync Gemini {} (attempt {}/{}): {}",
                     "429" if is_rate_limit else "error",
-                    attempt_num, self.max_retries, safe_msg,
+                    attempt_num,
+                    self.max_retries,
+                    safe_msg,
                 )
 
                 if is_rate_limit and limiter.circuit_breaker.is_open:
@@ -311,9 +339,11 @@ class GeminiProvider:
         except requests.RequestException as exc:
             return False, redact_message(str(exc))
 
-    def _stream_generator(self, response: requests.Response) -> Generator[str, None, None]:
+    def _stream_generator(
+        self, response: requests.Response
+    ) -> Generator[str, None, None]:
         for line in response.iter_lines():
-            line_str = line.decode('utf-8')
+            line_str = line.decode("utf-8")
             if line_str.startswith("data: "):
                 data_str = line_str[6:]
                 if data_str.strip() == "[DONE]":
@@ -321,7 +351,9 @@ class GeminiProvider:
                 try:
                     data = json.loads(data_str)
                     if "candidates" in data and len(data["candidates"]) > 0:
-                        parts = data["candidates"][0].get("content", {}).get("parts", [])
+                        parts = (
+                            data["candidates"][0].get("content", {}).get("parts", [])
+                        )
                         if parts:
                             yield parts[0].get("text", "")
                 except json.JSONDecodeError:

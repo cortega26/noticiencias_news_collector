@@ -3,13 +3,13 @@
 import logging
 from typing import Any, Optional
 
-from noticiencias.config_manager import load_config
-from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
+from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
     LLMRateLimiter,
 )
+from noticiencias.config_manager import load_config
 
 logger = logging.getLogger("news_collector.infrastructure.llm.factory")
 
@@ -23,7 +23,9 @@ def _ensure_rate_limiter(cfg: Any) -> None:
     if llm_rl is not None:
         rl_cfg = LLMRateLimitConfig(
             max_concurrent_requests=getattr(llm_rl, "max_concurrent_requests", 2),
-            min_delay_between_requests=getattr(llm_rl, "min_delay_between_requests", 1.0),
+            min_delay_between_requests=getattr(
+                llm_rl, "min_delay_between_requests", 1.0
+            ),
             circuit_breaker_threshold=getattr(llm_rl, "circuit_breaker_threshold", 3),
             circuit_breaker_cooldown=getattr(llm_rl, "circuit_breaker_cooldown", 60.0),
             max_retries=getattr(llm_rl, "max_retries", 3),
@@ -42,7 +44,7 @@ def get_provider(
     model: Optional[str] = None,
     timeout: int = 300,
     max_retries: int = 2,
-    config: Optional[Any] = None
+    config: Optional[Any] = None,
 ) -> Any:
     """
     Returns an appropriate LLM provider (Ollama or Gemini) based on active configuration.
@@ -62,7 +64,9 @@ def get_provider(
         use_model = getattr(gemini_cfg, "model", "gemini-2.5-flash")
 
         # Override with Gemini defaults if the provided model is Ollama-specific
-        if model and ("llama" in model.lower() or "qwen" in model.lower() or ":" in model):
+        if model and (
+            "llama" in model.lower() or "qwen" in model.lower() or ":" in model
+        ):
             model = use_model
 
         logger.info("Using GeminiProvider with model %s", model or use_model)

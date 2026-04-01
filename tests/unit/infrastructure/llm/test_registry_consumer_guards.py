@@ -144,7 +144,9 @@ def test_auditor_uses_registry(monkeypatch, tmp_path: Path):
             self.timeout = timeout
             self.max_retries = max_retries
 
-    def fake_get_provider(config=None, api_url=None, model=None, timeout=None, max_retries=None, **kwargs):
+    def fake_get_provider(
+        config=None, api_url=None, model=None, timeout=None, max_retries=None, **kwargs
+    ):
         return MockProvider(api_url, model, timeout, max_retries)
 
     monkeypatch.setattr(

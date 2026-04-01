@@ -22,6 +22,7 @@ class TestSmartHttpClient(unittest.IsolatedAsyncioTestCase):
 
             def mock_handler(request):
                 return httpx.Response(status_code=200, text="ok")
+
             transport = httpx.MockTransport(mock_handler)
 
             async with SmartHttpClient() as client:

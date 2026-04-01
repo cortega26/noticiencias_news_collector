@@ -45,7 +45,7 @@ run_refinery = refinery_main.main
 import logging
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
-from news_collector.config.settings import DATABASE_CONFIG, CONFIG
+from news_collector.config.settings import CONFIG, DATABASE_CONFIG
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.storage.database import DatabaseManager
 
@@ -284,9 +284,20 @@ with tab1:
             st.warning(f"No se pudieron cargar modelos: {e}")
 
         # Fallback list + Gemini models
-        base_fallback_options = ["llama3.3:latest", "llama3.2:latest", "qwen2.5:14b", "mistral"]
-        gemini_options = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
-        
+        base_fallback_options = [
+            "llama3.3:latest",
+            "llama3.2:latest",
+            "qwen2.5:14b",
+            "mistral",
+        ]
+        gemini_options = [
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+        ]
+
         model_options = (
             available_models + gemini_options
             if available_models
@@ -533,7 +544,9 @@ with tab1:
 # --- Tab Prompts ---
 with tab_prompts:
     st.header("📝 Prompts Editoriales del Sistema")
-    st.info("Personaliza las instrucciones fundamentales que rigen el comportamiento de la IA en cada fase del pipeline editorial.")
+    st.info(
+        "Personaliza las instrucciones fundamentales que rigen el comportamiento de la IA en cada fase del pipeline editorial."
+    )
 
     # Path to prompts.yaml
     PROMPTS_YAML_PATH = NEWS_COLLECTOR_PATH / "config" / "prompts.yaml"
@@ -555,19 +568,25 @@ with tab_prompts:
     st.markdown("### ✨ Configuración Activa (v2.0)")
 
     col_trans, col_edit = st.columns(2)
-    
+
     with col_trans:
         st.markdown("##### 1. Traductor Científico (Fase 1)")
         trans_sys = current_prompts.get("translator", {}).get("system", "")
         new_trans_sys = st.text_area(
-            "Instrucciones de Traducción", value=trans_sys, height=450, key="prompt_trans"
+            "Instrucciones de Traducción",
+            value=trans_sys,
+            height=450,
+            key="prompt_trans",
         )
-        
+
     with col_edit:
         st.markdown("##### 2. Editor Periodístico (Fase 2)")
         edit_sys = current_prompts.get("editor", {}).get("system", "")
         new_edit_sys = st.text_area(
-            "Instrucciones de Edición y Adaptación", value=edit_sys, height=450, key="prompt_edit"
+            "Instrucciones de Edición y Adaptación",
+            value=edit_sys,
+            height=450,
+            key="prompt_edit",
         )
 
     st.markdown("##### 3. Generador de Titulares (Fase 3)")
@@ -578,7 +597,9 @@ with tab_prompts:
 
     col_btn, empty_col = st.columns([1, 3])
     with col_btn:
-        if st.button("💾 Guardar Prompts (YAML)", use_container_width=True, type="primary"):
+        if st.button(
+            "💾 Guardar Prompts (YAML)", use_container_width=True, type="primary"
+        ):
             updated_prompts = current_prompts.copy()
             if "translator" not in updated_prompts:
                 updated_prompts["translator"] = {}
@@ -594,10 +615,14 @@ with tab_prompts:
             try:
                 with open(PROMPTS_YAML_PATH, "w", encoding="utf-8") as f:
                     yaml.dump(
-                        updated_prompts, f, allow_unicode=True, default_flow_style=False, sort_keys=False
+                        updated_prompts,
+                        f,
+                        allow_unicode=True,
+                        default_flow_style=False,
+                        sort_keys=False,
                     )
                 st.success("¡Prompts actualizados correctamente!")
-                
+
                 # Refresh variables to update UI immediately
                 trans_sys = new_trans_sys
                 edit_sys = new_edit_sys
@@ -607,17 +632,21 @@ with tab_prompts:
                 st.error(f"Error guardando prompts: {e}")
 
     st.markdown("---")
-    with st.expander("🕰️ Ver Prompts de Respaldo (Versión 1.0 - Pre-Auditoría)", expanded=False):
-        st.caption("Estos son los prompts originales por si necesitas consultar cómo operaba el sistema anteriormente.")
+    with st.expander(
+        "🕰️ Ver Prompts de Respaldo (Versión 1.0 - Pre-Auditoría)", expanded=False
+    ):
+        st.caption(
+            "Estos son los prompts originales por si necesitas consultar cómo operaba el sistema anteriormente."
+        )
         col_v1_trans, col_v1_edit = st.columns(2)
         with col_v1_trans:
             st.markdown("##### Traductor v1")
-            
+
             trans_v1_content = current_prompts.get("translator_v1", {}).get("system")
             if not trans_v1_content:
                 # Intento de lectura pura de línea si yaml_safe_load falló parcial
                 trans_v1_content = "No disponible. Revisa config/prompts.yaml"
-                
+
             st.code(trans_v1_content, language="markdown")
         with col_v1_edit:
             st.markdown("##### Editor v1")
@@ -875,24 +904,26 @@ with tab3:
         ):
             st.session_state["op_in_progress"] = True
             try:
-              with st.spinner("Ejecutando recolección y análisis cognitivo..."):
-                if not auth_ok:
-                    st.warning("Autenticación requerida para sincronizar.")
-                else:
-                    try:
-                        # Direct call to main module instead of subprocess
-                        result = run_refinery(
-                            fetch_only=False, fast_mode=False, dry_run=dry_run_enabled
-                        )
-                        if result.get("status") == "success":
-                            st.success("¡Recolección Completa!")
-                        else:
-                            st.error("Fallo en Sincronización")
-                            st.expander("Detalles del Error").write(
-                                result.get("message")
+                with st.spinner("Ejecutando recolección y análisis cognitivo..."):
+                    if not auth_ok:
+                        st.warning("Autenticación requerida para sincronizar.")
+                    else:
+                        try:
+                            # Direct call to main module instead of subprocess
+                            result = run_refinery(
+                                fetch_only=False,
+                                fast_mode=False,
+                                dry_run=dry_run_enabled,
                             )
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                            if result.get("status") == "success":
+                                st.success("¡Recolección Completa!")
+                            else:
+                                st.error("Fallo en Sincronización")
+                                st.expander("Detalles del Error").write(
+                                    result.get("message")
+                                )
+                        except Exception as e:
+                            st.error(f"Error: {e}")
             finally:
                 st.session_state["op_in_progress"] = False
 
@@ -933,7 +964,8 @@ with tab3:
                     _ts = data.get("exported_at") or data.get("generated_at")
                     if _ts:
                         try:
-                            from datetime import datetime as _dt, timezone as _tz
+                            from datetime import datetime as _dt
+                            from datetime import timezone as _tz
 
                             _exported = _dt.fromisoformat(_ts)
                             if _exported.tzinfo is None:
@@ -1162,37 +1194,60 @@ with tab3:
                                 )
 
                         # Visual Settings
-                        with st.expander("🎨 Configuración Visual / Caché", expanded=True):
+                        with st.expander(
+                            "🎨 Configuración Visual / Caché", expanded=True
+                        ):
                             visual_analysis_enabled = st.checkbox(
                                 "Activar Análisis Visual",
                                 value=True,
                                 help="Generar categorías y prompts para imágenes.",
                             )
-                            
+
                             st.markdown("---")
-                            if st.button("🧹 Limpiar Caché IA", help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.", use_container_width=True):
+                            if st.button(
+                                "🧹 Limpiar Caché IA",
+                                help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.",
+                                use_container_width=True,
+                            ):
                                 try:
                                     import re
-                                    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(selected_id))
+
+                                    safe_id = re.sub(
+                                        r"[^a-zA-Z0-9_-]", "", str(selected_id)
+                                    )
                                     count = 0
-                                    
+
                                     # NEWS_COLLECTOR_PATH is available globally in admin_panel.py
                                     # Check both global cache and the cloned temp repo cache
                                     cache_dirs = [
-                                        NEWS_COLLECTOR_PATH / "data" / "cache" / "editor",
-                                        NEWS_COLLECTOR_PATH / "temp" / "source" / "data" / "cache" / "editor"
+                                        NEWS_COLLECTOR_PATH
+                                        / "data"
+                                        / "cache"
+                                        / "editor",
+                                        NEWS_COLLECTOR_PATH
+                                        / "temp"
+                                        / "source"
+                                        / "data"
+                                        / "cache"
+                                        / "editor",
                                     ]
-                                    
+
                                     for cache_dir in cache_dirs:
                                         if cache_dir.exists():
-                                            for file_path in cache_dir.glob(f"{safe_id}_*.txt"):
+                                            for file_path in cache_dir.glob(
+                                                f"{safe_id}_*.txt"
+                                            ):
                                                 file_path.unlink()
                                                 count += 1
-                                                
+
                                     if count > 0:
-                                        st.success(f"✅ Caché eliminada ({count} archivos).")
+                                        st.success(
+                                            f"✅ Caché eliminada ({count} archivos)."
+                                        )
                                     else:
-                                        st.info("ℹ️ No se encontraron archivos de caché para este artículo.")
+                                        st.info(
+                                            "ℹ️ No se encontraron archivos de caché para este artículo."
+                                        )
                                 except Exception as e:
                                     st.error(f"Error al limpiar caché: {str(e)}")
 
@@ -1204,14 +1259,18 @@ with tab3:
                             pass  # noqa: SIM105
 
                         if is_pub:
-                            st.error("⛔ Artículo ya publicado. Usa 'Forzar Reprocesamiento' si necesitas sobrescribir.")
+                            st.error(
+                                "⛔ Artículo ya publicado. Usa 'Forzar Reprocesamiento' si necesitas sobrescribir."
+                            )
 
                             col_pub1, col_pub2 = st.columns(2)
                             with col_pub1:
                                 if st.button(
                                     "🔄 Forzar Reprocesamiento (Sobrescribir)",
                                     key=f"reproc_{selected_id}",
-                                    disabled=st.session_state.get("op_in_progress", False),
+                                    disabled=st.session_state.get(
+                                        "op_in_progress", False
+                                    ),
                                 ):
                                     st.session_state["op_in_progress"] = True
                                     try:
@@ -1219,7 +1278,9 @@ with tab3:
                                             f"Reprocesando ID {selected_id}..."
                                         ):
                                             if not auth_ok:
-                                                st.warning("Autenticación requerida para publicar.")
+                                                st.warning(
+                                                    "Autenticación requerida para publicar."
+                                                )
                                             else:
                                                 skip_flag = not visual_analysis_enabled
                                                 result = run_refinery(
@@ -1228,13 +1289,23 @@ with tab3:
                                                     export_path=str(JSON_PATH),
                                                 )
                                                 status = result.get("status")
-                                                if status == "success" and result.get("processed_count", 0) > 0:
-                                                    st.success("¡Reprocesamiento Completo!")
+                                                if (
+                                                    status == "success"
+                                                    and result.get("processed_count", 0)
+                                                    > 0
+                                                ):
+                                                    st.success(
+                                                        "¡Reprocesamiento Completo!"
+                                                    )
                                                 elif status == "error":
                                                     st.error("Reprocesamiento Fallido.")
-                                                    st.expander("Detalles del Error").write(result.get("message"))
+                                                    st.expander(
+                                                        "Detalles del Error"
+                                                    ).write(result.get("message"))
                                                 else:
-                                                    st.warning(f"Sin resultados: {result.get('message', 'Nada procesado.')}")
+                                                    st.warning(
+                                                        f"Sin resultados: {result.get('message', 'Nada procesado.')}"
+                                                    )
                                     finally:
                                         st.session_state["op_in_progress"] = False
 
@@ -1243,7 +1314,9 @@ with tab3:
                                     "🗑️ Despublicar (Eliminar)",
                                     type="primary",
                                     key=f"del_{selected_id}",
-                                    disabled=st.session_state.get("op_in_progress", False),
+                                    disabled=st.session_state.get(
+                                        "op_in_progress", False
+                                    ),
                                 ):
                                     with st.spinner(
                                         f"Solicitando eliminación de {selected_id}..."
@@ -1310,7 +1383,11 @@ with tab3:
 
                         if not is_pub:
                             # Calculate estimate
-                            content_len = len(selected_art.get("content", "").split()) if selected_art else 1000
+                            content_len = (
+                                len(selected_art.get("content", "").split())
+                                if selected_art
+                                else 1000
+                            )
                             active_model = env_vars.get("OLLAMA_MODEL", "unknown")
                             time_est = estimate_time(content_len, active_model)
 
@@ -1327,7 +1404,9 @@ with tab3:
                                     ):
                                         # Direct call to main module
                                         if not auth_ok:
-                                            st.warning("Autenticación requerida para publicar.")
+                                            st.warning(
+                                                "Autenticación requerida para publicar."
+                                            )
                                         else:
                                             try:
                                                 # Reverse logic: enable means skip=False
@@ -1342,29 +1421,39 @@ with tab3:
                                                 processed_count = result.get(
                                                     "processed_count", 0
                                                 )
-                                                if status == "success" and processed_count > 0:
+                                                if (
+                                                    status == "success"
+                                                    and processed_count > 0
+                                                ):
                                                     st.success(
                                                         "¡Procesamiento Completo! Revisa el repo de tu web."
                                                     )
                                                     st.balloons()
                                                 elif status == "error":
                                                     st.error("Procesamiento Fallido.")
-                                                    st.expander("Detalles del Error").write(
-                                                        result.get("message")
-                                                    )
-                                                elif status == "noop" or processed_count == 0:
+                                                    st.expander(
+                                                        "Detalles del Error"
+                                                    ).write(result.get("message"))
+                                                elif (
+                                                    status == "noop"
+                                                    or processed_count == 0
+                                                ):
                                                     message = result.get(
                                                         "message",
                                                         "No se encontraron artículos para procesar.",
                                                     )
-                                                    st.warning(f"Sin resultados: {message}")
+                                                    st.warning(
+                                                        f"Sin resultados: {message}"
+                                                    )
                                                 else:
                                                     st.error("Procesamiento Fallido.")
-                                                    st.expander("Detalles del Error").write(
-                                                        result.get("message")
-                                                    )
+                                                    st.expander(
+                                                        "Detalles del Error"
+                                                    ).write(result.get("message"))
                                             except Exception as e:
-                                                st.error(f"Error crítico de ejecución: {e}")
+                                                st.error(
+                                                    f"Error crítico de ejecución: {e}"
+                                                )
                                 finally:
                                     st.session_state["op_in_progress"] = False
 

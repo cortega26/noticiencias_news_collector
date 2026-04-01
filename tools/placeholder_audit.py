@@ -15,11 +15,13 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 try:  # pragma: no cover - optional dependency
     import yaml as _yaml_imp
+
     _pyyaml: Any = _yaml_imp
 except ModuleNotFoundError:  # pragma: no cover - executed in tests
     _pyyaml = None
 try:  # pragma: no cover - optional dependency
     from ruamel.yaml import YAML as _RuamelYAML_imp
+
     _RuamelYAML: Any = _RuamelYAML_imp
 except ModuleNotFoundError:  # pragma: no cover - executed in tests
     _RuamelYAML = None
