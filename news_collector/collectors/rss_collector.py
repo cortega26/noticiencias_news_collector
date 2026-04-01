@@ -924,6 +924,7 @@ class RSSCollector(BaseCollector):
                     "credibility_score": source_config["credibility_score"],
                     "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                     "original_url": raw_article.get("original_url", raw_article["url"]),
+                    "image_url": raw_article.get("image_url"),
                     "image_status": raw_article.get("_image_status"),
                     "image_source": raw_article.get("_image_source"),
                 },
