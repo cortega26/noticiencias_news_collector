@@ -926,34 +926,47 @@ class RefineryEngine:
         if not url or not url.startswith("http"):
             return None
 
-        # Determine extension
-        # Simple heuristic from URL, default to .jpg if unknown/complex
-        ext = ".jpg"
-        if ".png" in url.lower():
-            ext = ".png"
-        elif ".webp" in url.lower():
-            ext = ".webp"
-        elif ".jpeg" in url.lower():
-            ext = ".jpg"
-
-        filename = f"{slug}{ext}"
+        # Determine extension from Content-Type header (reliable) with URL heuristic fallback
+        _CT_TO_EXT = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+            "image/avif": ".avif",
+            "image/gif": ".gif",
+            "image/svg+xml": ".svg",
+        }
+        ext = None  # resolved after first request below
 
         # Paths
         assets_dir = target_dir / "src/assets/images"
         assets_dir.mkdir(parents=True, exist_ok=True)
-        local_path = assets_dir / filename
 
-        logger.info(f"Downloading image from {url} to {local_path}")
+        logger.info(f"Downloading image from {url}")
 
         from news_collector.infrastructure.requests_client import RobustRequestsClient
 
         try:
             with RobustRequestsClient() as client:
                 response = client.get(url, timeout=15)
-                local_path.write_bytes(response.content)
-                logger.info(f"Image saved: {local_path}")
-                # Return Astro format
-                return f"~/assets/images/{filename}"
+
+            # Resolve extension: Content-Type first, URL heuristic fallback
+            ct = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            ext = _CT_TO_EXT.get(ct)
+            if not ext:
+                url_lower = url.lower().split("?")[0]
+                for candidate_ext in (".png", ".webp", ".avif", ".gif", ".svg", ".jpeg", ".jpg"):
+                    if url_lower.endswith(candidate_ext):
+                        ext = ".jpg" if candidate_ext == ".jpeg" else candidate_ext
+                        break
+                else:
+                    ext = ".jpg"
+
+            filename = f"{slug}{ext}"
+            local_path = assets_dir / filename
+            local_path.write_bytes(response.content)
+            logger.info(f"Image saved: {local_path} ({len(response.content) // 1024} KB, {ct})")
+            return f"~/assets/images/{filename}"
         except Exception as e:
             logger.error(f"Failed to download image {url}: {e}")
             return None
