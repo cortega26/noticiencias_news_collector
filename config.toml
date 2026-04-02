@@ -55,7 +55,7 @@ pool_timeout = 30
 pool_recycle = 1800
 
 [collection]
-collection_interval_hours = 6
+collection_interval_hours = 12
 request_timeout_seconds = 30
 async_enabled = true
 max_concurrent_requests = 1
