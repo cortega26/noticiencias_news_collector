@@ -14,6 +14,7 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 import yaml
+from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
@@ -174,6 +175,7 @@ class EditorAgent:
         self.provider = get_provider(
             api_url=self.api_url, model=self.model, timeout=3600
         )
+        self.category_resolver = EditorialCategoryResolver()
         logger.info(
             f"EditorAgent model routing resolved: default={self.model}, "
             f"translator={self.translator_model}, editor={self.editor_model}, "
@@ -605,7 +607,8 @@ class EditorAgent:
                     "entry_id"
                 )
             )
-            raw_category = (raw_text.get("metadata") or {}).get("category", "other")
+            raw_category = raw_text.get("category")
+            metadata_category = (raw_text.get("metadata") or {}).get("category")
             if article_id == "unknown":
                 article_id = str(raw_text.get("id") or "unknown")
         else:
@@ -614,23 +617,19 @@ class EditorAgent:
 
             if article_id == "unknown":
                 article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
-            raw_category = "other"
+            raw_category = None
+            metadata_category = None
 
-        # Map source category to site category
-        category_map = {
-            "medicine": "Salud",
-            "biology": "Salud",
-            "technology": "Tecnología",
-            "artificial_intelligence": "Tecnología",
-            "engineering": "Tecnología",
-            "space": "Ciencia",
-            "physics": "Ciencia",
-            "popular_science": "Ciencia",
-            "community_science": "Ciencia",
-            "multidisciplinary": "Ciencia",
-        }
-
-        final_category = category_map.get(raw_category, "Ciencia")
+        category_resolution = self.category_resolver.resolve_category(
+            article_id=article_id,
+            title=title,
+            summary=summary,
+            content=content,
+            raw_category=raw_category,
+            metadata_category=metadata_category,
+        )
+        final_category = category_resolution.public_category
+        raw_category = category_resolution.selected_raw_category or "other"
 
         # R-12 Defense-in-depth: Sanitize Content Before LLM Processing
         from news_collector.utils.text_cleaner import clean_html

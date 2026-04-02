@@ -14,6 +14,7 @@ from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
+VALID_CATEGORIES = {"CIENCIA", "SALUD", "TECNOLOGÍA", "EDITORIAL"}
 
 
 class EditorialClassifier:
@@ -31,10 +32,12 @@ class EditorialClassifier:
         else:
             self.llm = llm_client
 
-    def classify_article(self, title: str, summary: str, content: str = "") -> str:
+    def try_classify_article(
+        self, title: str, summary: str, content: str = ""
+    ) -> str | None:
         """
         Classifies an article into one of the 4 editorial categories.
-        Returns "CIENCIA" as default fallback if classification fails.
+        Returns None if classification fails or the output is invalid.
         """
         article_text = f"TITULAR: {title}\n\nRESUMEN: {summary}\n"
         if content:
@@ -52,26 +55,29 @@ class EditorialClassifier:
                 logger.warning(
                     "Editorial Classifier returned empty or invalid response."
                 )
-                return "CIENCIA"
+                return None
 
             # Cleaning
             category = response.strip().upper()
-
-            # Simple validation against known set
-            valid_categories = {"CIENCIA", "SALUD", "TECNOLOGÍA", "EDITORIAL"}
 
             # Handle potential extra punctuation (e.g. "SALUD.")
             if category.endswith("."):
                 category = category[:-1]
 
-            if category in valid_categories:
+            if category in VALID_CATEGORIES:
                 return category
 
             logger.warning(
                 f"Editorial Classifier returned invalid category: '{category}'"
             )
-            return "CIENCIA"
+            return None
 
         except Exception as e:
             logger.error(f"Error in Editorial Classifier: {e}")
-            return "CIENCIA"
+            return None
+
+    def classify_article(self, title: str, summary: str, content: str = "") -> str:
+        """
+        Backward-compatible wrapper that fail-closes to CIENCIA.
+        """
+        return self.try_classify_article(title, summary, content) or "CIENCIA"
