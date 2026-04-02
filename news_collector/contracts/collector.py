@@ -117,6 +117,8 @@ class CollectorArticlePayload(TypedDict, total=False):
     word_count: int
     reading_time_minutes: int
     article_metadata: ArticleMetadata
+    image_url: str
+    image_alt: str
 
 
 class CollectorArticleModel(BaseModel):
@@ -141,6 +143,8 @@ class CollectorArticleModel(BaseModel):
     word_count: int = Field(default=0)
     reading_time_minutes: int = Field(default=1, gt=0)
     article_metadata: ArticleMetadataModel = Field(default_factory=ArticleMetadataModel)
+    image_url: str | None = None
+    image_alt: str | None = None
     content_mode: str = Field(default="full_text")
     min_summary_length_override: int | None = None
     min_content_length_override: int | None = None
@@ -236,5 +240,9 @@ class CollectorArticleModel(BaseModel):
         data["url"] = str(self.url)
         if data.get("original_url") is not None:
             data["original_url"] = str(data["original_url"])
+        if self.image_url:
+            self.article_metadata.image_url = self.image_url
+        if self.image_alt:
+            self.article_metadata.image_alt = self.image_alt
         data["article_metadata"] = self.article_metadata.model_dump_for_storage()
         return data

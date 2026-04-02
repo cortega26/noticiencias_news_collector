@@ -1,141 +1,90 @@
-# Pipeline Contracts & Failure Modes
+# Pipeline Contracts
 
-**Version:** 1.0 (Draft)
-**Status:** Living Document
-**Scope:** News Collector Ingestion $\rightarrow$ Refinery $\rightarrow$ Publishing $\rightarrow$ Auditor
+Status: Active  
+Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`, `docs/AGENTS.md`, and `docs/ARCHITECTURE.md`
 
----
+## Purpose
 
-## 1. Pipeline Phases & Contracts
+This document records the contract-bearing flows that matter operationally today: what artifact crosses a boundary, who owns it, and what failure behavior exists in code now.
 
-### Phase 0: Ingestion Handoff
+It intentionally distinguishes current behavior from desired future hardening.
 
-Transfers collected articles from the autonomous collector to the human-in-the-loop Refinery.
+## Contract Inventory
 
-- **Producer:** `news_collector.system.pipeline.run_cycle_orchestration`
-- **Consumer:** `apps.refinery.admin_panel` (via `RefineryEngine` or direct load)
-- **Artifact Path:** `data/exports/latest_articles.json` (with fallback to `temp/source/...`)
-- **Schema:** `news_collector.contracts.export.ExportContractV2`
-  - `schema_version`: `2` (int)
-  - `articles`: List[`ExportArticleModel`]
-- **Failure Mode:** **Fail-Soft**. If the JSON is missing or corrupt, the Refinery currently shows "No articles found" or mock data.
-  - _Target Behavior_: **Fail-Safe**. If JSON is invalid, fall back to querying the SQLite DB (`articles` table with `status='pending'`).
+| Flow | Producer | Consumer | Contract / Artifact | Current behavior |
+| --- | --- | --- | --- | --- |
+| Collection export | `news_collector/system/reporting.py` and collector entrypoints | `apps/refinery/main.py` | `ExportContractV2` from `news_collector/contracts/export.py` | `schema_version: 2` is the preferred path; legacy `schema_version: 1` is still tolerated with warnings |
+| Scoring boundary | workflow/system code | scoring modules | `ArticleScoringData`, `ScoringInputModel` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
+| Validation boundary | workflow/system code | validation modules | `ArticleValidationPayload` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
+| Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content/config.ts` |
+| Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
 
-### Phase 1: Scientific Translator
+## Export To Refinery
 
-Translates technical content to Spanish while preserving scientific accuracy.
+### Preferred Contract
 
-- **Implementation:** `ai_editor.EditorAgent._translate_scientific`
-- **Input:** Raw text (English/Mixed)
-- **Output:** `translated_text` (str)
-- **Cache:** `temp/cache/{safe_id}_stage1_translation.txt`
-- **Failure Mode:** **Fail-Closed**. Exceptions during LLM call abort the article.
+- top-level export shape: `ExportContractV2`
+- article shape: `ExportArticleModel`
 
-### Phase 2: Editorial Adapter
+### Current Compatibility
 
-Adapts tone to "Science Journalist for LatAm" style.
+- `apps/refinery/main.py` still supports legacy export payloads and missing/invalid `schema_version` through compatibility handling
+- this is real compatibility surface, not a theoretical note
 
-- **Implementation:** `ai_editor.EditorAgent._adapt_editorial`
-- **Input:** `translated_text` (from P1)
-- **Output:** `final_content` (Markdown str)
-- **Cache:** `temp/cache/{safe_id}_stage2_editorial.txt`
-- **Failure Mode:** **Fail-Closed**.
+### Current Failure Semantics
 
-### Phase 2.5: The Critic (Quality Guardrail)
+- invalid or missing export artifacts do not necessarily stop all Refinery usage
+- Refinery code contains fallback paths, including database-backed candidate loading in the UI path
+- those fallback paths reduce operator dead-ends, but they also mean the export artifact is not the only current ingress path
 
-Validates content against safety and quality rules explicitly.
+## Frontend Publication Contract
 
-- **Implementation:** `ai_editor.EditorAgent._critic_pass`
-- **Input:** `final_content` (from P2)
-- **Output:** `(bool, reason)`
-- **Configuration:**
-  - **Threshold:** `TEXT_PROCESSING_CONFIG.critic_score_threshold` (Default: 70)
-  - **Max Retries:** 2 (Hardcoded in `process_article`)
-  - **Model:** Implicitly uses `editor_model` (No dedicated binding).
-- **Logic:**
-  1.  Check Spanish language.
-  2.  Check Science/Tech relevance.
-  3.  Check Proper Nouns against `scientific_entities.json`.
-- **Failure Mode:** **Fail-Closed**.
-  - If `score < 70` after retries $\rightarrow$ Raise `ValueError`.
-  - If LLM crashes $\rightarrow$ Return `False` (Safe Default).
-  - _Bypass_: `ENABLE_TRANSLATION_GUARD="false"` env var skips this phase.
+### Authoritative Shape
 
-### Phase 3: Metadata & Headlines
+The backend mirror is:
 
-Generates structured metadata, headlines, and tags.
+- `news_collector/contracts/frontend_schema.py`
 
-- **Implementation:** `ai_editor.EditorAgent._generate_headlines`
-- **Input:** `final_content`
-- **Output:** `HeadlinesSchema` (Dict)
-  - `direct`, `question`, `benefit`, `excerpt`, `tags`
-- **Failure Mode:** **Fail-Closed**. Schema validation errors abort the process.
+The render authority is:
 
-### Phase 4: Publishing
+- `../noticiencias/src/content/config.ts`
 
-Persists the artifact and notifies downstream systems.
+### Current Publication Path
 
-- **Implementation:** `refinery_engine.RefineryEngine.process_single_article`
-- **Output:**
-  1.  **File**: `src/content/posts/{yyyy-mm-dd-slug}.md` (Schema: `AstroPost`)
-  2.  **Git**: Branch `content/update/{slug}` + Pull Request
-  3.  **DB**: Mark article as `published` with PR URL.
-- **Idempotency**: Checked via `refinery_manifest.json` and DB `canonical_slug`.
-- **Failure Mode:** **Fail-Closed**. Git errors or IO errors abort the specific article.
+- output directory: `src/content/posts/` in the target frontend repo
+- file naming: `<canonical-slug>.md`
+- sidecar manifest: `refinery_manifest.json`
 
-### Sidecar: Auditor
+### Current Identity Reuse Order
 
-Evaluates epistemic rigor asynchronously.
+`RefineryEngine` currently resolves publication identity in this order:
 
-- **Implementation:** `auditor.EditorialAuditor.audit_article_sync`
-- **Trigger:** `refinery_engine` submits to `ThreadPoolExecutor` (Max workers: 1).
-- **Input:** Refined Content + Metadata.
-- **Output:** `data/article_metadata/{safe_id}/auditor_score.json`
-- **Schema:** `_get_default_audit_result` (Normalized)
-  - `epistemic_rigor_score`: float (0.0 - 10.0)
-  - `issues`: list[str]
-- **Failure Mode:** **Fail-Open**.
-  - Exceptions are logged.
-  - Circuit Breaker trips after 3 failures (30 min cooldown).
-  - **Does NOT block** the publishing PR.
+1. database `canonical_slug`
+2. existing frontend file or sidecar manifest
+3. `published_date`
+4. `collected_date`
+5. current date as last resort
 
----
+The final two fallback steps are compatibility debt. They are not the desired end state for immutable identity.
 
-## 2. Reality vs UI Mismatches
+### Publication State Semantics
 
-| Feature          | Reality (Code)                        | Streamlit UI (Current)                         | Status    |
-| :--------------- | :------------------------------------ | :--------------------------------------------- | :-------- |
-| **Critic Phase** | **Active** (Checks score > 70)        | **Visible** in "AI Settings" (Status + Config) | ✅ Parity |
-| **Critic Model** | Uses `editor_model` (Shared)          | **Visible** ("Usa el mismo modelo...")         | ✅ Parity |
-| **Bypass State** | `ENABLE_TRANSLATION_GUARD` env/secret | **Visible** (Warning if Disabled)              | ✅ Parity |
-| **Auditor**      | Sidecar / Async                       | **Visible** in "Publicados" (Score + Badge)    | ✅ Parity |
-| **Export Error** | JSON missing/corrupt                  | **Handled** (Fallback to DB + Warning)         | ✅ Parity |
+- PR creation updates backend state to `PR_CREATED`
+- optional auditor execution happens after PR creation
+- final frontend site publication occurs after merge and frontend deploy, outside this repo
 
-**Status:** ALL MISMATCHES RESOLVED.
+## API Contract
 
----
+The serving layer currently exposes a read-oriented API:
 
-## 3. Operational Playbook
+- validated request parameters via `ArticleListParams`
+- deterministic cursor encoding using score, collected timestamp, and article ID
+- envelope response shape via `ArticlesEnvelope`
 
-### If Export is Missing
+The serving layer is not the owner of editorial mutation workflows.
 
-- **Symptom**: Admin Panel shows "⚠️ Export Artifact Corrupt/Invalid..." warning at top of candidate list.
-- **Behavior**: The system automatically queries the SQLite DB for articles in `pending` or `new` status and loads them.
-- **Action**: Proceed as normal. The fallback is robust. To fix the root cause, run `make collect` to regenerate the JSON.
+## Current Gaps To Treat As Gaps
 
-### If Critic Fails (Too Strict)
-
-- **Symptom**: Articles fail with "Translation Guardrail: Content rejected...".
-- **Action**:
-  1.  Go to "AI Settings".
-  2.  Toggle "Habilitar Crítico" to **OFF** (Warning will appear).
-  3.  Reprocess the article.
-  4.  Toggle it back **ON** afterwards.
-
-### Interpreting Auditor Scores
-
-- **Location**: "Publicados" Tab, under the article ID.
-- **Badges**:
-  - 🟢 **Green (> 8.0)**: Use with confidence (High Rigor).
-  - 🟡 **Orange (5.0 - 8.0)**: Acceptable for general news.
-  - 🔴 **Red (< 5.0)**: Review carefully. May contain speculation or lacks caveats.
+- Cross-repo schema parity is mirrored in code and tests, but not enforced by a single shared CI pipeline spanning both repositories.
+- Publication identity reuse is strong but still has fallback branches that can use non-source dates.
+- `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.

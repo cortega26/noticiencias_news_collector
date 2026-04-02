@@ -1,6 +1,6 @@
 """Unit tests for D1 contracts."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,9 +9,13 @@ from news_collector.contracts.adapters import (
     adapt_to_scoring_input,
     adapt_to_validation_payload,
 )
+from news_collector.config.sources import ALL_SOURCES
 from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.contracts.scoring import ScoringInputModel
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article
 from pydantic import ValidationError
+from sqlalchemy.orm import load_only
 
 
 def test_export_contract_v2_valid():
@@ -57,6 +61,109 @@ def test_adapt_article_to_export():
     assert model.id == 101
     assert model.metadata["foo"] == "bar"
     assert model.score == 0.85
+
+
+def test_adapt_article_to_export_handles_detached_saved_article(tmp_path):
+    db = DatabaseManager(
+        database_config={"type": "sqlite", "path": tmp_path / "detached_export.db"}
+    )
+    payload = {
+        "url": "https://contract-tests.example.com/article-1",
+        "original_url": "https://contract-tests.example.com/article-1",
+        "title": "Detached article export should remain stable",
+        "summary": "A summary long enough for the collector contract to accept it.",
+        "content": "Detached export content body for regression validation. " * 20,
+        "source_id": "nature",
+        "source_name": ALL_SOURCES["nature"]["name"],
+        "category": "science",
+        "published_date": datetime.now(timezone.utc),
+        "authors": ["Regression Bot"],
+        "language": "en",
+        "word_count": 140,
+        "reading_time_minutes": 1,
+        "article_metadata": {
+            "original_url": "https://contract-tests.example.com/article-1",
+            "processing_timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    }
+    try:
+        saved_article = db.save_article(payload)
+        assert saved_article is not None
+
+        model = adapt_article_to_export(saved_article)
+
+        assert model.id == saved_article.id
+        assert model.published_at is None
+        assert model.published_url is None
+        assert model.metadata["original_url"] == payload["article_metadata"]["original_url"]
+        assert (
+            model.metadata["processing_timestamp"]
+            == payload["article_metadata"]["processing_timestamp"]
+        )
+    finally:
+        db.close()
+
+
+def test_adapt_article_to_export_handles_partially_loaded_detached_article(tmp_path):
+    db = DatabaseManager(
+        database_config={"type": "sqlite", "path": tmp_path / "partial_export.db"}
+    )
+    payload = {
+        "url": "https://contract-tests.example.com/article-2",
+        "original_url": "https://contract-tests.example.com/article-2",
+        "title": "Partially loaded detached article export remains stable",
+        "summary": "Another summary long enough for the collector contract to accept it.",
+        "content": "Partially loaded detached export content body. " * 20,
+        "source_id": "nature",
+        "source_name": ALL_SOURCES["nature"]["name"],
+        "category": "science",
+        "published_date": datetime.now(timezone.utc),
+        "authors": ["Regression Bot"],
+        "language": "en",
+        "word_count": 140,
+        "reading_time_minutes": 1,
+        "article_metadata": {
+            "original_url": "https://contract-tests.example.com/article-2",
+            "processing_timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    }
+    try:
+        saved_article = db.save_article(payload)
+        assert saved_article is not None
+
+        with db.get_session() as session:
+            article = (
+                session.query(Article)
+                .options(
+                    load_only(
+                        Article.id,
+                        Article.title,
+                        Article.url,
+                        Article.summary,
+                        Article.content,
+                        Article.source_name,
+                        Article.source_id,
+                        Article.published_date,
+                    )
+                )
+                .filter(Article.id == saved_article.id)
+                .one()
+            )
+            session.expunge(article)
+
+        model = adapt_article_to_export(article)
+
+        assert model.id == saved_article.id
+        assert model.published_at is None
+        assert model.published_url is None
+        assert model.collected_date is None
+        assert model.score is None
+        assert model.metadata == {}
+        assert model.authors == []
+        assert model.components == {}
+        assert model.category is None
+    finally:
+        db.close()
 
 
 def test_scoring_input_model_validation():

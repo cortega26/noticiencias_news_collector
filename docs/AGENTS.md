@@ -1,448 +1,388 @@
-# AGENTS.md --- Noticiencias Backend (News Collector)
+# AGENTS.md — Noticiencias Backend (News Collector)
 
-Version: 2.4 (SourceRegistry Governance, Legacy Schema Policy, Provenance Law)
-Status: Active & Binding Supersedes: Version 2.3
+Status: Active and binding
+Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`; authoritative over lower-level backend docs
+Scope: `/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector`
 
----
+This file defines reviewable engineering law for the backend. It exists to keep the codebase operable as the ingestion pipeline, Refinery workflows, contracts, storage, and publishing logic grow. It is intentionally specific. Rules that cannot be checked in code review do not belong here.
 
-## Authority & Governance
+## 0) Mandatory Preflight
 
-Hierarchy of authority:
+Before changing code:
 
-1.  SOURCE_OF_TRUTH.md
-2.  This AGENTS.md
-3.  ARCHITECTURE.md
-4.  RUNBOOK.md
-5.  Inline documentation
+1. Read this file fully.
+2. Inspect the package boundaries touched by the change.
+3. Classify the change using the matrix in Section 10.
+4. Run the required validation for that class of change.
 
-This document may evolve only through the Architectural Amendment
-Procedure (Section 12).
+Do not ship "temporary compatibility", "quick manager", or "generic helper" layers. If a change cannot be explained in terms of the package responsibilities below, the design is not finished.
 
----
+## 1) Actual System Shape
 
-# 0) Architectural Intent
+The backend is not a generic framework. It is a Python pipeline with clear responsibilities:
 
-The backend is designed to be:
+- `news_collector/contracts/`: sealed external and cross-boundary data shapes; adapters live here.
+- `news_collector/system/`: orchestration, bootstrap, reporting, observability wiring.
+- `news_collector/collectors/`: ingestion from feeds and source endpoints.
+- `news_collector/enrichment/` and `news_collector/infrastructure/`: external I/O, enrichment strategies, HTTP clients, LLM/provider integrations, proxy/runtime concerns.
+- `news_collector/storage/`: database engines, sessions, ORM models, persistence, and DB analytics.
+- `news_collector/validation/`, `news_collector/scoring/`, `news_collector/taxonomy/`, `news_collector/editorial/`: decision rules and editorial heuristics.
+- `news_collector/logic/workflows/` and `apps/refinery/`: Refinery-specific application flows and UI integration.
+- `news_collector/serving/`: HTTP API surface.
+- `tests/`: architectural proof, regression, property, integration, and security checks.
 
-- Deterministic in identity
-- Contract-driven across boundaries
-- Resistant to silent regression
-- Safe for autonomous refactoring
-- Evolvable without structural decay
+Governance must match this structure. Do not invent a cleaner architecture in documents while coding against a different one.
 
----
+## 2) Architectural Laws
 
-# 1) Structure of Power (Visual)
+### LAW-B1: Boundaries must be typed
 
-This diagram is a **governance model**, not a runtime dependency graph.
+Rules:
 
-```mermaid
-flowchart TB
-  SOT[SOURCE_OF_TRUTH.md\n(Constitution)] --> AG[AGENTS.md\n(Backend Law)]
-  AG --> AR[ARCHITECTURE.md\n(Implementation Model)]
-  AR --> RB[RUNBOOK.md\n(Ops Procedures)]
-  RB --> CODE[Code / Tests / CI\n(Executable Evidence)]
-  AG --> CODE
+- External boundaries and sealed internal boundaries must use explicit types.
+- Use Pydantic models in `news_collector/contracts/` for API payloads, publication payloads, persisted article exchange, and other cross-subsystem contracts.
+- New or modified public functions must not introduce fresh `dict[str, Any]` payloads as their primary boundary type when a contract or typed model is appropriate.
+- Local parsing helpers may use raw dicts temporarily, but raw dicts must not leak across package boundaries once normalization is complete.
+
+Review trigger:
+
+- Any new ingress or egress shape needs either a contract, a typed dataclass/TypedDict with clear scope, or a strong reason why it remains local-only.
+
+### LAW-B2: Adapters are the only shape-conversion choke point
+
+Rules:
+
+- Structural mapping between ORM models, raw source payloads, frontend publication payloads, and contracts belongs in `news_collector/contracts/adapters.py` or a clearly named adapter module under `contracts/`.
+- Business rules do not belong in adapters.
+- Validation may happen in adapters; editorial judgment, scoring heuristics, and persistence policy may not.
+- Do not duplicate field-mapping logic in `system/`, `serving/`, `apps/refinery/`, or tests.
+
+Reject in review:
+
+- Hand-built export dicts in workflow code.
+- Repeating `source_id`, metadata, or publication-field normalization outside adapter code.
+
+### LAW-B3: Orchestration and decision logic must stay separate
+
+Rules:
+
+- `news_collector/system/` and `news_collector/logic/workflows/` coordinate steps, retries, batching, and dependency wiring.
+- Scoring thresholds, editorial policy, taxonomy rules, validation heuristics, and source-specific content judgments belong in dedicated policy modules, not orchestration code.
+- If a function both decides what is valid and performs I/O, split it into a pure decision path plus a thin I/O wrapper.
+- `system/` may call collaborators; it must not become the place where rules are authored.
+
+Legacy note:
+
+- Existing internal-method coupling in `system/` is compatibility debt. Do not spread that pattern into new modules.
+
+### LAW-B4: I/O must stay at the edges
+
+Rules:
+
+- Network calls belong in `collectors/`, `enrichment/`, `infrastructure/`, and the HTTP serving layer.
+- Database engine/session lifecycle and write operations belong in `storage/`.
+- File publication and artifact generation belong in explicit workflow/publisher paths, not in utility modules.
+- Pure rule code in `validation/`, `scoring/`, `taxonomy/`, and `editorial/` must be runnable without network, database, or environment access.
+- Environment-variable lookups must happen at configuration/bootstrap boundaries, not deep inside core logic.
+
+Allowed exception:
+
+- `serving/` may perform read-only query composition against storage models because it is an edge adapter. Do not add write workflows there.
+
+### LAW-B5: Canonical publication identity is deterministic and idempotent
+
+Rules:
+
+- `refinery_id`, slug, filename, canonical URL, and publication date are identity-bearing fields.
+- Identity-bearing fields must come from persisted state or deterministic derivation from approved inputs.
+- Runtime time, randomness, request order, and batch order must not change canonical publication outputs.
+- Retrying the same publication workflow must not create a new canonical identity for the same article.
+- If identity logic changes, the migration and compatibility plan must be explicit before code lands.
+
+Allowed non-determinism:
+
+- Trace IDs
+- session IDs
+- metrics timestamps
+- logs
+
+Not allowed in publication identity paths.
+
+### LAW-B6: Batch workflows must fail explicitly, not mysteriously
+
+Rules:
+
+- Batch code must return or log per-item outcomes for success, skip, and failure cases.
+- Continue-on-error behavior is allowed only when the result reports which items failed and why.
+- Silent item drops are forbidden.
+- Retries must be bounded and reserved for I/O failures, not validation bugs or deterministic logic errors.
+- Idempotent write paths must tolerate reprocessing without creating duplicate persistent state.
+
+### LAW-B7: Error handling must preserve signal
+
+Rules:
+
+- Boundary validation failures must raise explicit errors or return structured validation results.
+- `except Exception` is allowed only when the exception is logged with context and then re-raised or converted into a typed result.
+- Never use broad catches to hide partial corruption, skip tests, or make a pipeline "look successful".
+- Returning `None` as a failure sentinel is allowed only when the caller can distinguish it unambiguously and the contract documents it.
+
+Reject in review:
+
+- `except Exception: pass`
+- hidden fallback behavior that changes publication or scoring semantics
+- retries wrapped around code that is not I/O
+
+### LAW-B8: Utility sprawl is forbidden
+
+Rules:
+
+- `news_collector/utils/` is for narrow helpers with one stable responsibility.
+- A helper that knows about SQLAlchemy models, article workflow policy, HTTP transport, or UI state does not belong in `utils/`.
+- If a helper has one consumer, keep it local until reuse is real.
+- Do not create "common", "base", or "helpers" modules that mix unrelated concerns.
+- Prefer a small amount of duplication over a premature generic abstraction.
+
+### LAW-B9: New abstraction layers require proof
+
+Rules:
+
+- Do not add a new package, base class, service, manager, or factory unless the change clearly owns one of these concerns:
+  - lifecycle/composition
+  - transport indirection
+  - retry/backoff policy
+  - caching
+  - batch coordination
+  - plugin-style replacement already needed by more than one concrete implementation
+- "We may need this later" is not a valid reason.
+- Inheritance is discouraged for business logic. Prefer composition and explicit collaborators.
+- A new abstraction must reduce duplicated branching across at least two concrete call sites or replace a currently unstable boundary.
+
+### LAW-B10: Performance-sensitive paths need deliberate review
+
+Rules:
+
+- The following areas are performance-sensitive and should be reviewed for repeated work and unbounded growth:
+  - collector loops
+  - enrichment fan-out
+  - DB save/update batches
+  - ranking queries
+  - API pagination
+  - publication/export generation
+- Avoid repeated model validation, repeated JSON parsing, repeated DB round-trips, and N+1 query patterns inside loops.
+- Pagination and sorted API results must remain deterministic.
+- Memory growth in batch paths must be bounded; stream or chunk when practical.
+
+## 3) Package Boundary Rules
+
+### 3.1 `contracts/`
+
+Must:
+
+- define and validate boundary shapes
+- host adapter functions for shape conversion
+
+Must not:
+
+- perform network I/O
+- open DB sessions
+- import orchestration modules
+- bury business heuristics in field mapping
+
+### 3.2 `system/`
+
+Must:
+
+- bootstrap collaborators
+- coordinate pipeline stages
+- emit observability and reporting events
+
+Must not:
+
+- define new schema objects that duplicate `contracts/`
+- implement source-specific parsing
+- own SQLAlchemy models or raw SQL
+- author editorial/scoring policy
+
+### 3.3 `storage/`
+
+Must:
+
+- own engine/session creation
+- own ORM models and persistence behavior
+- centralize DB writes and DB-specific optimizations
+
+Must not:
+
+- perform network calls
+- absorb editorial policy because "the data is already here"
+
+### 3.4 `collectors/`, `enrichment/`, `infrastructure/`
+
+Must:
+
+- isolate transport, scraping, HTTP, provider, and runtime integration concerns
+
+Must not:
+
+- decide final publication identity
+- encode editorial publishing policy
+- duplicate contract adapters
+
+### 3.5 `logic/workflows/` and `apps/refinery/`
+
+Must:
+
+- compose workflows around contracts, policy modules, and persistence boundaries
+
+Must not:
+
+- become a second home for ad hoc schema definitions
+- bypass contracts because the UI "already knows the shape"
+
+### 3.6 `serving/`
+
+Must:
+
+- expose a stable read-oriented HTTP interface
+- validate inputs explicitly
+- paginate deterministically
+
+Must not:
+
+- mutate editorial state through convenience endpoints
+- replicate workflow logic already present elsewhere
+
+## 4) Testing Is Architectural Evidence
+
+Tests are mandatory when a change touches behavior, not just when it feels risky.
+
+Add or update tests when:
+
+- changing a contract, adapter, or boundary signature
+- changing source identity handling
+- touching canonical publication logic
+- changing batch behavior or retry behavior
+- fixing a bug
+- changing serving pagination/filter semantics
+- moving logic across package boundaries
+
+Prefer the narrowest test that proves the invariant:
+
+- contract tests for shape
+- unit tests for pure rules
+- boundary tests for orchestration
+- integration tests for storage and workflow coupling
+
+## 5) Operational Validation
+
+Baseline commands for meaningful code changes:
+
+```bash
+make lint
+make type
+make test
 ```
 
-Rule: If a lower-authority document conflicts with a higher-authority
-one, the higher authority prevails.
+Add the relevant targeted gates:
 
----
+- Contract or adapter changes:
 
-# 2) Architectural Status
+```bash
+make test-contracts
+```
 
-Enforced milestones:
+- Orchestration or workflow boundary changes:
 
-- S1 --- System Decomposition
-- S2 --- Canonical Identity & URL Determinism
-- D1 Phase 1 & 2 --- Contract Boundaries
+```bash
+make test-boundaries
+```
 
-All associated invariants are active.
+- Publication/refinery output changes:
 
----
+```bash
+make quality-gate
+```
 
-# 3) Core Architectural Laws
+- Config schema/doc generation changes:
 
-## LAW-1: Contract-Driven Boundaries (Critical)
+```bash
+make config-docs-check
+```
 
-All cross-boundary data MUST use Pydantic models under:
+- Dependency, security, or CI-hardening changes:
 
-    news_collector/contracts/
+```bash
+make quality
+```
 
-Forbidden:
+Run only the commands relevant to the change, but do not under-run the gate. If the touched code affects multiple areas, run the union of their checks.
 
-- Raw dict propagation across boundaries
-- Inline schema definitions
-- Post-validation mutation
-- Implicit structural assumptions
+## 6) Anti-Patterns Blocked in Review
 
----
+Reject these changes unless the diff includes a concrete justification:
 
-## LAW-1A: SourceRegistry Identity & Schema Governance (Critical)
+- New `manager`, `service`, or `factory` classes with no clear lifecycle or composition responsibility.
+- New cross-package dict payloads instead of typed boundaries.
+- Business logic added to `system/` because it was "already coordinating things".
+- Database writes from serving or utility code.
+- Transport/retry/env logic hidden inside rule modules.
+- One-off helpers moved to `utils/` for discoverability.
+- Generic plugin frameworks created before there are real plugins.
+- "Fail open" behavior that silently changes publication or scoring semantics.
+- New `asyncio.run(...)` calls below CLI or sync-compatibility boundaries.
 
-`source_id` is the canonical identity key for news sources.
+## 7) Refactor Triggers
 
-Mandatory:
+A refactor is required when:
 
-- `source_id` MUST be present in all schema_version >= 2 payloads that cross sealed boundaries.
-- `source_name` is display metadata only and MUST be canonicalized from the registry at the adapter boundary.
-- The canonical registry is `news_collector.config.sources.ALL_SOURCES`, keyed by `source_id`.
-- Registry `source_name` values MUST be casefold-unique.
-- Adapter fallback `source_name -> source_id` is allowed only for legacy schema_version `1`.
-- Missing `source_id` in schema_version >= 2 is a hard contract failure.
+- the same mapping logic appears in two modules
+- the same decision rule appears in workflow code and a policy module
+- a function needs both network and editorial reasoning to complete
+- a helper name becomes too generic to reveal its real dependency surface
+- batch behavior depends on hidden mutable module state
+- tests have to mock half the system just to verify one rule
 
-Legacy governance:
+## 8) Decision Heuristics
 
-- Legacy schema detection MUST emit warning logs.
-- Legacy compatibility logic MUST be isolated to adapter/input-normalization boundaries.
-- Contract, domain, and system layers MUST NOT branch on legacy schema behavior.
+Use these review heuristics consistently:
 
-Provenance persistence policy:
+- Prefer explicit collaborators over hidden globals.
+- Prefer a small amount of local duplication over a premature shared framework.
+- Prefer pure functions for policy and heuristics.
+- Prefer narrow adapters over "smart" models that know every layer.
+- Prefer bounded workflow steps over giant orchestrators with many optional branches.
+- Prefer deleting dead code paths over preserving them behind flags forever.
 
-- Markdown `source_identity` metadata is auxiliary audit trace, not canonical identity storage.
-- Canonical source identity remains the validated contract field `source_id`.
-- Canonical provenance line format is `<!-- source_identity: source_id=<ID>; source_name=<NAME> -->`.
-- Provenance metadata in publication artifacts MUST be idempotent (update/replace; never duplicate).
-- Publication artifacts MUST persist this provenance trace for auditability.
+## 9) Review Checklist
 
-Forbidden:
+Before considering a backend change complete, verify:
 
-- Weakening `source_id` requirement for schema_version >= 2.
-- Silent fallback identity resolution for non-legacy payloads.
-- Implicit identity derivation without registry validation.
+- Boundary types remain explicit.
+- Adapters are still the only place where shape conversion happens.
+- I/O stayed at the edge packages.
+- Publication identity is still deterministic.
+- Batch failure behavior is explicit.
+- No new abstraction was added without concrete justification.
+- Tests cover the changed invariant.
+- The required validation commands for the change class were run.
 
----
+## 10) Change Matrix
 
-## LAW-2: Adapters Layer Exclusivity (Critical)
+| Change type | Risk | Minimum requirement |
+| --- | --- | --- |
+| Documentation or comments only | Low | No code validation beyond sanity check |
+| Pure rule change in validation/scoring/editorial/taxonomy | Medium | `make lint && make type && make test` |
+| Contract/adapter/boundary change | High | Baseline + `make test-contracts` |
+| Orchestration, workflow, collector, storage, or serving change | High | Baseline + `make test-boundaries` and relevant targeted tests |
+| Publication identity, refinery publishing, config schema, dependency, or security change | Critical | Baseline + targeted gates + `make quality` where applicable |
 
-All structural transformations MUST occur in the **Adapters Layer**.
+When unsure, classify the change at the higher risk level.
 
-Allowed structure:
+## 11) Final Authority
 
-    news_collector/contracts/adapters/
-        __init__.py          # Expose stable public adapter API
-        validation.py
-        scoring.py
-        export.py
-        ...
+This file is the backend review standard.
 
-A single adapters.py file is permitted only if size remains
-maintainable.
-
-System and domain layers MUST NOT construct cross-boundary payloads
-manually.
-
-**Adapter Rule:** Adapters may transform shape and types, but MUST NOT
-implement business rules. Business rules belong in domain/components.
-
----
-
-## LAW-3: System Layer Is Pure Orchestration (Structural)
-
-`news_collector/system/` may:
-
-- Wire dependencies
-- Control execution flow
-- Emit semantic events
-- Route errors
-
-It MUST NOT:
-
-- Apply domain logic
-- Shape contract payloads
-- Serialize artifacts
-- Embed scoring logic
-- Implement validation rules
-
----
-
-## LAW-4: Canonical Identity Determinism (Critical)
-
-Canonical identity includes:
-
-- Slug
-- Publication date
-- Canonical URL
-- refinery_id
-- Filename
-
-Rules:
-
-- Derived deterministically
-- Persisted on first publication
-- Reused on update
-- Independent of runtime time
-- Independent of execution order
-
-Forbidden in identity path:
-
-- `datetime.now()`
-- Randomness
-- Execution-order-dependent mutations
-
-### LAW-4A: Canonical ID Generation Is Protected (Critical)
-
-If `refinery_id` is generated algorithmically (hash/derivation), then:
-
-- The generation algorithm MUST be treated as part of canonical
-  identity.
-- Changes to the algorithm MUST NOT retroactively change existing
-  `refinery_id` values.
-- If a new algorithm is introduced, it MUST be versioned explicitly
-  (e.g., `refinery_id_v2`) and the system MUST:
-  - Preserve old IDs for existing artifacts
-  - Use the versioned ID deterministically for new artifacts
-- Any migration or rewrite of canonical IDs requires explicit human
-  approval and must include a compatibility plan.
-
-### LAW-4B: Publication Stage Semantics (Critical)
-
-Backend publication state is staged:
-
-- `PR_CREATED`: The backend successfully created a Pull Request in the frontend repository.
-- `PUBLISHED`: Final site publication is downstream (merge + frontend deploy), not inferred at PR creation time.
-
-Auditor governance:
-
-- Default mode is optional (`editorial_auditor.blocking = false`).
-- Auditor failures (including LLM timeouts/unavailability) MUST be recorded as audit status metadata and MUST NOT silently corrupt publication state.
-
----
-
-## LAW-5: Domain Purity & Dependency Direction (Structural)
-
-The domain is the system's semantic core. It must be stable, testable,
-and transport-agnostic.
-
-**Dependency direction is inward**:
-
-- `system/` depends on domain
-- `contracts/` depends on domain (via adapters)
-- domain depends on neither `system/` nor `contracts/`
-
-Therefore domain/components MUST NOT import:
-
-- `news_collector.system.*`
-- `news_collector.contracts.*`
-
-### Allowed exceptions (must be explicit and documented)
-
-Only the following are permitted, and only if they keep the domain
-**pure**:
-
-1.  **Pure utilities**:
-    - Must be **purely functional** (same input → same output)
-    - Must have **zero side-effects**
-    - Forbidden inside utilities:
-      - File I/O, network I/O, database access
-      - Reading environment variables
-      - Logging/metrics emission
-      - Time access (`now()`, timestamps) unless passed in as an
-        argument
-      - Randomness unless passed in as an argument
-    - Recommended location: `news_collector/domain/utils_pure/` (or
-      equivalent)
-2.  **Ports/interfaces defined in domain** (preferred):
-    - Domain defines an interface; outer layers implement it.
-
-Any exception must include a short "Why this stays pure" note in code
-comments.
-
-**Domain Rule:** Domain code must be runnable and unit-testable without
-database, network, or LLM dependencies.
-
----
-
-# 4) Invariant Classification
-
-Critical Invariants: - Contract boundaries - SourceRegistry identity
-and schema governance (LAW-1A) - Canonical identity determinism
-(including canonical ID generation protection) - Adapters exclusivity
-
-Structural Invariants: - Orchestration purity - Observability
-separation - Domain purity (dependency direction inward)
-
-Policy Invariants: - Coverage preservation - CI enforcement
-
-Critical invariants cannot be modified autonomously.
-
----
-
-# 5) Transitional / Legacy Policy
-
-Some modules may predate Version 2.x compliance.
-
-Rules:
-
-1.  Transitional modules must be explicitly marked.
-2.  Any modification to a transitional module MUST upgrade it to current
-    laws.
-3.  No new non-compliant surface area may be introduced.
-4.  Transitional status cannot expand; it can only shrink.
-5.  Legacy export support (schema_version 1) is transitional compatibility debt, not a permanent contract.
-6.  Until an explicit cutoff date is approved through amendment, CI MUST enforce:
-    - Legacy path emits warning logs.
-    - schema_version >= 2 payloads without `source_id` fail hard.
-7.  Introducing or removing a legacy cutoff date requires explicit architectural amendment.
-
----
-
-# 6) Testing as Architectural Evidence
-
-Tests encode invariants.
-
-Agents MUST add tests when:
-
-- Introducing a new Contract
-- Modifying Adapter mappings
-- Changing boundary method signature
-- Fixing a bug (regression test required)
-- Modifying identity path logic
-- Introducing or altering domain rules
-- Touching canonical ID generation logic (LAW-4A)
-- Changing SourceRegistry mapping rules or legacy schema compatibility logic (LAW-1A)
-
----
-
-## 6.1 Coverage Policy
-
-Coverage must not decrease for invariant-protecting paths.
-
-Structural coverage \> Numeric coverage.
-
----
-
-# 7) Minimum Enforcement Set (Mandatory After Audit)
-
-The following MUST exist in CI:
-
-1.  Boundary Test:
-    - Fails if dict crosses a sealed boundary.
-2.  Identity Determinism Test:
-    - Same input processed multiple times → identical canonical
-      identity.
-3.  Canonical ID Protection Test:
-    - Existing artifacts retain their `refinery_id` values across
-      reprocessing and code changes.
-4.  System Purity Test:
-    - System layer does not perform payload shaping or validation.
-5.  Adapter Mapping Tests:
-    - Validate schema integrity and transformation correctness.
-6.  Import Guard Test (Domain Purity):
-    - Fails if domain/components imports `system/` or `contracts/`.
-7.  Source Identity Strictness Test:
-    - `schema_version >= 2` payload missing `source_id` fails contract/boundary validation.
-8.  Legacy Adapter Compatibility Test:
-    - `schema_version: 1` path emits warning and allows deterministic `source_name -> source_id` mapping.
-9.  SourceRegistry Uniqueness Test:
-    - Fails if two registry sources share the same `source_name` under casefold comparison.
-10. Provenance Idempotency Test:
-    - Publication artifact keeps a single canonical `source_identity` trace after repeated processing.
-
-Without these, architectural law is considered partially unenforced.
-
----
-
-# 8) Change Governance Matrix
-
-Change Type Autonomous Allowed
-
----
-
-Contract Addition (Backward Compatible) ⚠️ With Tests
-Contract Modification ❌ Human Review
-Adapter Refactor ⚠️ Boundary Tests
-System Refactor ❌ Preserve S1
-Domain Rule Changes ⚠️ Must add tests
-Canonical ID Generation Logic ❌ Human Approval
-Scoring Logic ❌ Human Approval
-Validation Rules ❌ Human Approval
-Source Identity Rules (`source_id`, fallback, registry mapping) ❌ Human Review
-Legacy Schema Compatibility Window ❌ Human Approval
-Provenance Persistence Semantics ⚠️ With Regression Tests
-Test Addition ✅ Required
-Contract Test Modification ❌ Human Review
-Test Deletion ❌ Human Review
-
----
-
-# 9) Autonomous Agent Enforcement
-
-## LAW-6: Refusal Obligation
-
-Agents MUST refuse if task:
-
-- Breaks critical invariants
-- Weakens validation
-- Introduces dict boundary crossing
-- Reduces invariant coverage
-- Introduces identity nondeterminism
-- Violates domain purity dependency rules
-- Changes canonical ID generation without approval (LAW-4A)
-- Weakens `source_id` strictness or enables non-legacy fallback (LAW-1A)
-- Introduces implicit identity derivation without registry validation (LAW-1A)
-
-Refusal must state: - Violated law - Explanation - Compliant alternative
-
----
-
-## LAW-7: No Speculative Refactoring
-
-No architecture collapse without explicit scope.
-
-Optimization must preserve invariants.
-
----
-
-## LAW-8: Escalation Over Assumption
-
-Ambiguity in architectural decisions requires halt and clarification.
-
----
-
-# 10) Document Roles (Non-Overlapping Responsibilities)
-
-To prevent duplication and drift:
-
-- **SOURCE_OF_TRUTH.md**: Mission, principles, ecosystem-level
-  guarantees.
-- **AGENTS.md**: What is **mandatory/forbidden**, enforcement
-  obligations, refusal rules.
-- **ARCHITECTURE.md**: The **how** --- diagrams, flows, implementation
-  model mapping laws to code.
-- **RUNBOOK.md**: Operational procedures --- run/debug/fix, incident
-  handling.
-
-AGENTS.md should remain compact and normative. ARCHITECTURE.md should
-carry explanatory depth.
-
----
-
-# 11) Out of Scope
-
-- Breaking schema migrations
-- Removing determinism guarantees
-- Collapsing boundary layers
-- Replacing contracts with primitives
-- Weakening domain purity dependency direction
-- Retroactive canonical ID rewrites
-
-Require explicit approval.
-
----
-
-# 12) Architectural Amendment Procedure
-
-Amendment requires:
-
-1.  Written proposal
-2.  Impact analysis
-3.  Invariant classification impact
-4.  Human approval
-5.  Version increment
-6.  Changelog update
-
----
-
-End of AGENTS.md ---
+- Code that violates these boundaries is not complete.
+- Simplicity is preferred, but not at the cost of hidden coupling.
+- Growth is allowed only when the dependency surface stays legible and testable.

@@ -69,6 +69,19 @@ class TestRefineryUIContracts(unittest.TestCase):
         self.assertIn("auditor_score.json", content)
         self.assertIn("Rigor:", content)
 
+        # 4. Check Manual URL ingestion controls exist
+        self.assertIn("Pegar URL Específica", content)
+        self.assertIn("🔗 Cargar Artículo desde URL", content)
+        self.assertIn("render_article_processing_panel", content)
+        self.assertIn("Artículo Seleccionado del Ranking", content)
+        self.assertIn("Artículo Cargado desde URL", content)
+
+        # 5. Check image brief queue visibility exists
+        self.assertIn("🖼️ Briefs de Imagen", content)
+        self.assertIn("Cola Editorial de Imágenes", content)
+        self.assertIn("Prompt listo para copiar", content)
+        self.assertIn("Subir imagen curada", content)
+
         print("✅ Static Contract Verification Passed for admin_panel.py")
 
     # @patch("apps.refinery.admin_panel.st")

@@ -1,8 +1,10 @@
 import logging
-import pytest
 from datetime import datetime
-from unittest.mock import MagicMock
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
 from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
@@ -14,11 +16,18 @@ def validate_collector_payload(payload):
 
 
 def test_process_single_article_enforces_contract(tmp_path):
+    config = SimpleNamespace(
+        app=SimpleNamespace(
+            policy_integrity_mode="disabled", editorial_mode="standard"
+        ),
+        paths=SimpleNamespace(data_dir=tmp_path / "data"),
+        github=SimpleNamespace(target_repo_url="https://github.com/org/repo"),
+    )
     engine = RefineryEngine(
         MagicMock(),
         MagicMock(),
         MagicMock(),
-        MagicMock(),
+        config,
         contract_validator=validate_collector_payload,
     )
 
@@ -53,6 +62,8 @@ def test_process_single_article_enforces_contract(tmp_path):
         "published_date": datetime(2024, 1, 1),
         "word_count": 50,
         "reading_time_minutes": 1,
+        "image_url": "~/assets/images/test.jpg",
+        "image_alt": "Imagen editorial del artículo válido",
     }
 
     engine.db.get_canonical_slug.return_value = None
@@ -69,11 +80,18 @@ def test_process_single_article_enforces_contract(tmp_path):
 
 
 def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
+    config = SimpleNamespace(
+        app=SimpleNamespace(
+            policy_integrity_mode="disabled", editorial_mode="standard"
+        ),
+        paths=SimpleNamespace(data_dir=tmp_path / "data"),
+        github=SimpleNamespace(target_repo_url="https://github.com/org/repo"),
+    )
     engine = RefineryEngine(
         MagicMock(),
         MagicMock(),
         MagicMock(),
-        MagicMock(),
+        config,
         contract_validator=validate_collector_payload,
     )
     engine.db.set_canonical_slug = MagicMock()
@@ -99,6 +117,8 @@ def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
     normalized = adapt_export_article_to_collector_payload(
         legacy_export_article, source_name_to_id={"lil'log": "lilian_weng"}
     )
+    normalized["image_url"] = "~/assets/images/legacy.jpg"
+    normalized["image_alt"] = "Imagen editorial del artículo legacy"
 
     result = engine.process_single_article(normalized, MagicMock(), tmp_path)
 

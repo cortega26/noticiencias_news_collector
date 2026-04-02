@@ -679,6 +679,7 @@ microsoft_research:
 #   headers: dict (optional custom headers)
 #   enrichment_strategy: string (http, scholarly, headless_fallback)
 #   headless_enabled: boolean (optional, enables headless fallback)
+#   manual_only: boolean (optional, excludes source from scheduled collection)
 #   proxy_mode: string (optional: off, auto, force. Default: auto)
 #   proxy_pool: string (optional: default, residential, datacenter. Default: default)
 #   etag: null

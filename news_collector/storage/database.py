@@ -375,6 +375,23 @@ class DatabaseManager:
             ).scalar()
             return bool(result)
 
+    def get_article_by_url(self, url: str) -> Optional[Article]:
+        """Fetch a single article by canonical URL."""
+        canonical_url = canonicalize_url(url) or url
+        with self.get_session() as session:
+            article = session.query(Article).filter_by(url=canonical_url).first()
+            if article is not None:
+                session.expunge(article)
+            return article
+
+    def get_article_by_id(self, article_id: int) -> Optional[Article]:
+        """Fetch a single article by id."""
+        with self.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is not None:
+                session.expunge(article)
+            return article
+
     def articles_exist(self, urls: List[str]) -> Set[str]:
         """
         Batch check for existing articles by URL.
@@ -713,6 +730,7 @@ class DatabaseManager:
                     journal=payload.get("journal"),
                     is_preprint=payload.get("is_preprint", False),
                     language=payload.get("language", "en"),
+                    content_mode=payload.get("content_mode"),
                     processing_status=initial_status,
                     article_metadata=article_metadata,
                     word_count=payload.get("word_count"),

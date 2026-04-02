@@ -25,7 +25,11 @@ class TestRefineryCanonical:
             '---\ntitle: Test\nrefinery_id: "101"\n---\nContent'
         )
 
-        return RefineryEngine(db, git, editor, config)
+        engine = RefineryEngine(db, git, editor, config)
+        engine._download_image = MagicMock(
+            return_value="~/assets/images/refinery-canonical.png"
+        )
+        return engine
 
     def test_preserves_existing_filename(self, engine, tmp_path):
         """
@@ -45,6 +49,7 @@ class TestRefineryCanonical:
             "title": "A Very Long New Title",
             "url": "http://x",
             "summary": "This is a sufficiently long summary.",
+            "image_url": "https://example.com/canonical-old.png",
             "source_id": "src",
             "source_name": "source_name",
             "category": "cat",
@@ -83,6 +88,7 @@ class TestRefineryCanonical:
             "title": "A Long Xmas Title",
             "url": "http://x",
             "summary": "This is a sufficiently long summary.",
+            "image_url": "https://example.com/canonical-new.png",
             "source_id": "src",
             "source_name": "source_name",
             "category": "cat",

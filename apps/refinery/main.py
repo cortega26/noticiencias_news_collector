@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import json
 import re
 import shutil
@@ -14,12 +15,12 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-import asyncio
-
+from apps.refinery.published_content import find_published_article_by_refinery_id
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_stage_models
+from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 # from news_collector.components.editorial import EditorAgent # Removed duplicate
@@ -366,6 +367,7 @@ def run_collector_script(
 def main(  # noqa: C901
     fetch_only=False,
     process_id=None,
+    article_url=None,
     dev=False,
     skip_visuals=False,
     export_path=None,
@@ -379,6 +381,7 @@ def main(  # noqa: C901
     Args:
         fetch_only (bool): If True, only clones/pulls the source repo.
         process_id (str): Optional ID or Title to filter processing.
+        article_url (str): Optional article URL for manual ingestion.
         dev (bool): If True, enables development features like mock data injection.
         export_path (str): Optional path to a specific JSON export to use.
         dry_run (bool): If True, simulates collection without saving to DB.
@@ -423,9 +426,32 @@ def main(  # noqa: C901
     )
 
     source_dir = SOURCE_DIR
+    manual_ingest_result = None
     preferred_export_path = None
     if export_path:
         preferred_export_path = Path(export_path).expanduser()
+    if article_url:
+        ingest_service = ManualUrlIngestService(
+            db_manager,
+            export_dir=project_root / "temp" / "manual_ingest",
+        )
+        manual_ingest_result = ingest_service.ingest(article_url)
+        if manual_ingest_result.get("status") != "success":
+            return {
+                "status": "error",
+                "message": manual_ingest_result.get(
+                    "message", "Manual URL ingestion failed."
+                ),
+                "processed_count": 0,
+                **manual_ingest_result,
+            }
+        process_id = str(manual_ingest_result["article_id"])
+        preferred_export_path = Path(manual_ingest_result["export_path"]).expanduser()
+        logger.info(
+            "Manual URL ingest ready for article %s using export %s",
+            process_id,
+            preferred_export_path,
+        )
     skip_clone = (
         preferred_export_path is not None
         and preferred_export_path.exists()
@@ -503,7 +529,11 @@ def main(  # noqa: C901
 
     selected_export_path = None
 
-    if CLONED_EXPORT_PATH.exists() or SIBLING_EXPORT_PATH.exists():
+    if (
+        (preferred_export_path is not None and preferred_export_path.exists())
+        or CLONED_EXPORT_PATH.exists()
+        or SIBLING_EXPORT_PATH.exists()
+    ):
         articles_to_process, selected_export_path = _select_export_articles(
             CLONED_EXPORT_PATH,
             SIBLING_EXPORT_PATH,
@@ -659,13 +689,19 @@ def main(  # noqa: C901
     logger.info("Refinery pass complete.")
 
     if processed_count == 0 and last_error:
-        return {
+        result = {
             "status": "error",
             "message": f"Error procesando artículo: {last_error}",
             "processed_count": 0,
         }
+        if manual_ingest_result:
+            result.update(manual_ingest_result)
+        return result
 
-    return {"status": "success", "processed_count": processed_count}
+    result = {"status": "success", "processed_count": processed_count}
+    if manual_ingest_result:
+        result.update(manual_ingest_result)
+    return result
 
 
 def delete_article(article_id: str) -> dict:
@@ -690,14 +726,9 @@ def delete_article(article_id: str) -> dict:
         target_file = None
 
         if posts_dir.exists():
-            for file_path in posts_dir.glob("*.md"):
-                try:
-                    content = file_path.read_text(encoding="utf-8")
-                    if f'refinery_id: "{article_id}"' in content:
-                        target_file = file_path
-                        break
-                except Exception:  # noqa: S112
-                    continue
+            target_article = find_published_article_by_refinery_id(posts_dir, article_id)
+            if target_article is not None:
+                target_file = target_article.file_path
 
         if not target_file:
             logger.warning(f"Article ID {article_id} not found in published content.")
@@ -751,6 +782,11 @@ if __name__ == "__main__":
         "--process-id", type=str, help="Process a specific article ID (or title) only."
     )
     parser.add_argument(
+        "--article-url",
+        type=str,
+        help="Fetch and process a specific article URL through the manual ingestion path.",
+    )
+    parser.add_argument(
         "--dev",
         action="store_true",
         help="Enable development features (like mock generation).",
@@ -776,6 +812,7 @@ if __name__ == "__main__":
     main(
         fetch_only=args.fetch_only,
         process_id=args.process_id,
+        article_url=args.article_url,
         dev=args.dev,
         skip_visuals=args.skip_visuals,
         export_path=args.export_path,

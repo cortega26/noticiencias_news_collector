@@ -1,8 +1,11 @@
 import importlib.util
 import json
+import logging
 import os
 import sqlite3
 import sys
+from contextlib import suppress
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -42,11 +45,17 @@ if spec is None or spec.loader is None:
 refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
-import logging
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
+from apps.refinery.published_content import (
+    find_published_article_by_refinery_id,
+    resolve_published_content_snapshot,
+    truncate_refinery_id,
+)
 from news_collector.config.settings import CONFIG, DATABASE_CONFIG
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.logic.workflows.image_briefs import ImageBriefStore
+from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
 
 # Alias for compatibility if legacy code relies on this name
@@ -232,12 +241,249 @@ def load_source_health():
         return None
 
 
+def get_refinery_data_dir() -> Path:
+    try:
+        from noticiencias.config_manager import load_config
+
+        config = load_config()
+        paths = getattr(config, "paths", None)
+        if isinstance(paths, dict):
+            return Path(paths.get("data_dir", NEWS_COLLECTOR_PATH / "data"))
+        data_dir = getattr(paths, "data_dir", NEWS_COLLECTOR_PATH / "data")
+        return Path(data_dir)
+    except Exception:
+        return NEWS_COLLECTOR_PATH / "data"
+
+
+def estimate_time(art_len: int, model: str) -> str:
+    """Rough CPU estimate for the three editorial phases."""
+    total_words = art_len or 1000
+    model_name = (model or "").lower()
+    if "llama3.3" in model_name or "70b" in model_name:
+        speed_factor = 0.05
+    elif "8b" in model_name:
+        speed_factor = 2.0
+    else:
+        speed_factor = 5.0
+
+    est_min = int((total_words * 3) / (speed_factor * 60))
+    est_min = max(est_min, 1)
+    return f"~{est_min} mins ({model})"
+
+
+def render_fetch_attempts(fetch_attempts: list[dict[str, Any]] | None) -> None:
+    if not fetch_attempts:
+        return
+    with st.expander("🧪 Resumen de Métodos de Extracción", expanded=False):
+        for attempt in fetch_attempts:
+            method = attempt.get("method", "unknown")
+            success = "✅" if attempt.get("success") else "⚠️"
+            reason = attempt.get("reason", "n/a")
+            content_length = attempt.get("content_length", 0)
+            st.write(
+                f"{success} `{method}` · motivo: `{reason}` · longitud: `{content_length}`"
+            )
+
+
+def render_article_processing_panel(  # noqa: C901
+    selected_art: dict[str, Any] | None,
+    *,
+    export_path: str | None,
+    auth_ok: bool,
+    env_vars: dict[str, Any],
+    panel_key: str,
+    header: str | None = None,
+    source_note: str | None = None,
+    fetch_attempts: list[dict[str, Any]] | None = None,
+) -> None:
+    if not selected_art:
+        return
+
+    selected_id = str(selected_art.get("id", selected_art.get("title", "")))
+    if not selected_id:
+        return
+
+    if header:
+        st.markdown(f"### {header}")
+    if source_note:
+        st.caption(source_note)
+    render_fetch_attempts(fetch_attempts)
+
+    with st.expander("📄 Revisar Resumen del Artículo", expanded=False):
+        st.write(f"**Título:** {selected_art.get('title')}")
+        st.write(f"**Resumen:** {selected_art.get('summary')}")
+        if selected_art.get("url"):
+            st.write(f"**URL:** {selected_art.get('url')}")
+
+    if selected_art.get("image_url"):
+        st.image(selected_art.get("image_url"), caption="Imagen Extraída", width=300)
+
+    with st.expander("🎨 Configuración Visual / Caché", expanded=True):
+        visual_analysis_enabled = st.checkbox(
+            "Activar Análisis Visual",
+            value=True,
+            help="Generar categorías y prompts para imágenes.",
+            key=f"visual_analysis_{panel_key}_{selected_id}",
+        )
+
+        st.markdown("---")
+        if st.button(
+            "🧹 Limpiar Caché IA",
+            key=f"clear_cache_{panel_key}_{selected_id}",
+            help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.",
+            use_container_width=True,
+        ):
+            try:
+                import re
+
+                safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", selected_id)
+                count = 0
+                cache_dirs = [
+                    NEWS_COLLECTOR_PATH / "data" / "cache" / "editor",
+                    NEWS_COLLECTOR_PATH / "temp" / "source" / "data" / "cache" / "editor",
+                ]
+
+                for cache_dir in cache_dirs:
+                    if cache_dir.exists():
+                        for file_path in cache_dir.glob(f"{safe_id}_*.txt"):
+                            file_path.unlink()
+                            count += 1
+
+                if count > 0:
+                    st.success(f"✅ Caché eliminada ({count} archivos).")
+                else:
+                    st.info("ℹ️ No se encontraron archivos de caché para este artículo.")
+            except Exception as exc:
+                st.error(f"Error al limpiar caché: {exc}")
+
+    refinery_db = DatabaseManager()
+    is_pub = False
+    with suppress(ValueError):
+        is_pub = refinery_db.is_article_published(int(selected_id))
+
+    if is_pub:
+        st.error(
+            "⛔ Artículo ya publicado. Usa 'Forzar Reprocesamiento' si necesitas sobrescribir."
+        )
+
+        col_pub1, col_pub2 = st.columns(2)
+        with col_pub1:
+            if st.button(
+                "🔄 Forzar Reprocesamiento (Sobrescribir)",
+                key=f"reproc_{panel_key}_{selected_id}",
+                disabled=st.session_state.get("op_in_progress", False),
+            ):
+                st.session_state["op_in_progress"] = True
+                try:
+                    with st.spinner(f"Reprocesando ID {selected_id}..."):
+                        if not auth_ok:
+                            st.warning("Autenticación requerida para publicar.")
+                        else:
+                            skip_flag = not visual_analysis_enabled
+                            result = run_refinery(
+                                process_id=str(selected_id),
+                                skip_visuals=skip_flag,
+                                export_path=str(export_path) if export_path else None,
+                            )
+                            status = result.get("status")
+                            if status == "success" and result.get("processed_count", 0) > 0:
+                                st.success("¡Reprocesamiento Completo!")
+                            elif status == "error":
+                                st.error("Reprocesamiento Fallido.")
+                                st.expander("Detalles del Error").write(result.get("message"))
+                            else:
+                                st.warning(
+                                    f"Sin resultados: {result.get('message', 'Nada procesado.')}"
+                                )
+                finally:
+                    st.session_state["op_in_progress"] = False
+
+        with col_pub2:
+            if st.button(
+                "🗑️ Despublicar (Eliminar)",
+                type="primary",
+                key=f"del_{panel_key}_{selected_id}",
+                disabled=st.session_state.get("op_in_progress", False),
+            ):
+                with st.spinner(f"Solicitando eliminación de {selected_id}..."):
+                    try:
+                        if hasattr(refinery_main, "delete_article"):
+                            del_result = refinery_main.delete_article(str(selected_id))
+                            if del_result.get("status") == "success":
+                                st.success("✅ Solicitud de eliminación creada.")
+                                st.markdown(
+                                    f"[Ver Pull Request de Eliminación]({del_result.get('pr_url')})"
+                                )
+                                st.info(
+                                    "Nota: La base de datos local seguirá marcándolo como procesado hasta recibir confirmación de limpieza."
+                                )
+                            else:
+                                st.error(f"Error: {del_result.get('message')}")
+                        else:
+                            st.error(
+                                "Función delete_article no encontrada. Reinicia la aplicación."
+                            )
+                    except Exception as exc:
+                        st.error(f"Error invocando despublicación: {exc}")
+        return
+
+    content_len = len(str(selected_art.get("content", "")).split()) if selected_art else 1000
+    active_model = env_vars.get("OLLAMA_MODEL", "unknown")
+    time_est = estimate_time(content_len, active_model)
+
+    if st.button(
+        f"✨ Refinar y Publicar (ID: {selected_id})",
+        type="primary",
+        help=f"Estimación de tiempo: {time_est}",
+        key=f"process_{panel_key}_{selected_id}",
+        disabled=st.session_state.get("op_in_progress", False),
+    ):
+        st.session_state["op_in_progress"] = True
+        try:
+            with st.spinner(
+                f"Procesando ID {selected_id}... Esto toma {time_est} en CPU."
+            ):
+                if not auth_ok:
+                    st.warning("Autenticación requerida para publicar.")
+                else:
+                    try:
+                        skip_flag = not visual_analysis_enabled
+                        result = run_refinery(
+                            process_id=str(selected_id),
+                            skip_visuals=skip_flag,
+                            export_path=str(export_path) if export_path else None,
+                        )
+
+                        status = result.get("status")
+                        processed_count = result.get("processed_count", 0)
+                        if status == "success" and processed_count > 0:
+                            st.success("¡Procesamiento Completo! Revisa el repo de tu web.")
+                            st.balloons()
+                        elif status == "error":
+                            st.error("Procesamiento Fallido.")
+                            st.expander("Detalles del Error").write(result.get("message"))
+                        elif status == "noop" or processed_count == 0:
+                            message = result.get(
+                                "message",
+                                "No se encontraron artículos para procesar.",
+                            )
+                            st.warning(f"Sin resultados: {message}")
+                        else:
+                            st.error("Procesamiento Fallido.")
+                            st.expander("Detalles del Error").write(result.get("message"))
+                    except Exception as exc:
+                        st.error(f"Error crítico de ejecución: {exc}")
+        finally:
+            st.session_state["op_in_progress"] = False
+
+
 # --- Tabs ---
-tab1, tab_prompts, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+tab1, tab_prompts, tab2, tab_images, tab3, tab4, tab5, tab6 = st.tabs(
     [
         "⚙️ Motor IA",
         "📝 Prompts Editoriales",
         "🕷️ Extractor & Scoring",
+        "🖼️ Briefs de Imagen",
         "💼 Tareas & PRs",
         "📈 Analítica",
         "🚀 Publicados (Live)",
@@ -878,6 +1124,142 @@ with tab2:
                     except Exception as e:
                         st.error(f"Error durante limpieza: {e}")
 
+# --- Tab Images: Editorial Image Briefs ---
+with tab_images:
+    st.header("🖼️ Cola Editorial de Imágenes")
+    st.caption(
+        "Cuando una nota no tiene una imagen utilizable, Refinery crea un brief estructurado aquí en lugar de publicar con un placeholder."
+    )
+
+    image_brief_store = ImageBriefStore(get_refinery_data_dir())
+    briefs = image_brief_store.list_briefs()
+
+    if not briefs:
+        st.info(
+            "No hay briefs pendientes. Los próximos artículos sin imagen válida aparecerán aquí."
+        )
+    else:
+        status_filter = st.selectbox(
+            "Filtrar por estado",
+            options=[
+                "Todos",
+                "needs_editorial_image",
+                "editorial_image_ready",
+                "resolved",
+            ],
+            index=0,
+        )
+        filtered_briefs = [
+            brief
+            for brief in briefs
+            if status_filter == "Todos" or brief.status == status_filter
+        ]
+
+        if not filtered_briefs:
+            st.info("No hay briefs en ese estado.")
+        else:
+            selected_label = st.selectbox(
+                "Seleccionar brief",
+                options=[
+                    f"{brief.slug} · {brief.status} · {brief.topic}"
+                    for brief in filtered_briefs
+                ],
+            )
+            selected_slug = selected_label.split(" · ", 1)[0]
+            selected_brief = next(
+                brief for brief in filtered_briefs if brief.slug == selected_slug
+            )
+
+            col_meta1, col_meta2, col_meta3 = st.columns(3)
+            col_meta1.metric("Estado", selected_brief.status)
+            col_meta2.metric("Motivo", selected_brief.reason)
+            col_meta3.metric("Prompt", selected_brief.prompt_version)
+
+            if selected_brief.source_url:
+                st.caption(f"Fuente: {selected_brief.source_url}")
+
+            st.text_area(
+                "Prompt listo para copiar",
+                value=selected_brief.generated_prompt,
+                height=320,
+                key=f"brief_prompt_{selected_brief.slug}",
+            )
+
+            if selected_brief.uploaded_asset_path:
+                uploaded_path = Path(selected_brief.uploaded_asset_path)
+                st.caption(f"Asset staged: `{uploaded_path}`")
+                if uploaded_path.exists():
+                    st.image(str(uploaded_path), caption="Asset staged", width=320)
+
+            with st.form(f"image_brief_form_{selected_brief.slug}"):
+                topic = st.text_input("Tema", value=selected_brief.topic)
+                news_angle = st.text_area(
+                    "Ángulo periodístico",
+                    value=selected_brief.news_angle,
+                    height=100,
+                )
+                scientific_domain = st.text_input(
+                    "Dominio científico", value=selected_brief.scientific_domain
+                )
+                subject_scene = st.text_area(
+                    "Escena / sujeto a representar",
+                    value=selected_brief.subject_scene,
+                    height=100,
+                )
+                draft_alt_text = st.text_input(
+                    "Texto alternativo preliminar",
+                    value=selected_brief.draft_alt_text,
+                )
+                upload = st.file_uploader(
+                    "Subir imagen curada",
+                    type=["png", "jpg", "jpeg", "webp", "avif"],
+                    key=f"image_upload_{selected_brief.slug}",
+                )
+                submit_brief = st.form_submit_button(
+                    "Guardar cambios del brief",
+                    use_container_width=True,
+                )
+
+            if submit_brief:
+                try:
+                    if upload is not None:
+                        updated_brief = image_brief_store.stage_upload(
+                            brief=selected_brief,
+                            filename=upload.name,
+                            content=upload.getvalue(),
+                            draft_alt_text=draft_alt_text,
+                            topic=topic,
+                            news_angle=news_angle,
+                            scientific_domain=scientific_domain,
+                            subject_scene=subject_scene,
+                        )
+                        st.success(
+                            f"Imagen staged para {updated_brief.slug}. Refinery la usará en la próxima publicación."
+                        )
+                    else:
+                        updated_brief = selected_brief.model_copy(
+                            update={
+                                "topic": topic.strip(),
+                                "news_angle": news_angle.strip(),
+                                "scientific_domain": scientific_domain.strip(),
+                                "subject_scene": subject_scene.strip(),
+                                "draft_alt_text": draft_alt_text.strip(),
+                                "generated_prompt": image_brief_store.prompt_template.format(
+                                    topic=topic.strip(),
+                                    news_angle=news_angle.strip(),
+                                    subject_scene=subject_scene.strip(),
+                                    scientific_domain=scientific_domain.strip(),
+                                    tone=selected_brief.tone,
+                                ),
+                                "updated_at": datetime.now(timezone.utc),
+                            }
+                        )
+                        image_brief_store.save_brief(updated_brief)
+                        st.success("Brief actualizado.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"No se pudo actualizar el brief: {exc}")
+
 # --- Tab 3: Operations ---
 with tab3:
     st.header("Operaciones del Pipeline")
@@ -926,6 +1308,87 @@ with tab3:
                             st.error(f"Error: {e}")
             finally:
                 st.session_state["op_in_progress"] = False
+
+    st.markdown("---")
+    st.subheader("Pegar URL Específica")
+    manual_url = st.text_input(
+        "URL del artículo",
+        key="manual_article_url",
+        placeholder="https://ejemplo.com/articulo",
+        help="Carga una URL concreta, la guarda en la base de datos y la deja lista para revisión.",
+    )
+    col_url_load, col_url_clear = st.columns([2, 1])
+    with col_url_load:
+        if st.button(
+            "🔗 Cargar Artículo desde URL",
+            disabled=st.session_state.get("op_in_progress", False),
+            use_container_width=True,
+        ):
+            st.session_state["op_in_progress"] = True
+            try:
+                with st.spinner("Extrayendo artículo desde URL específica..."):
+                    if not auth_ok:
+                        st.warning("Autenticación requerida para cargar artículos por URL.")
+                    else:
+                        try:
+                            ingest_service = ManualUrlIngestService(
+                                DatabaseManager(),
+                                export_dir=BASE_DIR / "temp" / "manual_ingest",
+                            )
+                            ingest_result = ingest_service.ingest(manual_url)
+                            if ingest_result.get("status") == "success":
+                                st.session_state["manual_loaded_article"] = ingest_result.get("article")
+                                st.session_state["manual_loaded_export_path"] = ingest_result.get("export_path")
+                                st.session_state["manual_loaded_fetch_attempts"] = ingest_result.get("fetch_attempts", [])
+                                st.session_state["manual_loaded_source_id"] = ingest_result.get("source_id")
+                                st.session_state["manual_loaded_source_created"] = ingest_result.get("source_created", False)
+                                st.session_state["manual_loaded_article_exists"] = ingest_result.get("article_exists", False)
+                                st.success("Artículo cargado desde URL. Revísalo y publícalo usando el flujo normal.")
+                            else:
+                                st.error(ingest_result.get("message", "No se pudo cargar la URL."))
+                        except Exception as exc:
+                            st.error(f"Error cargando URL: {exc}")
+            finally:
+                st.session_state["op_in_progress"] = False
+
+    with col_url_clear:
+        if st.button("🧽 Limpiar URL Cargada", use_container_width=True):
+            for key in [
+                "manual_loaded_article",
+                "manual_loaded_export_path",
+                "manual_loaded_fetch_attempts",
+                "manual_loaded_source_id",
+                "manual_loaded_source_created",
+                "manual_loaded_article_exists",
+            ]:
+                st.session_state.pop(key, None)
+            st.rerun()
+
+    manual_loaded_article = st.session_state.get("manual_loaded_article")
+    if manual_loaded_article:
+        source_id = st.session_state.get("manual_loaded_source_id", "unknown")
+        source_state = (
+            "fuente manual creada"
+            if st.session_state.get("manual_loaded_source_created")
+            else "fuente reutilizada"
+        )
+        article_state = (
+            "artículo existente reutilizado"
+            if st.session_state.get("manual_loaded_article_exists")
+            else "artículo nuevo guardado"
+        )
+        render_article_processing_panel(
+            manual_loaded_article,
+            export_path=st.session_state.get("manual_loaded_export_path"),
+            auth_ok=auth_ok,
+            env_vars=env_vars,
+            panel_key="manual_url",
+            header="Artículo Cargado desde URL",
+            source_note=f"Fuente resuelta: `{source_id}` · {source_state} · {article_state}",
+            fetch_attempts=st.session_state.get("manual_loaded_fetch_attempts", []),
+        )
+
+    st.markdown("---")
 
     # Section 2: List Candidates
     # Look for the JSON file
@@ -1170,8 +1633,6 @@ with tab3:
 
                     if selected_label:
                         selected_id = options[selected_label]
-
-                        # Show details of selected
                         selected_art = next(
                             (
                                 a
@@ -1180,282 +1641,14 @@ with tab3:
                             ),
                             None,
                         )
-                        if selected_art:
-                            with st.expander(
-                                "📄 Revisar Resumen del Artículo", expanded=False
-                            ):
-                                st.write(f"**Título:** {selected_art.get('title')}")
-                                st.write(f"**Resumen:** {selected_art.get('summary')}")
-                            if selected_art.get("image_url"):
-                                st.image(
-                                    selected_art.get("image_url"),
-                                    caption="Imagen Extraída",
-                                    width=300,
-                                )
-
-                        # Visual Settings
-                        with st.expander(
-                            "🎨 Configuración Visual / Caché", expanded=True
-                        ):
-                            visual_analysis_enabled = st.checkbox(
-                                "Activar Análisis Visual",
-                                value=True,
-                                help="Generar categorías y prompts para imágenes.",
-                            )
-
-                            st.markdown("---")
-                            if st.button(
-                                "🧹 Limpiar Caché IA",
-                                help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.",
-                                use_container_width=True,
-                            ):
-                                try:
-                                    import re
-
-                                    safe_id = re.sub(
-                                        r"[^a-zA-Z0-9_-]", "", str(selected_id)
-                                    )
-                                    count = 0
-
-                                    # NEWS_COLLECTOR_PATH is available globally in admin_panel.py
-                                    # Check both global cache and the cloned temp repo cache
-                                    cache_dirs = [
-                                        NEWS_COLLECTOR_PATH
-                                        / "data"
-                                        / "cache"
-                                        / "editor",
-                                        NEWS_COLLECTOR_PATH
-                                        / "temp"
-                                        / "source"
-                                        / "data"
-                                        / "cache"
-                                        / "editor",
-                                    ]
-
-                                    for cache_dir in cache_dirs:
-                                        if cache_dir.exists():
-                                            for file_path in cache_dir.glob(
-                                                f"{safe_id}_*.txt"
-                                            ):
-                                                file_path.unlink()
-                                                count += 1
-
-                                    if count > 0:
-                                        st.success(
-                                            f"✅ Caché eliminada ({count} archivos)."
-                                        )
-                                    else:
-                                        st.info(
-                                            "ℹ️ No se encontraron archivos de caché para este artículo."
-                                        )
-                                except Exception as e:
-                                    st.error(f"Error al limpiar caché: {str(e)}")
-
-                        # Process Button
-                        is_pub = False
-                        try:  # noqa: SIM105
-                            is_pub = refinery_db.is_article_published(int(selected_id))
-                        except ValueError:
-                            pass  # noqa: SIM105
-
-                        if is_pub:
-                            st.error(
-                                "⛔ Artículo ya publicado. Usa 'Forzar Reprocesamiento' si necesitas sobrescribir."
-                            )
-
-                            col_pub1, col_pub2 = st.columns(2)
-                            with col_pub1:
-                                if st.button(
-                                    "🔄 Forzar Reprocesamiento (Sobrescribir)",
-                                    key=f"reproc_{selected_id}",
-                                    disabled=st.session_state.get(
-                                        "op_in_progress", False
-                                    ),
-                                ):
-                                    st.session_state["op_in_progress"] = True
-                                    try:
-                                        with st.spinner(
-                                            f"Reprocesando ID {selected_id}..."
-                                        ):
-                                            if not auth_ok:
-                                                st.warning(
-                                                    "Autenticación requerida para publicar."
-                                                )
-                                            else:
-                                                skip_flag = not visual_analysis_enabled
-                                                result = run_refinery(
-                                                    process_id=str(selected_id),
-                                                    skip_visuals=skip_flag,
-                                                    export_path=str(JSON_PATH),
-                                                )
-                                                status = result.get("status")
-                                                if (
-                                                    status == "success"
-                                                    and result.get("processed_count", 0)
-                                                    > 0
-                                                ):
-                                                    st.success(
-                                                        "¡Reprocesamiento Completo!"
-                                                    )
-                                                elif status == "error":
-                                                    st.error("Reprocesamiento Fallido.")
-                                                    st.expander(
-                                                        "Detalles del Error"
-                                                    ).write(result.get("message"))
-                                                else:
-                                                    st.warning(
-                                                        f"Sin resultados: {result.get('message', 'Nada procesado.')}"
-                                                    )
-                                    finally:
-                                        st.session_state["op_in_progress"] = False
-
-                            with col_pub2:
-                                if st.button(
-                                    "🗑️ Despublicar (Eliminar)",
-                                    type="primary",
-                                    key=f"del_{selected_id}",
-                                    disabled=st.session_state.get(
-                                        "op_in_progress", False
-                                    ),
-                                ):
-                                    with st.spinner(
-                                        f"Solicitando eliminación de {selected_id}..."
-                                    ):
-                                        try:
-                                            # Call delete_article via import
-                                            # We need to import it first or use module access
-                                            # We already have `run_refinery` available via importlib in admin_panel.
-                                            # We need `delete_article` too.
-
-                                            if hasattr(refinery_main, "delete_article"):
-                                                del_result = (
-                                                    refinery_main.delete_article(
-                                                        str(selected_id)
-                                                    )
-                                                )
-                                                if (
-                                                    del_result.get("status")
-                                                    == "success"
-                                                ):
-                                                    st.success(
-                                                        "✅ Solicitud de eliminación creada."
-                                                    )
-                                                    st.markdown(
-                                                        f"[Ver Pull Request de Eliminación]({del_result.get('pr_url')})"
-                                                    )
-                                                    # Update DB to un-processed?
-                                                    # refinery_db.mark_processed(str(selected_id)) # No method to unmark
-                                                    st.info(
-                                                        "Nota: La base de datos local seguirá marcándolo como procesado hasta recibir confirmación de limpieza."
-                                                    )
-                                                else:
-                                                    st.error(
-                                                        f"Error: {del_result.get('message')}"
-                                                    )
-                                            else:
-                                                st.error(
-                                                    "Función delete_article no encontrada. Reinicia la aplicación."
-                                                )
-                                        except Exception as e:
-                                            st.error(
-                                                f"Error invocando despublicación: {e}"
-                                            )
-
-                        # Dynamic Time Estimation Helper
-                        def estimate_time(art_len: int, model: str) -> str:
-                            # Base speed heuristics (words per minute for 3 stages)
-                            # Stage 1 (Trans), Stage 2 (Edit), Stage 3 (Meta)
-                            total_words = art_len or 1000
-                            # Very rough factors based on CPU inference
-                            if "llama3.3" in model or "70b" in model:
-                                speed_factor = 0.05  # Slow (big model)
-                            elif "8b" in model:
-                                speed_factor = 2.0  # Fast (medium model)
-                            else:
-                                speed_factor = 5.0  # Very Fast (small/tiny model)
-
-                            est_min = int((total_words * 3) / (speed_factor * 60))
-                            est_min = max(est_min, 1)  # At least 1 min
-
-                            return f"~{est_min} mins ({model})"
-
-                        # Standard Process Button (hidden if already published — use Force Reprocess instead)
-
-                        if not is_pub:
-                            # Calculate estimate
-                            content_len = (
-                                len(selected_art.get("content", "").split())
-                                if selected_art
-                                else 1000
-                            )
-                            active_model = env_vars.get("OLLAMA_MODEL", "unknown")
-                            time_est = estimate_time(content_len, active_model)
-
-                            if st.button(
-                                f"✨ Refinar y Publicar (ID: {selected_id})",
-                                type="primary",
-                                help=f"Estimación de tiempo: {time_est}",
-                                disabled=st.session_state.get("op_in_progress", False),
-                            ):
-                                st.session_state["op_in_progress"] = True
-                                try:
-                                    with st.spinner(
-                                        f"Procesando ID {selected_id}... Esto toma {time_est} en CPU."
-                                    ):
-                                        # Direct call to main module
-                                        if not auth_ok:
-                                            st.warning(
-                                                "Autenticación requerida para publicar."
-                                            )
-                                        else:
-                                            try:
-                                                # Reverse logic: enable means skip=False
-                                                skip_flag = not visual_analysis_enabled
-                                                result = run_refinery(
-                                                    process_id=str(selected_id),
-                                                    skip_visuals=skip_flag,
-                                                    export_path=str(JSON_PATH),
-                                                )
-
-                                                status = result.get("status")
-                                                processed_count = result.get(
-                                                    "processed_count", 0
-                                                )
-                                                if (
-                                                    status == "success"
-                                                    and processed_count > 0
-                                                ):
-                                                    st.success(
-                                                        "¡Procesamiento Completo! Revisa el repo de tu web."
-                                                    )
-                                                    st.balloons()
-                                                elif status == "error":
-                                                    st.error("Procesamiento Fallido.")
-                                                    st.expander(
-                                                        "Detalles del Error"
-                                                    ).write(result.get("message"))
-                                                elif (
-                                                    status == "noop"
-                                                    or processed_count == 0
-                                                ):
-                                                    message = result.get(
-                                                        "message",
-                                                        "No se encontraron artículos para procesar.",
-                                                    )
-                                                    st.warning(
-                                                        f"Sin resultados: {message}"
-                                                    )
-                                                else:
-                                                    st.error("Procesamiento Fallido.")
-                                                    st.expander(
-                                                        "Detalles del Error"
-                                                    ).write(result.get("message"))
-                                            except Exception as e:
-                                                st.error(
-                                                    f"Error crítico de ejecución: {e}"
-                                                )
-                                finally:
-                                    st.session_state["op_in_progress"] = False
+                        render_article_processing_panel(
+                            selected_art,
+                            export_path=str(JSON_PATH) if JSON_PATH else None,
+                            auth_ok=auth_ok,
+                            env_vars=env_vars,
+                            panel_key="ranked_list",
+                            header="Artículo Seleccionado del Ranking",
+                        )
 
             else:
                 st.info("No se encontraron artículos en el archivo exportado.")
@@ -1619,44 +1812,44 @@ with tab5:
         from news_collector.components.publishing import GitHubPublisher
 
         TARGET_DIR = BASE_DIR / "temp" / "target"
-        POSTS_DIR = TARGET_DIR / "src/content/posts"
+        collector_repo_root = BASE_DIR.parents[1]
 
-        # 1. Ensure we have the latest state
-        if st.button("🔄 Refrescar Lista de Artículos Publicados"):
-            gh_handler = GitHubPublisher(env_vars.get("GITHUB_TOKEN", ""))
-            target_url = env_vars.get("TARGET_REPO_URL", "")
+        refresh_requested = st.button("🔄 Refrescar Lista de Artículos Publicados")
+        initial_refresh_key = "published_live_initial_refresh_done"
+        refresh_clone = refresh_requested or not st.session_state.get(
+            initial_refresh_key, False
+        )
+        st.session_state[initial_refresh_key] = True
 
-            with st.spinner("Sincronizando repo destino..."):
-                try:
-                    if not TARGET_DIR.exists():
-                        st.info("Clonando repositorio destino...")
-                        gh_handler.clone_repo(target_url, TARGET_DIR)
-                    else:
-                        try:
-                            repo = git.Repo(TARGET_DIR)
-                            repo.remotes.origin.pull()
-                        except Exception as e:
-                            st.warning(
-                                f"Error sincronizando (intentando reclonar): {e}"
-                            )
-                            import shutil
+        target_url = env_vars.get("TARGET_REPO_URL", "")
 
-                            shutil.rmtree(TARGET_DIR, ignore_errors=True)
-                            gh_handler.clone_repo(target_url, TARGET_DIR)
-                    st.success("Repositorio actualizado y sincronizado.")
-                except Exception as e:
-                    st.error(f"Fallo crítico actualizando repo: {e}")
+        try:
+            snapshot = resolve_published_content_snapshot(
+                target_repo_url=target_url,
+                collector_repo_root=collector_repo_root,
+                temp_target_dir=TARGET_DIR,
+                github_token=env_vars.get("GITHUB_TOKEN", ""),
+                refresh_clone=refresh_clone,
+            )
+        except Exception as exc:
+            st.error(f"Fallo cargando contenido publicado: {exc}")
+            snapshot = None
 
-        # 2. List Files
-        if TARGET_DIR.exists() and POSTS_DIR.exists():
-            files = sorted(list(POSTS_DIR.glob("*.md")), reverse=True)  # noqa: C414
+        if snapshot is not None:
+            articles = snapshot.articles
 
-            if not files:
+            if refresh_requested and snapshot.source_label != "Checkout local verificado del frontend":
+                st.success("Repositorio destino actualizado y sincronizado.")
+
+            if not articles:
                 st.info("No hay artículos en src/content/posts.")
             else:
-                st.write(f"Encontrados **{len(files)}** artículos.")
+                st.write(f"Encontrados **{len(articles)}** artículos.")
+                st.caption(
+                    f"Fuente: {snapshot.source_label} · {snapshot.freshness_label}"
+                )
+                st.caption(f"Ruta resuelta: `{snapshot.repo_root}`")
 
-                # Legacy Table Header
                 h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
                 h1.markdown("**Título**")
                 h2.markdown("**Archivo**")
@@ -1664,49 +1857,19 @@ with tab5:
                 h4.markdown("**Acción 2**")
                 st.markdown("---")
 
-                for f_path in files:
-                    # Parse metadata (Same logic as before)
-                    refinery_id = None
-                    article_title = f_path.name
-                    try:
-                        content = f_path.read_text(encoding="utf-8", errors="ignore")
-                        import re
+                for article in articles:
+                    file_path = article.file_path
+                    refinery_id = article.refinery_id
 
-                        match_id = re.search(
-                            r'^refinery_id:\s*["\']?([^"\']+)["\']?',
-                            content,
-                            re.MULTILINE,
-                        )
-                        if match_id:
-                            refinery_id = match_id.group(1)
-
-                        match_title = re.search(
-                            r"^title:\s*(.*)$", content, re.MULTILINE
-                        )
-                        if match_title:
-                            raw = match_title.group(1).strip()
-                            if (raw.startswith('"') and raw.endswith('"')) or (
-                                raw.startswith("'") and raw.endswith("'")
-                            ):
-                                raw = raw[1:-1]
-                            article_title = raw
-                    except Exception:  # noqa: S110
-                        pass
-
-                    # Row Layout
                     c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1.5])
 
                     with c1:
-                        st.write(article_title)
+                        st.write(article.title)
                     with c2:
-                        st.caption(f_path.name)
+                        st.caption(article.file_name)
                         if refinery_id:
-                            st.caption(f"ID: `{refinery_id}`")
+                            st.caption(f"ID: {truncate_refinery_id(refinery_id)}")
 
-                            # OBJECTIVE 4: Auditor Visibility
-
-                            # OBJECTIVE 4: Auditor Visibility
-                            # Check for auditor score
                             try:
                                 score_path = (
                                     BASE_DIR
@@ -1722,7 +1885,6 @@ with tab5:
                                             score_data.get("epistemic_rigor_score", 0.0)
                                         )
 
-                                        # Severity Badge
                                         color = "red"
                                         border = "🔴"
                                         if epistemic >= 8.0:
@@ -1743,11 +1905,10 @@ with tab5:
                     with c3:
                         if st.button(
                             "🗑️ Despublicar",
-                            key=f"btn_despub_{f_path.name}",
+                            key=f"btn_despub_{article.file_name}",
                             width="stretch",
                         ):
                             if refinery_id:
-                                # Copy-paste of delete logic
                                 with st.spinner("Solicitando eliminación..."):
                                     try:
                                         if hasattr(refinery_main, "delete_article"):
@@ -1771,25 +1932,75 @@ with tab5:
                     with c4:
                         if st.button(
                             "♻️ Reset",
-                            key=f"btn_rst_{f_path.name}",
+                            key=f"btn_rst_{article.file_name}",
                             width="stretch",
                         ):
-                            # Copy-paste of reset logic
                             try:
-                                repo = git.Repo(TARGET_DIR)
-                                repo.index.remove([str(f_path.relative_to(TARGET_DIR))])
-                                f_path.unlink()
-                                repo.index.commit(f"Deleted (Reset) {f_path.name}")
-                                repo.remotes.origin.push()
-
-                                db_manager = RefineryDatabaseManager(
-                                    {"type": "sqlite", "path": str(REFINERY_DB_PATH)}
+                                gh_handler = GitHubPublisher(
+                                    env_vars.get("GITHUB_TOKEN", "")
                                 )
+                                if not TARGET_DIR.exists():
+                                    gh_handler.clone_repo(target_url, TARGET_DIR)
+                                else:
+                                    repo = git.Repo(TARGET_DIR)
+                                    try:
+                                        repo.remotes.origin.pull()
+                                    except Exception:
+                                        import shutil
+
+                                        shutil.rmtree(TARGET_DIR, ignore_errors=True)
+                                        gh_handler.clone_repo(target_url, TARGET_DIR)
+                                        repo = git.Repo(TARGET_DIR)
+
+                                target_posts_dir = TARGET_DIR / "src/content/posts"
+                                target_article = None
                                 if refinery_id:
-                                    db_manager.delete_article(str(refinery_id))
-                                    db_manager.delete_article(f"{refinery_id}.md")
-                                st.success("Reset OK")
-                                st.rerun()
+                                    target_article = find_published_article_by_refinery_id(
+                                        target_posts_dir, refinery_id
+                                    )
+                                if target_article is None:
+                                    candidate_path = target_posts_dir / article.file_name
+                                    if candidate_path.exists():
+                                        target_article = article.__class__(
+                                            file_path=candidate_path,
+                                            file_name=candidate_path.name,
+                                            title=article.title,
+                                            refinery_id=refinery_id,
+                                            frontmatter=article.frontmatter,
+                                            modified_at=article.modified_at,
+                                        )
+                                if target_article is None:
+                                    st.error(
+                                        "No se encontró el archivo correspondiente en el clon temporal."
+                                    )
+                                else:
+                                    repo = git.Repo(TARGET_DIR)
+                                    repo.index.remove(
+                                        [
+                                            str(
+                                                target_article.file_path.relative_to(
+                                                    TARGET_DIR
+                                                )
+                                            )
+                                        ]
+                                    )
+                                    target_article.file_path.unlink()
+                                    repo.index.commit(
+                                        f"Deleted (Reset) {target_article.file_name}"
+                                    )
+                                    repo.remotes.origin.push()
+
+                                    db_manager = RefineryDatabaseManager(
+                                        {
+                                            "type": "sqlite",
+                                            "path": str(REFINERY_DB_PATH),
+                                        }
+                                    )
+                                    if refinery_id:
+                                        db_manager.delete_article(str(refinery_id))
+                                        db_manager.delete_article(f"{refinery_id}.md")
+                                    st.success("Reset OK")
+                                    st.rerun()
                             except Exception as e:
                                 st.error(str(e))
 

@@ -23,6 +23,14 @@ class TestRefineryEngine(unittest.TestCase):
         # Safe patching context
         self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
         self.git_patch.start()
+        self.auditor_patch = patch(
+            "news_collector.logic.workflows.refinery_engine.EditorialAuditor"
+        )
+        self.mock_auditor_cls = self.auditor_patch.start()
+        self.mock_auditor = MagicMock()
+        self.mock_auditor.should_run_fast.return_value = False
+        self.mock_auditor.get_cached_score.return_value = None
+        self.mock_auditor_cls.return_value = self.mock_auditor
 
         # Import inside patch context
         from news_collector.logic.workflows.refinery_engine import RefineryEngine
@@ -30,8 +38,12 @@ class TestRefineryEngine(unittest.TestCase):
         self.engine = RefineryEngine(
             self.mock_db, self.mock_git, self.mock_editor, self.mock_config
         )
+        self.engine._download_image = MagicMock(
+            return_value="~/assets/images/test-image.png"
+        )
 
     def tearDown(self):
+        self.auditor_patch.stop()
         self.git_patch.stop()
 
     def test_extract_slug(self):
@@ -52,7 +64,8 @@ class TestRefineryEngine(unittest.TestCase):
             "id": "123",
             "title": "Test valid title",
             "url": "http://x",
-            "summary": "sum",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",
@@ -119,7 +132,8 @@ class TestRefineryEngine(unittest.TestCase):
             "id": "123",
             "title": "Test valid title",
             "url": "http://x",
-            "summary": "sum",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",
@@ -151,7 +165,8 @@ class TestRefineryEngine(unittest.TestCase):
             "id": "124",
             "title": "Test Title 2",
             "url": "http://x",
-            "summary": "sum",
+            "summary": "This is another sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image-2.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",
@@ -187,7 +202,8 @@ class TestRefineryEngine(unittest.TestCase):
             "id": "1999-id",
             "title": "A vintage article",
             "url": "http://x",
-            "summary": "sum",
+            "summary": "This is a sufficiently long summary for vintage refinery validation.",
+            "image_url": "https://example.com/vintage.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",
@@ -211,6 +227,49 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertEqual(
                 self.mock_editor.process_article.call_args.kwargs["override_date"],
                 "1999-12-31",
+            )
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_uses_image_url_from_article_metadata(self, mock_dt):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        article = {
+            "id": "125",
+            "title": "Test Title With Metadata Image",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for metadata image handling.",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "article_metadata": {"image_url": "https://example.com/test.png"},
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            self.mock_editor.process_article.return_value = (
+                "---\nslug: image-test\n---\nContent"
+            )
+            self.mock_db.get_canonical_slug.return_value = None
+            self.mock_git.create_branch.return_value = "content/add/image-test"
+            self.mock_git.create_pull_request.return_value = "http://pr.url/image"
+            self.engine._download_image = MagicMock(
+                return_value="~/assets/images/image-test.png"
+            )
+
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+            self.assertTrue(result)
+            self.engine._download_image.assert_called_once_with(
+                "https://example.com/test.png",
+                "2024-01-01-test-title-with-metadata-image",
+                target_dir,
+            )
+            editor_payload = self.mock_editor.process_article.call_args.args[0]
+            self.assertEqual(
+                editor_payload["image_url"],
+                "~/assets/images/image-test.png",
             )
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")

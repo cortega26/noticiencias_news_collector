@@ -15,6 +15,7 @@ def test_astro_post_serialization():
         categories=["Ciencia"],
         tags=["tag1", "tag2"],
         image="http://example.com/image.jpg",
+        image_alt="Imagen editorial de prueba",
         source_url="http://source.com",
         refinery_id="123456",
         headlines_variants=HeadlinesVariants(question="Q?", benefit="B"),

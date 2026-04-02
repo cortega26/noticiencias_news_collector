@@ -1,289 +1,115 @@
-# SOURCE_OF_TRUTH.md
+# Backend Source Of Truth
 
-Version: 2.0 (Institutional Alignment Edition) Status: Active & Binding
-Created: 2026-01-16 Last Updated: 2026-03-02
+Status: Active and binding  
+Scope: `/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector`
 
----
+## Purpose
 
-> **"Evidence-first, Spanish-first. Deterministic by design."**
+This document defines the backend governance stack, the actual repo boundary with the frontend repo, and the current truths that other backend docs are allowed to build on.
 
-This document serves as the **Single Source of Truth** for the entire
-Noticiencias ecosystem.\
-It defines mission, system boundaries, architectural principles, and
-governance hierarchy.
+It governs documentation authority. It does not override code-owned contracts for exact field shapes or workflow definitions.
 
-If any document conflicts with this one, this document prevails.
+## Reality Snapshot
 
----
+Noticiencias currently spans two sibling repositories:
 
-# 1. Project Identity
+- backend/orchestration repo: `noticiencias_news_collector`
+- frontend/site repo: `noticiencias`
 
-## Mission
+This repo owns:
 
-Democratize access to scientific knowledge for Latin America by
-prioritizing evidence over clickbait.
+- ingestion
+- enrichment
+- scoring, validation, taxonomy, and editorial policy
+- persistence and API serving
+- Refinery UI and publication orchestration
+- the mirrored frontend publication contract
 
-## Core Value
+This repo does not own:
 
-Automated curation + Human refinement.\
-AI filters, scores, and structures --- humans make final editorial
-decisions.
+- frontend route structure
+- frontend SEO emission
+- frontend render-time component boundaries
+- final site deployment semantics after the frontend merge and deploy complete
 
-## Primary URL
+## Code-Owned Authority
 
-`noticiencias.com`
+The following files are authoritative for the exact concern they implement:
 
----
+1. `news_collector/contracts/*.py`
+   - boundary shapes and contract definitions
+2. `news_collector/contracts/adapters.py`
+   - contract-side structural mapping
+3. `news_collector/contracts/frontend_schema.py`
+   - backend mirror of the frontend publication artifact
+4. `news_collector/storage/database.py`
+   - persisted publication state and canonical slug persistence behavior
+5. `news_collector/logic/workflows/refinery_engine.py`
+   - current publication workflow behavior and recovery order
+6. `config.toml`, `news_collector/config/*`, `config/sources.*`
+   - runtime and source configuration
+7. `Makefile` and `.github/workflows/*.yml`
+   - real validation and automation behavior
 
-# 2. Foundational Architectural Principles
+If prose disagrees with these files about a field name, workflow step, job name, or command, the code wins and the documentation must be corrected.
 
-The Noticiencias ecosystem is governed by the following principles:
+## Documentation Authority
 
-### 2.1 Evidence-First Systems
+For backend governance and contributor behavior, authority is:
 
-- Editorial decisions prioritize verifiable scientific evidence.
-- Automated processes must be auditable.
-- No opaque scoring logic without traceability.
+1. `docs/SOURCE_OF_TRUTH.md`
+2. `docs/AGENTS.md`
+3. `docs/ARCHITECTURE.md`
+4. `docs/PIPELINE_CONTRACTS.md`
+5. `docs/ci.md`
+6. `docs/runbook.md`, `docs/collector_runbook.md`, `docs/operations.md`, `docs/testing.md`
+7. `context/INVARIANTS.md`, `context/CONTRACTS.md`
+8. `README.md`
 
-### 2.2 Deterministic Identity
+`context/*` files are derived summaries for context efficiency. They should not introduce stronger law than the higher documents above.
 
-- Canonical identity of published articles is immutable.
-- Reprocessing must be idempotent.
-- Canonical URLs and slugs are deterministic and persistent.
-- No time-based or random mutation in identity paths.
+## Current Non-Negotiable Truths
 
-### 2.3 Contract-Enforced Boundaries
+### Typed boundaries are the norm
 
-- All cross-subsystem communication must be explicitly defined.
-- Schema drift must be isolated through adapters.
-- Implicit structural assumptions are prohibited.
+Cross-subsystem boundaries are expected to use typed contracts from `news_collector/contracts/`. Local dict handling is acceptable during early parsing, but the normalized boundary shape should not remain a free-form dict.
 
-### 2.4 Tests as Architectural Proof
+### Adapters remain the structural conversion choke point
 
-- Tests encode invariants.
-- Critical system behaviors must be covered.
-- Regression without explicit approval is forbidden.
+Mapping between ORM objects, raw export payloads, and contract models belongs in adapter code under `news_collector/contracts/`, not in `system/`, `serving/`, or UI code.
 
-These principles are enforced operationally in: - `AGENTS.md` (Backend
-Law) - `ARCHITECTURE.md` (System Design) - CI/CD Quality Gates
+### The backend and frontend are separate systems
 
----
+The backend may publish into the frontend repo, but the frontend remains authoritative for:
 
-# 3. Ecosystem Overview
+- `src/content/config.ts`
+- `src/config.yaml`
+- frontend route pathnames
+- metadata emission
 
-The system is a **Hybrid Monorepo** composed of two distinct but
-coordinated components:
+Any change to the publication frontmatter contract is a cross-repo change.
 
----
+### Publication state semantics are bounded
 
-Component Role Repository Path Logic
+This repo currently records `PR_CREATED` after pull-request creation. Final public website publication happens outside this repo after the frontend merge/deploy path completes.
 
----
+### Identity reuse is real, absolute determinism is not yet universal
 
-**The Brain** `news_collector` `noticiencias_news_collector/` Python, AI,
-Scraping,
-Database,
-API
+Current publication identity reuse order is:
 
-**The Face** `noticiencias` `noticiencias/` Astro,
-React,
-Tailwind,
-Static Site
+1. persisted canonical slug in the database
+2. existing frontend file or `refinery_manifest.json` recovery
+3. new slug derived from source `published_date`
+4. fallback to `collected_date`
+5. last-resort fallback to current date
 
----
+The current-date fallback is compatibility debt, not a desired long-term invariant.
 
----
+## Non-Authoritative Material
 
-## 3.1 High-Level Data Flow
+The following are useful but not architectural authority:
 
-1.  **Ingestion**
-    - `news_collector` scrapes raw RSS feeds.
-2.  **Processing**
-    - Cleaning
-    - Deduplication
-    - Enrichment (NLP)
-    - Scoring
-    - Validation (contract-bound)
-3.  **Refinery**
-    - Human editors (Streamlit UI) select and refine articles.
-    - Canonical identity is locked at publication.
-4.  **Publishing**
-    - Refinery pushes valid Markdown files to the `noticiencias` repo.
-    - Push via PR or controlled commit.
-5.  **Build & Deploy**
-    - GitHub Actions builds Astro site.
-    - Deploys to GitHub Pages.
-
----
-
-## 3.2 Determinism Guarantee
-
-The following are immutable once published:
-
-- Filename
-- Publication date
-- Canonical URL
-- Slug
-- Refinery ID
-
-Reprocessing the same article must produce identical canonical
-artifacts.
-
-Non-determinism is allowed only in: - Logging - Telemetry - Runtime
-metrics
-
-Never in canonical identity path.
-
----
-
-# 4. Core Technical Truths
-
-## Technology Stack
-
-### Backend
-
-- Python 3.13+
-- Pydantic Contracts
-- SQLite (Dev/Default)
-- PostgreSQL (Prod Supported)
-
-### Frontend
-
-- Astro 5.0+
-- Node 18+
-- React
-- Tailwind
-
-### AI / LLM
-
-- Ollama (Local)
-- Llama 3
-- Mistral
-
-### Containerization
-
-- Docker
-- Docker Compose
-
----
-
-# 5. Critical Ports
-
-Port Purpose
-
----
-
-8501 Refinery UI (Streamlit)
-4321 Astro Dev Server
-11434 Ollama API
-
----
-
-# 6. Key Locations
-
-Purpose Location
-
----
-
-Config `noticiencias_news_collector/config.toml`
-Secrets `.env`
-Logs `noticiencias_news_collector/data/logs/`
-Raw Data `noticiencias_news_collector/data/news.db`
-
----
-
-# 7. Documentation Hierarchy
-
-Hierarchy of authority:
-
-1.  SOURCE_OF_TRUTH.md
-2.  AGENTS.md (Backend Law)
-3.  ARCHITECTURE.md
-4.  RUNBOOK.md
-5.  Inline code documentation
-
-Do not duplicate information across documents.
-
-Primary references:
-
-Topic Document
-
----
-
-Architecture `ARCHITECTURE.md`
-Backend Law `AGENTS.md`
-Operations `RUNBOOK.md`
-Frontend `../noticiencias/README.md`
-Security `SECURITY.md`
-Audit `audit/`
-
----
-
-# 8. Configuration & Precedence
-
-**Rule of Law:** Environment variables ALWAYS override files.
-
-Order of precedence:
-
-1.  System Environment Variables\
-    `NOTICIENCIAS__APP__ENVIRONMENT=production`
-
-2.  `.env` File\
-    `NOTICIENCIAS__APP__DEBUG=true`
-
-3.  `config.toml`\
-    `[app] debug = false`
-
-4.  Hardcoded Defaults\
-    Defined in Python schemas
-
-Reference: `audit/03_config_matrix.md`
-
----
-
-# 9. Verification & Quality Gates
-
-All Pull Requests must satisfy:
-
-## 9.1 Linting
-
-`make lint` - Ruff - Black - Mypy
-
-## 9.2 Testing
-
-`make test` - Pytest - Structural coverage enforcement -
-Invariant-protecting paths must not regress
-
-Numeric coverage target (\>80%) is secondary to invariant protection.
-
-## 9.3 Security
-
-`make security` - Bandit - Trufflehog - Pip-audit
-
-## 9.4 CI/CD Enforcement
-
-GitHub Actions enforces all gates on every PR.
-
-No merge allowed if: - Critical invariant violated - Deterministic
-identity compromised - Contract boundary broken - Tests removed without
-approval
-
----
-
-# 10. Governance & Evolution
-
-This document may evolve under controlled amendment:
-
-1.  Rationale documented
-2.  Impact analysis provided
-3.  Invariant impact assessed
-4.  Human approval granted
-5.  Version incremented
-6.  Changelog updated
-
-Architecture is durable but adaptable.
-
----
-
-End of SOURCE_OF_TRUTH.md --- Version 2.0 Institutional Alignment
-Edition
+- `audit/**`
+- most report files under `docs/audits/**`
+- archived refactor notes and one-off remediation plans
+- `docs/ops/RUNBOOK.md`, which is now a legacy compatibility path pointing to the current runbooks

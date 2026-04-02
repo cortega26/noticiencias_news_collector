@@ -10,7 +10,7 @@ from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 class HeadlinesVariants(BaseModel):
@@ -66,7 +66,7 @@ class AstroPost(BaseModel):
 
     # Media
     # Supports string (legacy/simple) or object (optimized)
-    image: Optional[Union[str, ImageObject]] = None
+    image: Union[str, ImageObject]
     image_alt: Optional[str] = None
 
     # Legacy / Compatibility
@@ -96,3 +96,12 @@ class AstroPost(BaseModel):
         # We allow datetime but clean it to date if time is 00:00:00?
         # Astro handles both.
         return v
+
+    @model_validator(mode="after")
+    def ensure_alt_text_contract(self) -> "AstroPost":
+        object_alt = self.image.alt.strip() if isinstance(self.image, ImageObject) and self.image.alt else ""
+        if not object_alt and not (self.image_alt or "").strip():
+            raise ValueError(
+                "image_alt is required when image does not provide inline alt text"
+            )
+        return self

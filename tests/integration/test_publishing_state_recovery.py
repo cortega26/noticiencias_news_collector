@@ -28,11 +28,23 @@ def _engine_deps():
     mock_config = MagicMock()
     mock_config.target_repo_url = "https://github.com/owner/repo.git"
     mock_config.app.policy_integrity_mode = "disabled"
+    mock_config.app.editorial_mode = "standard"
 
-    from news_collector.logic.workflows.refinery_engine import RefineryEngine
+    with patch(
+        "news_collector.logic.workflows.refinery_engine.EditorialAuditor"
+    ) as MockAuditorClass:
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
-    engine = RefineryEngine(mock_db, mock_git, mock_editor, mock_config)
-    return engine, mock_db, mock_git, mock_editor, mock_config
+        engine = RefineryEngine(mock_db, mock_git, mock_editor, mock_config)
+        engine.auditor = MockAuditorClass.return_value
+        engine.auditor.get_cached_score.return_value = None
+        engine.auditor.should_run_fast.return_value = False
+        engine.policy.auditor_threshold = 0.0
+        engine.policy.require_caveats = False
+        engine._download_image = MagicMock(
+            return_value="~/assets/images/publishing-recovery-test.png"
+        )
+        yield engine, mock_db, mock_git, mock_editor, mock_config
 
 
 class TestPublishingStateRecoveryWithExistingPR:
@@ -133,6 +145,8 @@ class TestPublishingStateTimeout:
             "id": "789",
             "title": "Old Article",
             "url": "http://example.com/old",
+            "summary": "This is a sufficiently long summary for timeout recovery validation.",
+            "image_url": "https://example.com/old.png",
             "source_id": "test",
             "source_name": "Test Source",
             "published_date": datetime(2024, 1, 1),
@@ -166,6 +180,8 @@ class TestPublishingStateMarkBeforeGitOps:
             "id": "100",
             "title": "Test Article",
             "url": "http://example.com/test",
+            "summary": "This is a sufficiently long summary for publishing state validation.",
+            "image_url": "https://example.com/test.png",
             "source_id": "test",
             "source_name": "Test Source",
             "published_date": datetime(2024, 1, 1),

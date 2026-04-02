@@ -21,6 +21,7 @@ class ArticleMetadata(TypedDict, total=False):
     image_status: str
     image_source: str
     image_url: str
+    image_alt: str
     normalized_title: str
     normalized_summary: str
 
@@ -36,6 +37,7 @@ class ArticleMetadataModel(BaseModel):
     image_status: str | None = None
     image_source: str | None = None
     image_url: str | None = None
+    image_alt: str | None = None
     normalized_title: str | None = None
     normalized_summary: str | None = None
 
