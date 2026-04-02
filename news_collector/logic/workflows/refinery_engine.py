@@ -40,6 +40,7 @@ from typing import Any, Dict, List, Optional
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
 from news_collector.utils.logger import get_logger
 
 if "TYPE_CHECKING":
@@ -128,11 +129,15 @@ class RefineryEngine:
             data_dir = paths.get("data_dir", "./data")
         else:
             data_dir = getattr(paths, "data_dir", "./data")
-        runtime_dir = Path(data_dir) / "runtime"
+        if not isinstance(data_dir, (str, os.PathLike)):
+            data_dir = "./data"
+        self.data_dir = Path(data_dir)
+        runtime_dir = self.data_dir / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
         self.enforcement_log_path = (
             runtime_dir / "editorial_policy_enforcement_log.jsonl"
         )
+        self.image_briefs = ImageBriefStore(self.data_dir)
 
         self.editor = editor_agent
         self.git = git_handler
@@ -305,18 +310,35 @@ class RefineryEngine:
         # Note: If we don't have a DB slug yet, the filename might change slightly later
         # (e.g. if we add a random suffix for uniqueness), but using a base slug here is fine.
 
-        image_slug = db_canonical_slug  # e.g. "2024-01-01-my-title"
-        if not image_slug:
-            # Create a safe base slug from ID or Title
-            # Using same logic as below (but simplified for image filename)
-            safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", article_id)
-            image_slug = f"{canonical_date}-{safe_id}"
+        image_slug = self._derive_image_slug(
+            article=article,
+            article_id=article_id,
+            canonical_date=canonical_date,
+            preferred_slug=db_canonical_slug,
+        )
 
         raw_image_url = article.get("image_url")
+        if not raw_image_url:
+            article_metadata = article.get("article_metadata")
+            if isinstance(article_metadata, dict):
+                raw_image_url = article_metadata.get("image_url")
         if isinstance(raw_image_url, str):
             raw_image_url = raw_image_url.strip()
 
-        if raw_image_url and raw_image_url.startswith("http"):
+        existing_brief = self.image_briefs.find_for_article(article_id, [image_slug])
+        resolved_brief_image = self._resolve_brief_image(
+            brief=existing_brief,
+            target_dir=target_dir,
+        )
+        if resolved_brief_image:
+            article["image_url"] = resolved_brief_image
+            article["image_alt"] = existing_brief.draft_alt_text
+            logger.info(
+                "Using staged editorial image for article %s from brief %s",
+                article_id,
+                existing_brief.slug if existing_brief else "unknown",
+            )
+        elif raw_image_url and raw_image_url.startswith("http"):
             local_image_ref = self._download_image(
                 raw_image_url, image_slug, target_dir
             )
@@ -325,9 +347,35 @@ class RefineryEngine:
                 article["image_url"] = local_image_ref
             else:
                 logger.warning(
-                    f"Failed to download image from {raw_image_url} (or download failed). Enforcing local policy with default."
+                    "Failed to download image from %s. Routing article %s to editorial image queue.",
+                    raw_image_url,
+                    article_id,
                 )
-                article["image_url"] = "~/assets/images/default.png"
+                self._queue_image_brief(
+                    article=article,
+                    article_id=article_id,
+                    slug=image_slug,
+                    reason="image_download_failed",
+                    existing_brief=existing_brief,
+                )
+                return False
+        elif not raw_image_url or raw_image_url == "~/assets/images/default.png":
+            reason = (
+                "placeholder_image_debt"
+                if raw_image_url == "~/assets/images/default.png"
+                else "missing_source_image"
+            )
+            self._queue_image_brief(
+                article=article,
+                article_id=article_id,
+                slug=image_slug,
+                reason=reason,
+                existing_brief=existing_brief,
+            )
+            return False
+
+        if article.get("image_url") and not article.get("image_alt"):
+            article["image_alt"] = f"Imagen editorial de {article.get('title', article_id)}"
 
         # Apply Policy to Editor
         self.editor.critic_threshold = self.policy.critic_threshold
@@ -534,6 +582,57 @@ class RefineryEngine:
         else:
             logger.error("Failed to create PR.")
             return False
+
+    def _derive_image_slug(
+        self,
+        *,
+        article: Dict[str, Any],
+        article_id: str,
+        canonical_date: str,
+        preferred_slug: str | None,
+    ) -> str:
+        if preferred_slug:
+            return preferred_slug
+        title = str(article.get("title") or "").strip()
+        base_slug = slugify_text(title, fallback=f"article-{article_id}")
+        return f"{canonical_date}-{base_slug}"
+
+    def _queue_image_brief(
+        self,
+        *,
+        article: Dict[str, Any],
+        article_id: str,
+        slug: str,
+        reason: str,
+        existing_brief: Any = None,
+    ) -> None:
+        brief = self.image_briefs.build_brief(
+            article=article,
+            slug=slug,
+            reason=reason,
+            existing=existing_brief,
+        )
+        brief_path = self.image_briefs.save_brief(brief)
+        logger.info(
+            "Queued editorial image brief for article %s at %s",
+            article_id,
+            brief_path,
+        )
+
+    def _resolve_brief_image(
+        self,
+        *,
+        brief: Any,
+        target_dir: Path,
+    ) -> str | None:
+        if brief is None:
+            return None
+        if brief.status not in {"editorial_image_ready", "resolved"}:
+            return None
+        return self.image_briefs.materialize_uploaded_asset(
+            brief=brief,
+            target_assets_dir=target_dir / "src" / "assets" / "images",
+        )
 
     def _record_audit_status(
         self,

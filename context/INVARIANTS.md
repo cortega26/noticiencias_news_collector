@@ -1,145 +1,45 @@
-# INVARIANTS.md — Noticiencias Backend Architectural Invariants
+# INVARIANTS.md — Backend Derived Invariants
 
-## Authority Hierarchy
+Status: Derived summary  
+Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`, `docs/AGENTS.md`, and `docs/ARCHITECTURE.md`
 
-Authority order (highest to lowest):
+## Purpose
 
-1. SOURCE_OF_TRUTH.md
-2. docs/AGENTS.md
-3. Module invariants defined in context/modules/\*.md
+This file is a compact invariant summary for backend contributors and agents. It should mirror higher-authority docs and code reality without inventing stronger guarantees.
 
-SOURCE_OF_TRUTH.md is the absolute architectural authority.
-If any invariant in lower-level documents contradicts SOURCE_OF_TRUTH.md,
-SOURCE_OF_TRUTH.md MUST prevail without exception.
+## Current Invariants
 
-Lower authorities MUST NOT contradict higher authorities.
+### I-1: Boundary contracts stay typed
 
----
+Sealed subsystem boundaries are expected to use models from `news_collector/contracts/` rather than free-form dicts that leak across packages.
 
-## Core System Invariants
+### I-2: Adapters own structural mapping
 
-### I-1: Data Contracts Are Mandatory
+Cross-boundary conversion between raw/export/ORM shapes and contract shapes belongs in adapter code under `news_collector/contracts/`.
 
-All system boundary crossings MUST use Pydantic models defined in:
+### I-3: `system/` coordinates
 
-news_collector/contracts/
+`news_collector/system/` is the orchestration layer. Policy, editorial judgment, and contract-shaping logic should not spread there.
 
-Raw dictionaries MUST NOT cross system boundaries.
+### I-4: Publication identity is reused before it is regenerated
 
-Derived from:
+Current publication identity resolution order is:
 
-- SOURCE_OF_TRUTH.md
-- docs/AGENTS.md LAW-1
+1. stored database slug
+2. existing frontend file or `refinery_manifest.json`
+3. deterministic derivation from article dates
+4. compatibility fallbacks
 
----
+The compatibility fallback path still exists; documentation should not describe identity as perfectly deterministic when source dates are missing.
 
-### I-2: Adapters Are Exclusive Conversion Layer
+### I-5: Frontend publication is a cross-repo contract
 
-Only news_collector/contracts/adapters.py may perform conversions between:
+`news_collector/contracts/frontend_schema.py` mirrors the frontend render contract in `../noticiencias/src/content/config.ts`. Either side changing that shape is a cross-repo contract event.
 
-- ORM → contract
-- external input → contract
-- contract → storage/export
+### I-6: Backend publication state stops at PR creation
 
-Derived from:
+This repo records candidate publication state as `PR_CREATED`. Final public website publication happens in the frontend repo after merge and deploy.
 
-- SOURCE_OF_TRUTH.md
-- docs/AGENTS.md LAW-2
+### I-7: Context files are summaries, not constitutions
 
----
-
-### I-3: System Layer Is Orchestration-Only
-
-Modules under news_collector/system/ MUST NOT:
-
-- validate business payloads
-- convert contracts
-- embed scoring or editorial logic
-
-Derived from:
-
-- SOURCE_OF_TRUTH.md
-- docs/AGENTS.md LAW-3
-
----
-
-### I-4: Canonical Identity Is Immutable
-
-Once assigned, the following MUST NEVER change:
-
-- refinery_id
-- canonical_slug
-- artifact filename
-- publication date
-
-Derived from:
-
-- SOURCE_OF_TRUTH.md
-- docs/AGENTS.md LAW-4, LAW-5
-
----
-
-### I-5: Database Is Canonical Identity Authority
-
-storage/database.py is the persistence authority responsible for:
-
-- canonical_slug persistence
-- identity reuse
-- canonical identity validation
-
-Derived from:
-
-- context/modules/storage_database.md
-
----
-
-### I-6: Editorial Policy Enforcement Precedes Persistence
-
-refinery_engine MUST enforce editorial policy prior to artifact creation or database persistence.
-
-Derived from:
-
-- context/modules/logic_workflows_refinery_engine.md
-
----
-
-### I-7: Context Files Are Authoritative Prompt Context
-
-Agents MUST use:
-
-- context/MODULE_INDEX.md
-- context/modules/\*.md
-- context/INVARIANTS.md
-
-instead of full source files unless explicitly required.
-
-Agents MUST prefer context files over full source code to minimize token usage,
-reduce hallucination risk, and preserve architectural invariants.
-
-Derived from:
-
-- context-engineering architecture
-
----
-
-## Agent Operational Invariants
-
-Agents MUST NOT:
-
-- modify contract schemas without authorization
-- modify adapters without boundary test validation
-- modify canonical identity logic
-- bypass editorial policy enforcement
-
-Agents MUST:
-
-- refuse tasks violating invariants
-- escalate ambiguity instead of guessing
-
----
-
-## Verification Commands
-
-make test-contracts
-make test-boundaries
-make test-system
+`context/*` files help with efficient codebase reasoning. If they conflict with higher docs or code, the higher docs and code win.

@@ -579,6 +579,7 @@ class EditorAgent:
         summary = ""
         content = ""
         image_url = None
+        image_alt = None
         source_url = None
         source_id = None
         source_name = None
@@ -594,6 +595,7 @@ class EditorAgent:
                 content = summary
 
             image_url = raw_text.get("image_url")
+            image_alt = raw_text.get("image_alt")
             source_id = raw_text.get("source_id")
             source_name = raw_text.get("source_name")
             source_url = (
@@ -803,6 +805,8 @@ class EditorAgent:
             }
             if image_url:
                 model_dict["image"] = image_url
+            if image_alt:
+                model_dict["image_alt"] = str(image_alt).strip()
             if source_url:
                 model_dict["source_url"] = source_url
             if article_id and article_id != "unknown":

@@ -1,172 +1,78 @@
 # Noticiencias News Collector
 
-![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)
+![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
 
-Scientific news aggregation pipeline and editorial tooling for the Noticiencias project. Requires Python 3.13+.
+Backend ingestion, editorial automation, and publication orchestration repo for the Noticiencias product.
 
-## Overview
+This repository is the system of record for collection, enrichment, scoring, storage, Refinery workflows, and the contract mirror used to publish into the sibling frontend repo `../noticiencias`. It is not the frontend site repo and it is not a monorepo; the product spans two coordinated repositories with explicit boundaries.
 
-This repository contains the backend ingestion pipeline plus the Streamlit-based Refinery UI used to review, refine, and publish articles to the Astro site.
+## Current Responsibilities
 
-## Features
+- collect and normalize source articles
+- score, validate, rerank, and persist them
+- expose read-oriented API endpoints
+- run the Streamlit Refinery UI
+- generate publication artifacts and open pull requests against the frontend repo
+- maintain the mirrored frontend publication contract in `news_collector/contracts/frontend_schema.py`
 
-- **RSS Feed Ingestion**: Collects news from configured RSS sources.
-- **Content Enrichment**: Cleans and normalizes article text.
-- **Scoring & Reranking**: Scores articles based on relevance and quality.
-- **Storage**: Persists data to SQLite/Postgres (schema validation included).
-- **Monitoring**: Logs and tracks collection health.
-- **Refinery UI**: Human-in-the-loop editorial panel for review and publishing.
-- **Per-Phase AI Config**: Independently configure models for Translation, Editing, and Headlines.
+## Current Shape
 
-## Installation
+- `news_collector/contracts/`: sealed cross-boundary models and adapters
+- `news_collector/system/`: orchestration, bootstrap, reporting, observability wiring
+- `news_collector/collectors/`, `enrichment/`, `infrastructure/`: ingestion and external I/O
+- `news_collector/storage/`: database engines, ORM models, persistence
+- `news_collector/scoring/`, `validation/`, `taxonomy/`, `editorial/`, `reranker/`: policy and decision logic
+- `news_collector/logic/workflows/`: workflow composition, publication, manual ingest, image briefs
+- `news_collector/components/editorial/` and `components/publishing/`: editorial and publishing collaborators
+- `news_collector/serving/`: FastAPI read surface
+- `apps/refinery/`: Streamlit Refinery application
 
-### Prerequisites
-
-- Python 3.13+
-- pip (or `make bootstrap` to provision a local venv)
-
-### Setup
-
-1.  Clone the repository:
-
-    ```bash
-    git clone https://github.com/cortega26/noticiencias_news_collector.git
-    cd noticiencias_news_collector
-    ```
-
-2.  Install dependencies:
-    ```bash
-    make bootstrap
-    ```
-    This creates `.venv/` and installs pinned dependencies from `requirements.lock`.
-
-## Usage
-
-### Running the Collector
-
-To run the main collection pipeline:
+## Preferred Entry Points
 
 ```bash
-python run_collector.py
-```
-
-Common flags:
-
-```bash
-python run_collector.py --dry-run
-python run_collector.py --sources nature science_daily
-```
-
-### Running the Refinery (Streamlit)
-
-```bash
-streamlit run apps/refinery/admin_panel.py
-```
-
-Access at `http://localhost:8501`.
-
-### Running Ollama (LLM)
-
-The Refinery uses Ollama for local LLM inference.
-
-1. Install Ollama from `https://ollama.com/`.
-2. Start the Ollama server:
-   ```bash
-   ollama serve
-   ```
-3. Pull a model (example):
-   ```bash
-   ollama pull llama3
-   ```
-4. Set environment variables in `.env`:
-   - `OLLAMA_API_URL=http://localhost:11434/api/generate`
-   - `OLLAMA_MODEL=llama3`
-
-### Configuration
-
-Configuration is managed via `config.toml` (root) and `.env`.
-
-#### Per-Phase Model Configuration (Recommended for CPU)
-
-For standard CPU deployments, use **Llama 3.2** for all phases to ensure reasonable performance (< 5 mins/article). 14B+ models require a GPU or very long processing times.
-
-```toml
-[ollama]
-# Base Model (Fallback)
-model = "llama3.2:latest"
-
-# Per-Phase Overrides (Optional)
-translator_model = "llama3.2:latest"
-editor_model = "llama3.2:latest"
-headlines_model = "llama3.2:latest"
-```
-
-### Testing
-
-Run the test suite using `pytest`:
-
-```bash
+make bootstrap
+python scripts/run_collector.py --dry-run
+make refinery
+make lint
+make type
 make test
 ```
 
-### Docker
+More local commands:
 
-Run the full stack (Collector + Refinery + DB) with Docker:
+- `make quality`
+- `make quality-ci`
+- `make e2e`
+- `make perf`
+- `make config-validate`
+- `make config-docs-check`
+- `make build`
 
-```bash
-docker-compose up --build
-```
+Notes:
 
-## Docs
+- `scripts/run_collector.py` is the preferred collector CLI entrypoint used by CI and automation.
+- `main.py` still exists as a compatibility surface, but new docs and operational guidance should prefer the script and Make targets above.
 
-- **Architecture**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- **Agents Protocol**: [`docs/AGENTS.md`](docs/AGENTS.md)
-- **Source of Truth**: [`docs/SOURCE_OF_TRUTH.md`](docs/SOURCE_OF_TRUTH.md)
-- **Operations Runbook**: [`docs/ops/RUNBOOK.md`](docs/ops/RUNBOOK.md)
-- **Configuration Schema**: [`docs/config_fields.md`](docs/config_fields.md)
+## Cross-Repo Contract
 
-After changing config schema fields, run:
+Publication into the frontend repo depends on two files staying aligned:
 
-```bash
-make config-docs
-make config-docs-check
-```
+- backend mirror: `news_collector/contracts/frontend_schema.py`
+- frontend render contract: `../noticiencias/src/content/config.ts`
 
-## Quality Gate (Editorial Regression Protection)
+If either changes, treat it as a cross-repo contract change.
 
-To prevent silent degradations in editorial quality, we maintain a set of "Golden Cases" that define structural and semantic invariants.
+## Governance Docs
 
-### Usage
+- [`docs/SOURCE_OF_TRUTH.md`](docs/SOURCE_OF_TRUTH.md): documentation hierarchy, repo boundary, and non-negotiable current truths.
+- [`docs/AGENTS.md`](docs/AGENTS.md): binding review and change law for this repo.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): actual package responsibilities and dependency direction.
+- [`docs/PIPELINE_CONTRACTS.md`](docs/PIPELINE_CONTRACTS.md): contract-bearing flows and current failure semantics.
+- [`docs/ci.md`](docs/ci.md): workflow and gate reference.
+- [`docs/runbook.md`](docs/runbook.md): current operational alert runbook.
+- [`docs/audits/2026-04-source-of-truth-audit.md`](docs/audits/2026-04-source-of-truth-audit.md): documentation audit for this pass.
+- [`docs/dev/source-of-truth-backlog.md`](docs/dev/source-of-truth-backlog.md): prioritized follow-up backlog.
 
-When modifying prompts, models, or pipeline logic, verify that the golden set still passes:
+## Historical Material
 
-```bash
-make quality-gate
-```
-
-This runs the current pipeline against cached scenarios in `quality_gate/golden/` and verifies strict constraints (forbidden phrases, mandatory sections, length bounds).
-
-To visually inspect changes, use snapshot mode:
-
-```bash
-python scripts/quality_gate.py --snapshot
-```
-
-This saves generated outputs to `quality_gate/snapshots/` for manual review.
-
-## Development & Quality
-
-We maintain high code quality standards using a unified suite of tools.
-
-- **Check Quality**: `make quality` (Runs Ruff, Mypy, Bandit, pip-audit, and Semgrep)
-- **Auto-Fix**: `make quality-fix` (Automatically fixes format and simple lint errors)
-- **Standards Guide**: See [`QUALITY.md`](docs/dev/QUALITY.md) for details on the tools and how to handle failures.
-
-## Security
-
-This project uses `gitleaks` to prevent secret leakage.
-Please check `.gitleaks.toml` for configuration.
-
-## License
-
-Copyright (c) 2026 Noticiencias Team. All Rights Reserved.
+- `audit/`, `docs/audits/`, and archived planning docs are useful evidence and history, but they are not architectural authority unless explicitly referenced by the active docs above.

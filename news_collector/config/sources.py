@@ -77,14 +77,14 @@ def load_sources():
         with open(yaml_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
-        # Reset buckets
-        ELITE_JOURNALS = {}
-        SCIENCE_MEDIA = {}
-        INSTITUTIONAL_SOURCES = {}
-        PREPRINT_SOURCES = {}
-        COMMUNITY_FEEDS = {}
-        AI_LABS = {}
-        ALL_SOURCES = {}
+        # Preserve dict identities so existing imports see live updates.
+        ELITE_JOURNALS.clear()
+        SCIENCE_MEDIA.clear()
+        INSTITUTIONAL_SOURCES.clear()
+        PREPRINT_SOURCES.clear()
+        COMMUNITY_FEEDS.clear()
+        AI_LABS.clear()
+        ALL_SOURCES.clear()
 
         for source_id, config in data.items():
             # Populate ALL_SOURCES

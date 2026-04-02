@@ -95,6 +95,8 @@ def test_legacy_export_to_pr_golden_path_preserves_source_identity(tmp_path: Pat
     normalized = loaded[0]
     assert normalized["source_id"] == source_id
     assert normalized["source_name"] == canonical_source_name
+    normalized["image_url"] = "~/assets/images/legacy-hardening.jpg"
+    normalized["image_alt"] = "Imagen editorial del artículo legacy"
 
     model = CollectorArticleModel.model_validate(normalized)
     assert model.source_id == source_id

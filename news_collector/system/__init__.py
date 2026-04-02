@@ -296,8 +296,15 @@ class NewsCollectorSystem:
                 if source_id in sources_filter
             }
         else:
-            # Procesar todas las fuentes
-            return cast(Dict[str, Dict[str, Any]], ALL_SOURCES.copy())
+            # Skip manual-only sources during scheduled collection runs.
+            return cast(
+                Dict[str, Dict[str, Any]],
+                {
+                    source_id: source_config
+                    for source_id, source_config in ALL_SOURCES.items()
+                    if not source_config.get("manual_only", False)
+                },
+            )
 
     async def _execute_collection(
         self,

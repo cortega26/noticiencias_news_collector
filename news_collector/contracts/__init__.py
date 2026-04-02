@@ -8,6 +8,12 @@ from .enrichment import (
     ArticleForEnrichment,
     ArticleForEnrichmentModel,
 )
+from .image_brief import (
+    IMAGE_BRIEF_REASON_VALUES,
+    IMAGE_BRIEF_STATUS_VALUES,
+    IMAGE_PROMPT_VERSION,
+    ImageBriefModel,
+)
 from .scoring import (
     ScoringComponents,
     ScoringComponentsModel,
@@ -24,6 +30,10 @@ __all__ = [
     "ArticleMetadataModel",
     "CollectorArticleModel",
     "CollectorArticlePayload",
+    "IMAGE_BRIEF_REASON_VALUES",
+    "IMAGE_BRIEF_STATUS_VALUES",
+    "IMAGE_PROMPT_VERSION",
+    "ImageBriefModel",
     "ScoringComponents",
     "ScoringComponentsModel",
     "ScoringRequest",

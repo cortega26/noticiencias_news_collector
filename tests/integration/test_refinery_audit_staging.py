@@ -62,6 +62,9 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
     }
     engine.policy.auditor_threshold = 0.0
     engine.policy.require_caveats = False
+    engine._download_image = MagicMock(
+        return_value="~/assets/images/article-1087.png"
+    )
 
     article = {
         "id": 1087,
@@ -69,6 +72,7 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
         "url": "https://example.com/article-1087",
         "summary": "Valid summary for audit timeout staging test.",
         "content": "Valid content " * 200,
+        "image_url": "https://example.com/article-1087.png",
         "source_id": "test-source",
         "source_name": "Test Source",
         "category": "science",

@@ -1,49 +1,89 @@
 # Continuous Integration
 
-The CI system is designed to keep the feedback loop under 15 minutes while enforcing security and quality gates.
+Status: Active  
+Scope: workflow and local-parity reference for the current repo
 
-## Required status checks
+## Primary PR And Push Workflow
 
-| Name                           | Type               | Default                  | Required | Description                                                                                         |
-| ------------------------------ | ------------------ | ------------------------ | -------- | --------------------------------------------------------------------------------------------------- |
-| `test`                         | GitHub Actions job | PR & push                | ✅       | Runs the unit suite under `pytest` with coverage reporting enabled.                                 |
-| `coverage`                     | GitHub Actions job | PR & push                | ✅       | Downloads coverage artifacts and enforces the ratchet via `scripts/coverage_ratcheter.sh`.          |
-| `bandit`                       | GitHub Actions job | PR & push                | ✅       | Executes Bandit with high-severity rules and blocks regressions through `scripts/security_gate.py`. |
-| `gitleaks`                     | GitHub Actions job | PR & push                | ✅       | Scans the repository for committed secrets using the repo’s `.gitleaks.toml`.                       |
-| `pip-audit`                    | GitHub Actions job | PR & push                | ✅       | Audits both runtime and security lock files for known vulnerabilities.                              |
-| `docs/linkcheck`               | GitHub Actions job | PR & push (docs scope)   | ✅       | Validates README and `docs/` hyperlinks with `linkchecker`.                                         |
-| `healthcheck`                  | GitHub Actions job | PR & push                | ✅       | Launches the collector health check (`run_collector.py --healthcheck`).                             |
-| `system-contract-and-coverage` | GitHub Actions job | PR & push (system scope) | ✅       | Enforces S1/S1-C strict contract and coverage requirements via `make test-system`.                  |
+The main workflow is `.github/workflows/ci.yml`.
 
-> These checks should be marked as “Required” in the branch protection rules for `main`.
+Current jobs:
 
-## Caching and concurrency
+- `lint`
+- `type`
+- `config`
+- `test`
+- `coverage`
+- `e2e`
+- `perf`
+- `healthcheck`
+- `bandit`
+- `gitleaks`
+- `pip-audit`
+- `audit-todos`
+- `build-artifacts`
 
-- Every Python job restores the `.venv` directory from an `actions/cache` key derived from `requirements.lock` and `requirements-security.lock`. Bootstrap is still invoked, but it becomes a no-op for cache hits, cutting setup to seconds.
-- Workflows (`ci`, `docs`, `security`, and the weekly inventory audit) use `concurrency` blocks so that new pushes cancel superseded runs on the same ref.
-- Artifact-heavy jobs (`test`, `coverage`, `bandit`, `gitleaks`, `pip-audit`, and `build-artifacts`) upload reports that downstream tooling consumes.
+These jobs are the current automation reality. Documentation should not claim a different required-check set than the workflow actually defines.
 
-## Weekly inventory automation
+## Local Parity Commands
 
-The `audit inventory weekly` workflow regenerates `audit/00_inventory.json` using `scripts/generate_inventory.py`. If the sanitized snapshot drifts from the committed baseline, the workflow:
-
-1. Uploads the generated JSON, diff, and summary as artifacts.
-2. Opens (or comments on) an “Inventory drift detected” issue that summarizes the changes.
-
-To run the same check locally:
+Closest local equivalents:
 
 ```bash
-python scripts/generate_inventory.py \
-  --output reports/audit/00_inventory.generated.json \
-  --compare-to audit/00_inventory.json \
-  --diff-output reports/audit/00_inventory.diff \
-  --summary-output reports/audit/00_inventory.summary.json
+make bootstrap
+make lint
+make type
+make config-validate
+make config-docs-check
+make test
+make e2e
+make perf
+make security
+make audit-todos-check
+make build
 ```
 
-Review the diff and update `audit/00_inventory.json` when intentional changes occur.
+Additional strict CI path:
 
-## Dependency lockfiles and pip-audit
+```bash
+make quality-ci
+make quality-gate
+```
 
-- Lockfile drift is checked with `python scripts/sync_lockfiles.py --check --install-pip-tools`.
-- When dependency inputs change, regenerate and commit lockfiles with `python scripts/sync_lockfiles.py --install-pip-tools`.
-- Runtime pip-audit suppressions are managed in `scripts/security_gate.py` and must include an `expires_on` date. Expired suppressions fail CI by design.
+## Other Active Workflows
+
+### Documentation
+
+- `.github/workflows/docs.yml`
+  - link-checks `README.md` and `docs/**`
+
+### Quality And Security
+
+- `.github/workflows/quality.yml`
+  - runs `make quality-ci` and `make quality-gate`
+- `.github/workflows/placeholder-audit-pr.yml`
+- `.github/workflows/placeholder-audit-nightly.yml`
+
+### Architecture And Contract Focus
+
+- `.github/workflows/system-verification.yml`
+  - runs `make test-system`
+- `.github/workflows/source_reliability.yml`
+  - source config, feed reliability, and LLM resilience checks
+- `.github/workflows/e2e.yml`
+  - legacy E2E contract validation workflow that still exists alongside the main CI workflow
+
+### Operational Automation
+
+- `.github/workflows/audit-inventory-weekly.yml`
+  - detects inventory drift against `audit/00_inventory.json`
+- `.github/workflows/dependency-lock-check.yml`
+- `.github/workflows/manual-lock-sync.yml`
+- `.github/workflows/daily_collector.yml`
+- `.github/workflows/release.yml`
+
+## Guidance
+
+- When updating docs about automation, update the workflow YAML first if behavior changed, then update this file.
+- When proposing branch-protection requirements, reference the current workflow job names exactly.
+- Do not describe jobs as required unless branch protection has actually been configured that way outside the repo.

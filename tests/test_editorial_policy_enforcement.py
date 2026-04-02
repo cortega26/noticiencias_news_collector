@@ -39,7 +39,9 @@ class TestEditorialPolicyEnforcement:
             engine.git = MagicMock()
             engine._update_manifest = MagicMock()
             engine._extract_slug = MagicMock(return_value="slug")
-            engine._download_image = MagicMock(return_value=None)
+            engine._download_image = MagicMock(
+                return_value="~/assets/images/editorial-policy-test.png"
+            )
 
             return engine
 
@@ -89,14 +91,8 @@ class TestEditorialPolicyEnforcement:
             "id": "test_persistence",
             "title": "Test with valid length",
             "url": "http://x",
-            "summary": "sum",
-            "source_id": "src",
-            "source_name": "src",
-            "category": "cat",
-            "published_date": __import__("datetime").datetime(2024, 1, 1),
-            "source_metadata": {},
-            "url": "http://x",
-            "summary": "sum",
+            "summary": "This is a sufficiently long summary for editorial policy validation.",
+            "image_url": "https://example.com/editorial-policy.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",
@@ -136,14 +132,8 @@ class TestEditorialPolicyEnforcement:
             "id": "test_allowed",
             "title": "Test with valid length",
             "url": "http://x",
-            "summary": "sum",
-            "source_id": "src",
-            "source_name": "src",
-            "category": "cat",
-            "published_date": __import__("datetime").datetime(2024, 1, 1),
-            "source_metadata": {},
-            "url": "http://x",
-            "summary": "sum",
+            "summary": "This is a sufficiently long summary for editorial policy validation.",
+            "image_url": "https://example.com/editorial-policy.png",
             "source_id": "src",
             "source_name": "src",
             "category": "cat",

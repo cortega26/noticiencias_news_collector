@@ -23,6 +23,10 @@ Failure modes:
 
 from typing import Any, Dict, List, Mapping, cast
 
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.exc import NoInspectionAvailable
+from sqlalchemy.orm.exc import DetachedInstanceError
+
 from news_collector.contracts.export import ExportArticleModel
 from news_collector.contracts.scoring import ArticleScoringData, ScoringInputModel
 from news_collector.contracts.validation import (
@@ -32,8 +36,40 @@ from news_collector.contracts.validation import (
 from news_collector.storage.models import Article
 
 
+def _optional_article_attr(article: Any, attr_name: str, default: Any = None) -> Any:
+    """Read optional ORM attributes without triggering lazy loads on detached instances."""
+    try:
+        state = sa_inspect(article)
+    except (NoInspectionAvailable, TypeError):
+        return getattr(article, attr_name, default)
+
+    unloaded = getattr(state, "unloaded", set())
+    expired = getattr(state, "expired_attributes", set())
+    if attr_name in unloaded or attr_name in expired:
+        return default
+
+    try:
+        return getattr(article, attr_name)
+    except DetachedInstanceError:
+        return default
+
+
 def adapt_article_to_export(article: Article) -> ExportArticleModel:
     """Safely converts an ORM Article to an ExportArticleModel."""
+    published_at = _optional_article_attr(article, "published_at")
+    published_url = _optional_article_attr(article, "published_url")
+    collected_date = _optional_article_attr(article, "collected_date")
+    final_score = _optional_article_attr(article, "final_score")
+    article_metadata = cast(
+        Dict[str, Any],
+        _optional_article_attr(article, "article_metadata", {}) or {},
+    )
+    authors = cast(List[str], _optional_article_attr(article, "authors", []) or [])
+    category = cast(str | None, _optional_article_attr(article, "category"))
+    score_components = cast(
+        Dict[str, Any],
+        _optional_article_attr(article, "score_components", {}) or {},
+    )
 
     return ExportArticleModel(
         id=cast(int, article.id),
@@ -46,21 +82,15 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
         published_date=(
             article.published_date.isoformat() if article.published_date else None
         ),
-        published_at=article.published_at.isoformat() if article.published_at else None,
-        published_url=cast(str, article.published_url),
-        collected_date=(
-            article.collected_date.isoformat() if article.collected_date else None
-        ),
-        score=cast(float, article.final_score),
-        image_url=(
-            article.article_metadata.get("image_url")
-            if article.article_metadata
-            else None
-        ),
-        metadata=cast(Dict[str, Any], article.article_metadata or {}),
-        authors=cast(List[str], article.authors or []),
-        category=cast(str, article.category),
-        components=cast(Dict[str, Any], article.score_components or {}),
+        published_at=published_at.isoformat() if published_at else None,
+        published_url=cast(str | None, published_url),
+        collected_date=collected_date.isoformat() if collected_date else None,
+        score=cast(float | None, final_score),
+        image_url=article_metadata.get("image_url") if article_metadata else None,
+        metadata=article_metadata,
+        authors=authors,
+        category=category,
+        components=score_components,
     )
 
 
