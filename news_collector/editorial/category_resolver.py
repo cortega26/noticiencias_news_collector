@@ -1,87 +1,19 @@
 from __future__ import annotations
-
-import re
-import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
 from news_collector.editorial.classifier import EditorialClassifier
+from news_collector.editorial.categories import (
+    DIRECT_CATEGORY_MAP,
+    GENERIC_CATEGORIES,
+    PUBLIC_CATEGORY_LABELS,
+    get_allowed_classifier_categories,
+    is_first_party_editorial_source,
+    normalize_raw_category,
+)
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
-
-PUBLIC_CATEGORY_LABELS = {
-    "CIENCIA": "Ciencia",
-    "SALUD": "Salud",
-    "TECNOLOGÍA": "Tecnología",
-    "EDITORIAL": "Editorial",
-}
-
-GENERIC_CATEGORIES = {
-    "",
-    "other",
-    "unknown",
-    "general",
-    "science",
-    "ciencia",
-    "multidisciplinary",
-}
-
-DIRECT_CATEGORY_MAP = {
-    "health": "Salud",
-    "salud": "Salud",
-    "medicine": "Salud",
-    "medical": "Salud",
-    "medicina": "Salud",
-    "biology": "Salud",
-    "biologia": "Salud",
-    "public_health": "Salud",
-    "salud_publica": "Salud",
-    "technology": "Tecnología",
-    "tecnologia": "Tecnología",
-    "tech": "Tecnología",
-    "artificial_intelligence": "Tecnología",
-    "inteligencia_artificial": "Tecnología",
-    "ai": "Tecnología",
-    "ia": "Tecnología",
-    "software": "Tecnología",
-    "engineering": "Tecnología",
-    "ingenieria": "Tecnología",
-    "digital": "Tecnología",
-    "editorial": "Editorial",
-    "opinion": "Editorial",
-    "opinion_piece": "Editorial",
-    "analysis": "Editorial",
-    "analisis": "Editorial",
-    "commentary": "Editorial",
-    "comentario": "Editorial",
-    "policy": "Editorial",
-    "politica": "Editorial",
-    "space": "Ciencia",
-    "espacio": "Ciencia",
-    "physics": "Ciencia",
-    "fisica": "Ciencia",
-    "chemistry": "Ciencia",
-    "quimica": "Ciencia",
-    "astronomy": "Ciencia",
-    "astronomia": "Ciencia",
-    "popular_science": "Ciencia",
-    "community_science": "Ciencia",
-}
-
-
-def _normalize_raw_category(value: Any) -> str:
-    if value is None:
-        return ""
-
-    text = str(value).strip().casefold()
-    if not text:
-        return ""
-
-    ascii_text = unicodedata.normalize("NFKD", text)
-    ascii_text = "".join(char for char in ascii_text if not unicodedata.combining(char))
-    ascii_text = re.sub(r"[^a-z0-9]+", "_", ascii_text)
-    return ascii_text.strip("_")
 
 
 @dataclass(frozen=True)
@@ -113,19 +45,34 @@ class EditorialCategoryResolver:
         content: str = "",
         raw_category: Any = None,
         metadata_category: Any = None,
+        source_url: str | None = None,
+        source_name: str | None = None,
+        source_id: str | None = None,
     ) -> CategoryResolution:
         selected_raw = (
             raw_category if str(raw_category or "").strip() else metadata_category
         )
 
-        top_level_normalized = _normalize_raw_category(raw_category)
-        metadata_normalized = _normalize_raw_category(metadata_category)
-        selected_normalized = _normalize_raw_category(selected_raw)
+        top_level_normalized = normalize_raw_category(raw_category)
+        metadata_normalized = normalize_raw_category(metadata_category)
+        selected_normalized = normalize_raw_category(selected_raw)
+        allow_editorial = is_first_party_editorial_source(
+            source_url=source_url,
+            source_name=source_name,
+            source_id=source_id,
+        )
+        allowed_categories = get_allowed_classifier_categories(
+            allow_editorial=allow_editorial
+        )
 
         mapped_selected = DIRECT_CATEGORY_MAP.get(selected_normalized)
-        if mapped_selected and selected_normalized not in GENERIC_CATEGORIES:
+        if (
+            mapped_selected
+            and selected_normalized not in GENERIC_CATEGORIES
+            and (mapped_selected != "EDITORIAL" or allow_editorial)
+        ):
             return CategoryResolution(
-                public_category=mapped_selected,
+                public_category=PUBLIC_CATEGORY_LABELS[mapped_selected],
                 selected_raw_category=self._string_or_none(selected_raw),
                 top_level_raw_category=self._string_or_none(raw_category),
                 metadata_raw_category=self._string_or_none(metadata_category),
@@ -137,6 +84,8 @@ class EditorialCategoryResolver:
             title=title,
             summary=summary,
             content=content,
+            allowed_categories=allowed_categories,
+            allow_editorial=allow_editorial,
         )
         if classifier_result:
             return CategoryResolution(
@@ -149,10 +98,24 @@ class EditorialCategoryResolver:
             )
 
         fallback_category = (
-            mapped_selected
-            or DIRECT_CATEGORY_MAP.get(top_level_normalized)
-            or DIRECT_CATEGORY_MAP.get(metadata_normalized)
-            or "Ciencia"
+            (
+                mapped_selected
+                if mapped_selected != "EDITORIAL" or allow_editorial
+                else None
+            )
+            or (
+                DIRECT_CATEGORY_MAP.get(top_level_normalized)
+                if DIRECT_CATEGORY_MAP.get(top_level_normalized) != "EDITORIAL"
+                or allow_editorial
+                else None
+            )
+            or (
+                DIRECT_CATEGORY_MAP.get(metadata_normalized)
+                if DIRECT_CATEGORY_MAP.get(metadata_normalized) != "EDITORIAL"
+                or allow_editorial
+                else None
+            )
+            or "CIENCIA"
         )
 
         logger.warning(
@@ -162,12 +125,12 @@ class EditorialCategoryResolver:
                 raw_category,
                 metadata_category,
                 selected_normalized,
-                fallback_category,
+                PUBLIC_CATEGORY_LABELS[fallback_category],
             )
         )
 
         return CategoryResolution(
-            public_category=fallback_category,
+            public_category=PUBLIC_CATEGORY_LABELS[fallback_category],
             selected_raw_category=self._string_or_none(selected_raw),
             top_level_raw_category=self._string_or_none(raw_category),
             metadata_raw_category=self._string_or_none(metadata_category),

@@ -627,6 +627,9 @@ class EditorAgent:
             content=content,
             raw_category=raw_category,
             metadata_category=metadata_category,
+            source_url=source_url,
+            source_name=source_name,
+            source_id=source_id,
         )
         final_category = category_resolution.public_category
         raw_category = category_resolution.selected_raw_category or "other"

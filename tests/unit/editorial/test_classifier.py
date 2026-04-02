@@ -19,6 +19,21 @@ class TestEditorialClassifier(unittest.TestCase):
         result = self.classifier.classify_article("Title", "Tech stuff")
         self.assertEqual(result, "TECNOLOGÍA")
 
+    def test_classify_accepts_ascii_variant_for_accented_category(self):
+        self.mock_llm.generate_sync.return_value = "astronomia"
+        result = self.classifier.classify_article("Title", "Space stuff")
+        self.assertEqual(result, "ASTRONOMÍA")
+
+    def test_classify_rejects_editorial_when_not_allowed(self):
+        self.mock_llm.generate_sync.return_value = "EDITORIAL"
+        result = self.classifier.classify_article(
+            "Title",
+            "Summary",
+            allowed_categories=("CIENCIA", "SALUD", "TECNOLOGÍA"),
+            allow_editorial=False,
+        )
+        self.assertEqual(result, "CIENCIA")
+
     def test_classify_fallback_on_invalid(self):
         self.mock_llm.generate_sync.return_value = "FOOBAR"
         result = self.classifier.classify_article("Title", "Summary")
