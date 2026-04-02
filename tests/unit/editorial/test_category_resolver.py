@@ -41,6 +41,24 @@ def test_top_level_health_maps_without_metadata() -> None:
     classifier.try_classify_article.assert_not_called()
 
 
+def test_top_level_astronomy_maps_without_metadata() -> None:
+    classifier = MagicMock()
+    resolver = EditorialCategoryResolver(classifier=classifier)
+
+    resolution = resolver.resolve_category(
+        article_id="space-1",
+        title="Nuevo mapa de galaxias",
+        summary="El observatorio refina la expansión cósmica.",
+        content="Contenido astronómico.",
+        raw_category="astronomy",
+        metadata_category=None,
+    )
+
+    assert resolution.public_category == "Astronomía"
+    assert resolution.resolution_method == "direct_map"
+    classifier.try_classify_article.assert_not_called()
+
+
 def test_generic_science_promotes_to_health_via_classifier() -> None:
     classifier = MagicMock()
     classifier.try_classify_article.return_value = "SALUD"
@@ -93,6 +111,49 @@ def test_metadata_category_remains_supported_for_legacy_payloads() -> None:
     )
 
     assert resolution.public_category == "Tecnología"
+    assert resolution.resolution_method == "direct_map"
+    classifier.try_classify_article.assert_not_called()
+
+
+def test_non_first_party_article_cannot_resolve_to_editorial() -> None:
+    classifier = MagicMock()
+    classifier.try_classify_article.return_value = "TECNOLOGÍA"
+    resolver = EditorialCategoryResolver(classifier=classifier)
+
+    resolution = resolver.resolve_category(
+        article_id="translated-analysis",
+        title="Meta cambia las reglas",
+        summary="Análisis de plataformas digitales.",
+        content="Contenido sobre plataformas y diseño digital.",
+        raw_category="analysis",
+        metadata_category=None,
+        source_url="https://theconversation.com/example-story",
+        source_name="The Conversation",
+        source_id="the_conversation",
+    )
+
+    assert resolution.public_category == "Tecnología"
+    assert resolution.resolution_method == "classifier"
+    classifier.try_classify_article.assert_called_once()
+
+
+def test_first_party_article_can_resolve_to_editorial() -> None:
+    classifier = MagicMock()
+    resolver = EditorialCategoryResolver(classifier=classifier)
+
+    resolution = resolver.resolve_category(
+        article_id="noti-editorial",
+        title="Nuestra visión",
+        summary="Explicamos nuestra línea editorial.",
+        content="Meta-discusión sobre el proyecto.",
+        raw_category="editorial",
+        metadata_category=None,
+        source_url="https://noticiencias.com/categorias/editorial",
+        source_name="Noticiencias",
+        source_id="noticiencias",
+    )
+
+    assert resolution.public_category == "Editorial"
     assert resolution.resolution_method == "direct_map"
     classifier.try_classify_article.assert_not_called()
 
