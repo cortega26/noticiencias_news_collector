@@ -37,6 +37,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
@@ -494,6 +495,10 @@ class RefineryEngine:
 
         target_file_path.write_text(refined_content, encoding="utf-8")
         logger.info(f"Written content to {target_file_path}")
+        if prune_hero_placeholder_allowlist_for_post(target_dir, target_file_path):
+            logger.info(
+                f"Removed stale hero placeholder allowlist entry for {output_filename}"
+            )
 
         # Update Sidecar Manifest
         self._update_manifest(posts_dir, article_id, output_filename)

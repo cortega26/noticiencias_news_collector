@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -193,3 +194,96 @@ def test_delete_article_supports_legacy_string_refinery_id(
     assert result["file_name"] == (
         "2026-02-16-un-agujero-negro-se-forma-sin-explotar-una-estrella-masiva.md"
     )
+
+
+def test_prune_hero_placeholder_allowlist_for_post_is_noop_without_allowlist(
+    tmp_path: Path,
+):
+    repo_root = tmp_path / "frontend"
+    post_file = _write_post(
+        repo_root / "src/content/posts",
+        "2026-04-02-live.md",
+        'title: "Live"\nimage: "~/assets/images/default.png"',
+    )
+
+    changed = published_content.prune_hero_placeholder_allowlist_for_post(
+        repo_root, post_file
+    )
+
+    assert changed is False
+
+
+def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
+    tmp_path: Path, monkeypatch
+):
+    prepared_repo = tmp_path / "prepared-target"
+    _init_repo(prepared_repo, "https://github.com/cortega26/noticiencias.git")
+    post_file = _write_post(
+        prepared_repo / "src/content/posts",
+        "2026-04-02-placeholder.md",
+        'title: "Placeholder"\nrefinery_id: "123"\nimage: "~/assets/images/default.png"',
+    )
+    allowlist_path = (
+        prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
+    )
+    allowlist_path.parent.mkdir(parents=True, exist_ok=True)
+    allowlist_path.write_text(
+        '{\n'
+        '  "allowedPlaceholders": {\n'
+        '    "src/content/posts/2026-04-02-placeholder.md": "Legacy placeholder."\n'
+        "  }\n"
+        '}\n',
+        encoding="utf-8",
+    )
+
+    target_clone = tmp_path / "runtime-target"
+
+    class FakeGitHubPublisher:
+        def __init__(self, _token: str):
+            return None
+
+        def clone_repo(self, _repo_url: str, target_dir: Path):
+            shutil.copytree(prepared_repo, target_dir)
+            return git.Repo(target_dir)
+
+        def create_branch(self, _repo, branch_prefix: str = "delete/article", **_kwargs):
+            return f"{branch_prefix}-123"
+
+        def commit_and_push(self, _repo, _message: str, _branch_name: str):
+            return None
+
+        def create_pull_request(
+            self,
+            *,
+            repo_url: str,
+            branch_name: str,
+            title: str,
+            body: str,
+        ) -> str:
+            assert post_file.name in title
+            return "https://github.com/cortega26/noticiencias/pull/2"
+
+    config = SimpleNamespace(
+        github=SimpleNamespace(
+            token="",
+            target_repo_url="https://github.com/cortega26/noticiencias.git",
+        )
+    )
+
+    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
+    monkeypatch.setattr(refinery_main, "GitHubPublisher", FakeGitHubPublisher)
+    monkeypatch.setattr(refinery_main, "TARGET_DIR", target_clone)
+
+    result = refinery_main.delete_article("123")
+
+    assert result["status"] == "success"
+    synced_allowlist = json.loads(allowlist_path.read_text(encoding="utf-8"))
+    runtime_allowlist = json.loads(
+        (target_clone / "data/hero-image-placeholder-allowlist.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert synced_allowlist["allowedPlaceholders"] == {
+        "src/content/posts/2026-04-02-placeholder.md": "Legacy placeholder."
+    }
+    assert runtime_allowlist["allowedPlaceholders"] == {}
