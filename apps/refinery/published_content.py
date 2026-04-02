@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import json
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -11,6 +12,8 @@ import yaml
 from news_collector.components.publishing import GitHubPublisher
 
 POSTS_SUBPATH = Path("src/content/posts")
+HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
+DEFAULT_HERO_IMAGE = "~/assets/images/default.png"
 
 
 @dataclass(frozen=True)
@@ -146,6 +149,79 @@ def parse_frontmatter_text(text: str) -> dict[str, Any]:
 
 def parse_frontmatter_file(file_path: Path) -> dict[str, Any]:
     return parse_frontmatter_text(file_path.read_text(encoding="utf-8"))
+
+
+def get_post_image_source(frontmatter: dict[str, Any]) -> str | None:
+    image = frontmatter.get("image")
+    if isinstance(image, str):
+        value = image.strip()
+        return value or None
+    if isinstance(image, dict):
+        src = image.get("src")
+        if isinstance(src, str):
+            value = src.strip()
+            return value or None
+    return None
+
+
+def hero_placeholder_allowlist_path(repo_root: Path) -> Path:
+    return repo_root / HERO_PLACEHOLDER_ALLOWLIST_SUBPATH
+
+
+def _normalize_allowlist_entries(entries: dict[str, Any]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for rel_path, reason in sorted(entries.items()):
+        if isinstance(reason, str):
+            normalized[rel_path] = reason
+    return normalized
+
+
+def _write_placeholder_allowlist(
+    allowlist_path: Path, entries: dict[str, Any]
+) -> None:
+    payload = {"allowedPlaceholders": _normalize_allowlist_entries(entries)}
+    allowlist_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def remove_hero_placeholder_allowlist_entry(repo_root: Path, rel_path: str) -> bool:
+    allowlist_path = hero_placeholder_allowlist_path(repo_root)
+    if not allowlist_path.exists():
+        return False
+
+    payload = json.loads(allowlist_path.read_text(encoding="utf-8"))
+    entries = payload.get("allowedPlaceholders")
+    if not isinstance(entries, dict):
+        return False
+
+    if rel_path not in entries:
+        return False
+
+    updated_entries = dict(entries)
+    del updated_entries[rel_path]
+    _write_placeholder_allowlist(allowlist_path, updated_entries)
+    return True
+
+
+def prune_hero_placeholder_allowlist_for_post(repo_root: Path, post_file: Path) -> bool:
+    resolved_repo_root = repo_root.resolve()
+
+    try:
+        rel_path = post_file.resolve().relative_to(resolved_repo_root).as_posix()
+    except ValueError:
+        return False
+
+    if not post_file.exists():
+        return remove_hero_placeholder_allowlist_entry(resolved_repo_root, rel_path)
+
+    frontmatter = parse_frontmatter_file(post_file)
+    image_src = get_post_image_source(frontmatter)
+    if image_src == DEFAULT_HERO_IMAGE:
+        return False
+
+    return remove_hero_placeholder_allowlist_entry(resolved_repo_root, rel_path)
 
 
 def read_published_article(file_path: Path) -> PublishedArticleRecord:

@@ -15,7 +15,10 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from apps.refinery.published_content import find_published_article_by_refinery_id
+from apps.refinery.published_content import (
+    find_published_article_by_refinery_id,
+    prune_hero_placeholder_allowlist_for_post,
+)
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
@@ -746,6 +749,10 @@ def delete_article(article_id: str) -> dict:
         filename = target_file.name
         target_file.unlink()
         logger.info(f"Deleted file: {filename}")
+        if prune_hero_placeholder_allowlist_for_post(TARGET_DIR, target_file):
+            logger.info(
+                f"Removed stale hero placeholder allowlist entry for {filename}"
+            )
 
         # 5. Commit & Push
         git_handler.commit_and_push(

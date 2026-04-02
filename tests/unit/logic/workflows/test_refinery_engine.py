@@ -4,6 +4,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import json
+
 # Import moved to test/setup to allow patching
 # from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
@@ -299,6 +301,62 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.create_branch.assert_not_called()
         self.mock_git.commit_and_push.assert_not_called()
         self.mock_git.create_pull_request.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_prunes_stale_hero_placeholder_allowlist(
+        self, mock_dt
+    ):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+
+        article = {
+            "id": "126",
+            "title": "Test Title With Real Hero",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for allowlist cleanup.",
+            "image_url": "https://example.com/test-image-3.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            allowlist_path = (
+                target_dir / "data" / "hero-image-placeholder-allowlist.json"
+            )
+            allowlist_path.parent.mkdir(parents=True, exist_ok=True)
+            allowlist_path.write_text(
+                '{\n'
+                '  "allowedPlaceholders": {\n'
+                '    "src/content/posts/2024-01-01-real-hero.md": "Old placeholder."\n'
+                "  }\n"
+                '}\n',
+                encoding="utf-8",
+            )
+
+            self.mock_editor.process_article.return_value = (
+                "---\n"
+                "slug: real-hero\n"
+                'image: "~/assets/images/real-hero.png"\n'
+                "image_alt: Real hero image\n"
+                "---\n"
+                "Content"
+            )
+            self.mock_db.get_canonical_slug.return_value = None
+            self.mock_git.create_branch.return_value = "content/update/real-hero"
+            self.mock_git.create_pull_request.return_value = "http://pr.url/real-hero"
+            self.engine._download_image = MagicMock(
+                return_value="~/assets/images/real-hero.png"
+            )
+
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+            self.assertTrue(result)
+            synced_allowlist = json.loads(allowlist_path.read_text(encoding="utf-8"))
+            self.assertEqual(synced_allowlist["allowedPlaceholders"], {})
 
 
 if __name__ == "__main__":
