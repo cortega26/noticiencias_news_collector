@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.scoring.cognitive_scorer import CognitiveScorer
 from news_collector.storage.models import Article
 
@@ -39,6 +40,13 @@ def mock_llm():
         }
     )
     return llm
+
+
+@pytest.fixture(autouse=True)
+def reset_llm_rate_limiter():
+    LLMRateLimiter.reset_instance()
+    yield
+    LLMRateLimiter.reset_instance()
 
 
 @pytest.fixture

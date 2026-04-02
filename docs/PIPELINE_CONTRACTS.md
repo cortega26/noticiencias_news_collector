@@ -54,6 +54,8 @@ The render authority is:
 - output directory: `src/content/posts/` in the target frontend repo
 - file naming: `<canonical-slug>.md`
 - sidecar manifest: `refinery_manifest.json`
+- category resolution reads top-level export `category` first, then falls back to `metadata.category`
+- refinery-generated posts must publish exactly one primary category from `Ciencia`, `Salud`, `Tecnología`, or `Editorial`
 
 ### Current Identity Reuse Order
 

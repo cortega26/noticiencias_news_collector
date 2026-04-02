@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from unittest.mock import MagicMock
 
 import yaml
 from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
@@ -147,3 +148,40 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     assert "date: '2026-03-02T15:30:00+00:00'" not in result
     assert 'date: "2026-03-02T15:30:00+00:00"' not in result
     assert re.search(r"\ndate: 2026-03-02\s+15:30:00\+00:00\n", result)
+
+
+def test_top_level_export_category_drives_frontmatter_category(monkeypatch, tmp_path) -> None:
+    agent = EditorAgent("http://example", "model")
+    agent.cache_dir = tmp_path / "editor-cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    agent.min_content_length = 0
+    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._generate_headlines = lambda *args: {
+        "direct": "Direct Headline",
+        "question": "Question Headline?",
+        "benefit": "Benefit Headline",
+        "excerpt": "This excerpt is long enough for metadata validation.",
+        "tags": ["infraestructura digital"],
+    }  # type: ignore[method-assign]
+
+    classifier_mock = MagicMock()
+    monkeypatch.setattr(agent.category_resolver, "_classifier", classifier_mock)
+
+    result = agent.process_article(
+        {
+            "id": "432",
+            "title": "Proyecto tecnológico regional",
+            "summary": "Software e IA para clientes empresariales.",
+            "content": "Contenido sobre plataformas digitales." * 10,
+            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/source",
+            "category": "technology",
+        },
+        override_date="2026-03-02",
+    )
+
+    fm = parse_frontmatter(result)
+    assert fm.get("categories") == ["Tecnología"]
+    classifier_mock.try_classify_article.assert_not_called()
