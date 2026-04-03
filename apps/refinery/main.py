@@ -398,6 +398,15 @@ def main(  # noqa: C901
     """
     logger.info(f"Starting Noticiencias Refinery... (Dry Run={dry_run})")
 
+    def merge_manual_ingest_context(base_result: dict[str, Any]) -> dict[str, Any]:
+        if not manual_ingest_result:
+            return base_result
+        for key, value in manual_ingest_result.items():
+            if key in {"status", "message", "processed_count"}:
+                continue
+            base_result[key] = value
+        return base_result
+
     try:
         config = load_config()
     except Exception as e:
@@ -444,14 +453,16 @@ def main(  # noqa: C901
         )
         manual_ingest_result = ingest_service.ingest(article_url)
         if manual_ingest_result.get("status") != "success":
-            return {
+            error_result = {
                 "status": "error",
                 "message": manual_ingest_result.get(
                     "message", "Manual URL ingestion failed."
                 ),
                 "processed_count": 0,
-                **manual_ingest_result,
             }
+            if manual_ingest_result.get("error_code"):
+                error_result["error_code"] = manual_ingest_result["error_code"]
+            return merge_manual_ingest_context(error_result)
         process_id = str(manual_ingest_result["article_id"])
         preferred_export_path = Path(manual_ingest_result["export_path"]).expanduser()
         logger.info(
@@ -679,7 +690,7 @@ def main(  # noqa: C901
             )
             processed_count = summary["processed_count"]
             if summary["errors"]:
-                last_error = str(summary["errors"][-1])
+                last_error = summary["errors"][-1]
                 logger.warning(f"Engine reported {len(summary['errors'])} errors.")
     except Exception as e:
         logger.error(f"Engine execution failed: {e}")
@@ -696,19 +707,22 @@ def main(  # noqa: C901
     logger.info("Refinery pass complete.")
 
     if processed_count == 0 and last_error:
+        message = (
+            last_error.get("message")
+            if isinstance(last_error, dict)
+            else str(last_error)
+        )
         result = {
             "status": "error",
-            "message": f"Error procesando artículo: {last_error}",
+            "message": f"Error procesando artículo: {message}",
             "processed_count": 0,
         }
-        if manual_ingest_result:
-            result.update(manual_ingest_result)
-        return result
+        if isinstance(last_error, dict) and last_error.get("error_code"):
+            result["error_code"] = last_error["error_code"]
+        return merge_manual_ingest_context(result)
 
     result = {"status": "success", "processed_count": processed_count}
-    if manual_ingest_result:
-        result.update(manual_ingest_result)
-    return result
+    return merge_manual_ingest_context(result)
 
 
 def _normalize_delete_target(target: str | dict[str, str]) -> dict[str, str]:

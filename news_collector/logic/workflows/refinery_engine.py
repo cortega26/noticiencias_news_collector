@@ -156,6 +156,7 @@ class RefineryEngine:
 
         self._manifest_cache: Dict[str, str] = {}
         self._manifest_loaded = False
+        self._last_blocked_error: Dict[str, str] | None = None
 
     def process_articles(
         self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
@@ -177,16 +178,27 @@ class RefineryEngine:
         for article in articles:
             article_id = "unknown"
             try:
+                self._last_blocked_error = None
                 # Identifier
                 article_id = str(article.get("id", article.get("title")))
                 logger.info(f"Refining item: {article_id}")
 
                 if self.process_single_article(article, target_repo_obj, target_dir):
                     processed_count += 1
+                elif self._last_blocked_error:
+                    errors.append({"id": article_id, **self._last_blocked_error})
 
             except Exception as e:
                 logger.error(f"Failed to process {article_id}: {e}")
-                errors.append({"id": article_id, "error": str(e)})
+                entry = {
+                    "id": article_id,
+                    "error": str(e),
+                    "message": getattr(e, "public_message", str(e)),
+                }
+                error_code = getattr(e, "error_code", None)
+                if error_code:
+                    entry["error_code"] = error_code
+                errors.append(entry)
 
         return {"processed_count": processed_count, "errors": errors}
 
@@ -389,6 +401,15 @@ class RefineryEngine:
                 article, override_date=canonical_date, explicit_article_id=article_id
             )
         except ValueError as ve:
+            error_code = getattr(ve, "error_code", None)
+            if error_code:
+                self._last_blocked_error = {
+                    "error": str(ve),
+                    "message": str(ve),
+                    "error_code": error_code,
+                }
+                logger.warning(f"⛔ Blocked before publish ({error_code}): {ve}")
+                return False
             if "Translation Guardrail" in str(ve):
                 logger.warning(f"⛔ Blocked by Editorial Policy (Critic): {ve}")
                 return False

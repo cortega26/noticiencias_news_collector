@@ -23,6 +23,27 @@ SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
     flags=re.IGNORECASE,
 )
+FRONTMATTER_BLOCK_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n*", flags=re.DOTALL)
+SOURCE_FOOTER_RE = re.compile(
+    r"(?mi)^\s*Fuente original:\s*\[[^\]]+\]\([^)]+\)\s*$"
+)
+_NARRATIVE_WORD_RE = re.compile(r"\b[\wÁÉÍÓÚáéíóúÑñ'-]+\b", flags=re.UNICODE)
+GENERATED_BODY_MIN_WORDS = 80
+BLOCKED_GENERATED_BODY_PATTERNS = (
+    re.compile(r"ilegible\s+y\s+corrupt", flags=re.IGNORECASE),
+    re.compile(
+        r"impidiendo\s+la\s+elaboraci[oó]n\s+de\s+un\s+texto",
+        flags=re.IGNORECASE,
+    ),
+    re.compile(
+        r"no\s+se\s+pudo\s+(?:elaborar|construir|redactar)\s+un\s+art[ií]culo",
+        flags=re.IGNORECASE,
+    ),
+    re.compile(
+        r"source\s+(?:was|is)\s+unreadable|content\s+provided\s+for\s+this\s+article\s+is\s+unreadable",
+        flags=re.IGNORECASE,
+    ),
+)
 
 # Patterns matching LLM meta-instruction preambles (Spanish).
 # Self-referential lines the model prepends to article content, e.g.
@@ -108,6 +129,54 @@ class HeadlinesSchema(BaseModel):
     benefit: str = Field(..., min_length=5)
     excerpt: str = Field(..., min_length=10, max_length=300)
     tags: list[str] = Field(default_factory=list, min_length=1, max_length=8)
+
+
+class GeneratedArticleValidationError(ValueError):
+    """Raised when the generated article body is not publishable."""
+
+    def __init__(self, message: str, *, error_code: str = "editorial_placeholder_blocked"):
+        super().__init__(message)
+        self.error_code = error_code
+
+
+def _extract_publishable_body(markdown: str) -> str:
+    """Remove frontmatter/footer scaffolding so body quality checks inspect only article prose."""
+    body = FRONTMATTER_BLOCK_RE.sub("", markdown.strip())
+    body = SOURCE_IDENTITY_COMMENT_RE.sub("", body)
+    body = SOURCE_FOOTER_RE.sub("", body)
+    return body.strip()
+
+
+def _count_narrative_words(markdown: str) -> int:
+    cleaned = _extract_publishable_body(markdown)
+    cleaned = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", cleaned)
+    cleaned = re.sub(r"(?m)^\s*>\s?", "", cleaned)
+    cleaned = re.sub(r"\[[^\]]+\]\([^)]+\)", " enlace ", cleaned)
+    return len(_NARRATIVE_WORD_RE.findall(cleaned))
+
+
+def validate_generated_article_markdown(markdown: str) -> None:
+    """
+    Block obvious placeholder/error prose and bodies too thin to be a publishable article.
+    """
+    body = _extract_publishable_body(markdown)
+    normalized = re.sub(r"\s+", " ", body).strip()
+    if not normalized:
+        raise GeneratedArticleValidationError(
+            "Generated article body is empty after removing metadata/footer scaffolding."
+        )
+
+    for pattern in BLOCKED_GENERATED_BODY_PATTERNS:
+        if pattern.search(normalized):
+            raise GeneratedArticleValidationError(
+                "Generated article body contains placeholder/error language and cannot be published."
+            )
+
+    word_count = _count_narrative_words(body)
+    if word_count < GENERATED_BODY_MIN_WORDS:
+        raise GeneratedArticleValidationError(
+            f"Generated article body is too thin to publish safely ({word_count} < {GENERATED_BODY_MIN_WORDS} words)."
+        )
 
 
 class EditorAgent:
@@ -720,6 +789,7 @@ class EditorAgent:
         final_content, headlines = self._repair_output(
             final_content, headlines, len(input_text)
         )
+        validate_generated_article_markdown(final_content)
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination

@@ -26,6 +26,21 @@ logger = get_logger().create_module_logger(__name__)
 
 _FETCH_METHODS = ("scholarly", "http", "headless")
 _HOST_PREFIXES = ("www.", "feeds.")
+MANUAL_INGEST_MIN_WORDS = 80
+_NARRATIVE_WORD_RE = re.compile(r"\b[\wÁÉÍÓÚáéíóúÑñ'-]+\b", flags=re.UNICODE)
+_BUNDLE_NOISE_MARKERS = (
+    "sourcescontent",
+    "sourcemappingurl",
+    "webpack://",
+    "__webpack_require__",
+    "function(",
+    "=>",
+    "export ",
+    "import ",
+    "const ",
+    "let ",
+    "var ",
+)
 
 
 def _clean_text(value: Any) -> str | None:
@@ -265,6 +280,22 @@ def _content_length(value: Any) -> int:
     return len(text) if text else 0
 
 
+def _word_count(value: Any) -> int:
+    text = _clean_text(value) or ""
+    return len(_NARRATIVE_WORD_RE.findall(text))
+
+
+def _looks_like_bundle_noise(value: str | None) -> bool:
+    text = (_clean_text(value) or "")[:5000]
+    if not text:
+        return False
+    lowered = text.casefold()
+    marker_hits = sum(lowered.count(marker) for marker in _BUNDLE_NOISE_MARKERS)
+    punctuation_hits = sum(lowered.count(char) for char in "{}[]();<>")
+    alpha_count = sum(1 for char in lowered if char.isalpha()) or 1
+    return marker_hits >= 3 and (punctuation_hits / alpha_count) >= 0.08
+
+
 class ManualUrlIngestService:
     """Fetches a single article URL, persists it, and prepares a one-off export."""
 
@@ -317,7 +348,7 @@ class ManualUrlIngestService:
             canonical_url
         )
         fetch_attempts = self._run_fetches(canonical_url, source_config)
-        payload = self._build_payload(
+        payload, build_error = self._build_payload(
             canonical_url,
             source_id=source_id,
             source_config=source_config,
@@ -327,7 +358,10 @@ class ManualUrlIngestService:
         if payload is None:
             return {
                 "status": "error",
-                "message": "No se pudo construir un artículo válido desde la URL.",
+                "message": (build_error or {}).get(
+                    "message", "No se pudo construir un artículo válido desde la URL."
+                ),
+                "error_code": (build_error or {}).get("error_code", "source_unusable"),
                 "source_id": source_id,
                 "source_created": source_created,
                 "fetch_attempts": self._public_attempts(fetch_attempts),
@@ -471,7 +505,7 @@ class ManualUrlIngestService:
         source_config: Mapping[str, Any],
         source_created: bool,
         fetch_attempts: list[dict[str, Any]],
-    ) -> dict[str, Any] | None:
+    ) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
         best_content = None
         best_content_length = -1
         merged: dict[str, Any] = {
@@ -518,10 +552,29 @@ class ManualUrlIngestService:
         summary = _clean_text(merged["summary"])
         content = _clean_text(best_content)
         if not content and not summary:
-            return None
+            return None, {
+                "error_code": "source_unusable",
+                "message": "La URL no produjo contenido legible para redactar un artículo.",
+            }
+
+        if _looks_like_bundle_noise(content):
+            return None, {
+                "error_code": "source_unusable",
+                "message": "La extracción devolvió ruido técnico o código fuente en lugar de texto periodístico legible.",
+            }
 
         word_basis = content or summary or ""
-        word_count = max(1, len(word_basis.split()))
+        word_count = max(1, _word_count(word_basis))
+        minimum_words = 40 if not content and summary else MANUAL_INGEST_MIN_WORDS
+        if word_count < minimum_words:
+            return None, {
+                "error_code": "source_unusable",
+                "message": (
+                    "La URL no aportó suficiente texto narrativo para un artículo fiable "
+                    f"({word_count} < {minimum_words} palabras)."
+                ),
+            }
+
         reading_time_minutes = max(1, word_count // 200 or 1)
 
         source_metadata = {
@@ -560,7 +613,7 @@ class ManualUrlIngestService:
                 "processing_timestamp": datetime.now(timezone.utc),
             },
         }
-        return payload
+        return payload, None
 
     def _preferred_method(self, source_config: Mapping[str, Any]) -> str:
         strategy = str(source_config.get("enrichment_strategy", "http")).strip().lower()

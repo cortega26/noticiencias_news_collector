@@ -464,7 +464,10 @@ def render_article_processing_panel(  # noqa: C901
                             st.balloons()
                         elif status == "error":
                             st.error("Procesamiento Fallido.")
-                            st.expander("Detalles del Error").write(result.get("message"))
+                            detail = result.get("message")
+                            if result.get("error_code"):
+                                detail = f"[{result.get('error_code')}] {detail}"
+                            st.expander("Detalles del Error").write(detail)
                         elif status == "noop" or processed_count == 0:
                             message = result.get(
                                 "message",
@@ -1348,7 +1351,10 @@ with tab3:
                                 st.session_state["manual_loaded_article_exists"] = ingest_result.get("article_exists", False)
                                 st.success("Artículo cargado desde URL. Revísalo y publícalo usando el flujo normal.")
                             else:
-                                st.error(ingest_result.get("message", "No se pudo cargar la URL."))
+                                detail = ingest_result.get("message", "No se pudo cargar la URL.")
+                                if ingest_result.get("error_code"):
+                                    detail = f"[{ingest_result.get('error_code')}] {detail}"
+                                st.error(detail)
                         except Exception as exc:
                             st.error(f"Error cargando URL: {exc}")
             finally:

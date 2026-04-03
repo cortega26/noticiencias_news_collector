@@ -303,6 +303,45 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.create_pull_request.assert_not_called()
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_returns_false_for_placeholder_block(self, mock_dt):
+        mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+
+        from news_collector.components.editorial.ai_editor import (
+            GeneratedArticleValidationError,
+        )
+
+        article = {
+            "id": "127",
+            "title": "Placeholder blocked article",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for placeholder blocking.",
+            "image_url": "https://example.com/test-image-4.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.side_effect = GeneratedArticleValidationError(
+            "Generated article body contains placeholder/error language and cannot be published."
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            result = self.engine.process_single_article(article, MagicMock(), target_dir)
+
+        self.assertFalse(result)
+        self.assertEqual(
+            self.engine._last_blocked_error["error_code"],
+            "editorial_placeholder_blocked",
+        )
+        self.mock_git.create_branch.assert_not_called()
+        self.mock_git.commit_and_push.assert_not_called()
+        self.mock_git.create_pull_request.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_prunes_stale_hero_placeholder_allowlist(
         self, mock_dt
     ):

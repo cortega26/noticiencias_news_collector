@@ -241,6 +241,100 @@ def test_ingest_attempts_all_methods_and_merges_best_payload(
     ] == "research_feed"
 
 
+def test_ingest_rejects_sparse_manual_source_with_error_code(
+    monkeypatch, tmp_path: Path
+):
+    db = MagicMock()
+    db.get_article_by_url.return_value = None
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.manual_ingest.ALL_SOURCES",
+        {
+            "ars_test": {
+                "name": "Ars Technica",
+                "url": "https://arstechnica.com/feed/",
+                "category": "technology",
+                "enrichment_strategy": "http",
+            }
+        },
+    )
+
+    service = ManualUrlIngestService(db, export_dir=tmp_path)
+    service.http = SimpleNamespace(
+        enrich=lambda _url: {
+            "success": True,
+            "reason": "html_ok",
+            "content": "Too short to be a trustworthy article export.",
+            "raw_content": """
+                <html>
+                  <head><meta property="og:title" content="Sparse extraction" /></head>
+                  <body><p>Too short to be a trustworthy article export.</p></body>
+                </html>
+            """,
+        }
+    )
+    service.scholarly = SimpleNamespace(
+        enrich_url=lambda _url: {"success": False, "reason": "not_applicable"}
+    )
+    service.headless = SimpleNamespace(
+        enrich=lambda _url, _cfg: {"success": False, "reason": "not_needed"}
+    )
+
+    result = service.ingest("https://arstechnica.com/ai/2026/03/sparse-manual-url/")
+
+    assert result["status"] == "error"
+    assert result["error_code"] == "source_unusable"
+    assert "suficiente texto narrativo" in result["message"]
+    db.save_article.assert_not_called()
+
+
+def test_ingest_rejects_bundle_noise_payload(monkeypatch, tmp_path: Path):
+    db = MagicMock()
+    db.get_article_by_url.return_value = None
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.manual_ingest.ALL_SOURCES",
+        {
+            "ars_test": {
+                "name": "Ars Technica",
+                "url": "https://arstechnica.com/feed/",
+                "category": "technology",
+                "enrichment_strategy": "http",
+            }
+        },
+    )
+
+    service = ManualUrlIngestService(db, export_dir=tmp_path)
+    noisy_content = (
+        "sourcesContent webpack:// __webpack_require__ function() { const map = []; "
+        "export default function leak(){ return map; } let sourceMappingURL = 'app.js.map'; "
+    ) * 8
+    service.http = SimpleNamespace(
+        enrich=lambda _url: {
+            "success": True,
+            "reason": "html_ok",
+            "content": noisy_content,
+            "raw_content": """
+                <html>
+                  <head><meta property="og:title" content="Bundle noise" /></head>
+                  <body><p>Bundle noise</p></body>
+                </html>
+            """,
+        }
+    )
+    service.scholarly = SimpleNamespace(
+        enrich_url=lambda _url: {"success": False, "reason": "not_applicable"}
+    )
+    service.headless = SimpleNamespace(
+        enrich=lambda _url, _cfg: {"success": False, "reason": "not_needed"}
+    )
+
+    result = service.ingest("https://arstechnica.com/ai/2026/03/bundle-noise/")
+
+    assert result["status"] == "error"
+    assert result["error_code"] == "source_unusable"
+    assert "ruido técnico o código fuente" in result["message"]
+    db.save_article.assert_not_called()
+
+
 def test_ingest_saves_summary_only_when_full_text_is_unavailable(
     monkeypatch, tmp_path: Path
 ):
@@ -273,7 +367,17 @@ def test_ingest_saves_summary_only_when_full_text_is_unavailable(
             "metadata": {
                 "author": [{"given": "Grace", "family": "Hopper"}],
                 "created": {"date-parts": [[2025, 1, 5]]},
-                "abstract": "<jats:p>This abstract is all we have, but it is enough to proceed.</jats:p>",
+                "abstract": (
+                    "<jats:p>This abstract is all we have, but it still provides enough "
+                    "narrative detail to describe the study question, the researchers, "
+                    "the methodology, the main finding, the limitations, and the broader "
+                    "scientific context. It explains what the team measured, how the "
+                    "comparison was designed, which instruments were used, why the result "
+                    "matters for the field, and where uncertainty remains. In other words, "
+                    "the abstract is long and descriptive enough for a guarded summary-only "
+                    "manual ingestion flow to remain trustworthy without turning into a "
+                    "placeholder article.</jats:p>"
+                ),
             },
         }
     )
@@ -288,7 +392,7 @@ def test_ingest_saves_summary_only_when_full_text_is_unavailable(
 
     assert result["status"] == "success"
     assert saved_models[0].content is None
-    assert saved_models[0].summary == "This abstract is all we have, but it is enough to proceed."
+    assert saved_models[0].summary.startswith("This abstract is all we have")
     assert saved_models[0].content_mode == "summary_only"
 
 
@@ -323,6 +427,7 @@ def test_ingest_fails_without_persistence_when_no_valid_payload_exists(
     result = service.ingest("https://blocked.example.com/article")
 
     assert result["status"] == "error"
+    assert result["error_code"] == "source_unusable"
     assert result["source_id"] == "blocked_source"
     assert [item["method"] for item in result["fetch_attempts"]] == [
         "http",
