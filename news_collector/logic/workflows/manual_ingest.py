@@ -650,13 +650,27 @@ class ManualUrlIngestService:
         fetch_attempts: list[dict[str, Any]],
     ) -> dict[str, Any]:
         export_article = export_model.model_dump()
+        publication_meta = (
+            export_model.metadata.get("publication", {})
+            if isinstance(export_model.metadata, dict)
+            else {}
+        )
+        publication_state = str(publication_meta.get("state") or "").strip()
+        published_candidate = bool(export_model.published_at or export_model.published_url)
+        publish_ready = bool(
+            isinstance(publication_meta.get("frontend_checks"), dict)
+            and publication_meta["frontend_checks"].get("ready_for_merge") is True
+        )
         return {
             "status": "success",
             "article_id": export_model.id,
             "source_id": export_model.source_id,
             "source_created": source_created,
             "article_exists": article_exists,
-            "published": bool(export_model.published_at or export_model.published_url),
+            "published": publication_state in {"LIVE", "DEPLOYED", "MERGED"},
+            "published_candidate": published_candidate,
+            "publish_ready": publish_ready,
+            "publication_state": publication_state or ("PR_CREATED" if published_candidate else "UNPUBLISHED"),
             "export_path": str(export_path),
             "fetch_attempts": fetch_attempts,
             "article": export_article,

@@ -498,6 +498,9 @@ def test_ingest_real_db_new_article_detached_export_path_is_stable(
     assert result["status"] == "success"
     assert result["article_exists"] is False
     assert result["published"] is False
+    assert result["published_candidate"] is False
+    assert result["publish_ready"] is False
+    assert result["publication_state"] == "UNPUBLISHED"
     assert Path(result["export_path"]).exists()
     assert result["article"]["title"].startswith("Entire Claude Code CLI")
     assert result["article"]["published_at"] is None
