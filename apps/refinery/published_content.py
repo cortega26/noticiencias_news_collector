@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any, Iterable
+import unicodedata
 from urllib.parse import urlparse
 
 import git
+import requests
 import yaml
 from news_collector.components.publishing import GitHubPublisher
 
 POSTS_SUBPATH = Path("src/content/posts")
 HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
+DELETED_ROUTE_SMOKE_CHECKS_SUBPATH = Path("data/deleted-route-smoke-checks.json")
+REFINERY_MANIFEST_FILENAME = "refinery_manifest.json"
 DEFAULT_HERO_IMAGE = "~/assets/images/default.png"
 
 
@@ -33,6 +37,18 @@ class PublishedContentSnapshot:
     articles: list[PublishedArticleRecord]
     source_label: str
     freshness_label: str
+
+
+@dataclass(frozen=True)
+class DeployHealthStatus:
+    branch: str
+    current_repo_sha: str | None
+    latest_run_sha: str | None
+    latest_run_conclusion: str | None
+    latest_run_url: str | None
+    latest_successful_sha: str | None
+    latest_successful_url: str | None
+    is_live_stale: bool
 
 
 def normalize_repo_url(repo_url: str) -> str:
@@ -168,6 +184,14 @@ def hero_placeholder_allowlist_path(repo_root: Path) -> Path:
     return repo_root / HERO_PLACEHOLDER_ALLOWLIST_SUBPATH
 
 
+def deleted_route_smoke_checks_path(repo_root: Path) -> Path:
+    return repo_root / DELETED_ROUTE_SMOKE_CHECKS_SUBPATH
+
+
+def refinery_manifest_path(repo_root: Path) -> Path:
+    return repo_root / POSTS_SUBPATH / REFINERY_MANIFEST_FILENAME
+
+
 def _normalize_allowlist_entries(entries: dict[str, Any]) -> dict[str, str]:
     normalized: dict[str, str] = {}
     for rel_path, reason in sorted(entries.items()):
@@ -182,6 +206,28 @@ def _write_placeholder_allowlist(
     payload = {"allowedPlaceholders": _normalize_allowlist_entries(entries)}
     allowlist_path.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _load_refinery_manifest(manifest_path: Path) -> dict[str, str]:
+    if not manifest_path.exists():
+        return {}
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for article_id, file_name in payload.items():
+        if isinstance(article_id, str) and isinstance(file_name, str):
+            normalized[article_id] = file_name
+    return normalized
+
+
+def _write_refinery_manifest(manifest_path: Path, entries: dict[str, str]) -> None:
+    manifest_path.write_text(
+        json.dumps(dict(sorted(entries.items())), indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
@@ -205,6 +251,34 @@ def remove_hero_placeholder_allowlist_entry(repo_root: Path, rel_path: str) -> b
     return True
 
 
+def prune_refinery_manifest_for_post(
+    repo_root: Path, *, file_name: str, refinery_id: str | None = None
+) -> list[str]:
+    manifest_path = refinery_manifest_path(repo_root)
+    manifest_entries = _load_refinery_manifest(manifest_path)
+    if not manifest_entries:
+        return []
+
+    removed_keys: list[str] = []
+    updated_entries = dict(manifest_entries)
+
+    if refinery_id:
+        normalized_id = str(refinery_id).strip()
+        if updated_entries.get(normalized_id) == file_name:
+            removed_keys.append(normalized_id)
+            del updated_entries[normalized_id]
+
+    for article_id, manifest_file_name in list(updated_entries.items()):
+        if manifest_file_name == file_name and article_id not in removed_keys:
+            removed_keys.append(article_id)
+            del updated_entries[article_id]
+
+    if removed_keys:
+        _write_refinery_manifest(manifest_path, updated_entries)
+
+    return sorted(removed_keys)
+
+
 def prune_hero_placeholder_allowlist_for_post(repo_root: Path, post_file: Path) -> bool:
     resolved_repo_root = repo_root.resolve()
 
@@ -222,6 +296,98 @@ def prune_hero_placeholder_allowlist_for_post(repo_root: Path, post_file: Path) 
         return False
 
     return remove_hero_placeholder_allowlist_entry(resolved_repo_root, rel_path)
+
+
+def _slugify_segment(value: str) -> str:
+    normalized = (
+        unicodedata.normalize("NFKD", value)
+        .encode("ascii", "ignore")
+        .decode("utf-8")
+        .strip()
+        .lower()
+    )
+    cleaned = []
+    last_dash = False
+    for char in normalized:
+        if char.isalnum():
+            cleaned.append(char)
+            last_dash = False
+        elif not last_dash:
+            cleaned.append("-")
+            last_dash = True
+    return "".join(cleaned).strip("-")
+
+
+def normalize_route_path(route_path: str) -> str:
+    stripped = str(route_path or "").strip()
+    if not stripped:
+        return ""
+    normalized = f"/{stripped.strip('/')}/"
+    return normalized.replace("//", "/")
+
+
+def infer_published_article_route(article: PublishedArticleRecord) -> str | None:
+    frontmatter_permalink = article.frontmatter.get("permalink")
+    if isinstance(frontmatter_permalink, str) and frontmatter_permalink.strip():
+        return normalize_route_path(frontmatter_permalink)
+
+    categories = article.frontmatter.get("categories")
+    if not isinstance(categories, list) or not categories:
+        return None
+
+    category = categories[0]
+    if not isinstance(category, str) or not category.strip():
+        return None
+
+    stem = Path(article.file_name).stem.strip()
+    category_slug = _slugify_segment(category)
+    if not stem or not category_slug:
+        return None
+
+    return normalize_route_path(f"/{category_slug}/{stem}/")
+
+
+def append_deleted_route_smoke_check(
+    repo_root: Path,
+    *,
+    route_path: str,
+    file_name: str,
+    reason: str,
+) -> bool:
+    normalized_path = normalize_route_path(route_path)
+    if not normalized_path:
+        return False
+
+    checks_path = deleted_route_smoke_checks_path(repo_root)
+    payload: dict[str, Any] = {"routes": []}
+    if checks_path.exists():
+        existing_payload = json.loads(checks_path.read_text(encoding="utf-8"))
+        if isinstance(existing_payload, dict):
+            payload = existing_payload
+
+    routes = payload.get("routes")
+    if not isinstance(routes, list):
+        routes = []
+
+    updated_routes = [
+        entry
+        for entry in routes
+        if isinstance(entry, dict) and normalize_route_path(entry.get("path", "")) != normalized_path
+    ]
+    updated_routes.append(
+        {
+            "path": normalized_path,
+            "file_name": file_name,
+            "reason": reason,
+            "deleted_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        }
+    )
+    payload["routes"] = sorted(updated_routes, key=lambda entry: str(entry.get("path", "")))
+    checks_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return True
 
 
 def read_published_article(file_path: Path) -> PublishedArticleRecord:
@@ -263,6 +429,14 @@ def truncate_refinery_id(refinery_id: str | None, *, limit: int = 52) -> str | N
     if len(compact) <= limit:
         return compact
     return f"{compact[: limit - 1].rstrip()}…"
+
+
+def get_repo_head_sha(repo_root: Path) -> str | None:
+    try:
+        repo = git.Repo(repo_root)
+        return repo.head.commit.hexsha
+    except Exception:
+        return None
 
 
 def refresh_published_target_clone(
@@ -310,17 +484,19 @@ def resolve_published_content_snapshot(
     github_token: str = "",
     refresh_clone: bool = False,
     extra_candidates: Iterable[Path] | None = None,
+    prefer_remote_checkout: bool = False,
 ) -> PublishedContentSnapshot:
-    local_checkout = find_local_target_checkout(
-        target_repo_url,
-        collector_repo_root=collector_repo_root,
-        extra_candidates=extra_candidates,
-    )
-    if local_checkout is not None:
-        return build_published_content_snapshot(
-            repo_root=local_checkout,
-            source_label="Checkout local verificado del frontend",
+    if not prefer_remote_checkout:
+        local_checkout = find_local_target_checkout(
+            target_repo_url,
+            collector_repo_root=collector_repo_root,
+            extra_candidates=extra_candidates,
         )
+        if local_checkout is not None:
+            return build_published_content_snapshot(
+                repo_root=local_checkout,
+                source_label="Checkout local verificado del frontend",
+            )
 
     if refresh_clone:
         repo_root, clone_label = refresh_published_target_clone(
@@ -358,3 +534,86 @@ def find_published_article_by_refinery_id(
         if article.refinery_id == target_id:
             return article
     return None
+
+
+def find_published_article_by_file_name(
+    posts_dir: Path, file_name: str
+) -> PublishedArticleRecord | None:
+    target_name = Path(str(file_name).strip()).name
+    if not target_name:
+        return None
+
+    for article in load_published_articles(posts_dir):
+        if article.file_name == target_name:
+            return article
+    return None
+
+
+def _parse_repo_owner_and_name(target_repo_url: str) -> tuple[str, str] | None:
+    normalized = normalize_repo_url(target_repo_url)
+    if not normalized.startswith("github.com/"):
+        return None
+
+    remainder = normalized.split("/", 1)[1]
+    owner, _, repo_name = remainder.partition("/")
+    if not owner or not repo_name:
+        return None
+    return owner, repo_name
+
+
+def fetch_pages_deploy_health(
+    *,
+    target_repo_url: str,
+    current_repo_sha: str | None,
+    github_token: str = "",
+    branch: str = "main",
+) -> DeployHealthStatus | None:
+    repo_identity = _parse_repo_owner_and_name(target_repo_url)
+    if repo_identity is None:
+        return None
+
+    owner, repo_name = repo_identity
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    response = requests.get(  # noqa: S113
+        f"https://api.github.com/repos/{owner}/{repo_name}/actions/workflows/deploy.yml/runs",
+        params={"branch": branch, "per_page": 10},
+        headers=headers,
+        timeout=10,
+    )
+    response.raise_for_status()
+    workflow_runs = response.json().get("workflow_runs", [])
+    if not isinstance(workflow_runs, list):
+        return None
+
+    latest_run = workflow_runs[0] if workflow_runs else {}
+    latest_success = next(
+        (
+            run
+            for run in workflow_runs
+            if isinstance(run, dict) and run.get("conclusion") == "success"
+        ),
+        {},
+    )
+
+    latest_successful_sha = str(latest_success.get("head_sha") or "") or None
+    latest_run_sha = str(latest_run.get("head_sha") or "") or None
+    return DeployHealthStatus(
+        branch=branch,
+        current_repo_sha=current_repo_sha,
+        latest_run_sha=latest_run_sha,
+        latest_run_conclusion=str(latest_run.get("conclusion") or "") or None,
+        latest_run_url=str(latest_run.get("html_url") or "") or None,
+        latest_successful_sha=latest_successful_sha,
+        latest_successful_url=str(latest_success.get("html_url") or "") or None,
+        is_live_stale=bool(
+            current_repo_sha
+            and latest_successful_sha
+            and current_repo_sha != latest_successful_sha
+        ),
+    )

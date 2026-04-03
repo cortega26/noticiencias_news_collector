@@ -48,7 +48,10 @@ run_refinery = refinery_main.main
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from apps.refinery.published_content import (
+    fetch_pages_deploy_health,
+    find_local_target_checkout,
     find_published_article_by_refinery_id,
+    get_repo_head_sha,
     resolve_published_content_snapshot,
     truncate_refinery_id,
 )
@@ -1830,6 +1833,7 @@ with tab5:
                 temp_target_dir=TARGET_DIR,
                 github_token=env_vars.get("GITHUB_TOKEN", ""),
                 refresh_clone=refresh_clone,
+                prefer_remote_checkout=True,
             )
         except Exception as exc:
             st.error(f"Fallo cargando contenido publicado: {exc}")
@@ -1837,6 +1841,60 @@ with tab5:
 
         if snapshot is not None:
             articles = snapshot.articles
+            action_repo_sha = get_repo_head_sha(snapshot.repo_root)
+            local_checkout = find_local_target_checkout(
+                target_url,
+                collector_repo_root=collector_repo_root,
+            )
+            deploy_health = None
+            try:
+                deploy_health = fetch_pages_deploy_health(
+                    target_repo_url=target_url,
+                    current_repo_sha=action_repo_sha,
+                    github_token=env_vars.get("GITHUB_TOKEN", ""),
+                )
+            except Exception as exc:
+                st.caption(f"Salud de deploy no disponible: {exc}")
+
+            if deploy_health is not None:
+                deploy_cols = st.columns(3)
+                deploy_cols[0].metric(
+                    "Repo remoto (SHA)",
+                    action_repo_sha[:7] if action_repo_sha else "n/a",
+                )
+                deploy_cols[1].metric(
+                    "Último deploy OK",
+                    (
+                        deploy_health.latest_successful_sha[:7]
+                        if deploy_health.latest_successful_sha
+                        else "n/a"
+                    ),
+                )
+                deploy_cols[2].metric(
+                    "Último run Pages",
+                    deploy_health.latest_run_conclusion or "unknown",
+                )
+
+                if deploy_health.is_live_stale:
+                    stale_url = deploy_health.latest_run_url or deploy_health.latest_successful_url
+                    warning = (
+                        "El sitio público está atrasado respecto de `origin/main`. "
+                        "Las acciones editoriales usarán el repo remoto, pero la web seguirá "
+                        "mostrando contenido viejo hasta que el deploy vuelva a estar en verde."
+                    )
+                    if stale_url:
+                        warning += f" Último run: {stale_url}"
+                    st.warning(warning)
+                elif deploy_health.latest_successful_sha:
+                    st.success(
+                        "GitHub Pages está alineado con el HEAD remoto usado por las acciones editoriales."
+                    )
+
+            if local_checkout and local_checkout.resolve() != snapshot.repo_root.resolve():
+                st.info(
+                    "Checkout local detectado solo como referencia: "
+                    f"`{local_checkout}`. Las acciones usan `{snapshot.repo_root}`."
+                )
 
             if refresh_requested and snapshot.source_label != "Checkout local verificado del frontend":
                 st.success("Repositorio destino actualizado y sincronizado.")
@@ -1869,7 +1927,6 @@ with tab5:
                         st.caption(article.file_name)
                         if refinery_id:
                             st.caption(f"ID: {truncate_refinery_id(refinery_id)}")
-
                             try:
                                 score_path = (
                                     BASE_DIR
@@ -1901,6 +1958,8 @@ with tab5:
                                     st.caption("⏳ No audit yet")
                             except Exception:  # noqa: S110
                                 pass
+                        else:
+                            st.caption("ID: n/a · se usará el nombre exacto del archivo")
 
                     with c3:
                         if st.button(
@@ -1908,26 +1967,25 @@ with tab5:
                             key=f"btn_despub_{article.file_name}",
                             width="stretch",
                         ):
+                            delete_target = {"file_name": article.file_name}
                             if refinery_id:
-                                with st.spinner("Solicitando eliminación..."):
-                                    try:
-                                        if hasattr(refinery_main, "delete_article"):
-                                            res = refinery_main.delete_article(
-                                                str(refinery_id)
+                                delete_target["refinery_id"] = str(refinery_id)
+
+                            with st.spinner("Solicitando eliminación..."):
+                                try:
+                                    if hasattr(refinery_main, "delete_article"):
+                                        res = refinery_main.delete_article(delete_target)
+                                        if res.get("status") == "success":
+                                            st.toast("✅ PR Creado", icon="🗑️")
+                                            st.markdown(
+                                                f"[Ver PR]({res.get('pr_url')})"
                                             )
-                                            if res.get("status") == "success":
-                                                st.toast("✅ PR Creado", icon="🗑️")
-                                                st.markdown(
-                                                    f"[Ver PR]({res.get('pr_url')})"
-                                                )
-                                            else:
-                                                st.error(res.get("message"))
                                         else:
-                                            st.error("Función no cargada")
-                                    except Exception as e:
-                                        st.error(str(e))
-                            else:
-                                st.error("Sin ID")
+                                            st.error(res.get("message"))
+                                    else:
+                                        st.error("Función no cargada")
+                                except Exception as e:
+                                    st.error(str(e))
 
                     with c4:
                         if st.button(
