@@ -16,8 +16,12 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from apps.refinery.published_content import (
+    append_deleted_route_smoke_check,
+    find_published_article_by_file_name,
     find_published_article_by_refinery_id,
+    infer_published_article_route,
     prune_hero_placeholder_allowlist_for_post,
+    prune_refinery_manifest_for_post,
 )
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
@@ -707,12 +711,41 @@ def main(  # noqa: C901
     return result
 
 
-def delete_article(article_id: str) -> dict:
+def _normalize_delete_target(target: str | dict[str, str]) -> dict[str, str]:
+    if isinstance(target, str):
+        value = target.strip()
+        if not value:
+            raise ValueError("Delete target is empty.")
+        return {"refinery_id": value}
+
+    if not isinstance(target, dict):
+        raise ValueError("Delete target must be a string or a dict.")
+
+    normalized: dict[str, str] = {}
+    for key in ("refinery_id", "file_name"):
+        raw_value = target.get(key)
+        if raw_value is None:
+            continue
+        value = str(raw_value).strip()
+        if value:
+            normalized[key] = value
+
+    if normalized.get("file_name"):
+        normalized["file_name"] = Path(normalized["file_name"]).name
+
+    if not normalized:
+        raise ValueError("Delete target requires 'refinery_id' or 'file_name'.")
+
+    return normalized
+
+
+def delete_article(target: str | dict[str, str]) -> dict:
     """
-    Locates and deletes an article from the target repo based on its refinery_id.
-    Creates a Pull Request for the deletion.
+    Locates and deletes an article from the target repo using an exact published
+    identifier (`refinery_id` or `file_name`) and creates a Pull Request.
     """
-    logger.info(f"Initiating One-Click Unpublish for ID: {article_id}")
+    target_info = _normalize_delete_target(target)
+    logger.info("Initiating One-Click Unpublish for target: %s", target_info)
 
     try:
         config = load_config()
@@ -727,17 +760,26 @@ def delete_article(article_id: str) -> dict:
         # 2. Search for File
         posts_dir = TARGET_DIR / "src/content/posts"
         target_file = None
+        target_article = None
 
         if posts_dir.exists():
-            target_article = find_published_article_by_refinery_id(posts_dir, article_id)
+            refinery_id = target_info.get("refinery_id")
+            if refinery_id:
+                target_article = find_published_article_by_refinery_id(
+                    posts_dir, refinery_id
+                )
+            if target_article is None and target_info.get("file_name"):
+                target_article = find_published_article_by_file_name(
+                    posts_dir, target_info["file_name"]
+                )
             if target_article is not None:
                 target_file = target_article.file_path
 
-        if not target_file:
-            logger.warning(f"Article ID {article_id} not found in published content.")
+        if not target_file or target_article is None:
+            logger.warning("Delete target %s not found in published content.", target_info)
             return {
                 "status": "error",
-                "message": "Article not found in remote content.",
+                "message": "Article not found in remote content for the requested identifier.",
             }
 
         # 3. Create Branch
@@ -747,11 +789,33 @@ def delete_article(article_id: str) -> dict:
 
         # 4. Delete File
         filename = target_file.name
+        route_path = infer_published_article_route(target_article)
+        removed_manifest_keys = prune_refinery_manifest_for_post(
+            TARGET_DIR,
+            file_name=filename,
+            refinery_id=target_article.refinery_id,
+        )
         target_file.unlink()
         logger.info(f"Deleted file: {filename}")
-        if prune_hero_placeholder_allowlist_for_post(TARGET_DIR, target_file):
+        removed_allowlist_entry = prune_hero_placeholder_allowlist_for_post(
+            TARGET_DIR, target_file
+        )
+        if removed_allowlist_entry:
             logger.info(
                 f"Removed stale hero placeholder allowlist entry for {filename}"
+            )
+        if removed_manifest_keys:
+            logger.info(
+                "Removed stale refinery manifest entries for %s: %s",
+                filename,
+                ", ".join(removed_manifest_keys),
+            )
+        if route_path:
+            append_deleted_route_smoke_check(
+                TARGET_DIR,
+                route_path=route_path,
+                file_name=filename,
+                reason="Route should disappear after merged unpublish.",
             )
 
         # 5. Commit & Push
@@ -764,10 +828,29 @@ def delete_article(article_id: str) -> dict:
             repo_url=config.github.target_repo_url,
             branch_name=branch_name,
             title=f"Unpublish: {filename}",
-            body=f"Request to unpublish/delete {filename}.\n\nRefinery ID: {article_id}",
+            body="\n".join(
+                [
+                    f"Request to unpublish/delete {filename}.",
+                    "",
+                    (
+                        f"Refinery ID: {target_article.refinery_id}"
+                        if target_article.refinery_id
+                        else "Refinery ID: n/a (filename-backed delete)"
+                    ),
+                    f"File Name: {filename}",
+                    *( [f"Route Smoke Check: {route_path}"] if route_path else [] ),
+                ]
+            ),
         )
 
-        return {"status": "success", "pr_url": pr_url, "file_name": filename}
+        return {
+            "status": "success",
+            "pr_url": pr_url,
+            "file_name": filename,
+            "route_path": route_path,
+            "manifest_entries_removed": removed_manifest_keys,
+            "allowlist_entry_removed": removed_allowlist_entry,
+        }
 
     except Exception as e:
         logger.error(f"Failed to delete article: {e}")

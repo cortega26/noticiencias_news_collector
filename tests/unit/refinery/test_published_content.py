@@ -132,6 +132,51 @@ def test_resolve_published_content_snapshot_refreshes_clone_when_no_local_checko
     assert len(snapshot.articles) == 1
 
 
+def test_resolve_published_content_snapshot_prefers_remote_clone_when_requested(
+    tmp_path: Path, monkeypatch
+):
+    collector_repo_root = tmp_path / "collector"
+    collector_repo_root.mkdir()
+
+    frontend_repo = tmp_path / "noticiencias"
+    _init_repo(frontend_repo, "https://github.com/cortega26/noticiencias.git")
+    _write_post(
+        frontend_repo / "src/content/posts",
+        "2026-03-27-local.md",
+        'title: "Local"\nrefinery_id: "27"',
+    )
+
+    temp_target_dir = tmp_path / "temp-target"
+
+    def fake_refresh(*, target_repo_url: str, target_dir: Path, github_token: str = ""):
+        _init_repo(target_dir, target_repo_url)
+        _write_post(
+            target_dir / "src/content/posts",
+            "2026-03-27-remote.md",
+            'title: "Remote"\nrefinery_id: "99"',
+        )
+        return target_dir, "Clon temporal actualizado desde origin"
+
+    monkeypatch.setattr(
+        published_content, "refresh_published_target_clone", fake_refresh
+    )
+
+    snapshot = published_content.resolve_published_content_snapshot(
+        target_repo_url="https://github.com/cortega26/noticiencias.git",
+        collector_repo_root=collector_repo_root,
+        temp_target_dir=temp_target_dir,
+        refresh_clone=True,
+        prefer_remote_checkout=True,
+        extra_candidates=[frontend_repo],
+    )
+
+    assert snapshot.source_label == "Clon temporal actualizado desde origin"
+    assert snapshot.repo_root == temp_target_dir.resolve()
+    assert [article.file_name for article in snapshot.articles] == [
+        "2026-03-27-remote.md"
+    ]
+
+
 def test_delete_article_supports_legacy_string_refinery_id(
     tmp_path: Path, monkeypatch
 ):
@@ -226,6 +271,7 @@ def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
     allowlist_path = (
         prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
     )
+    manifest_path = prepared_repo / "src/content/posts" / "refinery_manifest.json"
     allowlist_path.parent.mkdir(parents=True, exist_ok=True)
     allowlist_path.write_text(
         '{\n'
@@ -233,6 +279,10 @@ def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
         '    "src/content/posts/2026-04-02-placeholder.md": "Legacy placeholder."\n'
         "  }\n"
         '}\n',
+        encoding="utf-8",
+    )
+    manifest_path.write_text(
+        '{\n  "123": "2026-04-02-placeholder.md"\n}\n',
         encoding="utf-8",
     )
 
@@ -283,7 +333,94 @@ def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
             encoding="utf-8"
         )
     )
+    runtime_manifest = json.loads(
+        (target_clone / "src/content/posts/refinery_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
     assert synced_allowlist["allowedPlaceholders"] == {
         "src/content/posts/2026-04-02-placeholder.md": "Legacy placeholder."
     }
     assert runtime_allowlist["allowedPlaceholders"] == {}
+    assert runtime_manifest == {}
+
+
+def test_delete_article_supports_filename_target_without_refinery_id(
+    tmp_path: Path, monkeypatch
+):
+    prepared_repo = tmp_path / "prepared-target"
+    _init_repo(prepared_repo, "https://github.com/cortega26/noticiencias.git")
+    post_file = _write_post(
+        prepared_repo / "src/content/posts",
+        "2026-02-12-bienvenidos.md",
+        (
+            'title: "Bienvenidos"\n'
+            'categories: ["Editorial"]\n'
+            'image: "~/assets/images/default.png"\n'
+            'image_alt: "Bienvenidos"\n'
+        ),
+    )
+    allowlist_path = (
+        prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
+    )
+    allowlist_path.parent.mkdir(parents=True, exist_ok=True)
+    allowlist_path.write_text(
+        '{\n'
+        '  "allowedPlaceholders": {\n'
+        '    "src/content/posts/2026-02-12-bienvenidos.md": "Legacy onboarding page."\n'
+        "  }\n"
+        '}\n',
+        encoding="utf-8",
+    )
+
+    target_clone = tmp_path / "runtime-target"
+
+    class FakeGitHubPublisher:
+        def __init__(self, _token: str):
+            return None
+
+        def clone_repo(self, _repo_url: str, target_dir: Path):
+            shutil.copytree(prepared_repo, target_dir)
+            return git.Repo(target_dir)
+
+        def create_branch(self, _repo, branch_prefix: str = "delete/article", **_kwargs):
+            return f"{branch_prefix}-welcome"
+
+        def commit_and_push(self, _repo, _message: str, _branch_name: str):
+            return None
+
+        def create_pull_request(
+            self,
+            *,
+            repo_url: str,
+            branch_name: str,
+            title: str,
+            body: str,
+        ) -> str:
+            assert repo_url == "https://github.com/cortega26/noticiencias.git"
+            assert branch_name == "delete/article-welcome"
+            assert "Refinery ID: n/a (filename-backed delete)" in body
+            assert "Route Smoke Check: /editorial/2026-02-12-bienvenidos/" in body
+            return "https://github.com/cortega26/noticiencias/pull/3"
+
+    config = SimpleNamespace(
+        github=SimpleNamespace(
+            token="",
+            target_repo_url="https://github.com/cortega26/noticiencias.git",
+        )
+    )
+
+    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
+    monkeypatch.setattr(refinery_main, "GitHubPublisher", FakeGitHubPublisher)
+    monkeypatch.setattr(refinery_main, "TARGET_DIR", target_clone)
+
+    result = refinery_main.delete_article({"file_name": post_file.name})
+
+    assert result["status"] == "success"
+    assert result["file_name"] == post_file.name
+    deleted_routes = json.loads(
+        (target_clone / "data/deleted-route-smoke-checks.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert deleted_routes["routes"][0]["path"] == "/editorial/2026-02-12-bienvenidos/"
