@@ -12,6 +12,9 @@ import git
 import requests
 import yaml
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.contracts.frontend_publication import (
+    FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
+)
 
 POSTS_SUBPATH = Path("src/content/posts")
 HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
@@ -49,6 +52,19 @@ class DeployHealthStatus:
     latest_successful_sha: str | None
     latest_successful_url: str | None
     is_live_stale: bool
+
+
+@dataclass(frozen=True)
+class FrontendPrCheckStatus:
+    pr_url: str
+    pr_number: int
+    head_sha: str | None
+    branch: str | None
+    state: str | None
+    mergeable_state: str | None
+    required_workflows: tuple[str, ...]
+    workflow_conclusions: dict[str, str | None]
+    is_publish_ready: bool
 
 
 def normalize_repo_url(repo_url: str) -> str:
@@ -559,6 +575,116 @@ def _parse_repo_owner_and_name(target_repo_url: str) -> tuple[str, str] | None:
     if not owner or not repo_name:
         return None
     return owner, repo_name
+
+
+def _parse_github_pr_number(pr_url: str, target_repo_url: str) -> int | None:
+    parsed = urlparse(str(pr_url or "").strip())
+    repo_identity = _parse_repo_owner_and_name(target_repo_url)
+    if repo_identity is None:
+        return None
+
+    owner, repo_name = repo_identity
+    path_parts = [part for part in parsed.path.split("/") if part]
+    if (
+        parsed.hostname != "github.com"
+        or len(path_parts) < 4
+        or path_parts[0].lower() != owner.lower()
+        or path_parts[1].lower() != repo_name.lower()
+        or path_parts[2] != "pull"
+    ):
+        return None
+
+    try:
+        return int(path_parts[3])
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_frontend_pr_check_health(
+    *,
+    target_repo_url: str,
+    pr_url: str,
+    github_token: str = "",
+    required_workflows: Iterable[str] = FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
+) -> FrontendPrCheckStatus | None:
+    repo_identity = _parse_repo_owner_and_name(target_repo_url)
+    if repo_identity is None:
+        return None
+
+    pr_number = _parse_github_pr_number(pr_url, target_repo_url)
+    if pr_number is None:
+        return None
+
+    owner, repo_name = repo_identity
+    required = tuple(str(name).strip() for name in required_workflows if str(name).strip())
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    pr_response = requests.get(  # noqa: S113
+        f"https://api.github.com/repos/{owner}/{repo_name}/pulls/{pr_number}",
+        headers=headers,
+        timeout=10,
+    )
+    pr_response.raise_for_status()
+    pr_payload = pr_response.json()
+    head_payload = pr_payload.get("head") if isinstance(pr_payload, dict) else {}
+    head_sha = str((head_payload or {}).get("sha") or "") or None
+    branch = str((head_payload or {}).get("ref") or "") or None
+
+    workflow_runs: list[dict[str, Any]] = []
+    if head_sha:
+        runs_response = requests.get(  # noqa: S113
+            f"https://api.github.com/repos/{owner}/{repo_name}/actions/runs",
+            params={"head_sha": head_sha, "per_page": 50},
+            headers=headers,
+            timeout=10,
+        )
+        runs_response.raise_for_status()
+        raw_runs = runs_response.json().get("workflow_runs", [])
+        if isinstance(raw_runs, list):
+            workflow_runs = [run for run in raw_runs if isinstance(run, dict)]
+
+    latest_run_by_name: dict[str, dict[str, Any]] = {}
+    for run in workflow_runs:
+        run_name = str(run.get("name") or "").strip()
+        if not run_name or run_name in latest_run_by_name:
+            continue
+        latest_run_by_name[run_name] = run
+
+    workflow_conclusions: dict[str, str | None] = {}
+    for workflow_name in required:
+        run = latest_run_by_name.get(workflow_name)
+        if run is None:
+            workflow_conclusions[workflow_name] = None
+            continue
+
+        status = str(run.get("status") or "").strip()
+        conclusion = str(run.get("conclusion") or "").strip() or None
+        workflow_conclusions[workflow_name] = (
+            conclusion if status == "completed" else "pending"
+        )
+
+    is_publish_ready = bool(
+        str(pr_payload.get("state") or "").strip() == "open"
+        and required
+        and all(workflow_conclusions.get(name) == "success" for name in required)
+    )
+
+    return FrontendPrCheckStatus(
+        pr_url=pr_url,
+        pr_number=pr_number,
+        head_sha=head_sha,
+        branch=branch,
+        state=str(pr_payload.get("state") or "").strip() or None,
+        mergeable_state=str(pr_payload.get("mergeable_state") or "").strip() or None,
+        required_workflows=required,
+        workflow_conclusions=workflow_conclusions,
+        is_publish_ready=is_publish_ready,
+    )
 
 
 def fetch_pages_deploy_health(

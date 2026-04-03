@@ -24,6 +24,19 @@ def _write_post(posts_dir: Path, name: str, frontmatter: str, body: str = "Body"
     return file_path
 
 
+class _FakeResponse:
+    def __init__(self, payload, status_code: int = 200):
+        self._payload = payload
+        self.status_code = status_code
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
 def test_read_published_article_supports_numeric_and_string_refinery_ids(tmp_path: Path):
     numeric_post = _write_post(
         tmp_path,
@@ -97,6 +110,93 @@ def test_resolve_published_content_snapshot_prefers_verified_local_checkout(
     assert snapshot.source_label == "Checkout local verificado del frontend"
     assert snapshot.repo_root == frontend_repo.resolve()
     assert len(snapshot.articles) == 2
+
+
+def test_fetch_frontend_pr_check_health_requires_green_frontend_workflows(
+    monkeypatch,
+):
+    responses = [
+        _FakeResponse(
+            {
+                "state": "open",
+                "mergeable_state": "clean",
+                "head": {"sha": "abc123", "ref": "content/update-laser"},
+            }
+        ),
+        _FakeResponse(
+            {
+                "workflow_runs": [
+                    {"name": "Content Guard", "status": "completed", "conclusion": "success"},
+                    {
+                        "name": "Deploy to GitHub Pages",
+                        "status": "completed",
+                        "conclusion": "success",
+                    },
+                ]
+            }
+        ),
+    ]
+
+    def fake_get(*_args, **_kwargs):
+        return responses.pop(0)
+
+    monkeypatch.setattr(published_content.requests, "get", fake_get)
+
+    status = published_content.fetch_frontend_pr_check_health(
+        target_repo_url="https://github.com/cortega26/noticiencias.git",
+        pr_url="https://github.com/cortega26/noticiencias/pull/96",
+        github_token="token",
+    )
+
+    assert status is not None
+    assert status.pr_number == 96
+    assert status.head_sha == "abc123"
+    assert status.workflow_conclusions == {
+        "Content Guard": "success",
+        "Deploy to GitHub Pages": "success",
+    }
+    assert status.is_publish_ready is True
+
+
+def test_fetch_frontend_pr_check_health_stays_pending_until_all_required_workflows_finish(
+    monkeypatch,
+):
+    responses = [
+        _FakeResponse(
+            {
+                "state": "open",
+                "mergeable_state": "clean",
+                "head": {"sha": "abc123", "ref": "content/update-laser"},
+            }
+        ),
+        _FakeResponse(
+            {
+                "workflow_runs": [
+                    {"name": "Content Guard", "status": "completed", "conclusion": "success"},
+                    {
+                        "name": "Deploy to GitHub Pages",
+                        "status": "in_progress",
+                        "conclusion": None,
+                    },
+                ]
+            }
+        ),
+    ]
+
+    def fake_get(*_args, **_kwargs):
+        return responses.pop(0)
+
+    monkeypatch.setattr(published_content.requests, "get", fake_get)
+
+    status = published_content.fetch_frontend_pr_check_health(
+        target_repo_url="https://github.com/cortega26/noticiencias.git",
+        pr_url="https://github.com/cortega26/noticiencias/pull/96",
+    )
+
+    assert status is not None
+    assert status.workflow_conclusions["Content Guard"] == "success"
+    assert status.workflow_conclusions["Deploy to GitHub Pages"] == "pending"
+    assert status.is_publish_ready is False
 
 
 def test_resolve_published_content_snapshot_refreshes_clone_when_no_local_checkout(

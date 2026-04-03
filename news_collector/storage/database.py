@@ -51,6 +51,9 @@ from news_collector.config.settings import (
     DEDUP_CONFIG,
 )
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
+from news_collector.contracts.frontend_publication import (
+    FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
+)
 from news_collector.utils.logger import get_logger
 
 from ..storage.analytics import (
@@ -441,6 +444,13 @@ class DatabaseManager:
                 {
                     "state": "PR_CREATED",
                     "pr_url": pr_url,
+                    "frontend_checks": {
+                        "state": "pending",
+                        "ready_for_merge": False,
+                        "required_workflows": list(
+                            FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS
+                        ),
+                    },
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             )

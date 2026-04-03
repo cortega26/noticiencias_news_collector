@@ -74,6 +74,18 @@ class TestMarkArticlePublished:
             meta = dict(updated.article_metadata or {})
             assert meta.get("publication", {}).get("state") == "PR_CREATED"
             assert meta.get("publication", {}).get("pr_url") == pr_url
+            assert (
+                meta.get("publication", {})
+                .get("frontend_checks", {})
+                .get("state")
+                == "pending"
+            )
+            assert (
+                meta.get("publication", {})
+                .get("frontend_checks", {})
+                .get("ready_for_merge")
+                is False
+            )
 
     def test_mark_published_nonexistent_article(self, db_manager):
         result = db_manager.mark_article_published(99999, "https://pr.url")

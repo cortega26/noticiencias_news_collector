@@ -229,6 +229,8 @@ class RefineryEngine:
                 )
                 return False
 
+        article = self._normalize_article_payload(article)
+
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
         _numeric_id: int | None = None
         with contextlib.suppress(ValueError, TypeError):
@@ -388,7 +390,9 @@ class RefineryEngine:
             return False
 
         if article.get("image_url") and not article.get("image_alt"):
-            article["image_alt"] = f"Imagen editorial de {article.get('title', article_id)}"
+            article["image_alt"] = (
+                f"Imagen editorial de {article.get('title', article_id)}"
+            )
 
         # Apply Policy to Editor
         self.editor.critic_threshold = self.policy.critic_threshold
@@ -559,7 +563,10 @@ class RefineryEngine:
             f"Automated submission for {article_id}.\n\n"
             f"Source ID: {source_id}\n"
             f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery."
+            "Processed by Noticiencias Refinery.\n\n"
+            "Required frontend gates before merge/publication:\n"
+            "- Content Guard\n"
+            "- Deploy to GitHub Pages"
         )
 
         pr_url = self.git.create_pull_request(
@@ -759,7 +766,10 @@ class RefineryEngine:
             f"Automated submission for {article_id}.\n\n"
             f"Source ID: {source_id}\n"
             f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery (recovered from publishing state)."
+            "Processed by Noticiencias Refinery (recovered from publishing state).\n\n"
+            "Required frontend gates before merge/publication:\n"
+            "- Content Guard\n"
+            "- Deploy to GitHub Pages"
         )
 
         slug = publishing_branch.replace("content/update-", "", 1)
@@ -1048,6 +1058,7 @@ class RefineryEngine:
         Returns the Astro-compatible local path (e.g. "~/assets/images/slug.jpg")
         or None if download fails.
         """
+        url = str(url).strip()
         if not url or not url.startswith("http"):
             return None
 
@@ -1105,6 +1116,28 @@ class RefineryEngine:
         except Exception as e:
             logger.error(f"Failed to download image {url}: {e}")
             return None
+
+    def _normalize_article_payload(self, article: Any) -> Dict[str, Any]:
+        """Convert contract objects and URL-like values into plain Python primitives."""
+        if hasattr(article, "model_dump"):
+            article = article.model_dump(mode="python")
+        if not isinstance(article, dict):
+            raise TypeError("Article payload must normalize to a dictionary")
+
+        def normalize(value: Any) -> Any:
+            if hasattr(value, "model_dump"):
+                return normalize(value.model_dump(mode="python"))
+            if isinstance(value, dict):
+                return {str(key): normalize(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [normalize(item) for item in value]
+            if isinstance(value, tuple):
+                return [normalize(item) for item in value]
+            if value is None or isinstance(value, (bool, int, float, str)):
+                return value
+            return str(value)
+
+        return normalize(article)
 
     def _enforce_editorial_policy(
         self, article_id: str, cached_score: dict | None
