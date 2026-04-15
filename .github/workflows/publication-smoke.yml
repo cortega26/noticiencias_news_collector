@@ -1,0 +1,87 @@
+name: Publication Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - "news_collector/contracts/frontend_schema.py"
+      - "news_collector/logic/workflows/**"
+      - "news_collector/components/publishing/**"
+      - "scripts/generate_fixture_post.py"
+  workflow_dispatch:
+
+concurrency:
+  group: publication-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  publication-smoke:
+    name: Validate generated post against front-end schema
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout back-end
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Restore back-end venv cache
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+
+      - name: Bootstrap back-end (idempotent)
+        run: make bootstrap
+
+      - name: Checkout front-end (sparse)
+        # Only fetch the files needed to run validate:content.
+        # No Node modules are installed at this point.
+        uses: actions/checkout@v4
+        with:
+          repository: cortega26/noticiencias
+          path: ../noticiencias
+          sparse-checkout: |
+            src/
+            public/
+            data/
+            scripts/
+            package.json
+            package-lock.json
+            astro.config.mjs
+            tailwind.config.mjs
+            tsconfig.json
+            .nvmrc
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ../noticiencias/package-lock.json
+
+      - name: Install front-end deps
+        working-directory: ../noticiencias
+        run: npm ci
+
+      - name: Generate fixture post
+        run: |
+          python scripts/generate_fixture_post.py \
+            --output ../noticiencias/src/content/posts/_smoke-test.md
+
+      - name: Validate fixture post against front-end schema
+        working-directory: ../noticiencias
+        run: npm run validate:content
+
+      - name: Clean up fixture post
+        # Always remove the fixture so a failure mid-step doesn't leave it committed
+        if: always()
+        working-directory: ../noticiencias
+        run: rm -f src/content/posts/_smoke-test.md
