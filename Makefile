@@ -61,26 +61,26 @@ AUDIT_ISSUES_FLAGS ?=
 
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Creating virtual environment in $(VENV)"
-	@test -d $(VENV) || $(PYTHON) -m venv --copies $(VENV)
+	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 	@$(PYTHON_BIN) -m ensurepip --upgrade 2>/dev/null || true
 	@$(PYTHON_BIN) -m pip install --upgrade pip
-	@$(PIP) install --no-deps --require-hashes -r requirements.lock
-	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
-	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
+	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements.lock
+	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements-security.lock
+	@$(PYTHON_BIN) -m pip install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
 	@touch $(BOOTSTRAP_STAMP)
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@echo "[bootstrap-refinery] Creating isolated environment in $(VENV_REFINERY)"
-	@test -d $(VENV_REFINERY) || $(PYTHON) -m venv --copies $(VENV_REFINERY)
+	@test -d $(VENV_REFINERY) || $(PYTHON) -m venv $(VENV_REFINERY)
 	@$(PYTHON_REFINERY) -m ensurepip --upgrade 2>/dev/null || true
 	@$(PYTHON_REFINERY) -m pip install --upgrade pip
-	@$(PIP_REFINERY) install --no-deps --require-hashes -r requirements-refinery.lock
+	@$(PYTHON_REFINERY) -m pip install --no-deps --require-hashes -r requirements-refinery.lock
 	@# Install app in editable mode, assuming refinery deps cover runtime needs
-	@$(PIP_REFINERY) install -e . --no-deps
+	@$(PYTHON_REFINERY) -m pip install -e . --no-deps
 	@touch $(BOOTSTRAP_REFINERY_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
-	@$(PYTHON_BIN) -c "import pytest_timeout" >/dev/null 2>&1 || $(PIP) install "pytest-timeout>=2.3.0"
+	@$(PYTHON_BIN) -c "import pytest_timeout" >/dev/null 2>&1 || $(PYTHON_BIN) -m pip install "pytest-timeout>=2.3.0"
 	@echo "Environment ready at $(VENV)"
 
 run-local: bootstrap ## Run the collector locally
