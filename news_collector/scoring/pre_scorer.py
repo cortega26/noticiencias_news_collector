@@ -8,6 +8,9 @@ from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
 
+# IMPORTANT: Do not use %d or %s for string interpolation in logging calls here.
+# This project uses Loguru, which requires `{}` formatting (e.g. logger.info("... {}", var)).
+# Using %s or %d will result in literal '%d' printing in the logs and cause regressions.
 
 class PreScorer:
     """
@@ -48,7 +51,7 @@ class PreScorer:
 
         if len(candidates) <= limit:
             logger.info(
-                "PreScorer: Solicitados %d, disponibles %d. Retornando todos.",
+                "PreScorer: Solicitados {}, disponibles {}. Retornando todos.",
                 limit,
                 len(candidates),
             )
@@ -58,13 +61,13 @@ class PreScorer:
         limiter = LLMRateLimiter.get_instance()
         if limiter.circuit_breaker.is_open:
             logger.warning(
-                "PreScorer: Circuit breaker OPEN — falling back to FIFO for %d candidates.",
+                "PreScorer: Circuit breaker OPEN — falling back to FIFO for {} candidates.",
                 len(candidates),
             )
             return candidates[:limit]
 
         logger.info(
-            "PreScorer: Analizando %d candidatos para seleccionar Top %d...",
+            "PreScorer: Analizando {} candidatos para seleccionar Top {}...",
             len(candidates),
             limit,
         )
@@ -111,7 +114,7 @@ class PreScorer:
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
                 logger.warning(
-                    "PreScorer: LLM retornó %d válidos. Rellenando con FIFO.",
+                    "PreScorer: LLM retornó {} válidos. Rellenando con FIFO.",
                     len(valid_indices),
                 )
                 for i in range(len(candidates)):
@@ -126,23 +129,23 @@ class PreScorer:
             # Construir resultado
             selected_candidates = [candidates[i] for i in valid_indices]
 
-            logger.info("PreScorer: Selección completada. Indices: %s", valid_indices)
+            logger.info("PreScorer: Selección completada. Indices: {}", valid_indices)
             return selected_candidates
 
         except Exception as e:
             err_str = str(e)
             if "not configured" in err_str or "unavailable" in err_str.lower():
                 logger.warning(
-                    "PreScorer: LLM not available. Falling back to FIFO. (%s)",
+                    "PreScorer: LLM not available. Falling back to FIFO. ({})",
                     err_str,
                 )
             elif (
                 "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower()
             ):
                 logger.warning(
-                    "PreScorer: Rate limited — falling back to FIFO. (%s)",
+                    "PreScorer: Rate limited — falling back to FIFO. ({})",
                     err_str,
                 )
             else:
-                logger.error("Error en PreScorer: %s. Fallback a FIFO.", e)
+                logger.error("Error en PreScorer: {}. Fallback a FIFO.", e)
             return candidates[:limit]
