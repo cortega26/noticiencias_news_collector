@@ -62,7 +62,7 @@ AUDIT_ISSUES_FLAGS ?=
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Creating virtual environment in $(VENV)"
 	@test -d $(VENV) || $(PYTHON) -m venv --copies $(VENV)
-	@$(PIP) install --upgrade pip
+	@$(PYTHON_BIN) -m pip install --upgrade pip
 	@$(PIP) install --no-deps --require-hashes -r requirements.lock
 	@$(PIP) install --no-deps --require-hashes -r requirements-security.lock
 	@$(PIP) install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
@@ -71,7 +71,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@echo "[bootstrap-refinery] Creating isolated environment in $(VENV_REFINERY)"
 	@test -d $(VENV_REFINERY) || $(PYTHON) -m venv --copies $(VENV_REFINERY)
-	@$(PIP_REFINERY) install --upgrade pip
+	@$(PYTHON_REFINERY) -m pip install --upgrade pip
 	@$(PIP_REFINERY) install --no-deps --require-hashes -r requirements-refinery.lock
 	@# Install app in editable mode, assuming refinery deps cover runtime needs
 	@$(PIP_REFINERY) install -e . --no-deps
