@@ -68,6 +68,8 @@ If either changes, treat it as a cross-repo contract change.
 - [`docs/AGENTS.md`](docs/AGENTS.md): binding review and change law for this repo.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): actual package responsibilities and dependency direction.
 - [`docs/PIPELINE_CONTRACTS.md`](docs/PIPELINE_CONTRACTS.md): contract-bearing flows and current failure semantics.
+- [`docs/PRODUCT_FLOW.md`](docs/PRODUCT_FLOW.md): end-to-end product flow from RSS article to live published page.
+- [`docs/RUNBOOK_LOCAL_DEV.md`](docs/RUNBOOK_LOCAL_DEV.md): first-time setup and daily development runbook for the full system.
 - [`docs/ci.md`](docs/ci.md): workflow and gate reference.
 - [`docs/runbook.md`](docs/runbook.md): current operational alert runbook.
 - [`docs/audits/2026-04-source-of-truth-audit.md`](docs/audits/2026-04-source-of-truth-audit.md): documentation audit for this pass.
