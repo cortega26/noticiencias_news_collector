@@ -113,3 +113,7 @@ The following are useful but not architectural authority:
 - most report files under `docs/audits/**`
 - archived refactor notes and one-off remediation plans
 - `docs/ops/RUNBOOK.md`, which is now a legacy compatibility path pointing to the current runbooks
+- `archive/historical-reports/` — one-off investigation reports, benchmark outputs, and ad-hoc
+  analysis scripts that were generated during specific investigations. These are read-only
+  historical records; they do not govern current system behavior and must not be relied upon
+  as documentation of active design decisions.
