@@ -102,6 +102,17 @@ jobs:
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
       - name: Bootstrap (idempotent)
         run: make bootstrap
+      # Sparse-checkout of the front-end repo so that test_contracts_sync.py
+      # can validate cross-repo schema field parity (see docs/PIPELINE_CONTRACTS.md).
+      # Only the Astro content config is fetched; no Node toolchain is installed.
+      - name: Checkout front-end schema (sparse)
+        uses: actions/checkout@v4
+        with:
+          repository: cortega26/noticiencias
+          path: ../noticiencias
+          sparse-checkout: |
+            src/content/config.ts
+          sparse-checkout-cone-mode: false
       - name: Run tests
         run: |
           set -euo pipefail

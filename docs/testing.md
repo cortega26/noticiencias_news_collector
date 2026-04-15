@@ -33,4 +33,8 @@ pytest -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc t
 
 ## CI Integration
 
-The `system-contract-and-coverage` job in GitHub Actions runs this gate automatically on PRs affecting system files.
+The `system-contract-and-coverage` job in `.github/workflows/system-verification.yml`
+runs this gate automatically on PRs and pushes to `main` that affect system files
+(`news_collector/system/**`, `tests/unit/system/**`, `tools/ci/**`).  It is intentionally
+separate from the main `ci.yml` workflow to keep system verification scoped to changes
+that affect the system layer.  See [`docs/ci.md`](ci.md) for the full workflow reference.

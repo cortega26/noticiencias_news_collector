@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies using hash-pinned lockfiles (see ADR-0002)
+COPY requirements.lock requirements-security.lock ./
+RUN pip install --no-cache-dir --require-hashes -r requirements.lock \
+ && pip install --no-cache-dir --require-hashes -r requirements-security.lock
 
 # Install Playwright browsers (global location)
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -28,5 +29,5 @@ ENV RUN_ENVIRONMENT=production
 ENV ENABLE_HEADLESS=true
 ENV COLLECTION_INTERVAL_SECONDS=600
 
-# Entrypoint
-CMD ["python3", "scripts/run_collector_continuous.py"]
+# Entrypoint — preferred CLI entrypoint (see README.md "Preferred Entry Points")
+CMD ["python", "scripts/run_collector.py"]
