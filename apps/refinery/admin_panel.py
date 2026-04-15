@@ -548,6 +548,7 @@ with tab1:
             "gemini-2.0-flash",
             "gemini-1.5-pro",
             "gemini-1.5-flash",
+            "gemma-4-31b-it",
         ]
 
         model_options = (
