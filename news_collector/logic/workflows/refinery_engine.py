@@ -42,6 +42,10 @@ from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
+from news_collector.logic.workflows.image_handler import ArticleImageHandler
+from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
+from news_collector.logic.workflows.publication_identity import PublicationIdentityResolver
+from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 from news_collector.utils.logger import get_logger
 
 if "TYPE_CHECKING":
@@ -158,6 +162,15 @@ class RefineryEngine:
         self._manifest_loaded = False
         self._last_blocked_error: Dict[str, str] | None = None
 
+        self._writer = TargetRepoWriter()
+        self.identity_resolver = PublicationIdentityResolver(
+            db=self.db, manifest=self._writer
+        )
+        self._image_handler = ArticleImageHandler(image_briefs=self.image_briefs)
+        self._pr_orchestrator = PROrchestrator(
+            git=self.git, db=self.db, config=self.config
+        )
+
     def process_articles(
         self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
     ) -> Dict[str, Any]:
@@ -237,157 +250,46 @@ class RefineryEngine:
             _numeric_id = int(article_id)
 
         if _numeric_id is not None:
-            recovery_result = self._attempt_publishing_recovery(
-                _numeric_id, article_id, article
+            recovery_result = self._pr_orchestrator.attempt_recovery(
+                numeric_id=_numeric_id,
+                article_id=article_id,
+                article=article,
+                git_handler=self.git,
             )
-            if recovery_result is True:
+            if recovery_result is not None:
                 return True
             # recovery_result is None → no recovery needed, continue normal flow
 
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
 
-        # Priority 1: Check DB for immutable identity
-        db_canonical_slug = (
-            self.db.get_canonical_slug(article_id)
-            if hasattr(self.db, "get_canonical_slug")
-            else None
-        )
-
-        canonical_date = None
-        output_filename = None
-        final_slug = None
-
-        if db_canonical_slug:
-            logger.info(
-                f"🔒 Identity: Locked to DB canonical slug: {db_canonical_slug}"
-            )
-            # The slug in DB includes the date prefix e.g. "2024-01-25-my-article"
-            final_slug = db_canonical_slug
-            output_filename = f"{db_canonical_slug}.md"
-
-            # Extract date from valid slug
-            match = re.match(r"^(\d{4}-\d{2}-\d{2})-", db_canonical_slug)
-            if match:
-                canonical_date = match.group(1)
-            else:
-                # Should not happen if data integrity is kept, but safe fallback
-                canonical_date = datetime.now().strftime("%Y-%m-%d")
-
-        else:
-            # Priority 2: Check File System (Legacy Recovery)
-            existing_file = self._find_existing_file(posts_dir, article_id)
-            if existing_file:
-                logger.info(f"♻️ Idempotency: Found existing file {existing_file.name}")
-                output_filename = existing_file.name
-                final_slug = output_filename.replace(".md", "")
-                # Extract date
-                match = re.match(r"^(\d{4}-\d{2}-\d{2})-", output_filename)
-                if match:
-                    canonical_date = match.group(1)
-
-                # SELF-HEALING: Backfill DB
-                if hasattr(self.db, "set_canonical_slug") and final_slug:
-                    self.db.set_canonical_slug(article_id, final_slug)
-                    logger.info(f"💾 Backfilled canonical slug to DB: {final_slug}")
-
-            else:
-                # Priority 3: Creation Mode (Strict Determinism)
-                # MUST use source date, not system time, if available.
-                src_date = article.get("published_date")
-
-                if src_date:
-                    if hasattr(src_date, "strftime"):
-                        canonical_date = src_date.strftime("%Y-%m-%d")
-                    else:
-                        s_date = str(src_date).strip()
-                        # Try ISO format
-                        match = re.match(r"^\d{4}-\d{2}-\d{2}", s_date)
-                        if match:
-                            canonical_date = match.group(0)
-
-                # If still no date, use collected_date or NOW as absolute last resort
-                if not canonical_date:
-                    collected = article.get("collected_date")
-                    if collected and hasattr(collected, "strftime"):
-                        canonical_date = collected.strftime("%Y-%m-%d")
-                    else:
-                        canonical_date = datetime.now().strftime("%Y-%m-%d")
+        identity = self.identity_resolver.resolve(article_id, article, posts_dir)
+        canonical_date = identity.canonical_date
+        # For locked identities (P1/P2) output_filename and final_slug are already set.
+        # For creation mode (P3) they remain as provisional values until after AI editing.
+        final_slug = identity.final_slug if not identity.is_new else None
+        output_filename = identity.output_filename if not identity.is_new else None
+        # preferred_slug is used for image-asset naming; only relevant when identity is stable.
+        _image_preferred_slug = identity.final_slug if not identity.is_new else None
 
         # 2. AI Processing
         # We pass canonical_date to ensure the frontmatter matches our filename expectation
         logger.info(f"Processing with intended date: {canonical_date}")
 
         # --- IMAGE HANDLING ---
-        # 2a. Download Remote Image (if present)
-        # We need a slug for the image filename.
-        # If we have a DB slug, use that. If not, construct a tentative one.
-        # Note: If we don't have a DB slug yet, the filename might change slightly later
-        # (e.g. if we add a random suffix for uniqueness), but using a base slug here is fine.
-
-        image_slug = self._derive_image_slug(
+        img_resolution = self._image_handler.resolve(
             article=article,
             article_id=article_id,
             canonical_date=canonical_date,
-            preferred_slug=db_canonical_slug,
-        )
-
-        raw_image_url = article.get("image_url")
-        if not raw_image_url:
-            article_metadata = article.get("article_metadata")
-            if isinstance(article_metadata, dict):
-                raw_image_url = article_metadata.get("image_url")
-        if isinstance(raw_image_url, str):
-            raw_image_url = raw_image_url.strip()
-
-        existing_brief = self.image_briefs.find_for_article(article_id, [image_slug])
-        resolved_brief_image = self._resolve_brief_image(
-            brief=existing_brief,
+            preferred_slug=_image_preferred_slug,
             target_dir=target_dir,
+            download_fn=self._download_image,
         )
-        if resolved_brief_image:
-            article["image_url"] = resolved_brief_image
-            article["image_alt"] = existing_brief.draft_alt_text
-            logger.info(
-                "Using staged editorial image for article %s from brief %s",
-                article_id,
-                existing_brief.slug if existing_brief else "unknown",
-            )
-        elif raw_image_url and raw_image_url.startswith("http"):
-            local_image_ref = self._download_image(
-                raw_image_url, image_slug, target_dir
-            )
-            if local_image_ref:
-                logger.info(f"Updated article image to local asset: {local_image_ref}")
-                article["image_url"] = local_image_ref
-            else:
-                logger.warning(
-                    "Failed to download image from %s. Routing article %s to editorial image queue.",
-                    raw_image_url,
-                    article_id,
-                )
-                self._queue_image_brief(
-                    article=article,
-                    article_id=article_id,
-                    slug=image_slug,
-                    reason="image_download_failed",
-                    existing_brief=existing_brief,
-                )
-                return False
-        elif not raw_image_url or raw_image_url == "~/assets/images/default.png":
-            reason = (
-                "placeholder_image_debt"
-                if raw_image_url == "~/assets/images/default.png"
-                else "missing_source_image"
-            )
-            self._queue_image_brief(
-                article=article,
-                article_id=article_id,
-                slug=image_slug,
-                reason=reason,
-                existing_brief=existing_brief,
-            )
+        if not img_resolution.resolved:
             return False
+        article["image_url"] = img_resolution.image_url
+        if img_resolution.image_alt:
+            article["image_alt"] = img_resolution.image_alt
 
         if article.get("image_url") and not article.get("image_alt"):
             article["image_alt"] = (
@@ -426,25 +328,15 @@ class RefineryEngine:
             logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
 
         # 3. Determine Output Filename (if not yet locked)
-        if not output_filename:
-            slug_part = self._extract_slug(refined_content, article_id)
-            # FORCE VALIDATION: Ensure slug doesn't accidentally contain a date prefix again
-            # if the AI decided to include it.
-
-            # Construct the immutable slug
-            final_slug = f"{canonical_date}-{slug_part}"
-            output_filename = f"{final_slug}.md"
-
-            # --- NC-BE-015: Collision Check ---
-            # If target exists but priority 2 (_find_existing_file) didn't catch it,
-            # it belongs to a different article. Append deterministic counter to prevent overwrite.
-            target_file_path = posts_dir / output_filename
-            iteration = 1
-            while target_file_path.exists():
-                final_slug = f"{canonical_date}-{slug_part}-{iteration}"
-                output_filename = f"{final_slug}.md"
-                target_file_path = posts_dir / output_filename
-                iteration += 1
+        if identity.is_new:
+            # Creation mode: derive slug from AI-translated content and apply collision check.
+            # Pass self._extract_slug so that test-level monkeypatches are respected.
+            identity = self.identity_resolver.finalize_slug(
+                identity, refined_content, article_id, posts_dir,
+                extract_slug_fn=self._extract_slug,
+            )
+        final_slug = identity.final_slug
+        output_filename = identity.output_filename
 
         # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
         # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
@@ -466,17 +358,9 @@ class RefineryEngine:
             return False
 
         # Persist canonical slug AFTER policy approval (B-02 / F-0018)
-        if hasattr(self.db, "set_canonical_slug") and final_slug:
-            try:
-                persisted = self.db.set_canonical_slug(article_id, final_slug)
-                if persisted:
-                    logger.info(f"🔒 Identity Created: {final_slug}")
-                else:
-                    logger.info(
-                        f"🔒 Canonical slug already exists for article {article_id}: {final_slug}"
-                    )
-            except Exception as e:
-                logger.error(f"Failed to persist canonical slug: {e}")
+        # Only needed for new articles; P1/P2 identities already have DB entries.
+        if identity.is_new and final_slug:
+            self.identity_resolver.register_slug(article_id, final_slug)
 
         # 4. Create Branch
         # Create/sync the branch before writing files so branch collisions or
@@ -503,30 +387,17 @@ class RefineryEngine:
         )
 
         # 5. Save File
-        posts_dir.mkdir(parents=True, exist_ok=True)
-        target_file_path = posts_dir / output_filename
-
-        resolved_target = target_file_path.resolve()
-        resolved_posts = posts_dir.resolve()
-
-        # --- NC-BE-015 S0 GUARD: Path Traversal Check ---
         try:
-            resolved_target.relative_to(resolved_posts)
-        except ValueError:
-            logger.error(
-                f"🚨 S0 GUARD: Path traversal detected. {resolved_target} is outside {resolved_posts}"
+            self._writer.write_article(
+                posts_dir=posts_dir,
+                output_filename=output_filename,
+                content=refined_content,
+                article_id=article_id,
+                target_dir=target_dir,
             )
+        except ValueError as e:
+            logger.error("🚨 S0 GUARD: %s", e)
             return False
-
-        target_file_path.write_text(refined_content, encoding="utf-8")
-        logger.info(f"Written content to {target_file_path}")
-        if prune_hero_placeholder_allowlist_for_post(target_dir, target_file_path):
-            logger.info(
-                f"Removed stale hero placeholder allowlist entry for {output_filename}"
-            )
-
-        # Update Sidecar Manifest
-        self._update_manifest(posts_dir, article_id, output_filename)
 
         # (Auditor checking validation block removed from here as it is done above)
 
@@ -536,57 +407,22 @@ class RefineryEngine:
         )
 
         # 7. Create PR
-        # Resolve target repo URL with backward-compatible lookup
-        repo_url = None
-        github_cfg = getattr(self.config, "github", None)
-        if github_cfg:
-            # github may be an object or a dict depending on how config is passed in
-            repo_url = getattr(github_cfg, "target_repo_url", None) or (
-                github_cfg.get("target_repo_url")
-                if isinstance(github_cfg, dict)
-                else None
-            )
-        if repo_url is None:
-            # Legacy flat attribute support (older code paths/tests)
-            repo_url = getattr(self.config, "target_repo_url", None)
-            if repo_url is None and isinstance(self.config, dict):
-                repo_url = self.config.get("target_repo_url")
-
-        if not repo_url:
-            raise AttributeError(
-                "Invalid configuration: missing github.target_repo_url"
-            )
-
-        source_id = str(article.get("source_id", "")).strip() or "unknown"
-        source_name = str(article.get("source_name", "")).strip() or "unknown"
-        pr_body = (
-            f"Automated submission for {article_id}.\n\n"
-            f"Source ID: {source_id}\n"
-            f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery.\n\n"
-            "Required frontend gates before merge/publication:\n"
-            "- Content Guard\n"
-            "- Deploy to GitHub Pages"
-        )
-
-        pr_url = self.git.create_pull_request(
-            repo_url=repo_url,
+        pr_result = self._pr_orchestrator.create_pr(
+            article_id=article_id,
+            article=article,
             branch_name=branch_name,
-            title=f"News: {output_filename.replace('.md', '')}",
-            body=pr_body,
+            output_filename=output_filename,
+            git_handler=self.git,
         )
+        pr_url = pr_result.pr_url
 
         if pr_url:
             logger.info(f"Pull Request created successfully: {pr_url}")
-            # Mark processed in Main DB
             numeric_id = None
             try:
                 numeric_id = int(article_id)
-                self.db.mark_article_published(numeric_id, pr_url)
             except ValueError:
-                logger.warning(
-                    f"Could not mark non-numeric ID {article_id} in main DB. Skipping state update."
-                )
+                pass
 
             source_url = article.get("url") or article.get("source_url") or ""
             if audit_should_run:
