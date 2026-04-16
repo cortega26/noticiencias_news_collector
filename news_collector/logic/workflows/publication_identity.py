@@ -76,7 +76,7 @@ class PublicationIdentityResolver:
         db_slug = self._get_db_slug(article_id)
         if db_slug and self._date_from_slug(db_slug):
             canonical_date = self._date_from_slug(db_slug)
-            logger.info("🔒 Identity: Locked to DB canonical slug: %s", db_slug)
+            logger.info("🔒 Identity: Locked to DB canonical slug: {}", db_slug)
             return PublicationIdentity(
                 final_slug=db_slug,
                 canonical_date=canonical_date,
@@ -87,7 +87,7 @@ class PublicationIdentityResolver:
         # Priority 2 — FS scan
         existing_file = self._manifest.find_existing_file(posts_dir, article_id)
         if existing_file:
-            logger.info("♻️ Idempotency: Found existing file %s", existing_file.name)
+            logger.info("♻️ Idempotency: Found existing file {}", existing_file.name)
             fn = existing_file.name
             slug = fn.replace(".md", "")
             canonical_date = self._date_from_slug(slug) or datetime.now().strftime("%Y-%m-%d")
@@ -102,7 +102,7 @@ class PublicationIdentityResolver:
 
         # Priority 3 — Creation mode (also handles malformed DB slug)
         canonical_date = self._derive_date(article)
-        logger.info("Processing with intended date: %s", canonical_date)
+        logger.info("Processing with intended date: {}", canonical_date)
         # Derive a provisional slug from the article title so resolve() always
         # returns a complete identity.  The engine calls finalize_slug() after
         # AI editing to replace this with the translated-title slug.
@@ -178,9 +178,9 @@ class PublicationIdentityResolver:
         if hasattr(self._db, "set_canonical_slug"):
             try:
                 self._db.set_canonical_slug(article_id, slug)
-                logger.info("💾 Backfilled canonical slug to DB: %s", slug)
+                logger.info("💾 Backfilled canonical slug to DB: {}", slug)
             except Exception as e:
-                logger.error("Failed to backfill canonical slug: %s", e)
+                logger.error("Failed to backfill canonical slug: {}", e)
 
     def register_slug(self, article_id: str, slug: str) -> bool:
         """
@@ -192,12 +192,12 @@ class PublicationIdentityResolver:
         try:
             result = self._db.set_canonical_slug(article_id, slug)
             if result:
-                logger.info("🔒 Identity Created: %s", slug)
+                logger.info("🔒 Identity Created: {}", slug)
             else:
-                logger.info("🔒 Canonical slug already exists for article %s: %s", article_id, slug)
+                logger.info("🔒 Canonical slug already exists for article {}: {}", article_id, slug)
             return bool(result)
         except Exception as e:
-            logger.error("Failed to persist canonical slug: %s", e)
+            logger.error("Failed to persist canonical slug: {}", e)
             return False
 
     # ------------------------------------------------------------------

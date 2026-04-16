@@ -101,7 +101,7 @@ class PROrchestrator:
         )
 
         if pr_url:
-            logger.info("Pull Request created successfully: %s", pr_url)
+            logger.info("Pull Request created successfully: {}", pr_url)
             try:
                 numeric_id = int(article_id)
                 self._db.mark_article_published(numeric_id, pr_url)
@@ -173,7 +173,7 @@ class PROrchestrator:
                 elapsed = (datetime.now(timezone.utc) - started).total_seconds()
                 if elapsed > PUBLISHING_TIMEOUT_SECONDS:
                     logger.warning(
-                        "Article %s stuck in 'publishing' for %.1fh (>%.0fh). "
+                        "Article {} stuck in 'publishing' for {:.1f}h (>{:.0f}h). "
                         "Allowing reprocessing.",
                         article_id,
                         elapsed / 3600,
@@ -181,18 +181,18 @@ class PROrchestrator:
                     )
                     return None
             except (ValueError, TypeError) as e:
-                logger.warning("Could not parse publishing_started_at: %s", e)
+                logger.warning("Could not parse publishing_started_at: {}", e)
 
         if not publishing_branch:
             logger.warning(
-                "Article %s in 'publishing' state but no branch info. "
+                "Article {} in 'publishing' state but no branch info. "
                 "Allowing reprocessing.",
                 article_id,
             )
             return None
 
         logger.info(
-            "Attempting publishing recovery for article %s (branch: %s)",
+            "Attempting publishing recovery for article {} (branch: {})",
             article_id,
             publishing_branch,
         )
@@ -212,7 +212,7 @@ class PROrchestrator:
             )
         except Exception as e:
             logger.warning(
-                "Publishing recovery PR creation failed for %s: %s. "
+                "Publishing recovery PR creation failed for {}: {}. "
                 "Article stays in 'publishing' for next retry.",
                 article_id,
                 e,
@@ -220,7 +220,7 @@ class PROrchestrator:
             return None
 
         if result.pr_url:
-            logger.info("Publishing recovery succeeded for article %s: %s", article_id, result.pr_url)
+            logger.info("Publishing recovery succeeded for article {}: {}", article_id, result.pr_url)
             return result
 
         return None

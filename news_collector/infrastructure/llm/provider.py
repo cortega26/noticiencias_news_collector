@@ -115,7 +115,7 @@ class OllamaProvider:
         if key in _NON_CANONICAL_WARNED:
             return
         logger.warning(
-            "Non-canonical Ollama model id in %s: '%s' -> '%s' (registry normalized).",
+            "Non-canonical Ollama model id in {}: '{}' -> '{}' (registry normalized).",
             stage,
             raw_value,
             canonical_value,
@@ -201,7 +201,7 @@ class OllamaProvider:
 
             try:
                 logger.debug(
-                    "Sending async prompt to Ollama (%s) (attempt=%d/%d)",
+                    "Sending async prompt to Ollama ({}) (attempt={}/{})",
                     payload["model"],
                     attempt_num,
                     self.max_retries + 1,
@@ -214,7 +214,7 @@ class OllamaProvider:
                 data = response.json()
                 text = data.get("response", "")
 
-                logger.debug("Async LLM complete in %.2fs", time.time() - start)
+                logger.debug("Async LLM complete in {:.2f}s", time.time() - start)
 
                 limiter.circuit_breaker.record_success()
 
@@ -294,8 +294,8 @@ class OllamaProvider:
 
             try:
                 logger.debug(
-                    "Sending sync prompt to Ollama (%s) at %s "
-                    "(timeout=%ds, attempt=%d/%d)",
+                    "Sending sync prompt to Ollama ({}) at {} "
+                    "(timeout={}s, attempt={}/{})",
                     payload["model"],
                     self.api_url,
                     self.timeout,
@@ -310,7 +310,7 @@ class OllamaProvider:
                 if self._is_429_response(response):
                     limiter.circuit_breaker.record_rate_limit()
                     logger.warning(
-                        "Ollama 429 (attempt %d/%d)",
+                        "Ollama 429 (attempt {}/{})",
                         attempt_num,
                         self.max_retries + 1,
                     )

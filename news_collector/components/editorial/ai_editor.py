@@ -85,7 +85,7 @@ def _strip_llm_preamble(text: str) -> str:
             continue  # skip blank lines at the top
         if _LLM_PREAMBLE_LINE_RE.search(stripped):
             start_idx = i + 1
-            logger.warning("Stripped LLM preamble line: %s", stripped)
+            logger.warning("Stripped LLM preamble line: {}", stripped)
         else:
             break  # first non-blank, non-preamble line = article content
 
@@ -113,7 +113,7 @@ def _strip_llm_epilogue(text: str) -> str:
             continue  # skip trailing blank lines
         if _LLM_EPILOGUE_LINE_RE.search(stripped):
             end_idx = i
-            logger.warning("Stripped LLM epilogue line: %s", stripped)
+            logger.warning("Stripped LLM epilogue line: {}", stripped)
         else:
             break
 

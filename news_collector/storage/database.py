@@ -272,7 +272,7 @@ class DatabaseManager:
             self.engine = None
             self.SessionLocal = None
         except Exception as exc:  # pragma: no cover - defensive cleanup
-            logger.warning("Error cerrando el engine de base de datos: %s", exc)
+            logger.warning("Error cerrando el engine de base de datos: {}", exc)
 
     def __del__(self) -> None:
         if getattr(self, "engine", None) is None:

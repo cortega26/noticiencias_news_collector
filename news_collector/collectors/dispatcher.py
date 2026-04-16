@@ -54,18 +54,18 @@ class CollectorDispatcher:
         try:
             self.collectors["rss"] = create_collector(rss_type)
         except Exception as e:
-            logger.error("Failed to initialize RSS collector: %s", e, exc_info=True)
+            logger.opt(exception=True).error("Failed to initialize RSS collector: {}", e)
 
         try:
             self.collectors["html"] = create_collector("html")
         except Exception as e:
-            logger.error("Failed to initialize HTML collector: %s", e, exc_info=True)
+            logger.opt(exception=True).error("Failed to initialize HTML collector: {}", e)
 
         try:
             self.collectors["headless"] = create_collector("headless")
         except Exception as e:
             logger.warning(
-                "Failed to initialize Headless collector (check playwright install): %s",
+                "Failed to initialize Headless collector (check playwright install): {}",
                 e,
             )
 
@@ -78,10 +78,10 @@ class CollectorDispatcher:
             for name, c in self.collectors.items():
                 if hasattr(c, "health_tracker"):
                     c.health_tracker = self.health_tracker
-                    logger.debug("Dispatcher set tracker on %s (%s)", name, type(c))
+                    logger.debug("Dispatcher set tracker on {} ({})", name, type(c))
                 else:
                     logger.debug(
-                        "Collector %s (%s) has no health_tracker attr", name, type(c)
+                        "Collector {} ({}) has no health_tracker attr", name, type(c)
                     )
 
     def set_logger_factory(self, logger_factory):
@@ -173,7 +173,7 @@ class CollectorDispatcher:
 
         for res in results_list:
             if isinstance(res, Exception):
-                logger.error("Collector task failed: %s", res, exc_info=res)
+                logger.opt(exception=res).error("Collector task failed: {}", res)
                 continue
             if not isinstance(res, dict):
                 continue
