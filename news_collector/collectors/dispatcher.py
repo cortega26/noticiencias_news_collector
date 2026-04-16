@@ -22,12 +22,12 @@ Failure modes:
 """
 
 import asyncio
-import logging
 from typing import Any, Dict, Optional
 
 from news_collector.collectors.base_collector import BaseCollector, create_collector
+from news_collector.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger().create_module_logger(__name__)
 
 
 class CollectorDispatcher:
@@ -41,7 +41,7 @@ class CollectorDispatcher:
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker
         logger.debug(
-            "Dispatcher init health_tracker=%s id=%s",
+            "Dispatcher init health_tracker={} id={}",
             health_tracker,
             id(health_tracker) if health_tracker else "None",
         )

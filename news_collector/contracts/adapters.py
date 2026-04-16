@@ -43,8 +43,8 @@ def _optional_article_attr(article: Any, attr_name: str, default: Any = None) ->
     except (NoInspectionAvailable, TypeError):
         return getattr(article, attr_name, default)
 
-    unloaded = getattr(state, "unloaded", set())
-    expired = getattr(state, "expired_attributes", set())
+    unloaded: set[Any] = getattr(state, "unloaded", set())
+    expired: set[Any] = getattr(state, "expired_attributes", set())
     if attr_name in unloaded or attr_name in expired:
         return default
 

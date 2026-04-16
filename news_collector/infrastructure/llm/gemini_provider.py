@@ -63,7 +63,7 @@ class GeminiProvider:
         return f"{self._base_api_url}/models/{model}:{endpoint}?key={self.api_key}"
 
     @staticmethod
-    def _safe_model_name(model: str) -> str:
+    def _safe_model_name(model: str) -> str | None:
         """Strip Ollama-style tags and local model names before hitting Gemini."""
         if (
             "llama" in model.lower()
@@ -114,7 +114,7 @@ class GeminiProvider:
     def _backoff_delay(
         attempt: int, base: float = 2.0, cap: float = 30.0, jitter: float = 2.0
     ) -> float:
-        delay = min(cap, base * (2**attempt))
+        delay = min(cap, base * (2.0**attempt))
         return delay + random.uniform(0, jitter)  # noqa: S311
 
     @staticmethod

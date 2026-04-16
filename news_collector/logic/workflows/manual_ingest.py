@@ -125,6 +125,7 @@ def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, 
 
     metadata: dict[str, Any] = {}
 
+    _h1_tag = soup.find("h1")
     metadata["title"] = (
         meta_value(
             ("property", "og:title"),
@@ -133,7 +134,7 @@ def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, 
             ("name", "citation_title"),
         )
         or _clean_text(soup.title.string if soup.title else None)
-        or _clean_text(soup.find("h1").get_text(" ", strip=True) if soup.find("h1") else None)
+        or _clean_text(_h1_tag.get_text(" ", strip=True) if _h1_tag is not None else None)
     )
 
     summary = meta_value(

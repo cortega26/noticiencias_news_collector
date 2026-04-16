@@ -5,7 +5,7 @@ import time
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
@@ -449,7 +449,7 @@ class EditorAgent:
             # Original raised ValueError if no JSON found.
             # Provider returns {}
             raise ValueError("No parsing valid JSON object found")
-        return result
+        return cast(dict[Any, Any], result)
 
     def _critic_pass(self, content: str) -> tuple[bool, str | None]:
         """

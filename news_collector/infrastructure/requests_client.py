@@ -299,7 +299,7 @@ class RobustRequestsClient:
                         raise proxy_err
 
             # If not eligible or proxy failed logic, re-raise original
-            raise _direct_exc  # type: ignore[misc]
+            raise _direct_exc
         finally:
             self.session.set_ignore_ssrf(False)
 

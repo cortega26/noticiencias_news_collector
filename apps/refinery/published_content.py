@@ -637,9 +637,10 @@ def fetch_frontend_pr_check_health(
 
     workflow_runs: list[dict[str, Any]] = []
     if head_sha:
+        run_params: dict[str, Any] = {"head_sha": head_sha, "per_page": 50}
         runs_response = requests.get(  # noqa: S113
             f"https://api.github.com/repos/{owner}/{repo_name}/actions/runs",
-            params={"head_sha": head_sha, "per_page": 50},
+            params=run_params,
             headers=headers,
             timeout=10,
         )
@@ -657,13 +658,13 @@ def fetch_frontend_pr_check_health(
 
     workflow_conclusions: dict[str, str | None] = {}
     for workflow_name in required:
-        run = latest_run_by_name.get(workflow_name)
-        if run is None:
+        workflow_run = latest_run_by_name.get(workflow_name)
+        if workflow_run is None:
             workflow_conclusions[workflow_name] = None
             continue
 
-        status = str(run.get("status") or "").strip()
-        conclusion = str(run.get("conclusion") or "").strip() or None
+        status = str(workflow_run.get("status") or "").strip()
+        conclusion = str(workflow_run.get("conclusion") or "").strip() or None
         workflow_conclusions[workflow_name] = (
             conclusion if status == "completed" else "pending"
         )
@@ -706,9 +707,10 @@ def fetch_pages_deploy_health(
     if github_token:
         headers["Authorization"] = f"Bearer {github_token}"
 
+    deploy_params: dict[str, Any] = {"branch": branch, "per_page": 10}
     response = requests.get(  # noqa: S113
         f"https://api.github.com/repos/{owner}/{repo_name}/actions/workflows/deploy.yml/runs",
-        params={"branch": branch, "per_page": 10},
+        params=deploy_params,
         headers=headers,
         timeout=10,
     )
