@@ -51,7 +51,7 @@ More local commands:
 Notes:
 
 - `scripts/run_collector.py` is the preferred collector CLI entrypoint used by CI and automation.
-- `main.py` still exists as a compatibility surface, but new docs and operational guidance should prefer the script and Make targets above.
+- `main.py` is deprecated: it emits a warning and delegates to `scripts/run_collector.py`. It will be removed in a future release.
 
 ## Cross-Repo Contract
 

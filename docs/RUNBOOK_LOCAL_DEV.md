@@ -21,14 +21,13 @@ noticiencias/
 | Requirement | Minimum version | How to verify |
 |-------------|-----------------|---------------|
 | Python | 3.13 | `python3 --version` |
-| Node.js | 22.x | `node --version` — see `.nvmrc` in the front-end repo |
+| Node.js | 24.x | `node --version` — run `nvm use` in the front-end repo to apply `.nvmrc` |
 | npm | bundled with Node.js | `npm --version` |
 | make | any | `make --version` |
 | git | any | `git --version` |
 | Ollama (optional) | latest | `ollama --version` — only needed for LLM-enriched workflows |
 
-> Note: CI uses Node 24. Local `.nvmrc` pins 22.20.0. Both work; Node 24 is preferred
-> if you are validating deploy parity.
+> Note: CI and local development both use Node 24. Run `nvm use` in the front-end repo to apply the version from `.nvmrc`.
 
 ---
 
