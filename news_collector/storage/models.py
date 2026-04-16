@@ -29,7 +29,7 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # Base para todos los modelos
 
@@ -48,6 +48,9 @@ PROCESSING_STATUS_VALUES = (
     "error",
     "rejected",
 )
+_STATUS_CHECK = "processing_status IN ({})".format(
+    ", ".join(f"'{v}'" for v in PROCESSING_STATUS_VALUES)
+)
 
 
 class Article(Base):
@@ -64,100 +67,100 @@ class Article(Base):
 
     # Identificadores únicos
     # =====================
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # URL original - esto es crucial para evitar duplicados
-    url = Column(String(500), unique=True, nullable=False, index=True)
+    url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False, index=True)
 
     # Hash del contenido para detectar duplicados con URLs diferentes
-    content_hash = Column(String(64), index=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
 
     # SimHash para detección de near-duplicates
-    simhash = Column(BigInteger, index=True)
+    simhash: Mapped[int | None] = mapped_column(BigInteger, index=True)
     # Bucket de SimHash para acelerar búsqueda de duplicados cercanos
-    simhash_prefix = Column(Integer)
+    simhash_prefix: Mapped[int | None] = mapped_column(Integer)
 
     # Información básica del artículo
     # ==============================
-    title = Column(String(500), nullable=False)
-    summary = Column(Text)  # Resumen o descripción
-    content = Column(Text)  # Contenido completo cuando esté disponible
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    summary: Mapped[str | None] = mapped_column(Text)  # Resumen o descripción
+    content: Mapped[str | None] = mapped_column(Text)  # Contenido completo cuando esté disponible
 
     # Información de la fuente
     # =======================
-    source_id = Column(String(50), nullable=False, index=True)  # De config/sources.py
-    source_name = Column(String(100), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # De config/sources.py
+    source_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     # Metadatos temporales
     # ===================
-    published_date = Column(
+    published_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), index=True
     )  # Cuándo se publicó originalmente
-    published_at = Column(DateTime(timezone=True))  # Cuándo publicamos en Noticiencias
-    published_url = Column(String(500))  # URL pública en Noticiencias si aplica
-    collected_date = Column(
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # Cuándo publicamos en Noticiencias
+    published_url: Mapped[str | None] = mapped_column(String(500))  # URL pública en Noticiencias si aplica
+    collected_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )  # Cuándo lo recopilamos nosotros
     # Zona horaria original del published
-    published_tz_offset_minutes = Column(Integer)  # Offset original en minutos
-    published_tz_name = Column(String(64))  # Nombre TZ original si disponible
+    published_tz_offset_minutes: Mapped[int | None] = mapped_column(Integer)  # Offset original en minutos
+    published_tz_name: Mapped[str | None] = mapped_column(String(64))  # Nombre TZ original si disponible
 
     # Información del autor (cuando esté disponible)
     # ==============================================
-    authors = Column(JSON)  # Lista de autores en formato JSON
-    author_affiliations = Column(JSON)  # Afiliaciones institucionales
+    authors: Mapped[Any | None] = mapped_column(JSON)  # Lista de autores en formato JSON
+    author_affiliations: Mapped[Any | None] = mapped_column(JSON)  # Afiliaciones institucionales
 
     # Categorización y clasificación
     # ==============================
-    category = Column(String(50), index=True)  # Categoría principal
-    subcategories = Column(JSON)  # Subcategorías adicionales
-    keywords = Column(JSON)  # Palabras clave extraídas
+    category: Mapped[str | None] = mapped_column(String(50), index=True)  # Categoría principal
+    subcategories: Mapped[Any | None] = mapped_column(JSON)  # Subcategorías adicionales
+    keywords: Mapped[Any | None] = mapped_column(JSON)  # Palabras clave extraídas
 
     # Información científica específica
     # ================================
-    doi = Column(String(100), index=True)  # Digital Object Identifier
-    journal = Column(String(200))  # Revista científica
-    impact_factor = Column(Float)  # Factor de impacto de la revista
-    is_preprint = Column(
+    doi: Mapped[str | None] = mapped_column(String(100), index=True)  # Digital Object Identifier
+    journal: Mapped[str | None] = mapped_column(String(200))  # Revista científica
+    impact_factor: Mapped[float | None] = mapped_column(Float)  # Factor de impacto de la revista
+    is_preprint: Mapped[bool | None] = mapped_column(
         Boolean, default=False
     )  # Si es preprint sin revisión por pares
-    peer_reviewed = Column(Boolean)  # Indicador de revisión por pares
+    peer_reviewed: Mapped[bool | None] = mapped_column(Boolean)  # Indicador de revisión por pares
 
     # Procesamiento de texto y análisis
     # =================================
-    language = Column(String(5), default="en")  # Código ISO del idioma
-    content_mode = Column(String(20))  # full_text, summary_only, summary_fallback
-    word_count = Column(Integer)  # Número de palabras
-    reading_time_minutes = Column(Integer)  # Tiempo estimado de lectura
-    content_quality_score = Column(Float)  # Score de calidad del contenido (0-1)
+    language: Mapped[str | None] = mapped_column(String(5), default="en")  # Código ISO del idioma
+    content_mode: Mapped[str | None] = mapped_column(String(20))  # full_text, summary_only, summary_fallback
+    word_count: Mapped[int | None] = mapped_column(Integer)  # Número de palabras
+    reading_time_minutes: Mapped[int | None] = mapped_column(Integer)  # Tiempo estimado de lectura
+    content_quality_score: Mapped[float | None] = mapped_column(Float)  # Score de calidad del contenido (0-1)
 
     # Scoring y ranking
     # ================
-    raw_score = Column(Float, index=True)  # Score sin procesar
-    final_score = Column(Float, index=True)  # Score final ajustado
-    score_components = Column(JSON)  # Desglose del score por componente
+    raw_score: Mapped[float | None] = mapped_column(Float, index=True)  # Score sin procesar
+    final_score: Mapped[float | None] = mapped_column(Float, index=True)  # Score final ajustado
+    score_components: Mapped[Any | None] = mapped_column(JSON)  # Desglose del score por componente
 
     # Estado del procesamiento
     # =======================
-    processing_status = Column(String(20), default=PENDING_STATUS)
+    processing_status: Mapped[str | None] = mapped_column(String(20), default=PENDING_STATUS)
     # Estados posibles enumerados en PROCESSING_STATUS_VALUES
 
-    error_message = Column(Text)  # Si hubo errores en el procesamiento
+    error_message: Mapped[str | None] = mapped_column(Text)  # Si hubo errores en el procesamiento
 
     # Metadatos adicionales flexibles (usar nombre no-reservado)
     # ========================================================
-    article_metadata = Column(JSON)  # Información adicional específica por fuente
+    article_metadata: Mapped[Any | None] = mapped_column(JSON)  # Información adicional específica por fuente
 
     # Clustering de duplicados
-    cluster_id = Column(String(36))
-    duplication_confidence = Column(Float, default=0.0)
+    cluster_id: Mapped[str | None] = mapped_column(String(36))
+    duplication_confidence: Mapped[float | None] = mapped_column(Float, default=0.0)
 
     # Identidad Canónica (Fix S2/D1)
     # =============================
     # Esto garantiza que la URL sea estable e independiente del tiempo de procesamiento.
-    canonical_slug = Column(String(200), unique=True, index=True)
+    canonical_slug: Mapped[str | None] = mapped_column(String(200), unique=True, index=True)
 
     # Relaciones con otras tablas
     # ==========================
@@ -168,9 +171,7 @@ class Article(Base):
     # Índices compuestos para optimizar consultas comunes
     # ==================================================
     __table_args__ = (
-        CheckConstraint(
-            processing_status.in_(PROCESSING_STATUS_VALUES), name="ck_article_status"
-        ),
+        CheckConstraint(_STATUS_CHECK, name="ck_article_status"),
         Index(
             "idx_articles_completed_category_score_date",
             "category",
