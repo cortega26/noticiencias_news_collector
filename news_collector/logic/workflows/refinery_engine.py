@@ -394,7 +394,7 @@ class RefineryEngine:
                 target_dir=target_dir,
             )
         except ValueError as e:
-            logger.error("🚨 S0 GUARD: %s", e)
+            logger.error("🚨 S0 GUARD: {}", e)
             return False
 
         # (Auditor checking validation block removed from here as it is done above)

@@ -370,7 +370,7 @@ class ManualUrlIngestService:
         try:
             model = CollectorArticleModel.model_validate(payload)
         except Exception as exc:
-            logger.warning("Manual URL payload validation failed for %s: %s", canonical_url, exc)
+            logger.warning("Manual URL payload validation failed for {}: {}", canonical_url, exc)
             return {
                 "status": "error",
                 "message": f"Payload inválido: {exc}",
@@ -452,7 +452,7 @@ class ManualUrlIngestService:
         updated_sources[source_id] = source_cfg
         save_sources(updated_sources)
         self.db.initialize_sources({source_id: source_cfg})
-        logger.info("Created manual-only source %s for host %s", source_id, normalized_host)
+        logger.info("Created manual-only source {} for host {}", source_id, normalized_host)
         return source_id, source_cfg, True
 
     def _run_fetches(

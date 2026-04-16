@@ -113,7 +113,7 @@ class ArticleImageHandler:
             _dl = download_fn if download_fn is not None else self.download
             local_ref = _dl(raw_image_url, image_slug, target_dir)
             if local_ref:
-                logger.info("Updated article image to local asset: %s", local_ref)
+                logger.info("Updated article image to local asset: {}", local_ref)
                 alt = article.get("image_alt") or (
                     f"Imagen editorial de {article.get('title', article_id)}"
                 )
@@ -125,7 +125,7 @@ class ArticleImageHandler:
                 )
             # Download failed → queue brief
             logger.warning(
-                "Failed to download image from %s. Routing article %s to editorial image queue.",
+                "Failed to download image from {}. Routing article {} to editorial image queue.",
                 raw_image_url,
                 article_id,
             )
@@ -172,7 +172,7 @@ class ArticleImageHandler:
         assets_dir = target_dir / "src/assets/images"
         assets_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info("Downloading image from %s", url)
+        logger.info("Downloading image from {}", url)
         try:
             with RobustRequestsClient() as client:
                 response = client.get(url, timeout=15)
@@ -192,14 +192,14 @@ class ArticleImageHandler:
             local_path = assets_dir / filename
             local_path.write_bytes(response.content)
             logger.info(
-                "Image saved: %s (%d KB, %s)",
+                "Image saved: {} ({} KB, {})",
                 local_path,
                 len(response.content) // 1024,
                 ct,
             )
             return f"~/assets/images/{filename}"
         except Exception as e:
-            logger.error("Failed to download image %s: %s", url, e)
+            logger.error("Failed to download image {}: {}", url, e)
             return None
 
     # ------------------------------------------------------------------
@@ -244,4 +244,4 @@ class ArticleImageHandler:
             existing=existing_brief,
         )
         brief_path = self._briefs.save_brief(brief)
-        logger.info("Queued editorial image brief for article %s at %s", article_id, brief_path)
+        logger.info("Queued editorial image brief for article {} at {}", article_id, brief_path)

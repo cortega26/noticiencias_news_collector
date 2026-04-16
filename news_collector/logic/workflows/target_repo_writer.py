@@ -77,11 +77,11 @@ class TargetRepoWriter:
             )
 
         target_file_path.write_text(content, encoding="utf-8")
-        logger.info("Written content to %s", target_file_path)
+        logger.info("Written content to {}", target_file_path)
 
         if prune_hero_placeholder_allowlist_for_post(target_dir, target_file_path):
             logger.info(
-                "Removed stale hero placeholder allowlist entry for %s", output_filename
+                "Removed stale hero placeholder allowlist entry for {}", output_filename
             )
 
         self.update_manifest(posts_dir, article_id, output_filename)
@@ -98,9 +98,9 @@ class TargetRepoWriter:
                 data = json.loads(manifest_path.read_text(encoding="utf-8"))
                 self._manifest_cache = data
                 self._manifest_loaded = True
-                logger.info("Loaded refinery manifest with %d entries", len(data))
+                logger.info("Loaded refinery manifest with {} entries", len(data))
             except Exception as e:
-                logger.error("Failed to load manifest: %s", e)
+                logger.error("Failed to load manifest: {}", e)
                 self._manifest_cache = {}
         else:
             self._manifest_cache = {}
@@ -129,7 +129,7 @@ class TargetRepoWriter:
             )
             os.replace(str(tmp_path), str(manifest_path))
         except Exception as e:
-            logger.error("Failed to persist manifest: %s", e)
+            logger.error("Failed to persist manifest: {}", e)
 
     def find_existing_file(self, posts_dir: Path, article_id: str) -> Path | None:
         """
@@ -151,14 +151,14 @@ class TargetRepoWriter:
             filename = self._manifest_cache[article_id]
             file_path = posts_dir / filename
             if file_path.exists():
-                logger.info("⚡ Manifest hit: %s -> %s", article_id, filename)
+                logger.info("⚡ Manifest hit: {} -> {}", article_id, filename)
                 return file_path
             else:
-                logger.warning("Manifest stale: %s not found on disk.", filename)
+                logger.warning("Manifest stale: {} not found on disk.", filename)
                 # fall through to slow scan
 
         # 2. Linear scan (slow path)
-        logger.info("🐢 Slow scan triggered for %s", article_id)
+        logger.info("🐢 Slow scan triggered for {}", article_id)
         try:
             for file_path in posts_dir.glob("*.md"):
                 try:
@@ -177,6 +177,6 @@ class TargetRepoWriter:
                 except (OSError, UnicodeDecodeError):
                     continue
         except Exception as e:
-            logger.error("Error scanning for existing files: %s", e)
+            logger.error("Error scanning for existing files: {}", e)
 
         return None

@@ -69,7 +69,7 @@ def get_provider(
         ):
             model = use_model
 
-        logger.info("Using GeminiProvider with model %s", model or use_model)
+        logger.info("Using GeminiProvider with model {}", model or use_model)
         return GeminiProvider(
             api_key=gemini_api_key,
             model=model or use_model,
@@ -78,7 +78,7 @@ def get_provider(
         )
 
     # Fallback to Ollama
-    logger.info("Using OllamaProvider with model %s", model)
+    logger.info("Using OllamaProvider with model {}", model)
     return OllamaProvider(
         api_url=api_url,
         model=model,
