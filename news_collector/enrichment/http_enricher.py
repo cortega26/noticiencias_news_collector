@@ -24,6 +24,7 @@ class HttpEnricher:
 
     def __init__(self, request_client: Optional[RobustRequestsClient] = None):
         self.client = request_client or RobustRequestsClient()
+        self._blocked_urls: set[str] = set()
 
     def enrich(self, url: str) -> Dict[str, Any]:
         """
@@ -37,8 +38,25 @@ class HttpEnricher:
                 "status_code": int | None
             }
         """
+        if url in self._blocked_urls:
+            return {
+                "success": False,
+                "content": None,
+                "error": "HTTP 403",
+                "status_code": 403,
+            }
+
         try:
             response = self.client.get(url, timeout=15)
+
+            if response.status_code == 403:
+                self._blocked_urls.add(url)
+                return {
+                    "success": False,
+                    "content": None,
+                    "error": "HTTP 403",
+                    "status_code": 403,
+                }
 
             if response.status_code >= 400:
                 return {
