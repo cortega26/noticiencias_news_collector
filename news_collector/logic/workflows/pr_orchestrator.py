@@ -56,12 +56,16 @@ class PROrchestrator:
         branch_name: str,
         output_filename: str,
         git_handler: Any = None,
+        recovered: bool = False,
     ) -> PRResult:
         """
         Create a pull request for a published article.
 
         Calls git.create_pull_request and, on success, marks the article as
         published in the DB.
+
+        Args:
+            recovered: When True, the PR body notes this is a publishing recovery.
 
         Returns a PRResult with pr_url set if successful, or pr_url=None on failure.
         """
@@ -74,11 +78,16 @@ class PROrchestrator:
 
         source_id = str(article.get("source_id", "")).strip() or "unknown"
         source_name = str(article.get("source_name", "")).strip() or "unknown"
+        refinery_note = (
+            "Processed by Noticiencias Refinery (recovered from publishing state)."
+            if recovered
+            else "Processed by Noticiencias Refinery."
+        )
         pr_body = (
             f"Automated submission for {article_id}.\n\n"
             f"Source ID: {source_id}\n"
             f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery.\n\n"
+            f"{refinery_note}\n\n"
             "Required frontend gates before merge/publication:\n"
             "- Content Guard\n"
             "- Deploy to GitHub Pages"
@@ -102,7 +111,7 @@ class PROrchestrator:
                     article_id,
                 )
 
-        return PRResult(pr_url=pr_url)
+        return PRResult(pr_url=pr_url, recovered=recovered)
 
     def resolve_repo_url(self) -> str | None:
         """
@@ -189,31 +198,17 @@ class PROrchestrator:
         )
 
         git = git_handler if git_handler is not None else self._git
-        repo_url = self.resolve_repo_url()
-        if not repo_url:
-            logger.warning("Cannot resolve repo URL for publishing recovery.")
-            return None
-
-        source_id = str(article.get("source_id", "")).strip() or "unknown"
-        source_name = str(article.get("source_name", "")).strip() or "unknown"
-        pr_body = (
-            f"Automated submission for {article_id}.\n\n"
-            f"Source ID: {source_id}\n"
-            f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery (recovered from publishing state).\n\n"
-            "Required frontend gates before merge/publication:\n"
-            "- Content Guard\n"
-            "- Deploy to GitHub Pages"
-        )
         slug = publishing_branch.replace("content/update-", "", 1)
-        pr_title = f"News: {slug}"
+        output_filename = f"{slug}.md"
 
         try:
-            pr_url = git.create_pull_request(
-                repo_url=repo_url,
+            result = self.create_pr(
+                article_id=article_id,
+                article=article,
                 branch_name=publishing_branch,
-                title=pr_title,
-                body=pr_body,
+                output_filename=output_filename,
+                git_handler=git,
+                recovered=True,
             )
         except Exception as e:
             logger.warning(
@@ -224,12 +219,8 @@ class PROrchestrator:
             )
             return None
 
-        if pr_url:
-            logger.info("Publishing recovery succeeded for article %s: %s", article_id, pr_url)
-            try:
-                self._db.mark_article_published(numeric_id, pr_url)
-            except Exception as e:
-                logger.error("Recovery PR found but failed to mark as published: %s", e)
-            return PRResult(pr_url=pr_url, recovered=True)
+        if result.pr_url:
+            logger.info("Publishing recovery succeeded for article %s: %s", article_id, result.pr_url)
+            return result
 
         return None

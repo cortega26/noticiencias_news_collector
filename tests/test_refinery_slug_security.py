@@ -76,7 +76,7 @@ def test_slug_collision_handled(tmp_path):
     }
 
     # We monkeypatch internal file reading logic so it doesn't find a file during phase 2
-    engine._find_existing_file = MagicMock(return_value=None)
+    engine.writer.find_existing_file = MagicMock(return_value=None)
     engine._extract_slug = MagicMock(return_value="collision-test")
     engine._download_image = MagicMock(return_value="~/assets/images/collision-test.png")
 

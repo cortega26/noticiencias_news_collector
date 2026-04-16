@@ -4,7 +4,7 @@ import unittest
 
 # Add project root to path
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 BASE_DIR = Path(
     os.environ.get("NEWS_COLLECTOR_PATH", Path(__file__).resolve().parents[1])
@@ -36,6 +36,12 @@ class TestEditorAgentTags(unittest.TestCase):
                 "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
             }
         )
+        # These tests verify tag/category logic only; bypass body word-count validation
+        _patcher = patch(
+            "news_collector.components.editorial.ai_editor.validate_generated_article_markdown"
+        )
+        _patcher.start()
+        self.addCleanup(_patcher.stop)
 
     def test_other_category_filtered(self):
         raw_text = {

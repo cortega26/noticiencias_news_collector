@@ -123,7 +123,17 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
 
     monkeypatch.setattr(agent, "_translate_scientific", lambda _: "Texto traducido")
     monkeypatch.setattr(
-        agent, "_adapt_editorial", lambda _: "## Apertura\nTexto final."
+        agent, "_adapt_editorial", lambda _: (
+            "## Apertura\n"
+            "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+            "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+            "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+            "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+            "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+            "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+            "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+            "conocimiento en el área y representan un paso importante para futuras investigaciones."
+        )
     )
     monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
     monkeypatch.setattr(
@@ -189,7 +199,15 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
         agent,
         "_adapt_editorial",
         lambda _: (
-            "## Apertura\nTexto final.\n\n"
+            "## Apertura\n"
+            "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+            "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+            "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+            "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+            "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+            "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+            "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+            "conocimiento en el área y representan un paso importante para futuras investigaciones.\n\n"
             "<!-- source_identity: source_id=legacy_source; source_name=Legacy Name -->"
         ),
     )

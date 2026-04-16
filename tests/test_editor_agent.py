@@ -16,13 +16,22 @@ def parse_frontmatter(content: str) -> dict:
     return yaml.safe_load(match.group(1))
 
 
-def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
+def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
+    agent.cache_dir = tmp_path / "editor-cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
     sample_output = (
         "**TL;DR Visual**\n"
         "- ⚡ Punto uno\n\n"
         "**El Impacto (Lead)**\n"
-        "Texto base.\n"
+        "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+        "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+        "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+        "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+        "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+        "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+        "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+        "conocimiento en el área y representan un paso importante para futuras investigaciones.\n"
     )
     agent._send_prompt = lambda prompt, system=None, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
@@ -56,10 +65,22 @@ def test_process_article_strips_tldr_without_image_and_adds_source() -> None:
     assert "https://example.com/source" in result and "Fuente" in result
 
 
-def test_process_article_keeps_sections_with_image() -> None:
+def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
+    agent.cache_dir = tmp_path / "editor-cache"
+    agent.cache_dir.mkdir(parents=True, exist_ok=True)
     sample_output = (
-        "**TL;DR Visual**\n" "- Punto uno\n\n" "**El Impacto (Lead)**\n" "Texto base.\n"
+        "**TL;DR Visual**\n"
+        "- Punto uno\n\n"
+        "**El Impacto (Lead)**\n"
+        "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+        "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+        "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+        "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+        "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+        "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+        "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+        "conocimiento en el área y representan un paso importante para futuras investigaciones.\n"
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
@@ -92,7 +113,17 @@ def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
-    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    sample_output = (
+        "**El Impacto (Lead)**\n"
+        "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+        "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+        "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+        "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+        "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+        "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+        "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+        "conocimiento en el área y representan un paso importante para futuras investigaciones.\n"
+    )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
@@ -123,7 +154,17 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
-    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    sample_output = (
+        "**El Impacto (Lead)**\n"
+        "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+        "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+        "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+        "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+        "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+        "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+        "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+        "conocimiento en el área y representan un paso importante para futuras investigaciones.\n"
+    )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
@@ -155,7 +196,17 @@ def test_top_level_export_category_drives_frontmatter_category(monkeypatch, tmp_
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
     agent.min_content_length = 0
-    sample_output = "**El Impacto (Lead)**\nTexto base.\n"
+    sample_output = (
+        "**El Impacto (Lead)**\n"
+        "Este análisis examina los avances recientes en el campo científico y tecnológico. "
+        "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
+        "fenómenos estudiados en este dominio. El trabajo demuestra resultados significativos "
+        "para la comunidad científica internacional. Las implicaciones de estos hallazgos se "
+        "extienden a múltiples disciplinas y abren nuevas líneas de investigación prometedoras. "
+        "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
+        "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
+        "conocimiento en el área y representan un paso importante para futuras investigaciones.\n"
+    )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {

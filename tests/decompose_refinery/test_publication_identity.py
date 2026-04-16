@@ -313,3 +313,95 @@ class TestSlugPersistence:
         resolver = _make_resolver(db=db)
         result = resolver.register_slug("42", "2025-01-01-new-slug")
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# IDENT-09: finalize_slug — completes creation-mode identity post-AI-edit
+# ---------------------------------------------------------------------------
+
+class TestFinalizeSlug:
+    def test_ident_09_basic_slug_derived_from_content(self, tmp_path):
+        """IDENT-09: finalize_slug sets final_slug and output_filename from content."""
+        resolver = _make_resolver()
+        identity = PublicationIdentity(
+            final_slug=None,
+            canonical_date="2025-06-01",
+            output_filename=None,
+            is_new=True,
+        )
+        content = "slug: my-great-story\ntitle: My Great Story\nbody text"
+
+        result = resolver.finalize_slug(
+            identity=identity,
+            refined_content=content,
+            article_id="99",
+            posts_dir=tmp_path,
+        )
+
+        assert result.final_slug == "2025-06-01-my-great-story"
+        assert result.output_filename == "2025-06-01-my-great-story.md"
+        assert result.is_new is True
+        assert result.canonical_date == "2025-06-01"
+
+    def test_ident_09_collision_avoidance(self, tmp_path):
+        """IDENT-09: When target file already exists, suffix counter is appended."""
+        # Pre-create the would-be output file to trigger collision avoidance.
+        (tmp_path / "2025-06-01-my-great-story.md").write_text("existing")
+
+        resolver = _make_resolver()
+        identity = PublicationIdentity(
+            final_slug=None,
+            canonical_date="2025-06-01",
+            output_filename=None,
+            is_new=True,
+        )
+        content = "slug: my-great-story\ntitle: My Great Story"
+
+        result = resolver.finalize_slug(
+            identity=identity,
+            refined_content=content,
+            article_id="99",
+            posts_dir=tmp_path,
+        )
+
+        assert result.final_slug == "2025-06-01-my-great-story-1"
+        assert result.output_filename == "2025-06-01-my-great-story-1.md"
+
+    def test_ident_09_extract_slug_fn_override(self, tmp_path):
+        """IDENT-09: extract_slug_fn kwarg overrides default static method."""
+        resolver = _make_resolver()
+        identity = PublicationIdentity(
+            final_slug=None,
+            canonical_date="2025-03-15",
+            output_filename=None,
+            is_new=True,
+        )
+
+        result = resolver.finalize_slug(
+            identity=identity,
+            refined_content="irrelevant content",
+            article_id="7",
+            posts_dir=tmp_path,
+            extract_slug_fn=lambda _content, _id: "custom-slug",
+        )
+
+        assert result.final_slug == "2025-03-15-custom-slug"
+        assert result.output_filename == "2025-03-15-custom-slug.md"
+
+    def test_ident_09_guard_raises_on_non_new_identity(self, tmp_path):
+        """IDENT-09: Calling finalize_slug on a locked (is_new=False) identity raises."""
+        resolver = _make_resolver()
+        locked_identity = PublicationIdentity(
+            final_slug="2025-06-01-existing",
+            canonical_date="2025-06-01",
+            output_filename="2025-06-01-existing.md",
+            is_new=False,
+        )
+
+        with pytest.raises(AssertionError):
+            resolver.finalize_slug(
+                identity=locked_identity,
+                refined_content="slug: anything",
+                article_id="5",
+                posts_dir=tmp_path,
+            )

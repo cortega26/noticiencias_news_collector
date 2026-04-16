@@ -41,7 +41,7 @@ _FRONTEND_CONFIG = _REPO_ROOT.parent / "noticiencias" / "src" / "content" / "con
 # ---------------------------------------------------------------------------
 
 _ZOD_FIELD_RE = re.compile(
-    r"^\s{8}(\w+)\s*:\s*z\.",
+    r"^\s{6}(\w+)\s*:\s*z(?:\.[^\n]+|\s*$)",
     re.MULTILINE,
 )
 
