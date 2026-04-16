@@ -10,11 +10,11 @@ target_repo_url = "https://github.com/cortega26/noticiencias"
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
-model = "gemini-2.5-flash"
+model = "llama3.3:latest"
 timeout = 300
-translator_model = "gemini-2.5-flash"
-editor_model = "gemini-2.5-flash"
-headlines_model = "gemini-2.5-flash"
+translator_model = "llama3.3:latest"
+editor_model = "llama3.3:latest"
+headlines_model = "llama3.2:latest"
 
 [llm_rate_limiting]
 max_concurrent_requests = 2
