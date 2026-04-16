@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sqlite3
 import time
@@ -114,9 +115,15 @@ class CognitiveScorer(BasicScorer):
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
-        # Basic connectivity check or assume healthy until failure
-        # OllamaProvider doesn't have lightweight is_healthy, so assume True
         self.is_llm_healthy = True
+        if hasattr(self.llm, "check_health"):
+            ok, reason = self.llm.check_health(timeout_seconds=2.0)
+            if not ok:
+                logger.warning(
+                    "CognitiveScorer: LLM unreachable at cycle start ({}). Using heuristic fallback.",
+                    reason,
+                )
+                self.is_llm_healthy = False
         logger.info("CognitiveScorer Cycle Start.")
 
     def _check_budget(self) -> bool:
@@ -334,9 +341,12 @@ class CognitiveScorer(BasicScorer):
         )
 
         try:
-            # Use async generation from OllamaProvider
-            resp = await self.llm.generate_async(
-                joined_inputs, system=system_prompt, json_mode=True
+            # Use async generation from OllamaProvider, enforcing batch_timeout_sec
+            resp = await asyncio.wait_for(
+                self.llm.generate_async(
+                    joined_inputs, system=system_prompt, json_mode=True
+                ),
+                timeout=self.batch_timeout_sec,
             )
 
             if not isinstance(resp, dict) or "results" not in resp:
@@ -387,6 +397,12 @@ class CognitiveScorer(BasicScorer):
                     )
             return outputs
 
+        except asyncio.TimeoutError:
+            logger.warning(
+                "CognitiveScorer: LLM batch timed out after {}s — using heuristic fallback.",
+                self.batch_timeout_sec,
+            )
+            return None
         except Exception as e:
             logger.warning(f"Batch LLM failed: {e}")
             return None
