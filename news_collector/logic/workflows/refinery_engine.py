@@ -35,7 +35,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.components.editorial.ai_editor import EditorAgent
@@ -714,7 +714,7 @@ class RefineryEngine:
                 return value
             return str(value)
 
-        return normalize(article)
+        return cast(Dict[str, Any], normalize(article))
 
     def _enforce_editorial_policy(
         self, article_id: str, cached_score: dict | None

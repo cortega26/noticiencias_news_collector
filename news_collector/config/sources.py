@@ -52,13 +52,13 @@ CATEGORY_CONFIG = {
 }
 
 # Globals to be populated
-ELITE_JOURNALS = {}
-SCIENCE_MEDIA = {}
-INSTITUTIONAL_SOURCES = {}
-PREPRINT_SOURCES = {}
-COMMUNITY_FEEDS = {}
-AI_LABS = {}
-ALL_SOURCES = {}
+ELITE_JOURNALS: Dict[str, Any] = {}
+SCIENCE_MEDIA: Dict[str, Any] = {}
+INSTITUTIONAL_SOURCES: Dict[str, Any] = {}
+PREPRINT_SOURCES: Dict[str, Any] = {}
+COMMUNITY_FEEDS: Dict[str, Any] = {}
+AI_LABS: Dict[str, Any] = {}
+ALL_SOURCES: Dict[str, Any] = {}
 
 
 def load_sources():

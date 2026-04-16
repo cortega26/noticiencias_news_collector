@@ -163,7 +163,7 @@ class OllamaProvider:
     def _backoff_delay(
         attempt: int, base: float = 2.0, cap: float = 15.0, jitter: float = 1.5
     ) -> float:
-        delay = min(cap, base * (2**attempt))
+        delay = min(cap, base * (2.0**attempt))
         return delay + random.uniform(0, jitter)  # noqa: S311
 
     @staticmethod

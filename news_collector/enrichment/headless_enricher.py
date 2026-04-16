@@ -11,7 +11,7 @@ try:
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     from playwright.sync_api import sync_playwright
 except ImportError:
-    sync_playwright = None
+    sync_playwright = None  # type: ignore[assignment]
     PlaywrightTimeoutError = None  # type: ignore[assignment,misc]
 
 from news_collector.utils.logger import get_logger

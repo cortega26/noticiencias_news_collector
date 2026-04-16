@@ -96,7 +96,7 @@ class ArticleImageHandler:
             return ImageResolution(
                 resolved=True,
                 image_url=resolved_brief_image,
-                image_alt=existing_brief.draft_alt_text,
+                image_alt=existing_brief.draft_alt_text if existing_brief is not None else None,
                 queued_brief=False,
             )
 

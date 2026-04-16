@@ -7,7 +7,7 @@ import shutil
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from news_collector.contracts import IMAGE_PROMPT_VERSION, ImageBriefModel
 
@@ -178,7 +178,7 @@ class ImageBriefStore:
             tone=tone,
         )
         uploaded_asset_path = existing.uploaded_asset_path if existing else None
-        status = (
+        status: Literal["editorial_image_ready", "needs_editorial_image"] = (
             "editorial_image_ready"
             if uploaded_asset_path
             else "needs_editorial_image"

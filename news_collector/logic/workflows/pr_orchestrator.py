@@ -131,12 +131,12 @@ class PROrchestrator:
                 else None
             )
             if repo_url:
-                return repo_url
+                return str(repo_url)
 
         repo_url = getattr(self._config, "target_repo_url", None)
         if repo_url is None and isinstance(self._config, dict):
             repo_url = self._config.get("target_repo_url")
-        return repo_url
+        return str(repo_url) if repo_url is not None else None
 
     def attempt_recovery(
         self,

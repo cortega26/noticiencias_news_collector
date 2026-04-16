@@ -74,8 +74,8 @@ class PublicationIdentityResolver:
         """
         # Priority 1 — DB (only if slug is well-formed with a date prefix)
         db_slug = self._get_db_slug(article_id)
-        if db_slug and self._date_from_slug(db_slug):
-            canonical_date = self._date_from_slug(db_slug)
+        canonical_date = self._date_from_slug(db_slug) if db_slug else None
+        if db_slug and canonical_date:
             logger.info("🔒 Identity: Locked to DB canonical slug: {}", db_slug)
             return PublicationIdentity(
                 final_slug=db_slug,
@@ -261,7 +261,7 @@ class PublicationIdentityResolver:
         src_date = article.get("published_date")
         if src_date:
             if hasattr(src_date, "strftime"):
-                return src_date.strftime("%Y-%m-%d")
+                return str(src_date.strftime("%Y-%m-%d"))
             s = str(src_date).strip()
             match = re.match(r"^\d{4}-\d{2}-\d{2}", s)
             if match:
@@ -269,7 +269,7 @@ class PublicationIdentityResolver:
 
         collected = article.get("collected_date")
         if collected and hasattr(collected, "strftime"):
-            return collected.strftime("%Y-%m-%d")
+            return str(collected.strftime("%Y-%m-%d"))
 
         # Absolute last resort (known debt — see source-of-truth-backlog.md)
         return datetime.now().strftime("%Y-%m-%d")
