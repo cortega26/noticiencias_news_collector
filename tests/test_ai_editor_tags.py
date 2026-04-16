@@ -36,6 +36,10 @@ class TestEditorAgentTags(unittest.TestCase):
                 "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
             }
         )
+        # Prevent real LLM calls from the category classifier (uses its own provider)
+        self.agent.category_resolver._classifier = MagicMock(
+            try_classify_article=MagicMock(return_value=None)
+        )
         # These tests verify tag/category logic only; bypass body word-count validation
         _patcher = patch(
             "news_collector.components.editorial.ai_editor.validate_generated_article_markdown"

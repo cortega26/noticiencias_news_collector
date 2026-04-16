@@ -10,28 +10,63 @@
 # See docs/RUNBOOK_LOCAL_DEV.md for the full development workflow.
 # ===========================================================================
 
+import argparse
+import json
 import sys
+
+from news_collector.exceptions import EXIT_INTERNAL, NewsCollectorError
+from news_collector.system import create_system  # noqa: F401 — re-exported for compat
+
+
+def handle_exception(exc: Exception) -> None:
+    """Handle exception with structured JSON output and proper exit code."""
+    if isinstance(exc, NewsCollectorError):
+        exit_code = exc.exit_code
+        category = exc.category
+    else:
+        exit_code = EXIT_INTERNAL
+        category = "INTERNAL_ERROR"
+
+    error_message = str(exc)
+
+    print(
+        json.dumps(
+            {
+                "status": "fatal_error",
+                "error_message": error_message,
+                "exit_code": exit_code,
+                "error_category": category,
+            }
+        )
+    )
+
+    sys.stderr.write(
+        f"\n❌ ERROR FATAL DEL SISTEMA\n"
+        f"  Categoría: {category}\n"
+        f"  (Código {exit_code})\n"
+        f"  {error_message}\n"
+    )
+
+    sys.exit(exit_code)
 
 
 def main() -> None:
-    import warnings
+    parser = argparse.ArgumentParser(
+        prog="main.py",
+        description=(
+            "[DEPRECATED] News Collector entry point. "
+            "Use 'make run-local' or 'python scripts/run_collector.py' instead."
+        ),
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Run without saving data")
+    parser.parse_args()
 
-    warnings.warn(
-        "main.py is deprecated. Use 'make run-local' or "
-        "'python scripts/run_collector.py' instead. "
-        "See docs/RUNBOOK_LOCAL_DEV.md.",
-        DeprecationWarning,
-        stacklevel=1,
-    )
-    sys.stderr.write(
-        "\n[DEPRECATED] main.py is no longer the canonical entry point.\n"
-        "Use one of the following instead:\n"
-        "  make run-local\n"
-        "  python scripts/run_collector.py\n\n"
-        "See docs/RUNBOOK_LOCAL_DEV.md for the full development workflow.\n"
-    )
-    sys.exit(1)
+    try:
+        create_system()
+    except Exception as exc:
+        handle_exception(exc)
 
 
 if __name__ == "__main__":
     main()
+

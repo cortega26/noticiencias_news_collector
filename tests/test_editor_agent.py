@@ -20,6 +20,9 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    agent.category_resolver._classifier = MagicMock(
+        try_classify_article=MagicMock(return_value=None)
+    )
     sample_output = (
         "**TL;DR Visual**\n"
         "- ⚡ Punto uno\n\n"
@@ -69,6 +72,9 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    agent.category_resolver._classifier = MagicMock(
+        try_classify_article=MagicMock(return_value=None)
+    )
     sample_output = (
         "**TL;DR Visual**\n"
         "- Punto uno\n\n"
@@ -113,6 +119,9 @@ def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    agent.category_resolver._classifier = MagicMock(
+        try_classify_article=MagicMock(return_value=None)
+    )
     sample_output = (
         "**El Impacto (Lead)**\n"
         "Este análisis examina los avances recientes en el campo científico y tecnológico. "
@@ -154,6 +163,9 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
+    agent.category_resolver._classifier = MagicMock(
+        try_classify_article=MagicMock(return_value=None)
+    )
     sample_output = (
         "**El Impacto (Lead)**\n"
         "Este análisis examina los avances recientes en el campo científico y tecnológico. "

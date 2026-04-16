@@ -2141,10 +2141,11 @@ with tab6:
             ]
             # Filter cols that exist
             cols = [c for c in cols if c in health_df.columns]
+            styler = health_df[cols].style
+            if "latency" in cols:
+                styler = styler.highlight_max(axis=0, subset=["latency"], color="#ffcdd2")
             st.dataframe(
-                health_df[cols].style.highlight_max(
-                    axis=0, subset=["latency"], color="#ffcdd2"
-                ),
+                styler,
                 # Deprecated arg replaced by width='stretch'
                 width="stretch",
             )
