@@ -64,6 +64,7 @@ If either changes, treat it as a cross-repo contract change.
 
 ## Governance Docs
 
+- [`docs/INDEX.md`](docs/INDEX.md): full docs directory index — start here if you are looking for any document.
 - [`docs/SOURCE_OF_TRUTH.md`](docs/SOURCE_OF_TRUTH.md): documentation hierarchy, repo boundary, and non-negotiable current truths.
 - [`docs/AGENTS.md`](docs/AGENTS.md): binding review and change law for this repo.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): actual package responsibilities and dependency direction.
