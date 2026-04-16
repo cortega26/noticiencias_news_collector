@@ -158,16 +158,14 @@ class RefineryEngine:
             None
         )
 
-        self._manifest_cache: Dict[str, str] = {}
-        self._manifest_loaded = False
         self._last_blocked_error: Dict[str, str] | None = None
 
-        self._writer = TargetRepoWriter()
+        self.writer = TargetRepoWriter()
         self.identity_resolver = PublicationIdentityResolver(
-            db=self.db, manifest=self._writer
+            db=self.db, manifest=self.writer
         )
-        self._image_handler = ArticleImageHandler(image_briefs=self.image_briefs)
-        self._pr_orchestrator = PROrchestrator(
+        self.image_handler = ArticleImageHandler(image_briefs=self.image_briefs)
+        self.pr_orchestrator = PROrchestrator(
             git=self.git, db=self.db, config=self.config
         )
 
@@ -250,7 +248,7 @@ class RefineryEngine:
             _numeric_id = int(article_id)
 
         if _numeric_id is not None:
-            recovery_result = self._pr_orchestrator.attempt_recovery(
+            recovery_result = self.pr_orchestrator.attempt_recovery(
                 numeric_id=_numeric_id,
                 article_id=article_id,
                 article=article,
@@ -277,7 +275,7 @@ class RefineryEngine:
         logger.info(f"Processing with intended date: {canonical_date}")
 
         # --- IMAGE HANDLING ---
-        img_resolution = self._image_handler.resolve(
+        img_resolution = self.image_handler.resolve(
             article=article,
             article_id=article_id,
             canonical_date=canonical_date,
@@ -388,7 +386,7 @@ class RefineryEngine:
 
         # 5. Save File
         try:
-            self._writer.write_article(
+            self.writer.write_article(
                 posts_dir=posts_dir,
                 output_filename=output_filename,
                 content=refined_content,
@@ -407,7 +405,7 @@ class RefineryEngine:
         )
 
         # 7. Create PR
-        pr_result = self._pr_orchestrator.create_pr(
+        pr_result = self.pr_orchestrator.create_pr(
             article_id=article_id,
             article=article,
             branch_name=branch_name,
@@ -452,57 +450,6 @@ class RefineryEngine:
             logger.error("Failed to create PR.")
             return False
 
-    def _derive_image_slug(
-        self,
-        *,
-        article: Dict[str, Any],
-        article_id: str,
-        canonical_date: str,
-        preferred_slug: str | None,
-    ) -> str:
-        if preferred_slug:
-            return preferred_slug
-        title = str(article.get("title") or "").strip()
-        base_slug = slugify_text(title, fallback=f"article-{article_id}")
-        return f"{canonical_date}-{base_slug}"
-
-    def _queue_image_brief(
-        self,
-        *,
-        article: Dict[str, Any],
-        article_id: str,
-        slug: str,
-        reason: str,
-        existing_brief: Any = None,
-    ) -> None:
-        brief = self.image_briefs.build_brief(
-            article=article,
-            slug=slug,
-            reason=reason,
-            existing=existing_brief,
-        )
-        brief_path = self.image_briefs.save_brief(brief)
-        logger.info(
-            "Queued editorial image brief for article %s at %s",
-            article_id,
-            brief_path,
-        )
-
-    def _resolve_brief_image(
-        self,
-        *,
-        brief: Any,
-        target_dir: Path,
-    ) -> str | None:
-        if brief is None:
-            return None
-        if brief.status not in {"editorial_image_ready", "resolved"}:
-            return None
-        return self.image_briefs.materialize_uploaded_asset(
-            brief=brief,
-            target_assets_dir=target_dir / "src" / "assets" / "images",
-        )
-
     def _record_audit_status(
         self,
         article_numeric_id: int | None,
@@ -532,126 +479,6 @@ class RefineryEngine:
             logger.warning(
                 f"Failed to persist audit status for article {article_numeric_id}: {e}"
             )
-
-    # --- B-01 / F-0012, F-0015: Publishing state recovery ---
-    PUBLISHING_TIMEOUT_SECONDS = 3600  # 1 hour
-
-    def _attempt_publishing_recovery(  # noqa: C901
-        self,
-        numeric_id: int,
-        article_id: str,
-        article: Dict[str, Any],
-    ) -> bool | None:
-        """
-        B-01: If article is stuck in 'publishing' state, attempt recovery.
-
-        Returns:
-            True  – recovery succeeded (PR found or created), caller should return True.
-            None  – no recovery needed, caller should continue normal processing.
-        """
-        get_state = getattr(self.db, "get_publishing_state", None)
-        if not callable(get_state):
-            return None
-
-        publishing_info = get_state(numeric_id)
-        if publishing_info is None:
-            return None  # Not in publishing state
-
-        publishing_started_at = publishing_info.get("publishing_started_at")
-        publishing_branch = publishing_info.get("publishing_branch")
-
-        # Check timeout
-        if publishing_started_at:
-            try:
-                started = datetime.fromisoformat(publishing_started_at)
-                if started.tzinfo is None:
-                    started = started.replace(tzinfo=timezone.utc)
-                elapsed = (datetime.now(timezone.utc) - started).total_seconds()
-                if elapsed > self.PUBLISHING_TIMEOUT_SECONDS:
-                    logger.warning(
-                        f"Article {article_id} stuck in 'publishing' for "
-                        f"{elapsed / 3600:.1f}h (>{self.PUBLISHING_TIMEOUT_SECONDS / 3600}h). "
-                        "Allowing reprocessing."
-                    )
-                    return None  # Let normal flow re-process
-            except (ValueError, TypeError) as e:
-                logger.warning(f"Could not parse publishing_started_at: {e}")
-
-        if not publishing_branch:
-            logger.warning(
-                f"Article {article_id} in 'publishing' state but no branch info. "
-                "Allowing reprocessing."
-            )
-            return None
-
-        # Attempt recovery: resolve repo_url and try to create PR (422 recovery
-        # in create_pull_request will find an existing PR if one exists).
-        logger.info(
-            f"Attempting publishing recovery for article {article_id} "
-            f"(branch: {publishing_branch})"
-        )
-
-        repo_url = self._resolve_repo_url()
-        if not repo_url:
-            logger.warning("Cannot resolve repo URL for publishing recovery.")
-            return None
-
-        source_id = str(article.get("source_id", "")).strip() or "unknown"
-        source_name = str(article.get("source_name", "")).strip() or "unknown"
-        pr_body = (
-            f"Automated submission for {article_id}.\n\n"
-            f"Source ID: {source_id}\n"
-            f"Source Name: {source_name}\n\n"
-            "Processed by Noticiencias Refinery (recovered from publishing state).\n\n"
-            "Required frontend gates before merge/publication:\n"
-            "- Content Guard\n"
-            "- Deploy to GitHub Pages"
-        )
-
-        slug = publishing_branch.replace("content/update-", "", 1)
-        pr_title = f"News: {slug}"
-
-        try:
-            pr_url = self.git.create_pull_request(
-                repo_url=repo_url,
-                branch_name=publishing_branch,
-                title=pr_title,
-                body=pr_body,
-            )
-        except Exception as e:
-            logger.warning(
-                f"Publishing recovery PR creation failed for {article_id}: {e}. "
-                "Article stays in 'publishing' for next retry."
-            )
-            return None  # Stay in publishing, will retry on next invocation
-
-        if pr_url:
-            logger.info(
-                f"Publishing recovery succeeded for article {article_id}: {pr_url}"
-            )
-            try:
-                self.db.mark_article_published(numeric_id, pr_url)
-            except Exception as e:
-                logger.error(f"Recovery PR found but failed to mark as published: {e}")
-            return True
-
-        return None
-
-    def _resolve_repo_url(self) -> str | None:
-        """Extracts target_repo_url from config (shared logic for recovery)."""
-        github_cfg = getattr(self.config, "github", None)
-        if github_cfg:
-            repo_url = getattr(github_cfg, "target_repo_url", None) or (
-                github_cfg.get("target_repo_url")
-                if isinstance(github_cfg, dict)
-                else None
-            )
-            if repo_url:
-                return repo_url
-        repo_url = getattr(self.config, "target_repo_url", None)
-        if repo_url is None and isinstance(self.config, dict):
-            repo_url = self.config.get("target_repo_url")
-        return repo_url
 
     def _schedule_optional_audit(
         self,
@@ -754,92 +581,6 @@ class RefineryEngine:
                 reason=f"submission_failed: {e}",
                 attempts=0,
             )
-
-    def _find_existing_file(self, posts_dir: Path, article_id: str) -> Path | None:
-        """
-        Scans for existing file using O(1) manifest lookup, falling back to scanner.
-        """
-        if not posts_dir.exists():
-            return None
-
-        # 1. Try Manifest Lookup (Fast Path)
-        self._load_manifest(posts_dir)
-        if article_id in self._manifest_cache:
-            filename = self._manifest_cache[article_id]
-            file_path = posts_dir / filename
-            if file_path.exists():
-                logger.info(f"⚡ Manifest hit: {article_id} -> {filename}")
-                return file_path
-            else:
-                logger.warning(f"Manifest stale: {filename} not found on disk.")
-                # Fallthrough to robust scan
-
-        # 2. Legacy Linear Scan (Slow Path)
-        logger.info(f"🐢 Slow scan triggered for {article_id}")
-        try:
-            for file_path in posts_dir.glob("*.md"):
-                try:
-                    # Quick check: read first 50 lines (Frontmatter)
-                    content_head = []
-                    with open(file_path, "r") as f:
-                        for _ in range(50):
-                            line = f.readline()
-                            if not line:
-                                break
-                            content_head.append(line)
-
-                    full_head = "".join(content_head)
-                    if f'refinery_id: "{article_id}"' in full_head:
-                        # Self-heal manifest
-                        self._update_manifest(posts_dir, article_id, file_path.name)
-                        return file_path
-                except (OSError, UnicodeDecodeError):
-                    continue
-        except Exception as e:
-            logger.error(f"Error scanning for existing files: {e}")
-
-        return None
-
-    def _load_manifest(self, posts_dir: Path):
-        """Loads the sidecar manifest into memory if not already loaded."""
-        if self._manifest_loaded:
-            return
-
-        manifest_path = posts_dir / MANIFEST_FILENAME
-        if manifest_path.exists():
-            try:
-                data = json.loads(manifest_path.read_text(encoding="utf-8"))
-                self._manifest_cache = data
-                self._manifest_loaded = True
-                logger.info(f"Loaded refinery manifest with {len(data)} entries")
-            except Exception as e:
-                logger.error(f"Failed to load manifest: {e}")
-                self._manifest_cache = {}
-        else:
-            self._manifest_cache = {}
-            self._manifest_loaded = True  # Loaded empty
-
-    def _update_manifest(self, posts_dir: Path, article_id: str, filename: str):
-        """Updates the in-memory cache and persists the manifest to disk."""
-        self._load_manifest(posts_dir)  # Ensure loaded
-
-        if self._manifest_cache.get(article_id) == filename:
-            return  # No change
-
-        self._manifest_cache[article_id] = filename
-
-        # B-05 / F-0025: Atomic persist — write to .tmp then os.replace()
-        # so the manifest is always either old-complete or new-complete.
-        try:
-            manifest_path = posts_dir / MANIFEST_FILENAME
-            tmp_path = manifest_path.with_suffix(".tmp")
-            tmp_path.write_text(
-                json.dumps(self._manifest_cache, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
-            os.replace(str(tmp_path), str(manifest_path))
-        except Exception as e:
-            logger.error(f"Failed to persist manifest: {e}")
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
         """Extracts slug from frontmatter or generates fallback."""

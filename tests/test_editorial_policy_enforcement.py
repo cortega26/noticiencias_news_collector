@@ -37,7 +37,7 @@ class TestEditorialPolicyEnforcement:
 
             # Other mocks
             engine.git = MagicMock()
-            engine._update_manifest = MagicMock()
+            engine.writer.write_article = MagicMock(return_value=MagicMock())
             engine._extract_slug = MagicMock(return_value="slug")
             engine._download_image = MagicMock(
                 return_value="~/assets/images/editorial-policy-test.png"
@@ -115,8 +115,8 @@ class TestEditorialPolicyEnforcement:
         # We need to check if write_text was called on the path object returned by posts_dir / ...
         # Since target_dir is a mock, target_dir / ... returns another mock.
         # But checking specific calls on deep mocks is tricky.
-        # Let's verify _update_manifest was NOT called.
-        engine._update_manifest.assert_not_called()
+        # Let's verify write_article was NOT called.
+        engine.writer.write_article.assert_not_called()
 
         # 2. Git Branch/PR
         engine.git.create_branch.assert_not_called()
@@ -146,5 +146,5 @@ class TestEditorialPolicyEnforcement:
         result = engine.process_single_article(article, MagicMock(), target_dir)
 
         assert result is True
-        engine._update_manifest.assert_called_once()
+        engine.writer.write_article.assert_called_once()
         engine.git.create_pull_request.assert_called_once()

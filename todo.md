@@ -118,8 +118,14 @@ File: `news_collector/logic/workflows/pr_orchestrator.py`
 - [x] **5.2** Run `make lint && make type && make test` — all clean
 - [x] **5.3** Confirm no dead private methods remain in `RefineryEngine` (those listed in Phase 1–4 delete steps)
 - [x] **5.4** Confirm `RefineryEngine.__init__` signature is unchanged
-- [ ] **5.5** Call sub-agent: "review spec.md and the current implementation for gaps" — loop on feedback
-- [ ] **5.6** Update this file: mark all completed tasks, note any spec deviations
+- [x] **5.5** Call sub-agent: "review spec.md and the current implementation for gaps" — loop on feedback
+- [x] **5.6** Update this file: mark all completed tasks, note any spec deviations
+
+### Spec deviations (intentional, documented)
+
+- `RefineryEngine._extract_slug` and `RefineryEngine._download_image` kept as private shims — existing tests monkeypatch these methods directly. Removing them would break those tests. Tracked in deferred backlog.
+- `finalize_slug()` added to `PublicationIdentityResolver` public interface — not in original spec, but required to complete the creation-mode identity lifecycle cleanly. Four IDENT-09 unit tests added.
+- PR body duplication between `create_pr()` and `attempt_recovery()` resolved: `create_pr()` now accepts a `recovered: bool = False` flag; `attempt_recovery()` delegates to it instead of duplicating body logic.
 
 ---
 

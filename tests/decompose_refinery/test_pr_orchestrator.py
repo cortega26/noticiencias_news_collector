@@ -119,23 +119,53 @@ class TestCreatePR:
         mock_db.mark_article_published.assert_not_called()
 
     def test_pr_10_pr_body_contains_required_fields(self, mock_git, mock_db, config_obj):
-        """PR-10: PR body contains article_id, source_id, source_name."""
+        """PR-10: PR body contains article_id, source_id, source_name (no raw format drift)."""
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
+        # --- Normal path ---
         orchestrator.create_pr(
             article_id="42",
             article=make_article("42"),
             branch_name="content/update-test",
             output_filename="2024-01-25-test.md",
         )
+        normal_body = mock_git.create_pull_request.call_args.kwargs.get("body", "")
 
-        # Capture the body passed to create_pull_request
-        call_kwargs = mock_git.create_pull_request.call_args
-        body = call_kwargs.kwargs.get("body") or (call_kwargs.args[2] if len(call_kwargs.args) > 2 else "")
+        assert "42" in normal_body          # article_id
+        assert "src" in normal_body         # source_id
+        assert "Test Source" in normal_body # source_name
+        assert "Noticiencias Refinery" in normal_body
 
-        assert "42" in body          # article_id
-        assert "src" in body         # source_id
-        assert "Test Source" in body # source_name
+        # --- Recovery path ---
+        mock_git.reset_mock()
+        from datetime import timedelta
+        recent_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+        mock_db.get_publishing_state.return_value = {
+            "publishing_started_at": recent_time,
+            "publishing_branch": "content/update-test",
+        }
+
+        orchestrator.attempt_recovery(
+            numeric_id=42,
+            article_id="42",
+            article=make_article("42"),
+        )
+        recovery_body = mock_git.create_pull_request.call_args.kwargs.get("body", "")
+
+        assert "42" in recovery_body
+        assert "src" in recovery_body
+        assert "Test Source" in recovery_body
+        assert "Noticiencias Refinery" in recovery_body
+
+        # Both bodies must share the same structural template (no format drift).
+        # Remove the recovery-specific note before comparing structure.
+        normal_stripped = normal_body.replace("Processed by Noticiencias Refinery.", "REFINERY_NOTE")
+        recovery_stripped = recovery_body.replace(
+            "Processed by Noticiencias Refinery (recovered from publishing state).", "REFINERY_NOTE"
+        )
+        assert normal_stripped == recovery_stripped, (
+            "PR body structure diverged between normal and recovery paths"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -264,22 +264,22 @@ class TestCollaboratorWiring:
         )
 
     def test_engine_has_writer(self, tmp_path):
-        """After decomposition, engine must expose _writer attribute."""
+        """After decomposition, engine must expose writer attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "_writer"), (
-            "RefineryEngine must have a _writer attribute after Phase 2"
+        assert hasattr(engine, "writer"), (
+            "RefineryEngine must have a writer attribute after Phase 2"
         )
 
     def test_engine_has_image_handler(self, tmp_path):
-        """After decomposition, engine must expose _image_handler attribute."""
+        """After decomposition, engine must expose image_handler attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "_image_handler"), (
-            "RefineryEngine must have an _image_handler attribute after Phase 3"
+        assert hasattr(engine, "image_handler"), (
+            "RefineryEngine must have an image_handler attribute after Phase 3"
         )
 
     def test_engine_has_pr_orchestrator(self, tmp_path):
-        """After decomposition, engine must expose _pr_orchestrator attribute."""
+        """After decomposition, engine must expose pr_orchestrator attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "_pr_orchestrator"), (
-            "RefineryEngine must have a _pr_orchestrator attribute after Phase 4"
+        assert hasattr(engine, "pr_orchestrator"), (
+            "RefineryEngine must have a r_orchestrator attribute after Phase 4"
         )
