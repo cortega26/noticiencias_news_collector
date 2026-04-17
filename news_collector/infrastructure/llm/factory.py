@@ -78,7 +78,7 @@ def get_provider(
         )
 
     # Fallback to Ollama
-    logger.info("Using OllamaProvider with model {}", model)
+    logger.info("Using OllamaProvider with model %s", model)
     return OllamaProvider(
         api_url=api_url,
         model=model,
