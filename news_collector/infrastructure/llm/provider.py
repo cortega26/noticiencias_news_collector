@@ -150,6 +150,11 @@ class OllamaProvider:
             "model": use_model,
             "prompt": prompt,
             "stream": stream,
+            # Increase context window so long editorial prompts don't get truncated.
+            # 8192 comfortably fits ~2500 tokens of input + ~3000 tokens of article output.
+            "options": {
+                "num_ctx": 8192,
+            },
         }
         if system:
             payload["system"] = system

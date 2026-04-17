@@ -513,8 +513,10 @@ class EditorAgent:
             "  - Criterion 1: text contains untranslated English fragments fused into Spanish prose.\n"
             "  - Criterion 2: topic is not science/technology.\n"
             "  - Criterion 3: a canonical entity is literally translated.\n"
-            "  - Criterion 4: text is clearly truncated or incomplete.\n"
-            'Output JSON: {"score": integer, "reason": "short string"}\n\n'
+            "  - Criterion 4: text is clearly truncated or incomplete.\n\n"
+            "Set recoverable=false ONLY when Criterion 2 fails (wrong topic). "
+            "Criteria 1, 3, and 4 are always recoverable via rewriting.\n"
+            'Output JSON: {"score": integer, "reason": "short string", "recoverable": true_or_false}\n\n'
             f"{_sample_for_critic(content)}"
         )
 
@@ -524,27 +526,52 @@ class EditorAgent:
                 prompt, system=system_prompt, model=self.editor_model
             )
             logger.debug(f"Critic raw response: {response[:300]}")
-            result = self._extract_json(response)
+            result = self._extract_critic_json(response)
 
             score = result.get("score", 0)
-            reason = result.get("reason", "Unknown reason")  # Default reason
+            reason = result.get("reason", "Unknown reason")
+            # recoverable=False means the failure is fundamental (e.g. wrong topic);
+            # retrying/repairing is pointless. Default True to be safe if LLM omits field.
+            recoverable = bool(result.get("recoverable", True))
 
             if score < self.critic_threshold:
                 logger.warning(
-                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. Reason: {reason}"
+                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. "
+                    f"Reason: {reason}. Recoverable: {recoverable}"
                 )
-                return False, reason
+                return False, reason, recoverable
 
             logger.info(f"✅ Critic Pass Passed (Score: {score})")
-            return True, None
+            return True, None, True
         except Exception as e:
-            logger.warning(f"Critic Pass Failed (Error): {e} - Failing Open (MVS)")
-            # MVS Decision: If critic crashes, do we fail open or closed?
-            # Plan says "Fail if invalid". But if LLM crashes...
-            # Let's Fail Closed for safety as per "Do No Harm".
-            # BUT implementation plan says "Discard article".
-            # So return False.
-            return False, f"Critic Exception: {e}"
+            logger.warning(f"Critic Pass Failed (Error): {e} - Failing Closed")
+            return False, f"Critic Exception: {e}", True  # Treat errors as recoverable
+
+    def _extract_critic_json(self, text: str) -> dict:
+        """Extract the first flat JSON object with a 'score' key from LLM critic response.
+
+        Uses non-greedy matching on non-nested braces to avoid picking up large nested
+        JSON structures (e.g. model maps) that may appear in the response.
+        Falls back to the generic extractor if no match is found.
+        """
+        # Try all non-nested {...} blocks (no inner braces), finding the one with 'score'
+        for match in re.finditer(r'\{[^{}]*\}', text):
+            try:
+                data = json.loads(match.group(0))
+                if "score" in data:
+                    return data
+            except (ValueError, KeyError):
+                continue
+        # Fallback: try singly-nested (one level of nesting)
+        for match in re.finditer(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text):
+            try:
+                data = json.loads(match.group(0))
+                if "score" in data:
+                    return data
+            except (ValueError, KeyError):
+                continue
+        logger.warning("_extract_critic_json: no JSON with 'score' found, falling back to generic extractor")
+        return self._extract_json(text)
 
     def _repair_editorial(self, base_content: str, feedback: str) -> str:
         """
@@ -556,6 +583,9 @@ class EditorAgent:
             f"The previous version was rejected by the Quality Control Editor for the following reason:\n"
             f"'{feedback}'\n\n"
             f"Please rewrite the article to address this specific issue while maintaining the original style and structure.\n"
+            f"IMPORTANT: Write the COMPLETE article from start to finish. Do NOT truncate, cut off, or stop early. "
+            f"The article MUST end with a complete sentence (ending in '.', '!' or '?'). "
+            f"If you are running out of space, summarise rather than truncate.\n\n"
             f"Base Content:\n{base_content}"
         )
         return self._send_prompt(
@@ -788,7 +818,7 @@ class EditorAgent:
             max_retries = 2
             for attempt in range(max_retries + 1):
                 # We run this on the adapted content to be sure.
-                is_valid, reason = self._critic_pass(final_content)
+                is_valid, reason, recoverable = self._critic_pass(final_content)
 
                 if is_valid:
                     # Persist critic pass checkpoint to avoid re-running on resume
@@ -797,6 +827,12 @@ class EditorAgent:
                     except Exception as _e:
                         logger.warning(f"Failed to persist critic checkpoint: {_e}")
                     break
+
+                if not recoverable:
+                    raise ValueError(
+                        f"Article permanently discarded (irrecoverable): {reason}. "
+                        "No repair attempted — source content is fundamentally off-topic."
+                    )
 
                 if attempt < max_retries:
                     print(
@@ -810,11 +846,19 @@ class EditorAgent:
                     final_content = self._extract_markdown_content(
                         final_content
                     )  # Cleanup
-                    # Update the Stage 2 cache so a resume doesn't reload the bad version
-                    try:
-                        cache_s2.write_text(final_content, encoding="utf-8")
-                    except Exception as _e:
-                        logger.warning(f"Failed to update stage2 cache after repair: {_e}")
+                    # Update the Stage 2 cache so a resume doesn't reload the bad version.
+                    # Only overwrite if content looks complete (ends with a sentence terminator).
+                    _stripped = final_content.strip() if final_content else ""
+                    if _stripped and re.search(r'[.!?»"\']\s*$', _stripped):
+                        try:
+                            cache_s2.write_text(final_content, encoding="utf-8")
+                        except Exception as _e:
+                            logger.warning(f"Failed to update stage2 cache after repair: {_e}")
+                    else:
+                        logger.warning(
+                            "⚠️ Repair produced truncated content (no sentence terminator at end) — "
+                            "skipping cache_s2 overwrite to preserve previous version"
+                        )
                 else:
                     raise ValueError(
                         f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
