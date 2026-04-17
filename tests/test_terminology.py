@@ -60,10 +60,10 @@ def test_critic_rejects_bad_terminology(agent):
         with patch.object(agent, "_send_prompt") as mock_send:
             # Mock the LLM correctly identifying the error
             mock_send.return_value = (
-                '{"score": 10, "reason": "Incorrect translation of Dark Energy Survey"}'
+                '{"score": 10, "reason": "Incorrect translation of Dark Energy Survey", "recoverable": true}'
             )
 
-            is_valid, _ = agent._critic_pass("La Encuesta de Energía Oscura reportó...")
+            is_valid, _, _ = agent._critic_pass("La Encuesta de Energía Oscura reportó...")
 
             assert is_valid is False
 
@@ -73,25 +73,43 @@ def test_critic_rejects_english_fragments(agent):
     with patch.dict("os.environ", {"ENABLE_TRANSLATION_GUARD": "true"}):
         with patch.object(agent, "_send_prompt") as mock_send:
             mock_send.return_value = (
-                '{"score": 0, "reason": "Untranslated English fragment: makingla invisible"}'
+                '{"score": 0, "reason": "Untranslated English fragment: makingla invisible", "recoverable": true}'
             )
 
-            is_valid, reason = agent._critic_pass(
+            is_valid, reason, recoverable = agent._critic_pass(
                 "La materia oscura es una forma de materia makingla invisible para los telescopios."
             )
 
             assert is_valid is False
             assert reason is not None
+            assert recoverable is True
+
+
+def test_critic_marks_offtopic_as_irrecoverable(agent):
+    """Simulate the Critic marking an off-topic article as irrecoverable."""
+    with patch.dict("os.environ", {"ENABLE_TRANSLATION_GUARD": "true"}):
+        with patch.object(agent, "_send_prompt") as mock_send:
+            mock_send.return_value = (
+                '{"score": 0, "reason": "Content is about cooking, not science", "recoverable": false}'
+            )
+
+            is_valid, reason, recoverable = agent._critic_pass(
+                "Esta receta de paella es la mejor del mundo."
+            )
+
+            assert is_valid is False
+            assert recoverable is False
 
 
 def test_critic_accepts_good_terminology(agent):
     """Simulate the Critic accepting a correct translation."""
     with patch.dict("os.environ", {"ENABLE_TRANSLATION_GUARD": "true"}):
         with patch.object(agent, "_send_prompt") as mock_send:
-            mock_send.return_value = '{"score": 95, "reason": "Correct terminology"}'
+            mock_send.return_value = '{"score": 95, "reason": "Correct terminology", "recoverable": true}'
 
-            is_valid, _ = agent._critic_pass(
+            is_valid, _, recoverable = agent._critic_pass(
                 "El Observatorio de la Energía Oscura reportó..."
             )
 
             assert is_valid is True
+            assert recoverable is True

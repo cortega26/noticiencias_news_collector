@@ -11,9 +11,9 @@ target_repo_url = "https://github.com/cortega26/noticiencias"
 [ollama]
 api_url = "http://localhost:11434/api/generate"
 model = "llama3.3:latest"
-timeout = 900  # CPU-only: llama3.3 (70B) cold-load can exceed 5 min on CPU
-translator_model = "llama3.3:latest"
-editor_model = "llama3.3:latest"
+timeout = 7200  # CPU-only: large models can take hours; set generous timeout
+translator_model = "qwen2.5:32b"
+editor_model = "qwen2.5:32b"
 headlines_model = "llama3.2:latest"
 
 [llm_rate_limiting]
