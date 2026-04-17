@@ -59,13 +59,27 @@ def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> 
     assert MODULE.main() == 1
 
 
-def test_run_collector_smoke_network_tripwire(monkeypatch) -> None:
+def test_run_collector_smoke_network_tripwire(capfd, monkeypatch) -> None:
     def _deny_network(*args, **kwargs):  # noqa: ARG001
-        raise AssertionError("External network call attempted in smoke mode")
+        msg = f"External network call attempted in smoke mode: {args} {kwargs}"
+        import traceback
+        traceback.print_stack()
+        print(msg)
+        raise AssertionError(msg)
 
     monkeypatch.setenv("NOTICIENCIAS_SMOKE", "1")
     monkeypatch.setattr(requests, "get", _deny_network)
+    monkeypatch.setattr(requests, "post", _deny_network)
     monkeypatch.setattr(requests.sessions.Session, "get", _deny_network)
+    monkeypatch.setattr(requests.sessions.Session, "post", _deny_network)
     monkeypatch.setattr(httpx, "get", _deny_network)
+    monkeypatch.setattr(httpx, "post", _deny_network)
+    monkeypatch.setattr(httpx.Client, "get", _deny_network)
+    monkeypatch.setattr(httpx.Client, "post", _deny_network)
 
-    assert MODULE.main() == 0
+    result = MODULE.main()
+    if result != 0:
+        out, err = capfd.readouterr()
+        print("\n=== STDOUT ==\n", out)
+        print("\n=== STDERR ==\n", err)
+        assert result == 0, f"Smoke main failed with exit code {result}"
