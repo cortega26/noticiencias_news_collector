@@ -1,9 +1,12 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 
 
+@patch("news_collector.enrichment.router.enrichment_metrics", MagicMock())
+@patch("news_collector.enrichment.router.strategy_lock_manager", MagicMock())
+@patch("news_collector.enrichment.router.strategy_optimizer", MagicMock())
 class TestEnrichmentStrategyRouter(unittest.TestCase):
     def setUp(self):
         self.router = EnrichmentStrategyRouter()
