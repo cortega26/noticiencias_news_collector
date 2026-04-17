@@ -46,10 +46,12 @@ def test_critic_prompt_injection_and_logic(agent):
             prompt_sent = args[0]
 
             # Verify Prompt Content
-            assert "ONLY check entities that appear BOTH in the text AND in this canonical list" in prompt_sent
             assert "LISTA CANÓNICA DE ENTIDADES CIENTÍFICAS" in prompt_sent
             assert "Dark Energy Survey" in prompt_sent
             assert "Set score=0 ONLY IF" in prompt_sent
+            # Verify English fragment check is present
+            assert "makingla" in prompt_sent
+            assert "Criterion 1" in prompt_sent
 
 
 def test_critic_rejects_bad_terminology(agent):
@@ -64,6 +66,22 @@ def test_critic_rejects_bad_terminology(agent):
             is_valid, _ = agent._critic_pass("La Encuesta de Energía Oscura reportó...")
 
             assert is_valid is False
+
+
+def test_critic_rejects_english_fragments(agent):
+    """Simulate the Critic rejecting an article with residual English fused into Spanish."""
+    with patch.dict("os.environ", {"ENABLE_TRANSLATION_GUARD": "true"}):
+        with patch.object(agent, "_send_prompt") as mock_send:
+            mock_send.return_value = (
+                '{"score": 0, "reason": "Untranslated English fragment: makingla invisible"}'
+            )
+
+            is_valid, reason = agent._critic_pass(
+                "La materia oscura es una forma de materia makingla invisible para los telescopios."
+            )
+
+            assert is_valid is False
+            assert reason is not None
 
 
 def test_critic_accepts_good_terminology(agent):

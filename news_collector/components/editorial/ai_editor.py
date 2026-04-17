@@ -74,6 +74,25 @@ _LLM_EPILOGUE_LINE_RE = re.compile(
 )
 
 
+def _sample_for_critic(content: str, max_chars: int = 2000) -> str:
+    """
+    Return a representative sample of the content for critic evaluation.
+    Takes beginning, middle, and end slices so the full article is covered,
+    not just the opening paragraphs.
+    """
+    if len(content) <= max_chars:
+        return content
+    third = max_chars // 3
+    mid_start = max(0, len(content) // 2 - third // 2)
+    return (
+        content[:third]
+        + "\n\n[...]\n\n"
+        + content[mid_start : mid_start + third]
+        + "\n\n[...]\n\n"
+        + content[-third:]
+    )
+
+
 def _strip_llm_preamble(text: str) -> str:
     """Remove LLM meta-instruction preamble from the start of generated text."""
     lines = text.split("\n")
@@ -213,9 +232,16 @@ class EditorAgent:
             self.min_content_length = 750
             data_dir = "./data"
 
-        # Anchor cache to the configured data directory to avoid CWD-dependent paths
-        # Use a dedicated subfolder to avoid collisions with other caches
-        self.cache_dir = Path(data_dir) / "cache" / "editor"
+        # Anchor cache to an absolute path so it is stable regardless of CWD.
+        # config.toml uses "./data" (relative), so we resolve it against the
+        # project root (where config.toml lives), not against the process CWD.
+        # This prevents the Refinery UI (Streamlit) from losing the cache when
+        # it is launched from a different working directory.
+        from noticiencias.config_manager import _project_root
+        _resolved_data = Path(data_dir)
+        if not _resolved_data.is_absolute():
+            _resolved_data = _project_root() / _resolved_data
+        self.cache_dir = _resolved_data / "cache" / "editor"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.critic_threshold = TEXT_PROCESSING_CONFIG.get("critic_score_threshold", 70)
@@ -469,18 +495,27 @@ class EditorAgent:
         entities_context = self._load_scientific_entities()
 
         prompt = (
-            "Analyze the following text. \n"
-            "1. Is it written in Spanish? \n"
-            "2. Is it about science/technology? \n"
-            "3. Does it correctly handle the specific named entities listed below?\n"
-            f"   ONLY check entities that appear BOTH in the text AND in this canonical list. Ignore all other institution names.\n{entities_context}\n"
-            "   Example FAIL (if DES appears in text): 'Encuesta de Energía Oscura' (should be 'Dark Energy Survey' or 'DES').\n"
-            "   Example FAIL (if VLT appears in text): 'Telescopio Muy Grande' (should be 'Very Large Telescope' or 'VLT').\n"
-            "   If NO entities from the canonical list appear in the text, criterion 3 passes automatically.\n\n"
-            "Rate overall confidence 0-100 across all three criteria.\n"
-            "Set score=0 ONLY IF: the text is not in Spanish, OR it is not about science/technology, OR it contains a literal translation of a specific entity from the canonical list above.\n"
+            "Analyze the following text across four criteria:\n\n"
+            "1. LANGUAGE: Is the body written entirely in Spanish?\n"
+            "   - Intentional anglicisms in *italics* (e.g. *machine learning*, *dark matter*) are allowed.\n"
+            "   - Named entities kept in English (e.g. 'Dark Energy Survey', 'VLT') are allowed.\n"
+            "   - FAIL: mid-sentence English fragments fused with Spanish, e.g. 'makingla invisible', "
+            "'whereas los resultados', 'however se observó'. These are untranslated remnants.\n\n"
+            "2. TOPIC: Is it about science or technology?\n\n"
+            "3. ENTITY NAMES: Does it correctly handle entities from the canonical list below?\n"
+            f"   ONLY check entities that appear BOTH in the text AND in this list. Ignore all others.\n{entities_context}\n"
+            "   Example FAIL (if DES in text): 'Encuesta de Energía Oscura' (keep as 'Dark Energy Survey' or 'DES').\n"
+            "   Example FAIL (if VLT in text): 'Telescopio Muy Grande' (keep as 'Very Large Telescope' or 'VLT').\n"
+            "   If NO entities from the list appear in the text, criterion 3 passes automatically.\n\n"
+            "4. COMPLETENESS: Is the text a complete article (not truncated mid-sentence)?\n\n"
+            "Rate overall confidence 0-100.\n"
+            "Set score=0 ONLY IF at least one criterion fails:\n"
+            "  - Criterion 1: text contains untranslated English fragments fused into Spanish prose.\n"
+            "  - Criterion 2: topic is not science/technology.\n"
+            "  - Criterion 3: a canonical entity is literally translated.\n"
+            "  - Criterion 4: text is clearly truncated or incomplete.\n"
             'Output JSON: {"score": integer, "reason": "short string"}\n\n'
-            f"{content[:2000]}"
+            f"{_sample_for_critic(content)}"
         )
 
         try:
@@ -775,6 +810,11 @@ class EditorAgent:
                     final_content = self._extract_markdown_content(
                         final_content
                     )  # Cleanup
+                    # Update the Stage 2 cache so a resume doesn't reload the bad version
+                    try:
+                        cache_s2.write_text(final_content, encoding="utf-8")
+                    except Exception as _e:
+                        logger.warning(f"Failed to update stage2 cache after repair: {_e}")
                 else:
                     raise ValueError(
                         f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
