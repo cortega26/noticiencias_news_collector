@@ -13,7 +13,7 @@ def test_scientific_entities_loading(agent):
     """Test that scientific entities are correctly loaded from JSON."""
     entities_context = agent._load_scientific_entities()
     assert "LISTA CANÓNICA DE ENTIDADES CIENTÍFICAS" in entities_context
-    assert "Dark Energy Survey -> Observatorio de la Energía Oscura" in entities_context
+    assert "Dark Energy Survey -> Dark Energy Survey" in entities_context
     assert "Very Large Telescope -> Very Large Telescope" in entities_context
 
 
@@ -46,10 +46,10 @@ def test_critic_prompt_injection_and_logic(agent):
             prompt_sent = args[0]
 
             # Verify Prompt Content
-            assert "[CRITICAL] Does it respect proper nouns?" in prompt_sent
+            assert "ONLY check entities that appear BOTH in the text AND in this canonical list" in prompt_sent
             assert "LISTA CANÓNICA DE ENTIDADES CIENTÍFICAS" in prompt_sent
             assert "Dark Energy Survey" in prompt_sent
-            assert "SCORE MUST BE 0" in prompt_sent
+            assert "Set score=0 ONLY IF" in prompt_sent
 
 
 def test_critic_rejects_bad_terminology(agent):

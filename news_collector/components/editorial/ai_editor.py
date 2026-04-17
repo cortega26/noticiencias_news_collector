@@ -472,12 +472,13 @@ class EditorAgent:
             "Analyze the following text. \n"
             "1. Is it written in Spanish? \n"
             "2. Is it about science/technology? \n"
-            "3. [CRITICAL] Does it respect proper nouns? Check for literal translations of scientific institutions/surveys.\n"
-            f"   Specific check: Do NOT allow literal translations of these entities if they differ from the canonical list:\n{entities_context}\n"
-            "   Example FAIL: 'Encuesta de Energía Oscura' (Should be 'Observatorio...' or 'Dark Energy Survey').\n"
-            "   Example FAIL: 'Telescopio Muy Grande' (Should be 'Very Large Telescope' or 'VLT').\n\n"
-            "Rate confidence 0-100. \n"
-            "If a canonical entity name is malformed or literally translated, SCORE MUST BE 0.\n"
+            "3. Does it correctly handle the specific named entities listed below?\n"
+            f"   ONLY check entities that appear BOTH in the text AND in this canonical list. Ignore all other institution names.\n{entities_context}\n"
+            "   Example FAIL (if DES appears in text): 'Encuesta de Energía Oscura' (should be 'Dark Energy Survey' or 'DES').\n"
+            "   Example FAIL (if VLT appears in text): 'Telescopio Muy Grande' (should be 'Very Large Telescope' or 'VLT').\n"
+            "   If NO entities from the canonical list appear in the text, criterion 3 passes automatically.\n\n"
+            "Rate overall confidence 0-100 across all three criteria.\n"
+            "Set score=0 ONLY IF: the text is not in Spanish, OR it is not about science/technology, OR it contains a literal translation of a specific entity from the canonical list above.\n"
             'Output JSON: {"score": integer, "reason": "short string"}\n\n'
             f"{content[:2000]}"
         )
@@ -487,6 +488,7 @@ class EditorAgent:
             response = self._send_prompt(
                 prompt, system=system_prompt, model=self.editor_model
             )
+            logger.debug(f"Critic raw response: {response[:300]}")
             result = self._extract_json(response)
 
             score = result.get("score", 0)
