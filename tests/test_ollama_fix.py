@@ -83,6 +83,7 @@ class TestOllamaFix:
             "model": "llama3.3:latest",
             "prompt": "Test",
             "stream": False,
+            "options": {"num_ctx": 8192},
         }
 
         mock_post.assert_called_once()
