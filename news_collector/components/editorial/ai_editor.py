@@ -24,6 +24,8 @@ SOURCE_IDENTITY_COMMENT_RE = re.compile(
 )
 FRONTMATTER_BLOCK_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n*", flags=re.DOTALL)
 SOURCE_FOOTER_RE = re.compile(r"(?mi)^\s*Fuente original:\s*\[[^\]]+\]\([^)]+\)\s*$")
+_FENCE_DELIMITER_RE = re.compile(r"^\s*(```+|~~~+)")
+_HEADING_LINE_RE = re.compile(r"^(\s{0,3})(#{1,6})\s+(.*\S)\s*$")
 _NARRATIVE_WORD_RE = re.compile(r"\b[\wÁÉÍÓÚáéíóúÑñ'-]+\b", flags=re.UNICODE)
 GENERATED_BODY_MIN_WORDS = 80
 BLOCKED_GENERATED_BODY_PATTERNS = (
@@ -173,6 +175,85 @@ def _count_narrative_words(markdown: str) -> int:
     return len(_NARRATIVE_WORD_RE.findall(cleaned))
 
 
+def _normalize_article_body_heading_levels(markdown: str) -> str:
+    """Normalize article body headings to start at H2 and avoid skipped levels."""
+    lines = markdown.split("\n")
+    normalized_lines: list[str] = []
+    active_fence: str | None = None
+    previous_level = 1
+
+    for line in lines:
+        fence_match = _FENCE_DELIMITER_RE.match(line)
+        if fence_match:
+            fence_char = fence_match.group(1)[0]
+            if active_fence is None:
+                active_fence = fence_char
+            elif active_fence == fence_char:
+                active_fence = None
+            normalized_lines.append(line)
+            continue
+
+        if active_fence is not None:
+            normalized_lines.append(line)
+            continue
+
+        heading_match = _HEADING_LINE_RE.match(line)
+        if not heading_match:
+            normalized_lines.append(line)
+            continue
+
+        indent, hashes, text = heading_match.groups()
+        level = len(hashes)
+        normalized_level = max(2, level)
+        if normalized_level > previous_level + 1:
+            normalized_level = previous_level + 1
+
+        normalized_lines.append(f"{indent}{'#' * normalized_level} {text}")
+        previous_level = normalized_level
+
+    return "\n".join(normalized_lines)
+
+
+def _collect_heading_structure_issues(markdown: str) -> list[str]:
+    body = _extract_publishable_body(markdown)
+    if not body:
+        return []
+
+    issues: list[str] = []
+    active_fence: str | None = None
+    previous_level = 1
+
+    for line_number, line in enumerate(body.split("\n"), start=1):
+        fence_match = _FENCE_DELIMITER_RE.match(line)
+        if fence_match:
+            fence_char = fence_match.group(1)[0]
+            if active_fence is None:
+                active_fence = fence_char
+            elif active_fence == fence_char:
+                active_fence = None
+            continue
+
+        if active_fence is not None:
+            continue
+
+        heading_match = _HEADING_LINE_RE.match(line)
+        if not heading_match:
+            continue
+
+        _indent, hashes, text = heading_match.groups()
+        level = len(hashes)
+
+        if level == 1:
+            issues.append(f'body heading uses H1 at line {line_number}: "{text}"')
+        elif level > previous_level + 1:
+            issues.append(
+                f'body heading skips from H{previous_level} to H{level} at line {line_number}: "{text}"'
+            )
+
+        previous_level = level
+    return issues
+
+
 def validate_generated_article_markdown(markdown: str) -> None:
     """
     Block obvious placeholder/error prose and bodies too thin to be a publishable article.
@@ -189,6 +270,13 @@ def validate_generated_article_markdown(markdown: str) -> None:
             raise GeneratedArticleValidationError(
                 "Generated article body contains placeholder/error language and cannot be published."
             )
+
+    heading_issues = _collect_heading_structure_issues(markdown)
+    if heading_issues:
+        raise GeneratedArticleValidationError(
+            f"Generated article body has invalid heading structure: {heading_issues[0]}",
+            error_code="editorial_heading_structure_invalid",
+        )
 
     word_count = _count_narrative_words(body)
     if word_count < GENERATED_BODY_MIN_WORDS:
@@ -669,6 +757,8 @@ class EditorAgent:
         }
         for old, new in replacements.items():
             content = content.replace(old, new)
+
+        content = _normalize_article_body_heading_levels(content)
 
         # 3. Length Repair
         # Target strict 2.5x ratio on FINAL output (Frontmatter + Body)
