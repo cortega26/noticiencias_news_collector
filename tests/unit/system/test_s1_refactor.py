@@ -50,13 +50,13 @@ class TestS1RefactorSafety:
     @pytest.fixture
     def system(self, mock_logger, mock_db, mock_collectors, mock_scorer):
         """Creates a fresh system instance for each test."""
-        # Mock validations to pass
         with (
             patch("news_collector.system.bootstrap.validate_config"),
             patch("news_collector.system.bootstrap.validate_sources"),
+            patch("news_collector.system.bootstrap._verify_llm_health"),
         ):
             sys = NewsCollectorSystem()
-            return sys
+            yield sys
 
     def test_initialization_contract(self, system):
         """
@@ -227,33 +227,34 @@ class TestS1RefactorSafety:
         db = MagicMock()
         collector = MagicMock()
 
-        # 1. DB Warning (failed sources > 0)
-        db.get_health_status.return_value = {"failed_sources": 5}
-        collector.is_healthy.return_value = True
+        with patch("news_collector.system.bootstrap._verify_llm_health"):
+            # 1. DB Warning (failed sources > 0)
+            db.get_health_status.return_value = {"failed_sources": 5}
+            collector.is_healthy.return_value = True
 
-        res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
-        assert "5 fuentes fallando" in res["warnings"][0]
+            res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
+            assert "5 fuentes fallando" in res["warnings"][0]
 
-        # 2. DB Exception
-        db.get_health_status.side_effect = Exception("DB Down")
-        res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
-        assert res["healthy"] is False
-        assert "Error verificando base de datos" in res["issues"][0]
+            # 2. DB Exception
+            db.get_health_status.side_effect = Exception("DB Down")
+            res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
+            assert res["healthy"] is False
+            assert "Error verificando base de datos" in res["issues"][0]
 
-        # 3. Collector Unhealthy
-        db.get_health_status.side_effect = None
-        db.get_health_status.return_value = {"failed_sources": 0}
-        collector.is_healthy.return_value = False
+            # 3. Collector Unhealthy
+            db.get_health_status.side_effect = None
+            db.get_health_status.return_value = {"failed_sources": 0}
+            collector.is_healthy.return_value = False
 
-        res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
-        assert res["healthy"] is False
-        assert "Colector en estado no saludable" in res["issues"][0]
+            res = bootstrap.check_system_health(db, collector, logger, {"s1": {}})
+            assert res["healthy"] is False
+            assert "Colector en estado no saludable" in res["issues"][0]
 
-        # 4. No sources config
-        collector.is_healthy.return_value = True
-        res = bootstrap.check_system_health(db, collector, logger, {})
-        assert res["healthy"] is False
-        assert "No hay fuentes configuradas" in res["issues"][0]
+            # 4. No sources config
+            collector.is_healthy.return_value = True
+            res = bootstrap.check_system_health(db, collector, logger, {})
+            assert res["healthy"] is False
+            assert "No hay fuentes configuradas" in res["issues"][0]
 
     def test_build_collectors_error(self):
         """

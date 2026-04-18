@@ -56,6 +56,7 @@ def test_run_collector_smoke_replay_contract() -> None:
 def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> None:
     missing_fixture = tmp_path / "missing_replay.jsonl"
     monkeypatch.setattr(MODULE, "SMOKE_FIXTURE_PATH", missing_fixture)
+    monkeypatch.setenv("NOTICIENCIAS_SMOKE", "1")
     assert MODULE.main() == 1
 
 
