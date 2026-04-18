@@ -29,6 +29,17 @@ Cuando la tubería falla, comienza con estos síntomas comunes antes de escalar 
   - Corrige el valor en la GUI (asegurando tipos positivos para enteros y JSON válido para listas/tablas) y vuelve a guardar.
   - Confirma el cambio con `python -m noticiencias.config_manager --config ./config.toml --explain <clave>`; la salida debe mostrar `source: file (.../config.toml)` con el nuevo valor.
 
+## Error: Refinery usa un modelo o token distinto al esperado
+- **Contexto típico**: antes existía una configuración paralela en `apps/refinery/.env`, lo que producía drift entre la UI y el runtime del backend.
+- **Diagnóstico rápido**:
+  - Ejecuta `python -m noticiencias.config_manager --explain ollama.model` desde la raíz del repo.
+  - Verifica el archivo raíz `.env`; es la única capa local admitida para overrides.
+  - Si todavía existe `apps/refinery/.env`, trátalo como deuda de migración. La UI lo ignora y mostrará una advertencia.
+- **Resolución**:
+  - Mueve cualquier override necesario a la raíz del repo (`.env`) o a `config.toml`, según corresponda.
+  - Reinicia `make refinery` tras cambiar configuración persistida.
+  - Si necesitas saber por qué un valor está activo, usa `ConfigMetadata.provenance` o `python -m noticiencias.config_manager --explain <clave>`.
+
 ## Error: `ModuleNotFoundError` para modelos de enriquecimiento
 - **Contexto típico**: entorno virtual sin dependencias opcionales o modelos locales eliminados.
 - **Diagnóstico rápido**:

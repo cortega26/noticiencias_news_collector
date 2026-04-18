@@ -72,6 +72,7 @@ class ConfigMetadata:
     env_path: Optional[Path]
     env_prefix: str
     provenance: Dict[str, ConfigValueOrigin] = field(default_factory=dict)
+    warnings: list["ConfigWarning"] = field(default_factory=list)
     load_order: tuple[str, ...] = (
         "defaults",
         "file",
@@ -92,6 +93,24 @@ class ConfigMetadata:
         return sources
 
 
+@dataclass(frozen=True)
+class ConfigWarning:
+    """Actionable configuration warning produced during load."""
+
+    code: str
+    message: str
+    path: Path | None = None
+    keys: tuple[str, ...] = ()
+
+    def render(self) -> str:
+        details: list[str] = [self.message]
+        if self.path is not None:
+            details.append(f"path={self.path}")
+        if self.keys:
+            details.append("keys=" + ", ".join(self.keys))
+        return " | ".join(details)
+
+
 class ConfigError(RuntimeError):
     """Raised when configuration loading or validation fails."""
 
@@ -103,6 +122,14 @@ def _project_root() -> Path:
 def _default_paths() -> tuple[Path, Path]:
     root = _project_root()
     return root / DEFAULT_CONFIG_FILENAME, root / DEFAULT_ENV_FILENAME
+
+
+def default_config_path() -> Path:
+    return _default_paths()[0]
+
+
+def default_env_path() -> Path:
+    return _default_paths()[1]
 
 
 def _deepcopy_mapping(mapping: Mapping[str, Any]) -> Dict[str, Any]:
@@ -302,6 +329,62 @@ def _load_toml(path: Path) -> Mapping[str, Any]:
         raise ConfigError(f"Failed to parse {path}: {exc}") from exc
 
 
+def load_env_overrides(path: Path | None = None) -> Dict[str, str]:
+    """Load raw key/value overrides from the canonical repo-root .env file."""
+
+    env_path = path or default_env_path()
+    if not env_path.exists():
+        return {}
+    return {
+        key: value
+        for key, value in dotenv_values(env_path, verbose=False).items()
+        if value is not None
+    }
+
+
+def _format_env_assignment(key: str, value: str) -> str:
+    if value == "":
+        return f'{key}=""'
+    if any(char.isspace() for char in value) or "#" in value:
+        return f"{key}={json.dumps(value)}"
+    return f"{key}={value}"
+
+
+def save_env_overrides(
+    updates: Mapping[str, str | None],
+    path: Path | None = None,
+) -> Path:
+    """Persist raw environment overrides to the canonical repo-root .env file."""
+
+    env_path = path or default_env_path()
+    current = load_env_overrides(env_path)
+    for key, value in updates.items():
+        if value is None:
+            current.pop(key, None)
+            continue
+        rendered = str(value)
+        if rendered == "":
+            current.pop(key, None)
+            continue
+        current[key] = rendered
+
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = "\n".join(
+        _format_env_assignment(key, value) for key, value in current.items()
+    )
+    if payload:
+        payload += "\n"
+    temp_name = f".{env_path.name}.tmp"
+    tmp_path = env_path.with_name(temp_name)
+    try:
+        tmp_path.write_text(payload, encoding="utf-8")
+        os.replace(tmp_path, env_path)
+    except Exception as exc:  # pragma: no cover - defensive
+        tmp_path.unlink(missing_ok=True)
+        raise ConfigError(f"Failed to persist environment overrides: {exc}") from exc
+    return env_path
+
+
 def _detect_env_path(config_path: Path) -> Path:
     env_candidate = config_path.parent / DEFAULT_ENV_FILENAME
     if env_candidate.exists():
@@ -310,6 +393,65 @@ def _detect_env_path(config_path: Path) -> Path:
     if default_env_path.exists():
         return default_env_path
     return env_candidate
+
+
+def _legacy_env_paths(config_path: Path) -> tuple[Path, ...]:
+    root = config_path.parent
+    return (root / "apps" / "refinery" / DEFAULT_ENV_FILENAME,)
+
+
+def _legacy_env_key_map() -> dict[str, str]:
+    return {
+        "GITHUB_TOKEN": "github.token",  # nosec
+        "GITHUB_USER_NAME": "github.user_name",
+        "GITHUB_USER_EMAIL": "github.user_email",
+        "SOURCE_REPO_URL": "github.source_repo_url",
+        "TARGET_REPO_URL": "github.target_repo_url",
+        "OLLAMA_API_URL": "ollama.api_url",
+        "OLLAMA_MODEL": "ollama.model",
+        "OLLAMA_TRANSLATOR_MODEL": "ollama.translator_model",
+        "OLLAMA_EDITOR_MODEL": "ollama.editor_model",
+        "OLLAMA_HEADLINES_MODEL": "ollama.headlines_model",
+        "OLLAMA_TIMEOUT_SECONDS": "editorial_auditor.timeout_seconds",
+        "OLLAMA_RETRY_ATTEMPTS": "editorial_auditor.max_retries",
+        "OLLAMA_HEALTH_TIMEOUT_SECONDS": "editorial_auditor.health_timeout_seconds",
+        "SCORING_LLM_MODEL": "scoring.llm_model",
+    }
+
+
+def _collect_legacy_env_file_warnings(
+    *,
+    config_path: Path,
+    env_path: Path,
+    env_file_data: Mapping[str, str],
+) -> list[ConfigWarning]:
+    warnings: list[ConfigWarning] = []
+    for legacy_path in _legacy_env_paths(config_path):
+        if not legacy_path.exists():
+            continue
+        legacy_data = load_env_overrides(legacy_path)
+        if not legacy_data:
+            continue
+        conflicting_keys = tuple(
+            sorted(
+                key
+                for key in legacy_data
+                if key in env_file_data
+                and env_file_data.get(key) != legacy_data.get(key)
+            )
+        )
+        warnings.append(
+            ConfigWarning(
+                code="legacy_env_file_ignored",
+                message=(
+                    "Ignoring unsupported legacy env file. Move any required overrides "
+                    f"into {env_path}."
+                ),
+                path=legacy_path,
+                keys=conflicting_keys,
+            )
+        )
+    return warnings
 
 
 def _format_validation_error(
@@ -341,6 +483,7 @@ def load_config(  # noqa: C901
     config_path = path if path else _default_paths()[0]
     env_path = _detect_env_path(config_path)
     runtime_env = os.environ if environ is None else environ
+    warnings: list[ConfigWarning] = []
 
     defaults = DEFAULT_CONFIG.model_dump(mode="python")
     merged = _deepcopy_mapping(defaults)
@@ -356,30 +499,29 @@ def load_config(  # noqa: C901
         file_origin = ConfigValueOrigin(layer="file", source=str(config_path))
         _merge_layer(merged, file_data, provenance, origin=file_origin)
 
-    env_file_data: Dict[str, str] = {}
-    if env_path.exists():
-        env_file_data = {
-            key: value
-            for key, value in dotenv_values(env_path, verbose=False).items()
-            if value is not None
-        }
+    env_file_data: Dict[str, str] = load_env_overrides(env_path)
+    env_file_nested_paths: set[str] = set()
+    if env_file_data:
         for key, value in env_file_data.items():
             try:
                 path_key, parsed_value = _parse_kv_override(key, value, env_prefix)
             except ConfigError:
                 continue
             _assign_path(merged, path_key, parsed_value)
+            env_file_nested_paths.add(path_key)
             provenance[path_key] = ConfigValueOrigin(
                 layer="env-file",
                 source=str(env_path),
                 env_var=key,
             )
 
+    runtime_nested_paths: set[str] = set()
     for key, value in runtime_env.items():
         if not key.startswith(env_prefix + "__"):
             continue
         path_key, parsed_value = _parse_kv_override(key, value, env_prefix)
         _assign_path(merged, path_key, parsed_value)
+        runtime_nested_paths.add(path_key)
         provenance[path_key] = ConfigValueOrigin(
             layer="env",
             source="process",
@@ -388,36 +530,62 @@ def load_config(  # noqa: C901
 
     # LEGACY/FLAT ENV VAR MAPPING LAYER
     # Helps map flat .env vars (e.g. GITHUB_TOKEN) to new nested schema (github.token)
-    legacy_map = {
-        "GITHUB_TOKEN": "github.token",  # nosec
-        "GITHUB_USER_NAME": "github.user_name",
-        "GITHUB_USER_EMAIL": "github.user_email",
-        "SOURCE_REPO_URL": "github.source_repo_url",
-        "TARGET_REPO_URL": "github.target_repo_url",
-        "OLLAMA_API_URL": "ollama.api_url",
-        "OLLAMA_MODEL": "ollama.model",
-        "OLLAMA_TRANSLATOR_MODEL": "ollama.translator_model",
-        "OLLAMA_EDITOR_MODEL": "ollama.editor_model",
-        "OLLAMA_HEADLINES_MODEL": "ollama.headlines_model",
-        "OLLAMA_TIMEOUT_SECONDS": "editorial_auditor.timeout_seconds",
-        "OLLAMA_RETRY_ATTEMPTS": "editorial_auditor.max_retries",
-        "OLLAMA_HEALTH_TIMEOUT_SECONDS": "editorial_auditor.health_timeout_seconds",
-        "SCORING_LLM_MODEL": "scoring.llm_model",
-    }
+    legacy_map = _legacy_env_key_map()
 
-    # Check both raw env and .env file data for these keys
-    combined_env_sources = {**env_file_data, **runtime_env}
-
-    for legacy_key, target_path in legacy_map.items():
-        if legacy_key in combined_env_sources:
-            val = combined_env_sources[legacy_key]
-            if val:  # Only apply if not empty
-                _assign_path(merged, target_path, val)
-                provenance[target_path] = ConfigValueOrigin(
-                    layer="legacy_env",
-                    source="compatibility_mapping",
-                    env_var=legacy_key,
+    def apply_legacy_layer(
+        env_source: Mapping[str, str],
+        *,
+        layer: str,
+        source: str,
+        nested_paths: set[str],
+    ) -> None:
+        for legacy_key, target_path in legacy_map.items():
+            if legacy_key not in env_source:
+                continue
+            val = env_source[legacy_key]
+            if not val:
+                continue
+            if target_path in nested_paths:
+                canonical_var = f"{env_prefix}__" + "__".join(
+                    segment.upper() for segment in target_path.split(".")
                 )
+                warnings.append(
+                    ConfigWarning(
+                        code="legacy_env_shadowed",
+                        message=(
+                            f"Ignoring legacy env key {legacy_key} because canonical key "
+                            f"{canonical_var} also defines {target_path}. Migrate to the canonical name."
+                        ),
+                        keys=(legacy_key, canonical_var),
+                    )
+                )
+                continue
+            _assign_path(merged, target_path, val)
+            provenance[target_path] = ConfigValueOrigin(
+                layer=layer,
+                source=source,
+                env_var=legacy_key,
+            )
+
+    apply_legacy_layer(
+        env_file_data,
+        layer="legacy_env_file",
+        source=str(env_path),
+        nested_paths=env_file_nested_paths,
+    )
+    apply_legacy_layer(
+        runtime_env,
+        layer="legacy_env",
+        source="process",
+        nested_paths=runtime_nested_paths,
+    )
+    warnings.extend(
+        _collect_legacy_env_file_warnings(
+            config_path=config_path,
+            env_path=env_path,
+            env_file_data=env_file_data,
+        )
+    )
 
     try:
         config = Config.model_validate(merged)
@@ -428,6 +596,7 @@ def load_config(  # noqa: C901
         env_path=env_path if env_path.exists() else None,
         env_prefix=env_prefix,
         provenance=provenance,
+        warnings=warnings,
     )
     return config
 

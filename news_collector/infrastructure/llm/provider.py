@@ -22,6 +22,10 @@ from news_collector.infrastructure.llm.model_registry import (
     is_no_warn_mode_enabled,
     is_strict_mode_enabled,
 )
+from news_collector.infrastructure.llm.ollama_errors import (
+    OllamaProviderError,
+    build_ollama_http_error,
+)
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimiter,
     redact_message,
@@ -173,15 +177,20 @@ class OllamaProvider:
 
     @staticmethod
     def _is_429_response(response: requests.Response) -> bool:
-        return response.status_code == 429
+        return OllamaProvider._response_status_code(response) == 429
 
     @staticmethod
     def _is_429_httpx(response: httpx.Response) -> bool:
-        return response.status_code == 429
+        return OllamaProvider._response_status_code(response) == 429
+
+    @staticmethod
+    def _response_status_code(response: Any) -> int:
+        raw_status = getattr(response, "status_code", 200)
+        return raw_status if isinstance(raw_status, int) else 200
 
     # --- ASYNC API (Recommended) ---
 
-    async def generate_async(
+    async def generate_async(  # noqa: C901
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -228,8 +237,8 @@ class OllamaProvider:
                 return str(text)
 
             except httpx.HTTPStatusError as e:
-                safe_msg = redact_message(str(e))
                 if self._is_429_httpx(e.response):
+                    safe_msg = redact_message(str(e))
                     limiter.circuit_breaker.record_rate_limit()
                     logger.warning("Ollama 429 (attempt {}): {}", attempt_num, safe_msg)
                     if (
@@ -241,17 +250,25 @@ class OllamaProvider:
                         )
                         continue
                     raise RateLimitError(safe_msg) from e
-                else:
-                    limiter.circuit_breaker.record_error()
+
+                provider_error = build_ollama_http_error(
+                    e.response, model=str(payload["model"])
+                )
+                safe_msg = redact_message(str(provider_error))
+                limiter.circuit_breaker.record_error()
+                if not provider_error.retryable:
                     logger.error(
-                        "Async LLM error (attempt {}): {}", attempt_num, safe_msg
+                        "Async Ollama non-retryable failure (attempt {}): {}",
+                        attempt_num,
+                        safe_msg,
                     )
-                    if attempt_num <= self.max_retries:
-                        await __import__("asyncio").sleep(
-                            self._backoff_delay(attempt_num)
-                        )
-                        continue
-                    raise
+                    raise provider_error from e
+
+                logger.error("Async LLM error (attempt {}): {}", attempt_num, safe_msg)
+                if attempt_num <= self.max_retries:
+                    await __import__("asyncio").sleep(self._backoff_delay(attempt_num))
+                    continue
+                raise provider_error from e
             except httpx.RequestError as e:
                 limiter.circuit_breaker.record_error()
                 logger.error("Async LLM Request Error (attempt {}): {}", attempt_num, e)
@@ -329,6 +346,22 @@ class OllamaProvider:
                         f"Ollama returned 429 after {attempt_num} attempts"
                     )
 
+                if self._response_status_code(response) >= 400:
+                    provider_error = build_ollama_http_error(
+                        response, model=str(payload["model"])
+                    )
+                    if not provider_error.retryable:
+                        limiter.circuit_breaker.record_error()
+                        safe_msg = redact_message(str(provider_error))
+                        logger.error(
+                            "Sync LLM Request Error (Attempt {}/{}): {}",
+                            attempt_num,
+                            self.max_retries + 1,
+                            safe_msg,
+                        )
+                        raise provider_error
+                    raise requests.HTTPError(str(provider_error), response=response)
+
                 response.raise_for_status()
 
                 if stream:
@@ -347,8 +380,26 @@ class OllamaProvider:
             except RateLimitError:
                 raise  # already handled above
             except requests.RequestException as e:
-                safe_msg = redact_message(str(e))
                 limiter.circuit_breaker.record_error()
+                response_error: OllamaProviderError | None = None
+                error_response = getattr(e, "response", None)
+                if error_response is not None:
+                    response_error = build_ollama_http_error(
+                        error_response, model=str(payload["model"])
+                    )
+                    if not response_error.retryable:
+                        safe_msg = redact_message(str(response_error))
+                        logger.error(
+                            "Sync LLM Request Error (Attempt {}/{}): {}",
+                            attempt_num,
+                            self.max_retries + 1,
+                            safe_msg,
+                        )
+                        raise response_error from e
+
+                safe_msg = redact_message(
+                    str(response_error) if response_error is not None else str(e)
+                )
                 message = f"Sync LLM Request Error (Attempt {attempt_num}/{self.max_retries + 1}): {safe_msg}"
                 if log_errors_as_warning:
                     logger.warning(message)
@@ -358,6 +409,8 @@ class OllamaProvider:
                 if attempt_num <= self.max_retries:
                     time.sleep(self._backoff_delay(attempt_num))
                     continue
+                if response_error is not None:
+                    raise response_error from e
                 raise
             finally:
                 limiter.release_sync()

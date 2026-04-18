@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from typing import Any, Optional
 
 from news_collector.config.prompts import build_editorial_classification_system_prompt
-from news_collector.config.settings import CONFIG
 from news_collector.editorial.categories import (
     CANONICAL_PUBLIC_CATEGORIES,
     canonicalize_category_label,
@@ -12,6 +11,7 @@ from news_collector.editorial.categories import (
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.utils.logger import get_logger
+from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -21,11 +21,16 @@ class EditorialClassifier:
     Agent responsible for assigning a single editorial category to an article.
     """
 
-    def __init__(self, llm_client: Optional[Any] = None):
+    def __init__(self, llm_client: Optional[Any] = None, config: Any | None = None):
         if llm_client is None:
-            model = get_model_for_stage("classifier", config=CONFIG, logger=logger)
+            active_config = config or load_config()
+            model = get_model_for_stage(
+                "classifier", config=active_config, logger=logger
+            )
             self.llm = get_provider(
-                config=CONFIG, api_url=CONFIG.ollama.api_url, model=model
+                config=active_config,
+                api_url=active_config.ollama.api_url,
+                model=model,
             )
         else:
             self.llm = llm_client

@@ -9,9 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-import dotenv
 import streamlit as st
-import toml
 
 # Import refinery main explicitly to avoid ambiguous module resolution.
 # Import refinery main explicitly to avoid ambiguous module resolution.
@@ -55,11 +53,20 @@ from apps.refinery.published_content import (
     resolve_published_content_snapshot,
     truncate_refinery_id,
 )
-from news_collector.config.settings import CONFIG, DATABASE_CONFIG
+from news_collector.config import settings as config_settings
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
+from noticiencias.config_manager import (
+    Config,
+    default_config_path,
+    default_env_path,
+    load_config,
+    load_env_overrides,
+    save_config,
+    save_env_overrides,
+)
 
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
@@ -86,9 +93,7 @@ from news_collector.editorial.policy import EditorialPolicy
 # refinery_main has config object usually?
 # Let's load mode from config.toml directly or via config_manager
 try:
-    from noticiencias.config_manager import load_config
-
-    sys_config = load_config()
+    sys_config = config_settings.refresh_runtime_config()
     editorial_mode = getattr(sys_config.app, "editorial_mode", "standard")
     policy = EditorialPolicy.from_mode(editorial_mode)
 
@@ -114,9 +119,10 @@ except Exception as e:
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
-ENV_FILE = BASE_DIR / ".env"
-# Load environment variables into os.environ for main.py to see them
-dotenv.load_dotenv(ENV_FILE, override=False)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_FILE = default_config_path()
+ENV_FILE = default_env_path()
+LEGACY_REFINERY_ENV_FILE = BASE_DIR / ".env"
 
 REFINERY_UI_TOKEN_KEY = "REFINERY_UI_TOKEN"  # noqa: S105  # noqa: S105 # nosec
 REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
@@ -126,31 +132,15 @@ REFINERY_UI_BYPASS_KEY = "REFINERY_UI_UNSAFE_ALLOW"
 
 # --- Helper Functions ---
 def load_secrets():
-    if not ENV_FILE.exists():
-        return {}
-    # Only load secrets
-    all_env = dotenv.dotenv_values(ENV_FILE)
-    # Filter for known secrets or return all (simplest is return all for now, but UI will separate)
-    return all_env
+    return load_env_overrides(ENV_FILE)
 
 
 def save_secrets(secrets_dict):
-    # Load existing to preserve other keys if needed, or just write what we have
-    # Better: Update existing file with new values
-    current = dotenv.dotenv_values(ENV_FILE)
-    current.update(secrets_dict)
-
-    with open(ENV_FILE, "w") as f:
-        for key, value in current.items():
-            # Only write known secrets or everything? Let's write everything that is in the dict
-            # keys that are NOT secrets should generally be removed from here if we migrate them
-            # But for safety, we just allow writing the passed dict + updates.
-
-            # Simple approach: Write atomic
-            if " " in str(value) and not str(value).startswith('"'):
-                f.write(f'{key}="{value}"\n')
-            else:
-                f.write(f"{key}={value}\n")
+    normalized = {
+        key: (None if value in ("", None) else str(value))
+        for key, value in secrets_dict.items()
+    }
+    save_env_overrides(normalized, ENV_FILE)
 
 
 def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> bool:
@@ -167,7 +157,7 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
     if not token:
         st.error(
             "❌ Falta REFINERY_UI_TOKEN. "
-            "Configúralo en apps/refinery/.env para habilitar acciones de publicación."
+            "Configúralo en el .env raíz del backend para habilitar acciones de publicación."
         )
         return False
 
@@ -192,41 +182,46 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
 
 # Load Secrets for Auth
 secrets = load_secrets()
-# Default relative path
-# In monorepo structure, admin_panel is in apps/refinery, so root is up two levels
-DEFAULT_COLLECTOR_PATH = BASE_DIR.parent.parent
-# Get from config (preferred) or env or default
-# We need to load TOML early to find PATH?
-# Chicken and egg. NEWS_COLLECTOR_PATH is expected in .env usually for bootstrapping.
-# We will keep NEWS_COLLECTOR_PATH in .env/secrets for now as it defines WHERE config.toml is.
-collector_path_str = os.getenv("NEWS_COLLECTOR_PATH") or secrets.get(
-    "NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH)
-)  # env overrides
-NEWS_COLLECTOR_PATH = Path(collector_path_str).resolve()
-
-COLLECTOR_CONFIG_PATH = NEWS_COLLECTOR_PATH / "config.toml"
+NEWS_COLLECTOR_PATH = PROJECT_ROOT
 # Use configured DB path to ensure we wipe the correct DB
-configured_db_path = DATABASE_CONFIG.get("path", "refinery.db")
+runtime_config = config_settings.refresh_runtime_config()
+configured_db_path = config_settings.DATABASE_CONFIG.get("path", "refinery.db")
 REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / configured_db_path
+
+if LEGACY_REFINERY_ENV_FILE.exists():
+    legacy_keys = sorted(load_env_overrides(LEGACY_REFINERY_ENV_FILE).keys())
+    legacy_key_text = (
+        ", ".join(legacy_keys[:8]) if legacy_keys else "sin claves activas"
+    )
+    st.warning(
+        "⚠️ Se detectó `apps/refinery/.env`, pero ya no se usa como fuente de configuración. "
+        f"Migra cualquier override necesario al `.env` raíz ({ENV_FILE}). "
+        f"Claves detectadas: {legacy_key_text}"
+    )
+
+for config_warning in getattr(
+    getattr(runtime_config, "_metadata", None), "warnings", []
+):
+    st.warning(config_warning.message)
 
 
 def load_toml_config():
-    if not COLLECTOR_CONFIG_PATH.exists():
-        st.error(
-            f"❌ Archivo de configuración no encontrado en: `{COLLECTOR_CONFIG_PATH}`"
-        )
+    if not CONFIG_FILE.exists():
+        st.error(f"❌ Archivo de configuración no encontrado en: `{CONFIG_FILE}`")
         st.caption(
-            f"Ruta revisada: `{NEWS_COLLECTOR_PATH}`. Configura `NEWS_COLLECTOR_PATH` en la pestaña de ajustes."
+            f"Ruta revisada: `{NEWS_COLLECTOR_PATH}`. La UI ahora usa el repo raíz como fuente única de configuración."
         )
         st.info(f"Directorio de Trabajo Actual: `{os.getcwd()}`")
         return None
-    with open(COLLECTOR_CONFIG_PATH, "r") as f:
-        return toml.load(f)
+    return load_config(CONFIG_FILE).model_dump(mode="python")
 
 
 def save_toml_config(config_data):
-    with open(COLLECTOR_CONFIG_PATH, "w") as f:
-        toml.dump(config_data, f)
+    validated = Config.model_validate(config_data)
+    current = load_config(CONFIG_FILE)
+    validated._metadata = current._metadata
+    save_config(validated, CONFIG_FILE)
+    config_settings.refresh_runtime_config(validated)
 
 
 def load_source_health():
@@ -262,7 +257,12 @@ def estimate_time(art_len: int, model: str) -> str:
     """Rough CPU estimate for the three editorial phases."""
     total_words = art_len or 1000
     model_name = (model or "").lower()
-    if "llama3.3" in model_name or "70b" in model_name:
+    if (
+        "llama3.3" in model_name
+        or "70b" in model_name
+        or "32b" in model_name
+        or "qwen2.5:14b" in model_name
+    ):
         speed_factor = 0.05
     elif "8b" in model_name:
         speed_factor = 2.0
@@ -343,7 +343,12 @@ def render_article_processing_panel(  # noqa: C901
                 count = 0
                 cache_dirs = [
                     NEWS_COLLECTOR_PATH / "data" / "cache" / "editor",
-                    NEWS_COLLECTOR_PATH / "temp" / "source" / "data" / "cache" / "editor",
+                    NEWS_COLLECTOR_PATH
+                    / "temp"
+                    / "source"
+                    / "data"
+                    / "cache"
+                    / "editor",
                 ]
 
                 for cache_dir in cache_dirs:
@@ -355,7 +360,9 @@ def render_article_processing_panel(  # noqa: C901
                 if count > 0:
                     st.success(f"✅ Caché eliminada ({count} archivos).")
                 else:
-                    st.info("ℹ️ No se encontraron archivos de caché para este artículo.")
+                    st.info(
+                        "ℹ️ No se encontraron archivos de caché para este artículo."
+                    )
             except Exception as exc:
                 st.error(f"Error al limpiar caché: {exc}")
 
@@ -389,11 +396,16 @@ def render_article_processing_panel(  # noqa: C901
                                 export_path=str(export_path) if export_path else None,
                             )
                             status = result.get("status")
-                            if status == "success" and result.get("processed_count", 0) > 0:
+                            if (
+                                status == "success"
+                                and result.get("processed_count", 0) > 0
+                            ):
                                 st.success("¡Reprocesamiento Completo!")
                             elif status == "error":
                                 st.error("Reprocesamiento Fallido.")
-                                st.expander("Detalles del Error").write(result.get("message"))
+                                st.expander("Detalles del Error").write(
+                                    result.get("message")
+                                )
                             else:
                                 st.warning(
                                     f"Sin resultados: {result.get('message', 'Nada procesado.')}"
@@ -430,7 +442,9 @@ def render_article_processing_panel(  # noqa: C901
                         st.error(f"Error invocando despublicación: {exc}")
         return
 
-    content_len = len(str(selected_art.get("content", "")).split()) if selected_art else 1000
+    content_len = (
+        len(str(selected_art.get("content", "")).split()) if selected_art else 1000
+    )
     active_model = env_vars.get("OLLAMA_MODEL", "unknown")
     time_est = estimate_time(content_len, active_model)
 
@@ -460,7 +474,9 @@ def render_article_processing_panel(  # noqa: C901
                         status = result.get("status")
                         processed_count = result.get("processed_count", 0)
                         if status == "success" and processed_count > 0:
-                            st.success("¡Procesamiento Completo! Revisa el repo de tu web.")
+                            st.success(
+                                "¡Procesamiento Completo! Revisa el repo de tu web."
+                            )
                             st.balloons()
                         elif status == "error":
                             st.error("Procesamiento Fallido.")
@@ -476,7 +492,9 @@ def render_article_processing_panel(  # noqa: C901
                             st.warning(f"Sin resultados: {message}")
                         else:
                             st.error("Procesamiento Fallido.")
-                            st.expander("Detalles del Error").write(result.get("message"))
+                            st.expander("Detalles del Error").write(
+                                result.get("message")
+                            )
                     except Exception as exc:
                         st.error(f"Error crítico de ejecución: {exc}")
         finally:
@@ -529,7 +547,11 @@ with tab1:
         # Fetch Available Models (Only supported completely for Ollama right now, but fail gracefully for Gemini)
         available_models = []
         try:
-            temp_provider = get_provider(config=CONFIG, api_url=new_api_url, timeout=5)
+            temp_provider = get_provider(
+                config=config_settings.refresh_runtime_config(),
+                api_url=new_api_url,
+                timeout=5,
+            )
             if hasattr(temp_provider, "list_models"):
                 available_models = temp_provider.list_models()
         except Exception as e:
@@ -537,9 +559,9 @@ with tab1:
 
         # Fallback list + Gemini models
         base_fallback_options = [
-            "llama3.3:latest",
-            "llama3.2:latest",
+            "qwen2.5:32b",
             "qwen2.5:14b",
+            "llama3.2:latest",
             "mistral",
         ]
         gemini_options = [
@@ -571,16 +593,17 @@ with tab1:
             m_lower = m_name.lower()
             return (
                 "14b" in m_lower
+                or "32b" in m_lower
                 or "27b" in m_lower
                 or "70b" in m_lower
                 or "mixtral" in m_lower
             )
 
         # --- Base Model (Fallback) ---
-        current_base = ollama_cfg.get("model", "llama3.3:latest")
+        current_base = ollama_cfg.get("model", "qwen2.5:32b")
         if is_heavy_model(current_base):
             st.warning(
-                f"⚠️ El modelo base '{current_base}' es muy pesado para CPU. Considera usar llama3.2."
+                f"⚠️ El modelo base '{current_base}' requiere mucha RAM. Considera usar llama3.2 o Gemini en máquinas más limitadas."
             )
 
         base_model_sel = st.selectbox(
@@ -758,12 +781,9 @@ with tab1:
             secrets["ENABLE_TRANSLATION_GUARD"] = "true" if new_guard_state else "false"
             st.warning("Cambio pendiente. Guarda la configuración para aplicar.")
 
-        # --- PATH remains in Secrets/Env ---
-        secrets["NEWS_COLLECTOR_PATH"] = st.text_input(
-            "Ruta News Collector (Local)",
-            secrets.get("NEWS_COLLECTOR_PATH", str(DEFAULT_COLLECTOR_PATH)),
+        st.caption(
+            f"Ruta backend activa: `{NEWS_COLLECTOR_PATH}`. La UI ya no guarda `NEWS_COLLECTOR_PATH` en un `.env` separado."
         )
-        # ------------------------------
 
         st.markdown("##### 🔐 Secretos (.env)")
         secrets["GITHUB_TOKEN"] = st.text_input(
@@ -1335,7 +1355,9 @@ with tab3:
             try:
                 with st.spinner("Extrayendo artículo desde URL específica..."):
                     if not auth_ok:
-                        st.warning("Autenticación requerida para cargar artículos por URL.")
+                        st.warning(
+                            "Autenticación requerida para cargar artículos por URL."
+                        )
                     else:
                         try:
                             ingest_service = ManualUrlIngestService(
@@ -1344,17 +1366,35 @@ with tab3:
                             )
                             ingest_result = ingest_service.ingest(manual_url)
                             if ingest_result.get("status") == "success":
-                                st.session_state["manual_loaded_article"] = ingest_result.get("article")
-                                st.session_state["manual_loaded_export_path"] = ingest_result.get("export_path")
-                                st.session_state["manual_loaded_fetch_attempts"] = ingest_result.get("fetch_attempts", [])
-                                st.session_state["manual_loaded_source_id"] = ingest_result.get("source_id")
-                                st.session_state["manual_loaded_source_created"] = ingest_result.get("source_created", False)
-                                st.session_state["manual_loaded_article_exists"] = ingest_result.get("article_exists", False)
-                                st.success("Artículo cargado desde URL. Revísalo y publícalo usando el flujo normal.")
+                                st.session_state["manual_loaded_article"] = (
+                                    ingest_result.get("article")
+                                )
+                                st.session_state["manual_loaded_export_path"] = (
+                                    ingest_result.get("export_path")
+                                )
+                                st.session_state["manual_loaded_fetch_attempts"] = (
+                                    ingest_result.get("fetch_attempts", [])
+                                )
+                                st.session_state["manual_loaded_source_id"] = (
+                                    ingest_result.get("source_id")
+                                )
+                                st.session_state["manual_loaded_source_created"] = (
+                                    ingest_result.get("source_created", False)
+                                )
+                                st.session_state["manual_loaded_article_exists"] = (
+                                    ingest_result.get("article_exists", False)
+                                )
+                                st.success(
+                                    "Artículo cargado desde URL. Revísalo y publícalo usando el flujo normal."
+                                )
                             else:
-                                detail = ingest_result.get("message", "No se pudo cargar la URL.")
+                                detail = ingest_result.get(
+                                    "message", "No se pudo cargar la URL."
+                                )
                                 if ingest_result.get("error_code"):
-                                    detail = f"[{ingest_result.get('error_code')}] {detail}"
+                                    detail = (
+                                        f"[{ingest_result.get('error_code')}] {detail}"
+                                    )
                                 st.error(detail)
                         except Exception as exc:
                             st.error(f"Error cargando URL: {exc}")
@@ -1883,7 +1923,10 @@ with tab5:
                 )
 
                 if deploy_health.is_live_stale:
-                    stale_url = deploy_health.latest_run_url or deploy_health.latest_successful_url
+                    stale_url = (
+                        deploy_health.latest_run_url
+                        or deploy_health.latest_successful_url
+                    )
                     warning = (
                         "El sitio público está atrasado respecto de `origin/main`. "
                         "Las acciones editoriales usarán el repo remoto, pero la web seguirá "
@@ -1897,13 +1940,19 @@ with tab5:
                         "GitHub Pages está alineado con el HEAD remoto usado por las acciones editoriales."
                     )
 
-            if local_checkout and local_checkout.resolve() != snapshot.repo_root.resolve():
+            if (
+                local_checkout
+                and local_checkout.resolve() != snapshot.repo_root.resolve()
+            ):
                 st.info(
                     "Checkout local detectado solo como referencia: "
                     f"`{local_checkout}`. Las acciones usan `{snapshot.repo_root}`."
                 )
 
-            if refresh_requested and snapshot.source_label != "Checkout local verificado del frontend":
+            if (
+                refresh_requested
+                and snapshot.source_label != "Checkout local verificado del frontend"
+            ):
                 st.success("Repositorio destino actualizado y sincronizado.")
 
             if not articles:
@@ -1966,7 +2015,9 @@ with tab5:
                             except Exception:  # noqa: S110
                                 pass
                         else:
-                            st.caption("ID: n/a · se usará el nombre exacto del archivo")
+                            st.caption(
+                                "ID: n/a · se usará el nombre exacto del archivo"
+                            )
 
                     with c3:
                         if st.button(
@@ -1981,7 +2032,9 @@ with tab5:
                             with st.spinner("Solicitando eliminación..."):
                                 try:
                                     if hasattr(refinery_main, "delete_article"):
-                                        res = refinery_main.delete_article(delete_target)
+                                        res = refinery_main.delete_article(
+                                            delete_target
+                                        )
                                         if res.get("status") == "success":
                                             st.toast("✅ PR Creado", icon="🗑️")
                                             st.markdown(
@@ -2020,11 +2073,15 @@ with tab5:
                                 target_posts_dir = TARGET_DIR / "src/content/posts"
                                 target_article = None
                                 if refinery_id:
-                                    target_article = find_published_article_by_refinery_id(
-                                        target_posts_dir, refinery_id
+                                    target_article = (
+                                        find_published_article_by_refinery_id(
+                                            target_posts_dir, refinery_id
+                                        )
                                     )
                                 if target_article is None:
-                                    candidate_path = target_posts_dir / article.file_name
+                                    candidate_path = (
+                                        target_posts_dir / article.file_name
+                                    )
                                     if candidate_path.exists():
                                         target_article = article.__class__(
                                             file_path=candidate_path,
@@ -2143,7 +2200,9 @@ with tab6:
             cols = [c for c in cols if c in health_df.columns]
             styler = health_df[cols].style
             if "latency" in cols:
-                styler = styler.highlight_max(axis=0, subset=["latency"], color="#ffcdd2")
+                styler = styler.highlight_max(
+                    axis=0, subset=["latency"], color="#ffcdd2"
+                )
             st.dataframe(
                 styler,
                 # Deprecated arg replaced by width='stretch'

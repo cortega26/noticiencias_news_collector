@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
-from news_collector.config.settings import CONFIG
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.storage.models import Article
 from news_collector.utils.logger import get_logger
+from noticiencias.config_manager import load_config
 
 from .basic_scorer import BasicScorer
 from .heuristic_scorer import HeuristicScorer
@@ -36,6 +36,7 @@ class CognitiveScorer(BasicScorer):
         self,
         weights: Optional[Dict[str, float]] = None,
         llm_client: Any | None = None,
+        config: Any | None = None,
     ):
         print(
             f"{datetime.now().strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)"
@@ -61,9 +62,12 @@ class CognitiveScorer(BasicScorer):
         # 2. Components
         # Use provider directly
         if llm_client is None:
-            model = get_model_for_stage("scoring", config=CONFIG, logger=logger)
+            active_config = config or load_config()
+            model = get_model_for_stage("scoring", config=active_config, logger=logger)
             self.llm: Any = get_provider(
-                config=CONFIG, api_url=CONFIG.ollama.api_url, model=model
+                config=active_config,
+                api_url=active_config.ollama.api_url,
+                model=model,
             )
         else:
             self.llm = llm_client

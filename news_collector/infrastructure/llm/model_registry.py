@@ -11,13 +11,14 @@ from enum import Enum
 from typing import Any, Dict, Mapping
 
 import requests
+from news_collector.infrastructure.llm.ollama_errors import build_ollama_http_error
 from news_collector.utils.logger import get_logger
 
 LOGGER = get_logger().create_module_logger(__name__)
 
 DEFAULT_STAGE = "default"
-DEFAULT_BASE_MODEL = "llama3.3:latest"
-DEFAULT_SCORING_MODEL = "llama3.3"
+DEFAULT_BASE_MODEL = "qwen2.5:32b"
+DEFAULT_SCORING_MODEL = "qwen2.5:32b"
 
 ALL_STAGES: tuple[str, ...] = (
     DEFAULT_STAGE,
@@ -120,6 +121,7 @@ ResolvedModelMap = dict[str, ResolvedModel]
 _PROVENANCE_SOURCE_MAP = {
     "env": ModelSource.ENV,
     "env-file": ModelSource.ENV,
+    "legacy_env_file": ModelSource.ENV,
     "legacy_env": ModelSource.ENV,
     "file": ModelSource.CONFIG,
     "defaults": ModelSource.DEFAULT,
@@ -231,13 +233,13 @@ def _canonicalize_model_id_with_meta(
     if value == "":
         raise MissingModelConfigurationError(
             f"Empty Ollama model for stage '{stage}'. Set a value like "
-            "'llama3.3:latest'."
+            "'qwen2.5:32b'."
         )
     if value != value.strip() or any(char.isspace() for char in value):
         raise InvalidModelIdError(
             f"Invalid Ollama model for stage '{stage}': {value!r}. "
             "Whitespace is not allowed. Use '<model>:<tag>' "
-            "(example: 'llama3.3:latest')."
+            "(example: 'qwen2.5:32b')."
         )
 
     normalized = False
@@ -246,7 +248,7 @@ def _canonicalize_model_id_with_meta(
         if policy.pinned_mode:
             raise InvalidModelIdError(
                 f"Pinned mode forbids untagged model for stage '{stage}': {value!r}. "
-                "Use a pinned tag like 'llama3.3:70b' or 'qwen2.5:32b'."
+                "Use a pinned tag like 'qwen2.5:32b' or 'llama3.3:70b'."
             )
         if policy.strict_mode:
             raise NonCanonicalModelIdError(
@@ -274,7 +276,7 @@ def _canonicalize_model_id_with_meta(
         raise InvalidModelIdError(
             f"Invalid Ollama model for stage '{stage}': {value!r}. "
             "Allowed characters are letters, numbers, '.', '_', '-', '/', and one ':'. "
-            "Example: 'llama3.3:latest'."
+            "Example: 'qwen2.5:32b'."
         )
     return canonical, normalized
 
@@ -554,7 +556,9 @@ def preflight_ollama_models(
     config: Any,
     *,
     check_availability: bool = False,
+    check_generation: bool = False,
     timeout_seconds: int = 5,
+    probe_timeout_seconds: int | None = None,
     logger: logging.Logger | None = None,
     pinned_mode: bool | None = None,
     strict_mode: bool | None = None,
@@ -567,7 +571,7 @@ def preflight_ollama_models(
         strict_mode=strict_mode,
         no_warn_mode=no_warn_mode,
     )
-    if not check_availability:
+    if not check_availability and not check_generation:
         return resolved
 
     ollama_cfg = _get_value(config, "ollama")
@@ -578,24 +582,54 @@ def preflight_ollama_models(
     else:
         base_url = clean.split("/api/")[0]
 
-    tags_url = f"{base_url}/api/tags"
-    try:
-        response = requests.get(tags_url, timeout=timeout_seconds)
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise ModelAvailabilityError(
-            f"Ollama preflight failed to reach {tags_url}: {exc}"
-        ) from exc
-
-    models = response.json().get("models", [])
-    available = {m.get("name") for m in models if m.get("name")}
     required = set(resolved.values())
-    missing = sorted(model for model in required if model not in available)
-    if missing:
-        raise ModelAvailabilityError(
-            "Ollama preflight missing required model(s): "
-            f"{missing}. Pull them first (example: `ollama pull <model>:<tag>`)."
-        )
+    if check_availability:
+        tags_url = f"{base_url}/api/tags"
+        try:
+            response = requests.get(tags_url, timeout=timeout_seconds)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            raise ModelAvailabilityError(
+                f"Ollama preflight failed to reach {tags_url}: {exc}"
+            ) from exc
+
+        models = response.json().get("models", [])
+        available = {m.get("name") for m in models if m.get("name")}
+        missing = sorted(model for model in required if model not in available)
+        if missing:
+            raise ModelAvailabilityError(
+                "Ollama preflight missing required model(s): "
+                f"{missing}. Pull them first (example: `ollama pull <model>:<tag>`)."
+            )
+
+    if check_generation:
+        generate_url = f"{base_url}/api/generate"
+        effective_probe_timeout = probe_timeout_seconds or max(timeout_seconds, 30)
+        for model_name in sorted(required):
+            payload = {
+                "model": model_name,
+                "prompt": "ping",
+                "stream": False,
+                "options": {"num_ctx": 1, "num_predict": 1},
+            }
+            try:
+                response = requests.post(
+                    generate_url, json=payload, timeout=effective_probe_timeout
+                )
+            except requests.RequestException as exc:
+                raise ModelAvailabilityError(
+                    f"Ollama generate probe failed for model '{model_name}' at "
+                    f"{generate_url}: {exc}"
+                ) from exc
+
+            if response.status_code >= 400:
+                provider_error = build_ollama_http_error(
+                    response, model=str(model_name)
+                )
+                raise ModelAvailabilityError(
+                    f"Ollama generate probe failed: {provider_error}"
+                ) from provider_error
+
     return resolved
 
 

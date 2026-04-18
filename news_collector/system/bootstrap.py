@@ -54,6 +54,14 @@ def build_metrics():
     return get_metrics_reporter()
 
 
+def _resolve_module_logger(logger: Any, name: str = "system") -> Any:
+    if logger is None:
+        return None
+    if hasattr(logger, "create_module_logger"):
+        return logger.create_module_logger(name)
+    return logger
+
+
 def validate_system_config(
     config_override: Optional[Dict[str, Any]] = None, logger: Any = None
 ):
@@ -218,14 +226,20 @@ def check_system_health(
     }
 
 
-def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
+def _verify_llm_health(  # noqa: C901
+    logger: Any,
+    warnings: List[str],
+    *,
+    config: Any | None = None,
+) -> None:
     """Internal helper to verify LLM provider availability (Gemini or Ollama)."""
+    health_logger = _resolve_module_logger(logger, "system")
     if _is_smoke_mode_enabled():
-        import news_collector.config.settings
+        from news_collector.config import settings as config_settings
 
-        news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
-        if logger:
-            logger.create_module_logger("system").info(
+        config_settings.set_llm_system_available(False)
+        if health_logger:
+            health_logger.info(
                 "Smoke mode enabled: skipping external LLM health check."
             )
         return
@@ -235,18 +249,22 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
     try:
         import requests
 
-        from news_collector.config.settings import CONFIG
+        from news_collector.config import settings as config_settings
         from news_collector.infrastructure.llm.model_registry import (
+            ModelAvailabilityError,
             ModelRegistryError,
             is_no_warn_mode_enabled,
             is_strict_mode_enabled,
-            resolve_ollama_stage_models,
+            preflight_ollama_models,
         )
 
+        active_config = config or config_settings.refresh_runtime_config()
         strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
 
         # Check if Gemini is the active provider (API key configured)
-        gemini_api_key = getattr(getattr(CONFIG, "gemini", None), "api_key", None)
+        gemini_api_key = getattr(
+            getattr(active_config, "gemini", None), "api_key", None
+        )
         if gemini_api_key:
             # Gemini is the active provider — verify Gemini health, skip Ollama
             try:
@@ -254,20 +272,22 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                     GeminiProvider,
                 )
 
-                gemini_model = getattr(CONFIG.gemini, "model", "gemini-2.5-flash")
+                gemini_model = getattr(
+                    active_config.gemini, "model", "gemini-2.5-flash"
+                )
                 provider = GeminiProvider(api_key=gemini_api_key, model=gemini_model)
                 healthy, reason = provider.check_health(timeout_seconds=5)
                 if healthy:
-                    if logger:
-                        logger.create_module_logger("system").info(
+                    if health_logger:
+                        health_logger.info(
                             f"Gemini health check passed (model={gemini_model})."
                         )
                 else:
                     warning_msg = f"Gemini health check failed: {reason}"
                     warnings.append(warning_msg)
                     disable_llm = True
-                    if logger:
-                        logger.create_module_logger("system").warning(warning_msg)
+                    if health_logger:
+                        health_logger.warning(warning_msg)
                     if strict_llm_mode:
                         raise RuntimeError(warning_msg)
             except RuntimeError:
@@ -276,110 +296,88 @@ def _verify_llm_health(logger: Any, warnings: List[str]) -> None:  # noqa: C901
                 warning_msg = f"Gemini health check error: {gemini_err}"
                 warnings.append(warning_msg)
                 disable_llm = True
-                if logger:
-                    logger.create_module_logger("system").warning(warning_msg)
+                if health_logger:
+                    health_logger.warning(warning_msg)
                 if strict_llm_mode:
                     raise RuntimeError(warning_msg) from gemini_err
 
             if disable_llm:
-                import news_collector.config.settings
-
-                news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
-                if logger:
-                    logger.create_module_logger("system").warning(
+                config_settings.set_llm_system_available(False)
+                if health_logger:
+                    health_logger.warning(
                         "LLM System Disabled: Gemini health check failed."
                     )
+            else:
+                config_settings.set_llm_system_available(True)
             return
 
-        # No Gemini API key — fall back to Ollama health check
-        stage_models = {}
         try:
-            stage_models = resolve_ollama_stage_models(
-                CONFIG,
-                logger=logger.create_module_logger("system") if logger else None,
+            auditor_cfg = getattr(active_config, "editorial_auditor", None)
+            health_timeout_seconds = int(
+                getattr(auditor_cfg, "health_timeout_seconds", 5)
             )
+            preflight_ollama_models(
+                active_config,
+                check_availability=True,
+                check_generation=True,
+                timeout_seconds=health_timeout_seconds,
+                logger=health_logger,
+            )
+        except ModelAvailabilityError as availability_err:
+            warning_msg = str(availability_err)
+            warnings.append(warning_msg)
+            disable_llm = True
+            if health_logger:
+                health_logger.warning(warning_msg)
+            if strict_llm_mode:
+                raise RuntimeError(warning_msg) from availability_err
         except ModelRegistryError as cfg_error:
             warning_msg = f"Ollama model configuration error: {cfg_error}"
             warnings.append(warning_msg)
             disable_llm = True
-            if logger:
-                logger.create_module_logger("system").warning(warning_msg)
-            import news_collector.config.settings
-
-            news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
+            if health_logger:
+                health_logger.warning(warning_msg)
+            config_settings.set_llm_system_available(False)
             if strict_llm_mode:
                 raise RuntimeError(warning_msg) from cfg_error
             return
-
-        ollama_url = CONFIG.ollama.api_url
-        # If /api/generate is in the URL, strip it to check base health
-        base_url = ollama_url.split("/api/")[0]
-        health_url = f"{base_url}/api/tags"  # Standard Ollama check
-
-        try:
-            resp = requests.get(health_url, timeout=2)
-            if resp.status_code != 200:
-                warning_msg = (
-                    f"Ollama health check returned {resp.status_code} at {health_url}"
-                )
-                warnings.append(warning_msg)
-                disable_llm = True
-                if logger:
-                    logger.create_module_logger("system").warning(warning_msg)
-                if strict_llm_mode:
-                    raise RuntimeError(warning_msg)
-            else:
-                models = resp.json().get("models", [])
-                available_models = {
-                    m.get("name")
-                    for m in models
-                    if isinstance(m, dict) and m.get("name")
-                }
-                required_models = sorted(
-                    [str(m) for m in set(stage_models.values()) if m is not None]
-                )
-                missing = [
-                    model_name
-                    for model_name in required_models
-                    if model_name not in available_models
-                ]
-                if missing:
-                    warning_msg = (
-                        "Configured Ollama model(s) not found: "
-                        f"{missing}. Available sample: {sorted(str(x) for x in available_models if x)[:3]}"
-                    )
-                    warnings.append(warning_msg)
-                    disable_llm = True
-                    if logger:
-                        logger.create_module_logger("system").warning(warning_msg)
-                    if strict_llm_mode:
-                        raise RuntimeError(warning_msg)
-
-        except Exception as conn_err:
-            warning_msg = f"LLM Provider unreachable at {base_url}: {conn_err}"
+        except requests.RequestException as conn_err:
+            warning_msg = f"LLM Provider unreachable: {conn_err}"
             warnings.append(warning_msg)
             disable_llm = True
-            # Do not mark as critical to avoid stopping the collector, but log warning
-            if logger:
-                logger.create_module_logger("system").warning(warning_msg)
+            if health_logger:
+                health_logger.warning(warning_msg)
             if strict_llm_mode:
                 raise RuntimeError(warning_msg) from conn_err
 
     except Exception as e:
         if strict_llm_mode and isinstance(e, RuntimeError):
             raise
-        if logger:
-            logger.create_module_logger("system").warning(f"Skipping LLM check: {e}")
+        if health_logger:
+            health_logger.warning(f"Skipping LLM check: {e}")
 
     # Update global state if LLM issues found
     if disable_llm:
-        import news_collector.config.settings
+        from news_collector.config import settings as config_settings
 
-        news_collector.config.settings.LLM_SYSTEM_AVAILABLE = False
-        if logger:
-            logger.create_module_logger("system").warning(
-                "LLM System Disabled: Ollama health check failed."
-            )
+        config_settings.set_llm_system_available(False)
+        if health_logger:
+            health_logger.warning("LLM System Disabled: Ollama health check failed.")
+    else:
+        from news_collector.config import settings as config_settings
+
+        config_settings.set_llm_system_available(True)
+
+
+def preflight_llm_provider(
+    *,
+    config: Any | None = None,
+    logger: Any = None,
+) -> List[str]:
+    """Run the current provider health check and return warning messages."""
+    warnings: List[str] = []
+    _verify_llm_health(logger, warnings, config=config)
+    return warnings
 
 
 def bootstrap_system() -> List[str]:
@@ -388,12 +386,4 @@ def bootstrap_system() -> List[str]:
     Returns a list of warning strings. Never raises.
     Specific focus: LLM availability.
     """
-    warnings: List[str] = []
-    # We pass None as logger to avoid noise/setup complexity during simple CLI checks,
-    # or we could set up a basic logger if needed.
-    # For 'surgical' read-only check, None is safer to avoid side effects.
-
-    # Run the extracted LLM check
-    _verify_llm_health(None, warnings)
-
-    return warnings
+    return preflight_llm_provider()

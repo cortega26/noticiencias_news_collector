@@ -90,7 +90,7 @@
 | scoring.reranker_seed | int | 1337 |  |  |  |
 | scoring.source_cap_percentage | float | 0.5 |  |  |  |
 | scoring.topic_cap_percentage | float | 0.6 |  |  |  |
-| scoring.llm_model | str | "llama3.3" | Ollama model to use for cognitive scoring. |  | llama3.2, llama3.3 |
+| scoring.llm_model | str | "qwen2.5:32b" | Ollama model to use for cognitive scoring. |  | qwen2.5:14b, qwen2.5:32b |
 | text_processing | TextProcessingConfig |  |  |  |  |
 | text_processing.supported_languages | List | ["en", "es", "pt", "fr"] | Languages supported by NLP routines. |  |  |
 | text_processing.min_content_length | int | 750 | Minimum number of characters required for an article. |  |  |
@@ -118,12 +118,28 @@
 | github.target_repo_url | str | "https://github.com/cortega26/noticiencias" | URL of the target publishing repository. |  |  |
 | ollama | OllamaConfig |  |  |  |  |
 | ollama.api_url | str | "http://localhost:11434" | Base URL for the Ollama API. |  |  |
-| ollama.model | str | "llama3.3:latest" | Model tag to use for generation. |  |  |
+| ollama.model | str | "qwen2.5:32b" | Model tag to use for generation. |  |  |
 | ollama.timeout | int | 300 | Request timeout in seconds. |  |  |
 | ollama.translator_model | Optional |  | Model override for translation phase. |  |  |
 | ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
 | ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
+| gemini | GeminiConfig |  |  |  |  |
+| gemini.api_key | Optional |  | Google AI Studio API Key. |  |  |
+| gemini.model | str | "gemini-2.5-flash" | Model identifier to use for generation. |  |  |
+| gemini.timeout | int | 300 | Request timeout in seconds. |  |  |
+| llm_rate_limiting | LLMRateLimitingConfig |  |  |  |  |
+| llm_rate_limiting.max_concurrent_requests | int | 2 | Maximum number of concurrent in-flight LLM requests. |  |  |
+| llm_rate_limiting.min_delay_between_requests | float | 1.0 | Minimum seconds between consecutive LLM requests. |  |  |
+| llm_rate_limiting.circuit_breaker_threshold | int | 3 | Consecutive 429 errors before the circuit breaker opens. |  |  |
+| llm_rate_limiting.circuit_breaker_cooldown | float | 60.0 | Seconds the circuit breaker stays open before half-open probe. |  |  |
+| llm_rate_limiting.max_retries | int | 3 | Maximum retry attempts per LLM request. |  |  |
+| llm_rate_limiting.retry_backoff_base | float | 2.0 | Base for exponential backoff between retries. |  |  |
+| llm_rate_limiting.retry_backoff_max | float | 30.0 | Maximum backoff delay in seconds. |  |  |
+| llm_rate_limiting.retry_jitter_max | float | 2.0 | Maximum jitter added to backoff delay. |  |  |
 | editorial_auditor | EditorialAuditorConfig |  |  |  |  |
 | editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |
 | editorial_auditor.sampling_rate | float | 0.2 | Probability of auditing an article. |  |  |
 | editorial_auditor.blocking | bool | false | If true, blocks publication on audit failure. |  |  |
+| editorial_auditor.timeout_seconds | int | 45 | LLM request timeout for auditor calls. |  |  |
+| editorial_auditor.max_retries | int | 2 | Retry attempts after the first audit request (total attempts = retries + 1). |  |  |
+| editorial_auditor.health_timeout_seconds | int | 2 | Timeout used by preflight Ollama health checks. |  |  |

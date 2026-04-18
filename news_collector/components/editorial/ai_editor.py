@@ -15,7 +15,6 @@ from news_collector.utils.logger import get_logger
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 import yaml
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
-from news_collector.config.settings import TEXT_PROCESSING_CONFIG
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
@@ -24,9 +23,7 @@ SOURCE_IDENTITY_COMMENT_RE = re.compile(
     flags=re.IGNORECASE,
 )
 FRONTMATTER_BLOCK_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n*", flags=re.DOTALL)
-SOURCE_FOOTER_RE = re.compile(
-    r"(?mi)^\s*Fuente original:\s*\[[^\]]+\]\([^)]+\)\s*$"
-)
+SOURCE_FOOTER_RE = re.compile(r"(?mi)^\s*Fuente original:\s*\[[^\]]+\]\([^)]+\)\s*$")
 _NARRATIVE_WORD_RE = re.compile(r"\b[\wÁÉÍÓÚáéíóúÑñ'-]+\b", flags=re.UNICODE)
 GENERATED_BODY_MIN_WORDS = 80
 BLOCKED_GENERATED_BODY_PATTERNS = (
@@ -153,7 +150,9 @@ class HeadlinesSchema(BaseModel):
 class GeneratedArticleValidationError(ValueError):
     """Raised when the generated article body is not publishable."""
 
-    def __init__(self, message: str, *, error_code: str = "editorial_placeholder_blocked"):
+    def __init__(
+        self, message: str, *, error_code: str = "editorial_placeholder_blocked"
+    ):
         super().__init__(message)
         self.error_code = error_code
 
@@ -206,6 +205,7 @@ class EditorAgent:
         translator_model: str | None = None,
         editor_model: str | None = None,
         headlines_model: str | None = None,
+        config: Any | None = None,
     ):
         self.api_url = api_url
         self.model = model
@@ -218,8 +218,9 @@ class EditorAgent:
             r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U00002600-\U000026FF]",
             flags=re.UNICODE,
         )
+        cfg = config
         try:
-            cfg = load_config()
+            cfg = config or load_config()
             self.min_content_length = cfg.text_processing.min_content_length
             # Resolve persistent data directory for stable checkpointing across runs
             paths = getattr(cfg, "paths", None) or {}
@@ -238,13 +239,19 @@ class EditorAgent:
         # This prevents the Refinery UI (Streamlit) from losing the cache when
         # it is launched from a different working directory.
         from noticiencias.config_manager import _project_root
+
         _resolved_data = Path(data_dir)
         if not _resolved_data.is_absolute():
             _resolved_data = _project_root() / _resolved_data
         self.cache_dir = _resolved_data / "cache" / "editor"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        self.critic_threshold = TEXT_PROCESSING_CONFIG.get("critic_score_threshold", 70)
+        if cfg is not None:
+            self.critic_threshold = getattr(
+                cfg.text_processing, "critic_score_threshold", 70
+            )
+        else:
+            self.critic_threshold = 70
 
         self.prompts = self._load_prompts()
 
@@ -268,7 +275,10 @@ class EditorAgent:
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (900s) than default
         self.provider = get_provider(
-            api_url=self.api_url, model=self.model, timeout=3600
+            config=cfg,
+            api_url=self.api_url,
+            model=self.model,
+            timeout=3600,
         )
         self.category_resolver = EditorialCategoryResolver()
         logger.info(
@@ -477,7 +487,7 @@ class EditorAgent:
             raise ValueError("No parsing valid JSON object found")
         return cast(dict[Any, Any], result)
 
-    def _critic_pass(self, content: str) -> tuple[bool, str | None]:
+    def _critic_pass(self, content: str) -> tuple[bool, str | None, bool]:
         """
         Stage 1.5: Critic Guardrail.
         Verifies that the content is in Spanish and relevant to science.
@@ -555,7 +565,7 @@ class EditorAgent:
         Falls back to the generic extractor if no match is found.
         """
         # Try all non-nested {...} blocks (no inner braces), finding the one with 'score'
-        for match in re.finditer(r'\{[^{}]*\}', text):
+        for match in re.finditer(r"\{[^{}]*\}", text):
             try:
                 data = json.loads(match.group(0))
                 if "score" in data:
@@ -563,14 +573,16 @@ class EditorAgent:
             except (ValueError, KeyError):
                 continue
         # Fallback: try singly-nested (one level of nesting)
-        for match in re.finditer(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text):
+        for match in re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", text):
             try:
                 data = json.loads(match.group(0))
                 if "score" in data:
                     return data
             except (ValueError, KeyError):
                 continue
-        logger.warning("_extract_critic_json: no JSON with 'score' found, falling back to generic extractor")
+        logger.warning(
+            "_extract_critic_json: no JSON with 'score' found, falling back to generic extractor"
+        )
         return self._extract_json(text)
 
     def _repair_editorial(self, base_content: str, feedback: str) -> str:
@@ -818,7 +830,12 @@ class EditorAgent:
             max_retries = 2
             for attempt in range(max_retries + 1):
                 # We run this on the adapted content to be sure.
-                is_valid, reason, recoverable = self._critic_pass(final_content)
+                critic_result = self._critic_pass(final_content)
+                if len(critic_result) == 2:
+                    is_valid, reason = critic_result
+                    recoverable = True
+                else:
+                    is_valid, reason, recoverable = critic_result
 
                 if is_valid:
                     # Persist critic pass checkpoint to avoid re-running on resume
@@ -853,7 +870,9 @@ class EditorAgent:
                         try:
                             cache_s2.write_text(final_content, encoding="utf-8")
                         except Exception as _e:
-                            logger.warning(f"Failed to update stage2 cache after repair: {_e}")
+                            logger.warning(
+                                f"Failed to update stage2 cache after repair: {_e}"
+                            )
                     else:
                         logger.warning(
                             "⚠️ Repair produced truncated content (no sentence terminator at end) — "
