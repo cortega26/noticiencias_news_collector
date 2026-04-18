@@ -36,6 +36,79 @@ def test_precedence_env_overrides(tmp_path: Path) -> None:
     assert provenance.env_var == "NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS"
 
 
+def test_legacy_root_env_file_override_is_tracked(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("OLLAMA_MODEL=qwen2.5:32b\n", encoding="utf-8")
+
+    config = load_config(config_file, environ={})
+
+    assert config.ollama.model == "qwen2.5:32b"
+    provenance = config._metadata.provenance["ollama.model"]
+    assert provenance.layer == "legacy_env_file"
+    assert provenance.env_var == "OLLAMA_MODEL"
+
+
+def test_canonical_env_file_key_wins_over_legacy_key(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "NOTICIENCIAS__OLLAMA__MODEL=qwen2.5:32b",
+                "OLLAMA_MODEL=llama3.3",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_file, environ={})
+
+    assert config.ollama.model == "qwen2.5:32b"
+    provenance = config._metadata.provenance["ollama.model"]
+    assert provenance.layer == "env-file"
+    assert any(
+        warning.code == "legacy_env_shadowed" for warning in config._metadata.warnings
+    )
+
+
+def test_process_env_canonical_key_overrides_env_file(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("NOTICIENCIAS__OLLAMA__MODEL=qwen2.5:32b\n", encoding="utf-8")
+
+    config = load_config(
+        config_file,
+        environ={"NOTICIENCIAS__OLLAMA__MODEL": "gemma-4:27b"},
+    )
+
+    assert config.ollama.model == "gemma-4:27b"
+    provenance = config._metadata.provenance["ollama.model"]
+    assert provenance.layer == "env"
+
+
+def test_legacy_refinery_env_file_is_ignored(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("OLLAMA_MODEL=qwen2.5:32b\n", encoding="utf-8")
+    legacy_env = tmp_path / "apps" / "refinery" / ".env"
+    legacy_env.parent.mkdir(parents=True, exist_ok=True)
+    legacy_env.write_text("OLLAMA_MODEL=llama3.3\n", encoding="utf-8")
+
+    config = load_config(config_file, environ={})
+
+    assert config.ollama.model == "qwen2.5:32b"
+    assert any(
+        warning.code == "legacy_env_file_ignored"
+        for warning in config._metadata.warnings
+    )
+
+
 def test_save_config_creates_backups(tmp_path: Path) -> None:
     config_file = tmp_path / "config.toml"
     config_file.write_text(

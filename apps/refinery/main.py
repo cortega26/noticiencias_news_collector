@@ -33,6 +33,7 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 # from news_collector.components.editorial import EditorAgent # Removed duplicate
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
+from news_collector.system.bootstrap import preflight_llm_provider
 from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import load_config
 
@@ -413,6 +414,31 @@ def main(  # noqa: C901
         logger.critical(f"Config Error: {e}")
         return {"status": "error", "message": str(e)}
 
+    from news_collector.config import settings as config_settings
+
+    config = config_settings.refresh_runtime_config(config)
+
+    if not fetch_only:
+        llm_warnings = preflight_llm_provider(config=config, logger=logger)
+
+        if not config_settings.LLM_SYSTEM_AVAILABLE:
+            detail = (
+                llm_warnings[-1]
+                if llm_warnings
+                else "LLM preflight failed before Refinery startup."
+            )
+            hint = (
+                "Libera memoria del host, detén procesos persistentes de pruebas, "
+                "o cambia a Gemini / un modelo local más pequeño."
+            )
+            logger.error(f"Refinery LLM preflight failed: {detail}")
+            return {
+                "status": "error",
+                "message": f"LLM preflight failed: {detail}. {hint}",
+                "processed_count": 0,
+                "error_code": "llm_preflight_failed",
+            }
+
     # Initialize Database
     db_manager = DatabaseManager()
 
@@ -424,6 +450,7 @@ def main(  # noqa: C901
         translator_model=resolved_models["translator"],
         editor_model=resolved_models["editor"],
         headlines_model=resolved_models["headlines"],
+        config=config,
     )
 
     # Contract Validator to inject into Domain layer
@@ -528,20 +555,8 @@ def main(  # noqa: C901
     # 1. Look in Cloned Repo (Cloud Source)
     CLONED_EXPORT_PATH = source_dir / "data/exports/latest_articles.json"
 
-    # 2. Look in Sibling Repo (Local Source) - Fallback
-    # Load env vars to check for custom path
-    from dotenv import dotenv_values
-
-    env_config = dotenv_values(".env")
-
-    # Default relative path
-    # In monorepo: apps/refinery/main.py -> root is up 2 levels
-    default_sibling_path = Path(__file__).resolve().parents[2]
-    # Get from env or default
-    collector_path_str = env_config.get(
-        "NEWS_COLLECTOR_PATH", str(default_sibling_path)
-    )
-    collector_path = Path(collector_path_str)
+    # 2. Look in repo-local export path (same runtime root as config.toml)
+    collector_path = project_root
 
     SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
 
@@ -790,7 +805,9 @@ def delete_article(target: str | dict[str, str]) -> dict:
                 target_file = target_article.file_path
 
         if not target_file or target_article is None:
-            logger.warning("Delete target %s not found in published content.", target_info)
+            logger.warning(
+                "Delete target %s not found in published content.", target_info
+            )
             return {
                 "status": "error",
                 "message": "Article not found in remote content for the requested identifier.",
@@ -852,7 +869,7 @@ def delete_article(target: str | dict[str, str]) -> dict:
                         else "Refinery ID: n/a (filename-backed delete)"
                     ),
                     f"File Name: {filename}",
-                    *( [f"Route Smoke Check: {route_path}"] if route_path else [] ),
+                    *([f"Route Smoke Check: {route_path}"] if route_path else []),
                 ]
             ),
         )

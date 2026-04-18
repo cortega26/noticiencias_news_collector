@@ -1,7 +1,10 @@
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from news_collector.infrastructure.llm.model_registry import ModelRegistryError
+from news_collector.infrastructure.llm.model_registry import (
+    ModelAvailabilityError,
+    ModelRegistryError,
+)
 
 
 class TestPublicEntrypoints:
@@ -33,52 +36,46 @@ class TestPublicEntrypoints:
 
         # We need to mock requests to avoid actual network calls and potential failures if offline
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
-            with patch("requests.get") as mock_get:
-                # Mock successful response
-                mock_response = MagicMock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {
-                    "models": [{"name": "llama3.3:latest"}]
-                }
-                mock_get.return_value = mock_response
-
-                # Also need to ensure CONFIG.ollama.model matches the mocked response
-                # We can't easily patch CONFIG.ollama.model here since it's already imported inside the function
-                # But we can patch local 'CONFIG' import inside _verify_llm_health if needed,
-                # OR just rely on our config.toml having "llama3.3:latest" which matches our mock.
-
-                # Run it
+            with patch(
+                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                return_value={"default": "llama3.3:latest"},
+            ):
                 warnings = bootstrap_system()
 
-                # Should be empty list if healthy
                 assert isinstance(warnings, list)
                 if warnings:
                     print(f"Unexpected warnings: {warnings}")
-                # We should expect NO warnings if model matches.
-                # Note: if config differs from mock, we get warning.
-                # Let's Assert it returns a list types. Content depends on config vs mock.
 
     def test_bootstrap_system_returns_warnings_on_failure(self):
         """Task 2b: Verify it returns warnings instead of raising exception."""
         from news_collector.system.bootstrap import bootstrap_system
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
-            with patch("requests.get") as mock_get:
-                mock_get.side_effect = Exception("Connection refused")
+            with patch(
+                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                side_effect=ModelAvailabilityError(
+                    "Ollama preflight failed to reach /api/tags: Connection refused"
+                ),
+            ):
 
                 warnings = bootstrap_system()
 
                 assert isinstance(warnings, list)
                 assert len(warnings) > 0
-                # Provider-aware: message depends on whether Gemini or Ollama is active
-                assert any("unreachable" in w or "health check" in w for w in warnings)
+                assert any(
+                    "preflight failed" in w or "health check" in w for w in warnings
+                )
 
     def test_bootstrap_strict_mode_fails_fast(self):
         from news_collector.system.bootstrap import bootstrap_system
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "1"}, clear=False):
-            with patch("requests.get") as mock_get:
-                mock_get.side_effect = Exception("Connection refused")
+            with patch(
+                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                side_effect=ModelAvailabilityError(
+                    "Ollama preflight failed to reach /api/tags: Connection refused"
+                ),
+            ):
                 with patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True):
                     try:
                         bootstrap_system()
@@ -86,7 +83,7 @@ class TestPublicEntrypoints:
                     except RuntimeError as exc:
                         msg = str(exc)
                         assert (
-                            "LLM Provider unreachable" in msg
+                            "Ollama preflight failed" in msg
                             or "Ollama model configuration error" in msg
                             or "Gemini health check" in msg
                         )
@@ -100,11 +97,14 @@ class TestPublicEntrypoints:
             clear=False,
         ):
             # Also force Ollama path so registry error is reached
-            with patch("news_collector.config.settings.CONFIG") as mock_cfg:
+            with patch(
+                "news_collector.config.settings.refresh_runtime_config"
+            ) as mock_refresh:
+                mock_cfg = mock_refresh.return_value
                 mock_cfg.gemini.api_key = None
                 mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
                 with patch(
-                    "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
+                    "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
                     side_effect=ModelRegistryError("NO_WARN mode forbids inheritance"),
                 ):
                     with patch(

@@ -45,6 +45,9 @@ make test               # confirm the baseline test suite passes
 ### Required `.env` edits for local use
 
 All variables in `.env.example` have safe defaults for local SQLite-based development.
+The only supported local environment override file is the repo-root `.env`.
+Do not create or edit `apps/refinery/.env`; Refinery no longer reads it.
+
 The only values you may need to set for full pipeline functionality:
 
 | Variable | Purpose | Required for |
@@ -55,6 +58,10 @@ The only values you may need to set for full pipeline functionality:
 
 Without Ollama or Gemini configured the collector still runs in dry-run and structural
 test modes.
+
+Note: a successful `GET /api/tags` response is not sufficient to prove local Ollama is
+usable. The startup preflight now probes actual generation for each configured model, so
+the machine must have enough free RAM to admit those models, not just list them.
 
 ---
 
@@ -96,6 +103,8 @@ make refinery           # starts Streamlit at http://localhost:8501
 
 `make refinery` runs `make bootstrap-refinery` and `make migrate` automatically, then
 launches `apps/refinery/admin_panel.py` in its isolated `.venv-refinery` environment.
+Refinery resolves configuration from the same `config.toml` and repo-root `.env`
+that `load_config()` uses everywhere else in the backend.
 
 ---
 
@@ -146,6 +155,7 @@ change matrices.
 |-------|-------------|-----|
 | `sqlite3.OperationalError: database is locked` | Parallel collector processes | `pkill -f run_collector.py` then retry |
 | `429 Too Many Requests` | Aggressive rate limit config | Adjust `[rate_limiting]` in `config.toml`; see `docs/faq.md` |
+| `500` from Ollama with `requires more system memory` | Host RAM/swap exhausted; model cannot be admitted | Free memory first (`ps aux --sort=-%mem | head`, stop stale `vitest`/Node jobs), then retry. If the machine still cannot fit the configured model, use Gemini or override to a smaller local Ollama model. |
 | `Configuration validation failed` | Invalid `config.toml` value | Run `make config-validate` for details |
 | `ModuleNotFoundError` | Stale or missing venv | `make bootstrap` |
 | Front-end `astro check` fails | Schema mismatch in content file | `npm run validate:content` for field-level detail |

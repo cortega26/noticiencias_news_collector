@@ -10,11 +10,11 @@ target_repo_url = "https://github.com/cortega26/noticiencias"
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
-model = "llama3.3:latest"
+model = "qwen2.5:32b"
 timeout = 7200  # CPU-only: large models can take hours; set generous timeout
 translator_model = "qwen2.5:32b"
 editor_model = "qwen2.5:32b"
-headlines_model = "llama3.2:latest"
+headlines_model = "qwen2.5:32b"
 
 [llm_rate_limiting]
 max_concurrent_requests = 2
@@ -85,7 +85,7 @@ simhash_candidate_window = 500
 daily_top_count = 10
 minimum_score = 0.3
 mode = "cognitive"
-llm_model = "llama3.2"
+llm_model = "qwen2.5:32b"
 workers = 1
 reranker_seed = 1337
 source_cap_percentage = 0.5

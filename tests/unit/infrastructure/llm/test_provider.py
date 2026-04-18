@@ -2,6 +2,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from news_collector.infrastructure.llm.ollama_errors import OllamaAdmissionError
 from news_collector.infrastructure.llm.provider import OllamaProvider
 
 
@@ -68,6 +69,46 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
 
         result = self.provider.generate_sync("Hi", model="test-model")
         self.assertEqual(result, "Sync Hello")
+
+    @patch("news_collector.infrastructure.llm.provider.time.sleep")
+    @patch("requests.post")
+    @patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True)
+    def test_generate_sync_raises_non_retryable_admission_error(
+        self, mock_post, _mock_sleep
+    ):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_resp.json.return_value = {
+            "error": "model requires more system memory (19.1 GiB) than is available (1.0 GiB)"
+        }
+        mock_resp.text = '{"error":"model requires more system memory (19.1 GiB) than is available (1.0 GiB)"}'
+        mock_post.return_value = mock_resp
+
+        with self.assertRaises(OllamaAdmissionError) as excinfo:
+            self.provider.generate_sync("Hi", model="qwen2.5:32b")
+
+        self.assertIn("requires more system memory", str(excinfo.exception))
+        self.assertEqual(mock_post.call_count, 1)
+
+    @patch("news_collector.infrastructure.llm.provider.time.sleep")
+    @patch("requests.post")
+    @patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True)
+    def test_generate_sync_retries_transient_http_500(self, mock_post, _mock_sleep):
+        transient_resp = MagicMock()
+        transient_resp.status_code = 500
+        transient_resp.json.return_value = {"error": "temporary backend failure"}
+        transient_resp.text = '{"error":"temporary backend failure"}'
+
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {"response": "Recovered", "done": True}
+
+        mock_post.side_effect = [transient_resp, success_resp]
+
+        result = self.provider.generate_sync("Hi", model="test-model")
+
+        self.assertEqual(result, "Recovered")
+        self.assertEqual(mock_post.call_count, 2)
 
     @patch("requests.get")
     def test_check_health(self, mock_get):

@@ -1,19 +1,20 @@
 from unittest.mock import MagicMock, patch
 
+from news_collector.infrastructure.llm.model_registry import ModelAvailabilityError
 from news_collector.system import bootstrap
 
 
 def test_ollama_health_check_graceful_failure():
-    # Patch requests.get globally, since bootstrap.py imports it locally but uses the global module
-    # Also patch Gemini API key to None so the Ollama path is exercised
     with (
-        patch("requests.get", side_effect=Exception("Connection refused")),
-        patch("news_collector.config.settings.CONFIG") as mock_cfg,
         patch(
-            "news_collector.infrastructure.llm.model_registry.resolve_ollama_stage_models",
-            return_value={"default": "llama3.3:latest"},
+            "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+            side_effect=ModelAvailabilityError(
+                "Ollama preflight failed to reach /api/tags: Connection refused"
+            ),
         ),
+        patch("news_collector.config.settings.refresh_runtime_config") as mock_refresh,
     ):
+        mock_cfg = mock_refresh.return_value
         mock_cfg.gemini.api_key = None
         mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
 
@@ -35,7 +36,7 @@ def test_ollama_health_check_graceful_failure():
 
         # Should return healthy=True (issues are handled as warnings for LLM to avoid blocking boot)
         assert "warnings" in res
-        assert any("LLM Provider unreachable" in w for w in res["warnings"])
+        assert any("Ollama preflight failed" in w for w in res["warnings"])
 
         # Ensure it didn't crash
         assert res["healthy"]

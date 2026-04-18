@@ -70,6 +70,22 @@ For backend governance and contributor behavior, authority is:
 
 ## Current Non-Negotiable Truths
 
+### Runtime configuration has one authority path
+
+Local backend runtime configuration is resolved only through
+`noticiencias.config_manager.load_config()`.
+
+The supported source order is:
+
+1. built-in defaults from `noticiencias.config_schema.DEFAULT_CONFIG`
+2. `config.toml`
+3. repo-root `.env`
+4. process environment
+
+`apps/refinery/.env` is a deprecated legacy file and is not a runtime source of truth.
+If it exists, it must be treated as ignored migration debt, not as an active override
+layer.
+
 ### Typed boundaries are the norm
 
 Cross-subsystem boundaries are expected to use typed contracts from `news_collector/contracts/`. Local dict handling is acceptable during early parsing, but the normalized boundary shape should not remain a free-form dict.

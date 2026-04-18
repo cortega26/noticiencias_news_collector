@@ -468,9 +468,9 @@ class ScoringConfig(StrictModel):
     source_cap_percentage: float = Field(default=0.5, ge=0.0, le=1.0)
     topic_cap_percentage: float = Field(default=0.6, ge=0.0, le=1.0)
     llm_model: str = Field(
-        default="llama3.3",
+        default="qwen2.5:32b",
         description="Ollama model to use for cognitive scoring.",
-        examples=["llama3.2", "llama3.3"],
+        examples=["qwen2.5:14b", "qwen2.5:32b"],
     )
 
 
@@ -675,7 +675,7 @@ class OllamaConfig(StrictModel):
         description="Base URL for the Ollama API.",
     )
     model: str = Field(
-        default="llama3.3:latest",
+        default="qwen2.5:32b",
         description="Model tag to use for generation.",
     )
     timeout: PositiveInt = Field(
