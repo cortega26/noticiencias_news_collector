@@ -747,13 +747,19 @@ class EditorAgent:
             )
 
         # 2. Section Normalization (Simple Mapping)
-        # Normalize common variations to standard headers
+        # Normalize common variations to standard headers.
+        # NOTE: Length trim (step 3) runs BEFORE heading strip so the "Cierre" anchor
+        # is still detectable when we need to find the trim boundary.
         replacements = {
             "## Introducción": "## Apertura",
             "## Antecedentes": "## Contexto",
-            "## Conclusión": "## Cierre",
+            # "## Conclusión" mapped to empty — closing headings must not appear in output
+            "## Conclusión": "",
             "**Introducción**": "**Apertura**",
-            "**Conclusión**": "**Cierre**",
+            # Bold closing markers removed — they are internal editorial labels
+            "**Conclusión**": "",
+            "**Cierre**": "",
+            "## Construcción del Modelo Mental": "## Contexto",
         }
         for old, new in replacements.items():
             content = content.replace(old, new)
@@ -769,26 +775,26 @@ class EditorAgent:
                 f"Output body too long ({len(content)} > {max_chars}). Applying deterministic trim."
             )
 
-            # Rule 1: Remove trailing after Cierre
-            if "Cierre" in content:
-                match = re.search(r"(#{2,3} |[*]{2})Cierre", content, re.IGNORECASE)
-                if match:
-                    start_idx = match.start()
-                    # Keep Cierre paragraph (assumed ~500 chars max)
-                    # Find next double newline after start
-                    cierre_end = content.find("\n\n", start_idx + 50)
-                    if cierre_end == -1:
-                        cierre_end = len(content)
-                    else:
-                        cierre_end = min(
-                            len(content), cierre_end + 1000
-                        )  # Keep a bit more context
+            # Rule 1: Trim after the closing section.
+            # The closing section heading is stripped above, so we anchor on the text
+            # that immediately follows it — a double newline near the end of the article.
+            # As a reliable proxy we look for the last ## heading and keep up to
+            # ~1000 chars past it, which covers the final paragraph.
+            last_heading_match = None
+            for m in re.finditer(r"^#{2,3} ", content, re.MULTILINE):
+                last_heading_match = m
+            if last_heading_match:
+                start_idx = last_heading_match.start()
+                cierre_end = content.find("\n\n", start_idx + 50)
+                if cierre_end == -1:
+                    cierre_end = len(content)
+                else:
+                    cierre_end = min(len(content), cierre_end + 1000)
+                potential_cut = content[:cierre_end]
+                if len(potential_cut) < len(content):
+                    content = potential_cut
 
-                    potential_cut = content[:cierre_end]
-                    if len(potential_cut) < len(content):
-                        content = potential_cut
-
-            # Rule 3 (Fail-safe): Hard truncate
+            # Rule 2 (Fail-safe): Hard truncate
             if len(content) > max_chars:
                 content = content[:max_chars]
                 last_period = content.rfind(".")
@@ -796,6 +802,24 @@ class EditorAgent:
                     content = content[: last_period + 1]
                 else:
                     content += "..."
+
+        # 4. Strip internal editorial headings that must never appear in published output.
+        # This runs AFTER length trim so the trim anchor logic above still works.
+        content = re.sub(
+            r"^#{1,3} ?(?:Título|Titulo):[^\n]*\n?",
+            "",
+            content,
+            flags=re.MULTILINE,
+        )
+        # Remove any surviving closing-section headings (e.g. AI ignoring the prompt fix).
+        content = re.sub(
+            r"^#{1,3} ?(?:Cierre(?:\s*[—\-]\s*\S[^\n]*)?)[ \t]*\n?",
+            "",
+            content,
+            flags=re.MULTILINE | re.IGNORECASE,
+        )
+        # Collapse any double-blank lines created by the removals above.
+        content = re.sub(r"\n{3,}", "\n\n", content)
 
         return content, headlines
 

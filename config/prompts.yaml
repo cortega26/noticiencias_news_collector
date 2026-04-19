@@ -228,7 +228,7 @@ editor:
     ---
 
 
-    ## 2. Construcción del Modelo Mental
+    ## 2. Contexto
 
 
     Explica el fenómeno base antes del estudio.
@@ -314,7 +314,11 @@ editor:
     ---
 
 
-    ## 7. Cierre — Reapertura Cognitiva
+    ## 7. Párrafo de cierre
+
+
+    NO uses ningún heading (##) para esta sección. Escribe el párrafo final directamente
+    sin título de sección.
 
 
     NO resumas.
@@ -420,6 +424,12 @@ editor:
     - fusiones inglés con español dentro de una misma oración (p.ej. "makingla
     invisible", "whereas los resultados", "however se observó"): si el texto de
     entrada contiene estos fragmentos, tradúcelos antes de incorporarlos
+
+    - uses un heading (##) con el texto "Título:" o que replique el título del artículo:
+    el cuerpo comienza directamente con la sección de apertura
+
+    - uses headings internos como "Cierre", "Reapertura Cognitiva", "Construcción del
+    Modelo Mental" u otras etiquetas del proceso editorial: el lector no debe verlos
 
 
     El engagement debe provenir de la comprensión.
