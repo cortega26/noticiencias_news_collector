@@ -149,7 +149,7 @@ phys_org:
   min_delay_seconds: 60
   content_mode: summary_only # HTML fetch blocked (403), use summary
   fetch_mode: rss_only # Skip HTML fetch attempts
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -191,7 +191,7 @@ sciencedaily_top:
   description: Latest research news
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -469,7 +469,7 @@ deepmind_blog:
   impact_factor: null
   description: News and stories from Google DeepMind
   content_mode: full_text
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   etag: null
   last_modified: null
@@ -489,7 +489,7 @@ harvard_gazette:
   description: Official news from Harvard University
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -549,7 +549,7 @@ uw_news:
   description: University of Washington News
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -570,7 +570,7 @@ uw_madison_news:
   description: University of Wisconsin-Madison News
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -653,7 +653,7 @@ microsoft_research:
   description: Research news from Microsoft
   typical_delay: 0
   content_mode: summary_only
-  enrichment_strategy: headless_fallback
+  enrichment_strategy: scrapling_stealth
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -697,9 +697,8 @@ openai_blog:
   impact_factor: null
   description: Announcements from OpenAI
   typical_delay: 0
-  content_mode: summary_only
-  fetch_mode: rss_only
-  enrichment_strategy: http
+  content_mode: full_text  # scrapling_http (curl_cffi TLS) bypasses the 403 on article pages
+  enrichment_strategy: scrapling_http
   headless_enabled: false
   etag: null
   last_modified: null
