@@ -484,7 +484,7 @@ model = "qwen2.5:32b"
 timeout = 7200
 translator_model = "qwen2.5:32b"
 editor_model = "qwen2.5:32b"
-headlines_model = "qwen2.5:32b"
+headlines_model = "llama3.2:latest"
 
 [gemini]
 model = "gemini-2.5-flash"
