@@ -32,6 +32,7 @@ from typing import Any, Dict
 
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
 from news_collector.enrichment.http_enricher import HttpEnricher
+from news_collector.enrichment.scrapling_enricher import ScraplingEnricher, ScraplingHttpEnricher
 from news_collector.enrichment.scholarly import ScholarlyMetadataEnricher
 from news_collector.enrichment.strategy_lock_manager import strategy_lock_manager
 from news_collector.enrichment.strategy_optimizer import strategy_optimizer
@@ -57,8 +58,9 @@ class EnrichmentStrategyRouter:
 
         self.scholarly = ScholarlyMetadataEnricher()
         self.http = HttpEnricher()
-        # HeadlessEnricher also needs logger
         self.headless = HeadlessEnricher(logger_factory=logger_factory)
+        self.scrapling = ScraplingEnricher(logger_factory=logger_factory)
+        self.scrapling_http = ScraplingHttpEnricher(logger_factory=logger_factory)
 
     def route_enrichment(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any], candidate: Dict[str, Any]
@@ -146,6 +148,21 @@ class EnrichmentStrategyRouter:
                         "details": {"source_id": source_id, "strategy": "proxy_auto"},
                     }
                 )
+
+            elif proposed_strategy == "scrapling_stealth":
+                if source_config.get("headless_enabled"):
+                    if original_strategy != "scrapling_stealth":
+                        source_config["enrichment_strategy"] = "scrapling_stealth"
+                        self.logger.info(
+                            {
+                                "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
+                                "details": {
+                                    "source_id": source_id,
+                                    "strategy": "scrapling_stealth",
+                                    "original": original_strategy,
+                                },
+                            }
+                        )
 
             elif (
                 proposed_strategy == "http"
@@ -351,6 +368,80 @@ class EnrichmentStrategyRouter:
                     "success": False,
                     "reason": error_reason,
                     "strategy_used": "headless",
+                }
+
+        # 4. Scrapling HTTP Strategy (curl_cffi TLS fingerprinting, no browser)
+        if strategy == "scrapling_http":
+            enrichment_metrics.record_attempt(source_id, "scrapling_http")
+            start = time.time()
+            res = self.scrapling_http.enrich(url, source_config)
+            duration = res.get("duration", time.time() - start)
+
+            if res["success"]:
+                content = res["content"]
+                length = len(content)
+                is_publishable = length >= 500
+                enrichment_metrics.record_success(source_id, "scrapling_http", duration, length, is_publishable)
+                if is_publishable:
+                    return {"success": True, "content": content, "raw_content": res.get("raw_content"), "strategy_used": "scrapling_http"}
+                enrichment_metrics.record_failure(source_id, "scrapling_http", "content_too_short", duration)
+                return {"success": False, "reason": "content_too_short", "strategy_used": "scrapling_http"}
+            else:
+                reason = res.get("error", "scrapling_http_failed")
+                enrichment_metrics.record_failure(source_id, "scrapling_http", reason, duration)
+                return {"success": False, "reason": reason, "strategy_used": "scrapling_http"}
+
+        # 5. Scrapling Stealth Strategy
+        if strategy == "scrapling_stealth":
+            enrichment_metrics.record_attempt(source_id, "scrapling_stealth")
+            start = time.time()
+            scrapling_res = self.scrapling.enrich(url, source_config)
+            duration = scrapling_res.get("duration", time.time() - start)
+            enrichment_metrics.record_cost(source_id, headless_seconds=duration)
+
+            if scrapling_res["success"]:
+                content = scrapling_res["content"]
+                length = len(content)
+                is_publishable = length >= 500
+                enrichment_metrics.record_success(
+                    source_id, "scrapling_stealth", duration, length, is_publishable
+                )
+                self.logger.info(
+                    {
+                        "event": "enrichment.scrapling.success",
+                        "details": {"source_id": source_id, "url": url, "length": length},
+                    }
+                )
+                if is_publishable:
+                    return {
+                        "success": True,
+                        "content": content,
+                        "raw_content": scrapling_res.get("raw_content"),
+                        "strategy_used": "scrapling_stealth",
+                    }
+                enrichment_metrics.record_failure(
+                    source_id, "scrapling_stealth", "content_too_short", duration
+                )
+                return {
+                    "success": False,
+                    "reason": "content_too_short",
+                    "strategy_used": "scrapling_stealth",
+                }
+            else:
+                error_reason = scrapling_res.get("error", "scrapling_failed")
+                enrichment_metrics.record_failure(
+                    source_id, "scrapling_stealth", error_reason, duration
+                )
+                self.logger.error(
+                    {
+                        "event": "enrichment.scrapling.failed",
+                        "details": {"source_id": source_id, "url": url, "reason": error_reason},
+                    }
+                )
+                return {
+                    "success": False,
+                    "reason": error_reason,
+                    "strategy_used": "scrapling_stealth",
                 }
 
         return {

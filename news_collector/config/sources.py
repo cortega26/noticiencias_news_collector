@@ -218,14 +218,14 @@ def validate_sources():  # noqa: C901
         strategy = config.get(
             "enrichment_strategy", "http"
         )  # Default to http if missing
-        valid_strategies = ["scholarly", "http", "headless_fallback", "discovery_only"]
+        valid_strategies = ["scholarly", "http", "headless_fallback", "scrapling_stealth", "scrapling_http", "discovery_only"]
         if strategy not in valid_strategies:
             errors.append(
                 f"Source '{source_id}' has invalid enrichment_strategy: '{strategy}'. Must be one of {valid_strategies}"
             )
 
         # 6. Check Headless Configuration
-        if strategy == "headless_fallback":
+        if strategy in ("headless_fallback", "scrapling_stealth"):
             if not isinstance(config.get("headless_enabled"), bool):
                 errors.append(
                     f"Source '{source_id}' must specify 'headless_enabled' (bool) when using headless_fallback."
