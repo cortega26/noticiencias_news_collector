@@ -69,6 +69,11 @@ class CollectorDispatcher:
                 e,
             )
 
+        try:
+            self.collectors["reddit"] = create_collector("reddit")
+        except Exception as e:
+            logger.opt(exception=True).error("Failed to initialize Reddit collector: {}", e)
+
         if self.logger_factory:
             for c in self.collectors.values():
                 if hasattr(c, "set_logger_factory"):

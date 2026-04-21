@@ -1205,6 +1205,10 @@ def create_collector(collector_type: str) -> BaseCollector:
         from .headless_collector import HeadlessCollector
 
         return HeadlessCollector()
+    elif collector_type.lower() == "reddit":
+        from .reddit_collector import RedditCollector
+
+        return RedditCollector()
     else:
         raise ValueError(f"Tipo de colector no soportado: {collector_type}")
 

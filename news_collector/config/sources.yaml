@@ -1,87 +1,3 @@
-nature:
-  name: Nature
-  url: https://www.nature.com/nature.rss
-  credibility_score: 1.0
-  update_frequency: weekly
-  category: multidisciplinary
-  language: en
-  impact_factor: 49.962
-  description: La revista científica más prestigiosa del mundo
-  typical_delay: 0
-  content_mode: summary_only
-  enrichment_strategy: scholarly
-  headless_enabled: false
-  etag: null
-  last_modified: null
-  _group: ELITE_JOURNALS
-  tier: "A"
-  fetchability_score: 95
-  crawl_interval_seconds: 600
-
-science:
-  name: Science
-  url: https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science
-  credibility_score: 1.0
-  update_frequency: weekly
-  category: multidisciplinary
-  language: en
-  impact_factor: 47.728
-  description: Revista insignia de la AAAS, rival histórico de Nature
-  typical_delay: 0
-  content_mode: summary_only
-  fetch_mode: rss_only
-  headers:
-    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
-    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-  enrichment_strategy: http
-  headless_enabled: false
-  etag: null
-  last_modified: null
-  _group: ELITE_JOURNALS
-  tier: "A"
-  fetchability_score: 95
-  crawl_interval_seconds: 600
-
-cell:
-  name: Cell
-  url: https://www.cell.com/cell/inpress.rss
-  credibility_score: 0.98
-  update_frequency: biweekly
-  category: biology
-  language: en
-  impact_factor: 38.637
-  description: La revista más importante en biología celular y molecular
-  typical_delay: 1
-  content_mode: summary_only
-  fetch_mode: rss_only
-  enrichment_strategy: http
-  headless_enabled: false
-  etag: null
-  last_modified: null
-  _group: ELITE_JOURNALS
-  tier: "B"
-  fetchability_score: 90
-  crawl_interval_seconds: 3600
-
-nejm:
-  name: New England Journal of Medicine
-  # UPDATED: eTOC RSS Feed (More reliable than Most Viewed)
-  url: https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm
-  fetch_mode: "rss_only"
-  content_mode: "summary_only"
-  enrichment_strategy: http
-  headless_enabled: false
-  credibility_score: 0.95
-  update_frequency: weekly
-  category: medicine
-  impact_factor: 91.245
-  description: La biblia de la medicina clínica
-  typical_delay: 0
-  _group: ELITE_JOURNALS
-  tier: "A"
-  fetchability_score: 90
-  crawl_interval_seconds: 3600
-
 scientific_american:
   name: Scientific American
   url: https://www.scientificamerican.com/platform/syndication/rss/
@@ -440,24 +356,22 @@ biorxiv:
 
 reddit_science:
   name: r/science
-  url: https://www.reddit.com/r/science/new/.rss
+  url: https://www.reddit.com/r/science/  # display URL only; collector uses OAuth API
+  collector_type: reddit
+  subreddit: science
+  sort: new
   credibility_score: 0.6
   update_frequency: hourly
   category: community_science
   language: en
   impact_factor: null
-  description: Subreddit for verified scientific news
-  typical_delay: 0
-  rate_limit_notes: Usar user-agent dedicado y no superar 60 requests por minuto
+  description: Subreddit for verified scientific news — collected via Reddit OAuth API
   min_delay_seconds: 30
-  content_mode: full_text
-  status: blocked # Permanently 403WAF blocked, requires API integration (Future)
-  etag: null
-  last_modified: null
+  content_mode: summary_only
   _group: COMMUNITY_FEEDS
-  tier: "D"
-  fetchability_score: 50
-  crawl_interval_seconds: 86400
+  tier: "C"
+  fetchability_score: 90
+  crawl_interval_seconds: 3600
 
 deepmind_blog:
   name: Google DeepMind
