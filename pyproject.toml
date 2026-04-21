@@ -43,6 +43,7 @@ refinery = [
     "watchdog>=4.0.0",
     "pandas>=2.0.0",
     "toml>=0.10.2",
+    "scrapling[fetchers]>=0.4.0",
 ]
 security = [
     "bandit>=1.7.9",
