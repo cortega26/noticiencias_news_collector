@@ -1,4 +1,4 @@
-#!/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.venv/bin/python3
+#!/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/.venv/bin/python
 import sys
 from alembic.config import main
 if __name__ == '__main__':
