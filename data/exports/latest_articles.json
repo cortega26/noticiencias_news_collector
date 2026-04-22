@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "version": "2.0",
-  "generated_at": "2026-04-16T21:15:08.238310+00:00",
+  "generated_at": "2026-04-21T21:34:18.940570+00:00",
   "contract": "news_collector.export.v2",
   "article_count": 50,
   "articles": [
@@ -61,6 +61,67 @@
       "category": "multidisciplinary",
       "components": {
         "source_credibility": 0.7635,
+        "recency": 0.9775,
+        "content_quality": 0.955,
+        "engagement": null,
+        "engagement_potential": 0.955,
+        "nqi_substance": 0.955,
+        "nqi_narrative": 0.955,
+        "nqi_relevance": 0.955,
+        "nqi_credibility": 0.955
+      }
+    },
+    {
+      "id": 989,
+      "title": "Vanessa Ezenwa elected Ecological Society of America Fellow",
+      "url": "https://fas.yale.edu/news-announcements/news/vanessa-ezenwa-elected-ecological-society-america-fellow",
+      "summary": "Ezenwa, who was elected as a lifelong fellow, researches the ecology and evolution of infectious diseases in wild animals.",
+      "content": "Vanessa Ezenwa elected Ecological Society of America Fellow | Faculty of Arts and Sciences Skip to main site navigation Skip to main content Vanessa Ezenwa elected Ecological Society of America Fellow News April 16, 2026 By Michaela Herrmann Ezenwa, who was elected as a lifelong fellow, researches the ecology and evolution of infectious diseases in wild animals. News & Announcements News and Stories Vanessa Ezenwa elected Ecological Society of America Fellow Vanessa Ezenwa , Professor of Ecology and Evolutionary Biology, has been elected as a Fellow of the Ecological Society of America (ESA) in recognition of her contributions to the science of ecology. Ezenwa is one of eight new fellows elected this year. The honor recognizes ecologists who have made “outstanding contributions to advancing or applying ecological knowledge” in academia, government, nonprofit organizations, and the private sector. Fellows of the ESA are elected for life. Ezenwa’s research focuses on the ecology and evolution of infectious diseases in wild animals. She studies how interactions between hosts and pathogens occurring at the scale of individual organisms translate to broader ecological and epidemiological patterns. Her work integrates perspectives from animal behavior, ecology, evolution and immunology to make sense of complex infectious disease processes operating in natural populations. She was previously elected a Fellow of the American Association for the Advancement of Science and has received a National Science Foundation CAREER Award and a Fulbright Scholar Award, among others. “These Fellows and Early Career Fellows represent a remarkable group of scientists whose contributions are shaping the direction of ecological research and its application,” said ESA President Peter Groffman. “I am delighted to see their achievements recognized by their peers. Their work is expanding how we understand ecological systems while also informing decisions that affect ecosystems and communities. ESA is proud to count them among its members, and we look forward to the continued impact of their work.” The 2026 group of Fellows will be recognized at an awards ceremony at the ESA’s Annual Meeting this July in Salt Lake City, Utah. The Ecological Society of America, founded in 1915, is the world’s largest community of professional ecologists and a trusted source of ecological knowledge, committed to advancing the understanding of life on Earth. Related News Making a difference for America New Haven is Yale’s home, but our impact is felt nationwide — in every state across America, in communities large and small. Explore Yale's impact across America with this interactive map. April 14, 2026 This 210-million-year-old crocodile cousin was built for biting Bhart-Anjan Bhullar, Associate Professor of Earth and Planetary Sciences, is part of a team of researchers that have identified a 210-million-year-old crocodile relative from New Mexico as a distinct species, Eosphorosuchus lacrimosa. April 14, 2026 Showing the math for Earth’s first — and sudden — spark of life Inspired by an undergraduate science class, a new study co-authored by a Yale alum and Jun Korenaga, Professor of Earth and Planetary Sciences, uses math to suggest that the spark of life on Earth happened quickly — once the conditions were right. April 13, 2026",
+      "source_name": "Yale News",
+      "source_id": "yale_news",
+      "published_date": "2026-04-22T00:24:16",
+      "published_at": null,
+      "published_url": null,
+      "collected_date": "2026-04-21T21:11:12.202430",
+      "score": 0.9397,
+      "image_url": "https://fas.yale.edu/sites/default/files/2026-04/Vanessa%20Ezenwa.png",
+      "metadata": {
+        "source_metadata": {
+          "feed_title": "YaleNews Articles",
+          "entry_id": "https://news.yale.edu/2026/04/21/vanessa-ezenwa-elected-ecological-society-america-fellow"
+        },
+        "credibility_score": 0.9,
+        "processing_timestamp": "2026-04-21T21:11:12.000288+00:00",
+        "original_url": "https://fas.yale.edu/news-announcements/news/vanessa-ezenwa-elected-ecological-society-america-fellow",
+        "enrichment": {
+          "language": "en",
+          "normalized_title": "Vanessa Ezenwa elected Ecological Society of America Fellow",
+          "normalized_summary": "Ezenwa, who was elected as a lifelong fellow, researches the ecology and evolution of infectious diseases in wild animals.",
+          "entities": [
+            "ESA"
+          ],
+          "topics": [
+            "science"
+          ],
+          "sentiment": "neutral",
+          "model_version": "2025.02-pattern-v1",
+          "editorial_display_category": null,
+          "error": null
+        },
+        "image_status": "IMAGE_OK",
+        "image_source": "meta:og:image",
+        "image_url": "https://fas.yale.edu/sites/default/files/2026-04/Vanessa%20Ezenwa.png",
+        "image_alt": null,
+        "normalized_title": null,
+        "normalized_summary": null
+      },
+      "authors": [
+        "Yale News",
+        "news@yale.edu (Yale News)"
+      ],
+      "category": "multidisciplinary",
+      "components": {
+        "source_credibility": 0.7575,
         "recency": 0.9775,
         "content_quality": 0.955,
         "engagement": null,
@@ -1151,6 +1212,129 @@
       "category": "medicine",
       "components": {
         "source_credibility": 0.7135,
+        "recency": 0.9275,
+        "content_quality": 0.855,
+        "engagement": null,
+        "engagement_potential": 0.855,
+        "nqi_substance": 0.855,
+        "nqi_narrative": 0.855,
+        "nqi_relevance": 0.855,
+        "nqi_credibility": 0.855
+      }
+    },
+    {
+      "id": 992,
+      "title": "Deep-rooted grass stores significantly more carbon, new study says",
+      "url": "https://news.yale.edu/2026/04/21/deep-rooted-grass-stores-significantly-more-carbon-new-study-says",
+      "summary": "A study of perennial grasses in nine U.S. states shows that grass with deep roots stores more carbon than crops with shallow roots, providing important climate benefits.",
+      "content": "Deep-rooted grass stores significantly more carbon, new study says | Yale News Skip to main content Search YaleNews Sort by Close Search Share Close Share this page Post to Facebook Post to Twitter Post to LinkedIn Email this page Print this page Listen to this story Deep-rooted grass stores significantly more carbon, new study says 0:00 / 0:00 Soil biologist Eric Slessarev has some advice for conservationists, landscapers, and farmers with fallow fields. Go touch deep-rooted grass. Or better yet, go plant some. Slessarev, an assistant professor of ecology and evolutionary biology in Yale’s Faculty of Arts and Sciences, is first author of a new study showing that deep-rooted grasses store significantly more carbon in their root biomass than shallow-rooted crops — without harming the existing organic material already in the ground. The study helps confirm longstanding assumptions about the potential climate benefits of planting deep-rooted grass as a meaningful way to store organic carbon, replenish nutrients, and prevent erosion in soil. It also explores the implications of using perennial grasses as an alternative biofuel source that doesn’t deplete soil as much as crops such as corn do. “If we can find a role for perennial, deep-rooted plants in the larger economy, it will be a benefit to everyone,” said Slessarev, who is a member of the Yale Center for Natural Carbon Capture . “There is so much going on in the soil, in these deeper layers, that is worthwhile to study and understand.” The study appears in the journal Earth’s Future. Slessarev is co-corresponding author of the study with Erin Nuccio, a researcher at Lawrence Livermore National Laboratory in California. A field at the James E. “Bud” Smith Plant Materials Center in Knox City, Texas, shows shallow-rooted wheat on the left and deep-rooted switchgrass on the right. Photo courtesy of Eric Slessarev For the study, the researchers analyzed soil at a dozen sites in nine U.S. states, comparing samples from beneath deep-rooted switchgrass — a common prairie grass with a root depth of 5 to 10 feet — with samples beneath shallow-rooted crops. The study included sites in Oklahoma, Texas, Mississippi, North Carolina, New York, Michigan, Illinois, Wisconsin, and South Dakota. The switchgrass stored an additional 0.58 metric tons of carbon per hectare in its roots compared to shallow-rooted annual crops, the researchers found. “Overall, this helps corroborate the idea that switchgrass and other deep-rooted plants can be beneficial to soil health,” Slessarev said. “It’s a night and day difference.” Slessarev takes a soil sample at the James E. “Bud” Smith Plant Materials Center in Knox City, Texas. The work of conducting the study was painstaking, he noted. The team took more than 700 soil core samples and carefully isolated the roots in each sample by hand. They used radiocarbon isotopes to determine how the roots were chemically influencing the existing soil. Slessarev went to most of the sites himself, driving a pickup truck that pulled a trailer with soil sampling gear. “It was a great way to see the country,” he said. “It became a grand adventure for me, full of colors and textures in the soil.” The study was supported by Lawrence Livermore National Laboratory’s Lab Directed Research and Development program, the U.S. Department of Energy, and the Center for Advanced Bioenergy and Bioproducts Innovation. Environment Honors Vanessa Ezenwa elected Ecological Society of America Fellow Apr 21, 2026 From Faculty of Arts & Sciences Entrepreneurship Startup Yale 2026: Purpose-driven ideas, community-powered wins Apr 21, 2026 From Tsai CITY Environmental Humanities ‘Animals in French Visual Culture, 1750-1900’ Apr 21, 2026 3 min read Honors Four Yale students named 2026 Wyss Scholars Apr 16, 2026 From School of the Environment",
+      "source_name": "Yale News",
+      "source_id": "yale_news",
+      "published_date": "2026-04-21T21:44:47",
+      "published_at": null,
+      "published_url": null,
+      "collected_date": "2026-04-21T21:11:12.202436",
+      "score": 0.8547,
+      "image_url": "https://news.yale.edu/sites/default/files/styles/opengraph_image/public/2026-04/Tall-Grass-2.jpg?h=03155992&itok=XFW2cBqp",
+      "metadata": {
+        "source_metadata": {
+          "feed_title": "YaleNews Articles",
+          "entry_id": "https://news.yale.edu/2026/04/21/deep-rooted-grass-stores-significantly-more-carbon-new-study-says"
+        },
+        "credibility_score": 0.9,
+        "processing_timestamp": "2026-04-21T21:11:12.023439+00:00",
+        "original_url": "https://news.yale.edu/2026/04/21/deep-rooted-grass-stores-significantly-more-carbon-new-study-says",
+        "enrichment": {
+          "language": "en",
+          "normalized_title": "Deep-rooted grass stores significantly more carbon, new study says",
+          "normalized_summary": "A study of perennial grasses in nine U.S. states shows that grass with deep roots stores more carbon than crops with shallow roots, providing important climate benefits.",
+          "entities": [],
+          "topics": [
+            "science",
+            "health",
+            "climate",
+            "economy"
+          ],
+          "sentiment": "neutral",
+          "model_version": "2025.02-pattern-v1",
+          "editorial_display_category": null,
+          "error": null
+        },
+        "image_status": "IMAGE_OK",
+        "image_source": "meta:og:image",
+        "image_url": "https://news.yale.edu/sites/default/files/styles/opengraph_image/public/2026-04/Tall-Grass-2.jpg?h=03155992&itok=XFW2cBqp",
+        "image_alt": null,
+        "normalized_title": null,
+        "normalized_summary": null
+      },
+      "authors": [
+        "Yale News",
+        "news@yale.edu (Yale News)"
+      ],
+      "category": "multidisciplinary",
+      "components": {
+        "source_credibility": 0.7075,
+        "recency": 0.9275,
+        "content_quality": 0.855,
+        "engagement": null,
+        "engagement_potential": 0.855,
+        "nqi_substance": 0.855,
+        "nqi_narrative": 0.855,
+        "nqi_relevance": 0.855,
+        "nqi_credibility": 0.855
+      }
+    },
+    {
+      "id": 990,
+      "title": "Startup Yale 2026: Purpose-driven ideas, community-powered wins",
+      "url": "https://startup.yale.edu/2026/04/15/startup-yale-2026-purpose-driven-ideas-community-powered-wins/",
+      "summary": "Startup Yale 2026 brought together a record-breaking crowd for a full day of pitches, workshops, and hands-on conversations. More than a competition, it showed how purpose-driven ventures grow through community, with over $230,000 awarded to teams already building and scaling their work.",
+      "content": "Startup Yale 2026: Purpose-Driven Ideas, Community-Powered Wins – Startup Yale Skip to Main Content Startup Yale 2026: Purpose-Driven Ideas, Community-Powered Wins Startup Yale 2026 was powered by the people who showed up ready to build, share, and push ideas forward. With over 1000 registered attendees, a record-breaking turnout, Hotel Marcel was active from the first check-in to the final award. Founders moved between pitch rooms and conversations, mentors connected with students through rapid, one-on-one conversations designed to exchange ideas and perspectives, and judges pressed deeper on the decisions shaping each venture. This year’s theme, Build with Purpose. Grow through Community. , showed up in real ways. It shaped how founders pitched, how judges responded, and how people moved through the space. Every conversation, every question, every introduction reinforced one thing: ideas get better when they’re built in community. “Building with purpose means creating something that impacts people. At the end of the day, it’s about making a positive difference in their lives,” said Justin Silver, Co-founder and COO of AAVRANI and Venture Advisor at Tsai CITY. Where ideas move forward Startup Yale 2026 was not just about being on stage. Some of the most important moments happened right after. After pitches, founders moved into follow-up conversations with judges, mentors, and even investors. These were more focused, working conversations, digging into customer acquisitions, hiring, and what to do next. Founders also connected with each other—comparing notes, sharing resources, and making introductions. Workshops throughout the day covered the core components of building, from defining the customer and problem in Building Things That Matter and refining how founders communicate their ideas in From Stumbling to Storytelling: Master the Message That Sells Your Startup , to building teams with intention and approaching fundraising as a system in Hiring with Intention and Founder Judgment Is the Moat: Fundraising Systems and Long-Horizon Capital Strategy . In the Building Things That Matter workshop, Kofi Ampadu , Founder and General Partner of SKU’d Ventures, pushed founders to define the real problem their product or service solves and who it is actually for, emphasizing that customers do not just buy things, they “hire” solutions to make progress in their lives. “Building a company is an experiment. You come with a hypothesis, and you are constantly testing it and refining your understanding of why it matters,” Kofi shared. That mindset carried throughout the day. Founders were not just presenting, they were testing ideas, responding to feedback, and refining their next steps in real time. For many attendees, the value extended beyond the pitches. Whether they were building something on their own or exploring ideas, they were able to see how founders think through decisions, respond to feedback, and move their work forward in practice. “Start now. Stay close to what you care about, and find a community, like Tsai CITY, that will push you to keep going,” said Keith Pemberton (YC ’27), founder of QuarterMill. “I’m really glad I came. Being surrounded by people building thoughtful, impactful projects is incredibly energizing,” one attendee shared. The winners After a full day of pitching and tough decisions, Startup Yale 2026 awarded over $230,000 in prizes to ventures pushing meaningful work forward. Creative Entrepreneurship Prize Grand Prize: Rosetint Community Theatre ​ Audience Choice: Studio B-Du ​ Future of Health Innovation Prize Grand Prize: The Micro-Clinic ​ Audience Choice: forEVAhealth ​ Manolo Sanchez Prize Grand Prize: Safari Strives Audience Choice: Havn Miller Prize Grand Prize: Gideon Audience Choice: PARTEE New Haven Civic Innovation Prize Grand Prize: Revenue Cycle ​ 2nd Prize: Pearl CT ​ 3rd Prize: QuarterMill ​ Audience Choice: PathConnect Planetary Solutions Prize Grand Prize: Oilzyme ​ 2nd Prize: Apical Audience Choice: Oilzyme Rothberg Catalyzer Prize Grand Prize: Spark Audience Choice: Allstrum Yale Innovators Prize Grand Prize: AssistiveMath Audience Choice Winner: Pyari Poster Prizes Launch Pad Poster Prize: Split Logistics Accelerator Poster Prize: Comitia Across categories, the impact of the funding was immediate and specific. Teams will use the prize money to run pilots, build infrastructure, secure early customers, and expand access to the communities they are serving. “The prize money means everything for our venture. It gives us the opportunity to build our infrastructure and hit the ground running,” said Kevin Reardon (YC ’28), winner of the Launch Pad Poster Prize and founder of Split Logistics, a zero-commission marketplace that eliminates the 15% broker tax and redistributes the savings between shippers and truckers, restoring respect, equity, and profit to the people who move the world. Beyond the stage, a mentoring session brought together students, founders, and advisors for fast-paced, one-on-one conversations designed to spark new ideas and connections. Tsai CITY venture development teams also shared their ventures through poster presentations, walking attendees through their work, gathering feedback, and building visibility for projects still in development. Build across campus and beyond Startup Yale 2026 happened at Hotel Marcel, but it was built in rooms across campus. This year’s event was made possible through collaboration with partners including: Center for Business and the Environment at Yale Cultural Innovation Lab at Yale Dwight Hall at Yale Yale Planetary Solutions Tsai Center of Innovative Thinking at Yale Yale School of Engineering & Applied Science Yale School of Music Yale School of Public Health Yale Ventures Startup Yale 2026 was also supported by MindTrust , whose sponsorship helped make this year’s event possible. What this moment means The ideas shared during Startup Yale 2026 are already being tested, refined, and pushed forward. The people behind them are continuing the conversations that started here and building on that momentum. Startup Yale 2026 showcased what it looks like to build with purpose and grow through community. It captured where founders are right now, and how much further their ideas can go when they are shaped by feedback, conversation, and connection. Partners Sponsors Email Name",
+      "source_name": "Yale News",
+      "source_id": "yale_news",
+      "published_date": "2026-04-22T00:15:39",
+      "published_at": null,
+      "published_url": null,
+      "collected_date": "2026-04-21T21:11:12.202435",
+      "score": 0.8547,
+      "image_url": null,
+      "metadata": {
+        "source_metadata": {
+          "feed_title": "YaleNews Articles",
+          "entry_id": "https://news.yale.edu/2026/04/21/startup-yale-2026-purpose-driven-ideas-community-powered-wins"
+        },
+        "credibility_score": 0.9,
+        "processing_timestamp": "2026-04-21T21:11:12.006009+00:00",
+        "original_url": "https://startup.yale.edu/2026/04/15/startup-yale-2026-purpose-driven-ideas-community-powered-wins/",
+        "enrichment": {
+          "language": "en",
+          "normalized_title": "Startup Yale 2026: Purpose-driven ideas, community-powered wins",
+          "normalized_summary": "Startup Yale 2026 brought together a record-breaking crowd for a full day of pitches, workshops, and hands-on conversations. More than a competition, it showed how purpose-driven ventures grow through community, with over $230,000 awarded to teams already building and scaling their work.",
+          "entities": [],
+          "topics": [
+            "space",
+            "science",
+            "health"
+          ],
+          "sentiment": "positive",
+          "model_version": "2025.02-pattern-v1",
+          "editorial_display_category": null,
+          "error": null
+        },
+        "image_status": "IMAGE_MISSING_SOURCE",
+        "image_source": null,
+        "image_url": null,
+        "image_alt": null,
+        "normalized_title": null,
+        "normalized_summary": null
+      },
+      "authors": [
+        "Yale News",
+        "news@yale.edu (Yale News)"
+      ],
+      "category": "multidisciplinary",
+      "components": {
+        "source_credibility": 0.7075,
         "recency": 0.9275,
         "content_quality": 0.855,
         "engagement": null,
@@ -2994,193 +3178,7 @@
         "nqi_relevance": 0.9293,
         "nqi_credibility": 0.9293
       }
-    },
-    {
-      "id": 458,
-      "title": "Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations",
-      "url": "https://biorxiv.org/content/10.64898/2026.03.24.714034v1?rss=1",
-      "summary": "Recently, a number of tools have been released that generate ensembles of protein structures based on artificial intelligence (AI) approaches. Although ensembles generated by the tools differ significantly, we demonstrate a computational path to harmonizing the various outputs under a stationary condition using two complementary physics-based approaches. In the first stage, the AI ensemble is used to seed a weighted ensemble (WE) simulation, promoting relaxation toward the steady state. In the second stage, trajectory segments generated by WE are reweighted to steady state using the recently developed RiteWeight (RW) algorithm. We applied this approach to generate an atomically- detailed equilibrium ensemble of unliganded adenylate kinase conformations, starting from ensembles produced by three AI tools: AFSample2, ESMFlow-PDB (trained from PDB structures), and ESMFlow-MD (trained from molecular dynamics simulation data). Dramatic differences in the AI-generated ensembles are largely erased during the WE-RW process, yielding a consistent description of the equilibrium ensemble for a given force field.",
-      "content": "Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations | bioRxiv Skip to main content New Results Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations View ORCID Profile Lisa Otten , View ORCID Profile Jeremy M. G. Leung , View ORCID Profile Lillian Chong , View ORCID Profile Daniel M Zuckerman doi: https://doi.org/10.64898/2026.03.24.714034 Lisa Otten 1 Oregon Health and Science University; Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Lisa Otten Jeremy M. G. Leung 2 University of Pittsburgh; Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Jeremy M. G. Leung Lillian Chong 2 University of Pittsburgh; Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Lillian Chong For correspondence: ltchong{at}pitt.edu Daniel M Zuckerman 3 Oregon Health & Science University Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Daniel M Zuckerman Abstract Info/History Metrics Preview PDF Abstract Recently, a number of tools have been released that generate ensembles of protein structures based on artificial intelligence (AI) approaches. Although ensembles generated by the tools differ significantly, we demonstrate a computational path to harmonizing the various outputs under a stationary condition using two complementary physics-based approaches. In the first stage, the AI ensemble is used to seed a weighted ensemble (WE) simulation, promoting relaxation toward the steady state. In the second stage, trajectory segments generated by WE are reweighted to steady state using the recently developed RiteWeight (RW) algorithm. We applied this approach to generate an atomically- detailed equilibrium ensemble of unliganded adenylate kinase conformations, starting from ensembles produced by three AI tools: AFSample2, ESMFlow-PDB (trained from PDB structures), and ESMFlow-MD (trained from molecular dynamics simulation data). Dramatic differences in the AI-generated ensembles are largely erased during the WE-RW process, yielding a consistent description of the equilibrium ensemble for a given force field. Competing Interest Statement The authors have declared no competing interest. Funder Information Declared National Institutes of Health, https://ror.org/01cwqze88 , GM115805 Copyright The copyright holder for this preprint is the author/funder, who has granted bioRxiv a license to display the preprint in perpetuity. It is made available under a CC-BY 4.0 International license . Back to top Previous Next Posted April 03, 2026. Download PDF Email Thank you for your interest in spreading the word about bioRxiv. NOTE: Your email address is requested solely to identify you as the sender of this article. Your Email * Your Name * Send To * Enter multiple addresses on separate lines or separate them with commas. You are going to email the following Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations Message Subject (Your Name) has forwarded a page to you from bioRxiv Message Body (Your Name) thought you would like to see this page from the bioRxiv website. Your Personal Message CAPTCHA This question is for testing whether or not you are a human visitor and to prevent automated spam submissions. Share Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations Lisa Otten , Jeremy M. G. Leung , Lillian Chong , Daniel M Zuckerman bioRxiv 2026.03.24.714034; doi: https://doi.org/10.64898/2026.03.24.714034 Share This Article: Copy Citation Tools Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations Lisa Otten , Jeremy M. G. Leung , Lillian Chong , Daniel M Zuckerman bioRxiv 2026.03.24.714034; doi: https://doi.org/10.64898/2026.03.24.714034 Citation Manager Formats BibTeX Bookends EasyBib EndNote (tagged) EndNote 8 (xml) Medlars Mendeley Papers RefWorks Tagged Ref Manager RIS Zotero Tweet Widget Facebook Like Google Plus One Subject Areas All Articles Animal Behavior and Cognition (7479) Biochemistry (17193) Bioengineering (13447) Bioinformatics (40856) Biophysics (20952) Cancer Biology (18052) Cell Biology (24878) Clinical Trials (138) Developmental Biology (13122) Ecology (19463) Epidemiology (2067) Evolutionary Biology (23889) Genetics (15371) Genomics (22078) Immunology (17317) Microbiology (39483) Molecular Biology (16763) Neuroscience (86553) Paleontology (655) Pathology (2766) Pharmacology and Toxicology (4696) Physiology (7454) Plant Biology (14767) Scientific Communication and Education (2017) Synthetic Biology (4178) Systems Biology (9629) Zoology (2224)",
-      "source_name": "bioRxiv",
-      "source_id": "biorxiv",
-      "published_date": "2026-04-03T04:00:00",
-      "published_at": null,
-      "published_url": null,
-      "collected_date": "2026-04-03T15:36:47.773229",
-      "score": 0.8371,
-      "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-      "metadata": {
-        "source_metadata": {
-          "doi": "10.64898/2026.03.24.714034v1?",
-          "feed_title": "bioRxiv Subject Collection: All",
-          "entry_id": "https://www.biorxiv.org/content/10.64898/2026.03.24.714034v1?rss=1"
-        },
-        "credibility_score": 0.65,
-        "processing_timestamp": "2026-04-03T15:36:45.203842+00:00",
-        "original_url": "https://www.biorxiv.org/content/10.64898/2026.03.24.714034v1?rss=1",
-        "enrichment": {
-          "language": "en",
-          "normalized_title": "Rectifying AI-generated protein structure ensembles for equilibrium using physics-based computations",
-          "normalized_summary": "Recently, a number of tools have been released that generate ensembles of protein structures based on artificial intelligence (AI) approaches. Although ensembles generated by the tools differ significantly, we demonstrate a computational path to harmonizing the various outputs under a stationary condition using two complementary physics-based approaches. In the first stage, the AI ensemble is used to seed a weighted ensemble (WE) simulation, promoting relaxation toward the steady state. In the second stage, trajectory segments generated by WE are reweighted to steady state using the recently developed RiteWeight (RW) algorithm. We applied this approach to generate an atomically- detailed equilibrium ensemble of unliganded adenylate kinase conformations, starting from ensembles produced by three AI tools: AFSample2, ESMFlow-PDB (trained from PDB structures), and ESMFlow-MD (trained from molecular dynamics simulation data). Dramatic differences in the AI-generated ensembles are largely erased during the WE-RW process, yielding a consistent description of the equilibrium ensemble for a given force field.",
-          "entities": [
-            "Google"
-          ],
-          "topics": [
-            "science",
-            "health",
-            "technology"
-          ],
-          "sentiment": "neutral",
-          "model_version": "2025.02-pattern-v1",
-          "editorial_display_category": null,
-          "error": null
-        },
-        "image_status": "IMAGE_OK",
-        "image_source": "meta:og:image",
-        "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-        "image_alt": null,
-        "normalized_title": null,
-        "normalized_summary": null
-      },
-      "authors": [
-        "Otten, L., Leung, J. M. G., Chong, L., Zuckerman, D. M."
-      ],
-      "category": "biology",
-      "components": {
-        "source_credibility": 0.725,
-        "recency": 0.8832,
-        "content_quality": 0.84,
-        "engagement": null,
-        "engagement_potential": 0.84,
-        "nqi_substance": 0.84,
-        "nqi_narrative": 0.84,
-        "nqi_relevance": 0.84,
-        "nqi_credibility": 0.84
-      }
-    },
-    {
-      "id": 566,
-      "title": "Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease",
-      "url": "https://biorxiv.org/content/10.64898/2026.04.02.716074v1?rss=1",
-      "summary": "Metabolic dysfunction-associated steatotic liver disease (MASLD) afflicts more than one-third of adults globally, contributing significantly to an increased cardiovascular disease risk. Further, patients with severe liver disease experience muscle weakness (sarcopenic obesity) and fatigue. Hypoxia-inducible factor 2 (HIF2) accumulates in the livers of MASLD patients and has been implicated in disease progression. Here we sought to understand the role of hepatic HIF2 in mediating hepatic and extra-hepatic features of MASLD. Using a well-validated obese mouse model of MASLD, we investigated the impact of hepatocyte-specific HIF2 deletion (hHIF2-/-) on hepatic, cardiac and skeletal muscle metabolism, and cardiac function. Over 28 weeks, mice were exposed to a high-fat, high-fructose, high-cholesterol (GAN) diet, which induced obesity alongside hepatic steatosis, fibrosis and inflammation. In contrast to observations in lean mouse models of liver disease, hHIF2-/- did not protect against MASLD, despite greater hepatic NADH-supported mitochondrial respiration and higher intracellular sphingomyelin levels. Instead, in the hearts of GAN-fed mice, hHIF2-/- caused diacylglycerol accumulation independent of diet, accumulation of long-chain acyl-carnitines and exacerbation of ceramide accumulation. Langendorff-perfused hearts from hHIF2-/- mice showed systolic and diastolic dysfunction, including 24% lower left ventricular developed pressure and 34% lower maximal rate of relaxation (dP/dtmin). However, isolated hearts from hHIF2-/- mice were protected against MASLD-associated sympathetic dominance, determined using autonomic receptor agonist stimulation. Both GAN-feeding and hHIF2-/- were associated with lower lean mass (14% and 5.4% lower than respective controls), whilst hHIF2-/- enhanced OXPHOS-associated protein levels in gastrocnemius muscle. Overall, hHIF2-/- resulted in detrimental extra-hepatic effects, including myocardial lipid accumulation, impaired cardiac function",
-      "content": "Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease | bioRxiv Skip to main content New Results Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease View ORCID Profile Lorenz M.W. Holzner , Rosa M. Korpershoek , Youguo Niu , Anna Cochrane , Paula M. Darwin , Julia Babuta , Areesha Nazeer , Cecilia Castro , Alice P. Sowton , Alice E. Knapton , Benjamin D. Thackray , Julian L. Griffin , Zoe Hall , Dino A. Giussani , View ORCID Profile Rob C. I. Wüst , Andrew J. Murray doi: https://doi.org/10.64898/2026.04.02.716074 Lorenz M.W. Holzner 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Lorenz M.W. Holzner For correspondence: lorenz.holzner{at}babraham.ac.uk Rosa M. Korpershoek 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Youguo Niu 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Anna Cochrane 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Paula M. Darwin 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Julia Babuta 2 Division of Systems Medicine, Department of Metabolism, Digestion and Reproduction, Imperial College London, Hammersmith Hospital Campus, London, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Areesha Nazeer 3 The Rowett Institute, University of Aberdeen, Aberdeen, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Cecilia Castro 3 The Rowett Institute, University of Aberdeen, Aberdeen, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Alice P. Sowton 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Alice E. Knapton 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Benjamin D. Thackray 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Julian L. Griffin 3 The Rowett Institute, University of Aberdeen, Aberdeen, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Zoe Hall 2 Division of Systems Medicine, Department of Metabolism, Digestion and Reproduction, Imperial College London, Hammersmith Hospital Campus, London, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Dino A. Giussani 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Rob C. I. Wüst 4 Department of Human Movement Sciences, Faculty of Behavioural and Movement Sciences, Vrije Universiteit Amsterdam, Amsterdam Movement Sciences, Amsterdam, the Netherlands Find this author on Google Scholar Find this author on PubMed Search for this author on this site ORCID record for Rob C. I. Wüst Andrew J. Murray 1 Department of Physiology, Development and Neuroscience, University of Cambridge, UK; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Abstract Info/History Metrics Supplementary material Preview PDF Abstract Metabolic dysfunction-associated steatotic liver disease (MASLD) afflicts more than one-third of adults globally, contributing significantly to an increased cardiovascular disease risk. Further, patients with severe liver disease experience muscle weakness (sarcopenic obesity) and fatigue. Hypoxia-inducible factor 2α (HIF2α) accumulates in the livers of MASLD patients and has been implicated in disease progression. Here we sought to understand the role of hepatic HIF2α in mediating hepatic and extra-hepatic features of MASLD. Using a well-validated obese mouse model of MASLD, we investigated the impact of hepatocyte-specific HIF2α deletion (hHIF2α -/- ) on hepatic, cardiac and skeletal muscle metabolism, and cardiac function. Over 28 weeks, mice were exposed to a high-fat, high-fructose, high-cholesterol (GAN) diet, which induced obesity alongside hepatic steatosis, fibrosis and inflammation. In contrast to observations in lean mouse models of liver disease, hHIF2α -/- did not protect against MASLD, despite greater hepatic NADH-supported mitochondrial respiration and higher intracellular sphingomyelin levels. Instead, in the hearts of GAN-fed mice, hHIF2α -/- caused diacylglycerol accumulation independent of diet, accumulation of long-chain acyl-carnitines and exacerbation of ceramide accumulation. Langendorff-perfused hearts from hHIF2α -/- mice showed systolic and diastolic dysfunction, including 24% lower left ventricular developed pressure and 34% lower maximal rate of relaxation (dP/dtmin). However, isolated hearts from hHIF2α -/- mice were protected against MASLD-associated sympathetic dominance, determined using autonomic receptor agonist stimulation. Both GAN-feeding and hHIF2α -/- were associated with lower lean mass (14% and 5.4% lower than respective controls), whilst hHIF2α -/- enhanced OXPHOS-associated protein levels in gastrocnemius muscle. Overall, hHIF2α -/- resulted in detrimental extra-hepatic effects, including myocardial lipid accumulation, impaired cardiac function, and loss of whole-body lean mass, with no apparent protection against MASLD disease progression. Competing Interest Statement The authors have declared no competing interest. Funder Information Declared Wellcome Trust , 220033/Z/19/Z Biotechnology and Biological Sciences Research Council , BB/M011194/1 British Heart Foundation , FS/17/61/33473 , FS/19/54/34889C , FS/4yPhD/F/20/34124 , PG/14/5/30547 Research Councils UK , EP/E500552/1 Evelyn Trust , 16/33 Amsterdam Movement Sciences, https://ror.org/04atb9h07 Medical Research Council , MR/V03362X/1 Copyright The copyright holder for this preprint is the author/funder, who has granted bioRxiv a license to display the preprint in perpetuity. It is made available under a CC-BY 4.0 International license . Back to top Previous Next Posted April 06, 2026. Download PDF Supplementary Material Email Thank you for your interest in spreading the word about bioRxiv. NOTE: Your email address is requested solely to identify you as the sender of this article. Your Email * Your Name * Send To * Enter multiple addresses on separate lines or separate them with commas. You are going to email the following Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease Message Subject (Your Name) has forwarded a page to you from bioRxiv Message Body (Your Name) thought you would like to see this page from the bioRxiv website. Your Personal Message CAPTCHA This question is for testing whether or not you are a human visitor and to prevent automated spam submissions. Share Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease Lorenz M.W. Holzner , Rosa M. Korpershoek , Youguo Niu , Anna Cochrane , Paula M. Darwin , Julia Babuta , Areesha Nazeer , Cecilia Castro , Alice P. Sowton , Alice E. Knapton , Benjamin D. Thackray , Julian L. Griffin , Zoe Hall , Dino A. Giussani , Rob C. I. Wüst , Andrew J. Murray bioRxiv 2026.04.02.716074; doi: https://doi.org/10.64898/2026.04.02.716074 Share This Article: Copy Citation Tools Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease Lorenz M.W. Holzner , Rosa M. Korpershoek , Youguo Niu , Anna Cochrane , Paula M. Darwin , Julia Babuta , Areesha Nazeer , Cecilia Castro , Alice P. Sowton , Alice E. Knapton , Benjamin D. Thackray , Julian L. Griffin , Zoe Hall , Dino A. Giussani , Rob C. I. Wüst , Andrew J. Murray bioRxiv 2026.04.02.716074; doi: https://doi.org/10.64898/2026.04.02.716074 Citation Manager Formats BibTeX Bookends EasyBib EndNote (tagged) EndNote 8 (xml) Medlars Mendeley Papers RefWorks Tagged Ref Manager RIS Zotero Tweet Widget Facebook Like Google Plus One Subject Areas All Articles Animal Behavior and Cognition (7486) Biochemistry (17216) Bioengineering (13460) Bioinformatics (40896) Biophysics (20968) Cancer Biology (18073) Cell Biology (24911) Clinical Trials (138) Developmental Biology (13139) Ecology (19490) Epidemiology (2067) Evolutionary Biology (23921) Genetics (15391) Genomics (22093) Immunology (17338) Microbiology (39524) Molecular Biology (16779) Neuroscience (86650) Paleontology (656) Pathology (2770) Pharmacology and Toxicology (4700) Physiology (7462) Plant Biology (14777) Scientific Communication and Education (2018) Synthetic Biology (4182) Systems Biology (9634) Zoology (2226)",
-      "source_name": "bioRxiv",
-      "source_id": "biorxiv",
-      "published_date": "2026-04-06T04:00:00",
-      "published_at": null,
-      "published_url": null,
-      "collected_date": "2026-04-06T20:57:23.865225",
-      "score": 0.8359,
-      "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-      "metadata": {
-        "source_metadata": {
-          "doi": "10.64898/2026.04.02.716074v1?",
-          "feed_title": "bioRxiv Subject Collection: All",
-          "entry_id": "https://www.biorxiv.org/content/10.64898/2026.04.02.716074v1?rss=1"
-        },
-        "credibility_score": 0.65,
-        "processing_timestamp": "2026-04-06T20:57:23.745949+00:00",
-        "original_url": "https://www.biorxiv.org/content/10.64898/2026.04.02.716074v1?rss=1",
-        "enrichment": {
-          "language": "en",
-          "normalized_title": "Hepatic HIF2α modulates extra-hepatic disease-associated phenotypes during metabolic dysfunction-associated steatotic liver disease",
-          "normalized_summary": "Metabolic dysfunction-associated steatotic liver disease (MASLD) afflicts more than one-third of adults globally, contributing significantly to an increased cardiovascular disease risk. Further, patients with severe liver disease experience muscle weakness (sarcopenic obesity) and fatigue. Hypoxia-inducible factor 2 (HIF2) accumulates in the livers of MASLD patients and has been implicated in disease progression. Here we sought to understand the role of hepatic HIF2 in mediating hepatic and extra-hepatic features of MASLD. Using a well-validated obese mouse model of MASLD, we investigated the impact of hepatocyte-specific HIF2 deletion (hHIF2-/-) on hepatic, cardiac and skeletal muscle metabolism, and cardiac function. Over 28 weeks, mice were exposed to a high-fat, high-fructose, high-cholesterol (GAN) diet, which induced obesity alongside hepatic steatosis, fibrosis and inflammation. In contrast to observations in lean mouse models of liver disease, hHIF2-/- did not protect against MASLD, despite greater hepatic NADH-supported mitochondrial respiration and higher intracellular sphingomyelin levels. Instead, in the hearts of GAN-fed mice, hHIF2-/- caused diacylglycerol accumulation independent of diet, accumulation of long-chain acyl-carnitines and exacerbation of ceramide accumulation. Langendorff-perfused hearts from hHIF2-/- mice showed systolic and diastolic dysfunction, including 24% lower left ventricular developed pressure and 34% lower maximal rate of relaxation (dP/dtmin). However, isolated hearts from hHIF2-/- mice were protected against MASLD-associated sympathetic dominance, determined using autonomic receptor agonist stimulation. Both GAN-feeding and hHIF2-/- were associated with lower lean mass (14% and 5.4% lower than respective controls), whilst hHIF2-/- enhanced OXPHOS-associated protein levels in gastrocnemius muscle. Overall, hHIF2-/- resulted in detrimental extra-hepatic effects, including myocardial lipid accumulation, impaired cardiac function",
-          "entities": [
-            "Google"
-          ],
-          "topics": [
-            "science",
-            "health"
-          ],
-          "sentiment": "negative",
-          "model_version": "2025.02-pattern-v1",
-          "editorial_display_category": null,
-          "error": null
-        },
-        "image_status": "IMAGE_OK",
-        "image_source": "meta:og:image",
-        "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-        "image_alt": null,
-        "normalized_title": null,
-        "normalized_summary": null
-      },
-      "authors": [
-        "Holzner, L. M. W., Korpershoek, R. M., Niu, Y., Cochrane, A., Darwin, P. M., Babuta, J., Nazeer, A., Castro, C., Sowton, A. P., Knapton, A. E., Thackray, B. D., Griffin, J. L., Hall, Z., Giussani, D. A., Wüst, R. C. I., Murray, A. J."
-      ],
-      "category": "biology",
-      "components": {
-        "source_credibility": 0.725,
-        "recency": 0.8768,
-        "content_quality": 0.84,
-        "engagement": null,
-        "engagement_potential": 0.84,
-        "nqi_substance": 0.84,
-        "nqi_narrative": 0.84,
-        "nqi_relevance": 0.84,
-        "nqi_credibility": 0.84
-      }
-    },
-    {
-      "id": 563,
-      "title": "Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC",
-      "url": "https://biorxiv.org/content/10.64898/2026.04.02.716106v1?rss=1",
-      "summary": "Extrachromosomal DNA (ecDNA) has emerged as a critical mediator of oncogene amplification and transcriptional dynamics in aggressive cancers, yet its contribution to chemotherapy resistance in vivo remains incompletely understood. This study investigates the contribution of ecDNA-associated molecular features to predictive chemotherapy resistance in TNBC. We analyzed RNA-seq data from 4T1 TNBC cells and 4T1 bulk tumors at different growth stages (1-, 3-, and 6-week) to identify differentially expressed ecDNA alterations. We then utilized molecular docking tools to predict ecDNA protein-drug interactions and employed machine learning (ML) models to predict ecDNA-associated therapeutic resistance. Our results revealed changes in global gene expression, including expression of ecDNA-associated genes, that continued over time, with significant molecular remodeling observed at six weeks. Additionally, we found gradual accumulation of mutations in ecDNA genes, which may have contributed to reduced drug binding affinity, indicating potential resistance. ML models generated stable, high-confidence classifications of resistant phenotypes, consistently identifying ecDNA burden and prevalence as dominant predictive features of drug resistance. Drug specific predictions further highlighted elevated resistance probabilities for paclitaxel and doxorubicin, whereas hydroxyurea, which depletes ecDNA, showed reduced resistance probabilities, indicating potential roles of ecDNA in chemoresistance. This study provides new insights into temporal remodeling of ecDNA within TNBC tumors over time and their potential association with drug resistance.",
-      "content": "Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC | bioRxiv Skip to main content New Results Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC Md. Iftehimul , Dipongkor Saha doi: https://doi.org/10.64898/2026.04.02.716106 Md. Iftehimul 1 Institute of Biotechnology, Bangladesh Agricultural University, Mymensingh 2202, Bangladesh; Find this author on Google Scholar Find this author on PubMed Search for this author on this site Dipongkor Saha 2 Department of Biology, North Carolina Agricultural and Technical State University, Greensboro, NC 27411, USA Find this author on Google Scholar Find this author on PubMed Search for this author on this site For correspondence: dsaha1{at}ncat.edu Abstract Info/History Metrics Preview PDF Abstract Extrachromosomal DNA (ecDNA) has emerged as a critical mediator of oncogene amplification and transcriptional dynamics in aggressive cancers, yet its contribution to chemotherapy resistance in vivo remains incompletely understood. This study investigates the contribution of ecDNA-associated molecular features to predictive chemotherapy resistance in TNBC. We analyzed RNA-seq data from 4T1 TNBC cells and 4T1 bulk tumors at different growth stages (1-, 3-, and 6-week) to identify differentially expressed ecDNA alterations. We then utilized molecular docking tools to predict ecDNA protein-drug interactions and employed machine learning (ML) models to predict ecDNA-associated therapeutic resistance. Our results revealed changes in global gene expression, including expression of ecDNA-associated genes, that continued over time, with significant molecular remodeling observed at six weeks. Additionally, we found gradual accumulation of mutations in ecDNA genes, which may have contributed to reduced drug binding affinity, indicating potential resistance. ML models generated stable, high-confidence classifications of resistant phenotypes, consistently identifying ecDNA burden and prevalence as dominant predictive features of drug resistance. Drug specific predictions further highlighted elevated resistance probabilities for paclitaxel and doxorubicin, whereas hydroxyurea, which depletes ecDNA, showed reduced resistance probabilities, indicating potential roles of ecDNA in chemoresistance. This study provides new insights into temporal remodeling of ecDNA within TNBC tumors over time and their potential association with drug resistance. Competing Interest Statement The authors have declared no competing interest. Copyright The copyright holder for this preprint is the author/funder, who has granted bioRxiv a license to display the preprint in perpetuity. It is made available under a CC-BY 4.0 International license . Back to top Previous Next Posted April 06, 2026. Download PDF Email Thank you for your interest in spreading the word about bioRxiv. NOTE: Your email address is requested solely to identify you as the sender of this article. Your Email * Your Name * Send To * Enter multiple addresses on separate lines or separate them with commas. You are going to email the following Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC Message Subject (Your Name) has forwarded a page to you from bioRxiv Message Body (Your Name) thought you would like to see this page from the bioRxiv website. Your Personal Message CAPTCHA This question is for testing whether or not you are a human visitor and to prevent automated spam submissions. Share Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC Md. Iftehimul , Dipongkor Saha bioRxiv 2026.04.02.716106; doi: https://doi.org/10.64898/2026.04.02.716106 Share This Article: Copy Citation Tools Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC Md. Iftehimul , Dipongkor Saha bioRxiv 2026.04.02.716106; doi: https://doi.org/10.64898/2026.04.02.716106 Citation Manager Formats BibTeX Bookends EasyBib EndNote (tagged) EndNote 8 (xml) Medlars Mendeley Papers RefWorks Tagged Ref Manager RIS Zotero Tweet Widget Facebook Like Google Plus One Subject Areas All Articles Animal Behavior and Cognition (7486) Biochemistry (17216) Bioengineering (13460) Bioinformatics (40896) Biophysics (20968) Cancer Biology (18073) Cell Biology (24911) Clinical Trials (138) Developmental Biology (13139) Ecology (19490) Epidemiology (2067) Evolutionary Biology (23921) Genetics (15391) Genomics (22093) Immunology (17338) Microbiology (39524) Molecular Biology (16779) Neuroscience (86650) Paleontology (656) Pathology (2770) Pharmacology and Toxicology (4700) Physiology (7462) Plant Biology (14777) Scientific Communication and Education (2018) Synthetic Biology (4182) Systems Biology (9634) Zoology (2226)",
-      "source_name": "bioRxiv",
-      "source_id": "biorxiv",
-      "published_date": "2026-04-06T04:00:00",
-      "published_at": null,
-      "published_url": null,
-      "collected_date": "2026-04-06T20:57:23.865219",
-      "score": 0.8359,
-      "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-      "metadata": {
-        "source_metadata": {
-          "doi": "10.64898/2026.04.02.716106v1?",
-          "feed_title": "bioRxiv Subject Collection: All",
-          "entry_id": "https://www.biorxiv.org/content/10.64898/2026.04.02.716106v1?rss=1"
-        },
-        "credibility_score": 0.65,
-        "processing_timestamp": "2026-04-06T20:57:23.706839+00:00",
-        "original_url": "https://www.biorxiv.org/content/10.64898/2026.04.02.716106v1?rss=1",
-        "enrichment": {
-          "language": "en",
-          "normalized_title": "Integrative Transcriptomic and Machine Learning Analysis of ecDNA-Associated Features for Studying Chemotherapy Resistance in TNBC",
-          "normalized_summary": "Extrachromosomal DNA (ecDNA) has emerged as a critical mediator of oncogene amplification and transcriptional dynamics in aggressive cancers, yet its contribution to chemotherapy resistance in vivo remains incompletely understood. This study investigates the contribution of ecDNA-associated molecular features to predictive chemotherapy resistance in TNBC. We analyzed RNA-seq data from 4T1 TNBC cells and 4T1 bulk tumors at different growth stages (1-, 3-, and 6-week) to identify differentially expressed ecDNA alterations. We then utilized molecular docking tools to predict ecDNA protein-drug interactions and employed machine learning (ML) models to predict ecDNA-associated therapeutic resistance. Our results revealed changes in global gene expression, including expression of ecDNA-associated genes, that continued over time, with significant molecular remodeling observed at six weeks. Additionally, we found gradual accumulation of mutations in ecDNA genes, which may have contributed to reduced drug binding affinity, indicating potential resistance. ML models generated stable, high-confidence classifications of resistant phenotypes, consistently identifying ecDNA burden and prevalence as dominant predictive features of drug resistance. Drug specific predictions further highlighted elevated resistance probabilities for paclitaxel and doxorubicin, whereas hydroxyurea, which depletes ecDNA, showed reduced resistance probabilities, indicating potential roles of ecDNA in chemoresistance. This study provides new insights into temporal remodeling of ecDNA within TNBC tumors over time and their potential association with drug resistance.",
-          "entities": [
-            "Google"
-          ],
-          "topics": [
-            "general"
-          ],
-          "sentiment": "neutral",
-          "model_version": "2025.02-pattern-v1",
-          "editorial_display_category": null,
-          "error": null
-        },
-        "image_status": "IMAGE_OK",
-        "image_source": "meta:og:image",
-        "image_url": "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png",
-        "image_alt": null,
-        "normalized_title": null,
-        "normalized_summary": null
-      },
-      "authors": [
-        "Iftehimul, M., Saha, D."
-      ],
-      "category": "biology",
-      "components": {
-        "source_credibility": 0.725,
-        "recency": 0.8768,
-        "content_quality": 0.84,
-        "engagement": null,
-        "engagement_potential": 0.84,
-        "nqi_substance": 0.84,
-        "nqi_narrative": 0.84,
-        "nqi_relevance": 0.84,
-        "nqi_credibility": 0.84
-      }
     }
   ],
-  "exported_at": "2026-04-16T21:15:08.238945+00:00"
+  "exported_at": "2026-04-21T21:34:18.941583+00:00"
 }
