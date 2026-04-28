@@ -368,6 +368,22 @@ class EditorAgent:
             model=self.model,
             timeout=3600,
         )
+
+        # When a cloud provider (NVIDIA / Gemini) is active the Ollama per-stage
+        # model names are irrelevant — the provider handles model selection
+        # internally.  Override all stage attrs to the provider's own model so
+        # that (a) call sites pass the correct identifier and (b) the routing log
+        # reflects the model that will actually be used.
+        from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        if isinstance(self.provider, (NvidiaProvider, GeminiProvider)):
+            cloud_model = getattr(self.provider, "model", self.model)
+            self.model = cloud_model
+            self.translator_model = cloud_model
+            self.editor_model = cloud_model
+            self.headlines_model = cloud_model
+
         self.category_resolver = EditorialCategoryResolver()
         logger.info(
             f"EditorAgent model routing resolved: default={self.model}, "
