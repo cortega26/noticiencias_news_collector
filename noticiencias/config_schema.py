@@ -734,6 +734,54 @@ class GeminiConfig(StrictModel):
         return v
 
 
+class NvidiaConfig(StrictModel):
+    """NVIDIA NIM LLM settings (OpenAI-compatible API)."""
+
+    api_key: Optional[str] = Field(
+        default=None,
+        description="NVIDIA API key from build.nvidia.com.",
+    )
+    model: str = Field(
+        default="nvidia/qwen3-next-80b-a3b-thinking",
+        description="NVIDIA NIM model identifier (e.g. 'nvidia/qwen3-next-80b-a3b-thinking').",
+    )
+    base_url: str = Field(
+        default="https://integrate.api.nvidia.com/v1",
+        description="Base URL for the NVIDIA NIM API.",
+    )
+    timeout: PositiveInt = Field(
+        default=300,
+        description="Request timeout in seconds.",
+    )
+    max_tokens: PositiveInt = Field(
+        default=4096,
+        description="Maximum number of tokens to generate per request.",
+    )
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _blank_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
+    @field_validator("model", mode="before")
+    @classmethod
+    def _validate_nvidia_model(cls, v: str) -> str:
+        import re
+
+        # NVIDIA models follow <org>/<model-name> or plain <model-name> format.
+        # Allow letters, numbers, '.', '-', '_', '/' — no colons (Ollama tags).
+        pattern = r"^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                f"Invalid NVIDIA model name '{v}'. Must start with alphanumeric and "
+                "only contain [a-zA-Z0-9._/-], max 128 chars. "
+                "Example: 'qwen/qwen3-235b-a22b-thinking'."
+            )
+        return v
+
+
 class LLMRateLimitingConfig(StrictModel):
     """Rate limiting configuration for LLM API calls."""
 
@@ -818,6 +866,7 @@ class Config(StrictModel):
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     gemini: GeminiConfig = Field(default_factory=GeminiConfig)
+    nvidia: NvidiaConfig = Field(default_factory=NvidiaConfig)
     llm_rate_limiting: LLMRateLimitingConfig = Field(
         default_factory=LLMRateLimitingConfig
     )

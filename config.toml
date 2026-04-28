@@ -490,6 +490,14 @@ headlines_model = "llama3.2:latest"
 model = "gemini-2.5-flash"
 timeout = 300
 
+[nvidia]
+# Set api_key via NOTICIENCIAS__NVIDIA__API_KEY env var — do NOT commit it here.
+# Confirm the exact model ID at https://build.nvidia.com/models
+model = "nvidia/qwen3-next-80b-a3b-thinking"
+base_url = "https://integrate.api.nvidia.com/v1"
+timeout = 300
+max_tokens = 4096
+
 [llm_rate_limiting]
 max_concurrent_requests = 2
 min_delay_between_requests = 1.0

@@ -4,6 +4,7 @@ import logging
 from typing import Any, Optional
 
 from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
+from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
@@ -58,6 +59,26 @@ def get_provider(
     # Initialize rate limiter singleton from config (idempotent)
     _ensure_rate_limiter(cfg)
 
+    # Priority 1: NVIDIA NIM (when an NVIDIA API key is configured)
+    nvidia_cfg = getattr(cfg, "nvidia", None)
+    nvidia_api_key = getattr(nvidia_cfg, "api_key", None) if nvidia_cfg else None
+    if nvidia_api_key:
+        use_model = getattr(nvidia_cfg, "model", "nvidia/qwen3-next-80b-a3b-thinking")
+        use_base_url = getattr(
+            nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"
+        )
+        use_max_tokens = getattr(nvidia_cfg, "max_tokens", 4096)
+        logger.info("Using NvidiaProvider with model %s", use_model)
+        return NvidiaProvider(
+            api_key=nvidia_api_key,
+            model=use_model,
+            base_url=use_base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+            max_tokens=use_max_tokens,
+        )
+
+    # Priority 2: Gemini (when a Google AI Studio API key is configured)
     gemini_cfg = getattr(cfg, "gemini", None)
     gemini_api_key = getattr(gemini_cfg, "api_key", None) if gemini_cfg else None
     if gemini_api_key:
@@ -77,7 +98,7 @@ def get_provider(
             max_retries=max_retries,
         )
 
-    # Fallback to Ollama
+    # Priority 3: Ollama (local)
     logger.info("Using OllamaProvider with model %s", model)
     return OllamaProvider(
         api_url=api_url,
