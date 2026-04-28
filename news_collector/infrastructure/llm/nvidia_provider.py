@@ -70,7 +70,7 @@ class NvidiaProvider:
         max_tokens: int = 4096,
     ):
         self.api_key = api_key
-        self.model = model or "nvidia/qwen3-next-80b-a3b-thinking"
+        self.model = model or "qwen/qwen3-next-80b-a3b-thinking"
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
@@ -93,6 +93,12 @@ class NvidiaProvider:
         ``self.model`` so the NVIDIA endpoint always receives a valid model ID.
         """
         if model:
+            # org/model-slug format (contains '/' but no ':') signals a cloud API model
+            # such as "qwen/qwen3-next-80b-a3b-thinking" or "meta/llama-3.1-70b-instruct".
+            # Pass these through unchanged; they are already valid NVIDIA NIM identifiers.
+            if "/" in model and ":" not in model:
+                return model
+            # Ollama model tag format (name:tag) or known local model name -> replace
             lower = model.lower()
             is_ollama_local = any(ind in lower for ind in _OLLAMA_MODEL_INDICATORS)
             has_ollama_tag = ":" in model  # e.g. "qwen2.5:32b"
@@ -100,6 +106,28 @@ class NvidiaProvider:
                 return self.model
             return model
         return self.model
+
+    def list_models(self) -> list[str]:
+        """
+        Returns the list of models available through this NVIDIA NIM instance.
+        At minimum returns the configured model; attempts to query the /models
+        endpoint for the full catalog.
+        """
+        models_url = f"{self.base_url}/models"
+        try:
+            resp = requests.get(
+                models_url,
+                headers=self._auth_headers(),
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                names = [m.get("id") for m in data.get("data", []) if m.get("id")]
+                if names:
+                    return names
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Could not fetch NVIDIA model list: {}", exc)
+        return [self.model]
 
     # ---- Request helpers ----
 
