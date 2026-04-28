@@ -1,16 +1,93 @@
+import json
+import re
 from typing import Any, Dict, List, Optional
+
+from noticiencias.config_manager import load_config
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.utils.logger import get_logger
-from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger(__name__)
 
 # IMPORTANT: Do not use %d or %s for string interpolation in logging calls here.
 # This project uses Loguru, which requires `{}` formatting (e.g. logger.info("... {}", var)).
 # Using %s or %d will result in literal '%d' printing in the logs and cause regressions.
+
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.IGNORECASE | re.DOTALL)
+_LATAM_KEYWORDS = (
+    "latinoamerica",
+    "latinoamérica",
+    "mexico",
+    "méxico",
+    "brazil",
+    "brasil",
+    "argentina",
+    "chile",
+    "peru",
+    "perú",
+    "colombia",
+    "bogotá",
+    "santiago",
+    "buenos aires",
+    "andes",
+    "amazonas",
+    "conicet",
+    "unam",
+    "fapesp",
+    "fiocruz",
+)
+_SCIENCE_PRIORITY_KEYWORDS = (
+    "study",
+    "research",
+    "scientists",
+    "researchers",
+    "analysis",
+    "data",
+    "evidence",
+    "climate",
+    "drought",
+    "heat wave",
+    "glacier",
+    "health",
+    "dengue",
+    "vaccine",
+    "virus",
+    "astronomy",
+    "observatory",
+    "space",
+    "satellite",
+    "ai",
+    "artificial intelligence",
+    "model",
+    "discovery",
+    "detect",
+    "reveals",
+    "public health",
+)
+_LOW_VALUE_KEYWORDS = (
+    "campus",
+    "student life",
+    "alumni",
+    "dean",
+    "provost",
+    "vice provost",
+    "office of",
+    "breakfast",
+    "mentorship portal",
+    "award",
+    "leadership",
+    "fundraiser",
+    "fundraising",
+    "donor",
+    "commencement",
+    "menu",
+    "newsletter",
+    "partnership announcement",
+    "administrative",
+    "internal update",
+)
 
 
 class PreScorer:
@@ -39,6 +116,106 @@ class PreScorer:
             self.llm = llm_client
         self.model_name = self.llm.model
 
+    @staticmethod
+    def _extract_balanced_segment(  # noqa: C901
+        text: str, open_char: str, close_char: str
+    ) -> str | None:
+        start_idx = text.find(open_char)
+        if start_idx == -1:
+            return None
+
+        depth = 0
+        in_string = False
+        escape = False
+        for idx, char in enumerate(text[start_idx:], start=start_idx):
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+                continue
+
+            if char == open_char:
+                depth += 1
+            elif char == close_char:
+                depth -= 1
+                if depth == 0:
+                    return text[start_idx : idx + 1]
+        return None
+
+    def _parse_selected_indices(self, response: Any) -> list[int]:  # noqa: C901
+        if isinstance(response, dict):
+            data = response.get("selected_indices", [])
+            return data if isinstance(data, list) else []
+
+        if isinstance(response, list):
+            return response
+
+        text = str(response or "").strip()
+        if not text:
+            return []
+
+        candidates = [text]
+        fenced_blocks = _JSON_FENCE_RE.findall(text)
+        candidates.extend(block for block in fenced_blocks if block.strip())
+
+        object_segment = self._extract_balanced_segment(text, "{", "}")
+        if object_segment:
+            candidates.append(object_segment)
+
+        array_segment = self._extract_balanced_segment(text, "[", "]")
+        if array_segment:
+            candidates.append(array_segment)
+
+        for candidate in candidates:
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+
+            if isinstance(parsed, dict):
+                data = parsed.get("selected_indices", [])
+                if isinstance(data, list):
+                    return data
+            elif isinstance(parsed, list):
+                return parsed
+
+        return []
+
+    @staticmethod
+    def _score_candidate(candidate: Dict[str, Any]) -> float:
+        title = str(candidate.get("title") or "")
+        summary = str(candidate.get("summary") or "")
+        text = f"{title} {summary}".lower()
+
+        score = 0.0
+        score += sum(4.0 for keyword in _LATAM_KEYWORDS if keyword in text)
+        score += sum(2.5 for keyword in _SCIENCE_PRIORITY_KEYWORDS if keyword in text)
+        score -= sum(3.5 for keyword in _LOW_VALUE_KEYWORDS if keyword in text)
+        score += min(len(summary) / 140.0, 1.5)
+        score += min(len(title) / 80.0, 0.5)
+
+        if any(word in text for word in ("study", "research", "scientists", "data")):
+            score += 1.0
+
+        return score
+
+    def _deterministic_rank_indices(
+        self, candidates: List[Dict[str, Any]]
+    ) -> list[int]:
+        scored = [
+            (self._score_candidate(candidate), -idx, idx)
+            for idx, candidate in enumerate(candidates)
+        ]
+        scored.sort(reverse=True)
+        return [idx for _score, _stable_idx, idx in scored]
+
     def select_top_candidates(  # noqa: C901
         self, candidates: List[Dict[str, Any]], limit: int = 5, source_context: str = ""
     ) -> List[Dict[str, Any]]:
@@ -64,17 +241,19 @@ class PreScorer:
         # --- Circuit breaker check: fail fast if provider is overloaded ---
         limiter = LLMRateLimiter.get_instance()
         if limiter.circuit_breaker.is_open:
+            heuristic_rank = self._deterministic_rank_indices(candidates)
             logger.warning(
-                "PreScorer: Circuit breaker OPEN — falling back to FIFO for {} candidates.",
+                "PreScorer: Circuit breaker OPEN — falling back to heuristic rank for {} candidates.",
                 len(candidates),
             )
-            return candidates[:limit]
+            return [candidates[i] for i in heuristic_rank[:limit]]
 
         logger.info(
             "PreScorer: Analizando {} candidatos para seleccionar Top {}...",
             len(candidates),
             limit,
         )
+        heuristic_rank = self._deterministic_rank_indices(candidates)
 
         # Construir prompt batch
         candidates_text = ""
@@ -88,9 +267,10 @@ class PreScorer:
         prompt = (
             f"Here is a list of recent article candidates from source '{source_context}':\n\n"
             f"{candidates_text}\n\n"
-            f"TASK: Identify the {limit} most scientifically significant, impactful, or intellectually engaging articles for a 'Scientific News' curation platform.\n"
-            "Ignore generic updates, simple announcements, or minor news.\n"
-            "Prioritize: Breakthroughs, Research, Deep Analysis, High Impact.\n\n"
+            f"TASK: Identify the {limit} strongest stories for Noticiencias, a science-and-technology publication for Latin American readers.\n"
+            "Prefer stories with either a direct Latin American connection OR strong universal relevance for a curious Spanish-speaking reader.\n"
+            "Prioritize: breakthroughs, evidence-driven research, health, climate, AI, space, biodiversity, public-interest science, and consequential technology.\n"
+            "Down-rank hyper-local campus administration, alumni updates, awards, fundraising, internal university announcements, and minor product/partnership news.\n\n"
             f"RESPONSE FORMAT: Return valid JSON containing ONLY a list of the integers corresponding to the top {limit} indices, ordered by relevance.\n"
             'Example: {"selected_indices": [3, 0, 7, 1, 4]}'
         )
@@ -98,15 +278,10 @@ class PreScorer:
         try:
             response = self.llm.generate_sync(
                 prompt=prompt,
-                json_mode=True,
                 system="You are an expert Science Editor selecting the most important stories for publication. You output JSON only.",
             )
 
-            selected_indices = []
-            if isinstance(response, dict) and "selected_indices" in response:
-                selected_indices = response["selected_indices"]
-            elif isinstance(response, list):  # Fallback if LLM returns list directly
-                selected_indices = response
+            selected_indices = self._parse_selected_indices(response)
 
             # Validar índices
             valid_indices = []
@@ -118,10 +293,10 @@ class PreScorer:
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
                 logger.warning(
-                    "PreScorer: LLM retornó {} válidos. Rellenando con FIFO.",
+                    "PreScorer: LLM retornó {} válidos. Rellenando con ranking heurístico editorial.",
                     len(valid_indices),
                 )
-                for i in range(len(candidates)):
+                for i in heuristic_rank:
                     if len(valid_indices) >= limit:
                         break
                     if i not in valid_indices:
@@ -140,16 +315,16 @@ class PreScorer:
             err_str = str(e)
             if "not configured" in err_str or "unavailable" in err_str.lower():
                 logger.warning(
-                    "PreScorer: LLM not available. Falling back to FIFO. ({})",
+                    "PreScorer: LLM not available. Falling back to heuristic rank. ({})",
                     err_str,
                 )
             elif (
                 "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower()
             ):
                 logger.warning(
-                    "PreScorer: Rate limited — falling back to FIFO. ({})",
+                    "PreScorer: Rate limited — falling back to heuristic rank. ({})",
                     err_str,
                 )
             else:
-                logger.error("Error en PreScorer: {}. Fallback a FIFO.", e)
-            return candidates[:limit]
+                logger.error("Error en PreScorer: {}. Fallback a heuristic rank.", e)
+            return [candidates[i] for i in heuristic_rank[:limit]]

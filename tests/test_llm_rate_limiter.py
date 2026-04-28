@@ -241,8 +241,8 @@ class TestPreScorerCircuitBreakerIntegration:
     def teardown_method(self):
         LLMRateLimiter.reset_instance()
 
-    def test_prescorer_falls_back_to_fifo_when_cb_open(self):
-        """When circuit breaker is open, PreScorer should return FIFO without calling LLM."""
+    def test_prescorer_falls_back_to_heuristic_rank_when_cb_open(self):
+        """When circuit breaker is open, PreScorer should return heuristic rank without calling LLM."""
         cfg = LLMRateLimitConfig(
             max_concurrent_requests=5,
             min_delay_between_requests=0.0,
@@ -264,15 +264,26 @@ class TestPreScorerCircuitBreakerIntegration:
         scorer = PreScorer(llm_client=mock_llm)
 
         candidates = [
-            {"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)
+            {
+                "title": "University office announces alumni breakfast",
+                "summary": "A campus office shared an internal alumni update.",
+            },
+            {
+                "title": "Vice provost wins local leadership award",
+                "summary": "An administrative profile with limited scientific value.",
+            },
+            {
+                "title": "Mexican researchers develop dengue warning model",
+                "summary": "A public-health study for Latin American outbreak monitoring.",
+            },
         ]
-        result = scorer.select_top_candidates(candidates, limit=3)
+        result = scorer.select_top_candidates(candidates, limit=2)
 
         # LLM should not have been called
         mock_llm.generate_sync.assert_not_called()
-        # Should return first 3 (FIFO)
-        assert len(result) == 3
-        assert result == candidates[:3]
+        # Should rank the high-value LatAm science item first, not keep FIFO.
+        assert len(result) == 2
+        assert result[0] == candidates[2]
 
     def test_prescorer_calls_llm_when_cb_closed(self):
         """When circuit breaker is closed, PreScorer should attempt LLM call."""
@@ -299,7 +310,7 @@ class TestPreScorerCircuitBreakerIntegration:
         assert len(result) == 3
 
     def test_prescorer_handles_rate_limit_error(self):
-        """PreScorer should catch RateLimitError and fall back to FIFO."""
+        """PreScorer should catch RateLimitError and fall back to heuristic rank."""
         cfg = LLMRateLimitConfig(
             max_concurrent_requests=5,
             min_delay_between_requests=0.0,
@@ -317,12 +328,23 @@ class TestPreScorerCircuitBreakerIntegration:
         scorer = PreScorer(llm_client=mock_llm)
 
         candidates = [
-            {"title": f"Article {i}", "summary": f"Summary {i}"} for i in range(10)
+            {
+                "title": "University office announces alumni breakfast",
+                "summary": "A campus office shared an internal alumni update.",
+            },
+            {
+                "title": "Vice provost wins local leadership award",
+                "summary": "An administrative profile with limited scientific value.",
+            },
+            {
+                "title": "Mexican researchers develop dengue warning model",
+                "summary": "A public-health study for Latin American outbreak monitoring.",
+            },
         ]
-        result = scorer.select_top_candidates(candidates, limit=3)
+        result = scorer.select_top_candidates(candidates, limit=2)
 
-        assert len(result) == 3
-        assert result == candidates[:3]
+        assert len(result) == 2
+        assert result[0] == candidates[2]
 
 
 # ---------------------------------------------------------------------------

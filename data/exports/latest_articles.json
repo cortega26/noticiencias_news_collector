@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "version": "2.0",
-  "generated_at": "2026-04-28T18:39:24.863627+00:00",
+  "generated_at": "2026-04-28T18:55:46.496222+00:00",
   "contract": "news_collector.export.v2",
   "article_count": 50,
   "articles": [
@@ -1596,6 +1596,126 @@
       }
     },
     {
+      "id": 1101,
+      "title": "Reading gains in Alabama, Mississippi and Louisiana are often touted, but don’t show full picture of literacy",
+      "url": "https://theconversation.com/reading-gains-in-alabama-mississippi-and-louisiana-are-often-touted-but-dont-show-full-picture-of-literacy-280889",
+      "summary": "While these Southern states made some gains in reading, they weren’t evenly felt across different student populations.",
+      "content": "Reading gains in Alabama, Mississippi and Louisiana are often touted, but don’t show full picture of literacy A fourth grade teacher leads a small group of students in a reading exercise in March 2023 at Tuskegee Public School in Tuskegee, Ala. Julie Bennett/The Washington Post via Getty Images Despite decades of legislation meant to boost children’s reading levels, literacy scores have remained relatively stagnant across the U.S. over the past 30 years . Educators, policymakers and parents were genuinely excited in the late 2010s, when three Southern states – Alabama, Mississippi and Louisiana – appeared to buck the literacy trend . All three of these states, which have long lagged in literacy scores, made notable gains in fourth grade reading scores from 2013 to 2024 , as measured by the National Assessment of Educational Progress, or NAEP. We are researchers in literacy and learning. Two of us are at the University of Alabama and Mercer University , where we educate elementary teachers. The other two work at Temple University, where we research early language and the science of learning . We all study how children develop as readers and how teaching styles and policies shape that development. Some observers and scholars have called Alabama, Mississippi and Louisiana’s reading gains the “ Southern surge ” and say this progress shows that recent literacy reforms are working. A straightforward explanation has taken hold : As more schools spent additional time on phonics and implemented other “ science of reading ” reforms, students became stronger readers. This narrative accurately captures some of the available evidence. But it also simplifies a complex set of patterns in literacy data, and it limits the discussion that policymakers should have. A fourth grade student raises her hand during a reading and language arts class in Columbia, Miss., in August 2020. Edmund D. Fountain/The Washington Post via Getty Images Reading scores under pressure Since the early 2000s, new federal and state policies have placed pressure on schools to improve students’ reading outcomes. The 2001 No Child Left Behind Act required all states to track and report literacy testing results. This law, which the Obama administration replaced in 2015 with the Every Student Succeeds Act , mandated annual testing in reading and math for students in third through eighth grades. Many schools narrowed their curriculum to try to boost their students’ reading scores. They cut time for science, social studies, art and recess to focus on reading and math . Students entering school in the early 2000s – the first classes fully exposed to No Child Left Behind’s requirements – spent more time on reading instruction than any previous generation . But sustained reading gains still didn’t follow. The NAEP is often called the nation’s report card. It is the only federally administered test that allows meaningful comparisons in reading levels across states . The NAEP found that fourth grade reading scores nationwide increased modestly beginning in 2005. They peaked around 2017 and have declined since. But there’s a complication in how those scores are interpreted. NAEP’s mid-level score, called “proficient,” does not mean a student is reading at grade level – it reflects a high standard that most students do not reach. In the case of fourth grade readers, it means they can recognize a text’s structure and organization, explain how characters influence others and make other complex observations. Students can also receive a lower “basic” score, or a higher “advanced” one. Alabama’s example illustrates the gap that can emerge between NAEP test results and a state’s assessments. The state’s 2025 assessments show that 81% to 88% of second and third graders were reading “on grade level.” But the 2024 NAEP shows only about 30% of Alabama fourth graders – the youngest grade the NAEP measures for literacy – were “proficient” at reading. Both numbers can be accurate. They reflect different definitions and measurement systems . Understanding reading gains in the South Despite differences in measuring reading, a small number of states have shown clear improvement over the past decade, according to the NAEP. Mississippi has shown the strongest gains. In 2013, it was 49th out of all 50 states when it came to ranking fourth grade reading scores . In 2024, Mississippi climbed to ninth in fourth grade reading . Mississippi’s progress predates recent national attention to the science of reading – meaning, the body of research on reading – suggesting its gains cannot be attributed solely to the current wave of related reforms. In 2013, Mississippi passed the Literacy-Based Promotion Act , which combined early reading screening, teacher training, literacy coaching and additional support. Research shows that the policy could account for roughly five points of reading gains, on average. These gains reflect long-term, system-wide efforts rather than a rapid shift tied to a single policy change. At the middle school level, however, the pattern in Mississippi looks different. Improvements in fourth grade reading have not translated into similar gains in eighth grade reading . Early improvements in children’s ability to decode words do not necessarily lead to success with more complex texts that require additional vocabulary and background knowledge. This gap does not negate Mississippi’s progress, but it does raise questions about what the next decade of work needs to look like. Louisiana’s reading score trajectory is more modest. Recent NAEP scores for fourth grade students in Louisiana are similar to those from the mid-2010s – a rebound to a prior level. While Louisiana ranked 50th in fourth grade reading in 2019, it rose to 38th in 2024 . A 32-point gap between Black and white students’ average fourth grade reading scores persists in 2024 data, nearly unchanged from the late 1990s. In this case, some reading progress happened. Yet the underlying inequities between students did not shift. Alabama’s results illustrate a third pattern: relative stability in fourth grade reading scores during a period of national decline. The state ranked 35th in fourth grade NAEP reading in 2013 and remains in a similar position in 2024, showing little change. The state’s average NAEP score for fourth grade students shifted by a single point between 2019 and 2024 – not a surge, but a state holding its ground while others fell. Meanwhile, chronic absenteeism has fallen in Alabama since 2019. As research links attendance to academic achievement , it makes it difficult to attribute the state’s small shift in reading scores to any single factor. Across all three states, substantial gaps between Black and white students’ reading scores persist on NAEP scoring. The same pattern extends nationally to Hispanic students, poor students and other groups . This shows that fourth grade students’ reading gains have not been accompanied by comparable reductions in social, racial and ethnic inequities. Students follow a reading lesson in a first grade class in Aurora, Colo., in October 2024. Hyoung Chang/The Denver Post via Getty Images A more complicated story Still, parts of the Southern surge in reading is genuinely encouraging. It is also the latest chapter in a long story. Mississippi’s gains, for example, came alongside coaching, professional development and early intervention. Louisiana’s reading recovery unfolded alongside a 34% increase in education funding over the past decade. Test score changes reflect a combination of policy decisions, classroom practices and broader conditions, often unfolding over many years. Reading is hard to teach, hard to sustain and not connected to any one policy shift. Literacy Reading Teaching reading Mississippi Alabama No Child Left Behind National Assessment of Educational Progress (NAEP) Louisiana Kids reading ​ ​ ​ ​",
+      "source_name": "The Conversation",
+      "source_id": "the_conversation",
+      "published_date": "2026-04-28T16:27:35",
+      "published_at": null,
+      "published_url": null,
+      "collected_date": "2026-04-28T18:49:06.942674",
+      "score": 0.8531,
+      "image_url": "https://images.theconversation.com/files/732590/original/file-20260427-57-cmmsha.jpg?ixlib=rb-4.1.0&rect=0%2C557%2C5236%2C2618&q=45&auto=format&w=1356&h=668&fit=crop",
+      "metadata": {
+        "source_metadata": {
+          "feed_title": "The Conversation – Articles (US)",
+          "entry_id": "tag:theconversation.com,2011:article/280889"
+        },
+        "credibility_score": 0.9,
+        "processing_timestamp": "2026-04-28T18:49:06.837363+00:00",
+        "original_url": "https://theconversation.com/reading-gains-in-alabama-mississippi-and-louisiana-are-often-touted-but-dont-show-full-picture-of-literacy-280889",
+        "enrichment": {
+          "language": "en",
+          "normalized_title": "Reading gains in Alabama, Mississippi and Louisiana are often touted, but don’t show full picture of literacy",
+          "normalized_summary": "While these Southern states made some gains in reading, they weren’t evenly felt across different student populations.",
+          "entities": [],
+          "topics": [
+            "science"
+          ],
+          "sentiment": "positive",
+          "model_version": "2025.02-pattern-v1",
+          "editorial_display_category": null,
+          "error": null
+        },
+        "image_status": "IMAGE_OK",
+        "image_source": "meta:og:image",
+        "image_url": "https://images.theconversation.com/files/732590/original/file-20260427-57-cmmsha.jpg?ixlib=rb-4.1.0&rect=0%2C557%2C5236%2C2618&q=45&auto=format&w=1356&h=668&fit=crop",
+        "image_alt": null,
+        "normalized_title": null,
+        "normalized_summary": null
+      },
+      "authors": [
+        "Brittany Adams, Assistant Professor of Literacy Education, University of Alabama",
+        "Elias Blinkoff, Postdoctoral Fellow, Department of Psychology and Neuroscience, Temple University",
+        "Karyn Allee, Associate Professor of Elementary Education, Mercer University",
+        "Kathy Hirsh-Pasek, Professor of Psychology, Temple University"
+      ],
+      "category": "popular_science",
+      "components": {
+        "source_credibility": 0.7075,
+        "recency": 0.9191,
+        "content_quality": 0.855,
+        "engagement": null,
+        "engagement_potential": 0.855,
+        "nqi_substance": 0.855,
+        "nqi_narrative": 0.855,
+        "nqi_relevance": 0.855,
+        "nqi_credibility": 0.855
+      }
+    },
+    {
+      "id": 1098,
+      "title": "How the concept of ‘medical freedom’ is reshaping the military’s decades-long stance on the flu vaccine mandate − and endangering troops’ readiness",
+      "url": "https://theconversation.com/how-the-concept-of-medical-freedom-is-reshaping-the-militarys-decades-long-stance-on-the-flu-vaccine-mandate-and-endangering-troops-readiness-281387",
+      "summary": "The US military helped create the first flu vaccine to keep service members in action – and the logic for requiring vaccination has not changed.",
+      "content": "How the concept of ‘medical freedom’ is reshaping the military’s decades-long stance on the flu vaccine mandate − and endangering troops’ readiness Vaccine mandates in the U.S. military are nearly as old as the country itself. jacoblund/iStock via Getty Images Plus For the first time in almost 80 years, U.S. service members will no longer be mandated to receive the annual influenza vaccine. Defense Secretary Pete Hegseth announced the change on April 22, 2026 . Citing medical autonomy and religious freedom, he described the requirement as “overly broad and not rational,” telling troops that “your body, your faith and your convictions are not negotiable.” The flu shot requirement that Hegseth ended had been in place since 1945 , with one brief pause in 1949. It was part of a tradition of military vaccine mandates nearly as old as the United States itself. As an epidemiologist who studies vaccine-preventable diseases , I find the end of the flu mandate striking less for its immediate impact than for what it signals. For most of American history, military commanders took for granted that infectious disease could cost them a war , which is why vaccination was considered a matter of military readiness rather than personal choice. A tradition that started with George Washington The first American military vaccine mandate predates the Constitution. In the winter of 1777, Gen. George Washington ordered the mass inoculation of the Continental Army against smallpox . His decision wasn’t ideological – it was strategic. The year before, a smallpox outbreak had torn through American troops outside Quebec , contributing to the collapse of the northern campaign. John Adams famously wrote to his wife, Abigail, that smallpox was killing 10 soldiers for every one felled in battle . Inoculation in 1777 was itself risky. The procedure, called variolation , involved deliberately infecting a soldier with a small amount of smallpox virus to build immunity. Washington gambled that losing some to inoculation was better than losing a war to the virus. Historians have credited the decision with saving the Continental Army. The COVID-19 pandemic reframed the politics surrounding vaccine mandates. That pattern held for centuries: When an infectious disease threatened to take more soldiers off the line than enemy fire did , the military required protection. U.S. troops received smallpox vaccinations from the War of 1812 through World War II . During World War I, the Army added typhoid vaccination . During World War II, it expanded vaccine requirements to also include tetanus, cholera, diphtheria, plague, yellow fever and, in 1945, influenza. 1945: New war, new vaccine The flu vaccine mandate grew out of military experiences during the influenza pandemic of 1918 . That spring, a novel influenza strain spread through crowded Army training camps and traveled to Europe with American troops. About 45,000 American soldiers died of influenza during World War I – nearly as many as the roughly 53,000 killed in combat. The 1918 pandemic made clear that a respiratory virus could cripple an army. In 1941, as the country prepared to enter another world war, the U.S. Army organized an influenza commission that partnered with the University of Michigan to develop the first influenza vaccine. Clinical trials in military recruits showed that the vaccine reduced the incidence of influenza illness by 85% , and in 1945 the military mandated the vaccine. Roughly 7 million service members were vaccinated that year. The mandate was briefly paused in 1949 after scientists realized the vaccine needed regular updates due to the virus changing. Once formulations could be adjusted seasonally, the mandate returned in the early 1950s and has stayed in place continuously – until Hegseth’s change of policy. The influenza pandemic of 1918 killed nearly as many American troops as were killed in battle during World War I. Otis Historical Archives, National Museum of Health and Medicine COVID-19 changed vaccine politics For decades, vaccine mandates were an unremarkable fact of military life, but COVID-19 changed that. In August 2021, all service members were ordered to be vaccinated against COVID-19 . More than 98% of active duty troops complied , but the mandate became a flash point. More than 8,000 service members were involuntarily discharged for refusing the shot . In 2023, Congress passed a law requiring the Pentagon to rescind the military COVID-19 vaccine mandate . This reversal reframed the politics of military vaccine requirements. In January 2025, President Donald Trump ordered the reinstatement , with back pay, of troops discharged over COVID-19 vaccine refusal. In announcing the end of the flu mandate, Hegseth relied heavily on “ medical freedom ” language that emerged from the COVID-19 vaccine debate, rather than on any new evidence about influenza or the effectiveness of the flu vaccine. The medical freedom movement opposes government involvement in what its supporters see as personal health decisions – including public health recommendations such as vaccine mandates, masking and social distancing. Does the vaccination rationale still hold? Critics of the military flu vaccine mandate argued that flu is a milder threat than it was in 1918, that service members are healthier than the general population and that personal choice should outweigh public health logic for a seasonal virus. The epidemiology tells a different story. Although flu seasons can vary in disease severity, the virus mutates so unpredictably that pandemic flu seasons – like those in 1918, 1957, 1968 and 2009 – are a recurring possibility. Flu still hospitalizes and kills tens of thousands of Americans annually. The Centers for Disease Control and Prevention estimates the influenza vaccine prevented roughly 180,000 hospitalizations and 12,000 deaths during the 2024-2025 season. The military operates in precisely the conditions that favor the spread of respiratory viruses : recruit training centers, barracks, ships and submarines where people live in close quarters. The logic that drove Washington in 1777 and the Army surgeon general in 1945 to require vaccination hasn’t really changed. A sick soldier can’t deploy, can’t train and can spread illness through an entire unit. What has changed is the political weight assigned to individual refusal – and that, more than the biology of the flu or the effectiveness of the vaccine, is what the end of this mandate reflects. Influenza Vaccines Military Department of Defense Trump administration American Founders 1918 flu pandemic Vaccine hesitancy Vaccine misinformation COVID-19 Flu vaccines Pete Hegseth Vaccine mandates Personal choice Smallpox vaccine America 250 ​ ​ ​ ​",
+      "source_name": "The Conversation",
+      "source_id": "the_conversation",
+      "published_date": "2026-04-28T16:28:47",
+      "published_at": null,
+      "published_url": null,
+      "collected_date": "2026-04-28T18:49:06.942672",
+      "score": 0.8531,
+      "image_url": "https://images.theconversation.com/files/732591/original/file-20260427-57-f3qagv.jpg?ixlib=rb-4.1.0&rect=0%2C526%2C7652%2C3826&q=45&auto=format&w=1356&h=668&fit=crop",
+      "metadata": {
+        "source_metadata": {
+          "feed_title": "The Conversation – Articles (US)",
+          "entry_id": "tag:theconversation.com,2011:article/281387"
+        },
+        "credibility_score": 0.9,
+        "processing_timestamp": "2026-04-28T18:49:06.811408+00:00",
+        "original_url": "https://theconversation.com/how-the-concept-of-medical-freedom-is-reshaping-the-militarys-decades-long-stance-on-the-flu-vaccine-mandate-and-endangering-troops-readiness-281387",
+        "enrichment": {
+          "language": "en",
+          "normalized_title": "How the concept of ‘medical freedom’ is reshaping the military’s decades-long stance on the flu vaccine mandate − and endangering troops’ readiness",
+          "normalized_summary": "The US military helped create the first flu vaccine to keep service members in action – and the logic for requiring vaccination has not changed.",
+          "entities": [],
+          "topics": [
+            "science",
+            "health"
+          ],
+          "sentiment": "neutral",
+          "model_version": "2025.02-pattern-v1",
+          "editorial_display_category": null,
+          "error": null
+        },
+        "image_status": "IMAGE_OK",
+        "image_source": "meta:og:image",
+        "image_url": "https://images.theconversation.com/files/732591/original/file-20260427-57-f3qagv.jpg?ixlib=rb-4.1.0&rect=0%2C526%2C7652%2C3826&q=45&auto=format&w=1356&h=668&fit=crop",
+        "image_alt": null,
+        "normalized_title": null,
+        "normalized_summary": null
+      },
+      "authors": [
+        "Katrine L. Wallace, Assistant Professor of Epidemiology and Biostatistics, University of Illinois Chicago"
+      ],
+      "category": "popular_science",
+      "components": {
+        "source_credibility": 0.7075,
+        "recency": 0.9192,
+        "content_quality": 0.855,
+        "engagement": null,
+        "engagement_potential": 0.855,
+        "nqi_substance": 0.855,
+        "nqi_narrative": 0.855,
+        "nqi_relevance": 0.855,
+        "nqi_credibility": 0.855
+      }
+    },
+    {
       "id": 585,
       "title": "Accelerate agentic tool calling with serverless model customization in Amazon SageMaker AI",
       "url": "https://aws.amazon.com/blogs/machine-learning/accelerate-agentic-tool-calling-with-serverless-model-customization-in-amazon-sagemaker-ai/",
@@ -3055,124 +3175,7 @@
         "nqi_relevance": 0.855,
         "nqi_credibility": 0.855
       }
-    },
-    {
-      "id": 116,
-      "title": "The long shadow of Paul Ehrlich’s ‘Population Bomb’ is evident in anti-immigration efforts today",
-      "url": "https://theconversation.com/the-long-shadow-of-paul-ehrlichs-population-bomb-is-evident-in-anti-immigration-efforts-today-279151",
-      "summary": "In the 1960s and ’70s, his arguments also resonated on the left, including with the head of a powerful environmental group.",
-      "content": "The long shadow of Paul Ehrlich’s ‘Population Bomb’ is evident in anti-immigration efforts today The idea of overpopulation has been used to argue against immigration. Pandagolik/iStock/Getty Images Plus Paul Ehrlich opened his 1968 book “ The Population Bomb ” with a scene recounting returning to his hotel through a crowded Delhi neighborhood on a stifling night in the mid-1960s. He described the physical sensation of overpopulation: people eating, washing, arguing, begging – “people, people, people, people.” From that visceral opening, he declared that famine, conflict and nuclear war would sweep the globe in the 1970s because of overpopulation. Hundreds of millions of people would starve to death regardless of any crash programs launched to prevent it. Ehrlich argued for population control, chillingly describing population growth as a “cancer” that needed to be cut out. Ehrlich’s predictions were conspicuously wrong – and experts said so at the time . But his logic resonated through the 1970s and ’80s across the political spectrum. Its shadow is evident in today’s anti-immigration campaigns and White House arguments for mass deportation. We have followed its long afterlife, as a computational social scientist studying contemporary extremism and as a historian whose book “ Building the Population Bomb ” analyzed Ehrlich’s impact. Getting it wrong Demographers and economists in the decades after World War II rejected the idea that Ehrlich was promoting to millions of readers: that population growth is the primary cause of environmental degradation. Instead, the expert consensus showed how pollution and resource depletion are driven far more by extraction and overconsumption than by head count. Princeton demographer Ansley Coale told the Population Association of America in 1968, the year “The Population Bomb” was published, that attributing national failures to population growth had become fashionable despite most of the country’s problems having little to do with it. His colleague and former Population Association of America president Frank Notestein demonstrated at the association’s 1970 meeting that increases in pollution had far outpaced increases in population. Notestein called population control in “developed regions” a distraction from the more immediate need to regulate industry. Visitors to Chicago’s Museum of Science and Industry listen to a taped explanation of the world population clock in 1976. The world population reached 8 billion in 2022. Bettmann/Contributor via Getty Images Ecologist Barry Commoner’s 1971 empirical study confirmed that postwar environmental damage had stemmed almost entirely from new production methods and rising per capita consumption, not from the growing number of people. When the economist Julian Simon challenged Ehrlich in 1980 to a wager on changes in commodity prices over the next decade, Ehrlich accepted – and lost. In a 2009 retrospective , Ehrlich acknowledged some of “The Population Bomb’s” flaws but did not revisit its central claim. The mass famines he predicted had not materialized in the 1970s because he had not anticipated the Green Revolution , a dramatic expansion of agriculture output. He said the book’s catastrophic scenarios were illustrative exercises, not inevitable forecasts. He dismissed his critics as shills for polluters. Ehrlich’s retrospective concluded, “It was thus a successful tract, and we’re proud of it.” Origins of the ‘population bomb’ analogy Ehrlich’s arguments resonated with the popular anxieties of the late 1960s. By tying population growth to the environment, the threat of nuclear war and the sexual revolution, Ehrlich generated left-wing support for population control , which had previously been primarily a concern of the political right. With the publication of “The Population Bomb,” Ehrlich became a celebrity almost overnight. Though his claims about the consequences of population growth were consistently wrong, Ehrlich had an enormous public impact. A butterfly biologist, he was suddenly booking appearances on Johnny Carson’s “Tonight Show .” He influenced dystopian Hollywood productions , such as “ ZPG ” (1972), “ Soylent Green ” (1973) and “ Logan’s Run ” (1976). Paul Ehrlich on “The Tonight Show Starring Johnny Carson” in 1980. The intellectual genealogy behind “The Population Bomb” ran deeper than Ehrlich’s own career. The “bomb” analogy was borrowed from a 1954 pamphlet by Hugh Moore , a businessman whose population anxieties descended from Guy Irving Burch , the anti-immigrant eugenicist who founded the Population Reference Bureau in 1929. Burch, worried about “ alien or negro stock ” replacing Europeans, introduced the phrase “population explosion” to American public discourse in the 1930s as part of a campaign for immigration restriction. Moore updated Burch’s framework for the Cold War, warning that population growth in Africa, Asia and Latin America would produce communist expansion and nuclear war. Ehrlich’s use of ecological carrying capacity – the idea that any environment has a finite number of resources to support a population before collapsing – justified coercive population control initiatives as foreign and domestic environmental policies in the minds of many Americans. India’s “ Emergency” period from 1975-77 subjected an estimated 8 million people to sterilization under conditions ranging from financial inducement to outright coercion. China’s one-child policy was enforced through fines, forced sterilizations and compelled abortions for nearly three decades. Population control programs in some developing countries imposed contraception and sterilization on women without their consent. California performed sterilizations on some inmates until the 2010s . Hysterectomies on detainees continued in at least one U.S. Immigration and Customs Enforcement detention center until 2019. Ehrlich tied environment to immigration Within the United States, Ehrlich co-founded the organization Zero Population Growth , which quickly outlasted its original premise. By 1972, the total fertility rate in the United States was already below the replacement level, and ZPG pivoted to immigration restriction as its primary policy target. David Brower , the first director of the Sierra Club, authored the famous line “the battle to feed all of humanity is over” in the foreword to “The Population Bomb.” He appointed John Tanton, Ehrlich’s ZPG co-founder, to chair the Sierra Club’s national population committee. Tanton would go on to build a network of groups that would implement the logic Ehrlich had popularized. This logic linked Ehrlich’s ecological carrying capacity , lifeboat ethics – the idea that wealthy nations risked being swamped by immigration – and reactionary anxieties about demographic change . Tanton’s anti-immigration network became one of the most influential organizations in late-20th-century American politics. In addition to ZPG, Tanton founded the Federation for American Immigration Reform (FAIR) in 1979, the Center for Immigration Studies in 1985, The Social Contract Press in 1990 and NumbersUSA in 1996. This network produced policy research and lobbied for drastic reductions in both legal and illegal immigration. It was also instrumental in repackaging nativism into genteel policy briefs for the 1994 Republican revolution , securing the bipartisan passage of the Illegal Immigration Reform and Immigrant Responsibility Act of 1996, and backing anti-immigration efforts that passed in California and Arizona . Ehrlich served on FAIR’s board of advisers until 2002. He died on March 13 , 2026. Ehrlich, Tanton and Brower, as part of Californians for Population Stabilization , tried to push the Sierra Club to adopt immigration restrictions as an official position, but members of the influential environmentalist group resisted. Ballot measures and board elections for the Sierra Club from the late 1990s into the early 2000s exposed the deep ties to anti-immigration activists – and defeated them. Overpopulation in politics today Ehrlich’s population anxieties continue to have a long afterlife as political figures build on the idea that immigration constitutes a form of “replacement” of existing populations. Once-fringe grievances suggesting white people were being replaced by people of color have become part of President Donald Trump’s MAGA allies’ “ mass deportation now ” agenda. Fifty years separate India’s sterilization camps from today’s ICE detention warehouses, but we believe the logic connecting them is direct: a population defined as excessive, a government apparatus authorized to reduce it, and a scientific vocabulary used by some of the president’s closest allies to justify the means as an ecological necessity. Ehrlich’s contributions to that vocabulary proved far more durable than his predictions. Population Immigration Demographics Donald Trump Paul Ehrlich Nativism Events More events Jobs Lecturer (Education Focused), Finance Politics & Society Editor (UK Edition) Research Fellow in Math Modelling of Multicellular Interfaces Visiting Professor - 2027 Australia-Korea Chair in Australian Studies at Seoul National University More jobs ​ ​ ​ ​",
-      "source_name": "The Conversation",
-      "source_id": "the_conversation",
-      "published_date": "2026-03-26T16:34:11",
-      "published_at": null,
-      "published_url": null,
-      "collected_date": "2026-03-27T04:35:18.422509",
-      "score": 0.8381,
-      "image_url": null,
-      "metadata": {
-        "source_metadata": {
-          "feed_title": "The Conversation – Articles (US)",
-          "entry_id": "tag:theconversation.com,2011:article/279151"
-        },
-        "credibility_score": 0.9,
-        "processing_timestamp": "2026-03-27T04:35:18.123365+00:00",
-        "original_url": "https://theconversation.com/the-long-shadow-of-paul-ehrlichs-population-bomb-is-evident-in-anti-immigration-efforts-today-279151",
-        "enrichment": {
-          "language": "en",
-          "normalized_title": "The long shadow of Paul Ehrlich’s ‘Population Bomb’ is evident in anti-immigration efforts today",
-          "normalized_summary": "In the 1960s and ’70s, his arguments also resonated on the left, including with the head of a powerful environmental group.",
-          "entities": [],
-          "topics": [
-            "science"
-          ],
-          "sentiment": "positive",
-          "model_version": "2025.02-pattern-v1",
-          "editorial_display_category": null,
-          "error": null
-        },
-        "image_status": "IMAGE_OK",
-        "image_source": "meta:og:image",
-        "image_url": null,
-        "normalized_title": null,
-        "normalized_summary": null
-      },
-      "authors": [
-        "Emily Klancher Merchant, Assistant Professor of Science and Technology Studies, University of California, Davis",
-        "Brian C. Keegan, Associate Professor of Information Science, University of Colorado Boulder; Harvard University"
-      ],
-      "category": "popular_science",
-      "components": {
-        "source_credibility": 0.7075,
-        "recency": 0.8901,
-        "content_quality": 0.855,
-        "engagement": null,
-        "engagement_potential": 0.855,
-        "nqi_substance": 0.855,
-        "nqi_narrative": 0.855,
-        "nqi_relevance": 0.855,
-        "nqi_credibility": 0.855
-      }
-    },
-    {
-      "id": 115,
-      "title": "Millions are protesting – but boycotts might be key to changing government policies",
-      "url": "https://theconversation.com/millions-are-protesting-but-boycotts-might-be-key-to-changing-government-policies-276256",
-      "summary": "History suggests that boycotts are uniquely suited to expand public participation enough to spur political change.",
-      "content": "Millions are protesting – but boycotts might be key to changing government policies The ‘No Kings’ protests have drawn millions of Americans and may grow even larger. Frederic J. Brown/AFP via Getty Images The organizers of the estimated 3,000 “No Kings” protests, rallies and other events planned for March 28, 2026, say they expect that the protests will be the largest such mass mobilization in U.S. history. As scholars of peace studies and social movements , we investigate how ordinary people press their governments to change their policies. An estimated 7 million Americans took part in the 2,100 “No Kings” protests on Oct. 18, 2025, breaking all previous records . But research that we and other scholars have conducted indicates that massive turnouts at protests may not be enough to achieve the goals of a protest movement, such as bringing about changes in government policies. We believe that protest movements can be more effective when they place more emphasis on boycotts of corporations that support a government’s agenda than on increasing the size and scope of these protests. That’s because history suggests that boycotts are uniquely suited to expand public participation and reach the scale necessary for political change. Boycotts attract first-time activists with simple “ buy this , not that ” instructions. They offer easy ways for people to feel heard with little investment of time, money or risk. Rise of the ‘No Kings’ movement The “ No Kings ” movement has been holding nonviolent protests across the U.S. since June 2025 to express mass opposition to the Trump administration’s policies. Its organizers include a range of nonprofits. They include those supporting civil rights, such as the American Civil Liberties Union; LGBTQ+ rights, like the Human Rights Campaign; progressive political groups, including Indivisible and MoveOn; and unions, such as the American Federation of Teachers. The protests’ organizers are harnessing growing public opposition to President Donald Trump’s second administration. Gallup’s final presidential poll , for example, conducted in December 2025, found that only about 1 in 3 Americans approved of his performance . In March 2026, Fox News found that 6 in 10 Americans disapprove of Trump’s immigration enforcement effort, and a CBS poll found that 6 in 10 oppose the U.S. war with Iran. The “No Kings” movement from the start has objected to harsh federal immigration enforcement tactics , including the rapid growth in the number of immigrants being detained and deported. The March 28 protests will also make the widespread opposition to the costly Iran war more visible. “No Kings” organizers cite other reasons for their protests , such as the White House’s threats to intervene in elections , health care spending cuts and the cessation of many environmental protections . Many of the ‘No Kings’ events on Oct. 18, 2025, took place in small towns, like Shelburne, Vt., pictured here. Robert Nickelsberg/Getty Images Opposition to Trump is spreading The “No Kings” protests have spread to more parts of the United States than ever before. Protests have taken place in every state – in large cities like Dallas, Philadelphia and Phoenix, as well as thousands of smaller towns like Corydon, Indiana , and Hamilton, Montana . The protests even drew thousands of people in some GOP strongholds . Researchers find that only a small part of the population needs to protest, boycott or strike to create strong pressure. If 3.5% of a population participates in nonviolent protests or boycotts, it can lead to policy changes. In the United States, 3.5% of the population translates to nearly 12 million people. The “No Kings” movement would need to nearly double in size from its October 2025 levels to reach this threshold. Boycotts could help reach this tipping point. How boycotts work Economic boycotts have a long history as a tool of collective protest as people withdraw their labor, purchases or cooperation to pressure powerful institutions. Boycotts are a form of mass noncooperation that enables more people to resist without taking time off from work, engaging in confrontation or risking arrest. While demonstrations signal dissent, boycotts change incentives for business leaders. When boycotts cause companies to lose customers and profits slump, they can become unexpected allies in public opposition. For example, after mass protests against federal immigration raids in Minneapolis, many of the biggest corporations operating in the state released an announcement that called on the government to de-escalate to reduce tensions in the area. Public support for boycotts Several consumer boycotts are underway in the U.S., with many taking aim at the Trump administration’s policies. Boycott leaders focus on major companies, such as Target, Walmart , Amazon and Home Depot , that have donated to the White House ballroom construction project and other causes Trump is personally spearheading, People’s Union USA , a movement seeking to leverage the power of U.S. consumers , organized what it called a nationwide “economic blackout” on Feb. 28. The organizers urged Americans to avoid spending any money for 24 hours to protest corporate influence over U.S. policies. It’s unclear how effective that boycott was. Where corporate boycotts have worked In the 1980s, consumer boycotts of white-owned businesses in South Africa reduced profits and drew global attention to the government’s support of apartheid, a discriminatory system that denied rights to the country’s Black majority. As business suffered, white business leaders pressed for reforms, contributing to the end of apartheid and South Africa’s multiracial elections in 1994 . In the U.S., different boycotts from both the right and the left have compelled Target to change its policies in recent years. Right-wing boycotts demanding the removal of LGBTQ+ Pride merchandise in 2023 caused Target to curtail its embrace of diversity practices. After Trump’s 2025 executive order banning diversity, equity and inclusion programs, Target faced left-wing boycotts for ending its Racial Equity Action and Change program. The company’s sales fell and its stock declined by 33% in the first three quarters of 2025 . In March 2026, boycott leaders declared victory , saying that the boycotts led to Target’s weak financial performance. Following the growing wave of consumer boycotts, several media companies have also faced pressure from the public. In September 2025, Disney suspended late night talk show host Jimmy Kimmel , whose program airs on ABC, after Kimmel suggested that right-wing influencer Charlie Kirk was killed by a fellow conservative. The comedian accused Trump supporters of using his death to “ score political points .” Disney owns ABC. Kimmel’s suspension triggered a rapid public backlash. Three million viewers called for a Disney boycott to disrupt the company’s streaming revenue. Facing mounting risks to its reputation and bottom line, Disney reversed course and put Kimmel back on the air. In December 2025, it renewed his contract for the following year . The episode illustrated how organized consumer pressure can counter attempts at political intimidation when boycott campaigns focus on a company’s core economic interests. Uncoordinated boycotts can fail To be sure, many boycotts fail to meet their goals even when they do succeed at raising awareness. Their economic impact depends on how many people take part, sustained participation, and clear demands . Boycotts lacking adequate coordination and clear aims are likely to fail, especially when different groups target different companies. The No Kings protests will no doubt continue to reflect mounting public frustration. But to be effective at their goal of reining in many of Trump’s policies and actions, we believe that this vast movement will likely require a larger, focused boycott that can hurt the revenue and reputation of companies that have financially backed the president or provided support for his policies. Activism Boycotts Activists Social movements US protests No Kings Events More events Jobs Lecturer (Education Focused), Finance Politics & Society Editor (UK Edition) Research Fellow in Math Modelling of Multicellular Interfaces Visiting Professor - 2027 Australia-Korea Chair in Australian Studies at Seoul National University More jobs ​ ​ ​ ​",
-      "source_name": "The Conversation",
-      "source_id": "the_conversation",
-      "published_date": "2026-03-26T16:36:00",
-      "published_at": null,
-      "published_url": null,
-      "collected_date": "2026-03-27T04:35:18.422508",
-      "score": 0.8381,
-      "image_url": null,
-      "metadata": {
-        "source_metadata": {
-          "feed_title": "The Conversation – Articles (US)",
-          "entry_id": "tag:theconversation.com,2011:article/276256"
-        },
-        "credibility_score": 0.9,
-        "processing_timestamp": "2026-03-27T04:35:18.093153+00:00",
-        "original_url": "https://theconversation.com/millions-are-protesting-but-boycotts-might-be-key-to-changing-government-policies-276256",
-        "enrichment": {
-          "language": "en",
-          "normalized_title": "Millions are protesting – but boycotts might be key to changing government policies",
-          "normalized_summary": "History suggests that boycotts are uniquely suited to expand public participation enough to spur political change.",
-          "entities": [],
-          "topics": [
-            "science",
-            "health"
-          ],
-          "sentiment": "negative",
-          "model_version": "2025.02-pattern-v1",
-          "editorial_display_category": null,
-          "error": null
-        },
-        "image_status": "IMAGE_OK",
-        "image_source": "meta:og:image",
-        "image_url": null,
-        "normalized_title": null,
-        "normalized_summary": null
-      },
-      "authors": [
-        "Lisa Schirch, Professor of the Practice of Peace Studies, University of Notre Dame",
-        "David Cortright, Professor Emeritus, Kroc Institute for International Peace Studies, University of Notre Dame"
-      ],
-      "category": "popular_science",
-      "components": {
-        "source_credibility": 0.7075,
-        "recency": 0.8902,
-        "content_quality": 0.855,
-        "engagement": null,
-        "engagement_potential": 0.855,
-        "nqi_substance": 0.855,
-        "nqi_narrative": 0.855,
-        "nqi_relevance": 0.855,
-        "nqi_credibility": 0.855
-      }
     }
   ],
-  "exported_at": "2026-04-28T18:39:24.863871+00:00"
+  "exported_at": "2026-04-28T18:55:46.498074+00:00"
 }
