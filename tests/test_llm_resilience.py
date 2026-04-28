@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from news_collector.infrastructure.llm.model_registry import ModelAvailabilityError
@@ -15,8 +16,14 @@ def test_ollama_health_check_graceful_failure():
         patch("news_collector.config.settings.refresh_runtime_config") as mock_refresh,
     ):
         mock_cfg = mock_refresh.return_value
-        mock_cfg.gemini.api_key = None
-        mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
+        mock_cfg.nvidia = SimpleNamespace(api_key=None)
+        mock_cfg.gemini = SimpleNamespace(api_key=None)
+        mock_cfg.ollama = SimpleNamespace(
+            api_url="http://localhost:11434/api/generate",
+            model="qwen2.5:32b",
+        )
+        mock_cfg.scoring = SimpleNamespace(llm_model="qwen2.5:32b")
+        mock_cfg.editorial_auditor = SimpleNamespace(health_timeout_seconds=1)
 
         # Mock config
         mock_config = {"url": "http://foo"}  # dummy
