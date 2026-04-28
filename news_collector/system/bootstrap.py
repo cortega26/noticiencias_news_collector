@@ -261,6 +261,58 @@ def _verify_llm_health(  # noqa: C901
         active_config = config or config_settings.refresh_runtime_config()
         strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
 
+        # Check if NVIDIA NIM is the active provider (highest priority)
+        nvidia_api_key = getattr(
+            getattr(active_config, "nvidia", None), "api_key", None
+        )
+        if nvidia_api_key:
+            try:
+                from news_collector.infrastructure.llm.nvidia_provider import (
+                    NvidiaProvider,
+                )
+
+                nvidia_cfg = active_config.nvidia
+                nvidia_model = getattr(nvidia_cfg, "model", "nvidia/qwen3-next-80b-a3b-thinking")
+                provider = NvidiaProvider(
+                    api_key=nvidia_api_key,
+                    model=nvidia_model,
+                    base_url=getattr(nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"),
+                )
+                healthy, reason = provider.check_health(timeout_seconds=5)
+                if healthy:
+                    if health_logger:
+                        health_logger.info(
+                            f"NVIDIA NIM health check passed (model={nvidia_model})."
+                        )
+                else:
+                    warning_msg = f"NVIDIA NIM health check failed: {reason}"
+                    warnings.append(warning_msg)
+                    disable_llm = True
+                    if health_logger:
+                        health_logger.warning(warning_msg)
+                    if strict_llm_mode:
+                        raise RuntimeError(warning_msg)
+            except RuntimeError:
+                raise
+            except Exception as nvidia_err:
+                warning_msg = f"NVIDIA NIM health check error: {nvidia_err}"
+                warnings.append(warning_msg)
+                disable_llm = True
+                if health_logger:
+                    health_logger.warning(warning_msg)
+                if strict_llm_mode:
+                    raise RuntimeError(warning_msg) from nvidia_err
+
+            if disable_llm:
+                config_settings.set_llm_system_available(False)
+                if health_logger:
+                    health_logger.warning(
+                        "LLM System Disabled: NVIDIA NIM health check failed."
+                    )
+            else:
+                config_settings.set_llm_system_available(True)
+            return
+
         # Check if Gemini is the active provider (API key configured)
         gemini_api_key = getattr(
             getattr(active_config, "gemini", None), "api_key", None
