@@ -63,7 +63,7 @@ def get_provider(
     nvidia_cfg = getattr(cfg, "nvidia", None)
     nvidia_api_key = getattr(nvidia_cfg, "api_key", None) if nvidia_cfg else None
     if nvidia_api_key:
-        use_model = getattr(nvidia_cfg, "model", "nvidia/qwen3-next-80b-a3b-thinking")
+        use_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking")
         use_base_url = getattr(
             nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"
         )

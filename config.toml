@@ -493,7 +493,7 @@ timeout = 300
 [nvidia]
 # Set api_key via NOTICIENCIAS__NVIDIA__API_KEY env var — do NOT commit it here.
 # Confirm the exact model ID at https://build.nvidia.com/models
-model = "nvidia/qwen3-next-80b-a3b-thinking"
+model = "qwen/qwen3-next-80b-a3b-thinking"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300
 max_tokens = 4096

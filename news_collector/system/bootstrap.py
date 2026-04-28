@@ -272,7 +272,7 @@ def _verify_llm_health(  # noqa: C901
                 )
 
                 nvidia_cfg = active_config.nvidia
-                nvidia_model = getattr(nvidia_cfg, "model", "nvidia/qwen3-next-80b-a3b-thinking")
+                nvidia_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking")
                 provider = NvidiaProvider(
                     api_key=nvidia_api_key,
                     model=nvidia_model,

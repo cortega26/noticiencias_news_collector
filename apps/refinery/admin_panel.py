@@ -54,6 +54,8 @@ from apps.refinery.published_content import (
 )
 from news_collector.config import settings as config_settings
 from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
+from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
@@ -553,6 +555,19 @@ with tab1:
             )
             if hasattr(temp_provider, "list_models"):
                 available_models = temp_provider.list_models()
+            # Show active provider badge
+            if isinstance(temp_provider, NvidiaProvider):
+                st.success(
+                    f"🚀 **Proveedor Activo: NVIDIA NIM** — `{temp_provider.model}`"
+                )
+            elif isinstance(temp_provider, GeminiProvider):
+                st.info(
+                    f"✨ **Proveedor Activo: Gemini** — `{getattr(temp_provider, 'model', 'gemini')}`"
+                )
+            else:
+                st.warning(
+                    f"🖥️ **Proveedor Activo: Ollama (Local)** — `{getattr(temp_provider, 'model', 'unknown')}`"
+                )
         except Exception as e:
             st.warning(f"No se pudieron cargar modelos: {e}")
 
