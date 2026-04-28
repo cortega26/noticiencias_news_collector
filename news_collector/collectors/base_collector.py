@@ -115,32 +115,34 @@ class BaseCollector(ABC):
         """
         Versión asíncrona de collect_from_source.
         Por defecto, delega a la versión síncrona usando un hilo.
-        Incluye un timeout global de seguridad (5 minutos) para evitar hilos zombis.
-        """
-        # Hard cap of 5 minutes per source to prevent system hangs
-        # This is a safety net; inner requests should have their own shorter timeouts
-        timeout = getattr(self, "GLOBAL_SOURCE_TIMEOUT", 300)
 
-        try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(self.collect_from_source, source_id, source_config),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
+        Nota operativa: `asyncio.wait_for(asyncio.to_thread(...))` genera
+        falsos timeouts porque no puede cancelar el hilo subyacente; eso deja
+        trabajo huérfano que sigue escribiendo en storage/logs después de que
+        el orquestador ya marcó la fuente como fallida o incluso cerró el
+        sistema. Preferimos esperar el resultado real y emitir una alerta
+        diagnóstica si la fuente sobrepasa el umbral esperado.
+        """
+        timeout = getattr(self, "GLOBAL_SOURCE_TIMEOUT", 300)
+        start = time.monotonic()
+        result = await asyncio.to_thread(
+            self.collect_from_source, source_id, source_config
+        )
+        elapsed = time.monotonic() - start
+
+        if elapsed > timeout:
             self._emit_log(
-                "error",
-                "collector.source.timeout_hard_limit",
+                "warning",
+                "collector.source.soft_timeout_exceeded",
                 source_id=source_id,
-                details={"timeout_seconds": timeout},
+                latency=elapsed,
+                details={
+                    "timeout_seconds": timeout,
+                    "behavior": "waited_for_real_result",
+                },
             )
-            return {
-                "source_id": source_id,
-                "success": False,
-                "articles_found": 0,
-                "articles_saved": 0,
-                "error_message": f"Timeout global excedido ({timeout}s)",
-                "processing_time": timeout,
-            }
+
+        return result
 
     def collect_from_multiple_sources(
         self,

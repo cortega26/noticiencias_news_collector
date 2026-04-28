@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -53,6 +54,42 @@ async def test_crawl_interval_enforcement_run():
     source_id = "test_source"
 
     assert collector._check_crawl_interval(source_id, source_config) is True
+
+
+@pytest.mark.asyncio
+async def test_collect_from_source_async_waits_for_real_result_after_soft_timeout():
+    class SlowCollector(BaseCollector):
+        GLOBAL_SOURCE_TIMEOUT = 0.01
+
+        def collect_from_source(self, source_id, source_config):
+            del source_id, source_config
+            time.sleep(0.05)
+            return {
+                "success": True,
+                "articles_found": 2,
+                "articles_saved": 1,
+                "processing_time": 0.05,
+            }
+
+    collector = SlowCollector()
+
+    with patch.object(collector, "_emit_log") as mock_emit_log:
+        result = await collector.collect_from_source_async(
+            "slow_source", {"url": "http://example.com"}
+        )
+
+    assert result["success"] is True
+    assert result["articles_found"] == 2
+    mock_emit_log.assert_any_call(
+        "warning",
+        "collector.source.soft_timeout_exceeded",
+        source_id="slow_source",
+        latency=pytest.approx(0.05, rel=0.75),
+        details={
+            "timeout_seconds": 0.01,
+            "behavior": "waited_for_real_result",
+        },
+    )
 
 
 @pytest.mark.asyncio

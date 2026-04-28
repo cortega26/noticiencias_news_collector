@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from news_collector.observability.enrichment_metrics_store import EnrichmentMetricsStore
 
@@ -86,6 +87,42 @@ class TestEnrichmentMetricsStore(unittest.TestCase):
         self.assertEqual(metrics["http_success"], 0)
         self.assertEqual(metrics["headless_success"], 0)
         self.assertEqual(metrics["scholarly_success"], 0)
+
+    def test_scrapling_http_maps_to_http_metrics_bucket(self):
+        with patch(
+            "news_collector.observability.enrichment_metrics_store.logger.warning"
+        ) as mock_warning:
+            self.store.record_attempt("source_f", strategy="scrapling_http")
+            self.store.record_success(
+                "source_f",
+                "scrapling_http",
+                duration=4.0,
+                content_length=900,
+                is_publishable=True,
+            )
+
+        metrics = self.store.get_metrics("source_f")
+        self.assertEqual(metrics["http_attempts"], 1)
+        self.assertEqual(metrics["http_success"], 1)
+        mock_warning.assert_not_called()
+
+    def test_scrapling_stealth_maps_to_headless_metrics_bucket(self):
+        with patch(
+            "news_collector.observability.enrichment_metrics_store.logger.warning"
+        ) as mock_warning:
+            self.store.record_attempt("source_g", strategy="scrapling_stealth")
+            self.store.record_success(
+                "source_g",
+                "scrapling_stealth",
+                duration=6.0,
+                content_length=1200,
+                is_publishable=False,
+            )
+
+        metrics = self.store.get_metrics("source_g")
+        self.assertEqual(metrics["headless_attempts"], 1)
+        self.assertEqual(metrics["headless_success"], 1)
+        mock_warning.assert_not_called()
 
 
 if __name__ == "__main__":

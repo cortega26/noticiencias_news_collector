@@ -122,14 +122,35 @@ class EnrichmentMetricsStore:
             self.conn.commit()
             cur.close()
 
+    @staticmethod
+    def _normalize_strategy_bucket(strategy: Optional[str]) -> Optional[str]:
+        """
+        Maps concrete enrichment strategies to the aggregate metric bucket they
+        should increment. History rows keep the original strategy string.
+        """
+        if strategy is None:
+            return None
+
+        strategy_buckets = {
+            "http": "http",
+            "scrapling_http": "http",
+            "headless": "headless",
+            "headless_fallback": "headless",
+            "scrapling_stealth": "headless",
+            "proxy": "proxy",
+            "scholarly": "scholarly",
+        }
+        return strategy_buckets.get(strategy)
+
     def record_attempt(self, source_id: str, strategy: Optional[str] = None):
         """Records attempt in both aggregate and history tables."""
         ctx = run_context.get_context()
+        metric_strategy = self._normalize_strategy_bucket(strategy)
 
         with self._lock:
             cur = self.conn.cursor()
             # Use fixed SQL statements per strategy to avoid runtime SQL composition.
-            if strategy == "http":
+            if metric_strategy == "http":
                 cur.execute(
                     """
                     INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, http_attempts)
@@ -142,7 +163,7 @@ class EnrichmentMetricsStore:
                 """,
                     (source_id,),
                 )
-            elif strategy == "headless":
+            elif metric_strategy == "headless":
                 cur.execute(
                     """
                     INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, headless_attempts)
@@ -155,7 +176,7 @@ class EnrichmentMetricsStore:
                 """,
                     (source_id,),
                 )
-            elif strategy == "proxy":
+            elif metric_strategy == "proxy":
                 cur.execute(
                     """
                     INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, proxy_attempts)
@@ -168,7 +189,7 @@ class EnrichmentMetricsStore:
                 """,
                     (source_id,),
                 )
-            elif strategy == "scholarly":
+            elif metric_strategy == "scholarly":
                 cur.execute(
                     """
                     INSERT INTO enrichment_metrics (source_id, total_discovered, total_enrichment_attempted, scholarly_attempts)
@@ -221,9 +242,9 @@ class EnrichmentMetricsStore:
         is_publishable: bool,
     ):
         ctx = run_context.get_context()
-        valid_strategies = ["http", "headless", "proxy", "scholarly"]
+        metric_strategy = self._normalize_strategy_bucket(strategy)
 
-        if strategy not in valid_strategies:
+        if metric_strategy is None:
             logger.warning(f"Invalid strategy recorded: {strategy}")
             return
 
@@ -258,7 +279,7 @@ class EnrichmentMetricsStore:
 
                 self._execute_success_update(
                     cur=cur,
-                    strategy=strategy,
+                    strategy=metric_strategy,
                     source_id=source_id,
                     publishable_increment=1 if is_publishable else 0,
                     new_avg_len=new_avg_len,
@@ -268,7 +289,7 @@ class EnrichmentMetricsStore:
                 # Should have been created by record_attempt, but handle edge case
                 self._execute_success_insert(
                     cur=cur,
-                    strategy=strategy,
+                    strategy=metric_strategy,
                     source_id=source_id,
                     publishable_increment=1 if is_publishable else 0,
                     content_length=content_length,

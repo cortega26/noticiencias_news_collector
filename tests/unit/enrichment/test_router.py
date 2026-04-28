@@ -10,9 +10,12 @@ from news_collector.enrichment.router import EnrichmentStrategyRouter
 class TestEnrichmentStrategyRouter(unittest.TestCase):
     def setUp(self):
         self.router = EnrichmentStrategyRouter()
+        self.router.logger = MagicMock()
         self.router.scholarly = MagicMock()
         self.router.http = MagicMock()
         self.router.headless = MagicMock()
+        self.router.scrapling = MagicMock()
+        self.router.scrapling_http = MagicMock()
 
     def test_scholarly_strategy(self):
         source_config = {"enrichment_strategy": "scholarly"}
@@ -105,6 +108,36 @@ class TestEnrichmentStrategyRouter(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["reason"], "headless_disabled_config")
         self.router.headless.enrich.assert_not_called()
+
+    def test_scrapling_disabled_summary_only_logs_info_with_fallback(self):
+        source_config = {
+            "enrichment_strategy": "scrapling_stealth",
+            "content_mode": "summary_only",
+        }
+        cand = {"url": "http://example.com/fallback"}
+
+        self.router.scrapling.enrich.return_value = {
+            "success": False,
+            "error": "scrapling_disabled",
+            "duration": 0.2,
+        }
+
+        result = self.router.route_enrichment("src", source_config, cand)
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "scrapling_disabled")
+        self.router.logger.info.assert_any_call(
+            {
+                "event": "enrichment.scrapling.skipped",
+                "details": {
+                    "source_id": "src",
+                    "url": "http://example.com/fallback",
+                    "reason": "scrapling_disabled",
+                    "fallback": "summary_only",
+                },
+            }
+        )
+        self.router.logger.error.assert_not_called()
 
 
 if __name__ == "__main__":
