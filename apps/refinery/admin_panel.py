@@ -534,175 +534,272 @@ with tab1:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🤖 Configuración de Modelos (Per-Phase)")
+        st.subheader("🤖 Configuración de Modelos")
 
-        # Read from TOML [ollama] section
-        ollama_cfg = config_data.get("ollama", {})
+        # ── Helpers ──────────────────────────────────────────────────────────
 
-        # API URL First
-        current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
-        new_api_url = st.text_input("Endpoint de Ollama", current_api)
-        config_data.setdefault("ollama", {})
-        config_data["ollama"]["api_url"] = new_api_url
-
-        # Fetch Available Models (Only supported completely for Ollama right now, but fail gracefully for Gemini)
-        available_models = []
-        active_provider_is_ollama = False
-        try:
-            temp_provider = get_provider(
-                config=config_settings.refresh_runtime_config(),
-                api_url=new_api_url,
-                timeout=5,
-            )
-            # Show active provider badge
-            if isinstance(temp_provider, NvidiaProvider):
-                st.success(
-                    f"🚀 **Proveedor Activo: NVIDIA NIM** — `{temp_provider.model}`"
-                )
-                # Do NOT populate Ollama dropdowns with NVIDIA cloud models —
-                # they use org/model slugs that fail OllamaConfig validation.
-                # available_models stays [] so the Ollama fallback list is used.
-            elif isinstance(temp_provider, GeminiProvider):
-                st.info(
-                    f"✨ **Proveedor Activo: Gemini** — `{getattr(temp_provider, 'model', 'gemini')}`"
-                )
-            else:
-                active_provider_is_ollama = True
-                st.warning(
-                    f"🖥️ **Proveedor Activo: Ollama (Local)** — `{getattr(temp_provider, 'model', 'unknown')}`"
-                )
-                if hasattr(temp_provider, "list_models"):
-                    available_models = temp_provider.list_models()
-        except Exception as e:
-            st.warning(f"No se pudieron cargar modelos: {e}")
-
-        # Fallback list + Gemini models
-        base_fallback_options = [
-            "qwen2.5:32b",
-            "qwen2.5:14b",
-            "llama3.2:latest",
-            "mistral",
-        ]
-        gemini_options = [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
-            "gemma-4-31b-it",
-        ]
-
-        model_options = (
-            available_models + gemini_options
-            if available_models
-            else base_fallback_options + gemini_options
-        )
-
-        # Helper index
         def get_idx(options, value, default=0):
             try:
                 return options.index(value)
             except ValueError:
                 return default
 
-        # Helper: Detect "Slow" Models
         def is_heavy_model(m_name):
             if not m_name:
                 return False
             m_lower = m_name.lower()
-            return (
-                "14b" in m_lower
-                or "32b" in m_lower
-                or "27b" in m_lower
-                or "70b" in m_lower
-                or "mixtral" in m_lower
+            return any(
+                tok in m_lower for tok in ("14b", "32b", "27b", "70b", "mixtral")
             )
 
-        # --- Base Model (Fallback) ---
-        current_base = ollama_cfg.get("model", "qwen2.5:32b")
-        if is_heavy_model(current_base):
-            st.warning(
-                f"⚠️ El modelo base '{current_base}' requiere mucha RAM. Considera usar llama3.2 o Gemini en máquinas más limitadas."
+        # ── Detect currently active provider (without side-effects) ──────────
+        ollama_cfg = config_data.get("ollama", {})
+        current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
+
+        _active_provider = None
+        try:
+            _active_provider = get_provider(
+                config=config_settings.refresh_runtime_config(),
+                api_url=current_api,
+                timeout=5,
+            )
+        except Exception:
+            pass
+
+        _active_is_nvidia = isinstance(_active_provider, NvidiaProvider)
+        _active_is_gemini = isinstance(_active_provider, GeminiProvider)
+        _active_is_cloud = _active_is_nvidia or _active_is_gemini
+
+        # ── Top-level provider type selector ─────────────────────────────────
+        # Initialise session default from the actual active provider so the
+        # page opens in the correct section on first load.
+        if "provider_mode" not in st.session_state:
+            st.session_state["provider_mode"] = (
+                "☁️ Cloud (NVIDIA / Gemini)" if _active_is_cloud else "🖥️ Local (Ollama)"
             )
 
-        base_model_sel = st.selectbox(
-            "Modelo Base (Fallback)",
-            options=model_options,
-            index=get_idx(model_options, current_base),
-            help="Modelo usado si se selecciona 'Default' en una fase.",
-        )
-        config_data["ollama"]["model"] = base_model_sel
-
-        # --- Resolved Summary (Truth) ---
-        st.markdown("##### 🔍 Resumen de Configuración (Resuelto)")
-        # When a cloud provider is active every pipeline stage uses that
-        # provider's model, so the Ollama per-stage overrides are irrelevant.
-        if isinstance(temp_provider, (NvidiaProvider, GeminiProvider)):
-            cloud_model = getattr(temp_provider, "model", "N/A")
-            r_trans = r_edit = r_head = cloud_model
-        else:
-            r_trans = ollama_cfg.get("translator_model") or base_model_sel
-            r_edit = ollama_cfg.get("editor_model") or base_model_sel
-            r_head = ollama_cfg.get("headlines_model") or base_model_sel
-
-        c_r1, c_r2, c_r3 = st.columns(3)
-        c_r1.metric(
-            "1. Traductor",
-            r_trans,
-            delta="Lento" if is_heavy_model(r_trans) else "Rápido",
-            delta_color="inverse",
-        )
-        c_r2.metric(
-            "2. Editor",
-            r_edit,
-            delta="Lento" if is_heavy_model(r_edit) else "Rápido",
-            delta_color="inverse",
-        )
-        c_r3.metric(
-            "3. Titulares",
-            r_head,
-            delta="Lento" if is_heavy_model(r_head) else "Rápido",
-            delta_color="inverse",
+        provider_mode = st.radio(
+            "Tipo de proveedor",
+            options=["☁️ Cloud (NVIDIA / Gemini)", "🖥️ Local (Ollama)"],
+            index=0 if st.session_state["provider_mode"] == "☁️ Cloud (NVIDIA / Gemini)" else 1,
+            horizontal=True,
+            key="provider_mode",
+            help="Elige el tipo de proveedor LLM. El proveedor activo depende de las API keys configuradas.",
         )
 
         st.markdown("---")
 
-        # --- PRESETS (Shortcuts) + Manual Config ---
-        # When a cloud provider is active, Ollama per-stage settings have no
-        # effect on pipeline execution.  Collapse them so the UI reflects what
-        # is actually happening; the settings are still editable for when the
-        # user switches back to Ollama.
-        _ollama_sections_expanded = active_provider_is_ollama
-        _ollama_expander_label = (
-            "⚙️ Configuración Ollama (Fallback — inactivo mientras NVIDIA/Gemini está activo)"
-            if not active_provider_is_ollama
-            else "⚙️ Configuración Ollama"
-        )
-        with st.expander(_ollama_expander_label, expanded=_ollama_sections_expanded):
-            # --- PRESETS (Shortcuts) ---
-            st.markdown("#### ⚡ Presets (Atajos)")
-            st.caption(
-                "Aplica una configuración recomendada. Esto rellenará los selectores de abajo."
+        # ════════════════════════════════════════════════════════════════════
+        # CLOUD BRANCH
+        # ════════════════════════════════════════════════════════════════════
+        if provider_mode == "☁️ Cloud (NVIDIA / Gemini)":
+
+            # Active provider notice
+            if _active_is_nvidia:
+                st.success(f"🚀 **Proveedor Activo: NVIDIA NIM** — `{_active_provider.model}`")
+            elif _active_is_gemini:
+                st.info(f"✨ **Proveedor Activo: Gemini** — `{getattr(_active_provider, 'model', 'N/A')}`")
+            else:
+                st.warning(
+                    "⚠️ Ningún proveedor cloud está activo actualmente. "
+                    "Configura `NOTICIENCIAS__NVIDIA__API_KEY` o `NOTICIENCIAS__GEMINI__API_KEY` en el `.env`."
+                )
+
+            # Sub-selector: NVIDIA vs Gemini
+            cloud_choice = st.radio(
+                "Proveedor cloud",
+                options=["🚀 NVIDIA NIM", "✨ Gemini"],
+                horizontal=True,
+                key="cloud_provider_choice",
             )
 
+            st.markdown("---")
+
+            if cloud_choice == "🚀 NVIDIA NIM":
+                # ── NVIDIA settings ───────────────────────────────────────
+                st.markdown("#### NVIDIA NIM")
+                config_data.setdefault("nvidia", {})
+                nvidia_cfg = config_data["nvidia"]
+
+                _nvidia_model_options = [
+                    "qwen/qwen3-next-80b-a3b-thinking",
+                    "meta/llama-3.1-70b-instruct",
+                    "meta/llama-3.3-70b-instruct",
+                    "mistralai/mistral-large-2-instruct",
+                    "mistralai/mixtral-8x22b-instruct-v0.1",
+                    "google/gemma-3-27b-it",
+                    "microsoft/phi-4",
+                    "deepseek-ai/deepseek-r1",
+                ]
+                _current_nvidia_model = nvidia_cfg.get(
+                    "model", "qwen/qwen3-next-80b-a3b-thinking"
+                )
+                _nvidia_model_sel = st.selectbox(
+                    "Modelo NVIDIA NIM",
+                    options=_nvidia_model_options,
+                    index=get_idx(_nvidia_model_options, _current_nvidia_model),
+                    help="ID del modelo en https://build.nvidia.com/models",
+                    key="nvidia_model_sel",
+                )
+                config_data["nvidia"]["model"] = _nvidia_model_sel
+
+                _nvidia_maxtok = st.number_input(
+                    "Max tokens",
+                    min_value=256,
+                    max_value=32768,
+                    value=int(nvidia_cfg.get("max_tokens", 4096)),
+                    step=256,
+                    key="nvidia_max_tokens",
+                )
+                config_data["nvidia"]["max_tokens"] = _nvidia_maxtok
+
+                if st.button("💾 Guardar configuración NVIDIA", key="save_nvidia"):
+                    save_toml_config(config_data)
+                    st.success("Configuración NVIDIA guardada.")
+                    st.rerun()
+
+                st.markdown("---")
+                st.markdown("##### 🔍 Resumen de Etapas")
+                c_r1, c_r2, c_r3 = st.columns(3)
+                c_r1.metric("1. Traductor", _nvidia_model_sel, delta="Cloud")
+                c_r2.metric("2. Editor", _nvidia_model_sel, delta="Cloud")
+                c_r3.metric("3. Titulares", _nvidia_model_sel, delta="Cloud")
+
+            else:
+                # ── Gemini settings ───────────────────────────────────────
+                st.markdown("#### Gemini")
+                config_data.setdefault("gemini", {})
+                gemini_cfg = config_data["gemini"]
+
+                _gemini_model_options = [
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
+                    "gemini-2.0-flash",
+                    "gemini-1.5-pro",
+                    "gemini-1.5-flash",
+                    "gemma-4-31b-it",
+                ]
+                _current_gemini_model = gemini_cfg.get("model", "gemini-2.5-flash")
+                _gemini_model_sel = st.selectbox(
+                    "Modelo Gemini",
+                    options=_gemini_model_options,
+                    index=get_idx(_gemini_model_options, _current_gemini_model),
+                    key="gemini_model_sel",
+                )
+                config_data["gemini"]["model"] = _gemini_model_sel
+
+                if st.button("💾 Guardar configuración Gemini", key="save_gemini"):
+                    save_toml_config(config_data)
+                    st.success("Configuración Gemini guardada.")
+                    st.rerun()
+
+                st.markdown("---")
+                st.markdown("##### 🔍 Resumen de Etapas")
+                c_r1, c_r2, c_r3 = st.columns(3)
+                c_r1.metric("1. Traductor", _gemini_model_sel, delta="Cloud")
+                c_r2.metric("2. Editor", _gemini_model_sel, delta="Cloud")
+                c_r3.metric("3. Titulares", _gemini_model_sel, delta="Cloud")
+
+        # ════════════════════════════════════════════════════════════════════
+        # LOCAL (OLLAMA) BRANCH
+        # ════════════════════════════════════════════════════════════════════
+        else:
+            if _active_is_cloud:
+                st.warning(
+                    "⚠️ Un proveedor cloud está activo ahora mismo. "
+                    "Estos ajustes se usarán cuando no haya API key cloud configurada."
+                )
+            else:
+                st.success(
+                    f"🖥️ **Proveedor Activo: Ollama (Local)** — "
+                    f"`{getattr(_active_provider, 'model', 'N/A') if _active_provider else 'N/A'}`"
+                )
+
+            # Endpoint
+            new_api_url = st.text_input(
+                "Endpoint de Ollama",
+                current_api,
+                key="ollama_api_url",
+            )
+            config_data.setdefault("ollama", {})
+            config_data["ollama"]["api_url"] = new_api_url
+
+            # Fetch Ollama local model list (only when Ollama is actually active)
+            available_models: list[str] = []
+            if not _active_is_cloud and _active_provider and hasattr(_active_provider, "list_models"):
+                try:
+                    available_models = _active_provider.list_models()
+                except Exception:
+                    pass
+
+            _ollama_base_options = [
+                "qwen2.5:32b",
+                "qwen2.5:14b",
+                "llama3.2:latest",
+                "mistral:latest",
+                "phi4:latest",
+            ]
+            model_options = available_models if available_models else _ollama_base_options
+
+            # Base model
+            current_base = ollama_cfg.get("model", "qwen2.5:32b")
+            if is_heavy_model(current_base):
+                st.warning(
+                    f"⚠️ El modelo base `{current_base}` requiere mucha RAM. "
+                    "Considera `llama3.2:latest` en máquinas sin GPU."
+                )
+
+            base_model_sel = st.selectbox(
+                "Modelo Base (Fallback)",
+                options=model_options,
+                index=get_idx(model_options, current_base),
+                help="Modelo usado cuando una fase no tiene override explícito.",
+                key="ollama_base_model",
+            )
+            config_data["ollama"]["model"] = base_model_sel
+
+            # Configuration Summary
+            st.markdown("##### 🔍 Resumen de Etapas")
+            r_trans = ollama_cfg.get("translator_model") or base_model_sel
+            r_edit  = ollama_cfg.get("editor_model")     or base_model_sel
+            r_head  = ollama_cfg.get("headlines_model")  or base_model_sel
+
+            c_r1, c_r2, c_r3 = st.columns(3)
+            c_r1.metric(
+                "1. Traductor", r_trans,
+                delta="Lento" if is_heavy_model(r_trans) else "Rápido",
+                delta_color="inverse",
+            )
+            c_r2.metric(
+                "2. Editor", r_edit,
+                delta="Lento" if is_heavy_model(r_edit) else "Rápido",
+                delta_color="inverse",
+            )
+            c_r3.metric(
+                "3. Titulares", r_head,
+                delta="Lento" if is_heavy_model(r_head) else "Rápido",
+                delta_color="inverse",
+            )
+
+            st.markdown("---")
+
+            # ── Presets ───────────────────────────────────────────────────
+            st.markdown("#### ⚡ Presets (Atajos)")
+            st.caption("Aplica una configuración recomendada para todas las fases.")
             col_p1, col_p2, col_p3 = st.columns(3)
 
-            # Preset: Production (Llama 3.2 Pure)
             if col_p1.button(
-                "🚀 Producción (CPU / Rápido)",
-                help="Llama 3.2 en todo. Ideal para servidores sin GPU.",
+                "🚀 Producción (CPU)",
+                help="Llama 3.2 en todo — sin GPU requerida.",
             ):
-                config_data["ollama"]["model"] = "llama3.2:latest"
-                config_data["ollama"]["translator_model"] = "llama3.2:latest"
-                config_data["ollama"]["editor_model"] = "llama3.2:latest"
-                config_data["ollama"]["headlines_model"] = "llama3.2:latest"
+                for k in ("model", "translator_model", "editor_model", "headlines_model"):
+                    config_data["ollama"][k] = "llama3.2:latest"
                 save_toml_config(config_data)
                 st.rerun()
 
-            # Preset: Balanced (Qwen 14B)
             if col_p2.button(
-                "⚖️ Calidad (GPU Requerida)",
-                help="Qwen 14B. NO USAR EN CPU (Tiempos > 45min).",
+                "⚖️ Calidad (GPU)",
+                help="Qwen 2.5 14B — requiere GPU.",
             ):
                 config_data["ollama"]["model"] = "qwen2.5:14b"
                 config_data["ollama"]["translator_model"] = "qwen2.5:14b"
@@ -711,52 +808,41 @@ with tab1:
                 save_toml_config(config_data)
                 st.rerun()
 
-            # Preset: Reset
             if col_p3.button(
-                "↺ Reset a Base", help="Borra overrides y usa Modelo Base para todo."
+                "↺ Reset a Base",
+                help="Elimina overrides por fase — usa Modelo Base para todo.",
             ):
-                keys_to_remove = ["translator_model", "editor_model", "headlines_model"]
-                for k in keys_to_remove:
-                    if k in config_data["ollama"]:
-                        del config_data["ollama"][k]
+                for k in ("translator_model", "editor_model", "headlines_model"):
+                    config_data["ollama"].pop(k, None)
                 save_toml_config(config_data)
                 st.rerun()
 
             st.markdown("---")
 
-            # --- Phase Overrides (Explicit) ---
-            st.markdown("#### 🛠️ Configuración Manual por Fase")
+            # ── Manual per-phase overrides ────────────────────────────────
+            st.markdown("#### 🛠️ Override por Fase")
 
-            phases = [
-                ("translator_model", "1. Traductor Científico"),
-                ("editor_model", "2. Editor Periodístico"),
-                ("headlines_model", "3. Generador de Titulares"),
-            ]
-
-            # Options: Default + Models
-            # Display "Default (Base)" to be clear
             default_label = f"(Default: {base_model_sel})"
             phase_options = [default_label] + model_options
 
-            for cfg_key, label in phases:
-                curr_val = ollama_cfg.get(cfg_key)  # None or str
-
-                # Determine Index
+            for cfg_key, label in [
+                ("translator_model", "1. Traductor Científico"),
+                ("editor_model", "2. Editor Periodístico"),
+                ("headlines_model", "3. Generador de Titulares"),
+            ]:
+                curr_val = ollama_cfg.get(cfg_key)
                 sel_idx = 0
                 if curr_val and curr_val in model_options:
-                    sel_idx = (
-                        model_options.index(curr_val) + 1
-                    )  # +1 because of Default item
+                    sel_idx = model_options.index(curr_val) + 1
 
                 sel = st.selectbox(
-                    label, options=phase_options, index=sel_idx, key=f"sel_{cfg_key}"
+                    label,
+                    options=phase_options,
+                    index=sel_idx,
+                    key=f"sel_{cfg_key}",
                 )
-
-                # Save Logic
                 if sel == default_label:
-                    # Remove explicit key to inherit base
-                    if cfg_key in config_data["ollama"]:
-                        del config_data["ollama"][cfg_key]
+                    config_data["ollama"].pop(cfg_key, None)
                 else:
                     config_data["ollama"][cfg_key] = sel
 
