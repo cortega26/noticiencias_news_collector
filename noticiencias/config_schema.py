@@ -700,12 +700,12 @@ class OllamaConfig(StrictModel):
     def _validate_model_name(cls, v: str | None) -> str | None:
         if v is None:
             return None
-        # Allowlist regex: alphanum starting char, then allow . : - _ /
+        # Allowlist regex: alphanum starting char, then allow . : - _
         # Max length 128
-        pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.:/-]{0,127}$"
+        pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$"
         if not re.match(pattern, v):
             raise ValueError(
-                f"Invalid model name '{v}'. Must start with alphanumeric and only contain [a-zA-Z0-9_.:/-], max 128 chars."
+                f"Invalid model name '{v}'. Must start with alphanumeric and only contain [a-zA-Z0-9_.:-], max 128 chars."
             )
         return v
 
