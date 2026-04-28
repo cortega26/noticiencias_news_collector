@@ -1,0 +1,358 @@
+(.venv) carlos@i5-12600K:~/VS_Code_Projects/noticiencias/noticiencias_news_collector$ make refinery
+Environment ready at .venv
+Upgrading database schema...
+16:53:15 | INFO     | 🎯 Sistema de logging configurado exitosamente
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.1.84:8501
+
+16:53:17 | INFO     | 🎯 Sistema de logging configurado exitosamente
+16:53:18 | INFO     | LLMRateLimiter initialized: max_concurrent=2, min_delay=1.0s, cb_threshold=3, cb_cooldown=60.0s
+16:53:18 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:18 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:18 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:18 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:18 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:19 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:19 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:19 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:19 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:19 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:23 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:23 | INFO     | Starting Noticiencias Refinery... (Dry Run=False)
+16:53:23 | INFO     | NVIDIA NIM health check passed (model=qwen/qwen3-next-80b-a3b-thinking).
+16:53:23 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:23 | INFO     | Resolved Ollama model map: {"auditor":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"ENV","stage":"auditor"},"classifier":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"classifier"},"council":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"council"},"default":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"ENV","stage":"default"},"editor":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"editor"},"headlines":{"inherited":false,"model_id":"llama3.2:latest","normalized":false,"notes":null,"raw_value":"llama3.2:latest","source":"CONFIG","stage":"headlines"},"pre_scorer":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"pre_scorer"},"scoring":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"scoring"},"translator":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"translator"}}
+16:53:23 | INFO     | Inherited Ollama model for stage 'pre_scorer' from 'default': 'qwen2.5:32b'
+16:53:23 | INFO     | Inherited Ollama model for stage 'scoring' from 'default': 'qwen2.5:32b'
+16:53:23 | INFO     | Resolved Ollama model map: {"auditor":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"auditor"},"classifier":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"classifier"},"council":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"council"},"default":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"default"},"editor":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"editor"},"headlines":{"inherited":false,"model_id":"llama3.2:latest","normalized":false,"notes":null,"raw_value":"llama3.2:latest","source":"CONFIG","stage":"headlines"},"pre_scorer":{"inherited":true,"model_id":"qwen2.5:32b","normalized":false,"notes":"inherited from 'default'","raw_value":null,"source":"INHERITED","stage":"pre_scorer"},"scoring":{"inherited":true,"model_id":"qwen2.5:32b","normalized":false,"notes":"inherited from 'default'","raw_value":null,"source":"INHERITED","stage":"scoring"},"translator":{"inherited":false,"model_id":"qwen2.5:32b","normalized":false,"notes":null,"raw_value":"qwen2.5:32b","source":"CONFIG","stage":"translator"}}
+16:53:23 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:23 | INFO     | EditorAgent model routing resolved: default=qwen/qwen3-next-80b-a3b-thinking, translator=qwen/qwen3-next-80b-a3b-thinking, editor=qwen/qwen3-next-80b-a3b-thinking, headlines=qwen/qwen3-next-80b-a3b-thinking
+16:53:23 | INFO     | ✅ Policy Integrity Verified: b6e90727...
+16:53:23 | INFO     | Refinery Engine initialized with Editorial Mode: STANDARD
+16:53:23 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:23 | INFO     | Auditor configured: endpoint=http://localhost:11434/api/generate model=qwen2.5:32b timeout=45s retries=2 health_timeout=2s optional=True
+16:53:23 | INFO     | Cloning https://github.com/cortega26/noticiencias_news_collector.git to temp/source...
+16:53:30 | INFO     | Source data synced successfully.
+16:53:30 | INFO     | Starting News Collector (Direct API)... Dry Run: False
+🎯 Inicializando News Collector System (ID: 81db28ea)
+16:53:30 | INFO     | 🏥 ESTADO DEL SISTEMA:
+16:53:30 | INFO     |   • Python: 3.13.12
+16:53:30 | INFO     |   • Plataforma: Linux-6.17.0-22-generic-x86_64-with-glibc2.39
+16:53:30 | INFO     |   • CPU cores: x86_64
+✅ 43 sources validated successfully against strict schema.
+16:53:31 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+16:53:31 | INFO     | ✅ 43 fuentes inicializadas/actualizadas
+16:53:31 | INFO     | Base de datos configurada
+16:53:31 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:31 | INFO     | Initializing Metrics Store for env='development' at 'data/metrics/development/enrichment_metrics.db'
+DEBUG: System created Dispatcher with health_tracker=None id=None
+16:53:31 | INFO     | Dispatcher de colectores configurado
+16:53:31 | INFO     | Sistema de validación configurado
+DEBUG: create_scorer selected_mode=cognitive (from config: cognitive)
+16:53:31 | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)
+16:53:31 | INFO     | 🧠 Scorer inicializado con pesos: {'source_credibility': 0.1, 'recency': 0.2, 'content_quality': 0.35, 'engagement_potential': 0.35}
+16:53:31 | INFO     | Using NvidiaProvider with model qwen/qwen3-next-80b-a3b-thinking
+16:53:31 | INFO     | Sistema de scoring configurado
+16:53:31 | WARNING  | {'event': 'database.health.warning', 'trace_id': None, 'session_id': None, 'source_id': 'database', 'latency': 0.0, 'details': {'failed_sources': 3}}
+16:53:31 | INFO     | NVIDIA NIM health check passed (model=qwen/qwen3-next-80b-a3b-thinking).
+16:53:31 | WARNING  | {'event': 'system.initialize.warning', 'trace_id': '671e4adf-5cc9-4f2e-be3b-83167631e760', 'session_id': 'init-81db28ea', 'source_id': 'system', 'latency': 0.0, 'details': {'warnings': ['3 fuentes fallando']}}
+16:53:31 | INFO     | ============================================================
+16:53:31 | INFO     | 🚀 NEWS COLLECTOR SYSTEM INICIADO
+16:53:31 | INFO     | ============================================================
+16:53:31 | INFO     | Versión: 1.0.0
+16:53:31 | INFO     | Modo debug: False
+16:53:31 | INFO     | Configuración principal:
+16:53:31 | INFO     |   sources_configured: 43
+16:53:31 | INFO     |   database_type: sqlite
+16:53:31 | INFO     |   collection_interval: 12
+16:53:31 | INFO     |   min_score_threshold: 0.3
+16:53:31 | INFO     | Logs guardándose en: /home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/logs/collector.log
+16:53:31 | INFO     | ============================================================
+16:53:31 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 17 candidatos para seleccionar Top 5...
+DEBUG: RSSCollector source=yale_news raw_articles=0
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 15 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:32 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+DEBUG: RSSCollector source=nih_news raw_articles=0
+16:53:32 | INFO     | PreScorer: Analizando 15 candidatos para seleccionar Top 5...
+16:53:33 | INFO     | PreScorer: Analizando 7 candidatos para seleccionar Top 5...
+16:53:33 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:34 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:34 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:34 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:35 | INFO     | PreScorer: Analizando 10 candidatos para seleccionar Top 5...
+DEBUG: RSSCollector source=the_verge raw_articles=5
+16:53:35 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:53:35 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'microsoft_research', 'url': 'https://microsoft.com/en-us/research/podcast/can-we-ai-our-way-to-a-more-sustainable-world/', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=microsoft_research raw_articles=1
+16:53:36 | INFO     | PreScorer: Analizando 7 candidatos para seleccionar Top 5...
+DEBUG: RSSCollector source=nasa_news raw_articles=5
+16:53:36 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:53:37 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:38 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:53:40 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:54:15 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:54:15 | INFO     | PreScorer: Selección completada. Indices: [0, 11, 6, 16, 12]
+16:54:15 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:54:15 | INFO     | PreScorer: Selección completada. Indices: [0, 11, 7, 18, 14]
+DEBUG: RSSCollector source=techcrunch raw_articles=5
+16:54:16 | INFO     | 💾 Bulk save completed atomically: 5 articles
+DEBUG: RSSCollector source=bair_blog raw_articles=0
+DEBUG: RSSCollector source=the_gradient raw_articles=0
+DEBUG: RSSCollector source=last_week_in_ai raw_articles=0
+DEBUG: RSSCollector source=quanta_magazine raw_articles=0
+16:54:24 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+DEBUG: RSSCollector source=new_scientist raw_articles=5
+16:54:31 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:54:31 | INFO     | PreScorer: Analizando 20 candidatos para seleccionar Top 5...
+16:54:55 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:54:55 | INFO     | PreScorer: Selección completada. Indices: [0, 3, 2, 17, 6]
+16:54:57 | INFO     | PreScorer: Selección completada. Indices: [5, 17, 19, 15, 6]
+DEBUG: RSSCollector source=wired raw_articles=5
+DEBUG: RSSCollector source=scientific_american raw_articles=5
+16:55:00 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:55:00 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:55:00 | WARNING  | {'event': 'collector.reddit.no_credentials', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'reddit_science', 'collector_type': 'RedditCollector', 'details': {'hint': 'Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in .env'}}
+16:55:02 | INFO     | PreScorer: Analizando 15 candidatos para seleccionar Top 5...
+16:55:37 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:55:37 | INFO     | PreScorer: Selección completada. Indices: [0, 4, 8, 6, 13]
+16:55:40 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:55:40 | INFO     | PreScorer: Selección completada. Indices: [0, 5, 1, 2, 10]
+DEBUG: RSSCollector source=stat_news raw_articles=5
+16:55:40 | INFO     | 💾 Bulk save completed atomically: 5 articles
+DEBUG: RSSCollector source=mit_news raw_articles=5
+16:55:44 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:56:21 | INFO     | PreScorer: Selección completada. Indices: [15, 13, 5, 3, 11]
+16:56:23 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:56:23 | INFO     | PreScorer: Selección completada. Indices: [0, 11, 9, 7, 2]
+DEBUG: RSSCollector source=livescience raw_articles=5
+DEBUG: RSSCollector source=space_com raw_articles=5
+16:56:29 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:56:29 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:57:04 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:57:04 | INFO     | PreScorer: Selección completada. Indices: [0, 9, 14, 18, 19]
+16:57:04 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'deepmind_blog', 'url': 'https://deepmind.google/blog/announcing-our-partnership-with-the-republic-of-korea/', 'reason': 'scrapling_disabled'}}
+16:57:04 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'deepmind_blog', 'url': 'https://deepmind.google/blog/were-expanding-our-presence-in-singapore-to-advance-ai-in-the-asia-pacific-region/', 'reason': 'scrapling_disabled'}}
+16:57:05 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'deepmind_blog', 'url': 'https://deepmind.google/blog/gemini-25-flash-lite-is-now-ready-for-scaled-production-use/', 'reason': 'scrapling_disabled'}}
+16:57:05 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'deepmind_blog', 'url': 'https://deepmind.google/blog/try-deep-think-in-the-gemini-app/', 'reason': 'scrapling_disabled'}}
+16:57:06 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'deepmind_blog', 'url': 'https://deepmind.google/blog/rethinking-how-we-measure-ai-intelligence/', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=deepmind_blog raw_articles=5
+16:57:07 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:57:07 | INFO     | PreScorer: Selección completada. Indices: [0, 2, 6, 9, 12]
+DEBUG: RSSCollector source=ars_technica raw_articles=5
+16:57:10 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:57:39 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:57:39 | INFO     | PreScorer: Selección completada. Indices: [0, 2, 1, 6, 3]
+16:57:39 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_news', 'url': 'https://washington.edu/news/2026/04/28/april-research-highlights-sunbird-tongues-seattle-fault-inbound-asteroids-more/', 'reason': 'scrapling_disabled'}}
+16:57:39 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_news', 'url': 'https://washington.edu/news/2026/04/23/researchers-discover-the-fossil-of-a-new-hamster-sized-mammal-that-lived-alongside-dinosaurs-on-the-pacific-coast/', 'reason': 'scrapling_disabled'}}
+16:57:39 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_news', 'url': 'https://washington.edu/news/2026/04/28/bikebutler-cycling-map-seattle-routes/', 'reason': 'scrapling_disabled'}}
+16:57:39 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_news', 'url': 'https://washington.edu/news/2026/04/20/washingtons-hepatitis-c-elimination-initiative-expanded-access-to-testing-and-treatment-while-reducing-per-patient-costs-uw-led-study-finds/', 'reason': 'scrapling_disabled'}}
+16:57:39 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_news', 'url': 'https://washington.edu/news/2026/04/22/paul-wiggins-protein-overabundance-study/', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=uw_news raw_articles=5
+16:57:51 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:57:51 | INFO     | PreScorer: Selección completada. Indices: [0, 14, 16, 12, 19]
+16:57:51 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'harvard_gazette', 'url': 'https://news.harvard.edu/gazette/story/2026/04/call-it-his-personal-everest/', 'reason': 'scrapling_disabled'}}
+16:57:51 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'harvard_gazette', 'url': 'https://news.harvard.edu/gazette/story/2026/04/single-minded-pursuit-of-profit-can-get-firms-in-trouble-same-thing-with-ai/', 'reason': 'scrapling_disabled'}}
+16:57:51 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'harvard_gazette', 'url': 'https://news.harvard.edu/gazette/story/2026/04/blood-test-has-potential-to-detect-earliest-signals-of-alzheimers-disease/', 'reason': 'scrapling_disabled'}}
+16:57:51 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'harvard_gazette', 'url': 'https://news.harvard.edu/gazette/story/2026/04/got-personal-financial-medical-data-youd-like-to-keep-private-good-luck/', 'reason': 'scrapling_disabled'}}
+16:57:51 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'harvard_gazette', 'url': 'https://news.harvard.edu/gazette/story/2026/04/time-for-government-business-leaders-to-figure-out-ai-cybersecurity-regulation/', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=harvard_gazette raw_articles=5
+16:58:21 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:58:21 | INFO     | PreScorer: Selección completada. Indices: [0, 5, 9, 3, 19]
+DEBUG: RSSCollector source=google_research raw_articles=5
+16:58:26 | INFO     | 💾 Bulk save completed atomically: 5 articles
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'uw_madison_news', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'uw_madison_news', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'medicalxpress', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'medicalxpress', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'techxplore', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'techxplore', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'openai_blog', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'openai_blog', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'nvidia_research', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'nvidia_research', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'aws_ml_blog', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'aws_ml_blog', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'the_conversation', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'the_conversation', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'science_news', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'science_news', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | ERROR    | {'event': 'collector.source.timeout_hard_limit', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'inverse_science', 'collector_type': 'RSSCollector', 'details': {'timeout_seconds': 300}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'inverse_science', 'collector_type': 'RSSCollector', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'phys_org', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'uw_madison_news', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'medicalxpress', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'techxplore', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'openai_blog', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'nvidia_research', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'aws_ml_blog', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'the_conversation', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'science_news', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | WARNING  | {'event': 'collector.source.failed', 'trace_id': '1ccfe7fe-8106-4d20-9b40-ef961015abca', 'session_id': '81db28ea-20260428-205331', 'source_id': 'inverse_science', 'latency': 300.0, 'details': {'articles_found': 0, 'articles_saved': 0, 'error_message': 'Timeout global excedido (300s)'}}
+16:58:31 | INFO     | Article rejected: Taylor Swift is stepping up the legal war on AI copycats - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Now YouTube TV lets you multiview any channel you want - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: The FCC is going after the broadcast licenses of Disney-owned ABC stations - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Elon Musk takes the stand in high-profile trial against OpenAI - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: You can get dragged into a police investigation by proximity alone — for now - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: There’s No Place Like NASA’s New X-59 Hangar Home - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Curiosity Captures a 360-Degree View at ‘Nevado Sajama’ - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Six Years of Curiosity’s Wheels on the Move - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Fiery Fall Color in Southern Chile - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: NASA’s X-59 Gets Freedom 250 Logo - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Amazon is already offering new OpenAI products on AWS - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Founder of Shark Tank-backed startup Scholly sues his acquirer Sallie Mae - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Otter’s new feature lets users search across their enterprise tools - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Drizzle on top: a new high-end dog food brand is coming for the 1% - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: OpenAI ends Microsoft legal peril over its $50B Amazon deal - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: People are betting on measles outbreaks – and that might be useful - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: 10,000 new planets found hidden in NASA telescope data - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Largest-ever octopus was great white shark of invertebrate predators - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Exercise advice for long covid may be doing more harm than good - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Why the right kind of stress is crucial for your health and happiness - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Sniffies’ Users Worry About a ‘Straightification’ of the Gay Hookup App - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Why Sharing a Screenshot Can Get You Jailed in the UAE - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: UAE to Exit OPEC After Nearly 60 Years - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Colorado's Anti-Repair Bill Is Dead - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Some Musk v. Altman Jurors Don't Like Elon Musk - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: STAT+: AIDS group sues Trump administration over undisclosed agreement with Gilead - Title matches blocklist pattern: '(?i)^STAT\+:'
+16:58:31 | INFO     | Article rejected: Predicting consequences of new hepatitis B vaccine recs - Content appears to be a newsletter (matched 'daily dose of').
+16:58:31 | INFO     | Article rejected: STAT+: Google clinical director says AI can be a ‘bridge’ for people having a mental health crisis - Title matches blocklist pattern: '(?i)^STAT\+:'
+16:58:31 | INFO     | Article rejected: STAT+: Dems say RFK Jr. has a pattern of failing to answer their questions - Title matches blocklist pattern: '(?i)^STAT\+:'
+16:58:31 | INFO     | Article rejected: First-of-its-kind map of the mouse nose reveals surprises about the sense of smell - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: New AI algorithms are 95% better at showing how the universe changes over time - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: New data center will be partially powered by human brain cells for the first time - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Full moon helps paint vibrant, muddy 'brushstrokes' in Indonesian river — Earth from space - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: How everything you do is being monitored in an AI-fuelled 'surveillance capitalism system' that's ramping up aggressively - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Scientists learn how much baby stars in Orion weigh — by watching their dance moves - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Did decaying dark matter help create the universe's first supermassive black holes? - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Want to know my secret for learning the night sky? Welcome to sidewalk stargazing - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Backyard snapshot delivers stunning galaxy image | Space photo of the day for April 27, 2026 - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: AI sped up James Webb Space Telescope data analysis from years to days. What can it do for the groundbreaking Rubin Observatory? - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Electrical current might be the key to a better cup of coffee - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Study: Infrasound likely a key factor in alleged hauntings - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Meet the 19-meter Cretaceous kraken that swam with mosasaurs - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: US Space Command: Russia is now operationalizing co-orbital ASAT weapons - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:31 | INFO     | Article rejected: Pentagon pulls the plug on one of the military's most troubled space programs - Title relevance too low (0.00 < 0.05). Content might be unrelated.
+16:58:32 | INFO     | CognitiveScorer Cycle Start.
+16:58:33 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:58:33 | INFO     | PreScorer: Selección completada. Indices: [0, 1, 2, 14, 16]
+16:58:34 | WARNING  | HttpEnricher fetch failed for https://medicalxpress.com/news/2026-04-bile-duct-cells-reveal-key.html: 403 Client Error: Forbidden for url: https://medicalxpress.com/news/2026-04-bile-duct-cells-reveal-key.html
+16:58:35 | WARNING  | HttpEnricher fetch failed for https://medicalxpress.com/news/2026-04-cellular-pathways-underlie-differences-physical.html: 403 Client Error: Forbidden for url: https://medicalxpress.com/news/2026-04-cellular-pathways-underlie-differences-physical.html
+16:58:35 | WARNING  | HttpEnricher fetch failed for https://medicalxpress.com/news/2026-04-distinct-patterns-cognitive-decline-alzheimer.html: 403 Client Error: Forbidden for url: https://medicalxpress.com/news/2026-04-distinct-patterns-cognitive-decline-alzheimer.html
+16:58:35 | WARNING  | HttpEnricher fetch failed for https://medicalxpress.com/news/2026-04-emotion-recognition-issues-linked-chronic.html: 403 Client Error: Forbidden for url: https://medicalxpress.com/news/2026-04-emotion-recognition-issues-linked-chronic.html
+16:58:36 | WARNING  | HttpEnricher fetch failed for https://medicalxpress.com/news/2026-04-genome-ai-quantum-personalized-medicine.html: 403 Client Error: Forbidden for url: https://medicalxpress.com/news/2026-04-genome-ai-quantum-personalized-medicine.html
+DEBUG: RSSCollector source=medicalxpress raw_articles=5
+16:58:36 | INFO     | 💾 Bulk save completed atomically: 1 articles
+16:58:52 | WARNING  | CognitiveScorer: LLM batch timed out after 20.0s — using heuristic fallback.
+16:58:52 | INFO     | 📊 MÉTRICAS DE PERFORMANCE CICLO COMPLETO
+16:58:52 | INFO     |   total_duration_seconds: 321.668
+16:58:52 | INFO     |   articles_per_second: 0.236
+16:58:52 | INFO     |   sources_per_minute: 7.088
+16:58:52 | INFO     |   success_rate_percent: 86.840
+16:58:52 | INFO     | 📊 Reporte de Recolección: 12/43 fuentes produjeron información con éxito (artículos guardados).
+16:58:52 | INFO     | Exporting results to /home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/exports/latest_articles.json
+16:58:52 | INFO     | Exported 50 articles to /home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/exports/latest_articles.json
+16:58:52 | INFO     | Sistema apagado correctamente.
+16:59:05 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:59:05 | INFO     | PreScorer: Selección completada. Indices: [0, 11, 7, 4, 13]
+16:59:06 | WARNING  | HttpEnricher fetch failed for https://techxplore.com/news/2026-04-solar-cell-moonlights-absorbing-emitting.html: 403 Client Error: Forbidden for url: https://techxplore.com/news/2026-04-solar-cell-moonlights-absorbing-emitting.html
+16:59:06 | WARNING  | HttpEnricher fetch failed for https://techxplore.com/news/2026-04-reveals-lack-transparency-ad-digital.html: 403 Client Error: Forbidden for url: https://techxplore.com/news/2026-04-reveals-lack-transparency-ad-digital.html
+16:59:07 | WARNING  | HttpEnricher fetch failed for https://techxplore.com/news/2026-04-extreme-weather-renewable-grids-power.html: 403 Client Error: Forbidden for url: https://techxplore.com/news/2026-04-extreme-weather-renewable-grids-power.html
+16:59:07 | WARNING  | HttpEnricher fetch failed for https://techxplore.com/news/2026-04-robotically-blocks-efficient-sustainable.html: 403 Client Error: Forbidden for url: https://techxplore.com/news/2026-04-robotically-blocks-efficient-sustainable.html
+16:59:07 | WARNING  | HttpEnricher fetch failed for https://techxplore.com/news/2026-04-uk-biobank-sale-china.html: 403 Client Error: Forbidden for url: https://techxplore.com/news/2026-04-uk-biobank-sale-china.html
+DEBUG: RSSCollector source=techxplore raw_articles=5
+16:59:07 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'techxplore', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:07 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'techxplore', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:07 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'techxplore', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:17 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:59:17 | INFO     | PreScorer: Selección completada. Indices: [0, 6, 1, 2, 5]
+16:59:17 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_madison_news', 'url': 'https://news.wisc.edu/uw-madisons-reach-throughout-wisconsin-adds-up-to-38-9-billion-a-year/', 'reason': 'scrapling_disabled'}}
+16:59:17 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_madison_news', 'url': 'https://news.wisc.edu/five-uw-madison-professors-elected-to-american-academy-of-arts-sciences/', 'reason': 'scrapling_disabled'}}
+16:59:17 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_madison_news', 'url': 'https://news.wisc.edu/meet-some-of-our-notable-grads-for-spring-2026/', 'reason': 'scrapling_disabled'}}
+16:59:17 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_madison_news', 'url': 'https://students.wisc.edu/news/uw-survey-offers-first-comprehensive-look-at-student-basic-needs/', 'reason': 'scrapling_disabled'}}
+16:59:17 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'uw_madison_news', 'url': 'https://news.wisc.edu/being-part-of-something-bigger-than-you-with-badger-volunteers/', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=uw_madison_news raw_articles=5
+16:59:17 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'uw_madison_news', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:17 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'uw_madison_news', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:43 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+16:59:43 | INFO     | PreScorer: Selección completada. Indices: [0, 4, 2, 5, 3]
+16:59:45 | INFO     | PreScorer: Selección completada. Indices: [2, 16, 15, 13, 19]
+DEBUG: RSSCollector source=nvidia_research raw_articles=5
+16:59:48 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'nvidia_research', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:48 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'nvidia_research', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+16:59:48 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'nvidia_research', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+[2026-04-28 16:59:49] INFO: Fetched (200) <GET https://openai.com/index/introducing-gpt-5-5/> (referer: https://www.google.com/)
+16:59:49 | INFO     | Fetched (200) <GET https://openai.com/index/introducing-gpt-5-5/> (referer: https://www.google.com/)
+16:59:49 | WARNING  | Invalid strategy recorded: scrapling_http
+[2026-04-28 16:59:52] INFO: Fetched (200) <GET https://openai.com/index/introducing-chatgpt-images-2-0/> (referer: https://www.google.com/)
+16:59:52 | INFO     | Fetched (200) <GET https://openai.com/index/introducing-chatgpt-images-2-0/> (referer: https://www.google.com/)
+16:59:52 | WARNING  | Invalid strategy recorded: scrapling_http
+[2026-04-28 16:59:58] INFO: Fetched (200) <GET https://openai.com/index/introducing-openai-privacy-filter/> (referer: https://www.google.com/)
+16:59:58 | INFO     | Fetched (200) <GET https://openai.com/index/introducing-openai-privacy-filter/> (referer: https://www.google.com/)
+16:59:58 | WARNING  | Invalid strategy recorded: scrapling_http
+[2026-04-28 17:00:00] INFO: Fetched (200) <GET https://openai.com/index/introducing-workspace-agents-in-chatgpt/> (referer: https://www.google.com/)
+17:00:00 | INFO     | Fetched (200) <GET https://openai.com/index/introducing-workspace-agents-in-chatgpt/> (referer: https://www.google.com/)
+17:00:00 | WARNING  | Invalid strategy recorded: scrapling_http
+[2026-04-28 17:00:05] INFO: Fetched (200) <GET https://openai.com/index/codex-for-almost-everything/> (referer: https://www.google.com/)
+17:00:05 | INFO     | Fetched (200) <GET https://openai.com/index/codex-for-almost-everything/> (referer: https://www.google.com/)
+17:00:05 | WARNING  | Invalid strategy recorded: scrapling_http
+DEBUG: RSSCollector source=openai_blog raw_articles=5
+17:00:05 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'openai_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:05 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'openai_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:05 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'openai_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:24 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+17:00:24 | INFO     | PreScorer: Selección completada. Indices: [0, 6, 5, 14, 1]
+17:00:28 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+17:00:28 | INFO     | PreScorer: Selección completada. Indices: [0, 11, 12, 18, 5]
+17:00:28 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'phys_org', 'url': 'https://phys.org/news/2026-04-soil-fertilization-amazonian-dark-earth.html', 'reason': 'scrapling_disabled'}}
+17:00:28 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'phys_org', 'url': 'https://phys.org/news/2026-04-ancient-farming-clues-expose-humanity.html', 'reason': 'scrapling_disabled'}}
+17:00:28 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'phys_org', 'url': 'https://phys.org/news/2026-04-urban-agriculture-europe-vegetable-demand.html', 'reason': 'scrapling_disabled'}}
+17:00:28 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'phys_org', 'url': 'https://phys.org/news/2026-04-soil-fertilizer-primary-source-nitrogen.html', 'reason': 'scrapling_disabled'}}
+17:00:28 | ERROR    | {'event': 'enrichment.scrapling.failed', 'details': {'source_id': 'phys_org', 'url': 'https://phys.org/news/2026-04-tiny-dna-fragments-big-agricultural.html', 'reason': 'scrapling_disabled'}}
+DEBUG: RSSCollector source=phys_org raw_articles=5
+17:00:28 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:28 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:28 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'phys_org', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+DEBUG: RSSCollector source=aws_ml_blog raw_articles=5
+17:00:31 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'aws_ml_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:31 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'aws_ml_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:00:31 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'aws_ml_blog', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:04 | WARNING  | PreScorer: LLM retornó 1 válidos. Rellenando con ranking heurístico editorial.
+17:01:04 | INFO     | PreScorer: Selección completada. Indices: [0, 17, 12, 15, 19]
+17:01:07 | INFO     | PreScorer: Selección completada. Indices: [1, 18, 9, 17, 2]
+DEBUG: RSSCollector source=the_conversation raw_articles=5
+17:01:08 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'the_conversation', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:08 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'the_conversation', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:08 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'the_conversation', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+DEBUG: RSSCollector source=science_news raw_articles=5
+17:01:11 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'science_news', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:11 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'science_news', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:11 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'science_news', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:47 | INFO     | PreScorer: Selección completada. Indices: [10, 1, 14, 13, 7]
+DEBUG: RSSCollector source=inverse_science raw_articles=5
+17:01:54 | ERROR    | {'event': 'collector.fetch.unexpected_error', 'source_id': 'inverse_science', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:54 | ERROR    | {'event': 'collector.circuit_breaker.update_failed', 'source_id': 'inverse_science', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:54 | ERROR    | {'event': 'collector.source.stats_update_failed', 'source_id': 'inverse_science', 'collector_type': 'RSSCollector', 'details': {'error': "'NoneType' object is not callable"}}
+17:01:54 | INFO     | News Collector finished successfully.
+17:01:54 | INFO     | Found Cloud export at temp/source/data/exports/latest_articles.json
+17:01:54 | INFO     | Using export at temp/source/data/exports/latest_articles.json
+17:01:54 | INFO     | Loaded 50 new articles from JSON export.
+17:01:54 | INFO     | Total candidate content items: 50
+17:01:54 | INFO     | BULK MODE: Limiting to first 5 item(s)
+17:01:54 | INFO     | Auto-processing disabled. New articles saved to inbox.
+17:01:54 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+17:01:54 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+17:01:54 | INFO     | ✅ Base de datos configurada exitosamente: sqlite
+17:01:54 | INFO     | ✅ Base de datos configurada exitosamente: sqlite

@@ -432,12 +432,27 @@ class EnrichmentStrategyRouter:
                 enrichment_metrics.record_failure(
                     source_id, "scrapling_stealth", error_reason, duration
                 )
-                self.logger.error(
-                    {
-                        "event": "enrichment.scrapling.failed",
-                        "details": {"source_id": source_id, "url": url, "reason": error_reason},
-                    }
-                )
+                log_payload = {
+                    "event": "enrichment.scrapling.failed",
+                    "details": {"source_id": source_id, "url": url, "reason": error_reason},
+                }
+                if (
+                    error_reason == "scrapling_disabled"
+                    and source_config.get("content_mode") == "summary_only"
+                ):
+                    self.logger.info(
+                        {
+                            "event": "enrichment.scrapling.skipped",
+                            "details": {
+                                "source_id": source_id,
+                                "url": url,
+                                "reason": error_reason,
+                                "fallback": "summary_only",
+                            },
+                        }
+                    )
+                else:
+                    self.logger.error(log_payload)
                 return {
                     "success": False,
                     "reason": error_reason,
