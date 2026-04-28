@@ -444,6 +444,8 @@ def main(  # noqa: C901
 
     git_handler = GitHubPublisher(config.github.token)
     resolved_models = resolve_ollama_stage_models(config, logger=logger)
+    # api_url is only used by the OllamaProvider fallback; NVIDIA/Gemini providers
+    # ignore it and read their credentials from config instead.
     editor_agent = EditorAgent(
         api_url=config.ollama.api_url,
         model=resolved_models["default"],
