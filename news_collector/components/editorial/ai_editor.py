@@ -285,6 +285,24 @@ def validate_generated_article_markdown(markdown: str) -> None:
         )
 
 
+def _reason_indicates_missing_text(reason: str | None) -> bool:
+    normalized = str(reason or "").strip().lower()
+    if not normalized:
+        return False
+    markers = (
+        "no text provided",
+        "no content provided",
+        "text is empty",
+        "content is empty",
+        "sin texto",
+        "texto vacío",
+        "texto vacio",
+        "empty after removing",
+        "too thin to publish safely",
+    )
+    return any(marker in normalized for marker in markers)
+
+
 class EditorAgent:
     def __init__(
         self,
@@ -647,6 +665,8 @@ class EditorAgent:
             # recoverable=False means the failure is fundamental (e.g. wrong topic);
             # retrying/repairing is pointless. Default True to be safe if LLM omits field.
             recoverable = bool(result.get("recoverable", True))
+            if _reason_indicates_missing_text(reason):
+                recoverable = True
 
             if score < self.critic_threshold:
                 logger.warning(
@@ -688,6 +708,24 @@ class EditorAgent:
             "_extract_critic_json: no JSON with 'score' found, falling back to generic extractor"
         )
         return self._extract_json(text)
+
+    def _editorial_output_repair_reason(self, markdown: str) -> str | None:
+        body = _extract_publishable_body(markdown)
+        if not body:
+            return "No text provided"
+
+        return None
+
+    def _write_editorial_cache_if_valid(self, cache_path: Path, content: str) -> None:
+        repair_reason = self._editorial_output_repair_reason(content)
+        if repair_reason is not None:
+            logger.warning(
+                "Skipping stage2 cache write because editorial output is not critic-ready: {}",
+                repair_reason,
+            )
+            return
+
+        cache_path.write_text(content, encoding="utf-8")
 
     def _repair_editorial(self, base_content: str, feedback: str) -> str:
         """
@@ -944,10 +982,19 @@ class EditorAgent:
         if cache_s2.exists():
             print(f"(Loaded from cache: {cache_s2})")
             final_content = cache_s2.read_text(encoding="utf-8")
+            cached_repair_reason = self._editorial_output_repair_reason(final_content)
+            if cached_repair_reason is not None:
+                logger.warning(
+                    "Ignoring cached stage2 editorial output because it is not critic-ready: {}",
+                    cached_repair_reason,
+                )
+                final_content = self._adapt_editorial(translated_text)
+                final_content = self._extract_markdown_content(final_content)  # Cleanup
+                self._write_editorial_cache_if_valid(cache_s2, final_content)
         else:
             final_content = self._adapt_editorial(translated_text)
             final_content = self._extract_markdown_content(final_content)  # Cleanup
-            cache_s2.write_text(final_content, encoding="utf-8")
+            self._write_editorial_cache_if_valid(cache_s2, final_content)
 
         # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
         print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
@@ -959,13 +1006,22 @@ class EditorAgent:
         else:
             max_retries = 2
             for attempt in range(max_retries + 1):
-                # We run this on the adapted content to be sure.
-                critic_result = self._critic_pass(final_content)
-                if len(critic_result) == 2:
-                    is_valid, reason = critic_result
+                repair_reason = self._editorial_output_repair_reason(final_content)
+                if repair_reason is not None:
+                    logger.warning(
+                        "Stage 2 editorial output is not critic-ready. Triggering repair: {}",
+                        repair_reason,
+                    )
+                    is_valid = False
+                    reason = repair_reason
                     recoverable = True
                 else:
-                    is_valid, reason, recoverable = critic_result
+                    critic_result = self._critic_pass(final_content)
+                    if len(critic_result) == 2:
+                        is_valid, reason = critic_result
+                        recoverable = True
+                    else:
+                        is_valid, reason, recoverable = critic_result
 
                 if is_valid:
                     # Persist critic pass checkpoint to avoid re-running on resume
@@ -993,20 +1049,11 @@ class EditorAgent:
                     final_content = self._extract_markdown_content(
                         final_content
                     )  # Cleanup
-                    # Update the Stage 2 cache so a resume doesn't reload the bad version.
-                    # Only overwrite if content looks complete (ends with a sentence terminator).
-                    _stripped = final_content.strip() if final_content else ""
-                    if _stripped and re.search(r'[.!?»"\']\s*$', _stripped):
-                        try:
-                            cache_s2.write_text(final_content, encoding="utf-8")
-                        except Exception as _e:
-                            logger.warning(
-                                f"Failed to update stage2 cache after repair: {_e}"
-                            )
-                    else:
+                    try:
+                        self._write_editorial_cache_if_valid(cache_s2, final_content)
+                    except Exception as _e:
                         logger.warning(
-                            "⚠️ Repair produced truncated content (no sentence terminator at end) — "
-                            "skipping cache_s2 overwrite to preserve previous version"
+                            f"Failed to update stage2 cache after repair: {_e}"
                         )
                 else:
                     raise ValueError(
