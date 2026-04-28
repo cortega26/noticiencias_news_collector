@@ -547,27 +547,32 @@ with tab1:
 
         # Fetch Available Models (Only supported completely for Ollama right now, but fail gracefully for Gemini)
         available_models = []
+        active_provider_is_ollama = False
         try:
             temp_provider = get_provider(
                 config=config_settings.refresh_runtime_config(),
                 api_url=new_api_url,
                 timeout=5,
             )
-            if hasattr(temp_provider, "list_models"):
-                available_models = temp_provider.list_models()
             # Show active provider badge
             if isinstance(temp_provider, NvidiaProvider):
                 st.success(
                     f"🚀 **Proveedor Activo: NVIDIA NIM** — `{temp_provider.model}`"
                 )
+                # Do NOT populate Ollama dropdowns with NVIDIA cloud models —
+                # they use org/model slugs that fail OllamaConfig validation.
+                # available_models stays [] so the Ollama fallback list is used.
             elif isinstance(temp_provider, GeminiProvider):
                 st.info(
                     f"✨ **Proveedor Activo: Gemini** — `{getattr(temp_provider, 'model', 'gemini')}`"
                 )
             else:
+                active_provider_is_ollama = True
                 st.warning(
                     f"🖥️ **Proveedor Activo: Ollama (Local)** — `{getattr(temp_provider, 'model', 'unknown')}`"
                 )
+                if hasattr(temp_provider, "list_models"):
+                    available_models = temp_provider.list_models()
         except Exception as e:
             st.warning(f"No se pudieron cargar modelos: {e}")
 
