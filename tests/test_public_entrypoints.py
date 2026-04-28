@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from news_collector.infrastructure.llm.model_registry import (
@@ -52,41 +53,64 @@ class TestPublicEntrypoints:
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
             with patch(
-                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
-                side_effect=ModelAvailabilityError(
-                    "Ollama preflight failed to reach /api/tags: Connection refused"
-                ),
-            ):
-
-                warnings = bootstrap_system()
-
-                assert isinstance(warnings, list)
-                assert len(warnings) > 0
-                assert any(
-                    "preflight failed" in w or "health check" in w for w in warnings
+                "news_collector.config.settings.refresh_runtime_config"
+            ) as mock_refresh:
+                mock_cfg = mock_refresh.return_value
+                mock_cfg.nvidia = SimpleNamespace(api_key=None)
+                mock_cfg.gemini = SimpleNamespace(api_key=None)
+                mock_cfg.ollama = SimpleNamespace(
+                    api_url="http://localhost:11434/api/generate",
+                    model="qwen2.5:32b",
                 )
+                mock_cfg.scoring = SimpleNamespace(llm_model="qwen2.5:32b")
+                mock_cfg.editorial_auditor = SimpleNamespace(health_timeout_seconds=1)
+                with patch(
+                    "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                    side_effect=ModelAvailabilityError(
+                        "Ollama preflight failed to reach /api/tags: Connection refused"
+                    ),
+                ):
+                    warnings = bootstrap_system()
+
+                    assert isinstance(warnings, list)
+                    assert len(warnings) > 0
+                    assert any(
+                        "preflight failed" in w or "health check" in w for w in warnings
+                    )
 
     def test_bootstrap_strict_mode_fails_fast(self):
         from news_collector.system.bootstrap import bootstrap_system
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "1"}, clear=False):
             with patch(
-                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
-                side_effect=ModelAvailabilityError(
-                    "Ollama preflight failed to reach /api/tags: Connection refused"
-                ),
-            ):
-                with patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True):
-                    try:
-                        bootstrap_system()
-                        assert False, "Expected strict mode bootstrap failure"
-                    except RuntimeError as exc:
-                        msg = str(exc)
-                        assert (
-                            "Ollama preflight failed" in msg
-                            or "Ollama model configuration error" in msg
-                            or "Gemini health check" in msg
-                        )
+                "news_collector.config.settings.refresh_runtime_config"
+            ) as mock_refresh:
+                mock_cfg = mock_refresh.return_value
+                mock_cfg.nvidia = SimpleNamespace(api_key=None)
+                mock_cfg.gemini = SimpleNamespace(api_key=None)
+                mock_cfg.ollama = SimpleNamespace(
+                    api_url="http://localhost:11434/api/generate",
+                    model="qwen2.5:32b",
+                )
+                mock_cfg.scoring = SimpleNamespace(llm_model="qwen2.5:32b")
+                mock_cfg.editorial_auditor = SimpleNamespace(health_timeout_seconds=1)
+                with patch(
+                    "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                    side_effect=ModelAvailabilityError(
+                        "Ollama preflight failed to reach /api/tags: Connection refused"
+                    ),
+                ):
+                    with patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True):
+                        try:
+                            bootstrap_system()
+                            assert False, "Expected strict mode bootstrap failure"
+                        except RuntimeError as exc:
+                            msg = str(exc)
+                            assert (
+                                "Ollama preflight failed" in msg
+                                or "Ollama model configuration error" in msg
+                                or "Gemini health check" in msg
+                            )
 
     def test_bootstrap_no_warn_mode_fails_fast_on_registry_warnings(self):
         from news_collector.system.bootstrap import bootstrap_system
@@ -101,8 +125,14 @@ class TestPublicEntrypoints:
                 "news_collector.config.settings.refresh_runtime_config"
             ) as mock_refresh:
                 mock_cfg = mock_refresh.return_value
-                mock_cfg.gemini.api_key = None
-                mock_cfg.ollama.api_url = "http://localhost:11434/api/generate"
+                mock_cfg.nvidia = SimpleNamespace(api_key=None)
+                mock_cfg.gemini = SimpleNamespace(api_key=None)
+                mock_cfg.ollama = SimpleNamespace(
+                    api_url="http://localhost:11434/api/generate",
+                    model="qwen2.5:32b",
+                )
+                mock_cfg.scoring = SimpleNamespace(llm_model="qwen2.5:32b")
+                mock_cfg.editorial_auditor = SimpleNamespace(health_timeout_seconds=1)
                 with patch(
                     "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
                     side_effect=ModelRegistryError("NO_WARN mode forbids inheritance"),
