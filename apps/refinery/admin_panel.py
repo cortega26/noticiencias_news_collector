@@ -533,6 +533,14 @@ with tab1:
 
     col1, col2 = st.columns(2)
 
+    # Pre-resolve stage models from config so col2 widgets can reference them
+    # regardless of which provider branch is selected in col1.
+    _pre_ollama_cfg = config_data.get("ollama", {})
+    _pre_base = _pre_ollama_cfg.get("model", "qwen2.5:32b")
+    r_trans = _pre_ollama_cfg.get("translator_model") or _pre_base
+    r_edit  = _pre_ollama_cfg.get("editor_model")     or _pre_base
+    r_head  = _pre_ollama_cfg.get("headlines_model")  or _pre_base
+
     with col1:
         st.subheader("🤖 Configuración de Modelos")
 
