@@ -1,0 +1,38 @@
+{
+  "scenario": "duplicate_permalink_collision",
+  "source_id": "duplicate_permalink_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "duplicate_permalink_feed",
+      "url": "https://example.com/permalink/feed.xml",
+      "feed_title": "Duplicate Permalink Feed",
+      "category": "science",
+      "credibility_score": 0.93,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/ocean-study",
+          "title": "Pacific oxygen loss study raises fisheries concerns for Chile and Peru",
+          "summary": "Marine scientists studying oxygen loss in the Pacific reported new evidence that warming waters are changing fisheries conditions near Chile and Peru. Their analysis describes consequences for food systems, coastal economies, and ecosystem monitoring while offering a clear regional explanation of why the findings matter for public-interest environmental coverage in Latin America. The research connects dissolved oxygen trends with fisheries productivity, species movement, and coastal livelihoods, translating a technical marine dataset into effects that families, regulators, and regional scientists can understand. It also compares different monitoring strategies and highlights why long-term observation matters for resilience planning, making this a strong public-interest science story rather than a narrow academic announcement.",
+          "authors": ["Ocean Desk"],
+          "tags": ["climate", "ocean", "latin-america"],
+          "published": "2026-05-07T12:00:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "valid",
+    "forced_permalink": "2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras"
+  },
+  "expected": {
+    "selected_article_url": "https://example.com/ocean-study"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "scenario": "stuck_publishing_recovery",
+  "source_id": "publishing_recovery_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "publishing_recovery_feed",
+      "url": "https://example.com/recovery/feed.xml",
+      "feed_title": "Publishing Recovery Feed",
+      "category": "science",
+      "credibility_score": 0.9,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/recovery-story",
+          "title": "Regional disease model helps forecast dengue pressure in Latin America",
+          "summary": "A public-health modeling team built a regional dengue forecasting method that combines climate signals, health-system records, and mosquito surveillance across multiple Latin American countries. The report explains why earlier warnings matter for hospital readiness, vector-control timing, and local risk communication, and it summarizes practical recommendations that ministries and municipal teams could apply before peak outbreak periods arrive. Researchers tested the model against previous outbreak seasons, showing that earlier signals can change staffing plans, supply ordering, and neighborhood interventions where risk is rising fastest. The story has direct relevance for Latin American readers because it turns epidemiological evidence into decisions that affect clinics, schools, and local governments before seasonal pressure overwhelms public-health capacity.",
+          "authors": ["Health Modeling Group"],
+          "tags": ["health", "latin-america"],
+          "published": "2026-05-07T12:00:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "valid",
+    "seed_publishing_state": true,
+    "publishing_branch": "content/update-stuck-publishing-recovery"
+  },
+  "frontend_fixture": {
+    "preexisting_posts": []
+  },
+  "expected": {
+    "selected_article_url": "https://example.com/recovery-story"
+  }
+}

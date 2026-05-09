@@ -124,7 +124,7 @@ class TargetRepoWriter:
             manifest_path = posts_dir / MANIFEST_FILENAME
             tmp_path = manifest_path.with_suffix(".tmp")
             tmp_path.write_text(
-                json.dumps(self._manifest_cache, indent=2, sort_keys=True),
+                f"{json.dumps(self._manifest_cache, indent=2, sort_keys=True)}\n",
                 encoding="utf-8",
             )
             os.replace(str(tmp_path), str(manifest_path))

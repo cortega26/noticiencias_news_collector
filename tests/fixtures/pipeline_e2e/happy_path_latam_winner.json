@@ -1,0 +1,48 @@
+{
+  "scenario": "happy_path_latam_winner",
+  "source_id": "happy_path_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "happy_path_feed",
+      "url": "https://example.com/happy/feed.xml",
+      "feed_title": "Happy Path Feed",
+      "category": "science",
+      "credibility_score": 0.95,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/latam-water-risk",
+          "title": "Latin America drought study warns of food and energy pressure",
+          "summary": "Researchers from Chile, Peru, Brazil, and Mexico analyzed drought exposure across farms, reservoirs, and urban systems, finding that water stress is already reshaping food prices, electricity planning, migration pressure, and public health preparedness across multiple countries in Latin America. The study explains how repeated heat waves are amplifying crop losses, weakening hydropower reliability, and increasing wildfire risk near major cities, while also outlining policy steps that regional governments can adopt to reduce damage and protect vulnerable communities over the coming decade. The authors compare agricultural valleys, mining corridors, and dense metropolitan regions, showing that the same warming trend can trigger different cascades in water security, labor productivity, respiratory illness, and fiscal planning. They also document where early-warning systems, reservoir coordination, and drought insurance have started to reduce harm, making the article a broad public-interest science story with clear regional relevance rather than a narrow institutional update.",
+          "authors": ["Ana Investigadora"],
+          "tags": ["climate", "latin-america"],
+          "published": "2026-05-07T12:00:00+00:00"
+        },
+        {
+          "link": "https://example.com/internal-award",
+          "title": "University office announces annual innovation award breakfast",
+          "summary": "A university office announced an internal award breakfast celebrating administrators, alumni, and campus units that supported a new mentoring initiative during the spring term. Organizers described the event agenda, invited local attendees, and highlighted institutional recognition goals for the coming academic year without outlining broader public-interest scientific impact beyond the campus community.",
+          "authors": ["Campus Desk"],
+          "tags": ["campus"],
+          "published": "2026-05-07T11:00:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "valid"
+  },
+  "frontend_fixture": {
+    "preexisting_posts": []
+  },
+  "expected": {
+    "selected_article_url": "https://example.com/latam-water-risk"
+  }
+}

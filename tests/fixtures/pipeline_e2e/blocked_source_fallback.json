@@ -1,0 +1,38 @@
+{
+  "scenario": "blocked_source_fallback",
+  "source_id": "blocked_source_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "blocked_source_feed",
+      "url": "https://example.com/blocked/feed.xml",
+      "feed_title": "Blocked Source Feed",
+      "category": "science",
+      "credibility_score": 0.8,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/blocked-article",
+          "title": "Promising regional health study appears behind an extraction wall",
+          "summary": "Short fallback summary only.",
+          "authors": ["Reporter"],
+          "tags": ["health"],
+          "published": "2026-05-07T10:00:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "valid"
+  },
+  "frontend_fixture": {
+    "preexisting_posts": []
+  },
+  "expected": {}
+}

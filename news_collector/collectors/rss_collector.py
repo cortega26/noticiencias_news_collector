@@ -779,6 +779,9 @@ class RSSCollector(BaseCollector):
 
         for cand in selected_candidates:
             try:
+                cand.setdefault(
+                    "content_mode", source_config.get("content_mode", "full_text")
+                )
                 # --- ENRICHMENT STRATEGY ROUTER ---
                 enrichment_result = self.router.route_enrichment(
                     source_id, source_config, cand
@@ -810,7 +813,11 @@ class RSSCollector(BaseCollector):
                     cand["content"] = cand.get("summary", "")
                     # Mark as fallback so validation rules can be lenient
                     # BUT preserve 'summary_only' if explicitly configured of via discovery_only
-                    if cand["content"] and cand.get("content_mode") != "summary_only":
+                    effective_content_mode = (
+                        cand.get("content_mode")
+                        or source_config.get("content_mode", "full_text")
+                    )
+                    if cand["content"] and effective_content_mode != "summary_only":
                         cand["content_mode"] = "summary_fallback"
 
                 # Image Extraction Logic
@@ -1082,7 +1089,10 @@ class RSSCollector(BaseCollector):
                 )
 
                 if content_len < min_publish_len and summary_len < min_publish_len:
-                    article_model.processing_status_override = "enrichment_failed"
+                    article_model.processing_status_override = "rejected"
+                    article_model.article_metadata.source_metadata[
+                        "stage_b_failure_reason"
+                    ] = "content_too_short_for_publication"
                     self._emit_log(
                         "info",
                         "collector.contract.stage_b_failed",
