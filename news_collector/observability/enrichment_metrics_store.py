@@ -251,11 +251,15 @@ class EnrichmentMetricsStore:
                     (source_id,),
                 )
 
-            strategy_attempt_column = {
-                "http": "plain_http_attempts",
-                "scrapling_http": "scrapling_http_attempts",
-                "scrapling_stealth": "scrapling_stealth_attempts",
-            }.get(strategy)
+            strategy_attempt_column = (
+                {
+                    "http": "plain_http_attempts",
+                    "scrapling_http": "scrapling_http_attempts",
+                    "scrapling_stealth": "scrapling_stealth_attempts",
+                }.get(strategy)
+                if strategy is not None
+                else None
+            )
             if strategy_attempt_column:
                 cur.execute(
                     f"""

@@ -327,8 +327,10 @@ def _verify_llm_health(  # noqa: C901
                 gemini_model = getattr(
                     active_config.gemini, "model", "gemini-2.5-flash"
                 )
-                provider = GeminiProvider(api_key=gemini_api_key, model=gemini_model)
-                healthy, reason = provider.check_health(timeout_seconds=5)
+                gemini_provider = GeminiProvider(
+                    api_key=gemini_api_key, model=gemini_model
+                )
+                healthy, reason = gemini_provider.check_health(timeout_seconds=5)
                 if healthy:
                     if health_logger:
                         health_logger.info(

@@ -115,6 +115,25 @@ def test_metadata_category_remains_supported_for_legacy_payloads() -> None:
     classifier.try_classify_article.assert_not_called()
 
 
+def test_generic_source_prefers_specific_metadata_category() -> None:
+    classifier = MagicMock()
+    resolver = EditorialCategoryResolver(classifier=classifier)
+
+    resolution = resolver.resolve_category(
+        article_id="generic-source-tech",
+        title="Nueva capa de seguridad para internet satelital",
+        summary="La cobertura describe una plataforma y su impacto operativo.",
+        content="Contenido sobre software, redes y despliegue técnico.",
+        raw_category="multidisciplinary",
+        metadata_category="technology",
+    )
+
+    assert resolution.public_category == "Tecnología"
+    assert resolution.resolution_method == "direct_map"
+    assert resolution.selected_raw_category == "technology"
+    classifier.try_classify_article.assert_not_called()
+
+
 def test_non_first_party_article_cannot_resolve_to_editorial() -> None:
     classifier = MagicMock()
     classifier.try_classify_article.return_value = "TECNOLOGÍA"
@@ -173,4 +192,4 @@ def test_classifier_failure_falls_back_deterministically() -> None:
     )
 
     assert resolution.public_category == "Tecnología"
-    assert resolution.resolution_method == "fallback"
+    assert resolution.resolution_method == "direct_map"

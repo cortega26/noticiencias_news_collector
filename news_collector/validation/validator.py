@@ -39,9 +39,13 @@ DEFAULT_BLOCKLIST = [
     # Newsletter digests
     r"The Download:.*",
     # Shopping, deals, and product promotions
-    r"(?i)(big spring sale|% off|deal:|best deals|price drop|coupon|voucher|discount code)",
+    r"(?i)(big spring sale|prime day|black friday|cyber monday|% off|deal:|best deals|deal of the day|price drop|coupon|voucher|discount code|shopping guide|gift guide|affiliate picks?)",
     # Product buying guides disguised as articles
     r"(?i)(best .+ to buy|buying guide|vs\.\s)",
+    # Politics and election coverage outside editorial scope
+    r"(?i)(election results|election campaign|campaign trail|candidate debate|presidential race|parliamentary election|midterm results?)",
+    # Lifestyle, travel, celebrity, and fashion filler outside editorial scope
+    r"(?i)(travel guide|flight deal|hotel deal|packing list|fashion week|red carpet|celebrity style|beauty routine|outfit ideas|dating tips?)",
     # University minutiae irrelevant to general audience
     r"(?i)(named.*fellow|honorary degree|commencement address|class of \d{4}|admitted to the|divestment resolution|AAAS fellow)",
     # Corporate PR / hiring / fundraising

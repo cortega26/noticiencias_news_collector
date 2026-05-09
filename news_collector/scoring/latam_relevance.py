@@ -56,6 +56,21 @@ SCIENCE_PRIORITY_KEYWORDS = (
     "public health",
     "education",
     "policy",
+    "cybersecurity",
+    "privacy",
+    "internet",
+    "platform",
+    "semiconductor",
+    "chip",
+    "battery",
+    "grid",
+    "robotics",
+    "biotech",
+    "materials",
+    "energy",
+    "infrastructure",
+    "mobility",
+    "open source",
 )
 
 LOW_VALUE_KEYWORDS = (
@@ -84,6 +99,50 @@ LOW_VALUE_KEYWORDS = (
     "internal update",
     "student government",
     "portal",
+    "prime day",
+    "black friday",
+    "cyber monday",
+    "shopping guide",
+    "gift guide",
+    "coupon",
+    "discount",
+    "price drop",
+    "deal of the day",
+    "travel guide",
+    "flight deal",
+    "hotel deal",
+    "packing list",
+    "fashion week",
+    "red carpet",
+    "celebrity style",
+    "beauty routine",
+    "outfit ideas",
+    "dating tips",
+    "election campaign",
+    "election results",
+    "candidate debate",
+    "presidential race",
+)
+
+CONSEQUENTIAL_TECH_KEYWORDS = (
+    "ai",
+    "artificial intelligence",
+    "cybersecurity",
+    "privacy",
+    "internet",
+    "platform",
+    "software",
+    "semiconductor",
+    "chip",
+    "battery",
+    "grid",
+    "robotics",
+    "biotech",
+    "materials",
+    "energy",
+    "infrastructure",
+    "mobility",
+    "open source",
 )
 
 
@@ -102,6 +161,9 @@ def score_candidate_for_latam_audience(candidate: Dict[str, Any]) -> float:
 
     if any(word in text for word in ("study", "research", "scientists", "data")):
         score += 1.0
+
+    if any(word in text for word in CONSEQUENTIAL_TECH_KEYWORDS):
+        score += 1.5
 
     if "partnership" in text or "portal" in text:
         score -= 1.0

@@ -84,10 +84,13 @@ This article is not first-party Noticiencias-authored content. EDITORIAL is forb
 
     return f"""
 Role
-You are an Editorial Classification Agent for a science news site.
+You are an Editorial Classification Agent for a science-and-technology publication.
 
 Task
 Assign one (1) visible editorial category (badge) to an article.
+
+Audience
+Curious general readers looking for consequential science, technology, internet, AI, health, space, climate, and innovation coverage.
 
 Available Categories (ONLY)
 {categories_block}
@@ -105,8 +108,9 @@ Decision Rules
    - Public-health environments such as home, school, daycare, or workplace
 
 2. Assign TECNOLOGÍA if the core subject is:
-   - Software, hardware, engineering systems, AI products, or digital infrastructure
-   - Applied technological tools, platforms, or implementations
+   - Software, hardware, chips, devices, engineering systems, AI products, or digital infrastructure
+   - Internet platforms, cybersecurity, privacy, telecom, developer tooling, robotics, or applied computing systems
+   - Applied technological tools, platforms, implementations, or consequential product/platform shifts
 
 3. Assign ASTRONOMÍA if the core subject is:
    - Space, planets, stars, black holes, galaxies, cosmology, or space exploration
@@ -128,7 +132,9 @@ Decision Rules
 8. Assign ARQUEOLOGÍA if the article focuses on:
    - Ancient artifacts, excavation, early human tools, or material evidence about past societies
 
-9. Assign CIENCIA only if the article is genuinely scientific but does not fit a more specific allowed category above.
+9. Assign CIENCIA if the article is genuinely about science, research, or public-interest innovation but does not fit a more specific allowed category above.
+   - This includes consequential climate, energy, materials, environment, biotech, archaeology, and cross-disciplinary discovery stories
+   - It can also include broad public-interest science stories about infrastructure, mobility, or the internet when the primary value is the scientific or societal impact rather than the product/platform itself
 {editorial_rule}
 Mandatory Tie-Breaker Rules
 - If an article could reasonably be classified as both SALUD and BIOLOGÍA, choose SALUD.
