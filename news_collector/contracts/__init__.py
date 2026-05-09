@@ -14,12 +14,19 @@ from .image_brief import (
     IMAGE_PROMPT_VERSION,
     ImageBriefModel,
 )
+from .publication_validation import (
+    FrontendCheckResult,
+    PublicationAttemptStageResult,
+    PublicationAttemptSummary,
+    PublicationValidationSummary,
+)
 from .scoring import (
     ScoringComponents,
     ScoringComponentsModel,
     ScoringRequest,
     ScoringRequestModel,
 )
+from .source_health import SourceHealthRecord
 
 __all__ = [
     "ArticleEnrichment",
@@ -30,12 +37,17 @@ __all__ = [
     "ArticleMetadataModel",
     "CollectorArticleModel",
     "CollectorArticlePayload",
+    "FrontendCheckResult",
     "IMAGE_BRIEF_REASON_VALUES",
     "IMAGE_BRIEF_STATUS_VALUES",
     "IMAGE_PROMPT_VERSION",
     "ImageBriefModel",
+    "PublicationAttemptStageResult",
+    "PublicationAttemptSummary",
+    "PublicationValidationSummary",
     "ScoringComponents",
     "ScoringComponentsModel",
     "ScoringRequest",
     "ScoringRequestModel",
+    "SourceHealthRecord",
 ]

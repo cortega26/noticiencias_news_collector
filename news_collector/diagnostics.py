@@ -8,6 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional
 
+from news_collector.config.sources import ALL_SOURCES
+from news_collector.observability.enrichment_metrics_store import enrichment_metrics
+from news_collector.system.source_health import build_source_health_record
+
 FailureStage = Literal[
     "collector.fetch",
     "collector.parse",
@@ -107,10 +111,46 @@ class SourceHealthTracker:
 
     def export_json(self, path: str):
         self.finalize_status()
-        output = {
-            "generated_at": datetime.now().isoformat(),
-            "sources": {sid: asdict(data) for sid, data in self.sources.items()},
-        }
+        output: Dict[str, Dict[str, Any]] = {}
+        now = datetime.now().isoformat()
+        metrics_by_source = enrichment_metrics.get_all_metrics()
+
+        source_ids = sorted(set(ALL_SOURCES) | set(self.sources))
+
+        for sid in source_ids:
+            data = self.sources.get(sid)
+            observed = {
+                "last_run": now,
+                "feed_ok": bool(data and data.fetch_ok > 0),
+                "pipeline_ok": bool(
+                    data
+                    and (
+                        data.parsed_ok > 0
+                        or data.validation_ok > 0
+                        or data.filter_passed > 0
+                        or data.saved > 0
+                    )
+                ),
+                "content_ok": bool(data and data.saved > 0),
+                "content_mode": ALL_SOURCES.get(sid, {}).get("content_mode", "unknown"),
+                "enrichment_strategy": ALL_SOURCES.get(sid, {}).get(
+                    "enrichment_strategy", "http"
+                ),
+                "articles_found": data.parsed_ok if data else 0,
+                "articles_saved": data.saved if data else 0,
+                "latency": 0.0,
+                "last_error_message": data.primary_failure_reason if data else None,
+            }
+            record = build_source_health_record(
+                sid,
+                source_config=ALL_SOURCES.get(sid, {}),
+                observed=observed,
+                metrics=metrics_by_source.get(sid, {}),
+                failure_stage=data.primary_failure_stage if data else None,
+                failure_reason=data.primary_failure_reason if data else None,
+                last_run=now,
+            )
+            output[sid] = record.model_dump(mode="python")
 
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)

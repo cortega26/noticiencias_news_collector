@@ -1,0 +1,34 @@
+{
+  "candidates": [
+    {
+      "id": "latam_health",
+      "title": "Brazil dengue study uses satellite data to predict outbreaks",
+      "summary": "Researchers in Brazil combined public health data, climate analysis, and satellite observations to improve dengue forecasts for cities across Latin America.",
+      "source_name": "Global Health Research"
+    },
+    {
+      "id": "space_public_interest",
+      "title": "New climate satellite reveals glacier loss across the Andes",
+      "summary": "Scientists released new satellite evidence showing accelerated glacier retreat across the Andes, with implications for water security and climate policy.",
+      "source_name": "Space Science News"
+    },
+    {
+      "id": "campus_award",
+      "title": "Campus leadership award honors dean at donor breakfast",
+      "summary": "The university celebrated a campus leadership award, donor breakfast, and internal administrative milestone for student life teams.",
+      "source_name": "University Gazette"
+    },
+    {
+      "id": "partnership_noise",
+      "title": "Institution announces product partnership for new mentorship portal",
+      "summary": "A university office unveiled a product partnership announcement and mentorship portal as part of an internal update for alumni engagement.",
+      "source_name": "Institutional Updates"
+    }
+  ],
+  "expected_order": [
+    "latam_health",
+    "space_public_interest",
+    "campus_award",
+    "partnership_noise"
+  ]
+}

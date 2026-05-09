@@ -1,6 +1,9 @@
-from unittest.mock import mock_open, patch
+import json
+from pathlib import Path
+from unittest.mock import patch
 
 from news_collector.diagnostics import SourceHealth, SourceHealthTracker
+from news_collector.contracts.source_health import SourceHealthRecord
 
 
 def test_source_health_update():
@@ -43,22 +46,46 @@ def test_tracker_aggregation():
     assert s2.status == "FAILING"
 
 
-def test_export_json():
+def test_export_json(tmp_path: Path):
     tracker = SourceHealthTracker()
+    tracker.record_success("s1", "fetch", 1)
+    tracker.record_success("s1", "parse", 1)
     tracker.record_success("s1", "save", 1)
+    export_path = tmp_path / "report.json"
 
-    m_open = mock_open()
-    with patch("builtins.open", m_open), patch("pathlib.Path.mkdir"):
-        tracker.export_json("report.json")
+    with (
+        patch.dict(
+            "news_collector.diagnostics.ALL_SOURCES",
+            {
+                "s1": {
+                    "name": "Source One",
+                    "content_mode": "full_text",
+                    "enrichment_strategy": "http",
+                },
+                "s2": {
+                    "name": "Source Two",
+                    "content_mode": "summary_only",
+                    "enrichment_strategy": "scrapling_stealth",
+                },
+            },
+            clear=True,
+        ),
+        patch(
+            "news_collector.diagnostics.enrichment_metrics.get_all_metrics",
+            return_value={"s1": {"headless_seconds_used": 0.0}},
+        ),
+    ):
+        tracker.export_json(str(export_path))
 
-    # assert call arguments
-    # open is called with a Path object, checking strict quality might fail so use ANY or check str
-    from unittest.mock import ANY
+    payload = json.loads(export_path.read_text(encoding="utf-8"))
 
-    m_open.assert_called_with(ANY, "w", encoding="utf-8")
-    handle = m_open()
-    # verify write happened - tough with json.dump to mock file, but basic call ensures path reached
-    assert handle.write.called
+    assert set(payload) == {"s1", "s2"}
+    assert SourceHealthRecord.model_validate(payload["s1"]).operational_state == (
+        "healthy_full_text"
+    )
+    assert SourceHealthRecord.model_validate(payload["s2"]).operational_state == (
+        "failing_suppressed_candidate"
+    )
 
 
 def test_print_summary(capsys):
