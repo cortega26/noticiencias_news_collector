@@ -1,68 +1,116 @@
-def test_source_health_schema_contract():
-    """
-    Verifies that source_health.json output adheres to the expected schema.
-    Item 2 of Phase 3 Closure Checklist.
-    """
-    # 1. Setup Mock Data
-    mock_stats = {
-        "test_source": {
-            "last_run": "2024-01-01T12:00:00Z",
-            "articles_found": 5,
-            "articles_saved": 2,
+from news_collector.contracts.source_health import SourceHealthRecord
+from news_collector.system.source_health import (
+    build_source_health_record,
+    serialize_source_health_report,
+)
+
+
+def test_source_health_report_serialization_includes_all_configured_sources():
+    source_configs = {
+        "observed_source": {
+            "name": "Observed Source",
+            "language": "en",
+            "content_mode": "summary_only",
+            "enrichment_strategy": "scrapling_stealth",
+        },
+        "configured_only_source": {
+            "name": "Configured Only Source",
+            "language": "en",
+            "content_mode": "full_text",
+            "enrichment_strategy": "http",
+        },
+    }
+    source_details = {
+        "observed_source": {
             "feed_ok": True,
-            "content_ok": True,
             "pipeline_ok": True,
-            "source_type": "rss",
-            "content_mode": "full_text",
-            "latency": 0.5,
+            "content_ok": True,
+            "articles_found": 4,
+            "articles_saved": 3,
+            "content_mode": "summary_only",
+            "enrichment_strategy": "scrapling_stealth",
+            "latency": 1.25,
             "last_error_message": None,
-        },
-        "failed_source": {
-            "last_run": "2024-01-01T12:00:00Z",
-            "articles_found": 0,
-            "articles_saved": 0,
-            "feed_ok": False,
-            "content_ok": False,
+        }
+    }
+    metrics_by_source = {
+        "observed_source": {
+            "total_enrichment_attempted": 6,
+            "total_publishable": 3,
+            "avg_enrichment_time": 2.2,
+            "avg_content_length": 850.0,
+            "http_attempts": 1,
+            "plain_http_attempts": 1,
+            "plain_http_success": 1,
+            "scrapling_http_attempts": 2,
+            "scrapling_http_success": 1,
+            "headless_attempts": 2,
+            "scrapling_stealth_attempts": 2,
+            "scrapling_stealth_success": 1,
+            "proxy_attempts": 0,
+            "scholarly_attempts": 0,
+            "proxy_requests_used": 0,
+            "headless_seconds_used": 9.4,
+        }
+    }
+
+    report = serialize_source_health_report(
+        source_details,
+        source_configs=source_configs,
+        metrics_by_source=metrics_by_source,
+        last_run="2026-05-08T12:00:00Z",
+    )
+
+    assert set(report) == {"configured_only_source", "observed_source"}
+
+    observed = SourceHealthRecord.model_validate(report["observed_source"])
+    assert observed.operational_state == "healthy_summary_only"
+    assert observed.failure_taxonomy is None
+    assert observed.headless_seconds_used == 9.4
+    assert observed.publishable_ratio == 0.5
+    assert observed.save_ratio == 0.75
+    assert observed.plain_http_success_rate == 1.0
+    assert observed.scrapling_http_success_rate == 0.5
+    assert observed.scrapling_stealth_success_rate == 0.5
+
+    configured_only = SourceHealthRecord.model_validate(
+        report["configured_only_source"]
+    )
+    assert configured_only.operational_state == "failing_suppressed_candidate"
+    assert configured_only.articles_found == 0
+    assert configured_only.articles_saved == 0
+    assert configured_only.enrichment_strategy == "http"
+
+
+def test_source_health_record_classifies_failures_deterministically():
+    anti_bot = build_source_health_record(
+        "blocked_source",
+        source_config={"content_mode": "summary_only", "enrichment_strategy": "http"},
+        observed={
+            "feed_ok": True,
             "pipeline_ok": False,
-            "source_type": "rss",
-            "content_mode": "full_text",
-            "latency": 0.0,
-            "last_error_message": "403 Forbidden",
+            "content_ok": False,
+            "articles_found": 2,
+            "articles_saved": 0,
+            "last_error_message": "Cloudflare blocked request",
         },
-    }
+        metrics={},
+    )
+    assert anti_bot.failure_taxonomy == "anti_bot_block"
+    assert anti_bot.operational_state == "partial_yield_flaky"
 
-    # 2. Simulate Export (Testing the method logic indirectly or manually constructing expected format)
-    # Since we can't easily mock the internal state of a full System run without side effects,
-    # we will verify the structure that the system IS expected to produce.
-    # Ideally, we should import the function that generates this, but it's embedded in _generate_session_report.
-    # Let's inspect the artifacts produced by a previous run or trust the implementation?
-    # Better: Let's create a test that verifies the keys exist in the actual logic output.
-
-    # We will assume the structure based on what we implemented:
-    # { source_id: { ... keys ... } }
-
-    required_keys = {
-        "last_run",
-        "feed_ok",
-        "pipeline_ok",
-        "content_ok",
-        "content_mode",
-        "articles_found",
-        "articles_saved",
-        "latency",
-        "last_error_message",
-    }
-
-    for sid, data in mock_stats.items():
-        missing = required_keys - data.keys()
-        assert not missing, f"Source {sid} missing keys: {missing}"
-
-        # Type Checks
-        assert isinstance(data["feed_ok"], bool)
-        assert isinstance(data["articles_saved"], int)
-        if data["last_error_message"]:
-            assert isinstance(data["last_error_message"], str)
-
-
-if __name__ == "__main__":
-    test_source_health_schema_contract()
+    publication_failure = build_source_health_record(
+        "publish_failed_source",
+        source_config={"content_mode": "full_text", "enrichment_strategy": "http"},
+        observed={
+            "feed_ok": True,
+            "pipeline_ok": True,
+            "content_ok": False,
+            "articles_found": 1,
+            "articles_saved": 0,
+            "last_error_message": "validate:content duplicate permalink",
+        },
+        metrics={},
+    )
+    assert publication_failure.failure_taxonomy == "publication_contract_failure"
+    assert publication_failure.operational_state == "partial_yield_flaky"

@@ -66,6 +66,7 @@ phys_org:
   content_mode: summary_only # HTML fetch blocked (403), use summary
   fetch_mode: rss_only # Skip HTML fetch attempts
   enrichment_strategy: scrapling_stealth
+  strategy_justification: RSS-only fallback still uses Scrapling in live audits to detect whether Phys.org article pages become fetchable again without changing the source contract.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -108,6 +109,7 @@ sciencedaily_top:
   typical_delay: 0
   content_mode: summary_only
   enrichment_strategy: scrapling_stealth
+  strategy_justification: Summary-only output is intentional today, but Scrapling remains enabled so nightly audits can measure whether full article extraction becomes viable again.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -404,6 +406,7 @@ harvard_gazette:
   typical_delay: 0
   content_mode: summary_only
   enrichment_strategy: scrapling_stealth
+  strategy_justification: Harvard Gazette often needs browser-grade rendering for evaluation, even though the published contract currently remains summary-first.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -464,6 +467,7 @@ uw_news:
   typical_delay: 0
   content_mode: summary_only
   enrichment_strategy: scrapling_stealth
+  strategy_justification: Scrapling is retained for browser-grade health checks while production output stays summary-only until save ratios improve.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -485,6 +489,7 @@ uw_madison_news:
   typical_delay: 0
   content_mode: summary_only
   enrichment_strategy: scrapling_stealth
+  strategy_justification: Scrapling is retained for browser-grade health checks while production output stays summary-only until save ratios improve.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -568,6 +573,7 @@ microsoft_research:
   typical_delay: 0
   content_mode: summary_only
   enrichment_strategy: scrapling_stealth
+  strategy_justification: Microsoft Research pages are intermittently render-sensitive, so Scrapling stays enabled for audit comparison despite the current summary-only contract.
   headless_enabled: true
   headless_max_seconds: 60
   etag: null
@@ -592,6 +598,7 @@ microsoft_research:
 #   content_mode: string (full_text, summary_only)
 #   headers: dict (optional custom headers)
 #   enrichment_strategy: string (http, scholarly, headless_fallback)
+#   strategy_justification: string (required when summary_only or rss_only sources still use headless/Scrapling paths)
 #   headless_enabled: boolean (optional, enables headless fallback)
 #   manual_only: boolean (optional, excludes source from scheduled collection)
 #   proxy_mode: string (optional: off, auto, force. Default: auto)

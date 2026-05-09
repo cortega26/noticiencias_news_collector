@@ -62,8 +62,14 @@ class EnrichmentMetricsStore:
             total_publishable INTEGER DEFAULT 0,
             http_success INTEGER DEFAULT 0,
             http_attempts INTEGER DEFAULT 0,
+            plain_http_success INTEGER DEFAULT 0,
+            plain_http_attempts INTEGER DEFAULT 0,
+            scrapling_http_success INTEGER DEFAULT 0,
+            scrapling_http_attempts INTEGER DEFAULT 0,
             headless_success INTEGER DEFAULT 0,
             headless_attempts INTEGER DEFAULT 0,
+            scrapling_stealth_success INTEGER DEFAULT 0,
+            scrapling_stealth_attempts INTEGER DEFAULT 0,
             proxy_success INTEGER DEFAULT 0,
             proxy_attempts INTEGER DEFAULT 0,
             scholarly_success INTEGER DEFAULT 0,
@@ -107,6 +113,36 @@ class EnrichmentMetricsStore:
             with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(
                     "ALTER TABLE enrichment_metrics ADD COLUMN headless_attempts INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN plain_http_attempts INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN plain_http_success INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN scrapling_http_attempts INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN scrapling_http_success INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN scrapling_stealth_attempts INTEGER DEFAULT 0"
+                )
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                cur.execute(
+                    "ALTER TABLE enrichment_metrics ADD COLUMN scrapling_stealth_success INTEGER DEFAULT 0"
                 )
 
             with contextlib.suppress(sqlite3.OperationalError):
@@ -215,6 +251,22 @@ class EnrichmentMetricsStore:
                     (source_id,),
                 )
 
+            strategy_attempt_column = {
+                "http": "plain_http_attempts",
+                "scrapling_http": "scrapling_http_attempts",
+                "scrapling_stealth": "scrapling_stealth_attempts",
+            }.get(strategy)
+            if strategy_attempt_column:
+                cur.execute(
+                    f"""
+                    UPDATE enrichment_metrics
+                    SET {strategy_attempt_column} = {strategy_attempt_column} + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
+                )
+
             # Insert History
             cur.execute(
                 """
@@ -294,6 +346,22 @@ class EnrichmentMetricsStore:
                     publishable_increment=1 if is_publishable else 0,
                     content_length=content_length,
                     duration=duration,
+                )
+
+            strategy_success_column = {
+                "http": "plain_http_success",
+                "scrapling_http": "scrapling_http_success",
+                "scrapling_stealth": "scrapling_stealth_success",
+            }.get(strategy)
+            if strategy_success_column:
+                cur.execute(
+                    f"""
+                    UPDATE enrichment_metrics
+                    SET {strategy_success_column} = {strategy_success_column} + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
                 )
 
             # Insert History

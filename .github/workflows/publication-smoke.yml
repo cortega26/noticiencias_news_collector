@@ -4,9 +4,12 @@ on:
   pull_request:
     paths:
       - "news_collector/contracts/frontend_schema.py"
+      - "news_collector/contracts/publication_validation.py"
+      - "news_collector/logic/workflows/frontend_publication_validation.py"
       - "news_collector/logic/workflows/**"
       - "news_collector/components/publishing/**"
       - "scripts/generate_fixture_post.py"
+      - "scripts/validate_frontend_publication.py"
   workflow_dispatch:
 
 concurrency:
@@ -41,8 +44,7 @@ jobs:
         run: make bootstrap
 
       - name: Checkout front-end (sparse)
-        # Only fetch the files needed to run validate:content.
-        # No Node modules are installed at this point.
+        # Fetch only the files required by the real frontend gates used in smoke validation.
         uses: actions/checkout@v4
         with:
           repository: cortega26/noticiencias
@@ -67,21 +69,16 @@ jobs:
           cache: npm
           cache-dependency-path: ../noticiencias/package-lock.json
 
-      - name: Install front-end deps
-        working-directory: ../noticiencias
-        run: npm ci
-
-      - name: Generate fixture post
+      - name: Run backend-driven frontend publication validation
         run: |
-          python scripts/generate_fixture_post.py \
-            --output ../noticiencias/src/content/posts/_smoke-test.md
+          python scripts/validate_frontend_publication.py \
+            --frontend-root ../noticiencias \
+            --summary-output data/runtime/publication_smoke/frontend_publication_validation_summary.json
 
-      - name: Validate fixture post against front-end schema
-        working-directory: ../noticiencias
-        run: npm run validate:content
-
-      - name: Clean up fixture post
-        # Always remove the fixture so a failure mid-step doesn't leave it committed
+      - name: Upload smoke summary artifact
         if: always()
-        working-directory: ../noticiencias
-        run: rm -f src/content/posts/_smoke-test.md
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-publication-validation-summary
+          path: data/runtime/publication_smoke/frontend_publication_validation_summary.json
+          if-no-files-found: warn

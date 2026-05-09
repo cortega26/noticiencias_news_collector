@@ -7,6 +7,10 @@ from noticiencias.config_manager import load_config
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+from news_collector.scoring.latam_relevance import (
+    rank_candidates_for_latam_audience,
+    score_candidate_for_latam_audience,
+)
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -16,78 +20,6 @@ logger = get_logger().create_module_logger(__name__)
 # Using %s or %d will result in literal '%d' printing in the logs and cause regressions.
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.IGNORECASE | re.DOTALL)
-_LATAM_KEYWORDS = (
-    "latinoamerica",
-    "latinoamérica",
-    "mexico",
-    "méxico",
-    "brazil",
-    "brasil",
-    "argentina",
-    "chile",
-    "peru",
-    "perú",
-    "colombia",
-    "bogotá",
-    "santiago",
-    "buenos aires",
-    "andes",
-    "amazonas",
-    "conicet",
-    "unam",
-    "fapesp",
-    "fiocruz",
-)
-_SCIENCE_PRIORITY_KEYWORDS = (
-    "study",
-    "research",
-    "scientists",
-    "researchers",
-    "analysis",
-    "data",
-    "evidence",
-    "climate",
-    "drought",
-    "heat wave",
-    "glacier",
-    "health",
-    "dengue",
-    "vaccine",
-    "virus",
-    "astronomy",
-    "observatory",
-    "space",
-    "satellite",
-    "ai",
-    "artificial intelligence",
-    "model",
-    "discovery",
-    "detect",
-    "reveals",
-    "public health",
-)
-_LOW_VALUE_KEYWORDS = (
-    "campus",
-    "student life",
-    "alumni",
-    "dean",
-    "provost",
-    "vice provost",
-    "office of",
-    "breakfast",
-    "mentorship portal",
-    "award",
-    "leadership",
-    "fundraiser",
-    "fundraising",
-    "donor",
-    "commencement",
-    "menu",
-    "newsletter",
-    "partnership announcement",
-    "administrative",
-    "internal update",
-)
 
 
 class PreScorer:
@@ -190,31 +122,12 @@ class PreScorer:
 
     @staticmethod
     def _score_candidate(candidate: Dict[str, Any]) -> float:
-        title = str(candidate.get("title") or "")
-        summary = str(candidate.get("summary") or "")
-        text = f"{title} {summary}".lower()
-
-        score = 0.0
-        score += sum(4.0 for keyword in _LATAM_KEYWORDS if keyword in text)
-        score += sum(2.5 for keyword in _SCIENCE_PRIORITY_KEYWORDS if keyword in text)
-        score -= sum(3.5 for keyword in _LOW_VALUE_KEYWORDS if keyword in text)
-        score += min(len(summary) / 140.0, 1.5)
-        score += min(len(title) / 80.0, 0.5)
-
-        if any(word in text for word in ("study", "research", "scientists", "data")):
-            score += 1.0
-
-        return score
+        return score_candidate_for_latam_audience(candidate)
 
     def _deterministic_rank_indices(
         self, candidates: List[Dict[str, Any]]
     ) -> list[int]:
-        scored = [
-            (self._score_candidate(candidate), -idx, idx)
-            for idx, candidate in enumerate(candidates)
-        ]
-        scored.sort(reverse=True)
-        return [idx for _score, _stable_idx, idx in scored]
+        return rank_candidates_for_latam_audience(candidates)
 
     def select_top_candidates(  # noqa: C901
         self, candidates: List[Dict[str, Any]], limit: int = 5, source_context: str = ""

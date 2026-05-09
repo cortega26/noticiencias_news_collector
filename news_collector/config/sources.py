@@ -218,7 +218,14 @@ def validate_sources():  # noqa: C901
         strategy = config.get(
             "enrichment_strategy", "http"
         )  # Default to http if missing
-        valid_strategies = ["scholarly", "http", "headless_fallback", "scrapling_stealth", "scrapling_http", "discovery_only"]
+        valid_strategies = [
+            "scholarly",
+            "http",
+            "headless_fallback",
+            "scrapling_stealth",
+            "scrapling_http",
+            "discovery_only",
+        ]
         if strategy not in valid_strategies:
             errors.append(
                 f"Source '{source_id}' has invalid enrichment_strategy: '{strategy}'. Must be one of {valid_strategies}"
@@ -239,6 +246,8 @@ def validate_sources():  # noqa: C901
                     f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int."
                 )
 
+        errors.extend(audit_source_strategy_consistency(source_id, config))
+
     if errors:
         error_msg = (
             f"❌ Configuration Validation Failed ({len(errors)} errors):\n"
@@ -254,3 +263,56 @@ def validate_sources():  # noqa: C901
 def get_sources_by_tier(tier: str) -> Dict[str, Any]:
     """Retrieve sources belonging to a specific tier (A, B, C, D)."""
     return {sid: cfg for sid, cfg in ALL_SOURCES.items() if cfg.get("tier") == tier}
+
+
+def audit_source_strategy_consistency(
+    source_id: str, config: Dict[str, Any]
+) -> list[str]:
+    """Return deterministic consistency warnings for source strategy choices."""
+    issues: list[str] = []
+    strategy = str(config.get("enrichment_strategy", "http")).strip().lower()
+    content_mode = str(config.get("content_mode", "full_text")).strip().lower()
+    fetch_mode = str(config.get("fetch_mode", "")).strip().lower()
+    justification = str(config.get("strategy_justification", "")).strip()
+
+    if strategy == "scrapling_stealth" and not config.get("headless_enabled"):
+        issues.append(
+            f"Source '{source_id}' uses scrapling_stealth but headless_enabled is false."
+        )
+
+    if (
+        strategy in {"scrapling_stealth", "headless_fallback"}
+        and content_mode in {"summary_only", "summary_fallback"}
+        and not justification
+    ):
+        issues.append(
+            f"Source '{source_id}' uses {strategy} with {content_mode} but lacks strategy_justification."
+        )
+
+    if (
+        strategy in {"scrapling_stealth", "headless_fallback"}
+        and fetch_mode == "rss_only"
+        and not justification
+    ):
+        issues.append(
+            f"Source '{source_id}' is rss_only but still uses {strategy} without strategy_justification."
+        )
+
+    if strategy == "scrapling_stealth" and config.get("headless_enabled") is False:
+        issues.append(
+            f"Source '{source_id}' cannot use scrapling_stealth while headless is disabled."
+        )
+
+    return issues
+
+
+def collect_source_strategy_audit(
+    sources: Dict[str, Any] | None = None,
+) -> Dict[str, list[str]]:
+    """Audit the configured source catalog and return only sources with warnings."""
+    audited = sources or ALL_SOURCES
+    return {
+        source_id: issues
+        for source_id, config in audited.items()
+        if (issues := audit_source_strategy_consistency(source_id, config))
+    }

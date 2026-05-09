@@ -1,186 +1,334 @@
-# Spec: Stabilize Pre-Scoring and Critic Rejection Quality
+# Spec: Cross-Repo Pipeline Hardening, Source Reliability, and LatAm Relevance
 
 Status: Active
 Scope:
-- `news_collector/scoring/pre_scorer.py`
-- `news_collector/components/editorial/ai_editor.py`
-- focused regression coverage under `tests/`
+- `news_collector/logic/workflows/`
+- `news_collector/system/`
+- `news_collector/diagnostics.py`
+- `news_collector/enrichment/`
+- `news_collector/scoring/`
+- `.github/workflows/`
+- `tests/`
 
 Authority:
 - `docs/AGENTS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/SOURCE_OF_TRUTH.md`
+- `docs/PRODUCT_FLOW.md`
+- `docs/PIPELINE_CONTRACTS.md`
+- `../noticiencias/AGENTS.md`
 
 ## 1. Goals
 
-The current backend shows three coupled failures during collection/refinery runs:
+This initiative hardens the real backend-to-frontend publication loop, improves source reliability visibility, and strengthens deterministic relevance selection for a Spanish-speaking Latin American general-interest science audience.
 
-1. `PreScorer` often loses the LLM answer because the model returns prose plus JSON-like output, producing:
-   - `Failed to extract JSON from NVIDIA response`
-   - `PreScorer: LLM retornó 0 válidos. Rellenando con FIFO.`
-2. When the LLM fails, the fallback is FIFO, which tends to keep low-value articles that are weak for a Latin American general-interest science audience.
-3. The critic can permanently discard an article with:
-   - `Score 0/80.0. Reason: No text provided. Recoverable: False`
-   even when the real problem is an empty or broken stage-2 editorial output, not an off-topic source article.
+The implementation must deliver four linked outcomes:
 
-This task fixes those three behaviors without changing the overall pipeline shape.
+1. A backend-owned publication smoke path that validates a generated publication artifact against the real frontend gates, not just schema parity.
+2. A stable, machine-readable source-health artifact with explicit operational state and failure taxonomy.
+3. Stronger deterministic relevance/ranking safeguards so low-value institutional noise is down-ranked even when LLM behavior is degraded or absent.
+4. Deterministic PR-safe regression coverage plus opt-in live-source checks for Scrapling and source reliability.
 
-## 2. Non-Goals
+## 2. Baseline Facts To Preserve
 
-- No source catalog redesign in `sources.yaml`.
-- No new global ranking framework.
-- No threshold retuning across the full editorial policy surface.
-- No provider-wide JSON contract change for every LLM consumer.
+- Frontend contract parity currently passes locally via `npm run check:contract-sync`.
+- The configured source catalog currently contains 43 English-language sources.
+- Scrapling-related strategies are currently used by 8 sources:
+  - `deepmind_blog`
+  - `harvard_gazette`
+  - `microsoft_research`
+  - `openai_blog`
+  - `phys_org`
+  - `sciencedaily_top`
+  - `uw_madison_news`
+  - `uw_news`
+- Current zero-save/high-risk cohort from local health artifacts:
+  - `phys_org`
+  - `deepmind_blog`
+  - `harvard_gazette`
+  - `uw_news`
+  - `uw_madison_news`
+  - `medicalxpress`
+  - `techxplore`
+  - `openai_blog`
+  - `reddit_science`
+- Current partial-yield cohort:
+  - `sciencedaily_top`
+  - `michigan_news`
+  - `microsoft_research`
 
-## 3. Current Failure Analysis
+## 3. Non-Goals
 
-### 3.1 PreScorer is brittle at the provider boundary
+- No coordinated frontend schema expansion unless a blocker is found that cannot be solved through workflow/test hardening.
+- No redesign of the overall pipeline topology.
+- No migration of the frontend publication authority out of `../noticiencias`.
+- No live-network assertions in normal PR CI.
 
-`PreScorer.select_top_candidates()` currently calls the LLM with `json_mode=True` and assumes a clean JSON payload comes back. With reasoning-heavy models, the response can include prose before the JSON payload. When parsing fails, the provider returns an empty structure and `PreScorer` falls back to FIFO.
+## 4. Current Gaps
 
-### 3.2 FIFO fallback is editorially wrong
+### 4.1 Publication smoke is too narrow
 
-FIFO preserves feed order, not Noticiencias editorial value. In practice that over-selects:
+The backend publication smoke workflow currently generates a fixture post and runs only the frontend `validate:content` gate. That proves schema compatibility but does not prove:
 
-- hyper-local US campus stories
-- minor institutional announcements
-- product/fundraising/award items
-- niche updates with low LatAm or broad-human relevance
+- lint compatibility
+- build compatibility
+- dist sanity
+- frontend audit compatibility
+- manifest/sidecar compatibility
 
-### 3.3 Critic is classifying pipeline failure as content failure
+### 4.2 Source health is exported through inconsistent shapes
 
-`EditorAgent.process_article()` can send empty or near-empty `final_content` into `_critic_pass()`. The critic LLM then replies with something like `No text provided`, and the current logic trusts `recoverable: false`, causing a permanent discard even though the defect is a recoverable editorial-generation failure.
+The current codebase has two different source-health paths:
 
-## 4. Implementation Plan
+- `news_collector/system/reporting.py` writes a flat `source_health.json` mapping
+- `news_collector/diagnostics.py` exports a wrapped `generated_at/sources` structure
 
-### 4.1 Harden `PreScorer` locally, not provider-globally
+This makes the artifact shape unstable and prevents reliable downstream automation.
 
-File: `news_collector/scoring/pre_scorer.py`
+### 4.3 Source failure modes are under-specified
 
-Changes:
+Current health output captures only coarse success/save information. It does not consistently distinguish:
 
-- Stop relying on provider-side JSON extraction for this flow.
-- Call the LLM in text mode and parse the response inside `PreScorer`.
-- Add a narrow parser that accepts:
-  - clean JSON object: `{"selected_indices": [...]}`
-  - clean JSON list: `[1, 3, 0]`
-  - fenced JSON blocks
-  - prose plus trailing JSON/list output
-- Keep the boundary local to `PreScorer`; do not widen the generic provider contract.
+- feed fetch failure
+- article fetch blocked
+- content too short
+- JS-render requirement
+- anti-bot / Cloudflare
+- extraction/parser mismatch
+- editorial relevance rejection
+- downstream publication rejection
 
-Why:
+### 4.4 Deterministic relevance exists but is not yet a first-class regression contract
 
-- This removes the frequent NVIDIA warning for this path.
-- It lets `PreScorer` tolerate reasoning-heavy models without touching other JSON consumers such as the critic or cognitive scorer.
+The repo already contains LatAm-oriented heuristics in scoring, but there is not yet a single regression-focused golden/replay suite that proves:
 
-### 4.2 Replace FIFO fallback with deterministic editorial fallback
+- LatAm/public-interest stories outrank campus/institutional filler
+- low-yield source expansion does not degrade editorial quality
+- deterministic ranking remains aligned with the intended audience
 
-File: `news_collector/scoring/pre_scorer.py`
+## 5. Implementation Plan
 
-Changes:
+### 5.1 Replace planning artifacts
 
-- Add a local deterministic candidate scorer for fallback and fill-in ordering.
-- Rank candidates using signals already available in title/summary/source context:
-  - positive:
-    - LatAm countries/institutions/geographies
-    - science/health/climate/space/AI/public-interest terms
-    - evidence/research/study/discovery language
-  - negative:
-    - campus-event / dean / student / alumni / award / fundraiser language
-    - narrow institutional announcements
-    - generic product launch / partnership / funding noise
-- Use that deterministic rank in two places:
-  - to fill missing picks when the LLM returns partial/invalid output
-  - to replace feed-order FIFO when the LLM is unavailable, rate-limited, or malformed
-
-Prompt change:
-
-- Tighten the prompt so “relevance” explicitly means:
-  - direct LatAm connection, or
-  - clear universal interest for a curious Spanish-speaking Latin American reader
-- Explicitly down-rank hyper-local institutional news.
-
-Why:
-
-- Even when the LLM fails, the system no longer degrades to feed order.
-- This is the smallest change that directly addresses “la mayoría de los artículos son de bajo valor”.
-
-### 4.3 Treat empty editorial output as recoverable before critic discard
-
-File: `news_collector/components/editorial/ai_editor.py`
-
-Changes:
-
-- Add a deterministic pre-critic validation of stage-2 editorial output.
-- If the generated content is empty or effectively blank after cleanup:
-  - do not classify it as off-topic
-  - trigger the existing repair path with a concrete repair reason
-  - never mark it irrecoverable on that basis
-- Harden `_critic_pass()` so “No text provided” style responses are always normalized to `recoverable=True`.
-- Avoid writing clearly empty/broken stage-2 output to cache.
-
-Why:
-
-- “No text provided” is a pipeline artifact, not evidence that the source article is fundamentally off-topic.
-- This prevents permanent false negatives and gives the repair loop a fair chance to recover.
-
-## 5. Files Expected To Change
-
-- `news_collector/scoring/pre_scorer.py`
-- `news_collector/components/editorial/ai_editor.py`
-- new focused tests under `tests/`
+Files:
+- `spec.md`
 - `todo.md`
 
-## 6. Verification
+Changes:
+- Replace the prior pre-scorer/critic task spec with this cross-repo hardening spec.
+- Replace the todo list with phased tasks for:
+  - cross-repo publication validation
+  - source reliability and Scrapling audit
+  - deterministic relevance/ranking safeguards
+  - e2e and observability
 
-### V1. PreScorer parses mixed NVIDIA-style output
+### 5.2 Add a typed publication validation contract and runner
+
+Files:
+- new contract module under `news_collector/contracts/`
+- new backend script/helper for frontend publication validation
+- `.github/workflows/publication-smoke.yml`
+- tests under `tests/e2e_cross_repo/`
+
+Changes:
+- Introduce a typed publication validation summary model for machine-readable smoke outputs.
+- Add a backend-owned runner that:
+  - checks out or reuses a frontend workspace
+  - writes a generated fixture post and any required sidecars
+  - runs:
+    - `npm ci`
+    - `npm run lint`
+    - `npm run validate:content`
+    - `npm run build`
+    - `npm run test:dist`
+    - `npm run test:audit`
+  - records a structured result per command
+- Persist the summary artifact to disk for local runs and CI artifacts.
+- Upgrade `.github/workflows/publication-smoke.yml` to use the full validation runner instead of only `validate:content`.
+- Reuse the real frontend checks rather than reimplementing frontend validation logic inside backend code.
+
+Failure classes to encode in the summary:
+- `schema_mismatch`
+- `sidecar_missing_or_malformed`
+- `permalink_collision`
+- `taxonomy_contract_violation`
+- `frontend_build_failure`
+- `frontend_dist_failure`
+- `frontend_audit_failure`
+- `deploy_smoke_regression`
+
+### 5.3 Normalize source health into one stable contract
+
+Files:
+- new source-health contract module under `news_collector/contracts/`
+- `news_collector/system/reporting.py`
+- `news_collector/diagnostics.py`
+- tests for source-health schema and diagnostics
+
+Changes:
+- Define a single stable source-health record contract.
+- Preserve the existing top-level file location `data/exports/source_health.json`.
+- Export a flat `source_id -> record` mapping so current lightweight consumers remain simple.
+- Ensure every record always includes:
+  - `content_mode`
+  - `enrichment_strategy`
+  - `feed_ok`
+  - `pipeline_ok`
+  - `content_ok`
+  - `articles_found`
+  - `articles_saved`
+  - `last_error_message`
+  - latency fields
+  - strategy-cost fields
+  - operational state
+  - failure taxonomy
+  - ratios used for triage
+- Remove the current shape drift between `system.reporting` and `diagnostics`.
+
+Operational states:
+- `healthy_full_text`
+- `healthy_summary_only`
+- `partial_yield_flaky`
+- `failing_suppressed_candidate`
+
+Failure taxonomy values:
+- `feed_fetch_failure`
+- `article_fetch_blocked`
+- `content_too_short`
+- `js_render_required`
+- `anti_bot_block`
+- `extraction_parser_mismatch`
+- `editorial_relevance_rejection`
+- `publication_contract_failure`
+- `unknown_failure`
+
+### 5.4 Harden source strategy interpretation and Scrapling audit
+
+Files:
+- `news_collector/config/sources.py`
+- `news_collector/enrichment/router.py`
+- optionally `news_collector/enrichment/strategy_optimizer.py`
+- tests for source config and router behavior
+
+Changes:
+- Add deterministic review helpers for source strategy consistency.
+- Flag contradictory configurations, especially:
+  - `summary_only` or `rss_only` sources spending full Scrapling/headless budget without explicit justification
+  - sources that should prefer `scrapling_http` but are configured for stealth
+- Preserve justified exceptions through explicit source metadata rather than implicit behavior.
+- Keep source selection deterministic and reviewable.
+
+### 5.5 Add deterministic LatAm relevance regression coverage
+
+Files:
+- new pure helper under `news_collector/scoring/` if needed
+- tests under `tests/e2e_cross_repo/` and/or scoring-focused suites
+- replay/golden fixtures under `tests/data/`
+
+Changes:
+- Formalize a deterministic relevance layer for regression testing.
+- Reward:
+  - direct Latin American connection
+  - broad science/public-interest value
+  - meaningful health/climate/space/AI/education/policy impact
+- Down-rank:
+  - campus administration
+  - alumni/internal awards
+  - fundraising or donor news
+  - narrow institutional PR
+  - low-signal product/partnership noise
+- Add a replayable golden set that makes the intended editorial preference explicit.
+
+## 6. Test Plan
+
+### 6.1 Deterministic PR-safe coverage
+
+Add or update tests for:
+
+1. Full backend-driven frontend smoke run
+   - fixture post is generated
+   - required sidecars/manifests are materialized
+   - all frontend gates are executed
+   - structured summary is persisted
+
+2. Source-health contract
+   - every record has the stable required fields
+   - operational states are derived deterministically
+   - failure taxonomy is derived deterministically
+
+3. Source strategy consistency
+   - `summary_only` + stealth-without-justification is flagged
+   - `scrapling_http` is preferred where a browser is not needed
+   - strategy-cost fields are surfaced in the health report
+
+4. Relevance regression
+   - LatAm/public-interest science outranks campus/admin filler
+   - universal-interest science outranks low-value institutional updates
+   - ranking does not regress when candidate sets include weak institutional content
+
+### 6.2 Nightly/manual live coverage
+
+Keep live-network tests opt-in or scheduled:
+
+- live source health sweep across the catalog
+- live Scrapling comparison for hard sources
+- diff reporting for newly broken or collapsing sources
+
+## 7. Verification
+
+### V1. Full frontend smoke runs from the backend
 
 Proof:
+- run the new publication validation runner against a temp frontend workspace
+- assert success when all frontend gates pass
+- assert a structured summary artifact is written
 
-- Add a regression test where the LLM returns prose plus a JSON payload whose chosen order differs from heuristic rank.
-- Expected result: `select_top_candidates()` preserves the LLM-selected order, proving the mixed response was parsed.
-
-### V2. Fallback ranking is not FIFO
-
-Proof:
-
-- Add a regression test with one LatAm/high-interest science item and several low-value campus/admin items.
-- Force the LLM result to be empty/invalid.
-- Expected result: the LatAm/high-interest item is selected ahead of the low-value items.
-
-### V3. Partial LLM output is completed with heuristic order
+### V2. Publication failure classes are machine-readable
 
 Proof:
+- add regression tests that force command failures or malformed sidecars
+- assert the resulting summary contains the expected failure class
 
-- Add a regression test where the LLM returns only one valid index.
-- Expected result: the first LLM-selected item is preserved and only the remaining slots are filled by deterministic editorial rank.
-
-### V4. Empty stage-2 output is recoverable
-
-Proof:
-
-- Add an end-to-end `EditorAgent.process_article()` test where:
-  - translation succeeds
-  - first editorial adaptation returns empty text
-  - repair returns valid article markdown
-- Expected result: the article is produced successfully and the critic is only called after repairable content exists.
-
-### V5. Critic normalizes “No text provided” as recoverable
+### V3. `source_health.json` has one stable schema
 
 Proof:
+- update diagnostics/reporting tests so both code paths serialize the same flat record shape
+- assert required keys, operational state, and failure taxonomy are present
 
-- Add a targeted critic test with mocked LLM response:
-  - `{"score": 0, "reason": "No text provided", "recoverable": false}`
-- Expected result: `_critic_pass()` returns `recoverable=True`.
+### V4. Contradictory source strategy usage is detectable
 
-### V6. Required validation gates
+Proof:
+- add config/router tests covering `summary_only`/`rss_only` Scrapling contradictions and `scrapling_http` preference scenarios
 
-Because this is a workflow/editorial/scoring change, run:
+### V5. Deterministic LatAm relevance stays aligned
+
+Proof:
+- add replay/golden tests where a LatAm-relevant or broadly important science story must beat campus/internal announcement items
+
+### V6. Required validation commands
+
+Backend:
+
+```bash
+pytest tests/e2e_cross_repo -q
+pytest tests/test_source_health_schema.py tests/unit/test_diagnostics.py tests/unit/enrichment/test_router.py tests/unit/test_strategy_optimizer.py -q
+```
+
+Broader repo gates after implementation stabilizes:
 
 ```bash
 make lint
 make type
-pytest tests/test_llm_rate_limiter.py tests/test_terminology.py tests/test_editor_agent.py
+make test-contracts
+make test-boundaries
+make quality-gate
 ```
 
-If the new focused tests live elsewhere, include them explicitly in the pytest invocation.
+Frontend commands are executed by the backend smoke runner and must include:
+
+```bash
+npm ci
+npm run lint
+npm run validate:content
+npm run build
+npm run test:dist
+npm run test:audit
+```

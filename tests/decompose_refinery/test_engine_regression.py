@@ -11,6 +11,7 @@ These tests verify that:
 
 These tests use RefineryEngine directly (no change to its public interface).
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -20,12 +21,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from news_collector.contracts.publication_validation import (
+    PublicationValidationSummary,
+)
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
-
 
 # ---------------------------------------------------------------------------
 # Shared engine factory
 # ---------------------------------------------------------------------------
+
 
 def _make_engine(tmp_path: Path) -> RefineryEngine:
     """
@@ -87,7 +91,9 @@ def _make_article(
     }
 
 
-def _mock_http_image_client(*, content: bytes = b"image-bytes", content_type: str = "image/jpeg"):
+def _mock_http_image_client(
+    *, content: bytes = b"image-bytes", content_type: str = "image/jpeg"
+):
     """Context-manager patch that makes HTTP image downloads succeed."""
     mock_client = MagicMock()
     mock_client.__enter__ = MagicMock(return_value=mock_client)
@@ -105,6 +111,7 @@ def _mock_http_image_client(*, content: bytes = b"image-bytes", content_type: st
 # ---------------------------------------------------------------------------
 # E2E-01: Happy path — article with HTTP image → PR created, file written
 # ---------------------------------------------------------------------------
+
 
 class TestE2EHappyPath:
     def test_e2e_01_full_pipeline_pr_created(self, tmp_path):
@@ -130,11 +137,56 @@ class TestE2EHappyPath:
         manifest_path = posts_dir / "refinery_manifest.json"
         assert manifest_path.exists()
 
+        # Publication attempt summary must be persisted for traceability
+        summary_path = (
+            tmp_path / "data" / "runtime" / "publication_attempts" / "42.json"
+        )
+        assert summary_path.exists()
+        assert '"success": true' in summary_path.read_text(encoding="utf-8")
+
         # DB must have been marked as published
         engine.db.mark_article_published.assert_called_once()
 
         # git PR must have been created
         engine.git.create_pull_request.assert_called_once()
+
+    def test_e2e_01_frontend_validation_failure_blocks_pr(self, tmp_path):
+        """E2E-01b: Real frontend validation failure must stop PR creation before publish."""
+        engine = _make_engine(tmp_path)
+        target_dir = tmp_path / "target_repo"
+        target_dir.mkdir()
+        (target_dir / "package.json").write_text("{}", encoding="utf-8")
+        posts_dir = target_dir / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        article = _make_article()
+        failed_validation = PublicationValidationSummary(
+            generated_at="2026-05-08T12:00:00Z",
+            frontend_root=str(target_dir),
+            post_path=str(posts_dir / "2024-01-25-test-article-title.md"),
+            manifest_path=str(posts_dir / "refinery_manifest.json"),
+            success=False,
+            overall_failure_class="frontend_build_failure",
+            checks=[],
+        )
+
+        with (
+            _mock_http_image_client(),
+            patch(
+                "news_collector.logic.workflows.refinery_engine.run_frontend_publication_validation",
+                return_value=failed_validation,
+            ),
+        ):
+            result = engine.process_single_article(article, MagicMock(), target_dir)
+
+        assert result is False
+        engine.git.create_pull_request.assert_not_called()
+        summary_path = (
+            tmp_path / "data" / "runtime" / "publication_attempts" / "42.json"
+        )
+        assert '"failure_class": "frontend_build_failure"' in summary_path.read_text(
+            encoding="utf-8"
+        )
 
     def test_e2e_01_batch_processes_multiple_articles(self, tmp_path):
         """E2E-01 batch: process_articles returns correct processed_count."""
@@ -142,7 +194,10 @@ class TestE2EHappyPath:
         target_dir = tmp_path / "target_repo"
         target_dir.mkdir()
 
-        articles = [_make_article(str(i), published_date=datetime(2024, 1, i + 1)) for i in range(1, 4)]
+        articles = [
+            _make_article(str(i), published_date=datetime(2024, 1, i + 1))
+            for i in range(1, 4)
+        ]
 
         with _mock_http_image_client():
             summary = engine.process_articles(articles, MagicMock(), target_dir)
@@ -154,6 +209,7 @@ class TestE2EHappyPath:
 # ---------------------------------------------------------------------------
 # E2E-02: Idempotency — re-processing reuses identical filename
 # ---------------------------------------------------------------------------
+
 
 class TestE2EIdempotency:
     def test_e2e_02_reprocess_reuses_filename(self, tmp_path):
@@ -167,16 +223,21 @@ class TestE2EIdempotency:
         posts_dir.mkdir(parents=True)
 
         with _mock_http_image_client():
-            result = engine.process_single_article(_make_article(), MagicMock(), target_dir)
+            result = engine.process_single_article(
+                _make_article(), MagicMock(), target_dir
+            )
 
         assert result is True
         assert (posts_dir / "2025-01-01-locked-slug.md").exists()
-        assert not list(posts_dir.glob("2024-01-25-*.md")), "Must not create a new file for locked identity"
+        assert not list(
+            posts_dir.glob("2024-01-25-*.md")
+        ), "Must not create a new file for locked identity"
 
 
 # ---------------------------------------------------------------------------
 # E2E-03: Publishing-state recovery
 # ---------------------------------------------------------------------------
+
 
 class TestE2ERecovery:
     def test_e2e_03_stuck_in_publishing_recovery_returns_true(self, tmp_path):
@@ -202,6 +263,7 @@ class TestE2ERecovery:
 # E2E-04: Image download failure → process_single_article returns False
 # ---------------------------------------------------------------------------
 
+
 class TestE2EImageFailure:
     def test_e2e_04_image_failure_returns_false_no_file_written(self, tmp_path):
         """E2E-04: Image download fails → returns False, no .md file written."""
@@ -220,7 +282,9 @@ class TestE2EImageFailure:
             mock_instance.__exit__ = MagicMock(return_value=False)
             mock_instance.get.side_effect = ConnectionError("timeout")
 
-            result = engine.process_single_article(_make_article(), MagicMock(), target_dir)
+            result = engine.process_single_article(
+                _make_article(), MagicMock(), target_dir
+            )
 
         assert result is False
         assert list(posts_dir.glob("*.md")) == []
@@ -229,6 +293,7 @@ class TestE2EImageFailure:
 # ---------------------------------------------------------------------------
 # E2E-05: Editorial policy rejection → returns False before file write
 # ---------------------------------------------------------------------------
+
 
 class TestE2EPolicyRejection:
     def test_e2e_05_policy_rejection_returns_false(self, tmp_path):
@@ -244,7 +309,9 @@ class TestE2EPolicyRejection:
         posts_dir.mkdir(parents=True)
 
         with _mock_http_image_client():
-            result = engine.process_single_article(_make_article(), MagicMock(), target_dir)
+            result = engine.process_single_article(
+                _make_article(), MagicMock(), target_dir
+            )
 
         assert result is False
         assert list(posts_dir.glob("*.md")) == []
@@ -255,31 +322,32 @@ class TestE2EPolicyRejection:
 # E2E guard: All four collaborators are reachable from the engine instance
 # ---------------------------------------------------------------------------
 
+
 class TestCollaboratorWiring:
     def test_engine_has_identity_resolver(self, tmp_path):
         """After decomposition, engine must expose identity_resolver attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "identity_resolver"), (
-            "RefineryEngine must have an identity_resolver attribute after Phase 1"
-        )
+        assert hasattr(
+            engine, "identity_resolver"
+        ), "RefineryEngine must have an identity_resolver attribute after Phase 1"
 
     def test_engine_has_writer(self, tmp_path):
         """After decomposition, engine must expose writer attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "writer"), (
-            "RefineryEngine must have a writer attribute after Phase 2"
-        )
+        assert hasattr(
+            engine, "writer"
+        ), "RefineryEngine must have a writer attribute after Phase 2"
 
     def test_engine_has_image_handler(self, tmp_path):
         """After decomposition, engine must expose image_handler attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "image_handler"), (
-            "RefineryEngine must have an image_handler attribute after Phase 3"
-        )
+        assert hasattr(
+            engine, "image_handler"
+        ), "RefineryEngine must have an image_handler attribute after Phase 3"
 
     def test_engine_has_pr_orchestrator(self, tmp_path):
         """After decomposition, engine must expose pr_orchestrator attribute."""
         engine = _make_engine(tmp_path)
-        assert hasattr(engine, "pr_orchestrator"), (
-            "RefineryEngine must have a r_orchestrator attribute after Phase 4"
-        )
+        assert hasattr(
+            engine, "pr_orchestrator"
+        ), "RefineryEngine must have a r_orchestrator attribute after Phase 4"

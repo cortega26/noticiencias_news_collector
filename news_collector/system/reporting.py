@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from news_collector.config import SCORING_CONFIG
+from news_collector.config.sources import ALL_SOURCES
+from news_collector.observability.enrichment_metrics_store import enrichment_metrics
+from news_collector.system.source_health import serialize_source_health_report
 
 
 def get_top_articles(
@@ -180,23 +183,13 @@ def generate_session_report(
     }
 
     try:
-        health_data = {}
         source_details = collection_results.get("source_details", {})
-        for source_id, result in source_details.items():
-            success = result.get("success", False)
-            saved = result.get("articles_saved", 0)
-
-            health_data[source_id] = {
-                "last_run": datetime.now(timezone.utc).isoformat(),
-                "feed_ok": success,
-                "pipeline_ok": True,  # If we have a result here, pipeline ran
-                "content_ok": saved > 0,
-                "content_mode": result.get("content_mode", "unknown"),
-                "articles_found": result.get("articles_found", 0),
-                "articles_saved": saved,
-                "last_error_message": result.get("error_message"),
-                "latency": result.get("processing_time", 0),
-            }
+        health_data = serialize_source_health_report(
+            source_details,
+            source_configs=ALL_SOURCES,
+            metrics_by_source=enrichment_metrics.get_all_metrics(),
+            last_run=datetime.now(timezone.utc),
+        )
 
         export_path = Path("data/exports/source_health.json")
         export_path.parent.mkdir(parents=True, exist_ok=True)

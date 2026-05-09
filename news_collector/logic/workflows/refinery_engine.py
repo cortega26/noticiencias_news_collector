@@ -41,10 +41,19 @@ from apps.refinery.published_content import prune_hero_placeholder_allowlist_for
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.contracts import (
+    PublicationAttemptStageResult,
+    PublicationAttemptSummary,
+)
 from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
+from news_collector.logic.workflows.frontend_publication_validation import (
+    run_frontend_publication_validation,
+)
 from news_collector.logic.workflows.image_handler import ArticleImageHandler
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
-from news_collector.logic.workflows.publication_identity import PublicationIdentityResolver
+from news_collector.logic.workflows.publication_identity import (
+    PublicationIdentityResolver,
+)
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 from news_collector.utils.logger import get_logger
 
@@ -142,6 +151,8 @@ class RefineryEngine:
         self.enforcement_log_path = (
             runtime_dir / "editorial_policy_enforcement_log.jsonl"
         )
+        self.publication_attempts_dir = runtime_dir / "publication_attempts"
+        self.publication_attempts_dir.mkdir(parents=True, exist_ok=True)
         self.image_briefs = ImageBriefStore(self.data_dir)
 
         self.editor = editor_agent
@@ -221,6 +232,41 @@ class RefineryEngine:
         Returns True if successful (PR created), False otherwise.
         """
         article_id = str(article.get("id", article.get("title")))
+        publication_stages: list[PublicationAttemptStageResult] = []
+        branch_name: str | None = None
+        final_slug: str | None = None
+        output_filename: str | None = None
+        pr_url: str | None = None
+        validation_summary_path: str | None = None
+
+        def record_stage(name: str, success: bool, **details: Any) -> None:
+            publication_stages.append(
+                PublicationAttemptStageResult(
+                    name=name,
+                    success=success,
+                    details={
+                        key: value
+                        for key, value in details.items()
+                        if value is not None
+                    },
+                )
+            )
+
+        def persist_attempt(success: bool, failure_class: str | None = None) -> None:
+            self._persist_publication_attempt_summary(
+                article_id=article_id,
+                success=success,
+                stages=publication_stages,
+                output_filename=output_filename,
+                final_slug=final_slug,
+                branch_name=branch_name,
+                pr_url=pr_url,
+                validation_summary_path=validation_summary_path,
+                failure_class=failure_class,
+                target_repo=getattr(
+                    getattr(self.config, "github", None), "target_repo_url", None
+                ),
+            )
 
         # --- S1 GUARD: Enforce Content Contract via Injected Validator ---
         if self.contract_validator:
@@ -238,6 +284,12 @@ class RefineryEngine:
                     e=e,
                     exc_info=True,
                 )
+                record_stage(
+                    "contract_validation",
+                    False,
+                    error=str(e),
+                )
+                persist_attempt(False)
                 return False
 
         article = self._normalize_article_payload(article)
@@ -255,6 +307,9 @@ class RefineryEngine:
                 git_handler=self.git,
             )
             if recovery_result is not None:
+                pr_url = recovery_result.pr_url
+                record_stage("publishing_recovery", True, pr_url=pr_url)
+                persist_attempt(True)
                 return True
             # recovery_result is None → no recovery needed, continue normal flow
 
@@ -269,6 +324,13 @@ class RefineryEngine:
         output_filename = identity.output_filename if not identity.is_new else None
         # preferred_slug is used for image-asset naming; only relevant when identity is stable.
         _image_preferred_slug = identity.final_slug if not identity.is_new else None
+        record_stage(
+            "identity_resolved",
+            True,
+            canonical_date=str(canonical_date),
+            is_new=identity.is_new,
+            output_filename=output_filename,
+        )
 
         # 2. AI Processing
         # We pass canonical_date to ensure the frontmatter matches our filename expectation
@@ -284,7 +346,10 @@ class RefineryEngine:
             download_fn=self._download_image,
         )
         if not img_resolution.resolved:
+            record_stage("image_resolution", False)
+            persist_attempt(False)
             return False
+        record_stage("image_resolution", True, image_url=img_resolution.image_url)
         article["image_url"] = img_resolution.image_url
         if img_resolution.image_alt:
             article["image_alt"] = img_resolution.image_alt
@@ -313,11 +378,21 @@ class RefineryEngine:
                     "error_code": error_code,
                 }
                 logger.warning(f"⛔ Blocked before publish ({error_code}): {ve}")
+                record_stage(
+                    "editor_refinement",
+                    False,
+                    error_code=error_code,
+                    error=str(ve),
+                )
+                persist_attempt(False)
                 return False
             if "Translation Guardrail" in str(ve):
                 logger.warning(f"⛔ Blocked by Editorial Policy (Critic): {ve}")
+                record_stage("editor_refinement", False, error=str(ve))
+                persist_attempt(False)
                 return False
             raise ve
+        record_stage("editor_refinement", True)
 
         audit_should_run = False
         try:
@@ -330,11 +405,20 @@ class RefineryEngine:
             # Creation mode: derive slug from AI-translated content and apply collision check.
             # Pass self._extract_slug so that test-level monkeypatches are respected.
             identity = self.identity_resolver.finalize_slug(
-                identity, refined_content, article_id, posts_dir,
+                identity,
+                refined_content,
+                article_id,
+                posts_dir,
                 extract_slug_fn=self._extract_slug,
             )
         final_slug = identity.final_slug
         output_filename = identity.output_filename
+        record_stage(
+            "slug_finalized",
+            bool(output_filename),
+            final_slug=final_slug,
+            output_filename=output_filename,
+        )
 
         # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
         # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
@@ -345,7 +429,10 @@ class RefineryEngine:
             logger.warning(
                 f"⛔ Article {article_id} rejected by Editorial Policy (Auditor/Strictness)."
             )
+            record_stage("policy_gate", False)
+            persist_attempt(False)
             return False
+        record_stage("policy_gate", True)
 
         if self._has_quoted_date_only_frontmatter(refined_content):
             logger.error(
@@ -353,7 +440,10 @@ class RefineryEngine:
                 "Aborting before branch/commit/push.",
                 article_id,
             )
+            record_stage("frontmatter_guard", False, reason="quoted_date_only")
+            persist_attempt(False)
             return False
+        record_stage("frontmatter_guard", True)
 
         # Persist canonical slug AFTER policy approval (B-02 / F-0018)
         # Only needed for new articles; P1/P2 identities already have DB entries.
@@ -365,6 +455,8 @@ class RefineryEngine:
         # remote sync failures do not leave uncommitted content edits behind.
         if not output_filename:
             logger.error(f"Cannot proceed without output_filename for {article_id}")
+            record_stage("output_filename", False)
+            persist_attempt(False)
             return False
 
         branch_slug = output_filename.replace(".md", "")
@@ -383,6 +475,7 @@ class RefineryEngine:
         branch_name = self.git.create_branch(
             target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
         )
+        record_stage("branch_created", True, branch_name=branch_name)
 
         # 5. Save File
         try:
@@ -395,7 +488,43 @@ class RefineryEngine:
             )
         except ValueError as e:
             logger.error("🚨 S0 GUARD: {}", e)
+            record_stage("file_written", False, error=str(e))
+            persist_attempt(False)
             return False
+        record_stage("file_written", True, output_filename=output_filename)
+
+        package_json = target_dir / "package.json"
+        if package_json.exists():
+            validation_summary_path = str(
+                self.publication_attempts_dir
+                / f"{self._safe_publication_artifact_name(article_id)}.frontend_validation.json"
+            )
+            validation_summary = run_frontend_publication_validation(
+                target_dir,
+                summary_output_path=Path(validation_summary_path),
+                stage_fixture=False,
+                post_path=posts_dir / output_filename,
+                install_dependencies=not (target_dir / "node_modules").exists(),
+            )
+            record_stage(
+                "frontend_publication_validation",
+                validation_summary.success,
+                failure_class=validation_summary.overall_failure_class,
+                summary_path=validation_summary_path,
+            )
+            if not validation_summary.success:
+                persist_attempt(
+                    False,
+                    failure_class=validation_summary.overall_failure_class,
+                )
+                return False
+        else:
+            record_stage(
+                "frontend_publication_validation",
+                True,
+                skipped=True,
+                reason="frontend_workspace_not_detected",
+            )
 
         # (Auditor checking validation block removed from here as it is done above)
 
@@ -403,6 +532,7 @@ class RefineryEngine:
         self.git.commit_and_push(
             target_repo_obj, f"Update article: {output_filename}", branch_name
         )
+        record_stage("commit_pushed", True, branch_name=branch_name)
 
         # 7. Create PR
         pr_result = self.pr_orchestrator.create_pr(
@@ -416,6 +546,7 @@ class RefineryEngine:
 
         if pr_url:
             logger.info(f"Pull Request created successfully: {pr_url}")
+            record_stage("pr_created", True, pr_url=pr_url)
             numeric_id = None
             try:
                 numeric_id = int(article_id)
@@ -445,10 +576,54 @@ class RefineryEngine:
                     attempts=0,
                 )
 
+            persist_attempt(True)
             return True
         else:
             logger.error("Failed to create PR.")
+            record_stage("pr_created", False)
+            persist_attempt(False)
             return False
+
+    def _persist_publication_attempt_summary(
+        self,
+        *,
+        article_id: str,
+        success: bool,
+        stages: list[PublicationAttemptStageResult],
+        target_repo: str | None = None,
+        output_filename: str | None = None,
+        final_slug: str | None = None,
+        branch_name: str | None = None,
+        pr_url: str | None = None,
+        validation_summary_path: str | None = None,
+        failure_class: str | None = None,
+    ) -> None:
+        safe_article_id = self._safe_publication_artifact_name(article_id)
+
+        summary = PublicationAttemptSummary(
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            article_id=article_id,
+            target_repo=target_repo,
+            output_filename=output_filename,
+            final_slug=final_slug,
+            branch_name=branch_name,
+            pr_url=pr_url,
+            validation_summary_path=validation_summary_path,
+            success=success,
+            failure_class=failure_class,
+            stages=stages,
+        )
+
+        summary_path = self.publication_attempts_dir / f"{safe_article_id}.json"
+        summary_path.write_text(
+            json.dumps(summary.model_dump(mode="json"), indent=2),
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def _safe_publication_artifact_name(article_id: str) -> str:
+        safe_article_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", article_id).strip("_")
+        return safe_article_id or "unknown"
 
     def _record_audit_status(
         self,
