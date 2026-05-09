@@ -92,16 +92,29 @@ def _classify_failure(
     output: str,
 ) -> PublicationFailureClass:
     lowered = output.lower()
-    if "refinery_manifest" in lowered or "published content sidecar" in lowered:
-        return "sidecar_missing_or_malformed"
     if (
         "duplicate permalink" in lowered
         or "permalink" in lowered
         and "duplicate" in lowered
     ):
         return "permalink_collision"
-    if "categories" in lowered or "tags" in lowered or "taxonomy" in lowered:
+    if (
+        "[check:tags]" in lowered
+        or "tag violations" in lowered
+        or "tag contains disallowed" in lowered
+        or "categories" in lowered
+        or "tags" in lowered
+        or "taxonomy" in lowered
+    ):
         return "taxonomy_contract_violation"
+    if (
+        "refinery_manifest" in lowered
+        or "published content sidecar check found" in lowered
+        or "stale manifest entry" in lowered
+        or "escapes posts directory" in lowered
+        or "must map to a non-empty filename" in lowered
+    ):
+        return "sidecar_missing_or_malformed"
     if check_name == "build":
         return "frontend_build_failure"
     if check_name == "test_dist":

@@ -1,0 +1,48 @@
+{
+  "scenario": "low_value_beats_high_value_regression",
+  "source_id": "ranking_regression_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "ranking_regression_feed",
+      "url": "https://example.com/ranking/feed.xml",
+      "feed_title": "Ranking Regression Feed",
+      "category": "science",
+      "credibility_score": 0.9,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/andes-glacier-loss",
+          "title": "Andes glacier monitoring reveals faster water-security losses",
+          "summary": "Scientists tracking glaciers in Peru, Bolivia, Chile, and Argentina report that accelerated ice loss is already affecting river flow, seasonal water availability, agriculture, and hydroelectric planning for millions of people. The study links recent warming patterns to measurable shifts in dry-season supply, explains why downstream cities are at greater risk of shortages, and gives a regional comparison that helps Latin American decision makers prioritize adaptation policies, emergency planning, and cross-border scientific coordination over the next several years. The authors add field measurements from mountain communities, satellite observations of seasonal snowpack, and reservoir simulations for major river basins that support both irrigation and urban drinking water. Their findings describe how glacier retreat changes timing as well as quantity, meaning that the risk is not simply less water overall but more unstable supply at exactly the moments when heat, wildfire, and agricultural demand are already peaking across the region.",
+          "authors": ["Regional Climate Team"],
+          "tags": ["climate", "water", "latin-america"],
+          "published": "2026-05-07T12:00:00+00:00"
+        },
+        {
+          "link": "https://example.com/alumni-breakfast",
+          "title": "Vice provost highlights alumni breakfast and donor appreciation week",
+          "summary": "An internal institutional update described award speeches, donor recognition, and campus hospitality events scheduled for alumni and administrative leaders. The announcement focused on attendance plans, celebration logistics, and internal recognition rather than wider scientific, health, climate, education, or public-policy consequences for a broader audience beyond the institution itself.",
+          "authors": ["Institution Desk"],
+          "tags": ["campus"],
+          "published": "2026-05-07T11:30:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "valid"
+  },
+  "frontend_fixture": {
+    "preexisting_posts": []
+  },
+  "expected": {
+    "selected_article_url": "https://example.com/andes-glacier-loss"
+  }
+}

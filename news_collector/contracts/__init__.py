@@ -20,6 +20,7 @@ from .publication_validation import (
     PublicationAttemptSummary,
     PublicationValidationSummary,
 )
+from .pipeline_e2e import PipelineE2ERunSummary, PipelineStageSnapshot
 from .scoring import (
     ScoringComponents,
     ScoringComponentsModel,
@@ -45,6 +46,8 @@ __all__ = [
     "PublicationAttemptStageResult",
     "PublicationAttemptSummary",
     "PublicationValidationSummary",
+    "PipelineE2ERunSummary",
+    "PipelineStageSnapshot",
     "ScoringComponents",
     "ScoringComponentsModel",
     "ScoringRequest",

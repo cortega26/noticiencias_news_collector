@@ -237,6 +237,74 @@ Changes:
   - low-signal product/partnership noise
 - Add a replayable golden set that makes the intended editorial preference explicit.
 
+### 5.6 Add a full-pipeline E2E harness from collector replay to frontend handoff
+
+Files:
+- new pipeline E2E contract module under `news_collector/contracts/`
+- new orchestration helper under `news_collector/logic/workflows/`
+- new CLI entrypoint under `scripts/`
+- replay scenario fixtures under `tests/fixtures/`
+- a dedicated deterministic suite under `tests/e2e_pipeline/`
+
+Changes:
+- Introduce a typed `PipelineE2ERunSummary` contract plus stage snapshots for:
+  - collection
+  - validation
+  - scoring
+  - selection
+  - export
+  - approval
+  - publication
+  - frontend validation
+- Build one canonical harness that:
+  - runs `NewsCollectorSystem.run_collection_cycle()` against replay fixtures
+  - uses a temp DB, temp target repo, and temp diagnostics bundle per run
+  - exports real candidates from the DB
+  - selects an article for approval using the real export contract
+  - runs the real `RefineryEngine`
+  - executes the existing frontend validation runner against a target repo
+  - persists machine-readable snapshots for each stage
+- The deterministic suite must not rely on remote GitHub or live network sources.
+- The harness may stub only the non-deterministic boundaries that are not themselves under test:
+  - editorial generation
+  - remote PR creation
+  - optional dependency install
+- The harness must identify and persist a single root failure stage plus the first observable divergence when a scenario fails.
+
+Required deterministic scenarios:
+- `happy_path_latam_winner`
+- `blocked_source_fallback`
+- `low_value_beats_high_value_regression`
+- `frontend_rejects_generated_post`
+- `stuck_publishing_recovery`
+- `duplicate_permalink_collision`
+
+Required diagnostics bundle contents:
+- replay/scenario input
+- collection report
+- post-validation DB snapshot
+- scoring and final selection snapshot
+- export payload
+- approved article payload
+- generated markdown/frontmatter
+- frontend validation summary
+- publication attempt summary
+- run summary with root failure stage
+
+### 5.7 Fix save-path drift exposed by replay-driven candidate-only articles
+
+Files:
+- `news_collector/collectors/rss_collector.py`
+- deterministic tests covering candidate-only persistence behavior
+
+Changes:
+- Replace the invalid `processing_status_override="enrichment_failed"` path with a status that is actually allowed by the persistence contract.
+- Preserve the original intent:
+  - article is discovered and persisted for diagnostics
+  - article is not eligible for export/publication
+  - failure reason remains machine-readable for the E2E diagnostics bundle
+- Add regression coverage proving replay-discovered but non-publishable articles are persisted as non-publishable instead of being dropped silently by a contract mismatch.
+
 ## 6. Test Plan
 
 ### 6.1 Deterministic PR-safe coverage
@@ -263,6 +331,12 @@ Add or update tests for:
    - LatAm/public-interest science outranks campus/admin filler
    - universal-interest science outranks low-value institutional updates
    - ranking does not regress when candidate sets include weak institutional content
+
+5. Full-pipeline E2E harness
+   - replay fixture drives the real collector and DB persistence
+   - selection/export/refinery/frontend handoff run end to end
+   - every failure persists a diagnostics bundle with one root failure stage
+   - recovery, frontend rejection, and duplicate permalink scenarios are covered
 
 ### 6.2 Nightly/manual live coverage
 
@@ -309,6 +383,7 @@ Backend:
 
 ```bash
 pytest tests/e2e_cross_repo -q
+pytest tests/e2e_pipeline -q
 pytest tests/test_source_health_schema.py tests/unit/test_diagnostics.py tests/unit/enrichment/test_router.py tests/unit/test_strategy_optimizer.py -q
 ```
 

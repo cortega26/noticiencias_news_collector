@@ -74,3 +74,33 @@ Consult `spec.md` before every change.
   - `make lint` still fails on 39 pre-existing repo files outside this change set that Black would reformat.
   - `make type` still fails on pre-existing incompatibility in `news_collector/system/bootstrap.py:330` (`GeminiProvider` assigned where `NvidiaProvider` is inferred).
 - [x] Ask a fresh sub-agent to review `spec.md` and the current implementation for gaps if this work reaches another large iteration block
+
+## Phase 5 — Full pipeline E2E harness
+
+- [x] Fix replay-driven candidate persistence drift so non-publishable articles are still saved deterministically
+- [x] Add typed pipeline E2E contracts for run summaries and stage snapshots
+- [x] Add a reproducible harness that runs:
+  - replay fixture -> collector
+  - temp DB persistence
+  - validation + scoring + final selection
+  - export + approval selection
+  - `RefineryEngine`
+  - frontend validation runner
+  - diagnostics bundle persistence
+- [x] Add a CLI entrypoint for scenario-based E2E runs
+- [x] Add deterministic replay fixtures for:
+  - `happy_path_latam_winner`
+  - `blocked_source_fallback`
+  - `low_value_beats_high_value_regression`
+  - `frontend_rejects_generated_post`
+  - `stuck_publishing_recovery`
+  - `duplicate_permalink_collision`
+- [x] Add a dedicated deterministic suite under `tests/e2e_pipeline/`
+- [x] Add coverage proving every failing scenario records one root failure stage and a machine-readable bundle
+- [x] Re-run the focused E2E suites after each meaningful edit batch
+
+## Phase 6 — Live and workflow separation
+
+- [x] Split deterministic PR-safe E2E from nightly/manual live-source coverage
+- [x] Add a scheduled/manual workflow for live source drift checks using the critical cohort
+- [x] Emit a differential live report for newly broken, strategy-mismatched, or non-publishable sources

@@ -1,0 +1,40 @@
+{
+  "scenario": "frontend_rejects_generated_post",
+  "source_id": "frontend_reject_feed",
+  "source_config": {
+    "collector_type": "rss",
+    "content_mode": "summary_only",
+    "enrichment_strategy": "none",
+    "headless_enabled": false
+  },
+  "replay_events": [
+    {
+      "source_id": "frontend_reject_feed",
+      "url": "https://example.com/frontend/feed.xml",
+      "feed_title": "Frontend Reject Feed",
+      "category": "science",
+      "credibility_score": 0.92,
+      "latency_ms": 0,
+      "status_code": 200,
+      "articles": [
+        {
+          "link": "https://example.com/latam-ai-policy",
+          "title": "Latin American universities warn about AI policy gaps in classrooms",
+          "summary": "Researchers and education policy teams from across Latin America documented how unequal internet access, rushed procurement, and limited teacher training are shaping classroom AI adoption in schools and universities. Their report explains what safeguards are missing, how low-resource communities are affected, and why the issue matters for educational quality, social inequality, and public digital policy across the region in the near term. The analysis compares procurement contracts, teacher interviews, and student outcomes from multiple countries, showing where AI tools are widening gaps instead of closing them. It also identifies practical interventions around teacher support, transparency, accessibility, and data governance that ministries and school systems could adopt before temporary pilot programs harden into long-term inequities for the most vulnerable communities.",
+          "authors": ["Education Policy Desk"],
+          "tags": ["ai", "education", "latin-america"],
+          "published": "2026-05-07T12:00:00+00:00"
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "editor_mode": "invalid_taxonomy"
+  },
+  "frontend_fixture": {
+    "preexisting_posts": []
+  },
+  "expected": {
+    "selected_article_url": "https://example.com/latam-ai-policy"
+  }
+}
