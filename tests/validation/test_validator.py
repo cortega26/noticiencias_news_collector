@@ -95,3 +95,42 @@ class TestContentValidator:
         assert len(results["invalid"]) == 2
         titles = sorted([item["article"]["title"] for item in results["invalid"]])
         assert titles == ["Short", "The Download: Something bad"]
+
+    def test_validator_rejects_commerce_title_patterns(self):
+        validator = ContentValidator()
+
+        article = {
+            "title": "Prime Day deal: the best laptops to buy before the sale ends",
+            "content": (
+                "Prime Day deal coverage about the best laptops to buy before the sale ends. " * 12
+            ),
+        }
+
+        result = validator.validate_article(article)
+
+        assert result.is_valid is False
+        assert result.rule_name == "blocklist_pattern"
+
+    def test_validator_rejects_politics_and_lifestyle_title_patterns(self):
+        validator = ContentValidator()
+
+        politics_article = {
+            "title": "Election campaign enters final week after candidate debate",
+            "content": (
+                "Election campaign coverage enters the final week after a candidate debate. " * 12
+            ),
+        }
+        lifestyle_article = {
+            "title": "Travel guide: the hotel deal and packing list you need this summer",
+            "content": (
+                "Travel guide coverage of a hotel deal and packing list for the summer. " * 12
+            ),
+        }
+
+        politics_result = validator.validate_article(politics_article)
+        lifestyle_result = validator.validate_article(lifestyle_article)
+
+        assert politics_result.is_valid is False
+        assert politics_result.rule_name == "blocklist_pattern"
+        assert lifestyle_result.is_valid is False
+        assert lifestyle_result.rule_name == "blocklist_pattern"

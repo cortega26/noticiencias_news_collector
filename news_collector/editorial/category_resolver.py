@@ -1,16 +1,18 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
-from news_collector.editorial.classifier import EditorialClassifier
 from news_collector.editorial.categories import (
     DIRECT_CATEGORY_MAP,
     GENERIC_CATEGORIES,
     PUBLIC_CATEGORY_LABELS,
     get_allowed_classifier_categories,
     is_first_party_editorial_source,
+    is_generic_source_category,
     normalize_raw_category,
 )
+from news_collector.editorial.classifier import EditorialClassifier
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -49,8 +51,12 @@ class EditorialCategoryResolver:
         source_name: str | None = None,
         source_id: str | None = None,
     ) -> CategoryResolution:
+        raw_text = str(raw_category or "").strip()
+        metadata_text = str(metadata_category or "").strip()
         selected_raw = (
-            raw_category if str(raw_category or "").strip() else metadata_category
+            metadata_category
+            if raw_text and is_generic_source_category(raw_category) and metadata_text
+            else (raw_category if raw_text else metadata_category)
         )
 
         top_level_normalized = normalize_raw_category(raw_category)

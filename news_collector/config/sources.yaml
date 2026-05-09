@@ -155,6 +155,60 @@ techcrunch:
   fetchability_score: 90
   crawl_interval_seconds: 3600
 
+xataka:
+  name: Xataka
+  url: https://feeds.weblogssl.com/xataka2
+  credibility_score: 0.84
+  update_frequency: multiple_daily
+  category: multidisciplinary
+  language: es
+  impact_factor: null
+  description: Cobertura amplia de tecnología, internet, dispositivos y ciencia aplicada
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 88
+  crawl_interval_seconds: 3600
+
+genbeta:
+  name: Genbeta
+  url: https://feeds.weblogssl.com/genbeta
+  credibility_score: 0.84
+  update_frequency: multiple_daily
+  category: technology
+  language: es
+  impact_factor: null
+  description: Tecnología, software, internet y plataformas con foco práctico
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 88
+  crawl_interval_seconds: 3600
+
+gizmodo_tech:
+  name: Gizmodo Tech
+  url: https://gizmodo.com/tech/feed
+  credibility_score: 0.82
+  update_frequency: daily
+  category: technology
+  language: en
+  impact_factor: null
+  description: Noticias de tecnología, plataformas e internet con ángulo de cultura digital
+  typical_delay: 0
+  content_mode: full_text
+  etag: null
+  last_modified: null
+  _group: SCIENCE_MEDIA
+  tier: "B"
+  fetchability_score: 85
+  crawl_interval_seconds: 3600
+
 the_verge:
   name: The Verge
   url: https://www.theverge.com/rss/index.xml

@@ -58,6 +58,11 @@ GENERIC_CATEGORIES = {
     "life_sciences",
 }
 
+GENERIC_SOURCE_CATEGORIES = GENERIC_CATEGORIES | {
+    "popular_science",
+    "community_science",
+}
+
 DIRECT_CATEGORY_MAP = {
     "health": "SALUD",
     "salud": "SALUD",
@@ -125,6 +130,14 @@ def normalize_raw_category(value: Any) -> str:
     return ascii_text.strip("_")
 
 
+def is_generic_category(value: Any) -> bool:
+    return normalize_raw_category(value) in GENERIC_CATEGORIES
+
+
+def is_generic_source_category(value: Any) -> bool:
+    return normalize_raw_category(value) in GENERIC_SOURCE_CATEGORIES
+
+
 def canonicalize_category_label(value: str | None) -> str | None:
     if not value:
         return None
@@ -159,9 +172,6 @@ def is_first_party_editorial_source(
         return True
 
     lowered_name = str(source_name or "").strip().casefold()
-    if lowered_name and any(
+    return lowered_name and any(
         pattern in lowered_name for pattern in FIRST_PARTY_NAME_PATTERNS
-    ):
-        return True
-
-    return False
+    )

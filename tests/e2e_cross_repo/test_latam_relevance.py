@@ -41,3 +41,26 @@ def test_latam_relevance_penalizes_low_value_institutional_noise():
     assert score_candidate_for_latam_audience(
         high_value
     ) > score_candidate_for_latam_audience(low_value)
+
+
+def test_latam_relevance_favors_consequential_tech_over_commerce_filler():
+    high_value = {
+        "title": "Chile tests new grid-scale battery system to reduce blackout risk",
+        "summary": (
+            "Engineers and researchers analyzed energy storage, grid resilience, and public "
+            "infrastructure impacts for multiple cities in Latin America."
+        ),
+        "source_name": "Xataka",
+    }
+    low_value = {
+        "title": "Prime Day deal: the best earbuds to buy before prices go back up",
+        "summary": (
+            "A shopping guide rounds up discounts, coupons, and affiliate picks for readers "
+            "looking to upgrade their gadgets."
+        ),
+        "source_name": "Gizmodo",
+    }
+
+    assert score_candidate_for_latam_audience(
+        high_value
+    ) > score_candidate_for_latam_audience(low_value)
