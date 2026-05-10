@@ -256,7 +256,9 @@ class TestNvidiaProviderThinkingTrace:
     def test_strip_think_tags_removes_block(self):
         from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
-        text = "<think>I need to approach this task carefully.</think>Real content here."
+        text = (
+            "<think>I need to approach this task carefully.</think>Real content here."
+        )
         assert NvidiaProvider._strip_think_tags(text) == "Real content here."
 
     def test_strip_think_tags_multiline(self):

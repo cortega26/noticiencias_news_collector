@@ -70,14 +70,18 @@ def get_provider(
             nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"
         )
         use_max_tokens = max_tokens or getattr(nvidia_cfg, "max_tokens", 4096)
-        logger.info("Using NvidiaProvider with model %s (max_tokens=%s)", use_model, use_max_tokens)
+        logger.info(
+            "Using NvidiaProvider with model %s (max_tokens=%s)",
+            use_model,
+            use_max_tokens,
+        )
         return NvidiaProvider(
             api_key=nvidia_api_key,
             model=use_model,
             base_url=use_base_url,
             timeout=timeout,
             max_retries=max_retries,
-            max_tokens=use_max_tokens,
+            max_tokens=use_max_tokens,  # type: ignore[arg-type]
         )
 
     # Priority 2: Gemini (when a Google AI Studio API key is configured)

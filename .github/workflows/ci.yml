@@ -105,14 +105,21 @@ jobs:
       # Sparse-checkout of the front-end repo so that test_contracts_sync.py
       # can validate cross-repo schema field parity (see docs/PIPELINE_CONTRACTS.md).
       # Only the Astro content config is fetched; no Node toolchain is installed.
+      # Note: actions/checkout no longer supports path outside the repo checkout
+      # directory, so we use a subdirectory instead of ../noticiencias.
       - name: Checkout front-end schema (sparse)
         uses: actions/checkout@v4
         with:
           repository: cortega26/noticiencias
-          path: ../noticiencias
+          path: .tmp/frontend-schema
           sparse-checkout: |
-            src/content/config.ts
+            src/content.config.ts
           sparse-checkout-cone-mode: false
+      - name: Make frontend schema available at expected path
+        run: |
+          mkdir -p ../noticiencias
+          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
+          rm -rf .tmp/frontend-schema
       - name: Run tests
         run: |
           set -euo pipefail

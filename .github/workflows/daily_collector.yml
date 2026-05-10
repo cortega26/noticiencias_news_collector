@@ -38,7 +38,7 @@ jobs:
         run: make bootstrap
 
       - name: Run News Collector
-        run: python scripts/run_collector.py --export-json data/exports/latest_articles.json
+        run: .venv/bin/python scripts/run_collector.py --export-json data/exports/latest_articles.json
         env:
           LOG_LEVEL: INFO
 

@@ -361,7 +361,10 @@ class NewsCollectorSystem:
                 validator=self.validator,
                 logger=self.logger,
             )
-        return self.validation_coordinator.execute(collection_results, dry_run)
+        return cast(
+            Dict[str, Any],
+            self.validation_coordinator.execute(collection_results, dry_run),
+        )
 
     async def _execute_scoring(
         self, collection_results: Dict[str, Any], dry_run: bool
@@ -376,7 +379,10 @@ class NewsCollectorSystem:
                 logger=self.logger,
                 config_override=self.config_override,
             )
-        return await self.scoring_coordinator.execute(collection_results, dry_run)
+        return cast(
+            Dict[str, Any],
+            await self.scoring_coordinator.execute(collection_results, dry_run),
+        )
 
     def _execute_final_selection(
         self,

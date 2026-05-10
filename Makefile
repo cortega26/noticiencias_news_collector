@@ -60,7 +60,11 @@ AUDIT_ISSUES_FLAGS ?=
 .DEFAULT_GOAL := help
 
 $(BOOTSTRAP_STAMP): requirements.lock
-	@echo "[bootstrap] Creating virtual environment in $(VENV)"
+	@echo "[bootstrap] Setting up virtual environment in $(VENV)"
+	@if [ -d $(VENV) ] && ! $(VENV)/$(BIN_DIR)/python -c "import sys; sys.exit(0)" 2>/dev/null; then \
+		echo "[bootstrap] Existing venv Python not found, recreating..."; \
+		rm -rf $(VENV); \
+	fi
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 	@$(PYTHON_BIN) -m ensurepip --upgrade 2>/dev/null || true
 	@$(PYTHON_BIN) -m pip install --upgrade pip

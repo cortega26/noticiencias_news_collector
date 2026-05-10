@@ -32,7 +32,7 @@ jobs:
 
       - name: Run live critical cohort sweep
         run: |
-          python scripts/run_live_source_drift.py \
+          .venv/bin/python scripts/run_live_source_drift.py \
             --bundle-dir artifacts/live-source-drift
 
       - name: Run frontend handoff smoke on clean checkout
@@ -40,7 +40,7 @@ jobs:
           NOTICIENCIAS_FRONTEND_ROOT: ${{ github.workspace }}/../noticiencias
         run: |
           git clone --depth=1 https://github.com/${{ github.repository_owner }}/noticiencias.git ../noticiencias
-          python scripts/run_pipeline_e2e.py happy_path_latam_winner \
+          .venv/bin/python scripts/run_pipeline_e2e.py happy_path_latam_winner \
             --bundle-root artifacts/live-publication-smoke
 
       - name: Upload live drift artifacts

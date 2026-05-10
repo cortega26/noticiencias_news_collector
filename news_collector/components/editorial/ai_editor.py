@@ -547,7 +547,9 @@ class EditorAgent:
 
             print(" Done!")
             duration = time.time() - start_time
-            logger.info(f"{provider_name} processing complete in {duration:.2f} seconds.")
+            logger.info(
+                f"{provider_name} processing complete in {duration:.2f} seconds."
+            )
 
             result = "".join(full_text).strip()
             logger.debug(
