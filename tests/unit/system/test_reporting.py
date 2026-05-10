@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from news_collector.contracts.source_health import SourceHealthRecord
-from news_collector.system.reporting import generate_session_report
+from news_collector.system.reporter import SessionReporter
 
 
 def test_generate_session_report_exports_stable_source_health_shape(
@@ -17,6 +17,7 @@ def test_generate_session_report_exports_stable_source_health_shape(
         logger=MagicMock(),
     )
     system.logger.create_module_logger.return_value = MagicMock()
+    reporter = SessionReporter(system)
 
     collection_results = {
         "collection_summary": {
@@ -41,7 +42,7 @@ def test_generate_session_report_exports_stable_source_health_shape(
 
     with (
         patch.dict(
-            "news_collector.system.reporting.ALL_SOURCES",
+            "news_collector.config.sources.ALL_SOURCES",
             {
                 "s1": {
                     "name": "Source One",
@@ -57,7 +58,7 @@ def test_generate_session_report_exports_stable_source_health_shape(
             clear=True,
         ),
         patch(
-            "news_collector.system.reporting.enrichment_metrics.get_all_metrics",
+            "news_collector.system.reporter.enrichment_metrics.get_all_metrics",
             return_value={
                 "s1": {
                     "headless_seconds_used": 3.0,
@@ -67,8 +68,7 @@ def test_generate_session_report_exports_stable_source_health_shape(
             },
         ),
     ):
-        report = generate_session_report(
-            system,
+        report = reporter.generate_report(
             collection_results=collection_results,
             scoring_results={"statistics": {"articles_scored": 1}},
             selection_results={"selected_count": 1},
