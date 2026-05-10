@@ -258,7 +258,10 @@ def run_frontend_publication_validation(
 
     commands: list[tuple[str, list[str]]] = []
     if install_dependencies:
-        commands.append(("npm_ci", ["npm", "ci"]))
+        # Use --legacy-peer-deps to tolerate transient peer dependency conflicts
+        # in the front-end repo's package-lock.json. The smoke test validates the
+        # generated post against real front-end gates, not the lockfile's purity.
+        commands.append(("npm_ci", ["npm", "ci", "--legacy-peer-deps"]))
     # Generate image derivative manifest entries before lint (which checks them).
     # This ensures new articles with hero images pass check:image-derivatives.
     # Works gracefully without R2 credentials — only produces local manifest entries.
