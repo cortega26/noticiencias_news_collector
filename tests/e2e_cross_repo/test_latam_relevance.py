@@ -50,7 +50,7 @@ def test_latam_relevance_favors_consequential_tech_over_commerce_filler():
             "Engineers and researchers analyzed energy storage, grid resilience, and public "
             "infrastructure impacts for multiple cities in Latin America."
         ),
-        "source_name": "Xataka",
+        "source_name": "IEEE Spectrum",
     }
     low_value = {
         "title": "Prime Day deal: the best earbuds to buy before prices go back up",
@@ -58,7 +58,7 @@ def test_latam_relevance_favors_consequential_tech_over_commerce_filler():
             "A shopping guide rounds up discounts, coupons, and affiliate picks for readers "
             "looking to upgrade their gadgets."
         ),
-        "source_name": "Gizmodo",
+        "source_name": "Low-quality deal site",
     }
 
     assert score_candidate_for_latam_audience(
