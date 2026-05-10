@@ -477,7 +477,9 @@ class EnrichmentStrategyRouter:
                                 "source_id": source_id,
                                 "url": url,
                                 "reason": "scrapling_disabled",
-                                "fallback": source_config.get("content_mode", "unknown"),
+                                "fallback": source_config.get(
+                                    "content_mode", "unknown"
+                                ),
                             },
                         }
                     )

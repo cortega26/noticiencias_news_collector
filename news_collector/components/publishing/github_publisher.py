@@ -47,8 +47,8 @@ class GitHubPublisher:
     Formerly 'GitHandler' in the refinery app.
     """
 
-    def __init__(self, github_token: str, base_branch: str = DEFAULT_BASE_BRANCH):
-        self.github_token = github_token
+    def __init__(self, github_token: str = "", base_branch: str = DEFAULT_BASE_BRANCH):
+        self.github_token = github_token or os.environ.get("GITHUB_TOKEN", "")
         self.base_branch = base_branch or DEFAULT_BASE_BRANCH
         self._askpass_path: Path | None = None
         self.headers = {

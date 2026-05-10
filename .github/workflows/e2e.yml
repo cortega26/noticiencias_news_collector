@@ -39,7 +39,7 @@ jobs:
 
       - name: Dry-run collection and export
         run: |
-          python scripts/run_collector.py --dry-run --export-json output.json
+          .venv/bin/python scripts/run_collector.py --dry-run --export-json output.json
 
       - name: Validate export schema contract
-        run: python scripts/validate_export.py output.json
+        run: .venv/bin/python scripts/validate_export.py output.json

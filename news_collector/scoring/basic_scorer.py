@@ -223,11 +223,11 @@ class BasicScorer(AsyncScorer):
 
         # Explicitly ensure 'collected_date' exists as datetime
         if not article_obj.collected_date:
-            article_obj.collected_date = datetime.now(timezone.utc)
+            article_obj.collected_date = datetime.now(timezone.utc)  # type: ignore[attr-defined]
 
         # Ensure 'article_metadata' exists if it's missing (SafeNamespace returns None, causing problems)
         if article_obj.article_metadata is None:
-            article_obj.article_metadata = {}
+            article_obj.article_metadata = {}  # type: ignore[attr-defined]
 
         # Run the synchronous scoring logic in a separate thread to avoid blocking the event loop
         loop = asyncio.get_running_loop()
