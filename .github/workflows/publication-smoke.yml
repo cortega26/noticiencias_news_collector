@@ -64,6 +64,7 @@ jobs:
             tailwind.config.mjs
             tsconfig.json
             .nvmrc
+            eslint.config.mjs
           sparse-checkout-cone-mode: false
 
       - name: Set up Node
