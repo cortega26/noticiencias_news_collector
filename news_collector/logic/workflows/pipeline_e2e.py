@@ -376,6 +376,7 @@ def _write_frontend_fixture_repo(target_dir: Path, scenario: Mapping[str, Any]) 
             "build": "node scripts/check.js build",
             "test:dist": "node scripts/check.js test_dist",
             "test:audit": "node scripts/check.js test_audit",
+            "publish:image-derivatives": "echo 'mock: image derivatives ok'",
         },
     }
     _write_json(target_dir / "package.json", package_json)

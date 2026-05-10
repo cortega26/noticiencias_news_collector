@@ -48,10 +48,11 @@ jobs:
 
       - name: Checkout front-end (sparse)
         # Fetch only the files required by the real frontend gates used in smoke validation.
+        # Note: path must be inside the workspace for actions/checkout@v4.
         uses: actions/checkout@v4
         with:
           repository: cortega26/noticiencias
-          path: ../noticiencias
+          path: .tmp/noticiencias
           sparse-checkout: |
             src/
             public/
@@ -70,12 +71,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: ../noticiencias/package-lock.json
+          cache-dependency-path: .tmp/noticiencias/package-lock.json
 
       - name: Run backend-driven frontend publication validation
         run: |
           python scripts/validate_frontend_publication.py \
-            --frontend-root ../noticiencias \
+            --frontend-root .tmp/noticiencias \
             --summary-output data/runtime/publication_smoke/frontend_publication_validation_summary.json
 
       - name: Upload smoke summary artifact
