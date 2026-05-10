@@ -34,7 +34,7 @@ def build_fixture_post() -> AstroPost:
         author="Noticiencias",
         date=date(2026, 1, 1),
         categories=["Ciencia"],
-        tags=["smoke-test"],
+        tags=["smoke test"],
         image="https://example.com/placeholder.jpg",
         image_alt="Smoke test placeholder image",
         permalink="/smoke-test-ci-fixture/",
