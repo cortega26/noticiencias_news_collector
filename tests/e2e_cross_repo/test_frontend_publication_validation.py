@@ -50,6 +50,7 @@ def test_frontend_publication_validation_success_restores_workspace(tmp_path: Pa
     assert [check.name for check in summary.checks] == [
         "npm_ci",
         "publish_image_derivatives",
+        "format_post",
         "lint",
         "validate_content",
         "build",
@@ -88,6 +89,7 @@ def test_frontend_publication_validation_classifies_build_failures(tmp_path: Pat
     assert [check.name for check in summary.checks] == [
         "npm_ci",
         "publish_image_derivatives",
+        "format_post",
         "lint",
         "validate_content",
         "build",
@@ -137,6 +139,7 @@ def test_frontend_publication_validation_current_state_does_not_stage_fixture(
     assert summary.success is True
     assert [check.name for check in summary.checks] == [
         "publish_image_derivatives",
+        "format_post",
         "lint",
         "validate_content",
         "build",

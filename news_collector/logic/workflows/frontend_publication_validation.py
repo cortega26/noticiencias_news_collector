@@ -268,6 +268,16 @@ def run_frontend_publication_validation(
             ["npm", "run", "publish:image-derivatives"],
         )
     )
+    # Format the post file with Prettier before lint/format:check.
+    # The LLM-generated markdown may have minor formatting issues.
+    post_path_str = staged.get("post_path") or ""
+    if post_path_str:
+        commands.append(
+            (
+                "format_post",
+                ["npx", "prettier", "--write", post_path_str],
+            )
+        )
     commands.extend(
         [
             ("lint", ["npm", "run", "lint"]),
