@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,10 +16,14 @@ class TestRefineryCanonical:
         db = MagicMock()
         db.get_canonical_slug.return_value = None  # Default: No locked identity
         db.get_publishing_state.return_value = None  # B-01: No publishing recovery
-        git = MagicMock()
         editor = MagicMock()
         config = MagicMock()
         config.app.policy_integrity_mode = "disabled"
+        config.llm_rate_limiting = {"max_concurrent_requests": 1}
+        config.github = SimpleNamespace(target_repo_url="https://github.com/owner/repo")
+        git = MagicMock()
+        git.create_branch.return_value = "content/update/test"
+        git.create_pull_request.return_value = "https://github.com/owner/repo/pull/1"
 
         # Configure output of editor
         editor.process_article.return_value = (

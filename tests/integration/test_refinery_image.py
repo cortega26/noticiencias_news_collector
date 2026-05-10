@@ -11,6 +11,8 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 def mock_refinery_engine(tmp_path):
     db_manager = MagicMock()
     git_handler = MagicMock()
+    git_handler.create_branch.return_value = "content/update/test"
+    git_handler.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
     editor_agent = MagicMock()
     # Mock process_article simply to return content with frontmatter
     editor_agent.process_article.return_value = (

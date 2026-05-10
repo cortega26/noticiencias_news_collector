@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,6 +16,7 @@ class TestEditorialPolicyEnforcement:
         editor = MagicMock()
         config = MagicMock()
         config.app.editorial_mode = "standard"
+        config.github = SimpleNamespace(target_repo_url="https://github.com/org/repo")
         return db, git, editor, config
 
     @pytest.fixture
@@ -37,6 +39,8 @@ class TestEditorialPolicyEnforcement:
 
             # Other mocks
             engine.git = MagicMock()
+            engine.git.create_branch.return_value = "content/update/test"
+            engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
             engine.writer.write_article = MagicMock(return_value=MagicMock())
             engine._extract_slug = MagicMock(return_value="slug")
             engine._download_image = MagicMock(
