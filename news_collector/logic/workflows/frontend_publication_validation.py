@@ -78,7 +78,7 @@ def render_fixture_markdown(post: AstroPost) -> str:
 def _default_command_runner(
     command: Sequence[str], cwd: Path
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603
         list(command),
         cwd=str(cwd),
         text=True,

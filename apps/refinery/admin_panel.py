@@ -335,7 +335,6 @@ def render_article_processing_panel(  # noqa: C901
             "🧹 Limpiar Caché IA",
             key=f"clear_cache_{panel_key}_{selected_id}",
             help="Elimina el texto generado previamente para este artículo (traducciones/ediciones parciales) forzando que la IA genere el contenido desde cero.",
-            use_container_width=True,
         ):
             try:
                 import re
@@ -1021,9 +1020,7 @@ with tab_prompts:
 
     col_btn, empty_col = st.columns([1, 3])
     with col_btn:
-        if st.button(
-            "💾 Guardar Prompts (YAML)", use_container_width=True, type="primary"
-        ):
+        if st.button("💾 Guardar Prompts (YAML)", type="primary"):
             updated_prompts = current_prompts.copy()
             if "translator" not in updated_prompts:
                 updated_prompts["translator"] = {}
@@ -1395,7 +1392,6 @@ with tab_images:
                 )
                 submit_brief = st.form_submit_button(
                     "Guardar cambios del brief",
-                    use_container_width=True,
                 )
 
             if submit_brief:
@@ -1500,7 +1496,6 @@ with tab3:
         if st.button(
             "🔗 Cargar Artículo desde URL",
             disabled=st.session_state.get("op_in_progress", False),
-            use_container_width=True,
         ):
             st.session_state["op_in_progress"] = True
             try:
@@ -1553,7 +1548,7 @@ with tab3:
                 st.session_state["op_in_progress"] = False
 
     with col_url_clear:
-        if st.button("🧽 Limpiar URL Cargada", use_container_width=True):
+        if st.button("🧽 Limpiar URL Cargada"):
             for key in [
                 "manual_loaded_article",
                 "manual_loaded_export_path",

@@ -35,7 +35,7 @@ class ScoringCoordinator:
         self.logger = logger
         self.config_override = config_override or {}
 
-    async def execute(
+    async def execute(  # noqa: C901
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
         """Run the scoring phase — same logic as the extracted method."""
