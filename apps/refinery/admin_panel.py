@@ -565,14 +565,12 @@ with tab1:
         current_api = ollama_cfg.get("api_url", "http://localhost:11434/api/generate")
 
         _active_provider = None
-        try:
+        with suppress(Exception):
             _active_provider = get_provider(
                 config=config_settings.refresh_runtime_config(),
                 api_url=current_api,
                 timeout=5,
             )
-        except Exception:
-            pass
 
         _active_is_nvidia = isinstance(_active_provider, NvidiaProvider)
         _active_is_gemini = isinstance(_active_provider, GeminiProvider)
@@ -749,10 +747,8 @@ with tab1:
                 and _active_provider
                 and hasattr(_active_provider, "list_models")
             ):
-                try:
+                with suppress(Exception):
                     available_models = _active_provider.list_models()
-                except Exception:
-                    pass
 
             _ollama_base_options = [
                 "qwen2.5:32b",
