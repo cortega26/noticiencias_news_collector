@@ -21,7 +21,7 @@ minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
 # Override addopts to focus on system directory but filter via config
-addopts = "-ra --cov=news_collector/system --cov-report=term-missing --cov-fail-under=74"
+addopts = "-ra --cov=news_collector/system --cov-report=term-missing --cov-fail-under=80"
 markers = [
     "e2e: end-to-end scenarios",
 ]
