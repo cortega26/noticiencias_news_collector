@@ -6,7 +6,6 @@ import asyncio
 import errno
 import json
 import os
-import re
 import shutil
 import subprocess
 from datetime import datetime, timezone

@@ -37,7 +37,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
-from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
@@ -45,7 +44,7 @@ from news_collector.contracts import (
     PublicationAttemptStageResult,
     PublicationAttemptSummary,
 )
-from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
+from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
 )
@@ -65,7 +64,6 @@ logger = get_logger().create_module_logger("RefineryEngine")
 
 # Removing duplicate import if it exists further down
 
-from news_collector.contracts import MANIFEST_FILENAME
 QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
     r'(?m)^[A-Za-z_][A-Za-z0-9_-]*:\s*(["\'])\d{4}-\d{2}-\d{2}\1\s*$'
 )

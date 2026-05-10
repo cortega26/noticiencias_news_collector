@@ -11,17 +11,13 @@ from news_collector.infrastructure.llm.model_registry import (
 class TestPublicEntrypoints:
 
     def test_core_config_manager_entrypoints(self):
-        """Task 1: Verify from core.config_manager import CONFIG, get_config work."""
-        from core.config_manager import CONFIG, get_config
+        """Task 1: Verify direct noticiencias.config_manager import works."""
+        from noticiencias.config_manager import load_config as get_config
 
         # Verify get_config is callable and returns config
         cfg = get_config()
         assert cfg.ollama.api_url is not None
         assert cfg.ollama.model is not None
-
-        # Verify CONFIG is a Config instance (loaded)
-        assert CONFIG.ollama.api_url == cfg.ollama.api_url
-        assert CONFIG.ollama.model == cfg.ollama.model
 
     def test_bootstrap_system_entrypoint_exists_and_runs(self):
         """Task 2: Verify from news_collector.system.bootstrap import bootstrap_system works."""

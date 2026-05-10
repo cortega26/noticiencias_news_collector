@@ -7,8 +7,8 @@ policy_integrity_mode = "enforced"
 
 [paths]
 data_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data"
-logs_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/logs"
-dlq_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/dlq"
+logs_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/logs"
+dlq_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/dlq"
 
 [database]
 driver = "sqlite"

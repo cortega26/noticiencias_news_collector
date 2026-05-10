@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import random
-from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from news_collector.config import ALL_SOURCES, SCORING_CONFIG

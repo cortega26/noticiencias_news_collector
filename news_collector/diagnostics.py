@@ -3,7 +3,7 @@ Diagnostics module for tracking source health and collection statistics.
 """
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional
