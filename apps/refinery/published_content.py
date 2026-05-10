@@ -5,13 +5,14 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any, Iterable
-import unicodedata
 from urllib.parse import urlparse
 
 import git
 import requests
 import yaml
 from news_collector.components.publishing import GitHubPublisher
+from news_collector.utils.slug import slugify
+from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.frontend_publication import (
     FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
 )
@@ -19,7 +20,6 @@ from news_collector.contracts.frontend_publication import (
 POSTS_SUBPATH = Path("src/content/posts")
 HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
 DELETED_ROUTE_SMOKE_CHECKS_SUBPATH = Path("data/deleted-route-smoke-checks.json")
-REFINERY_MANIFEST_FILENAME = "refinery_manifest.json"
 DEFAULT_HERO_IMAGE = "~/assets/images/default.png"
 
 
@@ -205,7 +205,7 @@ def deleted_route_smoke_checks_path(repo_root: Path) -> Path:
 
 
 def refinery_manifest_path(repo_root: Path) -> Path:
-    return repo_root / POSTS_SUBPATH / REFINERY_MANIFEST_FILENAME
+    return repo_root / POSTS_SUBPATH / MANIFEST_FILENAME
 
 
 def _normalize_allowlist_entries(entries: dict[str, Any]) -> dict[str, str]:
@@ -315,23 +315,7 @@ def prune_hero_placeholder_allowlist_for_post(repo_root: Path, post_file: Path) 
 
 
 def _slugify_segment(value: str) -> str:
-    normalized = (
-        unicodedata.normalize("NFKD", value)
-        .encode("ascii", "ignore")
-        .decode("utf-8")
-        .strip()
-        .lower()
-    )
-    cleaned = []
-    last_dash = False
-    for char in normalized:
-        if char.isalnum():
-            cleaned.append(char)
-            last_dash = False
-        elif not last_dash:
-            cleaned.append("-")
-            last_dash = True
-    return "".join(cleaned).strip("-")
+    return slugify(value)
 
 
 def normalize_route_path(route_path: str) -> str:

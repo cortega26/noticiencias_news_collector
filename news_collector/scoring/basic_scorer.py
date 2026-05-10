@@ -35,6 +35,7 @@ from pydantic import ValidationError
 
 from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
 from news_collector.contracts import ScoringRequestModel
+from news_collector.utils.dict_wrapper import SafeNamespace
 from news_collector.utils.logger import get_logger
 
 from ..storage.models import Article
@@ -204,16 +205,6 @@ class BasicScorer(AsyncScorer):
         source_config = (
             source_config_obj if isinstance(source_config_obj, dict) else None
         )
-
-        class SafeNamespace:
-            collected_date: datetime | None
-            article_metadata: Dict[str, Any] | None
-
-            def __init__(self, **kwargs):
-                self.__dict__.update(kwargs)
-
-            def __getattr__(self, name):
-                return None
 
         # Parse date strings to datetime objects if necessary
         for date_field in ["published_date", "collected_date"]:

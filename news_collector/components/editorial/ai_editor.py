@@ -1150,6 +1150,7 @@ class EditorAgent:
 
             model_dict = {
                 "title": final_title,
+                # REVIEW: canonical default is SCHEMA_VERSION=1; is this intentionally 2?
                 "schema_version": 2,
                 "date": parsed_date_val,
                 "author": "Noticiencias AI",

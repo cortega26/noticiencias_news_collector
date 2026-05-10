@@ -1,5 +1,6 @@
 import re
 
+from news_collector.scoring.latam_relevance import LATAM_KEYWORDS
 from news_collector.storage.models import Article
 
 
@@ -93,39 +94,8 @@ class HeuristicScorer:
         Calculate affinity with Latin America.
         """
         text_lower = text.lower()
-        latam_keywords = [
-            "méxico",
-            "mexico",
-            "argentina",
-            "chile",
-            "colombia",
-            "brasil",
-            "brazil",
-            "perú",
-            "peru",
-            "uruguay",
-            "paraguay",
-            "bolivia",
-            "ecuador",
-            "venezuela",
-            "costa rica",
-            "panamá",
-            "panama",
-            "españa",
-            "spain",
-            "latinoamérica",
-            "unam",
-            "conicet",
-            "fapesp",
-            "tec de monterrey",
-            "santiago",
-            "buenos aires",
-            "bogotá",
-            "cdmx",
-            "amazonas",
-        ]
 
-        hits = sum(1 for w in latam_keywords if w in text_lower)
+        hits = sum(1 for w in LATAM_KEYWORDS if w in text_lower)
         if hits > 0:
             return (
                 1.0  # High relevance if even mentioned once (likely a regional study)

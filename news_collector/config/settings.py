@@ -8,6 +8,10 @@ from typing import Any, Dict
 
 from noticiencias.config_manager import Config, ConfigError, load_config
 
+from .runtime import RuntimeSettings
+
+RUNTIME = RuntimeSettings()
+
 _CONFIG_STATE: Any | None = None
 
 
@@ -24,31 +28,46 @@ class _RuntimeConfigProxy:
 CONFIG = _RuntimeConfigProxy()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-LOGS_DIR = BASE_DIR / "logs"
-DLQ_DIR = BASE_DIR / "dlq"
 
-DATABASE_CONFIG: Dict[str, Any] = {}
-COLLECTION_CONFIG: Dict[str, Any] = {}
-RATE_LIMITING_CONFIG: Dict[str, Any] = {}
-ROBOTS_CONFIG: Dict[str, Any] = {}
-DEDUP_CONFIG: Dict[str, Any] = {}
-SCORING_CONFIG: Dict[str, Any] = {}
-TEXT_PROCESSING_CONFIG: Dict[str, Any] = {}
-ENRICHMENT_CONFIG: Dict[str, Any] = {}
-NEWS_CONFIG: Dict[str, Any] = {}
-GEMINI_CONFIG: Dict[str, Any] = {}
-LOGGING_CONFIG: Dict[str, Any] = {}
+# -----------------------------------------------------------------------
+# Backward-compatible shims — resolve reads against RUNTIME so existing
+# ``from settings import ENVIRONMENT`` imports keep working without
+# changes.  New code should prefer ``from settings import RUNTIME``.
+# -----------------------------------------------------------------------
 
-ENVIRONMENT = "development"
-DEBUG = False
-IS_PRODUCTION = False
-IS_STAGING = False
+_module_attr_map: Dict[str, str] = {
+    "DATA_DIR": "data_dir",
+    "LOGS_DIR": "logs_dir",
+    "DLQ_DIR": "dlq_dir",
+    "ENVIRONMENT": "environment",
+    "DEBUG": "debug",
+    "IS_PRODUCTION": "is_production",
+    "IS_STAGING": "is_staging",
+    "DATABASE_CONFIG": "database_config",
+    "COLLECTION_CONFIG": "collection_config",
+    "RATE_LIMITING_CONFIG": "rate_limiting_config",
+    "ROBOTS_CONFIG": "robots_config",
+    "DEDUP_CONFIG": "dedup_config",
+    "SCORING_CONFIG": "scoring_config",
+    "TEXT_PROCESSING_CONFIG": "text_processing_config",
+    "ENRICHMENT_CONFIG": "enrichment_config",
+    "NEWS_CONFIG": "news_config",
+    "GEMINI_CONFIG": "gemini_config",
+    "LOGGING_CONFIG": "logging_config",
+    "LLM_SYSTEM_AVAILABLE": "llm_system_available",
+}
 
 
-def _replace_mapping(target: Dict[str, Any], new_values: Dict[str, Any]) -> None:
-    target.clear()
-    target.update(new_values)
+def __getattr__(name: str) -> Any:
+    attr = _module_attr_map.get(name)
+    if attr is not None:
+        return getattr(RUNTIME, attr)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__ + list(_module_attr_map.keys())))
+# -----------------------------------------------------------------------
 
 
 def _normalize_enrichment(config: Config) -> Dict[str, Any]:
@@ -130,54 +149,71 @@ def _build_logging_config(config: Config) -> Dict[str, Any]:
     }
 
 
-def refresh_runtime_config(config: Any | None = None) -> Any:
-    """Reload runtime config and refresh mutable exports in place."""
+# -----------------------------------------------------------------------
+# Path / environment / builder resolvers (split from refresh_runtime_config)
+# -----------------------------------------------------------------------
 
+
+def _resolve_paths(cfg: Any) -> None:
+    if not isinstance(cfg, Config):
+        paths = getattr(cfg, "paths", None)
+        if paths is not None:
+            RUNTIME.data_dir = getattr(paths, "data_dir", RUNTIME.data_dir)
+            RUNTIME.logs_dir = getattr(paths, "logs_dir", RUNTIME.logs_dir)
+            RUNTIME.dlq_dir = getattr(paths, "dlq_dir", RUNTIME.dlq_dir)
+            for directory in (RUNTIME.data_dir, RUNTIME.logs_dir, RUNTIME.dlq_dir):
+                Path(directory).mkdir(parents=True, exist_ok=True)
+        return
+
+    RUNTIME.data_dir = cfg.paths.data_dir
+    RUNTIME.logs_dir = cfg.paths.logs_dir
+    RUNTIME.dlq_dir = cfg.paths.dlq_dir
+    for directory in (RUNTIME.data_dir, RUNTIME.logs_dir, RUNTIME.dlq_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_environment(cfg: Any) -> None:
+    if not isinstance(cfg, Config):
+        app = getattr(cfg, "app", None)
+        if app is not None:
+            RUNTIME.environment = getattr(app, "environment", RUNTIME.environment)
+            RUNTIME.debug = getattr(app, "debug", RUNTIME.debug)
+            RUNTIME.is_production = RUNTIME.environment == "production"
+            RUNTIME.is_staging = RUNTIME.environment == "staging"
+        return
+
+    RUNTIME.environment = cfg.app.environment
+    RUNTIME.debug = cfg.app.debug
+    RUNTIME.is_production = RUNTIME.environment == "production"
+    RUNTIME.is_staging = RUNTIME.environment == "staging"
+
+
+def _resolve_builders(cfg: Config) -> None:
+    RUNTIME.database_config = _build_database_config(cfg)
+    RUNTIME.collection_config = _build_collection_config(cfg)
+    RUNTIME.rate_limiting_config = _build_rate_limiting_config(cfg)
+    RUNTIME.robots_config = cfg.robots.model_dump(mode="python")
+    RUNTIME.dedup_config = cfg.dedup.model_dump(mode="python")
+    RUNTIME.scoring_config = cfg.scoring.model_dump(mode="python")
+    RUNTIME.text_processing_config = _build_text_processing_config(cfg)
+    RUNTIME.enrichment_config = _normalize_enrichment(cfg)
+    RUNTIME.news_config = cfg.news.model_dump(mode="python")
+    RUNTIME.gemini_config = cfg.gemini.model_dump(mode="python")
+    RUNTIME.logging_config = _build_logging_config(cfg)
+
+
+def refresh_runtime_config(config: Any | None = None) -> Any:
+    """Reload runtime config and refresh RUNTIME in place."""
     global _CONFIG_STATE
-    global DATA_DIR, LOGS_DIR, DLQ_DIR
-    global ENVIRONMENT, DEBUG, IS_PRODUCTION, IS_STAGING
 
     cfg = config or load_config()
     _CONFIG_STATE = cfg
 
-    if not isinstance(cfg, Config):
-        paths = getattr(cfg, "paths", None)
-        if paths is not None:
-            DATA_DIR = getattr(paths, "data_dir", DATA_DIR)
-            LOGS_DIR = getattr(paths, "logs_dir", LOGS_DIR)
-            DLQ_DIR = getattr(paths, "dlq_dir", DLQ_DIR)
-            for directory in (DATA_DIR, LOGS_DIR, DLQ_DIR):
-                Path(directory).mkdir(parents=True, exist_ok=True)
-        app = getattr(cfg, "app", None)
-        if app is not None:
-            ENVIRONMENT = getattr(app, "environment", ENVIRONMENT)
-            DEBUG = getattr(app, "debug", DEBUG)
-            IS_PRODUCTION = ENVIRONMENT == "production"
-            IS_STAGING = ENVIRONMENT == "staging"
-        return cfg
+    _resolve_paths(cfg)
+    _resolve_environment(cfg)
 
-    DATA_DIR = cfg.paths.data_dir
-    LOGS_DIR = cfg.paths.logs_dir
-    DLQ_DIR = cfg.paths.dlq_dir
-    for directory in (DATA_DIR, LOGS_DIR, DLQ_DIR):
-        directory.mkdir(parents=True, exist_ok=True)
-
-    ENVIRONMENT = cfg.app.environment
-    DEBUG = cfg.app.debug
-    IS_PRODUCTION = ENVIRONMENT == "production"
-    IS_STAGING = ENVIRONMENT == "staging"
-
-    _replace_mapping(DATABASE_CONFIG, _build_database_config(cfg))
-    _replace_mapping(COLLECTION_CONFIG, _build_collection_config(cfg))
-    _replace_mapping(RATE_LIMITING_CONFIG, _build_rate_limiting_config(cfg))
-    _replace_mapping(ROBOTS_CONFIG, cfg.robots.model_dump(mode="python"))
-    _replace_mapping(DEDUP_CONFIG, cfg.dedup.model_dump(mode="python"))
-    _replace_mapping(SCORING_CONFIG, cfg.scoring.model_dump(mode="python"))
-    _replace_mapping(TEXT_PROCESSING_CONFIG, _build_text_processing_config(cfg))
-    _replace_mapping(ENRICHMENT_CONFIG, _normalize_enrichment(cfg))
-    _replace_mapping(NEWS_CONFIG, cfg.news.model_dump(mode="python"))
-    _replace_mapping(GEMINI_CONFIG, cfg.gemini.model_dump(mode="python"))
-    _replace_mapping(LOGGING_CONFIG, _build_logging_config(cfg))
+    if isinstance(cfg, Config):
+        _resolve_builders(cfg)
 
     return cfg
 
@@ -190,7 +226,6 @@ def get_config() -> Any:
 
 def validate_config(config: Config | None = None) -> None:
     """Execute domain specific consistency checks."""
-
     cfg = config or get_config()
     weights = cfg.scoring.weights
     feature_weights = cfg.scoring.feature_weights
@@ -229,14 +264,16 @@ def validate_config(config: Config | None = None) -> None:
 
 
 def set_llm_system_available(value: bool) -> None:
-    global LLM_SYSTEM_AVAILABLE
-    LLM_SYSTEM_AVAILABLE = value
+    """Toggle LLM system availability.
+
+    Deprecated: prefer ``RUNTIME.llm_system_available = value``.
+    """
+    RUNTIME.llm_system_available = value
 
 
-# Runtime state flags
-LLM_SYSTEM_AVAILABLE = True  # Default to True, updated by bootstrap health checks
-
+# One-shot load on first import
 refresh_runtime_config()
+
 
 __all__ = [
     "BASE_DIR",
@@ -260,6 +297,7 @@ __all__ = [
     "GEMINI_CONFIG",
     "LOGGING_CONFIG",
     "LLM_SYSTEM_AVAILABLE",
+    "RUNTIME",
     "get_config",
     "refresh_runtime_config",
     "set_llm_system_available",

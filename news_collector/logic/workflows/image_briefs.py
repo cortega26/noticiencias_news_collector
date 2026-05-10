@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import re
 import shutil
-import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
 from news_collector.contracts import IMAGE_PROMPT_VERSION, ImageBriefModel
+from news_collector.utils.slug import slugify
 
 PROMPT_TEMPLATE_PATH = (
     Path(__file__).resolve().parents[2]
@@ -43,14 +43,7 @@ def _ensure_min_text(value: str, *, fallback: str, min_length: int) -> str:
 
 def slugify_text(value: str, fallback: str) -> str:
     """Deterministically sanitize titles into filesystem-safe slugs."""
-    normalized = (
-        unicodedata.normalize("NFKD", value or "")
-        .encode("ascii", "ignore")
-        .decode("utf-8")
-    )
-    normalized = re.sub(r"[^a-zA-Z0-9\-_]", "-", normalized)
-    normalized = re.sub(r"-+", "-", normalized).strip("-").lower()
-    return normalized or fallback
+    return slugify(value, fallback=fallback)
 
 
 class ImageBriefStore:

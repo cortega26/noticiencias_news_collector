@@ -49,13 +49,14 @@ from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
 )
-from news_collector.logic.workflows.image_handler import ArticleImageHandler
+from news_collector.logic.workflows.image_handler import ArticleImageHandler, CT_TO_EXT
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.logic.workflows.publication_identity import (
     PublicationIdentityResolver,
 )
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 from news_collector.utils.logger import get_logger
+from news_collector.utils.slug import slugify
 
 if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
@@ -64,7 +65,7 @@ logger = get_logger().create_module_logger("RefineryEngine")
 
 # Removing duplicate import if it exists further down
 
-MANIFEST_FILENAME = "refinery_manifest.json"
+from news_collector.contracts import MANIFEST_FILENAME
 QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
     r'(?m)^[A-Za-z_][A-Za-z0-9_-]*:\s*(["\'])\d{4}-\d{2}-\d{2}\1\s*$'
 )
@@ -759,8 +760,6 @@ class RefineryEngine:
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
         """Extracts slug from frontmatter or generates fallback."""
-        import unicodedata
-
         slug = None
         if "slug:" in content:
             match = re.search(r'slug:\s*"?([^"\n]+)"?', content)
@@ -776,16 +775,7 @@ class RefineryEngine:
             slug = f"article-{fallback_id}"
 
         # --- NC-BE-015 S0 GUARD: Strict sanitize ---
-        slug = (
-            unicodedata.normalize("NFKD", slug)
-            .encode("ASCII", "ignore")
-            .decode("utf-8")
-        )
-        slug = re.sub(r"[^a-zA-Z0-9\-_]", "-", slug)
-        slug = re.sub(r"-+", "-", slug).strip("-").lower()
-
-        if not slug or slug == "-":
-            slug = f"article-{fallback_id}"
+        slug = slugify(slug, fallback=f"article-{fallback_id}")
 
         return slug
 
@@ -815,15 +805,6 @@ class RefineryEngine:
             return None
 
         # Determine extension from Content-Type header (reliable) with URL heuristic fallback
-        _CT_TO_EXT = {
-            "image/jpeg": ".jpg",
-            "image/jpg": ".jpg",
-            "image/png": ".png",
-            "image/webp": ".webp",
-            "image/avif": ".avif",
-            "image/gif": ".gif",
-            "image/svg+xml": ".svg",
-        }
         ext = None  # resolved after first request below
 
         # Paths
@@ -840,7 +821,7 @@ class RefineryEngine:
 
             # Resolve extension: Content-Type first, URL heuristic fallback
             ct = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
-            ext = _CT_TO_EXT.get(ct)
+            ext = CT_TO_EXT.get(ct)
             if not ext:
                 url_lower = url.lower().split("?")[0]
                 for candidate_ext in (

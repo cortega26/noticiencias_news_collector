@@ -12,6 +12,8 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
+from ._constants import SCHEMA_VERSION
+
 
 class HeadlinesVariants(BaseModel):
     """Variants of headlines for A/B testing or display."""
@@ -53,7 +55,7 @@ class AstroPost(BaseModel):
 
     # Core Fields
     title: str = Field(..., min_length=5, description="Article Title")
-    schema_version: int = Field(default=1, ge=1, description="Schema Version")
+    schema_version: int = Field(default=SCHEMA_VERSION, ge=1, description="Schema Version")
     excerpt: str = Field(
         ..., min_length=10, description="SEO Meta Description / Excerpt"
     )

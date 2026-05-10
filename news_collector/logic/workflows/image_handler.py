@@ -24,7 +24,7 @@ from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("ArticleImageHandler")
 
-_CT_TO_EXT: Dict[str, str] = {
+CT_TO_EXT: Dict[str, str] = {
     "image/jpeg": ".jpg",
     "image/jpg": ".jpg",
     "image/png": ".png",
@@ -178,7 +178,7 @@ class ArticleImageHandler:
                 response = client.get(url, timeout=15)
 
             ct = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
-            ext = _CT_TO_EXT.get(ct)
+            ext = CT_TO_EXT.get(ct)
             if not ext:
                 url_lower = url.lower().split("?")[0]
                 for candidate in (".png", ".webp", ".avif", ".gif", ".svg", ".jpeg", ".jpg"):
