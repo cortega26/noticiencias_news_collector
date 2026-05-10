@@ -649,7 +649,10 @@ class EditorAgent:
             "Set recoverable=false ONLY when Criterion 2 fails (wrong topic). "
             "Criteria 1, 3, and 4 are always recoverable via rewriting.\n"
             'Output JSON: {"score": integer, "reason": "short string", "recoverable": true_or_false}\n\n'
-            f"{_sample_for_critic(content)}"
+            # Pass full content — sampling with [...] markers triggers false
+            # "truncated mid-sentence" rejections from the completeness check.
+            # Full articles (~2k-8k chars) are well within any LLM's context window.
+            f"{content[:32000] if len(content) > 32000 else content}"
         )
 
         try:
@@ -1042,9 +1045,16 @@ class EditorAgent:
                         f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
                     )
                     print(f"   Reason: {reason}")
-                    # Repair using the Translated Text (Stage 1 output) as base to ensure fresh start
+                    # Repair using the rejected editorial content as base.
+                    # When the editorial body is empty (e.g. Stage 2 produced nothing),
+                    # fall back to the translated text as a starting point.
+                    repair_base = (
+                        final_content
+                        if _extract_publishable_body(final_content)
+                        else translated_text
+                    )
                     final_content = self._repair_editorial(
-                        translated_text, reason or "Unknown reason"
+                        repair_base, reason or "Unknown reason"
                     )
                     final_content = self._extract_markdown_content(
                         final_content
