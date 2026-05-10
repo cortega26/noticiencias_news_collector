@@ -70,10 +70,10 @@ class TargetRepoWriter:
         # NC-BE-015 S0 GUARD: Path Traversal Check
         try:
             resolved_target.relative_to(resolved_posts)
-        except ValueError:
+        except ValueError as err:
             raise ValueError(
                 f"Path traversal detected: {resolved_target} is outside {resolved_posts}"
-            )
+            ) from err
 
         target_file_path.write_text(content, encoding="utf-8")
         logger.info("Written content to {}", target_file_path)
