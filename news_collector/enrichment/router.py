@@ -469,8 +469,18 @@ class EnrichmentStrategyRouter:
                     },
                 }
                 if error_reason == "scrapling_disabled":
-                    # Configuration state, not a runtime failure — log at WARNING
-                    self.logger.warning(log_payload)
+                    # Configuration state, not a runtime failure — log at INFO
+                    self.logger.info(
+                        {
+                            "event": "enrichment.scrapling.skipped",
+                            "details": {
+                                "source_id": source_id,
+                                "url": url,
+                                "reason": "scrapling_disabled",
+                                "fallback": source_config.get("content_mode", "unknown"),
+                            },
+                        }
+                    )
                 else:
                     self.logger.error(log_payload)
                 return {
