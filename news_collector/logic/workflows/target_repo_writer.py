@@ -12,6 +12,7 @@ Does NOT own:
 - Git operations
 - Image download
 """
+
 from __future__ import annotations
 
 import json

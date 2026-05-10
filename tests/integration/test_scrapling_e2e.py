@@ -26,12 +26,36 @@ SCRAPLING_E2E = os.getenv("SCRAPLING_E2E", "false").lower() == "true"
 # Hard sources confirmed to need headless/stealth in the pipeline
 HARD_SOURCES = [
     {"id": "phys_org", "url": "https://phys.org/", "min_content_chars": 500},
-    {"id": "sciencedaily_top", "url": "https://www.sciencedaily.com/", "min_content_chars": 500},
-    {"id": "deepmind_blog", "url": "https://deepmind.google/blog/", "min_content_chars": 500},
-    {"id": "harvard_gazette", "url": "https://news.harvard.edu/gazette/", "min_content_chars": 500},
-    {"id": "uw_news", "url": "https://www.washington.edu/news/", "min_content_chars": 500},
-    {"id": "uw_madison_news", "url": "https://news.wisc.edu/", "min_content_chars": 500},
-    {"id": "microsoft_research", "url": "https://www.microsoft.com/en-us/research/blog/", "min_content_chars": 500},
+    {
+        "id": "sciencedaily_top",
+        "url": "https://www.sciencedaily.com/",
+        "min_content_chars": 500,
+    },
+    {
+        "id": "deepmind_blog",
+        "url": "https://deepmind.google/blog/",
+        "min_content_chars": 500,
+    },
+    {
+        "id": "harvard_gazette",
+        "url": "https://news.harvard.edu/gazette/",
+        "min_content_chars": 500,
+    },
+    {
+        "id": "uw_news",
+        "url": "https://www.washington.edu/news/",
+        "min_content_chars": 500,
+    },
+    {
+        "id": "uw_madison_news",
+        "url": "https://news.wisc.edu/",
+        "min_content_chars": 500,
+    },
+    {
+        "id": "microsoft_research",
+        "url": "https://www.microsoft.com/en-us/research/blog/",
+        "min_content_chars": 500,
+    },
 ]
 
 TIMEOUT_SECONDS = 30
@@ -57,7 +81,9 @@ def _fetch_with_httpx(source_id: str, url: str) -> FetchResult:
     }
     start = time.time()
     try:
-        r = httpx.get(url, headers=headers, timeout=TIMEOUT_SECONDS, follow_redirects=True)
+        r = httpx.get(
+            url, headers=headers, timeout=TIMEOUT_SECONDS, follow_redirects=True
+        )
         return FetchResult(
             source_id=source_id,
             url=url,
@@ -117,16 +143,22 @@ def _fetch_with_scrapling(source_id: str, url: str) -> FetchResult:
 
 def _print_results_table(results: List[FetchResult]) -> None:
     print("\n" + "=" * 90)
-    print(f"{'Source':<22} {'Method':<12} {'OK':<5} {'Status':<8} {'Chars':<10} {'Time(s)':<8} {'Error'}")
+    print(
+        f"{'Source':<22} {'Method':<12} {'OK':<5} {'Status':<8} {'Chars':<10} {'Time(s)':<8} {'Error'}"
+    )
     print("-" * 90)
     for r in results:
         ok = "✓" if r.success else "✗"
         err = r.error[:35] if r.error else ""
-        print(f"{r.source_id:<22} {r.method:<12} {ok:<5} {r.status_code:<8} {r.content_length:<10} {r.duration:<8.1f} {err}")
+        print(
+            f"{r.source_id:<22} {r.method:<12} {ok:<5} {r.status_code:<8} {r.content_length:<10} {r.duration:<8.1f} {err}"
+        )
     print("=" * 90)
 
 
-@pytest.mark.skipif(not SCRAPLING_E2E, reason="Set SCRAPLING_E2E=true to run real network tests")
+@pytest.mark.skipif(
+    not SCRAPLING_E2E, reason="Set SCRAPLING_E2E=true to run real network tests"
+)
 @pytest.mark.timeout(600)
 def test_scrapling_improves_hard_source_fetch_rate():
     """
@@ -141,11 +173,15 @@ def test_scrapling_improves_hard_source_fetch_rate():
 
         httpx_r = _fetch_with_httpx(source["id"], source["url"])
         httpx_results.append(httpx_r)
-        print(f"  httpx:     {'OK' if httpx_r.success else 'FAIL'} [{httpx_r.status_code}] {httpx_r.content_length} chars ({httpx_r.duration:.1f}s)")
+        print(
+            f"  httpx:     {'OK' if httpx_r.success else 'FAIL'} [{httpx_r.status_code}] {httpx_r.content_length} chars ({httpx_r.duration:.1f}s)"
+        )
 
         scrapling_r = _fetch_with_scrapling(source["id"], source["url"])
         scrapling_results.append(scrapling_r)
-        print(f"  scrapling: {'OK' if scrapling_r.success else 'FAIL'} [{scrapling_r.status_code}] {scrapling_r.content_length} chars ({scrapling_r.duration:.1f}s)")
+        print(
+            f"  scrapling: {'OK' if scrapling_r.success else 'FAIL'} [{scrapling_r.status_code}] {scrapling_r.content_length} chars ({scrapling_r.duration:.1f}s)"
+        )
 
     _print_results_table(httpx_results + scrapling_results)
 
@@ -156,7 +192,9 @@ def test_scrapling_improves_hard_source_fetch_rate():
     httpx_rate = httpx_ok / total
     scrapling_rate = scrapling_ok / total
 
-    print(f"\nSummary: httpx {httpx_ok}/{total} ({httpx_rate:.0%})  scrapling {scrapling_ok}/{total} ({scrapling_rate:.0%})")
+    print(
+        f"\nSummary: httpx {httpx_ok}/{total} ({httpx_rate:.0%})  scrapling {scrapling_ok}/{total} ({scrapling_rate:.0%})"
+    )
 
     # Scrapling must not be worse than plain httpx
     assert scrapling_rate >= httpx_rate, (

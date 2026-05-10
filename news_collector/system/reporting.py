@@ -120,5 +120,3 @@ def get_system_statistics(system) -> Dict[str, Any]:
     except Exception as e:
         system.logger.log_error_with_context(e, {"operation": "get_system_statistics"})
         raise
-
-

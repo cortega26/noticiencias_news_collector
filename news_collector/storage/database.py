@@ -382,7 +382,10 @@ class DatabaseManager:
         """Fetch a single article by canonical URL."""
         canonical_url = canonicalize_url(url) or url
         with self.get_session() as session:
-            article = cast(Optional[Article], session.query(Article).filter_by(url=canonical_url).first())
+            article = cast(
+                Optional[Article],
+                session.query(Article).filter_by(url=canonical_url).first(),
+            )
             if article is not None:
                 session.expunge(article)
             return article
@@ -390,7 +393,10 @@ class DatabaseManager:
     def get_article_by_id(self, article_id: int) -> Optional[Article]:
         """Fetch a single article by id."""
         with self.get_session() as session:
-            article = cast(Optional[Article], session.query(Article).filter(Article.id == article_id).first())
+            article = cast(
+                Optional[Article],
+                session.query(Article).filter(Article.id == article_id).first(),
+            )
             if article is not None:
                 session.expunge(article)
             return article

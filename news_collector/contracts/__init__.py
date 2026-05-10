@@ -1,7 +1,6 @@
 """Shared contracts for validated pipeline payloads."""
 
 from ._constants import MANIFEST_FILENAME, SCHEMA_VERSION
-
 from .collector import CollectorArticleModel, CollectorArticlePayload
 from .common import ArticleMetadata, ArticleMetadataModel
 from .enrichment import (
@@ -16,13 +15,13 @@ from .image_brief import (
     IMAGE_PROMPT_VERSION,
     ImageBriefModel,
 )
+from .pipeline_e2e import PipelineE2ERunSummary, PipelineStageSnapshot
 from .publication_validation import (
     FrontendCheckResult,
     PublicationAttemptStageResult,
     PublicationAttemptSummary,
     PublicationValidationSummary,
 )
-from .pipeline_e2e import PipelineE2ERunSummary, PipelineStageSnapshot
 from .scoring import (
     ScoringComponents,
     ScoringComponentsModel,

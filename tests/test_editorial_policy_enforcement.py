@@ -40,7 +40,9 @@ class TestEditorialPolicyEnforcement:
             # Other mocks
             engine.git = MagicMock()
             engine.git.create_branch.return_value = "content/update/test"
-            engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
+            engine.git.create_pull_request.return_value = (
+                "https://github.com/org/repo/pull/1"
+            )
             engine.writer.write_article = MagicMock(return_value=MagicMock())
             engine._extract_slug = MagicMock(return_value="slug")
             engine._download_image = MagicMock(

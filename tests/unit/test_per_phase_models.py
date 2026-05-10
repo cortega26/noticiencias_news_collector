@@ -123,7 +123,9 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
 
     monkeypatch.setattr(agent, "_translate_scientific", lambda _: "Texto traducido")
     monkeypatch.setattr(
-        agent, "_adapt_editorial", lambda _: (
+        agent,
+        "_adapt_editorial",
+        lambda _: (
             "## Apertura\n"
             "Este análisis examina los avances recientes en el campo científico y tecnológico. "
             "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
@@ -133,7 +135,7 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
             "La metodología empleada resulta reproducible y transparente, lo que fortalece la "
             "credibilidad del estudio. En conclusión, estos resultados contribuyen al avance del "
             "conocimiento en el área y representan un paso importante para futuras investigaciones."
-        )
+        ),
     )
     monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
     monkeypatch.setattr(

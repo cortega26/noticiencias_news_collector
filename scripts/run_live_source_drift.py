@@ -65,7 +65,9 @@ def main() -> int:
     tracker = SourceHealthTracker()
     system = create_system(health_tracker=tracker)
     if not system.initialize():
-        raise RuntimeError("Failed to initialize News Collector System for live drift run.")
+        raise RuntimeError(
+            "Failed to initialize News Collector System for live drift run."
+        )
 
     try:
         results = asyncio.run(
@@ -108,7 +110,12 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print(json.dumps({"report_path": str(report_path), "markdown_path": str(markdown_path)}, indent=2))
+    print(
+        json.dumps(
+            {"report_path": str(report_path), "markdown_path": str(markdown_path)},
+            indent=2,
+        )
+    )
     return 0
 
 

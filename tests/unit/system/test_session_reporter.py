@@ -148,9 +148,7 @@ class TestHealthExport:
         pass
 
     @patch("news_collector.system.reporter.serialize_source_health_report")
-    def test_health_export_failure_is_nonfatal(
-        self, mock_serialize, reporter
-    ):
+    def test_health_export_failure_is_nonfatal(self, mock_serialize, reporter):
         """If health export fails, the report is still returned."""
         mock_serialize.side_effect = OSError("Permission denied")
 

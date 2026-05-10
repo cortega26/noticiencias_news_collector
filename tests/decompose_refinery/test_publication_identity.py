@@ -9,6 +9,7 @@ Import path after implementation:
         PublicationIdentityResolver,
     )
 """
+
 from __future__ import annotations
 
 import re
@@ -24,10 +25,10 @@ from news_collector.logic.workflows.publication_identity import (
     PublicationIdentityResolver,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_manifest_stub():
     """Minimal stand-in for TargetRepoWriter that supports find_existing_file."""
@@ -48,6 +49,7 @@ def _make_resolver(db=None, manifest=None) -> PublicationIdentityResolver:
 # ---------------------------------------------------------------------------
 # IDENT-01: DB canonical slug present → locked identity returned, no FS scan
 # ---------------------------------------------------------------------------
+
 
 class TestIdentityFromDB:
     def test_ident_01_db_slug_used(self, tmp_path):
@@ -97,6 +99,7 @@ class TestIdentityFromDB:
 # ---------------------------------------------------------------------------
 # IDENT-02: DB empty, file exists in FS → recovered, manifest self-healed
 # ---------------------------------------------------------------------------
+
 
 class TestIdentityFromFilesystem:
     def test_ident_02_existing_file_recovered(self, tmp_path):
@@ -149,6 +152,7 @@ class TestIdentityFromFilesystem:
 # ---------------------------------------------------------------------------
 # IDENT-03: Creation mode — date from published_date
 # ---------------------------------------------------------------------------
+
 
 class TestIdentityCreationMode:
     def test_ident_03_date_from_published_date(self, tmp_path):
@@ -231,7 +235,10 @@ class TestIdentityCreationMode:
 
         identity = resolver.resolve(
             article_id="10",
-            article={"published_date": datetime(2024, 1, 1), "title": "Test Article Title"},
+            article={
+                "published_date": datetime(2024, 1, 1),
+                "title": "Test Article Title",
+            },
             posts_dir=posts_dir,
         )
 
@@ -240,14 +247,17 @@ class TestIdentityCreationMode:
         # But must still start with the correct date
         assert identity.final_slug.startswith("2024-01-01-")
         # And must not overwrite the existing file
-        assert not (posts_dir / "2024-01-01-test-article-title.md").read_text().startswith(
-            "---"
+        assert (
+            not (posts_dir / "2024-01-01-test-article-title.md")
+            .read_text()
+            .startswith("---")
         )
 
 
 # ---------------------------------------------------------------------------
 # IDENT-07 / IDENT-08: extract_slug — pure function, path traversal + Unicode
 # ---------------------------------------------------------------------------
+
 
 class TestExtractSlug:
     """extract_slug is a pure static method — no I/O required."""
@@ -271,7 +281,9 @@ class TestExtractSlug:
 
     def test_ident_07_empty_slug_uses_fallback(self):
         """IDENT-07 edge: Slug that reduces to empty → article-{fallback}."""
-        result = PublicationIdentityResolver.extract_slug("slug: !@#$%^&*()", "fallback")
+        result = PublicationIdentityResolver.extract_slug(
+            "slug: !@#$%^&*()", "fallback"
+        )
         assert result == "article-fallback"
 
     def test_ident_08_unicode_normalization(self):
@@ -291,6 +303,7 @@ class TestExtractSlug:
 # ---------------------------------------------------------------------------
 # backfill_slug / register_slug
 # ---------------------------------------------------------------------------
+
 
 class TestSlugPersistence:
     def test_backfill_slug_calls_db(self):
@@ -318,6 +331,7 @@ class TestSlugPersistence:
 # ---------------------------------------------------------------------------
 # IDENT-09: finalize_slug — completes creation-mode identity post-AI-edit
 # ---------------------------------------------------------------------------
+
 
 class TestFinalizeSlug:
     def test_ident_09_basic_slug_derived_from_content(self, tmp_path):

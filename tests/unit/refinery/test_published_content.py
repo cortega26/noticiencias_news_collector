@@ -17,7 +17,9 @@ def _init_repo(path: Path, remote_url: str) -> git.Repo:
     return repo
 
 
-def _write_post(posts_dir: Path, name: str, frontmatter: str, body: str = "Body") -> Path:
+def _write_post(
+    posts_dir: Path, name: str, frontmatter: str, body: str = "Body"
+) -> Path:
     posts_dir.mkdir(parents=True, exist_ok=True)
     file_path = posts_dir / name
     file_path.write_text(f"---\n{frontmatter}\n---\n\n{body}\n", encoding="utf-8")
@@ -37,7 +39,9 @@ class _FakeResponse:
             raise RuntimeError(f"HTTP {self.status_code}")
 
 
-def test_read_published_article_supports_numeric_and_string_refinery_ids(tmp_path: Path):
+def test_read_published_article_supports_numeric_and_string_refinery_ids(
+    tmp_path: Path,
+):
     numeric_post = _write_post(
         tmp_path,
         "2026-01-01-numeric.md",
@@ -92,13 +96,19 @@ def test_resolve_published_content_snapshot_prefers_verified_local_checkout(
     frontend_repo = tmp_path / "noticiencias"
     _init_repo(frontend_repo, "https://github.com/cortega26/noticiencias.git")
     frontend_posts = frontend_repo / "src/content/posts"
-    _write_post(frontend_posts, "2026-03-27-live.md", 'title: "Frontend"\nrefinery_id: "27"')
-    _write_post(frontend_posts, "2026-03-26-live.md", 'title: "Frontend 2"\nrefinery_id: "26"')
+    _write_post(
+        frontend_posts, "2026-03-27-live.md", 'title: "Frontend"\nrefinery_id: "27"'
+    )
+    _write_post(
+        frontend_posts, "2026-03-26-live.md", 'title: "Frontend 2"\nrefinery_id: "26"'
+    )
 
     clone_repo = tmp_path / "temp-target"
     _init_repo(clone_repo, "https://github.com/cortega26/noticiencias.git")
     clone_posts = clone_repo / "src/content/posts"
-    _write_post(clone_posts, "2026-02-18-stale.md", 'title: "Stale"\nrefinery_id: "849"')
+    _write_post(
+        clone_posts, "2026-02-18-stale.md", 'title: "Stale"\nrefinery_id: "849"'
+    )
 
     snapshot = published_content.resolve_published_content_snapshot(
         target_repo_url="https://github.com/cortega26/noticiencias.git",
@@ -126,7 +136,11 @@ def test_fetch_frontend_pr_check_health_requires_green_frontend_workflows(
         _FakeResponse(
             {
                 "workflow_runs": [
-                    {"name": "Content Guard", "status": "completed", "conclusion": "success"},
+                    {
+                        "name": "Content Guard",
+                        "status": "completed",
+                        "conclusion": "success",
+                    },
                     {
                         "name": "Deploy to GitHub Pages",
                         "status": "completed",
@@ -172,7 +186,11 @@ def test_fetch_frontend_pr_check_health_stays_pending_until_all_required_workflo
         _FakeResponse(
             {
                 "workflow_runs": [
-                    {"name": "Content Guard", "status": "completed", "conclusion": "success"},
+                    {
+                        "name": "Content Guard",
+                        "status": "completed",
+                        "conclusion": "success",
+                    },
                     {
                         "name": "Deploy to GitHub Pages",
                         "status": "in_progress",
@@ -277,9 +295,7 @@ def test_resolve_published_content_snapshot_prefers_remote_clone_when_requested(
     ]
 
 
-def test_delete_article_supports_legacy_string_refinery_id(
-    tmp_path: Path, monkeypatch
-):
+def test_delete_article_supports_legacy_string_refinery_id(tmp_path: Path, monkeypatch):
     prepared_repo = tmp_path / "prepared-target"
     _init_repo(prepared_repo, "https://github.com/cortega26/noticiencias.git")
     _write_post(
@@ -301,7 +317,9 @@ def test_delete_article_supports_legacy_string_refinery_id(
             shutil.copytree(prepared_repo, target_dir)
             return git.Repo(target_dir)
 
-        def create_branch(self, _repo, branch_prefix: str = "delete/article", **_kwargs):
+        def create_branch(
+            self, _repo, branch_prefix: str = "delete/article", **_kwargs
+        ):
             return f"{branch_prefix}-legacy-id"
 
         def commit_and_push(self, _repo, _message: str, _branch_name: str):
@@ -317,7 +335,10 @@ def test_delete_article_supports_legacy_string_refinery_id(
         ) -> str:
             assert repo_url == "https://github.com/cortega26/noticiencias.git"
             assert branch_name == "delete/article-legacy-id"
-            assert "Refinery ID: A Massive Star Suddenly Vanished and Left a Black Hole Behind" in body
+            assert (
+                "Refinery ID: A Massive Star Suddenly Vanished and Left a Black Hole Behind"
+                in body
+            )
             return "https://github.com/cortega26/noticiencias/pull/1"
 
     config = SimpleNamespace(
@@ -368,17 +389,15 @@ def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
         "2026-04-02-placeholder.md",
         'title: "Placeholder"\nrefinery_id: "123"\nimage: "~/assets/images/default.png"',
     )
-    allowlist_path = (
-        prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
-    )
+    allowlist_path = prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
     manifest_path = prepared_repo / "src/content/posts" / "refinery_manifest.json"
     allowlist_path.parent.mkdir(parents=True, exist_ok=True)
     allowlist_path.write_text(
-        '{\n'
+        "{\n"
         '  "allowedPlaceholders": {\n'
         '    "src/content/posts/2026-04-02-placeholder.md": "Legacy placeholder."\n'
         "  }\n"
-        '}\n',
+        "}\n",
         encoding="utf-8",
     )
     manifest_path.write_text(
@@ -396,7 +415,9 @@ def test_delete_article_prunes_matching_hero_placeholder_allowlist_entry(
             shutil.copytree(prepared_repo, target_dir)
             return git.Repo(target_dir)
 
-        def create_branch(self, _repo, branch_prefix: str = "delete/article", **_kwargs):
+        def create_branch(
+            self, _repo, branch_prefix: str = "delete/article", **_kwargs
+        ):
             return f"{branch_prefix}-123"
 
         def commit_and_push(self, _repo, _message: str, _branch_name: str):
@@ -460,16 +481,14 @@ def test_delete_article_supports_filename_target_without_refinery_id(
             'image_alt: "Bienvenidos"\n'
         ),
     )
-    allowlist_path = (
-        prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
-    )
+    allowlist_path = prepared_repo / "data" / "hero-image-placeholder-allowlist.json"
     allowlist_path.parent.mkdir(parents=True, exist_ok=True)
     allowlist_path.write_text(
-        '{\n'
+        "{\n"
         '  "allowedPlaceholders": {\n'
         '    "src/content/posts/2026-02-12-bienvenidos.md": "Legacy onboarding page."\n'
         "  }\n"
-        '}\n',
+        "}\n",
         encoding="utf-8",
     )
 
@@ -483,7 +502,9 @@ def test_delete_article_supports_filename_target_without_refinery_id(
             shutil.copytree(prepared_repo, target_dir)
             return git.Repo(target_dir)
 
-        def create_branch(self, _repo, branch_prefix: str = "delete/article", **_kwargs):
+        def create_branch(
+            self, _repo, branch_prefix: str = "delete/article", **_kwargs
+        ):
             return f"{branch_prefix}-welcome"
 
         def commit_and_push(self, _repo, _message: str, _branch_name: str):

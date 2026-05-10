@@ -77,7 +77,9 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
         # Verify
         # 1. Check if image file exists
         # Slug logic now uses the article title for the editorial brief/image key.
-        expected_image_path = target_dir / "src/assets/images/2024-01-01-test-article.jpg"
+        expected_image_path = (
+            target_dir / "src/assets/images/2024-01-01-test-article.jpg"
+        )
         assert expected_image_path.exists()
         assert expected_image_path.read_bytes() == b"fake-image-data"
 
@@ -85,7 +87,9 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
         mock_refinery_engine.editor.process_article.assert_called_once()
         call_args = mock_refinery_engine.editor.process_article.call_args
         passed_article = call_args[0][0]
-        assert passed_article["image_url"] == "~/assets/images/2024-01-01-test-article.jpg"
+        assert (
+            passed_article["image_url"] == "~/assets/images/2024-01-01-test-article.jpg"
+        )
 
 
 def test_missing_image_creates_editorial_brief_and_stops_publish(
@@ -165,7 +169,10 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     )
 
     assert result is True
-    expected_image_path = target_dir / "src/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
+    expected_image_path = (
+        target_dir
+        / "src/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
+    )
     assert expected_image_path.exists()
     assert expected_image_path.read_bytes() == b"manual-image-data"
 

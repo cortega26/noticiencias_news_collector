@@ -62,9 +62,7 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
     }
     engine.policy.auditor_threshold = 0.0
     engine.policy.require_caveats = False
-    engine._download_image = MagicMock(
-        return_value="~/assets/images/article-1087.png"
-    )
+    engine._download_image = MagicMock(return_value="~/assets/images/article-1087.png")
 
     article = {
         "id": 1087,

@@ -9,6 +9,7 @@ Import path after implementation:
         PRResult,
     )
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
@@ -22,10 +23,10 @@ from news_collector.logic.workflows.pr_orchestrator import (
     PRResult,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_git():
@@ -69,6 +70,7 @@ def make_article(article_id="42"):
 # PR-01: create_pr calls git.create_pull_request with correct repo_url
 # ---------------------------------------------------------------------------
 
+
 class TestCreatePR:
     def test_pr_01_calls_git_with_repo_url(self, mock_git, mock_db, config_obj):
         """PR-01: create_pr calls git.create_pull_request with resolved repo_url."""
@@ -84,10 +86,14 @@ class TestCreatePR:
         mock_git.create_pull_request.assert_called_once()
         call_kwargs = mock_git.create_pull_request.call_args
         # repo_url must match config
-        assert call_kwargs.kwargs.get("repo_url") == "https://github.com/org/repo" or \
-               call_kwargs.args[0] == "https://github.com/org/repo"
+        assert (
+            call_kwargs.kwargs.get("repo_url") == "https://github.com/org/repo"
+            or call_kwargs.args[0] == "https://github.com/org/repo"
+        )
 
-    def test_pr_02_marks_article_published_on_success(self, mock_git, mock_db, config_obj):
+    def test_pr_02_marks_article_published_on_success(
+        self, mock_git, mock_db, config_obj
+    ):
         """PR-02: create_pr calls db.mark_article_published on success."""
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
@@ -118,7 +124,9 @@ class TestCreatePR:
         assert result.pr_url is None
         mock_db.mark_article_published.assert_not_called()
 
-    def test_pr_10_pr_body_contains_required_fields(self, mock_git, mock_db, config_obj):
+    def test_pr_10_pr_body_contains_required_fields(
+        self, mock_git, mock_db, config_obj
+    ):
         """PR-10: PR body contains article_id, source_id, source_name (no raw format drift)."""
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
@@ -131,14 +139,15 @@ class TestCreatePR:
         )
         normal_body = mock_git.create_pull_request.call_args.kwargs.get("body", "")
 
-        assert "42" in normal_body          # article_id
-        assert "src" in normal_body         # source_id
-        assert "Test Source" in normal_body # source_name
+        assert "42" in normal_body  # article_id
+        assert "src" in normal_body  # source_id
+        assert "Test Source" in normal_body  # source_name
         assert "Noticiencias Refinery" in normal_body
 
         # --- Recovery path ---
         mock_git.reset_mock()
         from datetime import timedelta
+
         recent_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": recent_time,
@@ -159,18 +168,22 @@ class TestCreatePR:
 
         # Both bodies must share the same structural template (no format drift).
         # Remove the recovery-specific note before comparing structure.
-        normal_stripped = normal_body.replace("Processed by Noticiencias Refinery.", "REFINERY_NOTE")
+        normal_stripped = normal_body.replace(
+            "Processed by Noticiencias Refinery.", "REFINERY_NOTE"
+        )
         recovery_stripped = recovery_body.replace(
-            "Processed by Noticiencias Refinery (recovered from publishing state).", "REFINERY_NOTE"
+            "Processed by Noticiencias Refinery (recovered from publishing state).",
+            "REFINERY_NOTE",
         )
-        assert normal_stripped == recovery_stripped, (
-            "PR body structure diverged between normal and recovery paths"
-        )
+        assert (
+            normal_stripped == recovery_stripped
+        ), "PR body structure diverged between normal and recovery paths"
 
 
 # ---------------------------------------------------------------------------
 # PR-04/05/06: resolve_repo_url from different config shapes
 # ---------------------------------------------------------------------------
+
 
 class TestResolveRepoUrl:
     def test_pr_04_from_config_obj_attribute(self, mock_git, mock_db):
@@ -210,8 +223,11 @@ class TestResolveRepoUrl:
 # PR-07/08/09: attempt_recovery
 # ---------------------------------------------------------------------------
 
+
 class TestAttemptRecovery:
-    def test_pr_07_no_publishing_state_returns_none(self, mock_git, mock_db, config_obj):
+    def test_pr_07_no_publishing_state_returns_none(
+        self, mock_git, mock_db, config_obj
+    ):
         """PR-07: Article not in publishing state → attempt_recovery returns None."""
         mock_db.get_publishing_state.return_value = None
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
@@ -278,7 +294,9 @@ class TestAttemptRecovery:
 
         mock_db.mark_article_published.assert_called_once()
 
-    def test_attempt_recovery_no_branch_info_returns_none(self, mock_git, mock_db, config_obj):
+    def test_attempt_recovery_no_branch_info_returns_none(
+        self, mock_git, mock_db, config_obj
+    ):
         """attempt_recovery returns None when publishing state has no branch info."""
         recent_time = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
         mock_db.get_publishing_state.return_value = {

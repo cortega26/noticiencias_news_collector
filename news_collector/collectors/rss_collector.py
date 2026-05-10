@@ -813,10 +813,9 @@ class RSSCollector(BaseCollector):
                     cand["content"] = cand.get("summary", "")
                     # Mark as fallback so validation rules can be lenient
                     # BUT preserve 'summary_only' if explicitly configured of via discovery_only
-                    effective_content_mode = (
-                        cand.get("content_mode")
-                        or source_config.get("content_mode", "full_text")
-                    )
+                    effective_content_mode = cand.get(
+                        "content_mode"
+                    ) or source_config.get("content_mode", "full_text")
                     if cand["content"] and effective_content_mode != "summary_only":
                         cand["content_mode"] = "summary_fallback"
 

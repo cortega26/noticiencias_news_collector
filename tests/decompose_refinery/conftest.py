@@ -10,6 +10,7 @@ expected and normal until each phase of the decomposition is complete.
 Tests in this suite must NOT require a running database, network, or filesystem beyond
 tmp_path. All external I/O is mocked at the boundary.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,10 +22,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Shared article payload factory
 # ---------------------------------------------------------------------------
+
 
 def make_article(
     *,
@@ -63,7 +64,10 @@ def make_article(
 # Config factory that matches the shape expected by all collaborators
 # ---------------------------------------------------------------------------
 
-def make_config(*, target_repo_url: str = "https://github.com/org/repo") -> SimpleNamespace:
+
+def make_config(
+    *, target_repo_url: str = "https://github.com/org/repo"
+) -> SimpleNamespace:
     return SimpleNamespace(
         app=SimpleNamespace(
             policy_integrity_mode="disabled",
@@ -77,6 +81,7 @@ def make_config(*, target_repo_url: str = "https://github.com/org/repo") -> Simp
 # ---------------------------------------------------------------------------
 # Fake mock DB
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_db() -> MagicMock:
@@ -92,6 +97,7 @@ def mock_db() -> MagicMock:
 # ---------------------------------------------------------------------------
 # Fake mock git handler
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_git() -> MagicMock:

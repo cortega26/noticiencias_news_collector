@@ -16,18 +16,21 @@ from typing import Any, Dict, Iterable, List, Mapping
 from unittest.mock import patch
 
 import git
-
 from news_collector.config import ALL_SOURCES
-from news_collector.utils.slug import slugify
 from news_collector.config.settings import SCORING_CONFIG
-from news_collector.contracts import SCHEMA_VERSION, PipelineE2ERunSummary, PipelineStageSnapshot
+from news_collector.contracts import (
+    MANIFEST_FILENAME,
+    SCHEMA_VERSION,
+    PipelineE2ERunSummary,
+    PipelineStageSnapshot,
+)
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 from news_collector.perf.load_replay import CollectorReplaySession, ReplayEvent
 from news_collector.scoring.feature_scorer import FeatureBasedScorer
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
+from news_collector.utils.slug import slugify
 
-from news_collector.contracts import MANIFEST_FILENAME
 FRONTEND_COPY_IGNORE = shutil.ignore_patterns(".git", "node_modules", "dist", ".astro")
 NODE_MODULES_COPY_IGNORE = shutil.ignore_patterns(".cache")
 
@@ -69,13 +72,13 @@ def _article_to_dicts(items: Iterable[Any]) -> List[Dict[str, Any]]:
         if hasattr(item, "to_dict"):
             payload = dict(item.to_dict())
             if hasattr(item, "article_metadata"):
-                payload["article_metadata"] = getattr(item, "article_metadata")
+                payload["article_metadata"] = item.article_metadata
             if hasattr(item, "processing_status"):
-                payload["processing_status"] = getattr(item, "processing_status")
+                payload["processing_status"] = item.processing_status
             if hasattr(item, "error_message"):
-                payload["error_message"] = getattr(item, "error_message")
+                payload["error_message"] = item.error_message
             if hasattr(item, "content"):
-                payload["content"] = getattr(item, "content")
+                payload["content"] = item.content
             result.append(payload)
         else:
             result.append(dict(item))
@@ -330,7 +333,9 @@ def _init_local_repo(target_dir: Path) -> git.Repo:
 
 
 def _normalize_real_frontend_baseline(target_dir: Path) -> None:
-    footer_path = target_dir / "src" / "components" / "template" / "widgets" / "Footer.astro"
+    footer_path = (
+        target_dir / "src" / "components" / "template" / "widgets" / "Footer.astro"
+    )
     if not footer_path.exists():
         return
     subprocess.run(
@@ -384,7 +389,9 @@ def _write_frontend_fixture_repo(target_dir: Path, scenario: Mapping[str, Any]) 
     return target_dir
 
 
-def _prepare_target_repo(bundle_dir: Path, scenario: Mapping[str, Any]) -> tuple[Path, git.Repo]:
+def _prepare_target_repo(
+    bundle_dir: Path, scenario: Mapping[str, Any]
+) -> tuple[Path, git.Repo]:
     target_dir = bundle_dir / "target_repo"
     template_root = scenario.get("frontend_root")
     if not template_root:
@@ -499,8 +506,13 @@ def run_pipeline_e2e_scenario(
 
         with (
             patch("news_collector.system.bootstrap.build_database", return_value=db),
-            patch("news_collector.storage.database.get_database_manager", return_value=db),
-            patch("news_collector.collectors.base_collector.get_database_manager", return_value=db),
+            patch(
+                "news_collector.storage.database.get_database_manager", return_value=db
+            ),
+            patch(
+                "news_collector.collectors.base_collector.get_database_manager",
+                return_value=db,
+            ),
         ):
             previous_smoke = os.environ.get("NOTICIENCIAS_SMOKE")
             os.environ["NOTICIENCIAS_SMOKE"] = "1"
@@ -554,9 +566,7 @@ def run_pipeline_e2e_scenario(
             + len(db_snapshot["rejected"])
             + len(db_snapshot["completed"])
         )
-        validation_success = (
-            total_persisted_candidates > 0
-        )
+        validation_success = total_persisted_candidates > 0
         _record_stage(
             stages,
             stage="validation",
@@ -639,10 +649,14 @@ def run_pipeline_e2e_scenario(
             approved_article or {"approved": False},
         )
         selected_article_id = (
-            str(approved_article.get("id")) if isinstance(approved_article, dict) else None
+            str(approved_article.get("id"))
+            if isinstance(approved_article, dict)
+            else None
         )
         selected_article_url = (
-            str(approved_article.get("url")) if isinstance(approved_article, dict) else None
+            str(approved_article.get("url"))
+            if isinstance(approved_article, dict)
+            else None
         )
         expected_selected_url = fixture.get("expected", {}).get("selected_article_url")
         approval_success = approved_article is not None
@@ -653,9 +667,7 @@ def run_pipeline_e2e_scenario(
         elif expected_selected_url and selected_article_url != expected_selected_url:
             approval_success = False
             selection_failure_class = "selection_mismatch"
-            first_divergence = (
-                f"selection_mismatch actual={selected_article_url} expected={expected_selected_url}"
-            )
+            first_divergence = f"selection_mismatch actual={selected_article_url} expected={expected_selected_url}"
         _record_stage(
             stages,
             stage="selection",
@@ -674,7 +686,9 @@ def run_pipeline_e2e_scenario(
             success=approved_article is not None,
             details={"approved_article_id": selected_article_id},
             artifact_path=selection_artifact,
-            failure_class="no_publishable_candidates" if approved_article is None else None,
+            failure_class=(
+                "no_publishable_candidates" if approved_article is None else None
+            ),
         )
 
         publication_db = DatabaseManager({"type": "sqlite", "path": db_path})
@@ -697,13 +711,13 @@ def run_pipeline_e2e_scenario(
                 git_handler=LocalPRGitHandler(),
                 editor_agent=LocalEditorialEditor(
                     mode=editor_mode,
-                    forced_permalink=str(forced_permalink) if forced_permalink else None,
+                    forced_permalink=(
+                        str(forced_permalink) if forced_permalink else None
+                    ),
                 ),
                 config=_make_engine_config(bundle_dir),
             )
-            engine._download_image = (
-                lambda url, slug, target: url
-            )
+            engine._download_image = lambda url, slug, target: url
 
             if fixture.get("publication", {}).get("seed_publishing_state"):
                 publication_db.mark_article_publishing(
@@ -716,8 +730,12 @@ def run_pipeline_e2e_scenario(
                     ),
                 )
 
-            publication_result = engine.process_articles([approved_article], repo, target_dir)
-            attempt_name = engine._safe_publication_artifact_name(str(selected_article_id))
+            publication_result = engine.process_articles(
+                [approved_article], repo, target_dir
+            )
+            attempt_name = engine._safe_publication_artifact_name(
+                str(selected_article_id)
+            )
             publication_attempt_path = (
                 engine.publication_attempts_dir / f"{attempt_name}.json"
             )
@@ -729,9 +747,9 @@ def run_pipeline_e2e_scenario(
                 publication_details["attempt_summary"] = json.loads(
                     publication_attempt_path.read_text(encoding="utf-8")
                 )
-                frontend_validation_summary_path = publication_details["attempt_summary"].get(
-                    "validation_summary_path"
-                )
+                frontend_validation_summary_path = publication_details[
+                    "attempt_summary"
+                ].get("validation_summary_path")
                 output_filename = publication_details["attempt_summary"].get(
                     "output_filename"
                 )
@@ -759,11 +777,15 @@ def run_pipeline_e2e_scenario(
                 artifact_path=(
                     generated_post_artifact
                     if generated_post_artifact.exists()
-                    else publication_attempt_path
-                    if publication_attempt_path.exists()
-                    else None
+                    else (
+                        publication_attempt_path
+                        if publication_attempt_path.exists()
+                        else None
+                    )
                 ),
-                failure_class=publication_details.get("attempt_summary", {}).get("failure_class"),
+                failure_class=publication_details.get("attempt_summary", {}).get(
+                    "failure_class"
+                ),
             )
 
             if frontend_validation_summary_path:

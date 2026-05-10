@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
+from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.frontend_schema import AstroPost
 from news_collector.contracts.publication_validation import (
     FrontendCheckResult,
@@ -16,7 +17,6 @@ from news_collector.contracts.publication_validation import (
     PublicationValidationSummary,
 )
 
-from news_collector.contracts import MANIFEST_FILENAME
 FIXTURE_ARTICLE_ID = "smoke-test-ci-fixture"
 FIXTURE_POST_FILENAME = "_smoke-test.md"
 

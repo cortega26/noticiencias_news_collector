@@ -58,7 +58,9 @@ def main() -> None:
             "Use 'make run-local' or 'python scripts/run_collector.py' instead."
         ),
     )
-    parser.add_argument("--dry-run", action="store_true", help="Run without saving data")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Run without saving data"
+    )
     parser.parse_args()
 
     try:
@@ -69,4 +71,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

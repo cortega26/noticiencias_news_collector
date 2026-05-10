@@ -79,9 +79,11 @@ def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> 
 
 def test_run_collector_smoke_network_tripwire(capfd, monkeypatch) -> None:
     _clean_smoke_article()
+
     def _deny_network(*args, **kwargs):  # noqa: ARG001
         msg = f"External network call attempted in smoke mode: {args} {kwargs}"
         import traceback
+
         traceback.print_stack()
         print(msg)
         raise AssertionError(msg)

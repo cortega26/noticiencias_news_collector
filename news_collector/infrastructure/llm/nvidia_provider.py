@@ -256,7 +256,9 @@ class NvidiaProvider:
         timeout: Optional[int] = None,
     ) -> Union[str, Dict[str, Any]]:
         use_timeout = timeout or self.timeout
-        payload = self._prepare_payload(prompt, system, json_mode, stream=False, model=model)
+        payload = self._prepare_payload(
+            prompt, system, json_mode, stream=False, model=model
+        )
         use_model = payload["model"]
 
         limiter = LLMRateLimiter.get_instance()

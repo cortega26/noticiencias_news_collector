@@ -321,7 +321,9 @@ def test_mark_article_published_uses_original_url(test_db_manager) -> None:
         assert art.published_url == "https://github.com/org/repo/pull/1"
         assert art.processing_status == "completed"  # Updated to match implementation
         assert art.article_metadata["publication"]["state"] == "PR_CREATED"
-        assert art.article_metadata["publication"]["frontend_checks"]["state"] == "pending"
+        assert (
+            art.article_metadata["publication"]["frontend_checks"]["state"] == "pending"
+        )
         assert (
             art.article_metadata["publication"]["frontend_checks"]["ready_for_merge"]
             is False

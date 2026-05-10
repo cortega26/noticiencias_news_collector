@@ -16,10 +16,14 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_db = MagicMock()
         self.mock_git = MagicMock()
         self.mock_git.create_branch.return_value = "content/update/test-branch"
-        self.mock_git.create_pull_request.return_value = "https://github.com/owner/repo/pull/1"
+        self.mock_git.create_pull_request.return_value = (
+            "https://github.com/owner/repo/pull/1"
+        )
         self.mock_editor = MagicMock()
         self.mock_config = MagicMock()
-        self.mock_config.github = SimpleNamespace(target_repo_url="http://github.com/target")
+        self.mock_config.github = SimpleNamespace(
+            target_repo_url="http://github.com/target"
+        )
         self.mock_config.app.policy_integrity_mode = "disabled"
 
         # B-01: Ensure publishing recovery does not interfere with normal tests
@@ -338,7 +342,9 @@ class TestRefineryEngine(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             target_dir = Path(tmpdir)
-            result = self.engine.process_single_article(article, MagicMock(), target_dir)
+            result = self.engine.process_single_article(
+                article, MagicMock(), target_dir
+            )
 
         self.assertFalse(result)
         self.assertEqual(
@@ -377,11 +383,11 @@ class TestRefineryEngine(unittest.TestCase):
             )
             allowlist_path.parent.mkdir(parents=True, exist_ok=True)
             allowlist_path.write_text(
-                '{\n'
+                "{\n"
                 '  "allowedPlaceholders": {\n'
                 '    "src/content/posts/2024-01-01-real-hero.md": "Old placeholder."\n'
                 "  }\n"
-                '}\n',
+                "}\n",
                 encoding="utf-8",
             )
 

@@ -110,7 +110,9 @@ def _split_authors(value: str | None) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
-def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, Any]:  # noqa: C901
+def _extract_html_metadata(
+    raw_html: str | None, article_url: str
+) -> dict[str, Any]:  # noqa: C901
     if not raw_html:
         return {}
 
@@ -134,7 +136,9 @@ def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, 
             ("name", "citation_title"),
         )
         or _clean_text(soup.title.string if soup.title else None)
-        or _clean_text(_h1_tag.get_text(" ", strip=True) if _h1_tag is not None else None)
+        or _clean_text(
+            _h1_tag.get_text(" ", strip=True) if _h1_tag is not None else None
+        )
     )
 
     summary = meta_value(
@@ -145,7 +149,9 @@ def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, 
     )
     if not summary:
         first_paragraph = soup.find("p")
-        summary = _clean_text(first_paragraph.get_text(" ", strip=True) if first_paragraph else None)
+        summary = _clean_text(
+            first_paragraph.get_text(" ", strip=True) if first_paragraph else None
+        )
     metadata["summary"] = summary
 
     authors = (
@@ -202,9 +208,7 @@ def _extract_html_metadata(raw_html: str | None, article_url: str) -> dict[str, 
             if isinstance(authors_value, list):
                 for author in authors_value:
                     if isinstance(author, dict):
-                        parsed_authors.append(
-                            _clean_text(author.get("name")) or ""
-                        )
+                        parsed_authors.append(_clean_text(author.get("name")) or "")
                     else:
                         parsed_authors.append(_clean_text(author) or "")
             elif isinstance(authors_value, dict):
@@ -371,7 +375,9 @@ class ManualUrlIngestService:
         try:
             model = CollectorArticleModel.model_validate(payload)
         except Exception as exc:
-            logger.warning("Manual URL payload validation failed for {}: {}", canonical_url, exc)
+            logger.warning(
+                "Manual URL payload validation failed for {}: {}", canonical_url, exc
+            )
             return {
                 "status": "error",
                 "message": f"Payload inválido: {exc}",
@@ -417,7 +423,9 @@ class ManualUrlIngestService:
         parsed = urlparse(canonical_url)
         normalized_host = _normalize_host(parsed.hostname)
         for source_id, source_cfg in ALL_SOURCES.items():
-            source_host = _normalize_host(urlparse(str(source_cfg.get("url", ""))).hostname)
+            source_host = _normalize_host(
+                urlparse(str(source_cfg.get("url", ""))).hostname
+            )
             if source_host and source_host == normalized_host:
                 return source_id, dict(source_cfg), False
 
@@ -453,7 +461,9 @@ class ManualUrlIngestService:
         updated_sources[source_id] = source_cfg
         save_sources(updated_sources)
         self.db.initialize_sources({source_id: source_cfg})
-        logger.info("Created manual-only source {} for host {}", source_id, normalized_host)
+        logger.info(
+            "Created manual-only source {} for host {}", source_id, normalized_host
+        )
         return source_id, source_cfg, True
 
     def _run_fetches(
@@ -529,7 +539,14 @@ class ManualUrlIngestService:
             metadata = attempt.get("metadata")
             if not isinstance(metadata, dict):
                 continue
-            for key in ("title", "summary", "published_date", "doi", "journal", "image_url"):
+            for key in (
+                "title",
+                "summary",
+                "published_date",
+                "doi",
+                "journal",
+                "image_url",
+            ):
                 if merged.get(key) in (None, "", []):
                     merged[key] = metadata.get(key)
             if not merged["authors"] and metadata.get("authors"):
@@ -545,7 +562,12 @@ class ManualUrlIngestService:
 
         if not merged["title"]:
             parsed = urlparse(canonical_url)
-            tail = parsed.path.rstrip("/").split("/")[-1].replace("-", " ").replace("_", " ")
+            tail = (
+                parsed.path.rstrip("/")
+                .split("/")[-1]
+                .replace("-", " ")
+                .replace("_", " ")
+            )
             inferred_title = _clean_text(tail.title())
             if inferred_title and len(inferred_title) >= 10:
                 merged["title"] = inferred_title
@@ -657,7 +679,9 @@ class ManualUrlIngestService:
             else {}
         )
         publication_state = str(publication_meta.get("state") or "").strip()
-        published_candidate = bool(export_model.published_at or export_model.published_url)
+        published_candidate = bool(
+            export_model.published_at or export_model.published_url
+        )
         publish_ready = bool(
             isinstance(publication_meta.get("frontend_checks"), dict)
             and publication_meta["frontend_checks"].get("ready_for_merge") is True
@@ -671,7 +695,8 @@ class ManualUrlIngestService:
             "published": publication_state in {"LIVE", "DEPLOYED", "MERGED"},
             "published_candidate": published_candidate,
             "publish_ready": publish_ready,
-            "publication_state": publication_state or ("PR_CREATED" if published_candidate else "UNPUBLISHED"),
+            "publication_state": publication_state
+            or ("PR_CREATED" if published_candidate else "UNPUBLISHED"),
             "export_path": str(export_path),
             "fetch_attempts": fetch_attempts,
             "article": export_article,

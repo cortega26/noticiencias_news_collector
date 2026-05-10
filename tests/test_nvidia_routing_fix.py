@@ -17,7 +17,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
@@ -219,7 +218,9 @@ class TestEditorAgentModelRouting:
         agent = self._build_agent_with_provider(nvidia, tmp_path)
 
         # Simulate a translation call — the model kwarg should NOT be an Ollama name
-        agent.provider.generate("some content", system="system", model=agent.translator_model)
+        agent.provider.generate(
+            "some content", system="system", model=agent.translator_model
+        )
 
         call_kwargs = nvidia.generate.call_args
         model_arg = call_kwargs.kwargs.get("model") or (
@@ -227,7 +228,7 @@ class TestEditorAgentModelRouting:
         )
         # Must not be an Ollama-style model (with ":")
         assert model_arg is not None
-        assert ":" not in model_arg, (
-            f"Provider received Ollama model name '{model_arg}' instead of NVIDIA model"
-        )
+        assert (
+            ":" not in model_arg
+        ), f"Provider received Ollama model name '{model_arg}' instead of NVIDIA model"
         assert model_arg == "qwen/qwen3-next-80b-a3b-thinking"

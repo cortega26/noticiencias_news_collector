@@ -236,9 +236,12 @@ def test_ingest_attempts_all_methods_and_merges_best_payload(
     assert saved_model.doi == "10.1000/test-doi"
     assert saved_model.journal == "Journal of Tests"
     assert saved_model.article_metadata.image_url == "https://example.org/cover.png"
-    assert saved_model.article_metadata.source_metadata["manual_ingest"][
-        "resolved_source_id"
-    ] == "research_feed"
+    assert (
+        saved_model.article_metadata.source_metadata["manual_ingest"][
+            "resolved_source_id"
+        ]
+        == "research_feed"
+    )
 
 
 def test_ingest_rejects_sparse_manual_source_with_error_code(
@@ -614,9 +617,7 @@ def test_ingest_result_can_be_consumed_by_streamlit_url_loader(
     session_state["manual_loaded_export_path"] = result.get("export_path")
     session_state["manual_loaded_fetch_attempts"] = result.get("fetch_attempts", [])
     session_state["manual_loaded_source_id"] = result.get("source_id")
-    session_state["manual_loaded_source_created"] = result.get(
-        "source_created", False
-    )
+    session_state["manual_loaded_source_created"] = result.get("source_created", False)
     session_state["manual_loaded_article_exists"] = result.get("article_exists", False)
 
     assert result["status"] == "success"

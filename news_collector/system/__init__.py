@@ -440,7 +440,6 @@ class NewsCollectorSystem:
         )
 
 
-
 # Funciones de utilidad para uso externo
 # =====================================
 
