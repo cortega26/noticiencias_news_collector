@@ -521,9 +521,10 @@ class EditorAgent:
     def _send_prompt(
         self, prompt: str, system: str | None = None, model: str | None = None
     ) -> str:
-        """Helper to send prompt to Ollama with streaming handling."""
+        """Helper to send prompt with streaming handling."""
         use_model = model or self.model
-        logger.info(f"Sending prompt to Ollama ({use_model})...")
+        provider_name = self.provider.__class__.__name__.replace("Provider", "")
+        logger.info(f"Sending prompt to {provider_name} ({use_model})...")
         sys_preview = (system or "")[:20]
         print(f"Processing ({sys_preview}...) [{use_model}]", end="", flush=True)
 
@@ -544,13 +545,13 @@ class EditorAgent:
 
             print(" Done!")
             duration = time.time() - start_time
-            logger.info(f"Ollama processing complete in {duration:.2f} seconds.")
+            logger.info(f"{provider_name} processing complete in {duration:.2f} seconds.")
 
             return "".join(full_text).strip()
 
         except Exception as e:
             print("")
-            logger.error(f"Error communicating with Ollama: {e}")
+            logger.error(f"Error communicating with {provider_name}: {e}")
             raise
 
     def _load_scientific_entities(self) -> str:
@@ -592,8 +593,13 @@ class EditorAgent:
     def _adapt_editorial(self, translated_content: str) -> str:
         """Stage 2: Editorial Adaptation"""
         system_prompt = self.prompts.get("editor", {}).get("system", "")
+        user_prompt = (
+            "A continuación se presenta el texto de origen traducido al español. "
+            "Redacta el artículo periodístico-científico siguiendo las instrucciones del sistema.\n\n"
+            f"{translated_content}"
+        )
         return self._send_prompt(
-            translated_content, system=system_prompt, model=self.editor_model
+            user_prompt, system=system_prompt, model=self.editor_model
         )
 
     def _extract_json(self, text: str) -> dict:
@@ -631,6 +637,7 @@ class EditorAgent:
             "1. LANGUAGE: Is the body written entirely in Spanish?\n"
             "   - Intentional anglicisms in *italics* (e.g. *machine learning*, *dark matter*) are allowed.\n"
             "   - Named entities kept in English (e.g. 'Dark Energy Survey', 'VLT') are allowed.\n"
+            "   - FAIL: The entire text is in English instead of Spanish.\n"
             "   - FAIL: mid-sentence English fragments fused with Spanish, e.g. 'makingla invisible', "
             "'whereas los resultados', 'however se observó'. These are untranslated remnants.\n\n"
             "2. TOPIC: Is it about science or technology?\n\n"
@@ -737,13 +744,14 @@ class EditorAgent:
         logger.info(f"🔧 Repairing Editorial Content based on feedback: {feedback}")
         system_prompt = self.prompts.get("editor", {}).get("system", "")
         repair_prompt = (
-            f"The previous version was rejected by the Quality Control Editor for the following reason:\n"
+            "La versión anterior fue rechazada por el Editor de Control de Calidad por la siguiente razón:\n"
             f"'{feedback}'\n\n"
-            f"Please rewrite the article to address this specific issue while maintaining the original style and structure.\n"
-            f"IMPORTANT: Write the COMPLETE article from start to finish. Do NOT truncate, cut off, or stop early. "
-            f"The article MUST end with a complete sentence (ending in '.', '!' or '?'). "
-            f"If you are running out of space, summarise rather than truncate.\n\n"
-            f"Base Content:\n{base_content}"
+            "Reescribe el artículo para solucionar este problema específico, manteniendo el estilo y la estructura originales.\n"
+            "IMPORTANTE: Escribe el artículo COMPLETO de principio a fin. No lo trunques, cortes ni termines antes de tiempo. "
+            "El artículo DEBE terminar con una oración completa (que termine en '.', '!' o '?'). "
+            "Si te quedas sin espacio, resume en lugar de truncar.\n\n"
+            "Contenido base:\n"
+            f"{base_content}"
         )
         return self._send_prompt(
             repair_prompt, system=system_prompt, model=self.editor_model
