@@ -75,7 +75,7 @@ jobs:
 
       - name: Run backend-driven frontend publication validation
         run: |
-          python scripts/validate_frontend_publication.py \
+          .venv/bin/python scripts/validate_frontend_publication.py \
             --frontend-root .tmp/noticiencias \
             --summary-output data/runtime/publication_smoke/frontend_publication_validation_summary.json
 

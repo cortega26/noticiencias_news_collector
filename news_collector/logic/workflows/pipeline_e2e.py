@@ -141,6 +141,7 @@ class LocalEditorialEditor:
 
         if self.mode == "invalid_taxonomy":
             tags = ["TagInvalido!"]
+            categories = ["InvalidCategory"]
 
         return "\n".join(
             [
