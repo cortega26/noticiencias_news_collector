@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Full governance doc:** [`docs/AGENTS.md`](docs/AGENTS.md) — read it before making any change.
 
+**Mandatory workflow: Section 0.1 in AGENTS.md** — before every task, create/update `spec.md`, `todo.md`, and `tests/`; then work spec-first, check off todo, run tests after every meaningful commit, and call a review sub-agent every ~20 iterations. Consult `spec.md` before every change.
+
 ---
 
 ## Quick Commands
