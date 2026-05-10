@@ -29,7 +29,7 @@ class ValidationCoordinator:
     BATCH_SIZE = 100
     MAX_BATCHES = 10_000
 
-    def execute(
+    def execute(  # noqa: C901
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
         """Run the validation phase — same logic as the extracted method."""

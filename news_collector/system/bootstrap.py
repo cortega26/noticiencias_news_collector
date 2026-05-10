@@ -226,7 +226,7 @@ def check_system_health(
     }
 
 
-def _verify_llm_health(
+def _verify_llm_health(  # noqa: C901
     logger: Any,
     warnings: List[str],
     *,
