@@ -31,9 +31,9 @@ def test_preflight_llm_provider_disables_llm_on_admission_failure(monkeypatch) -
 
     monkeypatch.setattr("requests.get", lambda *args, **kwargs: tags_response)
     monkeypatch.setattr("requests.post", lambda *args, **kwargs: generate_response)
-    monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
+    monkeypatch.setattr(config_settings.RUNTIME, "llm_system_available", True)
 
     warnings = bootstrap.preflight_llm_provider(config=config, logger=MagicMock())
 
-    assert config_settings.LLM_SYSTEM_AVAILABLE is False
+    assert config_settings.RUNTIME.llm_system_available is False
     assert any("requires more system memory" in warning for warning in warnings)

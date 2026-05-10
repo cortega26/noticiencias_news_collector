@@ -11,13 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, cast
 
-from news_collector import get_database_manager as get_database_manager
-from news_collector import get_metrics_reporter as get_metrics_reporter
-from news_collector import setup_logging as setup_logging
 from news_collector.config import ALL_SOURCES, COLLECTION_CONFIG, SCORING_CONFIG
-from news_collector.config import validate_config as validate_config
-from news_collector.config import validate_sources as validate_sources
-from news_collector.validation.validator import ContentValidator as ContentValidator
 
 
 class NewsCollectorSystem:
@@ -65,6 +59,10 @@ class NewsCollectorSystem:
         self.system_logger: Any = None
         self.metrics: Any = None
         self.validator: Any = None
+
+        # Coordinadores
+        self.validation_coordinator: Any = None
+        self.scoring_coordinator: Any = None
 
         # Estado del sistema
         self.is_initialized = False
@@ -351,231 +349,34 @@ class NewsCollectorSystem:
             if original_save:
                 self.db_manager.save_article = original_save
 
-    def _execute_validation(  # noqa: C901
+    def _execute_validation(
         self, collection_results: Dict[str, Any], dry_run: bool
     ) -> Dict[str, Any]:
-        """Ejecuta la fase de validación de artículos recolectados."""
-        if dry_run:
-            # En dry_run no validamos porque no hay artículos en DB
-            return {"success": True, "validated_count": 0, "rejected_count": 0}
+        """Delegates to ValidationCoordinator."""
+        if self.validation_coordinator is None:
+            from news_collector.validation.coordinator import ValidationCoordinator
 
-        # Validation Batching
-        BATCH_SIZE = 100
-        MAX_BATCHES = 10_000
-        total_validated = 0
-        total_rejected = 0
-        batch_count = 0
-
-        validation_results: Dict[str, List[Any]] = {"invalid": [], "valid": []}
-
-        while True:
-            if batch_count >= MAX_BATCHES:
-                self.logger.create_module_logger("validation").error(
-                    f"Validation halted: Max batches ({MAX_BATCHES}) reached. Possible infinite loop."
-                )
-                break
-
-            pending_articles = self.db_manager.get_pending_articles(limit=BATCH_SIZE)
-            if not pending_articles:
-                break
-
-            batch_count += 1
-
-            # Prepare payload via contract adapter
-            from news_collector.contracts.adapters import adapt_to_validation_payload
-
-            validation_payload = adapt_to_validation_payload(pending_articles)
-            articles_to_validate = [
-                item.model_dump() for item in validation_payload.articles
-            ]
-
-            batch_results = self.validator.validate_batch(articles_to_validate)
-
-            # Aggregate stats
-            total_validated += len(pending_articles)
-            current_rejected = 0  # Count rejected in this batch
-
-            # Process invalid articles
-            invalid_mappings = []
-            if batch_results["invalid"]:
-                for invalid_item in batch_results["invalid"]:
-                    current_rejected += 1
-                    total_rejected += 1
-                    article_data = invalid_item["article"]
-                    reason = invalid_item["reason"]
-                    rule_name = invalid_item["rule"]
-
-                    article_id = article_data["id"]
-
-                    invalid_mappings.append(
-                        {
-                            "id": article_id,
-                            "processing_status": "rejected",
-                            "error_message": f"Validation failed: {rule_name} - {reason}",
-                        }
-                    )
-
-                # Accumulate results for report
-                validation_results["invalid"].extend(batch_results["invalid"])
-
-            valid_mappings = []
-            if batch_results.get("valid"):
-                # Accumulate valid results for report if validator returns them
-                if "valid" not in validation_results:
-                    validation_results["valid"] = []
-                validation_results["valid"].extend(batch_results.get("valid", []))
-
-                # Update valid articles to 'validated' so they exit the pending loop
-                for valid_item in batch_results.get("valid", []):
-                    article_id = valid_item.get("id")
-                    if article_id:
-                        valid_mappings.append(
-                            {"id": article_id, "processing_status": "validated"}
-                        )
-
-            all_mappings = invalid_mappings + valid_mappings
-            if all_mappings:
-                self.db_manager.update_validation_status_bulk(all_mappings)
-
-        self.logger.create_module_logger("validation").info(
-            {
-                "event": "validation.completed",
-                "total": total_validated,
-                "rejected": total_rejected,
-                "valid": total_validated - total_rejected,
-                "batches": batch_count,
-            }
-        )
-
-        return {
-            "success": True,
-            "validated_count": total_validated,
-            "rejected_count": total_rejected,
-            "details": validation_results,
-        }
-
-    async def _execute_scoring(  # noqa: C901
-        self, collection_results: Dict[str, Any], dry_run: bool
-    ) -> Dict[str, Any]:
-        """Ejecuta la fase de scoring de artículos."""
-        # Obtener artículos pendientes de scoring
-        if dry_run:
-            # En modo dry_run, simular scoring
-            return self._simulate_scoring(collection_results)
-        else:
-            # Scoring real
-            # FIX: Fetch 'validated' articles instead of 'pending' to match pipeline flow
-            pending_articles = self.db_manager.get_pending_articles(status="validated")
-
-            scoring_stats = {
-                "articles_scored": 0,
-                "articles_included": 0,
-                "articles_excluded": 0,
-                "average_score": 0.0,
-            }
-
-            total_score = 0.0
-
-            # Prepare tasks for async execution
-            tasks = []
-            self.config_override.get("scoring_workers") or SCORING_CONFIG.get(
-                "workers", 4
+            self.validation_coordinator = ValidationCoordinator(
+                db_manager=self.db_manager,
+                validator=self.validator,
+                logger=self.logger,
             )
+        return self.validation_coordinator.execute(collection_results, dry_run)
 
-            # Reset metrics if supported
-            if hasattr(self.scorer, "reset_cycle_metrics"):
-                self.scorer.reset_cycle_metrics()
+    async def _execute_scoring(
+        self, collection_results: Dict[str, Any], dry_run: bool
+    ) -> Dict[str, Any]:
+        """Delegates to ScoringCoordinator."""
+        if self.scoring_coordinator is None:
+            from news_collector.scoring.coordinator import ScoringCoordinator
 
-            # Prepare payloads for all articles
-            # Prepare payloads using contract adapter
-            from news_collector.contracts.adapters import adapt_to_scoring_input
-
-            payloads: List[Dict[str, Any]] = []
-            for article in pending_articles:
-                source_config = ALL_SOURCES.get(article.source_id)
-                # Create strict model
-                scoring_model = adapt_to_scoring_input(article, source_config)
-                # Dump back to dict as the scorer interface currently expects dicts
-                # (unless we updated scorer to accept models, but mission says no behavior change/rewrite yet)
-                # FeatureBasedScorer accepts Dict.
-                payloads.append(scoring_model.model_dump())
-
-            # Execute Scoring (Batch or Sequential)
-            results = []
-            if payloads:
-                # Flag to track if we should fallback to sequential
-                use_batch = hasattr(self.scorer, "score_batch_async")
-
-                if use_batch:
-                    try:
-                        results = await self.scorer.score_batch_async(payloads)
-                    except Exception as batch_error:
-                        # Harden Fix: Log batch failure as ERROR
-                        self.logger.create_module_logger("scoring").error(
-                            f"Batch scoring failed ({len(payloads)} items): {batch_error}"
-                        )
-
-                        # Harden Fix: Verify fallback exists before attempting
-                        if not hasattr(self.scorer, "score_article_async"):
-                            self.logger.create_module_logger("scoring").error(
-                                "Safe fallback failed: 'score_article_async' not found on scorer."
-                            )
-                            raise batch_error
-
-                        self.logger.create_module_logger("scoring").info(
-                            "Attempting sequential fallback."
-                        )
-                        use_batch = False
-                        results = []
-
-                if not use_batch:
-                    # Legacy Sequential or Fallback Execution
-                    # This isolates failures to individual items
-                    tasks = [self.scorer.score_article_async(p) for p in payloads]
-                    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            if results:
-                # results populated above by batch or legacy gathering
-
-                bulk_score_updates = []
-                for article, score_result in zip(
-                    pending_articles, results, strict=False
-                ):
-                    if isinstance(score_result, Exception):
-                        self.logger.create_module_logger("scoring").error(
-                            f"Error scoring artículo {article.id}: {str(score_result)}"
-                        )
-                        continue
-
-                    bulk_score_updates.append((article.id, score_result))
-
-                    scoring_stats["articles_scored"] += 1
-                    total_score += score_result["final_score"]
-
-                    if score_result["should_include"]:
-                        scoring_stats["articles_included"] += 1
-                    else:
-                        scoring_stats["articles_excluded"] += 1
-
-                if bulk_score_updates:
-                    success = self.db_manager.update_articles_score_bulk(
-                        bulk_score_updates
-                    )
-                    if not success:
-                        self.logger.create_module_logger("scoring").error(
-                            "Failed to perform bulk score updates."
-                        )
-
-            if scoring_stats["articles_scored"] > 0:
-                scoring_stats["average_score"] = (
-                    total_score / scoring_stats["articles_scored"]
-                )
-
-            return {
-                "success": True,
-                "statistics": scoring_stats,
-                "processed_articles": scoring_stats["articles_scored"],
-            }
+            self.scoring_coordinator = ScoringCoordinator(
+                db_manager=self.db_manager,
+                scorer=self.scorer,
+                logger=self.logger,
+                config_override=self.config_override,
+            )
+        return await self.scoring_coordinator.execute(collection_results, dry_run)
 
     def _execute_final_selection(
         self,
@@ -631,93 +432,13 @@ class NewsCollectorSystem:
         selection_results: Dict[str, Any],
         session_id: str,
     ) -> Dict[str, Any]:
-        """Genera reporte completo de la sesión."""
-        from news_collector.system.reporting import generate_session_report
+        """Delegates to SessionReporter."""
+        from news_collector.system.reporter import SessionReporter
 
-        return generate_session_report(
-            self, collection_results, scoring_results, selection_results, session_id
+        return SessionReporter(self).generate_report(
+            collection_results, scoring_results, selection_results, session_id
         )
 
-    def _simulate_collection(
-        self, sources: Dict[str, Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Simula recolección para modo dry_run."""
-        import random
-
-        # Generar artículos simulados para validar contrato
-        simulated_articles = []
-        for i in range(random.randint(5, 15)):  # noqa: S311
-            simulated_articles.append(
-                {
-                    "title": f"Artículo Simulado {i+1}",
-                    "url": f"https://example.com/article/{i+1}",
-                    "source_id": "simulation",  # Required by Contract
-                    "published_date": datetime.now(timezone.utc).isoformat(),
-                    "summary": f"Resumen del artículo simulado {i+1} para pruebas de contrato.",
-                    "content": "Contenido completo simulado...",
-                    "author": "Simulador",
-                    "categories": ["test", "simulation"],
-                    "tags": ["e2e", "contract"],
-                    "editorial_score": random.uniform(0.5, 0.9),  # noqa: S311
-                }
-            )
-
-        simulated_results = {
-            "collection_summary": {
-                "sources_processed": len(sources),
-                "articles_found": len(simulated_articles),
-                "articles_saved": len(
-                    simulated_articles
-                ),  # En simulación asumimos guardado
-                "success_rate_percent": random.uniform(80, 95),  # noqa: S311
-            },
-            "source_details": {
-                "simulation": {
-                    "success": True,
-                    "articles_found": len(simulated_articles),
-                    "articles_saved": len(simulated_articles),
-                }
-            },
-            "articles": simulated_articles,  # Para acceso directo en dry-run
-        }
-
-        self.logger.create_module_logger("simulation").info(
-            {
-                "event": "collection.simulation",
-                "trace_id": None,
-                "session_id": self.current_session,
-                "source_id": "simulation",
-                "latency": 0.0,
-                "details": {"sources": len(sources)},
-            }
-        )
-
-        return simulated_results
-
-    def _simulate_scoring(self, collection_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Simula scoring para modo dry_run."""
-        import random
-
-        articles_found = collection_results.get("collection_summary", {}).get(
-            "articles_found", 0
-        )
-
-        simulated_scoring = {
-            "success": True,
-            "statistics": {
-                "articles_scored": articles_found,
-                "articles_included": random.randint(  # noqa: S311  # noqa: S311
-                    articles_found // 3, articles_found // 2
-                ),
-                "articles_excluded": articles_found
-                - random.randint(  # noqa: S311
-                    articles_found // 3, articles_found // 2
-                ),
-                "average_score": random.uniform(0.4, 0.8),  # noqa: S311
-            },
-        }
-
-        return simulated_scoring
 
 
 # Funciones de utilidad para uso externo
