@@ -273,6 +273,8 @@ def run_frontend_publication_validation(
     )
     # Format the post file with Prettier before lint/format:check.
     # The LLM-generated markdown may have minor formatting issues.
+    # Also format all files in the checkout root to absorb pre-existing
+    # formatting noise before format:check runs on the entire repo.
     post_path_str = staged.get("post_path") or ""
     if post_path_str:
         commands.append(
@@ -281,6 +283,12 @@ def run_frontend_publication_validation(
                 ["npx", "prettier", "--write", post_path_str],
             )
         )
+    commands.append(
+        (
+            "format_repo",
+            ["npx", "prettier", "--write", str(root)],
+        )
+    )
     commands.extend(
         [
             ("lint", ["npm", "run", "lint"]),
