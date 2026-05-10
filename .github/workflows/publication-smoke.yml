@@ -19,6 +19,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   publication-smoke:
     name: Validate generated post against front-end schema

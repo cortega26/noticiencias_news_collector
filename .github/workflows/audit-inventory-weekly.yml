@@ -13,6 +13,9 @@ concurrency:
   group: audit-inventory-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   inventory:
     name: inventory drift audit
