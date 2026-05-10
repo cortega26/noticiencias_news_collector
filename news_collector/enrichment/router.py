@@ -152,20 +152,22 @@ class EnrichmentStrategyRouter:
                     }
                 )
 
-            elif proposed_strategy == "scrapling_stealth":
-                if source_config.get("headless_enabled"):
-                    if original_strategy != "scrapling_stealth":
-                        source_config["enrichment_strategy"] = "scrapling_stealth"
-                        self.logger.info(
-                            {
-                                "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
-                                "details": {
-                                    "source_id": source_id,
-                                    "strategy": "scrapling_stealth",
-                                    "original": original_strategy,
-                                },
-                            }
-                        )
+            elif (
+                proposed_strategy == "scrapling_stealth"
+                and source_config.get("headless_enabled")
+                and original_strategy != "scrapling_stealth"
+            ):
+                source_config["enrichment_strategy"] = "scrapling_stealth"
+                self.logger.info(
+                    {
+                        "event": f"strategy.{'lock' if locked_strategy else 'hint'}.applied",
+                        "details": {
+                            "source_id": source_id,
+                            "strategy": "scrapling_stealth",
+                            "original": original_strategy,
+                        },
+                    }
+                )
 
             elif (
                 proposed_strategy == "http"

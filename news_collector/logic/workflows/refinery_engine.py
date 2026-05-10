@@ -547,10 +547,8 @@ class RefineryEngine:
             logger.info(f"Pull Request created successfully: {pr_url}")
             record_stage("pr_created", True, pr_url=pr_url)
             numeric_id = None
-            try:
+            with contextlib.suppress(ValueError):
                 numeric_id = int(article_id)
-            except ValueError:
-                pass
 
             source_url = article.get("url") or article.get("source_url") or ""
             if audit_should_run:

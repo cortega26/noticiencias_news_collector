@@ -61,3 +61,29 @@ Consult `spec.md` before every change. Run tests after every meaningful edit.
 - [x] Fix Gap B: Remove dead `_simulate_collection` from `system/__init__.py`
 - [x] Fix Gap C: Remove stale re-export imports from `system/__init__.py`
 - [x] Fix Gap D: Remove stale `ContentValidator` import from `system/__init__.py`
+
+## Remaining lint items (14 non-trivial)
+
+All are real code-quality concerns requiring meaningful refactoring — not auto-fixable.
+
+### C901 complexity (9 functions > cyclomatic complexity 10)
+
+- [ ] `delete_article` — `apps/refinery/main.py:773`
+- [ ] `__init__` — `news_collector/collectors/dispatcher.py:39`
+- [ ] `enrich` — `news_collector/enrichment/scrapling_enricher.py:97`
+- [ ] `run_pipeline_e2e_scenario` — `news_collector/logic/workflows/pipeline_e2e.py:476`
+- [ ] `execute` — `news_collector/scoring/coordinator.py:38`
+- [ ] `_verify_llm_health` — `news_collector/system/bootstrap.py:229`
+- [ ] `classify_failure_taxonomy` — `news_collector/system/source_health.py:37`
+- [ ] `execute` — `news_collector/validation/coordinator.py:32`
+- [ ] `_extract_html_metadata` — `news_collector/logic/workflows/manual_ingest.py:113` (has `# noqa: C901`, needs real fix)
+
+### S603/S607 subprocess safety (2)
+
+- [ ] `frontend_publication_validation.py:81` — bare `subprocess.run` without input validation
+- [ ] `pipeline_e2e.py:341-342` — `npx` prettier with relative path (partial executable)
+
+### S608 SQL injection risk (2)
+
+- [ ] `enrichment_metrics_store.py:265` — string-built column name in UPDATE query
+- [ ] `enrichment_metrics_store.py:362` — same pattern, string-built column name
