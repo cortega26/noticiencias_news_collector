@@ -5,6 +5,7 @@ description = "Ignore known non-sensitive fixtures and generated assets."
 paths = [
   '''^tests/data/''',
   '''^tests/test_security_gate.py$''',
+  '''^tests/test_llm_rate_limiter\.py$''',
   '''^docs/fixtures/''',
   '''^docs/examples/''',
   '''^reports/''',
@@ -13,6 +14,8 @@ paths = [
   '''^apps/refinery/\.env\.example$''',
   '''^apps/refinery/admin_panel\.py$''',
   '''^tests/unit/scoring/test_cognitive_scorer\.py$''',
+  '''^\.env\.example$''',
+  '''^news_collector/config/sources\.yaml$''',
   '''^README\.md$''',
 ]
 regexes = [
