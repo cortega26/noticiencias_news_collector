@@ -23,10 +23,10 @@ from news_collector.system.source_health import (
     classify_operational_state,
 )
 
-
 # ---------------------------------------------------------------------------
 # bootstrap coverage
 # ---------------------------------------------------------------------------
+
 
 class TestBootstrapUtilities:
     """Cover simple utility functions in bootstrap.py."""
@@ -103,18 +103,14 @@ class TestBootstrapUtilities:
 
     def test_bootstrap_system(self):
         """bootstrap_system is a thin wrapper — verify it calls preflight."""
-        with patch(
-            "news_collector.system.bootstrap._verify_llm_health"
-        ) as mock_verify:
+        with patch("news_collector.system.bootstrap._verify_llm_health") as mock_verify:
             warnings = bootstrap.bootstrap_system()
         assert warnings == []
         assert mock_verify.called
 
     def test_preflight_llm_provider_returns_warnings(self):
         """preflight should return the warnings list from _verify_llm_health."""
-        with patch(
-            "news_collector.system.bootstrap._verify_llm_health"
-        ) as mock_verify:
+        with patch("news_collector.system.bootstrap._verify_llm_health") as mock_verify:
             mock_verify.side_effect = None  # appends to warnings list
             warnings = bootstrap.preflight_llm_provider()
         assert warnings == []
@@ -126,9 +122,12 @@ class TestVerifyLlmHealth:
 
     def test_smoke_mode_disables_llm(self, monkeypatch):
         monkeypatch.setenv("NOTICIENCIAS_SMOKE", "true")
-        with patch("news_collector.system.bootstrap._resolve_module_logger") as mock_res:
+        with patch(
+            "news_collector.system.bootstrap._resolve_module_logger"
+        ) as mock_res:
             bootstrap._verify_llm_health(MagicMock(), [])
         from news_collector.config import settings as config_settings
+
         assert config_settings.RUNTIME.llm_system_available is False
         mock_res.assert_called_once()
 
@@ -221,6 +220,7 @@ class TestVerifyLlmHealth:
     def test_checker_exception_strict_mode_raises(self):
         """Strict mode + exception — raises RuntimeError."""
         import os
+
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "true"}, clear=False):
             # Re-import or use is_strict_mode_enabled directly
             checker = MagicMock()
@@ -279,6 +279,7 @@ class TestVerifyLlmHealth:
 # ---------------------------------------------------------------------------
 # reporting coverage
 # ---------------------------------------------------------------------------
+
 
 class TestReportingCoverage:
     """Cover error branches in news_collector.system.reporting."""
@@ -343,6 +344,7 @@ class TestReportingCoverage:
 # source_health coverage
 # ---------------------------------------------------------------------------
 
+
 class TestSourceHealthCoverage:
     """Cover utility and branch gaps in source_health.py."""
 
@@ -361,91 +363,121 @@ class TestSourceHealthCoverage:
 
     def test_classify_failure_articles_saved_no_error(self):
         """articles_saved > 0 and no error_blob → None."""
-        assert classify_failure_taxonomy(
-            feed_ok=True,
-            pipeline_ok=True,
-            articles_saved=3,
-            last_error_message=None,
-        ) is None
+        assert (
+            classify_failure_taxonomy(
+                feed_ok=True,
+                pipeline_ok=True,
+                articles_saved=3,
+                last_error_message=None,
+            )
+            is None
+        )
 
     def test_classify_failure_publication_contract(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="permalink validation failed",
         )
         assert result == "publication_contract_failure"
 
     def test_classify_failure_editorial(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="relevance score too low",
         )
         assert result == "editorial_relevance_rejection"
 
     def test_classify_failure_anti_bot(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="cloudflare challenge",
         )
         assert result == "anti_bot_block"
 
     def test_classify_failure_js_render(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="javascript render timeout",
         )
         assert result == "js_render_required"
 
     def test_classify_failure_http_blocked(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="403 forbidden",
         )
         assert result == "article_fetch_blocked"
 
     def test_classify_failure_content_short(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="content_too_short",
         )
         assert result == "content_too_short"
 
     def test_classify_failure_extraction_parser(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="parse error at line 42",
         )
         assert result == "extraction_parser_mismatch"
 
     def test_classify_failure_feed_and_pipeline_down(self):
         result = classify_failure_taxonomy(
-            feed_ok=False, pipeline_ok=False, articles_saved=0,
+            feed_ok=False,
+            pipeline_ok=False,
+            articles_saved=0,
             last_error_message=None,
         )
         assert result == "feed_fetch_failure"
 
     def test_classify_failure_unknown(self):
         result = classify_failure_taxonomy(
-            feed_ok=True, pipeline_ok=True, articles_saved=0,
+            feed_ok=True,
+            pipeline_ok=True,
+            articles_saved=0,
             last_error_message="something unexpected happened",
         )
         assert result == "unknown_failure"
 
     def test_classify_operational_state_full_text_healthy(self):
         result = classify_operational_state(
-            content_mode="full_text", articles_found=10, articles_saved=8, save_ratio=0.8
+            content_mode="full_text",
+            articles_found=10,
+            articles_saved=8,
+            save_ratio=0.8,
         )
         assert result == "healthy_full_text"
 
     def test_classify_operational_state_summary_healthy(self):
         result = classify_operational_state(
-            content_mode="summary_only", articles_found=10, articles_saved=5, save_ratio=0.5
+            content_mode="summary_only",
+            articles_found=10,
+            articles_saved=5,
+            save_ratio=0.5,
         )
         assert result == "healthy_summary_only"
 
     def test_classify_operational_state_partial(self):
         result = classify_operational_state(
-            content_mode="summary_only", articles_found=10, articles_saved=1, save_ratio=0.1
+            content_mode="summary_only",
+            articles_found=10,
+            articles_saved=1,
+            save_ratio=0.1,
         )
         assert result == "partial_yield_flaky"
 
