@@ -379,12 +379,14 @@ class EditorAgent:
         self.headlines_model = resolved["headlines"].model_id
 
         # Initialize unified provider
-        # Note: ai_editor uses a higher timeout (900s) than default
+        # Note: ai_editor uses a higher timeout (3600s) and max_tokens (32768)
+        # than default because editorial articles require longer generation
         self.provider = get_provider(
             config=cfg,
             api_url=self.api_url,
             model=self.model,
             timeout=3600,
+            max_tokens=32768,
         )
 
         # When a cloud provider (NVIDIA / Gemini) is active the Ollama per-stage
@@ -547,7 +549,13 @@ class EditorAgent:
             duration = time.time() - start_time
             logger.info(f"{provider_name} processing complete in {duration:.2f} seconds.")
 
-            return "".join(full_text).strip()
+            result = "".join(full_text).strip()
+            logger.debug(
+                "Raw LLM response: %d chars, preview: %.200s",
+                len(result),
+                result[:200].replace("\n", " "),
+            )
+            return result
 
         except Exception as e:
             print("")

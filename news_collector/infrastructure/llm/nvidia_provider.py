@@ -194,12 +194,25 @@ class NvidiaProvider:
     # ---- Response helpers ----
 
     @staticmethod
+    def _strip_think_tags(text: str) -> str:
+        """Strip <think>...</think> blocks from text.
+
+        Some serving frameworks (SGLang, vLLM) embed reasoning traces inside
+        <think>...</think> tags within the content field.  The primary
+        mechanism to prevent thinking-trace pollution is to never promote
+        reasoning_content to content; this handles the secondary case where
+        thinking appears as inline XML tags inside content itself.
+        """
+        return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+
+    @staticmethod
     def _extract_text(data: Dict[str, Any]) -> str:
         choices = data.get("choices", [])
         if not choices:
             return ""
         message = choices[0].get("message", {})
-        return message.get("content", "") or ""
+        text = message.get("content", "") or ""
+        return NvidiaProvider._strip_think_tags(text)
 
     @staticmethod
     def _try_parse_json_dict(candidate: str) -> tuple[bool, Dict[str, Any]]:
@@ -456,7 +469,12 @@ class NvidiaProvider:
     def _stream_generator(
         self, response: requests.Response
     ) -> Generator[str, None, None]:
-        """Parse an SSE stream from NVIDIA NIM (OpenAI-style)."""
+        """Parse an SSE stream from NVIDIA NIM (OpenAI-compatible SSE format).
+
+        reasoning_content (thinking traces) is deliberately dropped.
+        Content is passed through _strip_think_tags as defense-in-depth
+        against serving frameworks that embed reasoning in content.
+        """
         for line in response.iter_lines():
             if isinstance(line, bytes):
                 line_str = line.decode("utf-8")
@@ -473,6 +491,6 @@ class NvidiaProvider:
                         delta = choices[0].get("delta", {})
                         content = delta.get("content")
                         if content:
-                            yield content
+                            yield self._strip_think_tags(content)
                 except json.JSONDecodeError:
                     continue

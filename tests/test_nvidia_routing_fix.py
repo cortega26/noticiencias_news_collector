@@ -232,3 +232,104 @@ class TestEditorAgentModelRouting:
             ":" not in model_arg
         ), f"Provider received Ollama model name '{model_arg}' instead of NVIDIA model"
         assert model_arg == "qwen/qwen3-next-80b-a3b-thinking"
+
+
+# ---------------------------------------------------------------------------
+# Thinking trace handling
+# ---------------------------------------------------------------------------
+
+
+class TestNvidiaProviderThinkingTrace:
+    """Verify that reasoning_content traces never leak into visible output."""
+
+    def test_strip_think_tags_empty(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        assert NvidiaProvider._strip_think_tags("") == ""
+
+    def test_strip_think_tags_noop(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        text = "Normal article content with no think tags."
+        assert NvidiaProvider._strip_think_tags(text) == text
+
+    def test_strip_think_tags_removes_block(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        text = "<think>I need to approach this task carefully.</think>Real content here."
+        assert NvidiaProvider._strip_think_tags(text) == "Real content here."
+
+    def test_strip_think_tags_multiline(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        text = "<think>Multi-line\nreasoning\ntrace</think>Clean content"
+        assert NvidiaProvider._strip_think_tags(text) == "Clean content"
+
+    def test_strip_think_tags_malformed_no_close(self):
+        """Unclosed <think> tag should not match (no </think> = no strip)."""
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        text = "<think>unclosed tag"
+        assert NvidiaProvider._strip_think_tags(text) == text
+
+    def test_strip_think_tags_multiple_blocks(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        text = "<think>first</think>middle<think>second</think>end"
+        assert NvidiaProvider._strip_think_tags(text) == "middleend"
+
+    def test_extract_text_drops_reasoning_content(self):
+        """When API returns only reasoning_content, _extract_text returns empty."""
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        data = {
+            "choices": [
+                {
+                    "message": {
+                        "content": None,
+                        "reasoning_content": "This is the thinking trace.",
+                    }
+                }
+            ]
+        }
+        result = NvidiaProvider._extract_text(data)
+        assert result == "", f"Expected empty, got {result!r}"
+
+    def test_extract_text_content_only(self):
+        """Normal content should pass through unchanged."""
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        data = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "This is the actual response.",
+                        "reasoning_content": "Thinking trace here.",
+                    }
+                }
+            ]
+        }
+        result = NvidiaProvider._extract_text(data)
+        assert result == "This is the actual response."
+
+    def test_extract_text_strips_think_tags(self):
+        """Content with embedded <think> tags should be cleaned."""
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        data = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "<think>reasoning</think>Clean article content."
+                    }
+                }
+            ]
+        }
+        result = NvidiaProvider._extract_text(data)
+        assert result == "Clean article content."
+
+    def test_extract_text_empty_choices(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        assert NvidiaProvider._extract_text({}) == ""
+        assert NvidiaProvider._extract_text({"choices": []}) == ""

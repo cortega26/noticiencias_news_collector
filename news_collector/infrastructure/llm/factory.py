@@ -45,10 +45,12 @@ def get_provider(
     model: Optional[str] = None,
     timeout: int = 300,
     max_retries: int = 2,
+    max_tokens: Optional[int] = None,
     config: Optional[Any] = None,
 ) -> Any:
     """
-    Returns an appropriate LLM provider (Ollama or Gemini) based on active configuration.
+    Returns an appropriate LLM provider (Ollama, NVIDIA, or Gemini) based on active configuration.
+    If NVIDIA API key is configured, NvidiaProvider is returned.
     If Gemini API key is configured, GeminiProvider is returned.
     Otherwise, OllamaProvider is returned.
 
@@ -67,8 +69,8 @@ def get_provider(
         use_base_url = getattr(
             nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"
         )
-        use_max_tokens = getattr(nvidia_cfg, "max_tokens", 4096)
-        logger.info("Using NvidiaProvider with model %s", use_model)
+        use_max_tokens = max_tokens or getattr(nvidia_cfg, "max_tokens", 4096)
+        logger.info("Using NvidiaProvider with model %s (max_tokens=%s)", use_model, use_max_tokens)
         return NvidiaProvider(
             api_key=nvidia_api_key,
             model=use_model,

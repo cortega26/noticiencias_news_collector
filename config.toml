@@ -496,7 +496,7 @@ timeout = 300
 model = "qwen/qwen3-next-80b-a3b-thinking"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300
-max_tokens = 4096
+max_tokens = 32768
 
 [llm_rate_limiting]
 max_concurrent_requests = 2
