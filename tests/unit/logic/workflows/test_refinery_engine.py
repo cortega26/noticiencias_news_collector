@@ -2,6 +2,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import json
@@ -14,9 +15,11 @@ class TestRefineryEngine(unittest.TestCase):
     def setUp(self):
         self.mock_db = MagicMock()
         self.mock_git = MagicMock()
+        self.mock_git.create_branch.return_value = "content/update/test-branch"
+        self.mock_git.create_pull_request.return_value = "https://github.com/owner/repo/pull/1"
         self.mock_editor = MagicMock()
         self.mock_config = MagicMock()
-        self.mock_config.target_repo_url = "http://github.com/target"
+        self.mock_config.github = SimpleNamespace(target_repo_url="http://github.com/target")
         self.mock_config.app.policy_integrity_mode = "disabled"
 
         # B-01: Ensure publishing recovery does not interfere with normal tests
@@ -60,6 +63,7 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_success(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         # Setup Inputs
         article = {
@@ -199,6 +203,7 @@ class TestRefineryEngine(unittest.TestCase):
     def test_override_date_strictly_follows_payload_published_date(self, mock_dt):
         # We mock system time to 2050 to prove it is IGNORED in favor of payload
         mock_dt.now.return_value.strftime.return_value = "2050-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2050-01-01T12:00:00"
 
         article = {
             "id": "1999-id",
@@ -234,6 +239,7 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_uses_image_url_from_article_metadata(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
         article = {
             "id": "125",
             "title": "Test Title With Metadata Image",
@@ -277,6 +283,7 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_blocks_quoted_date_only_frontmatter_before_git(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         article = {
             "id": "125",
@@ -305,6 +312,7 @@ class TestRefineryEngine(unittest.TestCase):
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_returns_false_for_placeholder_block(self, mock_dt):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         from news_collector.components.editorial.ai_editor import (
             GeneratedArticleValidationError,
@@ -346,6 +354,7 @@ class TestRefineryEngine(unittest.TestCase):
         self, mock_dt
     ):
         mock_dt.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         article = {
             "id": "126",

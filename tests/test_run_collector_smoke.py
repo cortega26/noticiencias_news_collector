@@ -17,6 +17,22 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+SMOKE_ARTICLE_URL = "https://example.com/articles/smoke-article-1"
+
+
+def _clean_smoke_article() -> None:
+    """Remove the known smoke article URL from the database so the replay
+    dedup check (article_exists) won't filter it out."""
+    try:
+        from news_collector.storage.database import get_database_manager
+
+        db = get_database_manager()
+        article = db.get_article_by_url(SMOKE_ARTICLE_URL)
+        if article is not None:
+            db.delete_article(article.id)
+    except Exception:
+        pass  # Non-fatal — the smoke test will fail independently if this matters
+
 
 def test_smoke_contract_requires_fixture_output() -> None:
     assert MODULE._smoke_contract_satisfied(
@@ -28,6 +44,7 @@ def test_smoke_contract_requires_fixture_output() -> None:
 
 
 def test_run_collector_smoke_replay_contract() -> None:
+    _clean_smoke_article()
     env = os.environ.copy()
     env["NOTICIENCIAS_SMOKE"] = "1"
 
@@ -61,6 +78,7 @@ def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> 
 
 
 def test_run_collector_smoke_network_tripwire(capfd, monkeypatch) -> None:
+    _clean_smoke_article()
     def _deny_network(*args, **kwargs):  # noqa: ARG001
         msg = f"External network call attempted in smoke mode: {args} {kwargs}"
         import traceback

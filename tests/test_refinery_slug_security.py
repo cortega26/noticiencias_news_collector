@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +14,7 @@ def _make_engine():
         mock_config = MagicMock()
         mock_config.app.policy_integrity_mode = "disabled"
         mock_config.app.editorial_mode = "standard"
+        mock_config.github = SimpleNamespace(target_repo_url="https://github.com/org/repo")
         engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), mock_config)
         engine.auditor = MockAuditorClass.return_value
         return engine
@@ -43,6 +45,8 @@ def test_slug_collision_handled(tmp_path):
     engine.db.get_canonical_slug.return_value = None
     engine.db.get_publishing_state.return_value = None  # B-01: No publishing recovery
     engine.git = MagicMock()
+    engine.git.create_branch.return_value = "content/update/test"
+    engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
     engine.editor = MagicMock()
     engine.editor.process_article.return_value = "content"
     engine.auditor = MagicMock()

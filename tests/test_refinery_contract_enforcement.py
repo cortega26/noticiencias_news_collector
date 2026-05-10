@@ -74,6 +74,8 @@ def test_process_single_article_enforces_contract(tmp_path):
     engine.policy.auditor_threshold = 0.0
     engine.policy.require_caveats = False
     engine.git = MagicMock()
+    engine.git.create_branch.return_value = "content/update/test"
+    engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
 
     result = engine.process_single_article(valid_article, MagicMock(), tmp_path)
     assert result is True
@@ -103,6 +105,8 @@ def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
     engine.policy.auditor_threshold = 0.0
     engine.policy.require_caveats = False
     engine.git = MagicMock()
+    engine.git.create_branch.return_value = "content/update/test"
+    engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
 
     legacy_export_article = {
         "id": "160",

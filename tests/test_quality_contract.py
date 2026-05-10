@@ -60,14 +60,14 @@ class TestQualityContract:
         assert model is not None
         assert str(model.url) == "https://example.com/short"
         # However, it should be marked as FAILED STAGE B
-        assert model.processing_status_override == "enrichment_failed"
+        assert model.processing_status_override == "rejected"
 
     def test_stage_b_enforces_limit_failure(
         self, mock_enrich, collector, source_config, mock_enrich_data
     ):
         """
         Verify that short content fails Stage B (Enrichment) and gets
-        marked as 'enrichment_failed'.
+        marked as 'rejected'.
         """
         mock_enrich.enrich_article.return_value = mock_enrich_data
 
@@ -87,7 +87,7 @@ class TestQualityContract:
 
         assert model is not None
         assert len(model.content) < 500
-        assert model.processing_status_override == "enrichment_failed"
+        assert model.processing_status_override == "rejected"
 
     def test_stage_b_enforces_limit_success(
         self, mock_enrich, collector, source_config, mock_enrich_data
@@ -138,4 +138,4 @@ class TestQualityContract:
 
         assert model is not None
         # Should fail because 500 char limit applies to PUBLICATION
-        assert model.processing_status_override == "enrichment_failed"
+        assert model.processing_status_override == "rejected"
