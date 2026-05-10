@@ -42,7 +42,9 @@ class ScraplingEnricher:
         )
 
         if self.enabled and StealthyFetcher is None:
-            self.logger.error("Scrapling enabled but scrapling[fetchers] not installed.")
+            self.logger.error(
+                "Scrapling enabled but scrapling[fetchers] not installed."
+            )
             self.enabled = False
 
     def _execute_enrich(
@@ -67,14 +69,18 @@ class ScraplingEnricher:
             "hide_canvas": True,
             "network_idle": True,
             "timeout": max_duration * 1000,  # milliseconds
-            "disable_resources": True,       # skip images/fonts for speed
+            "disable_resources": True,  # skip images/fonts for speed
         }
         if proxy:
             fetch_kwargs["proxy"] = proxy
 
         page = StealthyFetcher.fetch(url, **fetch_kwargs)
 
-        raw_content = page.body if isinstance(page.body, str) else page.body.decode("utf-8", errors="replace")
+        raw_content = (
+            page.body
+            if isinstance(page.body, str)
+            else page.body.decode("utf-8", errors="replace")
+        )
 
         text = page.get_all_text(separator=" ", strip=True)
         content = " ".join(text.split())  # normalize whitespace
@@ -88,9 +94,7 @@ class ScraplingEnricher:
             "duration": duration,
         }
 
-    def enrich(
-        self, url: str, source_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
         if not self.enabled:
             return {"success": False, "error": "scrapling_disabled", "content": None}
 
@@ -108,7 +112,9 @@ class ScraplingEnricher:
             source_config.get("proxy_mode") == "force"
             and proxy_manager.budget_manager.can_afford()
         ):
-            proxy_settings: Optional[Mapping[str, str]] = proxy_manager.get_proxy_settings(source_config)
+            proxy_settings: Optional[Mapping[str, str]] = (
+                proxy_manager.get_proxy_settings(source_config)
+            )
             if proxy_settings:
                 proxy = proxy_settings.get("http")
 
@@ -119,7 +125,12 @@ class ScraplingEnricher:
             budget_manager.record_usage(result["duration"])
             if proxy:
                 proxy_manager.record_usage(result["duration"])
-                self.logger.info({"event": "enrichment.scrapling.proxy.success", "details": {"url": url}})
+                self.logger.info(
+                    {
+                        "event": "enrichment.scrapling.proxy.success",
+                        "details": {"url": url},
+                    }
+                )
             return result
 
         except Exception as e:
@@ -144,7 +155,12 @@ class ScraplingEnricher:
                 proxy_settings = proxy_manager.get_proxy_settings(source_config)
                 if proxy_settings:
                     retry_proxy = proxy_settings.get("http")
-                    self.logger.info({"event": "enrichment.scrapling.proxy.attempt", "details": {"url": url, "reason": str(e)}})
+                    self.logger.info(
+                        {
+                            "event": "enrichment.scrapling.proxy.attempt",
+                            "details": {"url": url, "reason": str(e)},
+                        }
+                    )
                     start_retry = time.time()
                     try:
                         result2 = self._execute_enrich(url, source_config, retry_proxy)
@@ -163,7 +179,12 @@ class ScraplingEnricher:
                             "duration": duration_attempt_1 + dur2,
                         }
 
-            self.logger.error({"event": "enrichment.scrapling.failed", "details": {"url": url, "error": str(e)}})
+            self.logger.error(
+                {
+                    "event": "enrichment.scrapling.failed",
+                    "details": {"url": url, "error": str(e)},
+                }
+            )
             return {
                 "success": False,
                 "error": str(e),
@@ -189,11 +210,17 @@ class ScraplingHttpEnricher:
             else get_logger().create_module_logger(__name__)
         )
         if not self.enabled:
-            self.logger.error("ScraplingHttpEnricher: scrapling[fetchers] not installed.")
+            self.logger.error(
+                "ScraplingHttpEnricher: scrapling[fetchers] not installed."
+            )
 
     def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
         if not self.enabled:
-            return {"success": False, "error": "scrapling_not_installed", "content": None}
+            return {
+                "success": False,
+                "error": "scrapling_not_installed",
+                "content": None,
+            }
 
         timeout = source_config.get("headless_max_seconds", 30)
         start = time.time()
@@ -205,12 +232,21 @@ class ScraplingHttpEnricher:
             return {
                 "success": page.status < 400,
                 "content": content,
-                "raw_content": page.body if isinstance(page.body, str) else page.body.decode("utf-8", errors="replace"),
+                "raw_content": (
+                    page.body
+                    if isinstance(page.body, str)
+                    else page.body.decode("utf-8", errors="replace")
+                ),
                 "error": None if page.status < 400 else f"http_{page.status}",
                 "duration": duration,
             }
         except Exception as e:
-            self.logger.error({"event": "enrichment.scrapling_http.failed", "details": {"url": url, "error": str(e)}})
+            self.logger.error(
+                {
+                    "event": "enrichment.scrapling_http.failed",
+                    "details": {"url": url, "error": str(e)},
+                }
+            )
             return {
                 "success": False,
                 "error": str(e),

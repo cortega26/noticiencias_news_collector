@@ -37,7 +37,9 @@ def _record(source_id: str, **overrides: object) -> SourceHealthRecord:
     return SourceHealthRecord.model_validate(payload)
 
 
-def test_build_live_source_drift_report_flags_new_failures_and_strategy_mismatch() -> None:
+def test_build_live_source_drift_report_flags_new_failures_and_strategy_mismatch() -> (
+    None
+):
     baseline = {
         "phys_org": _record("phys_org"),
     }

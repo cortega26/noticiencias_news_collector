@@ -102,7 +102,8 @@ class TestContentValidator:
         article = {
             "title": "Prime Day deal: the best laptops to buy before the sale ends",
             "content": (
-                "Prime Day deal coverage about the best laptops to buy before the sale ends. " * 12
+                "Prime Day deal coverage about the best laptops to buy before the sale ends. "
+                * 12
             ),
         }
 
@@ -117,13 +118,15 @@ class TestContentValidator:
         politics_article = {
             "title": "Election campaign enters final week after candidate debate",
             "content": (
-                "Election campaign coverage enters the final week after a candidate debate. " * 12
+                "Election campaign coverage enters the final week after a candidate debate. "
+                * 12
             ),
         }
         lifestyle_article = {
             "title": "Travel guide: the hotel deal and packing list you need this summer",
             "content": (
-                "Travel guide coverage of a hotel deal and packing list for the summer. " * 12
+                "Travel guide coverage of a hotel deal and packing list for the summer. "
+                * 12
             ),
         }
 

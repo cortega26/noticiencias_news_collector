@@ -538,8 +538,8 @@ with tab1:
     _pre_ollama_cfg = config_data.get("ollama", {})
     _pre_base = _pre_ollama_cfg.get("model", "qwen2.5:32b")
     r_trans = _pre_ollama_cfg.get("translator_model") or _pre_base
-    r_edit  = _pre_ollama_cfg.get("editor_model")     or _pre_base
-    r_head  = _pre_ollama_cfg.get("headlines_model")  or _pre_base
+    r_edit = _pre_ollama_cfg.get("editor_model") or _pre_base
+    r_head = _pre_ollama_cfg.get("headlines_model") or _pre_base
 
     with col1:
         st.subheader("🤖 Configuración de Modelos")
@@ -583,13 +583,19 @@ with tab1:
         # page opens in the correct section on first load.
         if "provider_mode" not in st.session_state:
             st.session_state["provider_mode"] = (
-                "☁️ Cloud (NVIDIA / Gemini)" if _active_is_cloud else "🖥️ Local (Ollama)"
+                "☁️ Cloud (NVIDIA / Gemini)"
+                if _active_is_cloud
+                else "🖥️ Local (Ollama)"
             )
 
         provider_mode = st.radio(
             "Tipo de proveedor",
             options=["☁️ Cloud (NVIDIA / Gemini)", "🖥️ Local (Ollama)"],
-            index=0 if st.session_state["provider_mode"] == "☁️ Cloud (NVIDIA / Gemini)" else 1,
+            index=(
+                0
+                if st.session_state["provider_mode"] == "☁️ Cloud (NVIDIA / Gemini)"
+                else 1
+            ),
             horizontal=True,
             key="provider_mode",
             help="Elige el tipo de proveedor LLM. El proveedor activo depende de las API keys configuradas.",
@@ -604,9 +610,13 @@ with tab1:
 
             # Active provider notice
             if _active_is_nvidia:
-                st.success(f"🚀 **Proveedor Activo: NVIDIA NIM** — `{_active_provider.model}`")
+                st.success(
+                    f"🚀 **Proveedor Activo: NVIDIA NIM** — `{_active_provider.model}`"
+                )
             elif _active_is_gemini:
-                st.info(f"✨ **Proveedor Activo: Gemini** — `{getattr(_active_provider, 'model', 'N/A')}`")
+                st.info(
+                    f"✨ **Proveedor Activo: Gemini** — `{getattr(_active_provider, 'model', 'N/A')}`"
+                )
             else:
                 st.warning(
                     "⚠️ Ningún proveedor cloud está activo actualmente. "
@@ -734,7 +744,11 @@ with tab1:
 
             # Fetch Ollama local model list (only when Ollama is actually active)
             available_models: list[str] = []
-            if not _active_is_cloud and _active_provider and hasattr(_active_provider, "list_models"):
+            if (
+                not _active_is_cloud
+                and _active_provider
+                and hasattr(_active_provider, "list_models")
+            ):
                 try:
                     available_models = _active_provider.list_models()
                 except Exception:
@@ -747,7 +761,9 @@ with tab1:
                 "mistral:latest",
                 "phi4:latest",
             ]
-            model_options = available_models if available_models else _ollama_base_options
+            model_options = (
+                available_models if available_models else _ollama_base_options
+            )
 
             # Base model
             current_base = ollama_cfg.get("model", "qwen2.5:32b")
@@ -769,22 +785,25 @@ with tab1:
             # Configuration Summary
             st.markdown("##### 🔍 Resumen de Etapas")
             r_trans = ollama_cfg.get("translator_model") or base_model_sel
-            r_edit  = ollama_cfg.get("editor_model")     or base_model_sel
-            r_head  = ollama_cfg.get("headlines_model")  or base_model_sel
+            r_edit = ollama_cfg.get("editor_model") or base_model_sel
+            r_head = ollama_cfg.get("headlines_model") or base_model_sel
 
             c_r1, c_r2, c_r3 = st.columns(3)
             c_r1.metric(
-                "1. Traductor", r_trans,
+                "1. Traductor",
+                r_trans,
                 delta="Lento" if is_heavy_model(r_trans) else "Rápido",
                 delta_color="inverse",
             )
             c_r2.metric(
-                "2. Editor", r_edit,
+                "2. Editor",
+                r_edit,
                 delta="Lento" if is_heavy_model(r_edit) else "Rápido",
                 delta_color="inverse",
             )
             c_r3.metric(
-                "3. Titulares", r_head,
+                "3. Titulares",
+                r_head,
                 delta="Lento" if is_heavy_model(r_head) else "Rápido",
                 delta_color="inverse",
             )
@@ -800,7 +819,12 @@ with tab1:
                 "🚀 Producción (CPU)",
                 help="Llama 3.2 en todo — sin GPU requerida.",
             ):
-                for k in ("model", "translator_model", "editor_model", "headlines_model"):
+                for k in (
+                    "model",
+                    "translator_model",
+                    "editor_model",
+                    "headlines_model",
+                ):
                     config_data["ollama"][k] = "llama3.2:latest"
                 save_toml_config(config_data)
                 st.rerun()

@@ -125,7 +125,9 @@ def test_happy_path_captures_generated_markdown_artifact(tmp_path: Path) -> None
         bundle_root=bundle_root,
     )
 
-    publication_stage = next(stage for stage in summary.stages if stage.stage == "publication")
+    publication_stage = next(
+        stage for stage in summary.stages if stage.stage == "publication"
+    )
     generated_post_path = publication_stage.details.get("generated_post_path")
 
     assert summary.success is True

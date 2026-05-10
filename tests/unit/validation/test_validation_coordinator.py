@@ -141,9 +141,7 @@ class TestSingleBatch:
 class TestMultipleBatches:
     def test_two_batches(self, coordinator):
         # First call returns articles, second returns empty to stop loop
-        articles_batch1 = [
-            _MockArticle(id=i, title=f"A{i}") for i in range(3)
-        ]
+        articles_batch1 = [_MockArticle(id=i, title=f"A{i}") for i in range(3)]
         coordinator.db_manager.get_pending_articles.side_effect = [
             articles_batch1,
             [],

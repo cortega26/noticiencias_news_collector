@@ -38,7 +38,7 @@ def _ensure_min_text(value: str, *, fallback: str, min_length: int) -> str:
     padded = base.strip() or "editorial reference"
     while len(padded) < min_length:
         padded = f"{padded} {base}".strip()
-    return padded[:max(min_length, len(base))].strip()
+    return padded[: max(min_length, len(base))].strip()
 
 
 def slugify_text(value: str, fallback: str) -> str:
@@ -130,8 +130,9 @@ class ImageBriefStore:
             min_length=2,
         )
         subject_scene = (
-            (existing.subject_scene if existing else "")
-            or self._derive_subject_scene(title=title, summary=summary, domain=scientific_domain)
+            existing.subject_scene if existing else ""
+        ) or self._derive_subject_scene(
+            title=title, summary=summary, domain=scientific_domain
         )
         topic = _ensure_min_text(
             (existing.topic if existing else "") or title,
@@ -149,9 +150,8 @@ class ImageBriefStore:
             min_length=5,
         )
         draft_alt_text = (
-            (existing.draft_alt_text if existing else "")
-            or f"Imagen editorial de {title}"
-        )
+            existing.draft_alt_text if existing else ""
+        ) or f"Imagen editorial de {title}"
         draft_alt_text = _ensure_min_text(
             draft_alt_text,
             fallback=f"Imagen editorial de {title or slug}",
@@ -172,9 +172,7 @@ class ImageBriefStore:
         )
         uploaded_asset_path = existing.uploaded_asset_path if existing else None
         status: Literal["editorial_image_ready", "needs_editorial_image"] = (
-            "editorial_image_ready"
-            if uploaded_asset_path
-            else "needs_editorial_image"
+            "editorial_image_ready" if uploaded_asset_path else "needs_editorial_image"
         )
 
         return ImageBriefModel(
@@ -187,7 +185,9 @@ class ImageBriefStore:
             scientific_domain=scientific_domain,
             subject_scene=subject_scene,
             tone=tone,
-            source_url=str(article.get("url") or article.get("source_url") or "").strip()
+            source_url=str(
+                article.get("url") or article.get("source_url") or ""
+            ).strip()
             or None,
             draft_alt_text=draft_alt_text,
             prompt_version=IMAGE_PROMPT_VERSION,

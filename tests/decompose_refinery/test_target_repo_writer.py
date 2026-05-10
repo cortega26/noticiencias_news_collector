@@ -6,6 +6,7 @@ Verifies TargetRepoWriter (spec §3.3, §6.3 WRITE-01..07).
 Import path after implementation:
     from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 """
+
 from __future__ import annotations
 
 import json
@@ -23,6 +24,7 @@ MANIFEST_FILENAME = "refinery_manifest.json"
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def writer() -> TargetRepoWriter:
@@ -47,8 +49,11 @@ def target_dir(tmp_path) -> Path:
 # WRITE-01: write_article creates the file with correct content
 # ---------------------------------------------------------------------------
 
+
 class TestWriteArticle:
-    def test_write_01_file_created_with_correct_content(self, writer, posts_dir, target_dir, tmp_path):
+    def test_write_01_file_created_with_correct_content(
+        self, writer, posts_dir, target_dir, tmp_path
+    ):
         """WRITE-01: write_article creates posts_dir/output_filename with given content."""
         with patch(
             "apps.refinery.published_content.prune_hero_placeholder_allowlist_for_post",
@@ -112,6 +117,7 @@ class TestWriteArticle:
 # WRITE-03: update_manifest atomic write (no .tmp left behind)
 # ---------------------------------------------------------------------------
 
+
 class TestManifest:
     def test_write_03_atomic_write_no_tmp_left(self, writer, posts_dir):
         """WRITE-03: Manifest write uses tmp+rename; no .tmp file remains."""
@@ -147,12 +153,15 @@ class TestManifest:
         writer.update_manifest(posts_dir, "1", "2024-01-01-article.md")  # same data
         mtime_after = (posts_dir / MANIFEST_FILENAME).stat().st_mtime_ns
 
-        assert mtime_before == mtime_after, "File should not be rewritten for identical entries"
+        assert (
+            mtime_before == mtime_after
+        ), "File should not be rewritten for identical entries"
 
 
 # ---------------------------------------------------------------------------
 # WRITE-04/05/06: find_existing_file
 # ---------------------------------------------------------------------------
+
 
 class TestFindExistingFile:
     def test_write_04_manifest_hit(self, writer, posts_dir):

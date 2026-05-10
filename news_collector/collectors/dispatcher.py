@@ -54,12 +54,16 @@ class CollectorDispatcher:
         try:
             self.collectors["rss"] = create_collector(rss_type)
         except Exception as e:
-            logger.opt(exception=True).error("Failed to initialize RSS collector: {}", e)
+            logger.opt(exception=True).error(
+                "Failed to initialize RSS collector: {}", e
+            )
 
         try:
             self.collectors["html"] = create_collector("html")
         except Exception as e:
-            logger.opt(exception=True).error("Failed to initialize HTML collector: {}", e)
+            logger.opt(exception=True).error(
+                "Failed to initialize HTML collector: {}", e
+            )
 
         try:
             self.collectors["headless"] = create_collector("headless")
@@ -72,7 +76,9 @@ class CollectorDispatcher:
         try:
             self.collectors["reddit"] = create_collector("reddit")
         except Exception as e:
-            logger.opt(exception=True).error("Failed to initialize Reddit collector: {}", e)
+            logger.opt(exception=True).error(
+                "Failed to initialize Reddit collector: {}", e
+            )
 
         if self.logger_factory:
             for c in self.collectors.values():

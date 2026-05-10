@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from ._constants import SCHEMA_VERSION
 from pydantic import BaseModel, Field
+
+from ._constants import SCHEMA_VERSION
 
 PipelineStageName = Literal[
     "collection",

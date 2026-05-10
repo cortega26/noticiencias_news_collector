@@ -12,6 +12,7 @@ Does NOT own:
 - Canonical identity
 - Image handling
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ PUBLISHING_TIMEOUT_SECONDS = 3600  # 1 hour
 @dataclass
 class PRResult:
     """Result of PROrchestrator.create_pr() or attempt_recovery()."""
+
     pr_url: str | None
     recovered: bool = False
 
@@ -220,7 +222,11 @@ class PROrchestrator:
             return None
 
         if result.pr_url:
-            logger.info("Publishing recovery succeeded for article {}: {}", article_id, result.pr_url)
+            logger.info(
+                "Publishing recovery succeeded for article {}: {}",
+                article_id,
+                result.pr_url,
+            )
             return result
 
         return None

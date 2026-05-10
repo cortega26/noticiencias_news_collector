@@ -159,7 +159,4 @@ if __name__ == "__main__":
             print(f"❌ Cross-repo field parity test failed: {exc}")
             raise SystemExit(1) from exc
     else:
-        print(
-            f"⚠️  Skipped cross-repo parity check — {_FRONTEND_CONFIG} not found"
-        )
-
+        print(f"⚠️  Skipped cross-repo parity check — {_FRONTEND_CONFIG} not found")

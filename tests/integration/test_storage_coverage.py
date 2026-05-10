@@ -75,9 +75,7 @@ class TestMarkArticlePublished:
             assert meta.get("publication", {}).get("state") == "PR_CREATED"
             assert meta.get("publication", {}).get("pr_url") == pr_url
             assert (
-                meta.get("publication", {})
-                .get("frontend_checks", {})
-                .get("state")
+                meta.get("publication", {}).get("frontend_checks", {}).get("state")
                 == "pending"
             )
             assert (

@@ -44,11 +44,11 @@ from news_collector.contracts import (
     PublicationAttemptStageResult,
     PublicationAttemptSummary,
 )
-from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
 )
-from news_collector.logic.workflows.image_handler import ArticleImageHandler, CT_TO_EXT
+from news_collector.logic.workflows.image_briefs import ImageBriefStore
+from news_collector.logic.workflows.image_handler import CT_TO_EXT, ArticleImageHandler
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.logic.workflows.publication_identity import (
     PublicationIdentityResolver,

@@ -9,6 +9,7 @@ Import path after implementation:
         ImageResolution,
     )
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,10 +23,10 @@ from news_collector.logic.workflows.image_handler import (
     ImageResolution,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def image_briefs_stub() -> MagicMock:
@@ -49,7 +50,9 @@ def target_dir(tmp_path) -> Path:
     return d
 
 
-def _make_mock_http_response(*, content: bytes = b"fake-image", content_type: str = "image/jpeg"):
+def _make_mock_http_response(
+    *, content: bytes = b"fake-image", content_type: str = "image/jpeg"
+):
     response = MagicMock()
     response.content = content
     response.headers = {"Content-Type": content_type}
@@ -72,10 +75,13 @@ def _patch_http_client(response):
 # IMG-01: download saves file with Content-Type-derived extension
 # ---------------------------------------------------------------------------
 
+
 class TestDownload:
     def test_img_01_jpeg_content_type(self, handler, target_dir):
         """IMG-01: Content-Type image/jpeg → .jpg file saved."""
-        response = _make_mock_http_response(content=b"jpegdata", content_type="image/jpeg")
+        response = _make_mock_http_response(
+            content=b"jpegdata", content_type="image/jpeg"
+        )
         with _patch_http_client(response):
             result = handler.download(
                 url="https://example.com/photo.jpeg",
@@ -90,7 +96,9 @@ class TestDownload:
 
     def test_img_01_png_content_type(self, handler, target_dir):
         """IMG-01: Content-Type image/png → .png file saved."""
-        response = _make_mock_http_response(content=b"pngdata", content_type="image/png")
+        response = _make_mock_http_response(
+            content=b"pngdata", content_type="image/png"
+        )
         with _patch_http_client(response):
             result = handler.download(
                 url="https://example.com/photo.png",
@@ -102,7 +110,9 @@ class TestDownload:
 
     def test_img_01_avif_content_type(self, handler, target_dir):
         """IMG-01: Content-Type image/avif → .avif file saved."""
-        response = _make_mock_http_response(content=b"avifdata", content_type="image/avif")
+        response = _make_mock_http_response(
+            content=b"avifdata", content_type="image/avif"
+        )
         with _patch_http_client(response):
             result = handler.download(
                 url="https://example.com/photo",
@@ -156,8 +166,11 @@ class TestDownload:
 # IMG-04: resolve with editorial_image_ready brief → resolved=True
 # ---------------------------------------------------------------------------
 
+
 class TestResolve:
-    def _make_article(self, image_url: str | None = "https://example.com/img.jpg") -> dict:
+    def _make_article(
+        self, image_url: str | None = "https://example.com/img.jpg"
+    ) -> dict:
         return {
             "id": "42",
             "title": "Test Article",
@@ -167,13 +180,17 @@ class TestResolve:
             "published_date": datetime(2024, 1, 25),
         }
 
-    def test_img_04_brief_ready_returns_resolved(self, handler, image_briefs_stub, target_dir):
+    def test_img_04_brief_ready_returns_resolved(
+        self, handler, image_briefs_stub, target_dir
+    ):
         """IMG-04: Brief in editorial_image_ready status → resolved=True, asset materialized."""
         brief = MagicMock()
         brief.status = "editorial_image_ready"
         brief.draft_alt_text = "A staged image"
         image_briefs_stub.find_for_article.return_value = brief
-        image_briefs_stub.materialize_uploaded_asset.return_value = "~/assets/images/staged.jpg"
+        image_briefs_stub.materialize_uploaded_asset.return_value = (
+            "~/assets/images/staged.jpg"
+        )
 
         result = handler.resolve(
             article=self._make_article(),
@@ -207,7 +224,9 @@ class TestResolve:
         assert result.image_url.startswith("~/assets/images/")
         assert result.queued_brief is False
 
-    def test_img_06_download_failure_queues_brief(self, handler, image_briefs_stub, target_dir):
+    def test_img_06_download_failure_queues_brief(
+        self, handler, image_briefs_stub, target_dir
+    ):
         """IMG-06: Download fails → brief queued, resolved=False."""
         image_briefs_stub.find_for_article.return_value = None
 
@@ -231,7 +250,9 @@ class TestResolve:
         assert result.queued_brief is True
         image_briefs_stub.save_brief.assert_called_once()
 
-    def test_img_07_missing_image_url_queues_brief(self, handler, image_briefs_stub, target_dir):
+    def test_img_07_missing_image_url_queues_brief(
+        self, handler, image_briefs_stub, target_dir
+    ):
         """IMG-07: No image_url → brief queued, resolved=False."""
         image_briefs_stub.find_for_article.return_value = None
 
@@ -246,7 +267,9 @@ class TestResolve:
         assert result.resolved is False
         assert result.queued_brief is True
 
-    def test_img_08_default_placeholder_queues_brief(self, handler, image_briefs_stub, target_dir):
+    def test_img_08_default_placeholder_queues_brief(
+        self, handler, image_briefs_stub, target_dir
+    ):
         """IMG-08: Placeholder URL → brief queued, resolved=False."""
         image_briefs_stub.find_for_article.return_value = None
 
@@ -261,7 +284,9 @@ class TestResolve:
         assert result.resolved is False
         assert result.queued_brief is True
 
-    def test_img_auto_alt_text_set_when_missing(self, handler, image_briefs_stub, target_dir):
+    def test_img_auto_alt_text_set_when_missing(
+        self, handler, image_briefs_stub, target_dir
+    ):
         """resolve sets a fallback alt text when image resolved but no alt provided."""
         image_briefs_stub.find_for_article.return_value = None
         response = _make_mock_http_response(content=b"img", content_type="image/jpeg")

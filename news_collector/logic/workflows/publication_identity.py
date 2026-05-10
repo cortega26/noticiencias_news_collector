@@ -15,6 +15,7 @@ Does NOT own:
 - Policy decisions
 - Image logic
 """
+
 from __future__ import annotations
 
 import re
@@ -34,10 +35,10 @@ logger = get_logger().create_module_logger("PublicationIdentityResolver")
 
 @dataclass
 class PublicationIdentity:
-    final_slug: str       # e.g. "2024-01-25-my-article"
-    canonical_date: str   # e.g. "2024-01-25"
+    final_slug: str  # e.g. "2024-01-25-my-article"
+    canonical_date: str  # e.g. "2024-01-25"
     output_filename: str  # e.g. "2024-01-25-my-article.md"
-    is_new: bool          # True = creation mode; False = recovered from DB or FS
+    is_new: bool  # True = creation mode; False = recovered from DB or FS
 
 
 class PublicationIdentityResolver:
@@ -90,7 +91,9 @@ class PublicationIdentityResolver:
             logger.info("♻️ Idempotency: Found existing file {}", existing_file.name)
             fn = existing_file.name
             slug = fn.replace(".md", "")
-            canonical_date = self._date_from_slug(slug) or datetime.now().strftime("%Y-%m-%d")
+            canonical_date = self._date_from_slug(slug) or datetime.now().strftime(
+                "%Y-%m-%d"
+            )
             # Self-heal: write slug into DB
             self.backfill_slug(article_id, slug)
             return PublicationIdentity(
@@ -108,7 +111,11 @@ class PublicationIdentityResolver:
         # AI editing to replace this with the translated-title slug.
         title = article.get("title", "")
         title_content = f"title: {title}" if title else ""
-        slug_part = self.extract_slug(title_content, article_id) if title_content else f"article-{article_id}"
+        slug_part = (
+            self.extract_slug(title_content, article_id)
+            if title_content
+            else f"article-{article_id}"
+        )
 
         final_slug = f"{canonical_date}-{slug_part}"
         output_filename = f"{final_slug}.md"
@@ -194,7 +201,11 @@ class PublicationIdentityResolver:
             if result:
                 logger.info("🔒 Identity Created: {}", slug)
             else:
-                logger.info("🔒 Canonical slug already exists for article {}: {}", article_id, slug)
+                logger.info(
+                    "🔒 Canonical slug already exists for article {}: {}",
+                    article_id,
+                    slug,
+                )
             return bool(result)
         except Exception as e:
             logger.error("Failed to persist canonical slug: {}", e)

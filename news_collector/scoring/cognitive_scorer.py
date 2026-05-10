@@ -6,13 +6,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
-from news_collector.utils.dict_wrapper import SafeNamespace
+from noticiencias.config_manager import load_config
+
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.storage.models import Article
+from news_collector.utils.dict_wrapper import SafeNamespace
 from news_collector.utils.logger import get_logger
-from noticiencias.config_manager import load_config
 
 from .basic_scorer import BasicScorer
 from .heuristic_scorer import HeuristicScorer

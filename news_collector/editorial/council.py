@@ -24,11 +24,12 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from noticiencias.config_manager import load_config
+
 from news_collector.config.prompts import EDITORIAL_COUNCIL_SYSTEM_PROMPT
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.utils.logger import get_logger
-from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger(__name__)
 

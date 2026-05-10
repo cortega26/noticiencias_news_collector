@@ -26,7 +26,9 @@ CRITICAL_SOURCE_COHORT = [
 ]
 
 
-def _load_health_records(payload: Mapping[str, Any] | None) -> dict[str, SourceHealthRecord]:
+def _load_health_records(
+    payload: Mapping[str, Any] | None,
+) -> dict[str, SourceHealthRecord]:
     records: dict[str, SourceHealthRecord] = {}
     for source_id, raw in (payload or {}).items():
         if not isinstance(raw, Mapping):
@@ -58,10 +60,10 @@ def _strategy_recommendation(record: SourceHealthRecord) -> str | None:
     ):
         return "prefer_scrapling_http"
 
-    if (
-        configured in {"http", "plain_http"}
-        and record.failure_taxonomy in {"js_render_required", "anti_bot_block"}
-    ):
+    if configured in {"http", "plain_http"} and record.failure_taxonomy in {
+        "js_render_required",
+        "anti_bot_block",
+    }:
         return "upgrade_from_plain_http"
 
     if (
@@ -99,7 +101,10 @@ def build_live_source_drift_report(
 
         if previous is not None:
             became_broken = previous.articles_saved > 0 and current.articles_saved == 0
-            new_failure = previous.failure_taxonomy is None and current.failure_taxonomy is not None
+            new_failure = (
+                previous.failure_taxonomy is None
+                and current.failure_taxonomy is not None
+            )
             if became_broken or new_failure:
                 newly_broken.append(
                     {
@@ -209,7 +214,9 @@ def render_live_source_drift_markdown(report: Mapping[str, Any]) -> str:
             continue
         for entry in entries:
             source_id = entry.get("source_id", "unknown")
-            lines.append(f"- `{source_id}`: {json.dumps(entry, ensure_ascii=False, sort_keys=True)}")
+            lines.append(
+                f"- `{source_id}`: {json.dumps(entry, ensure_ascii=False, sort_keys=True)}"
+            )
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"

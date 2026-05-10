@@ -71,12 +71,12 @@ class SessionReporter:
                 "sources_processed": collection_results.get(
                     "collection_summary", {}
                 ).get("sources_processed", 0),
-                "articles_found": collection_results.get(
-                    "collection_summary", {}
-                ).get("articles_found", 0),
-                "articles_saved": collection_results.get(
-                    "collection_summary", {}
-                ).get("articles_saved", 0),
+                "articles_found": collection_results.get("collection_summary", {}).get(
+                    "articles_found", 0
+                ),
+                "articles_saved": collection_results.get("collection_summary", {}).get(
+                    "articles_saved", 0
+                ),
                 "articles_scored": scoring_results.get("statistics", {}).get(
                     "articles_scored", 0
                 ),

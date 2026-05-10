@@ -203,7 +203,9 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     assert re.search(r"\ndate: 2026-03-02\s+15:30:00\+00:00\n", result)
 
 
-def test_top_level_export_category_drives_frontmatter_category(monkeypatch, tmp_path) -> None:
+def test_top_level_export_category_drives_frontmatter_category(
+    monkeypatch, tmp_path
+) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)

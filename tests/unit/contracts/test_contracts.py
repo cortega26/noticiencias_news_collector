@@ -95,7 +95,10 @@ def test_adapt_article_to_export_handles_detached_saved_article(tmp_path):
         assert model.id == saved_article.id
         assert model.published_at is None
         assert model.published_url is None
-        assert model.metadata["original_url"] == payload["article_metadata"]["original_url"]
+        assert (
+            model.metadata["original_url"]
+            == payload["article_metadata"]["original_url"]
+        )
         assert (
             model.metadata["processing_timestamp"]
             == payload["article_metadata"]["processing_timestamp"]

@@ -30,9 +30,7 @@ class NvidiaHealthChecker(LLMHealthChecker):
         from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
         nvidia_cfg = config.nvidia
-        nvidia_model = getattr(
-            nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking"
-        )
+        nvidia_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking")
         provider = NvidiaProvider(
             api_key=nvidia_cfg.api_key,
             model=nvidia_model,
@@ -54,9 +52,7 @@ class NvidiaHealthChecker(LLMHealthChecker):
 
         if healthy:
             if logger:
-                logger.info(
-                    f"NVIDIA NIM health check passed (model={nvidia_model})."
-                )
+                logger.info(f"NVIDIA NIM health check passed (model={nvidia_model}).")
             return HealthResult(healthy=True)
         warning = f"NVIDIA NIM health check failed: {reason}"
         if logger:
@@ -102,7 +98,6 @@ class OllamaHealthChecker(LLMHealthChecker):
     def check(self, config: Any, logger: Any) -> HealthResult:
         try:
             import requests
-
             from news_collector.infrastructure.llm.model_registry import (
                 ModelAvailabilityError,
                 ModelRegistryError,

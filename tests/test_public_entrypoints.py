@@ -96,7 +96,9 @@ class TestPublicEntrypoints:
                         "Ollama preflight failed to reach /api/tags: Connection refused"
                     ),
                 ):
-                    with patch("news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True):
+                    with patch(
+                        "news_collector.config.settings.LLM_SYSTEM_AVAILABLE", True
+                    ):
                         try:
                             bootstrap_system()
                             assert False, "Expected strict mode bootstrap failure"

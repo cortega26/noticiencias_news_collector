@@ -55,7 +55,9 @@ class AstroPost(BaseModel):
 
     # Core Fields
     title: str = Field(..., min_length=5, description="Article Title")
-    schema_version: int = Field(default=SCHEMA_VERSION, ge=1, description="Schema Version")
+    schema_version: int = Field(
+        default=SCHEMA_VERSION, ge=1, description="Schema Version"
+    )
     excerpt: str = Field(
         ..., min_length=10, description="SEO Meta Description / Excerpt"
     )
@@ -101,7 +103,11 @@ class AstroPost(BaseModel):
 
     @model_validator(mode="after")
     def ensure_alt_text_contract(self) -> "AstroPost":
-        object_alt = self.image.alt.strip() if isinstance(self.image, ImageObject) and self.image.alt else ""
+        object_alt = (
+            self.image.alt.strip()
+            if isinstance(self.image, ImageObject) and self.image.alt
+            else ""
+        )
         if not object_alt and not (self.image_alt or "").strip():
             raise ValueError(
                 "image_alt is required when image does not provide inline alt text"

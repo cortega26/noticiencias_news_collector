@@ -27,7 +27,9 @@ def _engine_deps():
     mock_git = MagicMock()
     mock_editor = MagicMock()
     mock_config = MagicMock()
-    mock_config.github = SimpleNamespace(target_repo_url="https://github.com/owner/repo.git")
+    mock_config.github = SimpleNamespace(
+        target_repo_url="https://github.com/owner/repo.git"
+    )
     mock_config.app.policy_integrity_mode = "disabled"
     mock_config.app.editorial_mode = "standard"
 

@@ -13,6 +13,7 @@ Does NOT own:
 - File write for article content
 - Git operations
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ CT_TO_EXT: Dict[str, str] = {
 @dataclass
 class ImageResolution:
     """Result of ArticleImageHandler.resolve()."""
+
     resolved: bool
     image_url: str | None = None
     image_alt: str | None = None
@@ -82,7 +84,9 @@ class ArticleImageHandler:
 
         Returns an ImageResolution describing the outcome.
         """
-        image_slug = self._derive_slug(article, article_id, canonical_date, preferred_slug)
+        image_slug = self._derive_slug(
+            article, article_id, canonical_date, preferred_slug
+        )
 
         # 1. Check editorial brief store
         existing_brief = self._briefs.find_for_article(article_id, [image_slug])
@@ -96,7 +100,11 @@ class ArticleImageHandler:
             return ImageResolution(
                 resolved=True,
                 image_url=resolved_brief_image,
-                image_alt=existing_brief.draft_alt_text if existing_brief is not None else None,
+                image_alt=(
+                    existing_brief.draft_alt_text
+                    if existing_brief is not None
+                    else None
+                ),
                 queued_brief=False,
             )
 
@@ -129,11 +137,17 @@ class ArticleImageHandler:
                 raw_image_url,
                 article_id,
             )
-            self._queue_brief(article, article_id, image_slug, "image_download_failed", existing_brief)
+            self._queue_brief(
+                article, article_id, image_slug, "image_download_failed", existing_brief
+            )
             return ImageResolution(resolved=False, queued_brief=True)
 
         # 3. Local (non-http) path already set — pass through unchanged
-        if raw_image_url and not raw_image_url.startswith("http") and raw_image_url != "~/assets/images/default.png":
+        if (
+            raw_image_url
+            and not raw_image_url.startswith("http")
+            and raw_image_url != "~/assets/images/default.png"
+        ):
             alt = article.get("image_alt") or (
                 f"Imagen editorial de {article.get('title', article_id)}"
             )
@@ -181,7 +195,15 @@ class ArticleImageHandler:
             ext = CT_TO_EXT.get(ct)
             if not ext:
                 url_lower = url.lower().split("?")[0]
-                for candidate in (".png", ".webp", ".avif", ".gif", ".svg", ".jpeg", ".jpg"):
+                for candidate in (
+                    ".png",
+                    ".webp",
+                    ".avif",
+                    ".gif",
+                    ".svg",
+                    ".jpeg",
+                    ".jpg",
+                ):
                     if url_lower.endswith(candidate):
                         ext = ".jpg" if candidate == ".jpeg" else candidate
                         break
@@ -244,4 +266,6 @@ class ArticleImageHandler:
             existing=existing_brief,
         )
         brief_path = self._briefs.save_brief(brief)
-        logger.info("Queued editorial image brief for article {} at {}", article_id, brief_path)
+        logger.info(
+            "Queued editorial image brief for article {} at {}", article_id, brief_path
+        )

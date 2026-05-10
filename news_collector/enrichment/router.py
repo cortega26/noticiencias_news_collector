@@ -32,8 +32,11 @@ from typing import Any, Dict
 
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
 from news_collector.enrichment.http_enricher import HttpEnricher
-from news_collector.enrichment.scrapling_enricher import ScraplingEnricher, ScraplingHttpEnricher
 from news_collector.enrichment.scholarly import ScholarlyMetadataEnricher
+from news_collector.enrichment.scrapling_enricher import (
+    ScraplingEnricher,
+    ScraplingHttpEnricher,
+)
 from news_collector.enrichment.strategy_lock_manager import strategy_lock_manager
 from news_collector.enrichment.strategy_optimizer import strategy_optimizer
 from news_collector.infrastructure.run_context import run_context
@@ -381,15 +384,34 @@ class EnrichmentStrategyRouter:
                 content = res["content"]
                 length = len(content)
                 is_publishable = length >= 500
-                enrichment_metrics.record_success(source_id, "scrapling_http", duration, length, is_publishable)
+                enrichment_metrics.record_success(
+                    source_id, "scrapling_http", duration, length, is_publishable
+                )
                 if is_publishable:
-                    return {"success": True, "content": content, "raw_content": res.get("raw_content"), "strategy_used": "scrapling_http"}
-                enrichment_metrics.record_failure(source_id, "scrapling_http", "content_too_short", duration)
-                return {"success": False, "reason": "content_too_short", "strategy_used": "scrapling_http"}
+                    return {
+                        "success": True,
+                        "content": content,
+                        "raw_content": res.get("raw_content"),
+                        "strategy_used": "scrapling_http",
+                    }
+                enrichment_metrics.record_failure(
+                    source_id, "scrapling_http", "content_too_short", duration
+                )
+                return {
+                    "success": False,
+                    "reason": "content_too_short",
+                    "strategy_used": "scrapling_http",
+                }
             else:
                 reason = res.get("error", "scrapling_http_failed")
-                enrichment_metrics.record_failure(source_id, "scrapling_http", reason, duration)
-                return {"success": False, "reason": reason, "strategy_used": "scrapling_http"}
+                enrichment_metrics.record_failure(
+                    source_id, "scrapling_http", reason, duration
+                )
+                return {
+                    "success": False,
+                    "reason": reason,
+                    "strategy_used": "scrapling_http",
+                }
 
         # 5. Scrapling Stealth Strategy
         if strategy == "scrapling_stealth":
@@ -409,7 +431,11 @@ class EnrichmentStrategyRouter:
                 self.logger.info(
                     {
                         "event": "enrichment.scrapling.success",
-                        "details": {"source_id": source_id, "url": url, "length": length},
+                        "details": {
+                            "source_id": source_id,
+                            "url": url,
+                            "length": length,
+                        },
                     }
                 )
                 if is_publishable:
@@ -434,7 +460,11 @@ class EnrichmentStrategyRouter:
                 )
                 log_payload = {
                     "event": "enrichment.scrapling.failed",
-                    "details": {"source_id": source_id, "url": url, "reason": error_reason},
+                    "details": {
+                        "source_id": source_id,
+                        "url": url,
+                        "reason": error_reason,
+                    },
                 }
                 if error_reason == "scrapling_disabled":
                     # Configuration state, not a runtime failure — log at WARNING

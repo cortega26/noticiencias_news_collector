@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import json
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -11,11 +11,11 @@ import git
 import requests
 import yaml
 from news_collector.components.publishing import GitHubPublisher
-from news_collector.utils.slug import slugify
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.frontend_publication import (
     FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
 )
+from news_collector.utils.slug import slugify
 
 POSTS_SUBPATH = Path("src/content/posts")
 HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
@@ -216,9 +216,7 @@ def _normalize_allowlist_entries(entries: dict[str, Any]) -> dict[str, str]:
     return normalized
 
 
-def _write_placeholder_allowlist(
-    allowlist_path: Path, entries: dict[str, Any]
-) -> None:
+def _write_placeholder_allowlist(allowlist_path: Path, entries: dict[str, Any]) -> None:
     payload = {"allowedPlaceholders": _normalize_allowlist_entries(entries)}
     allowlist_path.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
@@ -372,17 +370,23 @@ def append_deleted_route_smoke_check(
     updated_routes = [
         entry
         for entry in routes
-        if isinstance(entry, dict) and normalize_route_path(entry.get("path", "")) != normalized_path
+        if isinstance(entry, dict)
+        and normalize_route_path(entry.get("path", "")) != normalized_path
     ]
     updated_routes.append(
         {
             "path": normalized_path,
             "file_name": file_name,
             "reason": reason,
-            "deleted_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "deleted_at": datetime.now(UTC)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
         }
     )
-    payload["routes"] = sorted(updated_routes, key=lambda entry: str(entry.get("path", "")))
+    payload["routes"] = sorted(
+        updated_routes, key=lambda entry: str(entry.get("path", ""))
+    )
     checks_path.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -600,7 +604,9 @@ def fetch_frontend_pr_check_health(
         return None
 
     owner, repo_name = repo_identity
-    required = tuple(str(name).strip() for name in required_workflows if str(name).strip())
+    required = tuple(
+        str(name).strip() for name in required_workflows if str(name).strip()
+    )
     headers = {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",

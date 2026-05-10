@@ -98,13 +98,10 @@ class ScoringCoordinator:
 
         if results:
             bulk_score_updates: List[tuple] = []
-            for article, score_result in zip(
-                pending_articles, results, strict=False
-            ):
+            for article, score_result in zip(pending_articles, results, strict=False):
                 if isinstance(score_result, Exception):
                     self.logger.create_module_logger("scoring").error(
-                        f"Error scoring artículo {article.id}: "
-                        f"{str(score_result)}"
+                        f"Error scoring artículo {article.id}: " f"{str(score_result)}"
                     )
                     continue
 
@@ -119,9 +116,7 @@ class ScoringCoordinator:
                     scoring_stats["articles_excluded"] += 1
 
             if bulk_score_updates:
-                success = self.db_manager.update_articles_score_bulk(
-                    bulk_score_updates
-                )
+                success = self.db_manager.update_articles_score_bulk(bulk_score_updates)
                 if not success:
                     self.logger.create_module_logger("scoring").error(
                         "Failed to perform bulk score updates."
@@ -138,9 +133,7 @@ class ScoringCoordinator:
             "processed_articles": scoring_stats["articles_scored"],
         }
 
-    def _simulate_scoring(
-        self, collection_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _simulate_scoring(self, collection_results: Dict[str, Any]) -> Dict[str, Any]:
         """Simulate scoring for dry-run mode (preserved from original)."""
         articles_found = collection_results.get("collection_summary", {}).get(
             "articles_found", 0

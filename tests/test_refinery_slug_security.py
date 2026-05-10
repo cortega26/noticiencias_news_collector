@@ -14,7 +14,9 @@ def _make_engine():
         mock_config = MagicMock()
         mock_config.app.policy_integrity_mode = "disabled"
         mock_config.app.editorial_mode = "standard"
-        mock_config.github = SimpleNamespace(target_repo_url="https://github.com/org/repo")
+        mock_config.github = SimpleNamespace(
+            target_repo_url="https://github.com/org/repo"
+        )
         engine = RefineryEngine(MagicMock(), MagicMock(), MagicMock(), mock_config)
         engine.auditor = MockAuditorClass.return_value
         return engine
@@ -82,7 +84,9 @@ def test_slug_collision_handled(tmp_path):
     # We monkeypatch internal file reading logic so it doesn't find a file during phase 2
     engine.writer.find_existing_file = MagicMock(return_value=None)
     engine._extract_slug = MagicMock(return_value="collision-test")
-    engine._download_image = MagicMock(return_value="~/assets/images/collision-test.png")
+    engine._download_image = MagicMock(
+        return_value="~/assets/images/collision-test.png"
+    )
 
     engine.process_single_article(article1, MagicMock(), tmp_path)
     engine.process_single_article(article2, MagicMock(), tmp_path)
