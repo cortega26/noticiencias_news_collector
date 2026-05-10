@@ -271,7 +271,7 @@ def run_frontend_publication_validation(
             ["npm", "run", "publish:image-derivatives"],
         )
     )
-    # Format the post file with Prettier before content checks.
+    # Format the post file with Prettier before lint.
     # The LLM-generated markdown may have minor formatting issues.
     post_path_str = staged.get("post_path") or ""
     if post_path_str:
@@ -281,16 +281,17 @@ def run_frontend_publication_validation(
                 ["npx", "prettier", "--write", post_path_str],
             )
         )
-    # Run content-validation checks individually — skip the front-end
-    # repo's format:check (pre-existing formatting noise unrelated to
-    # the generated post) and eslint (code quality, not post content).
+    # Format the entire checkout so that lint's format:check sub-step
+    # doesn't fail on pre-existing formatting noise in the front-end repo.
+    commands.append(
+        (
+            "format_repo",
+            ["npx", "prettier", "--write", str(root)],
+        )
+    )
     commands.extend(
         [
-            ("check_frontmatter_dates", ["npm", "run", "check:frontmatter-dates"]),
-            ("check_hero_images", ["npm", "run", "check:hero-images"]),
-            ("check_published_sidecars", ["npm", "run", "check:published-sidecars"]),
-            ("check_image_derivatives", ["npm", "run", "check:image-derivatives"]),
-            ("check_content_quality", ["npm", "run", "check:content-quality"]),
+            ("lint", ["npm", "run", "lint"]),
             ("validate_content", ["npm", "run", "validate:content"]),
             ("build", ["npm", "run", "build"]),
             ("test_dist", ["npm", "run", "test:dist"]),
