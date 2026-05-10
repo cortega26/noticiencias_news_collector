@@ -65,6 +65,8 @@ jobs:
             tsconfig.json
             .nvmrc
             eslint.config.mjs
+            tests/
+            vitest.config.ts
           sparse-checkout-cone-mode: false
 
       - name: Set up Node
