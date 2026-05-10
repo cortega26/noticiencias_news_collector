@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -167,7 +167,7 @@ quality-gate: bootstrap ## Run snapshot-first quality gate (No LLM required)
 quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwrite warning!)
 	@PYTHONPATH=$(CURDIR) $(PYTHON) scripts/quality_gate_refresh.py
 
-prepush: test quality-gate ## Run all checks required before pushing (Test + Quality Gate)
+prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
 MYPY_TARGETS := scripts/generate_api_docs.py \
 news_collector/utils/logger.py \
@@ -180,8 +180,14 @@ typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
 	@COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
 
-test: bootstrap ## Run all unit tests
+test: bootstrap ## Run unit tests (fast feedback, excludes slow e2e pipeline)
+	@$(PYTEST) tests --ignore=tests/e2e_pipeline
+
+test-all: bootstrap ## Run all tests including slow e2e pipeline
 	@$(PYTEST) tests
+
+test-e2e: bootstrap ## Run the full e2e pipeline tests (~4 min)
+	@$(PYTEST) tests/e2e_pipeline
 
 check-coverage: bootstrap ## Check if coverage meets the required threshold (fails under 80%)
 	@echo "[coverage] Checking coverage threshold..."
