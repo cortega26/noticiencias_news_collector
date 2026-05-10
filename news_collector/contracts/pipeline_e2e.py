@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
+from ._constants import SCHEMA_VERSION
 from pydantic import BaseModel, Field
 
 PipelineStageName = Literal[
@@ -31,7 +32,7 @@ class PipelineStageSnapshot(BaseModel):
 class PipelineE2ERunSummary(BaseModel):
     """Top-level summary for one deterministic E2E pipeline scenario run."""
 
-    schema_version: int = 1
+    schema_version: int = SCHEMA_VERSION
     scenario: str
     generated_at: str
     fixture_path: str

@@ -19,22 +19,22 @@ from unittest.mock import patch
 import git
 
 from news_collector.config import ALL_SOURCES
+from news_collector.utils.slug import slugify
 from news_collector.config.settings import SCORING_CONFIG
-from news_collector.contracts import PipelineE2ERunSummary, PipelineStageSnapshot
+from news_collector.contracts import SCHEMA_VERSION, PipelineE2ERunSummary, PipelineStageSnapshot
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 from news_collector.perf.load_replay import CollectorReplaySession, ReplayEvent
 from news_collector.scoring.feature_scorer import FeatureBasedScorer
 from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
 
-MANIFEST_FILENAME = "refinery_manifest.json"
+from news_collector.contracts import MANIFEST_FILENAME
 FRONTEND_COPY_IGNORE = shutil.ignore_patterns(".git", "node_modules", "dist", ".astro")
 NODE_MODULES_COPY_IGNORE = shutil.ignore_patterns(".cache")
 
 
 def _slugify(value: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
-    return normalized or "article"
+    return slugify(value)
 
 
 def _now_iso() -> str:
@@ -144,7 +144,7 @@ class LocalEditorialEditor:
             [
                 "---",
                 f"title: {str(article.get('title') or explicit_article_id)!r}",
-                "schema_version: 1",
+                f"schema_version: {SCHEMA_VERSION}",
                 f"excerpt: {str(article.get('summary') or '')[:180]!r}",
                 "author: 'Noticiencias'",
                 f"date: {override_date}",

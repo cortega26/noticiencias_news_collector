@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
+from news_collector.utils.dict_wrapper import SafeNamespace
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
@@ -199,14 +200,6 @@ class CognitiveScorer(BasicScorer):
         for i, payload in enumerate(payload_list):
             article_data = payload.get("article", payload)
 
-            # Simple wrapper
-            class Wrapper:
-                def __init__(self, d: Dict[str, Any]) -> None:
-                    self.__dict__ = d
-
-                def __getattr__(self, k: str) -> Any:
-                    return self.__dict__.get(k)
-
             # Ensure dates are parsed/defaulted
             for date_field in ["published_date", "collected_date"]:
                 val = article_data.get(date_field)
@@ -221,7 +214,7 @@ class CognitiveScorer(BasicScorer):
             if not article_data.get("collected_date"):
                 article_data["collected_date"] = datetime.now(timezone.utc)
 
-            art_obj = Wrapper(article_data)
+            art_obj = SafeNamespace(**article_data)
 
             key = self._get_cache_key(art_obj)
             cached = self._get_from_cache(key)

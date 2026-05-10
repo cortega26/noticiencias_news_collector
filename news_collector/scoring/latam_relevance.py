@@ -25,6 +25,18 @@ LATAM_KEYWORDS = (
     "unam",
     "fapesp",
     "fiocruz",
+    "uruguay",
+    "paraguay",
+    "bolivia",
+    "ecuador",
+    "venezuela",
+    "costa rica",
+    "panamá",
+    "panama",
+    "españa",
+    "spain",
+    "tec de monterrey",
+    "cdmx",
 )
 
 SCIENCE_PRIORITY_KEYWORDS = (

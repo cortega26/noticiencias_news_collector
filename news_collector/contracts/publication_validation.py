@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
+from ._constants import SCHEMA_VERSION
 from pydantic import BaseModel, Field
 
 PublicationFailureClass = Literal[
@@ -34,7 +35,7 @@ class FrontendCheckResult(BaseModel):
 class PublicationValidationSummary(BaseModel):
     """Machine-readable summary for a backend-driven frontend validation run."""
 
-    schema_version: int = 1
+    schema_version: int = SCHEMA_VERSION
     generated_at: str
     frontend_root: str
     post_path: str
@@ -56,7 +57,7 @@ class PublicationAttemptStageResult(BaseModel):
 class PublicationAttemptSummary(BaseModel):
     """Machine-readable summary for a generated publication artifact / PR attempt."""
 
-    schema_version: int = 1
+    schema_version: int = SCHEMA_VERSION
     generated_at: str
     article_id: str
     target_repo: Optional[str] = None

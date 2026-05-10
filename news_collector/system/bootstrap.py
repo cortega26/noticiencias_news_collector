@@ -226,13 +226,13 @@ def check_system_health(
     }
 
 
-def _verify_llm_health(  # noqa: C901
+def _verify_llm_health(
     logger: Any,
     warnings: List[str],
     *,
     config: Any | None = None,
 ) -> None:
-    """Internal helper to verify LLM provider availability (Gemini or Ollama)."""
+    """Internal helper to verify LLM provider availability (Gemini, NVIDIA, or Ollama)."""
     health_logger = _resolve_module_logger(logger, "system")
     if _is_smoke_mode_enabled():
         from news_collector.config import settings as config_settings
@@ -244,182 +244,40 @@ def _verify_llm_health(  # noqa: C901
             )
         return
 
-    disable_llm = False
-    strict_llm_mode = False
+    from news_collector.config import settings as config_settings
+    from news_collector.infrastructure.llm.health import resolve_health_checker
+    from news_collector.infrastructure.llm.model_registry import (
+        is_no_warn_mode_enabled,
+        is_strict_mode_enabled,
+    )
+
+    active_config = config or config_settings.refresh_runtime_config()
+    strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
+
+    checker = resolve_health_checker(active_config)
+    if checker is None:
+        return
+
     try:
-        import requests
-
-        from news_collector.config import settings as config_settings
-        from news_collector.infrastructure.llm.model_registry import (
-            ModelAvailabilityError,
-            ModelRegistryError,
-            is_no_warn_mode_enabled,
-            is_strict_mode_enabled,
-            preflight_ollama_models,
-        )
-
-        active_config = config or config_settings.refresh_runtime_config()
-        strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
-
-        # Check if NVIDIA NIM is the active provider (highest priority)
-        nvidia_api_key = getattr(
-            getattr(active_config, "nvidia", None), "api_key", None
-        )
-        if nvidia_api_key:
-            try:
-                from news_collector.infrastructure.llm.nvidia_provider import (
-                    NvidiaProvider,
-                )
-
-                nvidia_cfg = active_config.nvidia
-                nvidia_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking")
-                provider = NvidiaProvider(
-                    api_key=nvidia_api_key,
-                    model=nvidia_model,
-                    base_url=getattr(nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"),
-                )
-                healthy, reason = provider.check_health(timeout_seconds=5)
-                if healthy:
-                    if health_logger:
-                        health_logger.info(
-                            f"NVIDIA NIM health check passed (model={nvidia_model})."
-                        )
-                else:
-                    warning_msg = f"NVIDIA NIM health check failed: {reason}"
-                    warnings.append(warning_msg)
-                    disable_llm = True
-                    if health_logger:
-                        health_logger.warning(warning_msg)
-                    if strict_llm_mode:
-                        raise RuntimeError(warning_msg)
-            except RuntimeError:
-                raise
-            except Exception as nvidia_err:
-                warning_msg = f"NVIDIA NIM health check error: {nvidia_err}"
-                warnings.append(warning_msg)
-                disable_llm = True
-                if health_logger:
-                    health_logger.warning(warning_msg)
-                if strict_llm_mode:
-                    raise RuntimeError(warning_msg) from nvidia_err
-
-            if disable_llm:
-                config_settings.set_llm_system_available(False)
-                if health_logger:
-                    health_logger.warning(
-                        "LLM System Disabled: NVIDIA NIM health check failed."
-                    )
-            else:
-                config_settings.set_llm_system_available(True)
-            return
-
-        # Check if Gemini is the active provider (API key configured)
-        gemini_api_key = getattr(
-            getattr(active_config, "gemini", None), "api_key", None
-        )
-        if gemini_api_key:
-            # Gemini is the active provider — verify Gemini health, skip Ollama
-            try:
-                from news_collector.infrastructure.llm.gemini_provider import (
-                    GeminiProvider,
-                )
-
-                gemini_model = getattr(
-                    active_config.gemini, "model", "gemini-2.5-flash"
-                )
-                gemini_provider = GeminiProvider(
-                    api_key=gemini_api_key, model=gemini_model
-                )
-                healthy, reason = gemini_provider.check_health(timeout_seconds=5)
-                if healthy:
-                    if health_logger:
-                        health_logger.info(
-                            f"Gemini health check passed (model={gemini_model})."
-                        )
-                else:
-                    warning_msg = f"Gemini health check failed: {reason}"
-                    warnings.append(warning_msg)
-                    disable_llm = True
-                    if health_logger:
-                        health_logger.warning(warning_msg)
-                    if strict_llm_mode:
-                        raise RuntimeError(warning_msg)
-            except RuntimeError:
-                raise
-            except Exception as gemini_err:
-                warning_msg = f"Gemini health check error: {gemini_err}"
-                warnings.append(warning_msg)
-                disable_llm = True
-                if health_logger:
-                    health_logger.warning(warning_msg)
-                if strict_llm_mode:
-                    raise RuntimeError(warning_msg) from gemini_err
-
-            if disable_llm:
-                config_settings.set_llm_system_available(False)
-                if health_logger:
-                    health_logger.warning(
-                        "LLM System Disabled: Gemini health check failed."
-                    )
-            else:
-                config_settings.set_llm_system_available(True)
-            return
-
-        try:
-            auditor_cfg = getattr(active_config, "editorial_auditor", None)
-            health_timeout_seconds = int(
-                getattr(auditor_cfg, "health_timeout_seconds", 5)
-            )
-            preflight_ollama_models(
-                active_config,
-                check_availability=True,
-                check_generation=True,
-                timeout_seconds=health_timeout_seconds,
-                logger=health_logger,
-            )
-        except ModelAvailabilityError as availability_err:
-            warning_msg = str(availability_err)
-            warnings.append(warning_msg)
-            disable_llm = True
-            if health_logger:
-                health_logger.warning(warning_msg)
-            if strict_llm_mode:
-                raise RuntimeError(warning_msg) from availability_err
-        except ModelRegistryError as cfg_error:
-            warning_msg = f"Ollama model configuration error: {cfg_error}"
-            warnings.append(warning_msg)
-            disable_llm = True
-            if health_logger:
-                health_logger.warning(warning_msg)
-            config_settings.set_llm_system_available(False)
-            if strict_llm_mode:
-                raise RuntimeError(warning_msg) from cfg_error
-            return
-        except requests.RequestException as conn_err:
-            warning_msg = f"LLM Provider unreachable: {conn_err}"
-            warnings.append(warning_msg)
-            disable_llm = True
-            if health_logger:
-                health_logger.warning(warning_msg)
-            if strict_llm_mode:
-                raise RuntimeError(warning_msg) from conn_err
-
+        result = checker.check(active_config, health_logger)
+    except RuntimeError:
+        raise
     except Exception as e:
-        if strict_llm_mode and isinstance(e, RuntimeError):
-            raise
         if health_logger:
-            health_logger.warning(f"Skipping LLM check: {e}")
-
-    # Update global state if LLM issues found
-    if disable_llm:
-        from news_collector.config import settings as config_settings
-
+            health_logger.warning(f"LLM health check error: {e}")
         config_settings.set_llm_system_available(False)
-        if health_logger:
-            health_logger.warning("LLM System Disabled: Ollama health check failed.")
-    else:
-        from news_collector.config import settings as config_settings
+        if strict_llm_mode:
+            raise RuntimeError(f"LLM health check error: {e}") from e
+        return
 
+    if result.warning:
+        warnings.append(result.warning)
+
+    if result.disable_llm:
+        config_settings.set_llm_system_available(False)
+        if result.error and strict_llm_mode:
+            raise RuntimeError(result.error)
+    else:
         config_settings.set_llm_system_available(True)
 
 

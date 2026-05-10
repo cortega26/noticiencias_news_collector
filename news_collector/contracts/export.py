@@ -44,6 +44,7 @@ class ExportContractV2(BaseModel):
     Used by: system.export_latest_articles
     """
 
+    # Canonical default is contracts.SCHEMA_VERSION = 1 — this is intentionally v2
     schema_version: int = 2
     version: Literal["2.0"] = "2.0"
     generated_at: str

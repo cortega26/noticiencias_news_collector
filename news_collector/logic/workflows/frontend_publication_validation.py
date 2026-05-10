@@ -16,7 +16,7 @@ from news_collector.contracts.publication_validation import (
     PublicationValidationSummary,
 )
 
-MANIFEST_FILENAME = "refinery_manifest.json"
+from news_collector.contracts import MANIFEST_FILENAME
 FIXTURE_ARTICLE_ID = "smoke-test-ci-fixture"
 FIXTURE_POST_FILENAME = "_smoke-test.md"
 

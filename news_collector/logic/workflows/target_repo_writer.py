@@ -20,11 +20,10 @@ from pathlib import Path
 from typing import Dict
 
 from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
+from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("TargetRepoWriter")
-
-MANIFEST_FILENAME = "refinery_manifest.json"
 
 
 class TargetRepoWriter:

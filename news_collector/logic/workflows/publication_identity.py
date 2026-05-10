@@ -18,13 +18,13 @@ Does NOT own:
 from __future__ import annotations
 
 import re
-import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 
 from news_collector.utils.logger import get_logger
+from news_collector.utils.slug import slugify
 
 if TYPE_CHECKING:
     pass
@@ -228,16 +228,7 @@ class PublicationIdentityResolver:
             slug = f"article-{fallback_id}"
 
         # NC-BE-015 S0 GUARD: strict sanitise
-        slug = (
-            unicodedata.normalize("NFKD", slug)
-            .encode("ASCII", "ignore")
-            .decode("utf-8")
-        )
-        slug = re.sub(r"[^a-zA-Z0-9\-_]", "-", slug)
-        slug = re.sub(r"-+", "-", slug).strip("-").lower()
-
-        if not slug or slug == "-":
-            slug = f"article-{fallback_id}"
+        slug = slugify(slug, fallback=f"article-{fallback_id}")
 
         return slug
 
