@@ -259,6 +259,15 @@ def run_frontend_publication_validation(
     commands: list[tuple[str, list[str]]] = []
     if install_dependencies:
         commands.append(("npm_ci", ["npm", "ci"]))
+    # Generate image derivative manifest entries before lint (which checks them).
+    # This ensures new articles with hero images pass check:image-derivatives.
+    # Works gracefully without R2 credentials — only produces local manifest entries.
+    commands.append(
+        (
+            "publish_image_derivatives",
+            ["npm", "run", "publish:image-derivatives"],
+        )
+    )
     commands.extend(
         [
             ("lint", ["npm", "run", "lint"]),
