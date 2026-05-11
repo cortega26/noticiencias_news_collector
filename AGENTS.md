@@ -62,7 +62,7 @@ Additional gates by change type:
 
 ### Forbidden assumptions
 
-- Do not use `main.py` — it is deprecated; use `python scripts/run_collector.py`.
+- `main.py` has been removed. Use `python scripts/run_collector.py`.
 - Do not write to the front-end repo directly — publication goes through PRs only.
 - Do not add dict payloads across package boundaries without a typed contract.
 - Do not add I/O inside rule modules (`scoring/`, `validation/`, `taxonomy/`, `editorial/`).

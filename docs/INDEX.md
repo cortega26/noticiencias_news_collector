@@ -39,7 +39,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | Fixture management for tests | [`fixtures.md`](fixtures.md) |
 | Healthcheck runbook | [`runbooks/healthcheck.md`](runbooks/healthcheck.md) |
 | Operations reference | [`operations.md`](operations.md) |
-| Ops runbook (alerts and incidents) | [`ops/RUNBOOK.md`](ops/RUNBOOK.md) |
+| Ops runbook (alerts and incidents) | [`runbook.md`](runbook.md) |
 | Performance baselines | [`performance_baselines.md`](performance_baselines.md) |
 | Placeholder policy (TODO/FIXME standards) | [`placeholder_policy.md`](placeholder_policy.md) |
 | Release checklist | [`release-checklist.md`](release-checklist.md) |

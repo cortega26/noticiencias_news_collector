@@ -6,11 +6,21 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
-- No hay cambios nuevos desde la versión 1.3.0.
+- Composite action `.github/actions/setup-python-env/` consolidates the
+  setup-python → cache → bootstrap pattern used across CI workflows.
 
 ### Changed
 
-- No hay cambios nuevos desde la versión 1.3.0.
+- **CI workflow consolidation**: `ci.yml`, `e2e.yml`, `daily_collector.yml`,
+  `source_reliability.yml`, `live-source-drift.yml`, and `publication-smoke.yml`
+  now use the shared composite action for Python environment setup, eliminating
+  ~170 lines of duplicated step definitions across 12+ CI jobs.
+- **Removed `main.py`**: The deprecated CLI entrypoint (previously a thin wrapper
+  around `scripts/run_collector.py`) has been deleted. All documentation references
+  updated across 7 files. `tests/test_error_handling.py` removed with it.
+- **Documentation alignment**: `docs/INDEX.md` ops runbook pointer corrected from
+  legacy `ops/RUNBOOK.md` to current `runbook.md`. `docs/security.md` bandit
+  command no longer references removed `main.py`.
 
 ## [1.3.0] - 2026-01-24
 

@@ -148,3 +148,5 @@ data/**/dlq/*.json
 # portability_path_fix: generated temp artifacts
 temp/
 frontend_publication_validation_summary.json
+# Claude Code runtime artifacts
+.claude/scheduled_tasks.lock

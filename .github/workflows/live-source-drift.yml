@@ -18,18 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.13"
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-
-      - name: Bootstrap
-        run: make bootstrap
 
       - name: Run live critical cohort sweep
         run: |
