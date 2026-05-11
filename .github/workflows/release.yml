@@ -5,8 +5,6 @@ on:
     tags:
       - "v*"
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: write
@@ -18,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Prepare git branch
@@ -35,7 +33,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Generate release notes
         id: notes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = "${{ steps.vars.outputs.tag }}";
@@ -50,7 +48,7 @@ jobs:
         run: |
           echo "${{ steps.notes.outputs.body_base64 }}" | base64 --decode > release-notes.md
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Update changelog
@@ -87,7 +85,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Prepare image metadata
         id: meta
         run: |
@@ -119,7 +117,7 @@ jobs:
           - Commit: ${{ steps.meta.outputs.short_sha }}
           EOT
       - name: Publicar artefactos
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: collector-container
           path: |

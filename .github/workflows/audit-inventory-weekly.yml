@@ -13,8 +13,6 @@ concurrency:
   group: audit-inventory-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   inventory:
@@ -22,11 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         id: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -60,7 +58,7 @@ jobs:
 
       - name: Upload inventory artifacts
         if: steps.summary.outputs.drift_count != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: audit-inventory-drift
           path: |
@@ -70,7 +68,7 @@ jobs:
 
       - name: Open drift issue
         if: steps.summary.outputs.drift_count != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
