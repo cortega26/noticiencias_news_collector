@@ -125,7 +125,7 @@ The workflow reuses database or file-based identity when available, but it still
 
 ### Legacy entrypoints still exist
 
-`main.py`, older workflows, and schema-version compatibility code remain in the repo. They are part of the current support surface and should be documented as legacy compatibility, not erased from the architecture narrative.
+The deprecated `main.py` entrypoint has been removed (previously a compatibility wrapper). Older workflows and schema-version compatibility code remain in the repo. They are part of the current support surface and should be documented as legacy compatibility, not erased from the architecture narrative.
 
 ## Extension Rules
 

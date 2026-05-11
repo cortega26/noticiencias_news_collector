@@ -6,7 +6,7 @@ The Noticiencias stack runs proactive dependency and source-code scanning so tha
 
 The [`Security gate`](../.github/workflows/audit-security.yml) workflow runs on every push and pull request. It keeps the following checks blocking merges:
 
-1. `bandit -ll -r src core scripts noticiencias run_collector.py main.py -v -f json -o reports/security/bandit.json`
+1. `bandit -ll -r src core scripts noticiencias run_collector.py -v -f json -o reports/security/bandit.json`
 2. `gitleaks detect --source . --no-banner --redact --config=.gitleaks.toml --report-format json --report-path reports/security/gitleaks_report.json`
 3. `pip-audit -r requirements.lock -r requirements-security.lock --ignore-vuln GHSA-q2x7-8rv6-6q7h --ignore-vuln GHSA-gmj6-6f8f-6699 --ignore-vuln GHSA-cpwx-vrp4-4pq7 -f json -o reports/security/pip_audit.json`
 
