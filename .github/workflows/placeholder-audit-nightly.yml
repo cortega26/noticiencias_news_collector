@@ -33,7 +33,7 @@ jobs:
         run: |
           python -m tools.placeholder_audit --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: audit.sarif
       - name: Upload audit report artifact
