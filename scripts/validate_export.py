@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 # Define Contract Schema (Mirroring src/content/config.ts requirements)
-EXPECTED_SCHEMA_VERSION = 2
+EXPECTED_SCHEMA_VERSION = 1
 REQUIRED_FIELDS = ["title", "url", "source_id", "published_date", "summary"]
 
 OPTIONAL_FIELDS = [

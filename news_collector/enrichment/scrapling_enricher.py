@@ -94,7 +94,9 @@ class ScraplingEnricher:
             "duration": duration,
         }
 
-    def enrich(self, url: str, source_config: Dict[str, Any]) -> Dict[str, Any]:
+    def enrich(  # noqa: C901
+        self, url: str, source_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         if not self.enabled:
             return {"success": False, "error": "scrapling_disabled", "content": None}
 

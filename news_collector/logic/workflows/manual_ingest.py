@@ -110,9 +110,9 @@ def _split_authors(value: str | None) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
-def _extract_html_metadata(
+def _extract_html_metadata(  # noqa: C901
     raw_html: str | None, article_url: str
-) -> dict[str, Any]:  # noqa: C901
+) -> dict[str, Any]:
     if not raw_html:
         return {}
 

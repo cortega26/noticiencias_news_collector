@@ -34,7 +34,7 @@ def _normalize_last_run(last_run: Any) -> Optional[str]:
     return None
 
 
-def classify_failure_taxonomy(
+def classify_failure_taxonomy(  # noqa: C901
     *,
     feed_ok: bool,
     pipeline_ok: bool,

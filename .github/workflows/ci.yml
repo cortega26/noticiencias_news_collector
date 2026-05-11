@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: read
 
@@ -117,8 +120,8 @@ jobs:
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
-          mkdir -p ../noticiencias
-          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
+          mkdir -p ../noticiencias/src/content
+          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content/config.ts
           rm -rf .tmp/frontend-schema
       - name: Run tests
         run: |

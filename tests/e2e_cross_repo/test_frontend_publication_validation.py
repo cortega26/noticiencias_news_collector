@@ -51,13 +51,14 @@ def test_frontend_publication_validation_success_restores_workspace(tmp_path: Pa
         "npm_ci",
         "publish_image_derivatives",
         "format_post",
+        "format_repo",
         "lint",
         "validate_content",
         "build",
         "test_dist",
         "test_audit",
     ]
-    assert executed_commands[0] == ["npm", "ci"]
+    assert executed_commands[0] == ["npm", "ci", "--legacy-peer-deps"]
     assert not (posts_dir / FIXTURE_POST_FILENAME).exists()
     assert manifest_path.read_text(encoding="utf-8") == original_manifest
 
@@ -90,6 +91,7 @@ def test_frontend_publication_validation_classifies_build_failures(tmp_path: Pat
         "npm_ci",
         "publish_image_derivatives",
         "format_post",
+        "format_repo",
         "lint",
         "validate_content",
         "build",
@@ -140,6 +142,7 @@ def test_frontend_publication_validation_current_state_does_not_stage_fixture(
     assert [check.name for check in summary.checks] == [
         "publish_image_derivatives",
         "format_post",
+        "format_repo",
         "lint",
         "validate_content",
         "build",

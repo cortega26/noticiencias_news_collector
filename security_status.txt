@@ -1,0 +1,7 @@
+{
+  "pip-audit": {
+    "high_findings": [],
+    "severity_threshold": "HIGH",
+    "status": "pass"
+  }
+}

@@ -52,8 +52,10 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--no-header",
             "--generate-hashes",
             "--allow-unsafe",
-            "-c",
-            "requirements.lock",
+            # Note: No -c requirements.lock here because semgrep requires
+            # click~=8.1.8 which conflicts with scrapling[fetchers]'s click>=8.3.0
+            # pinned in the main lockfile. These are separate environments so
+            # the constraint is not needed.
             "--extra",
             "security",
             "--extra",
@@ -107,7 +109,7 @@ def ensure_piptools_installed(force: bool) -> None:
         LOGGER.info("Reinstalling pip-tools as requested.")
 
     run_command(
-        (sys.executable, "-m", "pip", "install", "pip-tools==7.5.2", "pip<26.0")
+        (sys.executable, "-m", "pip", "install", "pip-tools==7.5.3", "pip<27.0")
     )
 
 

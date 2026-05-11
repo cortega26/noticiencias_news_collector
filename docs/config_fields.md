@@ -127,6 +127,12 @@
 | gemini.api_key | Optional |  | Google AI Studio API Key. |  |  |
 | gemini.model | str | "gemini-2.5-flash" | Model identifier to use for generation. |  |  |
 | gemini.timeout | int | 300 | Request timeout in seconds. |  |  |
+| nvidia | NvidiaConfig |  |  |  |  |
+| nvidia.api_key | Optional |  | NVIDIA API key from build.nvidia.com. |  |  |
+| nvidia.model | str | "qwen/qwen3-next-80b-a3b-thinking" | NVIDIA NIM model identifier (e.g. 'qwen/qwen3-next-80b-a3b-thinking'). |  |  |
+| nvidia.base_url | str | "https://integrate.api.nvidia.com/v1" | Base URL for the NVIDIA NIM API. |  |  |
+| nvidia.timeout | int | 300 | Request timeout in seconds. |  |  |
+| nvidia.max_tokens | int | 4096 | Maximum number of tokens to generate per request. |  |  |
 | llm_rate_limiting | LLMRateLimitingConfig |  |  |  |  |
 | llm_rate_limiting.max_concurrent_requests | int | 2 | Maximum number of concurrent in-flight LLM requests. |  |  |
 | llm_rate_limiting.min_delay_between_requests | float | 1.0 | Minimum seconds between consecutive LLM requests. |  |  |

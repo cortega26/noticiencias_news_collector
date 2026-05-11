@@ -251,20 +251,31 @@ class EnrichmentMetricsStore:
                     (source_id,),
                 )
 
-            strategy_attempt_column = (
-                {
-                    "http": "plain_http_attempts",
-                    "scrapling_http": "scrapling_http_attempts",
-                    "scrapling_stealth": "scrapling_stealth_attempts",
-                }.get(strategy)
-                if strategy is not None
-                else None
-            )
-            if strategy_attempt_column:
+            if strategy == "http":
                 cur.execute(
-                    f"""
+                    """
                     UPDATE enrichment_metrics
-                    SET {strategy_attempt_column} = {strategy_attempt_column} + 1,
+                    SET plain_http_attempts = plain_http_attempts + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
+                )
+            elif strategy == "scrapling_http":
+                cur.execute(
+                    """
+                    UPDATE enrichment_metrics
+                    SET scrapling_http_attempts = scrapling_http_attempts + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
+                )
+            elif strategy == "scrapling_stealth":
+                cur.execute(
+                    """
+                    UPDATE enrichment_metrics
+                    SET scrapling_stealth_attempts = scrapling_stealth_attempts + 1,
                         last_updated = CURRENT_TIMESTAMP
                     WHERE source_id = ?
                 """,
@@ -352,16 +363,31 @@ class EnrichmentMetricsStore:
                     duration=duration,
                 )
 
-            strategy_success_column = {
-                "http": "plain_http_success",
-                "scrapling_http": "scrapling_http_success",
-                "scrapling_stealth": "scrapling_stealth_success",
-            }.get(strategy)
-            if strategy_success_column:
+            if strategy == "http":
                 cur.execute(
-                    f"""
+                    """
                     UPDATE enrichment_metrics
-                    SET {strategy_success_column} = {strategy_success_column} + 1,
+                    SET plain_http_success = plain_http_success + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
+                )
+            elif strategy == "scrapling_http":
+                cur.execute(
+                    """
+                    UPDATE enrichment_metrics
+                    SET scrapling_http_success = scrapling_http_success + 1,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE source_id = ?
+                """,
+                    (source_id,),
+                )
+            elif strategy == "scrapling_stealth":
+                cur.execute(
+                    """
+                    UPDATE enrichment_metrics
+                    SET scrapling_stealth_success = scrapling_stealth_success + 1,
                         last_updated = CURRENT_TIMESTAMP
                     WHERE source_id = ?
                 """,
