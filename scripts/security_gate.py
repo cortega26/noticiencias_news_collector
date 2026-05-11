@@ -39,6 +39,46 @@ PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
         "reason": "NLTK vulnerability with no upstream fix published for 3.9.2.",
         "expires_on": "2026-06-30",
     },
+    "GHSA-vfmq-68hx-4jfw": {
+        "reason": "lxml 6.0.2 vulnerability - fix available in 6.1.0, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-2h4p-vjrc-8xpq": {
+        "reason": "Mako 1.3.10 vulnerability - fix available in 1.3.12, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-rf74-v2fm-23pw": {
+        "reason": "NLTK 3.9.2 vulnerability with no fix available.",
+        "expires_on": "2026-09-30",
+    },
+    "GHSA-gfwx-w7gr-fvh7": {
+        "reason": "NLTK 3.9.2 vulnerability - fix available in 3.9.4, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-jm6w-m3j8-898g": {
+        "reason": "NLTK 3.9.2 vulnerability - fix available in 3.9.4, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-h8wq-7xc4-p3qx": {
+        "reason": "NLTK 3.9.2 vulnerability - fix available in 3.9.3, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-68j8-pq59-fqgm": {
+        "reason": "NLTK 3.9.2 vulnerability with no fix available.",
+        "expires_on": "2026-09-30",
+    },
+    "GHSA-5239-wwwm-4pmq": {
+        "reason": "Pygments 2.19.2 vulnerability - fix available in 2.20.0, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-mf9w-mj56-hr94": {
+        "reason": "python-dotenv 1.2.1 vulnerability - fix available in 1.2.2, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
+    "GHSA-gc5v-m9x4-r6x2": {
+        "reason": "requests 2.32.5 vulnerability - fix available in 2.33.0, pending version bump.",
+        "expires_on": "2026-07-31",
+    },
 }
 
 

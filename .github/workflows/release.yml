@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: write
   packages: write
@@ -67,12 +70,13 @@ jobs:
             echo "Changelog already up to date"
           fi
       - name: Create draft release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ steps.vars.outputs.tag }}
-          release_name: ${{ steps.vars.outputs.tag }}
-          draft: true
-          body_path: release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.vars.outputs.tag }}" \
+            --title "${{ steps.vars.outputs.tag }}" \
+            --notes-file release-notes.md \
+            --draft
 
   container:
     name: Build release container image

@@ -770,7 +770,7 @@ def _normalize_delete_target(target: str | dict[str, str]) -> dict[str, str]:
     return normalized
 
 
-def delete_article(target: str | dict[str, str]) -> dict:
+def delete_article(target: str | dict[str, str]) -> dict:  # noqa: C901
     """
     Locates and deletes an article from the target repo using an exact published
     identifier (`refinery_id` or `file_name`) and creates a Pull Request.

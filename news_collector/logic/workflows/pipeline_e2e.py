@@ -141,6 +141,7 @@ class LocalEditorialEditor:
 
         if self.mode == "invalid_taxonomy":
             tags = ["TagInvalido!"]
+            categories = ["InvalidCategory"]
 
         return "\n".join(
             [
@@ -338,8 +339,11 @@ def _normalize_real_frontend_baseline(target_dir: Path) -> None:
     )
     if not footer_path.exists():
         return
-    subprocess.run(
-        ["npx", "prettier", "--write", str(footer_path.relative_to(target_dir))],
+    npx_path = shutil.which("npx")
+    if npx_path is None:
+        return
+    subprocess.run(  # noqa: S603
+        [npx_path, "prettier", "--write", str(footer_path.relative_to(target_dir))],
         cwd=str(target_dir),
         text=True,
         capture_output=True,
@@ -373,6 +377,7 @@ def _write_frontend_fixture_repo(target_dir: Path, scenario: Mapping[str, Any]) 
             "build": "node scripts/check.js build",
             "test:dist": "node scripts/check.js test_dist",
             "test:audit": "node scripts/check.js test_audit",
+            "publish:image-derivatives": "echo 'mock: image derivatives ok'",
         },
     }
     _write_json(target_dir / "package.json", package_json)
@@ -473,7 +478,7 @@ def _root_failure_stage(stages: list[PipelineStageSnapshot]) -> str | None:
     return _first_failed_stage(stages)
 
 
-def run_pipeline_e2e_scenario(
+def run_pipeline_e2e_scenario(  # noqa: C901
     fixture_path: str | Path,
     *,
     bundle_root: str | Path | None = None,

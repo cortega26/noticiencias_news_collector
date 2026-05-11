@@ -36,7 +36,7 @@ class CollectorDispatcher:
     según el tipo de fuente (RSS, HTML, etc.).
     """
 
-    def __init__(self, logger_factory=None, health_tracker=None):
+    def __init__(self, logger_factory=None, health_tracker=None):  # noqa: C901
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker

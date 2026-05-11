@@ -32,6 +32,15 @@
     "editor_mode": "valid",
     "forced_permalink": "2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras"
   },
+  "frontend_fixture": {
+    "preexisting_posts": [
+      {
+        "refinery_id": "existing-post-001",
+        "filename": "existing-cursos-en-linea.md",
+        "content": "---\ntitle: 'Existing post'\npermalink: '2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras'\n---\n\nExisting content about online courses."
+      }
+    ]
+  },
   "expected": {
     "selected_article_url": "https://example.com/ocean-study"
   }

@@ -8,6 +8,32 @@ This file defines reviewable engineering law for the backend. It exists to keep 
 
 ## 0) Mandatory Preflight
 
+### 0.1 Spec-Driven Workflow (Mandatory)
+
+Every task MUST follow this workflow.
+
+**Before starting** — create or update these three files in the task root:
+
+1. **`spec.md`** — Complete specification with:
+   - Goals (what success looks like, acceptance criteria)
+   - Implementation details (files to change, how they change, design decisions)
+   - Verification section (exactly how you will prove each piece works — commands to run, outputs to check, edge cases to cover)
+
+2. **`todo.md`** — Running to-do list broken into verifiable sub-tasks. Check items off as you complete them. Add new items when you discover unexpected work.
+
+3. **`tests/`** — A folder of end-to-end or targeted tests that verify the implementation. Loop on them until each passes. When the existing test suite covers the change, add to it instead.
+
+**While working:**
+
+1. **(a)** Consult `spec.md` before every change. Never deviate from the spec without updating it first.
+2. **(b)** Check off `todo.md` items as you complete them. Add new items when you find additional work.
+3. **(c)** Run the tests from step 3 after every meaningful commit. Fix failures immediately — do not accumulate broken tests.
+4. **(d)** Every ~20 iterations (or after completing a major sub-task), call a fresh sub-agent with "review spec.md and the current implementation for gaps" and loop on its feedback until alignment is reached.
+
+If anything is unclear after reading the spec, resolve it by running the tests and inspecting the actual behavior — not by asking for clarification.
+
+### 0.2 Pre-change Checklist
+
 Before changing code:
 
 1. Read this file fully.
