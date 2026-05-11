@@ -1,0 +1,31 @@
+name: 'Setup Python Environment'
+description: 'Configures Python, restores virtualenv cache, and bootstraps project dependencies'
+inputs:
+  python-version:
+    description: 'Python version to set up'
+    required: false
+    default: '3.13'
+  cache-key:
+    description: >
+      Hash-based cache key fragment from requirements.lock.
+      When empty, virtualenv caching is skipped.
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Restore virtualenv cache
+      if: ${{ inputs.cache-key != '' }}
+      uses: actions/cache@v5
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.cache-key }}
+
+    - name: Bootstrap (idempotent)
+      shell: bash
+      run: make bootstrap

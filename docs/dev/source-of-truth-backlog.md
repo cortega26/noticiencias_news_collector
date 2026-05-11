@@ -28,13 +28,9 @@ Recommendation: Extract focused collaborators for publication identity, target-r
 Affected repo(s): backend  
 Suggested priority: high
 
-### Retire duplicate collector entrypoints
+### ~~Retire duplicate collector entrypoints~~ **CLOSED**
 
-Problem: `scripts/run_collector.py`, `main.py`, and older workflow surfaces overlap.  
-Impact: Docs and automation drift more easily, and contributors are less certain which path is authoritative.  
-Recommendation: Choose one primary collector entrypoint, migrate automation to it, and explicitly deprecate the others.  
-Affected repo(s): backend  
-Suggested priority: high
+`main.py` has been removed. `scripts/run_collector.py` is the sole collector entrypoint. If older workflow surfaces still reference `main.py`, they should be migrated to `run_collector.py`.
 
 ## Medium
 
