@@ -128,7 +128,7 @@ Three collector entrypoints exist. Use the table below to pick the right one:
 | `python scripts/run_collector.py --fast` | Full cycle, skip AI scoring | Quick data ingestion |
 | `python scripts/run_collector.py --sources nature mit_news` | Single-source targeted run | Debugging a specific source |
 | `python scripts/run_collector_continuous.py` | Infinite loop, respawns collector subprocess | Long-running daemon, Docker |
-| `main.py` | Legacy compatibility surface | **Do not use for new work** — prefer the script above |
+| `main.py` | **Removed** — was a legacy compatibility surface | Use `scripts/run_collector.py` |
 
 ---
 
