@@ -700,12 +700,7 @@ class RSSCollector(BaseCollector):
                 "classification": "BLOCKED_OR_NOT_FEED",
             }
 
-        # Check for JSON
-        if content_prefix.startswith(b"{") or content_prefix.startswith(b"["):
-            # For now, we don't support JSON feeds standard implementation unless feedparser handles it?
-            # Feedparser DOES support JSON Feed (v1). So let's try to parse it,
-            # but if it fails, classify clearly.
-            pass
+        # Check for JSON — feedparser handles JSON Feed natively below
 
         # 2. Parse
         # Pass bytes directly to feedparser to let it handle encoding sniffing
@@ -737,9 +732,15 @@ class RSSCollector(BaseCollector):
 
         # 4. Check for Empty Entries + Feed Index?
         if not parsed.entries:
-            # Could be a feed index (OPML or similar list of feeds)? Or just empty.
-            # Implementation of Feed Index detection would go here.
-            pass
+            self._emit_log(
+                "info",
+                "collector.feed.empty_entries",
+                source_id=source_id,
+                details={
+                    "feed_type": getattr(parsed, "version", "unknown"),
+                    "has_feed": bool(getattr(parsed, "feed", None)),
+                },
+            )
 
         return {
             "success": True,
