@@ -64,7 +64,11 @@ class RssParser:
         """Determines if a malformed feed is acceptable."""
         if not parsed_feed.bozo:
             return True
-        acceptable_exceptions = ["InvalidDocument", "UndeclaredNamespace"]
+        acceptable_exceptions = [
+            "InvalidDocument",
+            "UndeclaredNamespace",
+            "SAXParseException",
+        ]
         exception_name = parsed_feed.bozo_exception.__class__.__name__
         return exception_name in acceptable_exceptions
 

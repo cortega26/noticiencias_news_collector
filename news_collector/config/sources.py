@@ -246,6 +246,18 @@ def validate_sources():  # noqa: C901
                     f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int."
                 )
 
+        # 7. Blacklist consistency check
+        bl = config.get("blacklisted", False)
+        if bl:
+            if not config.get("blacklist_reason"):
+                errors.append(
+                    f"Source '{source_id}' is blacklisted=true but missing 'blacklist_reason'"
+                )
+            if not config.get("blacklisted_date"):
+                errors.append(
+                    f"Source '{source_id}' is blacklisted=true but missing 'blacklisted_date'"
+                )
+
         errors.extend(audit_source_strategy_consistency(source_id, config))
 
     if errors:

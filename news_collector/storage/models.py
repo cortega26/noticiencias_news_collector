@@ -414,6 +414,12 @@ class Source(Base):
     last_canary_check = Column(DateTime(timezone=True))
     last_canary_status = Column(String(20))
 
+    # Blacklist management
+    # ====================
+    blacklisted = Column(Boolean, default=False)
+    blacklisted_at = Column(DateTime(timezone=True))
+    blacklist_reason = Column(Text)
+
     # Configuración específica por fuente
     # ===================================
     custom_config = Column(JSON)  # Configuraciones especiales para esta fuente

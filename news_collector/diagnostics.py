@@ -154,8 +154,37 @@ class SourceHealthTracker:
 
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
+
+        payload: Dict[str, Any] = {"sources": output}
+
+        # Emit blacklist suggestions for sources that failed completely
+        suggested_blacklist: list[Dict[str, Any]] = []
+        for sid in sorted(self.sources):
+            data = self.sources[sid]
+            if data.saved > 0:
+                continue
+            if data.attempted == 0:
+                continue
+            if ALL_SOURCES.get(sid, {}).get("blacklisted"):
+                continue
+
+            suggested_blacklist.append(
+                {
+                    "source_id": sid,
+                    "reason": (
+                        data.primary_failure_reason
+                        or f"No articles saved ({data.parsed_ok} found, {data.saved} saved)"
+                    ),
+                    "failure_stage": data.primary_failure_stage,
+                    "run_attempted": data.attempted,
+                }
+            )
+
+        if suggested_blacklist:
+            payload["suggested_blacklist"] = suggested_blacklist
+
         with open(p, "w", encoding="utf-8") as f:
-            json.dump(output, f, indent=2)
+            json.dump(payload, f, indent=2)
 
     def print_summary_table(self):
         self.finalize_status()

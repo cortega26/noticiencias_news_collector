@@ -1429,6 +1429,21 @@ class DatabaseManager:
                         existing_source.feed_last_modified = source_config[
                             "last_modified"
                         ]
+                    # Sync blacklist state from sources.yaml
+                    if "blacklisted" in source_config:
+                        existing_source.blacklisted = source_config["blacklisted"]
+                    if "blacklist_reason" in source_config:
+                        existing_source.blacklist_reason = source_config[
+                            "blacklist_reason"
+                        ]
+                    if "blacklisted_date" in source_config:
+                        import contextlib
+                        from datetime import datetime, timezone
+
+                        with contextlib.suppress(ValueError, TypeError):
+                            existing_source.blacklisted_at = datetime.fromisoformat(
+                                source_config["blacklisted_date"]
+                            ).replace(tzinfo=timezone.utc)
                 else:
                     # Crear nueva fuente
                     new_source = Source(
