@@ -137,6 +137,7 @@ markers = [
     "perf: performance-focused regression tests",
     "security: security and compliance checks",
     "regression: regression tests (no network)",
+    "audit: real-network source reliability sweep (opt-in, gated by NOTICIENCIAS_AUDIT)",
 ]
 asyncio_mode = "auto"
 

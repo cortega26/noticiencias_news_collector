@@ -256,6 +256,10 @@ class CollectionConfig(StrictModel):
         default=2048,
         description="LRU cache size for canonical URLs; set to 0 to disable caching.",
     )
+    source_timeout_seconds: PositiveInt = Field(
+        default=300,
+        description="Total soft timeout per source (includes fetch, parse, enrichment).",
+    )
 
 
 class RateLimitingConfig(StrictModel):

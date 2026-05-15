@@ -59,8 +59,6 @@ async def test_crawl_interval_enforcement_run():
 @pytest.mark.asyncio
 async def test_collect_from_source_async_waits_for_real_result_after_soft_timeout():
     class SlowCollector(BaseCollector):
-        GLOBAL_SOURCE_TIMEOUT = 0.01
-
         def collect_from_source(self, source_id, source_config):
             del source_id, source_config
             time.sleep(0.05)
@@ -73,7 +71,14 @@ async def test_collect_from_source_async_waits_for_real_result_after_soft_timeou
 
     collector = SlowCollector()
 
-    with patch.object(collector, "_emit_log") as mock_emit_log:
+    with (
+        patch.object(collector, "_emit_log") as mock_emit_log,
+        patch.dict(
+            "news_collector.collectors.base_collector.COLLECTION_CONFIG",
+            {"source_timeout_seconds": 0.01},
+            clear=False,
+        ),
+    ):
         result = await collector.collect_from_source_async(
             "slow_source", {"url": "http://example.com"}
         )

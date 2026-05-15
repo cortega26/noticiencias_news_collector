@@ -123,7 +123,7 @@ class BaseCollector(ABC):
         sistema. Preferimos esperar el resultado real y emitir una alerta
         diagnóstica si la fuente sobrepasa el umbral esperado.
         """
-        timeout = getattr(self, "GLOBAL_SOURCE_TIMEOUT", 300)
+        timeout = COLLECTION_CONFIG.get("source_timeout_seconds", 300)
         start = time.monotonic()
         result = await asyncio.to_thread(
             self.collect_from_source, source_id, source_config
