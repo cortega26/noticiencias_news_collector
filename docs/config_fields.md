@@ -34,6 +34,7 @@
 | collection.recent_days_threshold | int | 7 | Number of trailing days considered 'recent'. |  |  |
 | collection.user_agent | str | "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" | HTTP User-Agent header sent to providers. |  |  |
 | collection.canonicalization_cache_size | int | 2048 | LRU cache size for canonical URLs; set to 0 to disable caching. |  |  |
+| collection.source_timeout_seconds | int | 300 | Total soft timeout per source (includes fetch, parse, enrichment). |  |  |
 | rate_limiting | RateLimitingConfig |  |  |  |  |
 | rate_limiting.delay_between_requests_seconds | float | 1.0 | Base delay enforced between requests to the same source. |  |  |
 | rate_limiting.domain_default_delay_seconds | float | 1.0 | Fallback delay applied when a domain has no override. |  |  |

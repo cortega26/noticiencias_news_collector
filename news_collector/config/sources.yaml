@@ -645,6 +645,7 @@ reddit_science:
   tier: "C"
   fetchability_score: 90
   crawl_interval_seconds: 3600
+  manual_only: true  # requires REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET env vars
 
 deepmind_blog:
   name: Google DeepMind
