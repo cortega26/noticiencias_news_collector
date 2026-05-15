@@ -457,6 +457,67 @@ class RSSCollector(BaseCollector):
                     "url": url,
                 }
 
+        # curl_cffi path for sources behind Cloudflare/WAF
+        if source_config.get("use_curl_cffi"):
+            try:
+                from scrapling import Fetcher
+
+                start_t = time.perf_counter()
+                page = Fetcher.get(
+                    url,
+                    headers=request_headers,
+                    timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+                    follow_redirects=True,
+                )
+                latency = (time.perf_counter() - start_t) * 1000
+
+                body_bytes = (
+                    page.body.encode("utf-8")
+                    if isinstance(page.body, str)
+                    else page.body
+                )
+                status = page.status if hasattr(page, "status") else 200
+
+                self._emit_log(
+                    "debug",
+                    "collector.fetch.raw",
+                    source_id=source_id,
+                    details={
+                        "status": status,
+                        "bytes": len(body_bytes),
+                        "client": "curl_cffi",
+                        "latency_ms": latency,
+                    },
+                )
+
+                if status >= 400:
+                    return {
+                        "success": False,
+                        "status_code": status,
+                        "error_message": f"HTTP {status}",
+                        "url": url,
+                    }
+                if len(body_bytes) > 10 * 1024 * 1024:
+                    return {
+                        "success": False,
+                        "error_message": "Feed too large (>10MB)",
+                        "url": url,
+                    }
+
+                return {
+                    "success": True,
+                    "status_code": status,
+                    "content": body_bytes,
+                    "url": url,
+                    "encoding": "utf-8",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error_message": f"curl_cffi Error: {str(e)}",
+                    "url": url,
+                }
+
         try:
             start_t = time.perf_counter()
             response = self.client.get(

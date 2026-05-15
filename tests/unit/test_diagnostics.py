@@ -79,11 +79,14 @@ def test_export_json(tmp_path: Path):
 
     payload = json.loads(export_path.read_text(encoding="utf-8"))
 
-    assert set(payload) == {"s1", "s2"}
-    assert SourceHealthRecord.model_validate(payload["s1"]).operational_state == (
+    sources = payload.get(
+        "sources", payload
+    )  # new format wraps in {"sources": ..., "suggested_blacklist": ...}
+    assert set(sources) == {"s1", "s2"}
+    assert SourceHealthRecord.model_validate(sources["s1"]).operational_state == (
         "healthy_full_text"
     )
-    assert SourceHealthRecord.model_validate(payload["s2"]).operational_state == (
+    assert SourceHealthRecord.model_validate(sources["s2"]).operational_state == (
         "failing_suppressed_candidate"
     )
 

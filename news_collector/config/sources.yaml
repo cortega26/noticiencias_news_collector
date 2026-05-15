@@ -532,6 +532,7 @@ mit_news:
   tier: "B"
   fetchability_score: 92
   crawl_interval_seconds: 3600
+  use_curl_cffi: true
 
 yale_news:
   name: Yale News
@@ -871,6 +872,9 @@ microsoft_research:
 #   strategy_justification: string (required when summary_only or rss_only sources still use headless/Scrapling paths)
 #   headless_enabled: boolean (optional, enables headless fallback)
 #   manual_only: boolean (optional, excludes source from scheduled collection)
+#   blacklisted: boolean (optional, excludes source from ALL collection — use for permanently dead feeds)
+#   blacklist_reason: string (required when blacklisted=true, e.g. "410 Gone — feed permanently removed")
+#   blacklisted_date: string (ISO date when blacklisted, e.g. "2026-05-15")
 #   proxy_mode: string (optional: off, auto, force. Default: auto)
 #   proxy_pool: string (optional: default, residential, datacenter. Default: default)
 #   etag: null

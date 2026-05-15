@@ -294,13 +294,14 @@ class NewsCollectorSystem:
                 if source_id in sources_filter
             }
         else:
-            # Skip manual-only sources during scheduled collection runs.
+            # Skip manual-only and blacklisted sources during scheduled collection runs.
             return cast(
                 Dict[str, Dict[str, Any]],
                 {
                     source_id: source_config
                     for source_id, source_config in ALL_SOURCES.items()
                     if not source_config.get("manual_only", False)
+                    and not source_config.get("blacklisted", False)
                 },
             )
 
