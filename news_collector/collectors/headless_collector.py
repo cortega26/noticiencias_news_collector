@@ -184,13 +184,6 @@ class HeadlessCollector(BaseCollector):
         finally:
             if "context" in locals():
                 await context.close()
-            # We don't close the browser here to reuse it across sources if possible?
-            # actually BaseCollector creates a new instance or reuses?
-            # For now, let's keep browser open if we process multiple sources,
-            # but usually dispatcher might call us once per source if initialized per source.
-            # If initialized once for multiple sources (dispatcher logic), we should close at end.
-            # For this specific method, we just close context.
-            pass
 
         return {
             "source_id": source_id,

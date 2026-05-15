@@ -210,6 +210,26 @@ class BaseCollector(ABC):
             details={"sources": count},
         )
 
+    # ------------------------------------------------------------------
+    # Template-method hooks (no-ops by default, subclasses may override)
+    # ------------------------------------------------------------------
+
+    def _pre_process_source(
+        self, source_id: str, source_config: Dict[str, Any]
+    ) -> None:
+        """Hook called before each source is collected."""
+
+    def _post_process_source(
+        self,
+        source_id: str,
+        source_config: Dict[str, Any],
+        result: Dict[str, Any],
+    ) -> None:
+        """Hook called after each source is collected."""
+
+    def _post_process_collection(self, results: Dict[str, Dict[str, Any]]) -> None:
+        """Hook called after all sources are collected."""
+
     def _finalize_collection_cycle(
         self, source_results: Dict[str, Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -1098,35 +1118,6 @@ class BaseCollector(ABC):
             )
 
         return recommendations
-
-    # Hooks que pueden ser overrideados por subclases
-    # ===============================================
-
-    def _pre_process_source(self, source_id: str, source_config: Dict[str, Any]):
-        """
-        Hook llamado antes de procesar cada fuente.
-        Las subclases pueden override esto para lógica específica.
-        """
-        pass
-
-    def _post_process_source(
-        self,
-        source_id: str,
-        source_config: Dict[str, Any],
-        source_result: Dict[str, Any],
-    ):
-        """
-        Hook llamado después de procesar cada fuente.
-        Las subclases pueden override esto para lógica específica.
-        """
-        pass
-
-    def _post_process_collection(self, source_results: Dict[str, Dict[str, Any]]):
-        """
-        Hook llamado después de procesar todas las fuentes.
-        Las subclases pueden override esto para lógica específica.
-        """
-        pass
 
     # Métodos de utilidad comunes
     # ===========================

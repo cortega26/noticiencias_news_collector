@@ -14,6 +14,11 @@ if str(SRC_DIR) not in sys.path:
 
 from news_collector.config import ENRICHMENT_CONFIG
 from news_collector.contracts import CollectorArticleModel
+from news_collector.storage.article_repository import (
+    ensure_timezone,
+    simhash_from_storage,
+    time_distance_seconds,
+)
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
 
@@ -79,7 +84,7 @@ def test_save_article_persists_signed_simhash(
 
     high_value = (1 << 63) | 0x12345
     monkeypatch.setattr(
-        "news_collector.storage.database.simhash64", lambda _: high_value
+        "news_collector.storage.article_repository.simhash64", lambda _: high_value
     )
 
     payload = _article_payload(
@@ -93,13 +98,10 @@ def test_save_article_persists_signed_simhash(
         with manager.get_session() as session:
             stored = session.query(Article).filter_by(url=payload["url"]).one()
             assert stored.simhash == high_value - (1 << 64)
-            assert (
-                DatabaseManager._simhash_from_storage(stored.simhash)
-                == high_value & SIMHASH_MASK
-            )
+            assert simhash_from_storage(stored.simhash) == high_value & SIMHASH_MASK
             assert stored.simhash_prefix == ((high_value & SIMHASH_MASK) >> 48) & 0xFFFF
             assert stored.published_date is not None
-            normalized = DatabaseManager._ensure_timezone(stored.published_date)
+            normalized = ensure_timezone(stored.published_date)
             assert normalized is not None
             assert normalized.tzinfo is not None
             assert normalized.utcoffset() == timedelta(0)
@@ -111,5 +113,5 @@ def test_time_distance_seconds_accepts_mixed_timezone_inputs() -> None:
     aware = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
     naive = datetime(2024, 1, 1, 0, 0)
 
-    delta = DatabaseManager._time_distance_seconds(aware, naive)
+    delta = time_distance_seconds(aware, naive)
     assert delta == 0.0

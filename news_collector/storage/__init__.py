@@ -4,6 +4,8 @@ Paquete de storage del News Collector System.
 Gestiona persistencia de datos, modelos y conexión a la base de datos.
 """
 
+from .analytics_repository import AnalyticsRepository
+from .article_repository import ArticleRepository
 from .database import DatabaseManager, get_database_manager
 from .models import (
     Article,
@@ -15,6 +17,7 @@ from .models import (
     create_all_tables,
     get_model_info,
 )
+from .source_repository import SourceRepository
 
 
 def initialize_database():
@@ -32,6 +35,9 @@ def get_database_health():
 __all__ = [
     "get_database_manager",
     "DatabaseManager",
+    "ArticleRepository",
+    "SourceRepository",
+    "AnalyticsRepository",
     "Base",
     "Article",
     "ArticleMetrics",
