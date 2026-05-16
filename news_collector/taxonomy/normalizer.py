@@ -94,6 +94,7 @@ class TagNormalizer:
 
         tag = tag.strip().lower()
         tag = re.sub(r"[-_]", " ", tag)
+        tag = tag.replace(".", "")
         tag = re.sub(r"\s+", " ", tag)
         return tag
 
