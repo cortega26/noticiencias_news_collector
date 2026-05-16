@@ -8,6 +8,19 @@ All notable changes to this project will be documented in this file. The format 
 
 - Composite action `.github/actions/setup-python-env/` consolidates the
   setup-python → cache → bootstrap pattern used across CI workflows.
+- **Editorial critic gate (stage 2.6)**: nuevo `_critic_editorial_pass` en
+  `ai_editor.py` que evalúa el artículo redactado contra 7 dimensiones
+  (hook, clarity, structure, rigor, voice, shareability, closing) usando el
+  prompt `editor_critic` definido en `config/prompts.yaml`. Bloquea con
+  feedback accionable y dispara 1 retry vía `_repair_editorial`. Controlado
+  por feature flag `ENABLE_EDITORIAL_CRITIC` (default `true`). Fail-open
+  ante errores de infra/parsing para no convertirse en blocker operacional.
+- **Contexto situacional al editor**: `_adapt_editorial` y
+  `_repair_editorial` ahora aceptan un `context` opcional con título
+  original, summary, fuente y categoría. El editor recibe esta metadata vía
+  `user_template` para elegir la estructura adaptativa correcta.
+- Nuevos prompts en `config/prompts.yaml`: `editor_critic` (system) y
+  `editor.user_template` para inyección de contexto.
 
 ### Changed
 
@@ -21,6 +34,15 @@ All notable changes to this project will be documented in this file. The format 
 - **Documentation alignment**: `docs/INDEX.md` ops runbook pointer corrected from
   legacy `ops/RUNBOOK.md` to current `runbook.md`. `docs/security.md` bandit
   command no longer references removed `main.py`.
+- **Prompt editorial reescrito**: `editor` system-prompt en
+  `config/prompts.yaml` rehecho con estructura adaptativa por tipo de
+  artículo (estudio/anuncio/tendencia/política), repertorio explícito de
+  aperturas y cierres, anti-tics-de-IA (triadas paralelas, "es importante
+  notar", etc.), voz de marca anclada ("tú", peer-to-peer), criterio de
+  shareability y cierre con puente conceptual al portal.
+- **Prompt traductor reescrito**: español neutro LatAm anclado con reglas
+  explícitas (léxico panregional, "tú", tiempos verbales). Filtro de ruido
+  por principio (no por enumeración). Glosario anti-alucinación extendido.
 
 ## [1.3.0] - 2026-01-24
 
