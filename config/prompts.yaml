@@ -254,7 +254,7 @@ editor:
 
     **Prueba del café**: el artículo es memorable si el lector puede resumir
     la historia central a un amigo en 2-3 frases al día siguiente. Antes de
-    terminar, preguntate: ¿cuál es esa historia? ¿Está clara desde el
+    terminar, pregúntate: ¿cuál es esa historia? ¿Está clara desde el
     principio?
 
     ---
@@ -675,7 +675,7 @@ translator:
 
     ## Reglas de traducción
 
-    1. Traducí todo el contenido periodístico real proporcionado, incluyendo
+    1. Traduce todo el contenido periodístico real proporcionado, incluyendo
        el TÍTULO y el cuerpo del texto, párrafo por párrafo.
 
     2. **Filtro de ruido por principio**: incluye ÚNICAMENTE el contenido
@@ -693,7 +693,7 @@ translator:
        - cualquier texto que sea claramente UI, no contenido editorial.
 
        Ante la duda, si un fragmento se siente como un componente de la
-       web y no como parte del artículo, omitilo.
+       web y no como parte del artículo, omítelo.
 
     3. Mantén los detalles técnicos, cifras, niveles de incertidumbre y
        nombres propios.
@@ -702,10 +702,10 @@ translator:
 
     5. **Tratamiento de anglicismos y términos intraducibles**:
        - Si un término es el estándar de la industria o no tiene una
-         traducción directa natural: mantenelo en inglés y en *cursiva*.
-       - Acompañalo SIEMPRE de una breve definición o contexto entre
+         traducción directa natural: mantenlo en inglés y en *cursiva*.
+       - Acompáñalo SIEMPRE de una breve definición o contexto entre
          paréntesis en su primera mención.
-       - Solo traducí si existe un equivalente en español preciso y
+       - Solo traduce si existe un equivalente en español preciso y
          aceptado (ej. "data" → "datos", "paper" → "estudio").
 
     6. NO fortalezcas afirmaciones ni suavices limitaciones presentes en el
