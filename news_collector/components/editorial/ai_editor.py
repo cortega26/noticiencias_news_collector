@@ -600,17 +600,81 @@ class EditorAgent:
             content, system=system_prompt, model=self.translator_model
         )
 
-    def _adapt_editorial(self, translated_content: str) -> str:
-        """Stage 2: Editorial Adaptation"""
-        system_prompt = self.prompts.get("editor", {}).get("system", "")
-        user_prompt = (
-            "A continuación se presenta el texto de origen traducido al español. "
-            "Redacta el artículo periodístico-científico siguiendo las instrucciones del sistema.\n\n"
-            f"{translated_content}"
-        )
+    def _adapt_editorial(
+        self,
+        translated_content: str,
+        context: dict | None = None,
+    ) -> str:
+        """Stage 2: Editorial Adaptation.
+
+        Args:
+            translated_content: The Spanish translation produced by stage 1.
+            context: Optional situational metadata (original title, summary,
+                source name, source URL, raw category). Threaded into the
+                user-prompt so the editor knows what kind of article this is
+                and why it matters, rather than redacting blind.
+        """
+        editor_cfg = self.prompts.get("editor", {})
+        system_prompt = editor_cfg.get("system", "")
+        user_template = editor_cfg.get("user_template")
+
+        context_block = self._format_editor_context_block(context)
+        if user_template:
+            user_prompt = user_template.format(
+                context_block=context_block,
+                translated_content=translated_content,
+            )
+        else:
+            # Fallback for the minimal/fallback prompts dict used in tests
+            user_prompt = (
+                "Vas a redactar el artículo siguiendo las instrucciones del sistema.\n\n"
+                f"## Contexto situacional\n\n{context_block}\n\n"
+                "## Texto traducido de referencia\n\n"
+                f"{translated_content}"
+            )
         return self._send_prompt(
             user_prompt, system=system_prompt, model=self.editor_model
         )
+
+    @staticmethod
+    def _format_editor_context_block(context: dict | None) -> str:
+        """Render situational metadata for the editor user-prompt.
+
+        Keeps the block compact and skips empty fields so the editor never
+        sees `Título original: ` with nothing after it.
+        """
+        if not context:
+            return (
+                "Sin metadata adicional. Inferí el tipo de noticia a partir "
+                "del contenido y elegí la estructura adaptativa que corresponda."
+            )
+
+        lines: list[str] = []
+
+        def add(label: str, value: Any, *, max_chars: int | None = None) -> None:
+            if value is None:
+                return
+            text = str(value).strip()
+            if not text:
+                return
+            if max_chars and len(text) > max_chars:
+                text = text[: max_chars - 1].rstrip() + "…"
+            lines.append(f"- **{label}:** {text}")
+
+        add("Título original", context.get("title"))
+        add("Resumen original", context.get("summary"), max_chars=400)
+        add("Fuente", context.get("source_name"))
+        add("URL fuente", context.get("source_url"))
+        add("Categoría sugerida", context.get("category"))
+        add("Tipo de artículo", context.get("article_type"))
+        add("Elemento más interesante", context.get("hook"))
+
+        if not lines:
+            return (
+                "Sin metadata adicional. Inferí el tipo de noticia a partir "
+                "del contenido y elegí la estructura adaptativa que corresponda."
+            )
+        return "\n".join(lines)
 
     def _extract_json(self, text: str) -> dict:
         """
@@ -729,6 +793,144 @@ class EditorAgent:
         )
         return self._extract_json(text)
 
+    def _critic_editorial_pass(
+        self,
+        content: str,
+        context: dict | None = None,
+    ) -> tuple[bool, str | None, bool]:
+        """
+        Stage 2.6: Editorial Critic Gate.
+
+        Evaluates the article against editorial-quality dimensions defined in
+        prompts.yaml::editor_critic (hook, clarity, structure, rigor, voice,
+        shareability, closing) and decides whether to approve or send back
+        for repair. Distinct from `_critic_pass`, which is a narrow
+        translation-integrity guardrail.
+
+        Returns a (is_valid, reason, recoverable) tuple compatible with the
+        existing repair loop.
+
+        Fails open: if the prompt is unavailable, the model returns
+        unparseable output, or the call raises, the article is approved so
+        the editorial critic never becomes a publication blocker for
+        infrastructure reasons. Quality regressions surface via the auditor.
+        """
+        if os.getenv("ENABLE_EDITORIAL_CRITIC", "true").lower() == "false":
+            logger.info("Editorial Critic Disabled (skipped)")
+            return True, None, True
+
+        critic_cfg = self.prompts.get("editor_critic", {})
+        system_prompt = critic_cfg.get("system", "")
+        if not system_prompt:
+            logger.warning(
+                "Editorial Critic skipped: 'editor_critic' prompt not configured"
+            )
+            return True, None, True
+
+        body = _extract_publishable_body(content)
+        if not body:
+            # Defer empty-body handling to the structural repair path.
+            return True, None, True
+
+        context_block = self._format_editor_context_block(context)
+        user_prompt = (
+            "Evaluá el siguiente artículo siguiendo las instrucciones del sistema. "
+            "Devolvé exclusivamente un objeto JSON válido con los campos pedidos.\n\n"
+            "## Contexto situacional del artículo\n\n"
+            f"{context_block}\n\n"
+            "## Artículo a evaluar\n\n"
+            f"{body[:32000] if len(body) > 32000 else body}"
+        )
+
+        try:
+            response = self._send_prompt(
+                user_prompt, system=system_prompt, model=self.editor_model
+            )
+            logger.debug(f"Editorial Critic raw response: {response[:300]}")
+            result = self._extract_editorial_critic_json(response)
+        except Exception as e:
+            logger.warning(
+                f"Editorial Critic Pass Failed (infra error): {e} - failing open"
+            )
+            return True, None, True
+
+        try:
+            approved = bool(result.get("approved", False))
+            recoverable = bool(result.get("recoverable", True))
+            feedback = str(result.get("feedback") or "").strip()
+            average = float(result.get("average", 0.0))
+            scores = {
+                key: int(result.get(key, 0))
+                for key in (
+                    "hook_score",
+                    "clarity_score",
+                    "structure_score",
+                    "rigor_score",
+                    "voice_score",
+                    "shareability_score",
+                    "closing_score",
+                )
+            }
+        except (TypeError, ValueError) as e:
+            logger.warning(
+                f"Editorial Critic returned unparseable scores: {e} - failing open"
+            )
+            return True, None, True
+
+        if approved:
+            logger.info(
+                f"✅ Editorial Critic Approved (avg={average:.1f}, scores={scores})"
+            )
+            return True, None, True
+
+        # If the model said `approved=false` but gave no reason, build one
+        # from the lowest score so the repair loop has something to act on.
+        if not feedback:
+            if scores:
+                worst_dim, worst_score = min(scores.items(), key=lambda kv: kv[1])
+                feedback = (
+                    f"Bajo puntaje en {worst_dim} ({worst_score}/10). "
+                    "Reescribí esa dimensión específicamente."
+                )
+            else:
+                feedback = "Calidad editorial insuficiente."
+
+        logger.warning(
+            f"⛔ EDITORIAL CRITIC REJECTED (avg={average:.1f}, scores={scores}, "
+            f"recoverable={recoverable}). Feedback: {feedback}"
+        )
+        return False, feedback, recoverable
+
+    def _extract_editorial_critic_json(self, text: str) -> dict:
+        """Extract the editor_critic JSON object from the LLM response.
+
+        Looks for the first JSON object containing 'approved' (the
+        distinguishing key of the editor_critic schema). Falls back to
+        '_extract_critic_json' (which looks for 'score'), then to the
+        generic extractor.
+        """
+        for match in re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", text):
+            try:
+                data = json.loads(match.group(0))
+                if "approved" in data or "average" in data:
+                    return data
+            except (ValueError, KeyError):
+                continue
+        # Try the simpler non-nested form as well, in case the model emitted
+        # a flat object without nested structures.
+        for match in re.finditer(r"\{[^{}]*\}", text):
+            try:
+                data = json.loads(match.group(0))
+                if "approved" in data or "average" in data:
+                    return data
+            except (ValueError, KeyError):
+                continue
+        logger.warning(
+            "_extract_editorial_critic_json: no JSON with 'approved'/'average' found, "
+            "falling back to generic extractor"
+        )
+        return self._extract_json(text)
+
     def _editorial_output_repair_reason(self, markdown: str) -> str | None:
         body = _extract_publishable_body(markdown)
         if not body:
@@ -747,20 +949,31 @@ class EditorAgent:
 
         cache_path.write_text(content, encoding="utf-8")
 
-    def _repair_editorial(self, base_content: str, feedback: str) -> str:
+    def _repair_editorial(
+        self,
+        base_content: str,
+        feedback: str,
+        context: dict | None = None,
+    ) -> str:
         """
         Stage 2.5 Repair: Re-run adaptation with specific feedback.
+        Re-injects situational context so the rewrite stays grounded in the
+        original article's intent and source.
         """
         logger.info(f"🔧 Repairing Editorial Content based on feedback: {feedback}")
         system_prompt = self.prompts.get("editor", {}).get("system", "")
+        context_block = self._format_editor_context_block(context)
         repair_prompt = (
-            "La versión anterior fue rechazada por el Editor de Control de Calidad por la siguiente razón:\n"
+            "La versión anterior fue rechazada por el Editor en Jefe por la siguiente razón:\n"
             f"'{feedback}'\n\n"
-            "Reescribe el artículo para solucionar este problema específico, manteniendo el estilo y la estructura originales.\n"
-            "IMPORTANTE: Escribe el artículo COMPLETO de principio a fin. No lo trunques, cortes ni termines antes de tiempo. "
-            "El artículo DEBE terminar con una oración completa (que termine en '.', '!' o '?'). "
-            "Si te quedas sin espacio, resume en lugar de truncar.\n\n"
-            "Contenido base:\n"
+            "Reescribí el artículo solucionando ese problema específico. "
+            "Mantené el contenido factual del texto base, pero corregí lo señalado.\n"
+            "IMPORTANTE: escribí el artículo COMPLETO de principio a fin. No lo trunques. "
+            "Debe terminar con una oración completa (que cierre en '.', '!' o '?'). "
+            "Si te quedás sin espacio, resumí en lugar de truncar.\n\n"
+            "## Contexto situacional\n\n"
+            f"{context_block}\n\n"
+            "## Contenido base a reescribir\n\n"
             f"{base_content}"
         )
         return self._send_prompt(
@@ -985,6 +1198,18 @@ class EditorAgent:
                 f"Content too short ({len(content)} chars). Likely paywalled or empty."
             )
 
+        # Situational context for the editor and the editorial critic.
+        # Gives the LLM the original title, summary, source, and category so
+        # it can pick the right structure (study, announcement, trend,
+        # policy) and write with intent, instead of redacting blind.
+        editor_context: dict[str, Any] = {
+            "title": title,
+            "summary": summary,
+            "source_url": source_url,
+            "source_name": source_name,
+            "category": raw_category,
+        }
+
         # 2. Pipeline Execution
 
         # --- STAGE 1: Scientific Translation ---
@@ -1009,15 +1234,18 @@ class EditorAgent:
                     "Ignoring cached stage2 editorial output because it is not critic-ready: {}",
                     cached_repair_reason,
                 )
-                final_content = self._adapt_editorial(translated_text)
+                final_content = self._adapt_editorial(translated_text, editor_context)
                 final_content = self._extract_markdown_content(final_content)  # Cleanup
                 self._write_editorial_cache_if_valid(cache_s2, final_content)
         else:
-            final_content = self._adapt_editorial(translated_text)
+            final_content = self._adapt_editorial(translated_text, editor_context)
             final_content = self._extract_markdown_content(final_content)  # Cleanup
             self._write_editorial_cache_if_valid(cache_s2, final_content)
 
         # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
+        # Narrow translation/integrity guardrail. Blocks for: residual
+        # English fragments, off-topic content, untranslated canonical
+        # entities, truncation. Not a quality gate.
         print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
 
         # Checkpoint: If we already passed the critic gate for this article, skip re-evaluation
@@ -1072,7 +1300,7 @@ class EditorAgent:
                         else translated_text
                     )
                     final_content = self._repair_editorial(
-                        repair_base, reason or "Unknown reason"
+                        repair_base, reason or "Unknown reason", editor_context
                     )
                     final_content = self._extract_markdown_content(
                         final_content
@@ -1086,6 +1314,73 @@ class EditorAgent:
                 else:
                     raise ValueError(
                         f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
+                    )
+
+        # --- STAGE 2.6: Editorial Critic Gate (Quality) ---
+        # Editor-in-chief evaluation against hook/clarity/structure/rigor/
+        # voice/shareability/closing. Bloquea por debajo del umbral con
+        # feedback accionable; fails open si la infra del LLM falla.
+        # Independiente del critic técnico anterior: ese verifica integridad
+        # de traducción, este verifica calidad editorial.
+        cache_s2_6 = self._get_cache_path(article_id, "stage2_6_editorial_critic_ok")
+        if cache_s2_6.exists():
+            print(f"(Loaded from cache: {cache_s2_6})")
+        elif os.getenv(
+            "ENABLE_EDITORIAL_CRITIC", "true"
+        ).lower() != "false" and self.prompts.get("editor_critic", {}).get("system"):
+            print("\n--- STAGE 2.6: Editorial Critic Gate ---")
+            max_editorial_retries = 1
+            for attempt in range(max_editorial_retries + 1):
+                ed_is_valid, ed_reason, ed_recoverable = self._critic_editorial_pass(
+                    final_content, editor_context
+                )
+
+                if ed_is_valid:
+                    try:
+                        cache_s2_6.write_text("ok", encoding="utf-8")
+                    except Exception as _e:
+                        logger.warning(
+                            f"Failed to persist editorial critic checkpoint: {_e}"
+                        )
+                    break
+
+                if not ed_recoverable:
+                    logger.warning(
+                        "Editorial Critic flagged irrecoverable issue; "
+                        f"publishing anyway with caveat: {ed_reason}"
+                    )
+                    break
+
+                if attempt < max_editorial_retries:
+                    print(
+                        f"⚠️ Editorial Critic rejected (Attempt {attempt+1}/{max_editorial_retries + 1}). "
+                        f"Reason: {ed_reason}"
+                    )
+                    repair_base = (
+                        final_content
+                        if _extract_publishable_body(final_content)
+                        else translated_text
+                    )
+                    final_content = self._repair_editorial(
+                        repair_base,
+                        ed_reason or "Calidad editorial insuficiente",
+                        editor_context,
+                    )
+                    final_content = self._extract_markdown_content(final_content)
+                    try:
+                        self._write_editorial_cache_if_valid(cache_s2, final_content)
+                    except Exception as _e:
+                        logger.warning(
+                            f"Failed to update stage2 cache after editorial repair: {_e}"
+                        )
+                else:
+                    # Exhausted retries: publish with logged warning rather
+                    # than blocking. Editorial-critic is advisory at the
+                    # tail because by this point the technical critic and
+                    # the placeholder validator have already passed.
+                    logger.warning(
+                        f"Editorial Critic still rejecting after {max_editorial_retries + 1} attempts. "
+                        f"Publishing with caveat. Reason: {ed_reason}"
                     )
 
         # --- STAGE 3: Metadata & Headlines ---

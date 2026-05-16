@@ -38,6 +38,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
     )
     agent._send_prompt = lambda prompt, system=None, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -90,6 +91,7 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -135,6 +137,7 @@ def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -179,6 +182,7 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -223,6 +227,7 @@ def test_top_level_export_category_drives_frontmatter_category(
     )
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {
         "direct": "Direct Headline",
         "question": "Question Headline?",

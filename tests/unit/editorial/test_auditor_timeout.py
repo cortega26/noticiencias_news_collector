@@ -111,3 +111,43 @@ def test_optional_auditor_timeout_uses_warning_not_error(
         "Auditor Error for 1088" in str(call.args[0])
         for call in error_mock.call_args_list
     )
+
+
+def test_keyword_word_boundary_matching(monkeypatch, tmp_path: Path) -> None:
+    """'cura' must not match inside 'oscura'; standalone 'cura' must still trigger."""
+    monkeypatch.setattr(
+        "news_collector.components.editorial.auditor.get_model_for_stage",
+        lambda *args, **kwargs: "registry-auditor:13b",
+    )
+    monkeypatch.setattr(
+        "news_collector.components.editorial.auditor.get_provider",
+        lambda *args, **kwargs: MagicMock(),
+    )
+
+    cfg = SimpleNamespace(
+        editorial_auditor=SimpleNamespace(
+            enabled=True,
+            sampling_rate=0.0,
+            blocking=False,
+            timeout_seconds=5,
+            max_retries=2,
+            health_timeout_seconds=1,
+        ),
+        paths=SimpleNamespace(data_dir=tmp_path),
+        ollama=SimpleNamespace(api_url="http://localhost:11434/api/generate"),
+    )
+    auditor = EditorialAuditor(cfg)
+
+    article = {"category": "astronomy", "metadata": {}}
+
+    # "oscura" contains "cura" as substring — must NOT trigger
+    assert not auditor.should_run_fast(
+        article,
+        "la materia oscura del universo y la energia oscura cosmica",
+    )
+
+    # standalone "cura" — must trigger
+    assert auditor.should_run_fast(
+        article,
+        "una nueva cura para la enfermedad fue descubierta",
+    )

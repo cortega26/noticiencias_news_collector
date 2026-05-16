@@ -45,9 +45,12 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
     )
 
     agent._translate_scientific = lambda content: "Texto base traducido"  # type: ignore[method-assign]
-    agent._adapt_editorial = lambda translated: ""  # type: ignore[method-assign]
+    agent._adapt_editorial = lambda *args, **kwargs: ""  # type: ignore[method-assign]
     repair_mock = MagicMock(return_value=_valid_markdown_body())
     agent._repair_editorial = repair_mock  # type: ignore[method-assign]
+    # Editorial critic gate is an independent stage; bypass it here so the
+    # test stays focused on the technical critic recovery path.
+    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {  # type: ignore[method-assign]
         "direct": "Hallazgo con impacto regional",
         "question": "¿Qué cambia con este hallazgo?",

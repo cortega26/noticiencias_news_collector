@@ -92,6 +92,21 @@ class TestTagNormalizer(unittest.TestCase):
         result2 = self.normalizer.sanitize_tags(result1.tags)
         self.assertEqual(result1.tags, result2.tags)
 
+    def test_period_stripping(self):
+        """Periods from abbreviations (e.g. 'vera c. rubin') are stripped."""
+        tags = ["observatorio vera c. rubin"]
+        result = self.normalizer.sanitize_tags(tags)
+        self.assertEqual(result.tags, ["observatorio vera c rubin"])
+        val_result = self.normalizer.validate_tags(result.tags)
+        self.assertTrue(val_result.is_valid)
+
+    def test_period_stripping_no_period(self):
+        """Tags without periods are unchanged by period stripping."""
+        tags = ["agujeros negros", "materia oscura", "ia"]
+        result = self.normalizer.sanitize_tags(tags)
+        expected = ["agujeros negros", "materia oscura", "inteligencia artificial"]
+        self.assertEqual(result.tags, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

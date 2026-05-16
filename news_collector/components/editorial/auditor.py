@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import re
 import tempfile
 import time
 from datetime import datetime
@@ -228,7 +229,7 @@ class EditorialAuditor:
         # 2. Trigger by Keywords
         content_lower = content[:5000].lower()
         for kw in self.trigger_keywords:
-            if kw in content_lower:
+            if re.search(r"\b" + re.escape(kw) + r"\b", content_lower):
                 logger.info(f"Auditor Triggered: Keyword match ('{kw}')")
                 return True
 

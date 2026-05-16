@@ -125,7 +125,7 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
     monkeypatch.setattr(
         agent,
         "_adapt_editorial",
-        lambda _: (
+        lambda *args, **kwargs: (
             "## Apertura\n"
             "Este análisis examina los avances recientes en el campo científico y tecnológico. "
             "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
@@ -138,6 +138,11 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
         ),
     )
     monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
+    monkeypatch.setattr(
+        agent,
+        "_critic_editorial_pass",
+        lambda *args, **kwargs: (True, None, True),
+    )
     monkeypatch.setattr(
         agent,
         "_generate_headlines",
@@ -200,7 +205,7 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
     monkeypatch.setattr(
         agent,
         "_adapt_editorial",
-        lambda _: (
+        lambda *args, **kwargs: (
             "## Apertura\n"
             "Este análisis examina los avances recientes en el campo científico y tecnológico. "
             "Los investigadores han identificado nuevos patrones que permiten comprender mejor los "
@@ -214,6 +219,11 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
         ),
     )
     monkeypatch.setattr(agent, "_critic_pass", lambda _: (True, None))
+    monkeypatch.setattr(
+        agent,
+        "_critic_editorial_pass",
+        lambda *args, **kwargs: (True, None, True),
+    )
     monkeypatch.setattr(
         agent,
         "_generate_headlines",
