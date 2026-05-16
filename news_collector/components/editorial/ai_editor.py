@@ -901,7 +901,7 @@ class EditorAgent:
         )
         return False, feedback, recoverable
 
-    def _extract_editorial_critic_json(self, text: str) -> dict:
+    def _extract_editorial_critic_json(self, text: str) -> dict[Any, Any]:
         """Extract the editor_critic JSON object from the LLM response.
 
         Looks for the first JSON object containing 'approved' (the
@@ -913,7 +913,7 @@ class EditorAgent:
             try:
                 data = json.loads(match.group(0))
                 if "approved" in data or "average" in data:
-                    return data
+                    return cast(dict[Any, Any], data)
             except (ValueError, KeyError):
                 continue
         # Try the simpler non-nested form as well, in case the model emitted
@@ -922,7 +922,7 @@ class EditorAgent:
             try:
                 data = json.loads(match.group(0))
                 if "approved" in data or "average" in data:
-                    return data
+                    return cast(dict[Any, Any], data)
             except (ValueError, KeyError):
                 continue
         logger.warning(
