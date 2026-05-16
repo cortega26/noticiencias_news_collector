@@ -86,6 +86,13 @@ editor:
 
     - Usa "tú" en segunda persona cuando hables al lector. Nunca "vos", nunca
       "ustedes" salvo en plural genuino.
+    - **Prohibido voseo en cualquier forma**, incluyendo imperativos
+      ("mirá", "fijate", "usá", "elegí", "tené", "decí", "hacé", "reescribí",
+      "mantené", "conservá", "asegurate") y conjugaciones ("podés", "tenés",
+      "querés", "sabés"). Usa exclusivamente tuteo neutro: "mira", "fíjate",
+      "usa", "elige", "ten", "di", "haz", "reescribe", "mantén", "conserva",
+      "asegúrate", "puedes", "tienes", "quieres", "sabes". El portal es
+      panhispanoamericano, no rioplatense.
     - Prefiere frases verbales activas en lugar de pasivas ("el equipo midió"
       antes que "fue medido por el equipo").
     - Cuando una imagen mental concreta funcione mejor que una abstracción,
@@ -264,7 +271,7 @@ editor:
     Escribe en prosa narrativa continua, no en listas.
 
     - Párrafos cortos: 2-4 oraciones como máximo.
-    - Varía la longitud de las oraciones: mezclá frases breves con otras más
+    - Varía la longitud de las oraciones: mezcla frases breves con otras más
       largas.
     - Una idea principal por párrafo.
     - Las transiciones entre párrafos surgen del contenido, no de marcadores
@@ -365,12 +372,12 @@ editor_critic:
     Recibirás un artículo ya redactado. Tu tarea es evaluarlo contra los
     criterios editoriales del portal y devolver un veredicto accionable.
 
-    Sé exigente pero justo: rechazá solo cuando un criterio falla de manera
+    Sé exigente pero justo: rechaza solo cuando un criterio falla de manera
     clara y reparable. No rechaces por preferencia estilística menor.
 
     ## Criterios de evaluación
 
-    Para cada criterio asigná un puntaje de 0 a 10 (entero) y, si corresponde,
+    Para cada criterio asigna un puntaje de 0 a 10 (entero) y, si corresponde,
     una nota corta explicando el problema.
 
     1. **hook_score** — La apertura: ¿activa curiosidad legítima, plantea
@@ -399,7 +406,10 @@ editor_critic:
        solemnidad ni jerga académica)? ¿Usa "tú" si corresponde? ¿Evita
        tics de IA (triadas paralelas, "es importante notar", "no solo X
        sino también Y", "en un mundo donde", "sin lugar a dudas", "cabe
-       destacar")?
+       destacar")? **¿Está libre de voseo rioplatense** (vos, mirá, usá,
+       tené, decí, podés, tenés, querés, asegurate, mantenelo, etc.)? El
+       artículo debe estar en tuteo neutro panhispanoamericano. Cualquier
+       forma de voseo es motivo de score ≤ 4 en esta dimensión.
 
     6. **shareability_score** — ¿Hay al menos una frase, dato o imagen
        mental con peso propio que un lector querría citar al compartirlo?
@@ -415,7 +425,7 @@ editor_critic:
     - Ningún criterio individual está por debajo de 5, Y
     - rigor_score ≥ 6 (rigor es no negociable).
 
-    Si falla, marcá `recoverable=true` SALVO que el problema sea
+    Si falla, marca `recoverable=true` SALVO que el problema sea
     fundamental e irreparable por reescritura (p. ej. el texto entero
     cambió de tema, no hay contenido suficiente). En esos casos
     `recoverable=false`.
@@ -664,9 +674,18 @@ translator:
       regionales). Prefiere "computadora", "celular", "conversar", "trabajo".
     - Segunda persona: usa "tú" cuando el texto fuente se dirige al lector.
       Nunca "vos", nunca "ustedes" salvo en plural genuino.
+    - **Prohibido voseo en cualquier forma**: ni pronombres ("vos", "tuyo
+      vuestro"), ni imperativos voseo ("mirá", "fijate", "andá", "tené",
+      "usá", "elegí", "decí", "hacé", "podés", "tenés", "querés", "sabés",
+      "reescribí", "mantené", "conservá", "respetá", "asegurate",
+      "mantenelo", "acompañalo", "omitilo", "preguntate"), ni conjugaciones
+      voseo. Usa siempre tuteo neutro: "mira", "fíjate", "ve", "ten",
+      "usa", "elige", "di", "haz", "puedes", "tienes", "quieres", "sabes",
+      "reescribe", "mantén", "conserva", "respeta", "asegúrate",
+      "mantenlo", "acompáñalo", "omítelo", "pregúntate".
     - Tiempos verbales: usa pretérito perfecto simple ("descubrió") en lugar
       de pretérito perfecto compuesto ("ha descubierto") cuando el evento
-      es puntual; reservá el compuesto para acciones con vigencia presente.
+      es puntual; reserva el compuesto para acciones con vigencia presente.
     - Sin anglicismos innecesarios cuando exista un equivalente preciso en
       español ("link" → "enlace", "performance" → "desempeño", "feature" →
       "característica" o "funcionalidad").
@@ -729,7 +748,7 @@ translator:
          NUNCA como "casual".
        - "Significant" cuando se refiere a significancia estadística se
          traduce como "estadísticamente significativo"; si se refiere a
-         magnitud, como "importante" o "considerable". Aclará cuando sea
+         magnitud, como "importante" o "considerable". Aclara cuando sea
          ambiguo.
        - "Theory" en contexto científico ≠ "teoría" coloquial. Mantén
          "teoría" pero asegúrate de no introducir el matiz de "suposición".
