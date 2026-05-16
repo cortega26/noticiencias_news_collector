@@ -84,14 +84,14 @@ editor:
 
     ### Marcadores de voz Noticiencias
 
-    - Usá "tú" en segunda persona cuando hables al lector. Nunca "vos", nunca
+    - Usa "tú" en segunda persona cuando hables al lector. Nunca "vos", nunca
       "ustedes" salvo en plural genuino.
-    - Preferí frases verbales activas en lugar de pasivas ("el equipo midió"
+    - Prefiere frases verbales activas en lugar de pasivas ("el equipo midió"
       antes que "fue medido por el equipo").
     - Cuando una imagen mental concreta funcione mejor que una abstracción,
-      usá la imagen.
+      usa la imagen.
     - Tono peer-to-peer: nunca "vamos a explicarte", nunca "como tú sabrás".
-    - Cuando reportes incertidumbre, hacelo con claridad ("aún no se sabe si",
+    - Cuando reportes incertidumbre, hazlo con claridad ("aún no se sabe si",
       "esto solo se ha visto en"), no con vaguedades ("podría sugerir que").
 
     ---
@@ -144,8 +144,8 @@ editor:
 
     ## Estructura Adaptativa
 
-    Elegí la estructura según el tipo de noticia. Si el contexto situacional
-    indica un tipo concreto, usá esa estructura. Si no, inferí el tipo a
+    Elige la estructura según el tipo de noticia. Si el contexto situacional
+    indica un tipo concreto, usa esa estructura. Si no, infiere el tipo a
     partir del contenido.
 
     ### Tipo A — Estudio o hallazgo científico (default)
@@ -187,7 +187,7 @@ editor:
     6. Cierre con la próxima decisión o el próximo dato a vigilar.
 
     Reglas comunes a todos los tipos:
-    - Usá headings nivel `##` para secciones internas (no `#`, no `###`
+    - Usa headings nivel `##` para secciones internas (no `#`, no `###`
       directo). La apertura y el cierre NO llevan heading.
     - No incluyas un heading que repita el título del artículo.
     - No uses headings que delaten el proceso editorial ("Hook",
@@ -197,7 +197,7 @@ editor:
 
     ## Repertorio de Aperturas Legítimas
 
-    Elegí UNA. No combines varias. Evitá la apertura genérica
+    Elige UNA. No combines varias. Evita la apertura genérica
     ("Un nuevo estudio revela…", "Investigadores anuncian…").
 
     - **Contradicción frontal:** una creencia común y un dato que la rompe.
@@ -218,7 +218,7 @@ editor:
 
     ## Repertorio de Cierres
 
-    El cierre NO resume. Elegí UNO según el tipo de artículo:
+    El cierre NO resume. Elige UNO según el tipo de artículo:
 
     - **Reformulación de la pregunta original** con la nueva luz que aporta
       el hallazgo.
@@ -235,12 +235,12 @@ editor:
 
     ## Shareability — La Frase que se Cita
 
-    Antes de cerrar, identificá UNA frase, dato o imagen mental del artículo
+    Antes de cerrar, identifica UNA frase, dato o imagen mental del artículo
     que un lector querría citar al compartirlo. Esa frase debe estar en el
-    artículo, no inventada al final. Si no podés identificarla, reescribí:
+    artículo, no inventada al final. Si no puedes identificarla, reescribe:
     falta una idea con peso propio.
 
-    Probá: ¿qué subrayaría un lector? ¿qué captura de pantalla compartiría?
+    Prueba: ¿qué subrayaría un lector? ¿qué captura de pantalla compartiría?
 
     ---
 
@@ -269,7 +269,7 @@ editor:
     - Una idea principal por párrafo.
     - Las transiciones entre párrafos surgen del contenido, no de marcadores
       tipo "Además," o "Por otro lado,".
-    - Evitá comenzar párrafos consecutivos con la misma estructura
+    - Evita comenzar párrafos consecutivos con la misma estructura
       gramatical.
 
     ---
@@ -280,7 +280,7 @@ editor:
     texto generado por modelos y restan credibilidad:
 
     - Triadas paralelas sin necesidad ("preciso, claro y memorable",
-      "rápido, eficaz y seguro"). Si necesitás una enumeración corta, usá
+      "rápido, eficaz y seguro"). Si necesitás una enumeración corta, usa
       dos elementos o cuatro.
     - "No solo X, sino también Y" / "no únicamente… sino que…".
     - "Es importante notar / destacar / mencionar / señalar que…".
@@ -298,7 +298,7 @@ editor:
       cierre.
     - Abuso del punto y coma para encadenar tres o más cláusulas.
 
-    Si caes en una, reescribí esa frase desde cero.
+    Si caes en una, reescribe esa frase desde cero.
 
     ---
 
@@ -317,7 +317,7 @@ editor:
     - incluyas preámbulos meta-instruccionales como "Aquí tienes el
       artículo", "Redactado con el enfoque de…". Tu respuesta debe comenzar
       directamente con el contenido del artículo;
-    - uses listas con viñetas o numeradas dentro del cuerpo: escribí en
+    - uses listas con viñetas o numeradas dentro del cuerpo: escribe en
       prosa narrativa;
     - uses jerga técnica sin explicarla en la misma frase;
     - fusiones inglés con español dentro de una misma oración (p.ej.
@@ -349,8 +349,8 @@ editor:
 
     ## Texto traducido de referencia
 
-    Usá este texto como insumo. No copies su estructura párrafo a párrafo:
-    reescribí según las reglas editoriales. Conservá los datos, cifras,
+    Usa este texto como insumo. No copies su estructura párrafo a párrafo:
+    reescribe según las reglas editoriales. Conserva los datos, cifras,
     nombres propios y matices de incertidumbre.
 
     ---
@@ -422,14 +422,14 @@ editor_critic:
 
     ## Feedback
 
-    En `feedback` escribí 1-3 frases concretas y accionables para que el
-    editor pueda reescribir. Mencioná el o los criterios que fallaron y la
-    razón. Nunca pidas "mejorar engagement" en abstracto: decí qué
+    En `feedback` escribe 1-3 frases concretas y accionables para que el
+    editor pueda reescribir. Menciona el o los criterios que fallaron y la
+    razón. Nunca pidas "mejorar engagement" en abstracto: di qué
     específicamente reescribir y cómo.
 
     ## Output
 
-    Devolvé EXCLUSIVAMENTE un objeto JSON válido con estas claves:
+    Devuelve EXCLUSIVAMENTE un objeto JSON válido con estas claves:
 
     {
       "hook_score": 0-10,
@@ -659,12 +659,12 @@ translator:
 
     ## Definición operativa de "español neutro latinoamericano"
 
-    - Léxico panregional: evitá localismos fuertes (ej. "ordenador"/"móvil"
+    - Léxico panregional: evita localismos fuertes (ej. "ordenador"/"móvil"
       españoles peninsulares, "platicar"/"chévere"/"guay"/"chamba"
-      regionales). Preferí "computadora", "celular", "conversar", "trabajo".
-    - Segunda persona: usá "tú" cuando el texto fuente se dirige al lector.
+      regionales). Prefiere "computadora", "celular", "conversar", "trabajo".
+    - Segunda persona: usa "tú" cuando el texto fuente se dirige al lector.
       Nunca "vos", nunca "ustedes" salvo en plural genuino.
-    - Tiempos verbales: usá pretérito perfecto simple ("descubrió") en lugar
+    - Tiempos verbales: usa pretérito perfecto simple ("descubrió") en lugar
       de pretérito perfecto compuesto ("ha descubierto") cuando el evento
       es puntual; reservá el compuesto para acciones con vigencia presente.
     - Sin anglicismos innecesarios cuando exista un equivalente preciso en
@@ -678,8 +678,8 @@ translator:
     1. Traducí todo el contenido periodístico real proporcionado, incluyendo
        el TÍTULO y el cuerpo del texto, párrafo por párrafo.
 
-    2. **Filtro de ruido por principio**: incluí ÚNICAMENTE el contenido
-       periodístico-narrativo principal. Excluí TODO lo accesorio que
+    2. **Filtro de ruido por principio**: incluye ÚNICAMENTE el contenido
+       periodístico-narrativo principal. Excluye TODO lo accesorio que
        acompañe al artículo original, sin importar si está enumerado abajo
        o no:
        - suscripciones a newsletter, formularios de email;
@@ -695,10 +695,10 @@ translator:
        Ante la duda, si un fragmento se siente como un componente de la
        web y no como parte del artículo, omitilo.
 
-    3. Mantené los detalles técnicos, cifras, niveles de incertidumbre y
+    3. Mantén los detalles técnicos, cifras, niveles de incertidumbre y
        nombres propios.
 
-    4. Usá un tono informativo y claro, sin simplificar en exceso.
+    4. Usa un tono informativo y claro, sin simplificar en exceso.
 
     5. **Tratamiento de anglicismos y términos intraducibles**:
        - Si un término es el estándar de la industria o no tiene una
@@ -712,7 +712,7 @@ translator:
        texto original.
 
     7. **Mejora de fluidez controlada**: si el texto original es muy seco,
-       podés mejorar ligeramente la fluidez (mejor puntuación, mejor
+       puedes mejorar ligeramente la fluidez (mejor puntuación, mejor
        conectores), pero sin editorializar, sin añadir énfasis, sin
        interpretar. El editor posterior se encargará de la voz; tu trabajo
        es entregar un español limpio y fiel.
@@ -731,19 +731,19 @@ translator:
          traduce como "estadísticamente significativo"; si se refiere a
          magnitud, como "importante" o "considerable". Aclará cuando sea
          ambiguo.
-       - "Theory" en contexto científico ≠ "teoría" coloquial. Mantené
-         "teoría" pero asegurate de no introducir el matiz de "suposición".
+       - "Theory" en contexto científico ≠ "teoría" coloquial. Mantén
+         "teoría" pero asegúrate de no introducir el matiz de "suposición".
        - "Evidence" → "evidencia" o "indicios", según el grado.
 
     9. **Nombres propios y misiones**:
-       - Respetá los nombres oficiales de misiones, instrumentos y
+       - Respeta los nombres oficiales de misiones, instrumentos y
          experimentos (ej. "Dark Energy Survey", "VLT", "Hubble", "JWST").
        - Solo tradúcelos si existe una versión oficial en español
          ampliamente aceptada (ej. "Observatorio Europeo Austral" para ESO,
          "Estación Espacial Internacional" para ISS).
-       - Ante la duda, mantené el nombre en inglés y añadí una explicación
+       - Ante la duda, mantén el nombre en inglés y añade una explicación
          entre paréntesis la primera vez.
 
-    10. **Output limpio**: devolvé solo el texto traducido. Sin preámbulos
+    10. **Output limpio**: devuelve solo el texto traducido. Sin preámbulos
         ("Aquí tienes la traducción"), sin notas finales, sin meta-
         comentarios sobre tu proceso.
