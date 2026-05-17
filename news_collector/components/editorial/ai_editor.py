@@ -147,6 +147,11 @@ class HeadlinesSchema(BaseModel):
     benefit: str = Field(..., min_length=5)
     excerpt: str = Field(..., min_length=10, max_length=300)
     tags: list[str] = Field(default_factory=list, min_length=1, max_length=8)
+    # Editorial voice contract (see docs/EDITORIAL_VOICE.md, sections 2.1 & 2.4).
+    # Optional for backward compatibility with cached outputs and older prompts.
+    pattern_used: str | None = None
+    requires_uncertainty_note: bool = False
+    hook_body_fidelity_check: str | None = None
 
 
 class GeneratedArticleValidationError(ValueError):
@@ -931,6 +936,144 @@ class EditorAgent:
         )
         return self._extract_json(text)
 
+    def _headline_critic_pass(
+        self, body: str, headlines: dict[str, Any]
+    ) -> tuple[bool, str | None]:
+        """
+        Stage 3.5: Headline Critic Gate.
+
+        Validates that the generated headlines (a) honor what the body
+        actually delivers and (b) do not cross into clickbait per
+        prompts.yaml::headline_critic. Returns
+        (approved, regenerate_instruction).
+
+        Fails open on infra errors so the critic never becomes a blocker
+        for non-editorial reasons. Quality regressions surface via the
+        editor_critic, the auditor, and the Editorial Council.
+        """
+        if os.getenv("ENABLE_HEADLINE_CRITIC", "true").lower() == "false":
+            logger.info("Headline Critic Disabled (skipped)")
+            return True, None
+
+        critic_cfg = self.prompts.get("headline_critic", {})
+        system_prompt = critic_cfg.get("system", "")
+        if not system_prompt:
+            logger.warning(
+                "Headline Critic skipped: 'headline_critic' prompt not configured"
+            )
+            return True, None
+
+        article_body = _extract_publishable_body(body) if body else ""
+        if not article_body:
+            return True, None
+
+        headline_payload = {
+            key: headlines.get(key)
+            for key in (
+                "direct",
+                "question",
+                "benefit",
+                "excerpt",
+                "pattern_used",
+                "requires_uncertainty_note",
+                "hook_body_fidelity_check",
+            )
+        }
+        truncated_body = (
+            article_body[:24000] if len(article_body) > 24000 else article_body
+        )
+        user_prompt = (
+            "Evalúa los siguientes titulares contra el cuerpo del artículo "
+            "siguiendo las instrucciones del sistema. Devuelve exclusivamente "
+            "un objeto JSON válido con los campos pedidos.\n\n"
+            "## Cuerpo del artículo\n\n"
+            f"{truncated_body}\n\n"
+            "## Titulares generados (JSON)\n\n"
+            f"{json.dumps(headline_payload, ensure_ascii=False, indent=2)}"
+        )
+
+        try:
+            response = self._send_prompt(
+                user_prompt, system=system_prompt, model=self.headlines_model
+            )
+            logger.debug(f"Headline Critic raw response: {response[:300]}")
+            result = self._extract_json(response)
+        except Exception as e:
+            logger.warning(
+                f"Headline Critic Pass Failed (infra error): {e} - failing open"
+            )
+            return True, None
+
+        try:
+            approved = bool(result.get("approved", False))
+            regenerate_instruction = str(
+                result.get("regenerate_instruction") or ""
+            ).strip()
+            fidelity_pass = bool(result.get("fidelity_pass", True))
+            sensationalism_pass = bool(result.get("sensationalism_pass", True))
+        except (TypeError, ValueError) as e:
+            logger.warning(
+                f"Headline Critic returned unparseable verdict: {e} - failing open"
+            )
+            return True, None
+
+        if approved:
+            logger.info(
+                f"✅ Headline Critic Approved "
+                f"(fidelity={fidelity_pass}, sensationalism={sensationalism_pass})"
+            )
+            return True, None
+
+        if not regenerate_instruction:
+            regenerate_instruction = (
+                "El titular no cumple alguna de las dos pruebas "
+                "(fidelidad gancho-cuerpo o línea roja de sensacionalismo). "
+                "Prueba con otro patrón del repertorio."
+            )
+
+        logger.warning(
+            f"⛔ HEADLINE CRITIC REJECTED "
+            f"(fidelity={fidelity_pass}, sensationalism={sensationalism_pass}). "
+            f"Instruction: {regenerate_instruction}"
+        )
+        return False, regenerate_instruction
+
+    def _generate_headlines_with_critic(self, final_content: str) -> dict:
+        """Stage 3 + 3.5 orchestrator.
+
+        Calls `_generate_headlines` and then gates the result through
+        `_headline_critic_pass`, retrying up to `max_headline_retries`
+        times with the critic's `regenerate_instruction` appended.
+
+        On exhaustion, returns the last generated headlines and logs a
+        warning — the editor_critic already gates the body, and the
+        deterministic repair layer will still run.
+        """
+        max_headline_retries = 2
+        headlines = self._generate_headlines(final_content)
+        for attempt in range(max_headline_retries + 1):
+            approved, regen_instruction = self._headline_critic_pass(
+                final_content, headlines
+            )
+            if approved:
+                return headlines
+            if attempt < max_headline_retries:
+                logger.warning(
+                    f"⚠️ Headline Critic rejected "
+                    f"(Attempt {attempt + 1}/{max_headline_retries + 1}). "
+                    f"Regenerating with instruction: {regen_instruction}"
+                )
+                headlines = self._generate_headlines(
+                    final_content, regenerate_instruction=regen_instruction
+                )
+            else:
+                logger.warning(
+                    f"Headline Critic still rejecting after "
+                    f"{max_headline_retries + 1} attempts. Publishing with "
+                    f"last generated headlines. Reason: {regen_instruction}"
+                )
+        return headlines
+
     def _editorial_output_repair_reason(self, markdown: str) -> str | None:
         body = _extract_publishable_body(markdown)
         if not body:
@@ -980,11 +1123,40 @@ class EditorAgent:
             repair_prompt, system=system_prompt, model=self.editor_model
         )
 
-    def _generate_headlines(self, adapted_content: str) -> dict:
-        """Stage 3: Headline Generation & Metadata"""
+    def _generate_headlines(
+        self,
+        adapted_content: str,
+        regenerate_instruction: str | None = None,
+    ) -> dict:
+        """Stage 3: Headline Generation & Metadata.
+
+        When `regenerate_instruction` is provided, the headline_critic gate
+        rejected the previous attempt; the instruction is appended to the
+        user prompt so the model knows which pattern to try next.
+        """
         system_prompt = self.prompts.get("headline", {}).get("system", "")
-        # Prompt explicitly for JSON in the message body as well to be safe
-        prompt = f"Analyze this article and generate JSON with keys: 'direct', 'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), and 'tags' (list of 3-5 semantic keywords in Spanish. Rules: lowercase, singular, specific entities/concepts. NO generic tags like 'ciencia', 'tecnologia', 'salud', 'noticia').\n\n{adapted_content[:2000]}"
+        # Prompt explicitly for JSON in the message body as well to be safe.
+        # Keys mirror HeadlinesSchema; the three editorial-voice fields are
+        # additive and described in detail by the system prompt.
+        prompt = (
+            "Analyze this article and generate JSON with keys: 'direct', "
+            "'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), "
+            "'tags' (list of 3-5 semantic keywords in Spanish. Rules: lowercase, "
+            "singular, specific entities/concepts. NO generic tags like "
+            "'ciencia', 'tecnologia', 'salud', 'noticia'), 'pattern_used' "
+            "(one of: curiosity_gap, stakes, counterintuitive, question, "
+            "human_emotion), 'requires_uncertainty_note' (boolean), and "
+            "'hook_body_fidelity_check' (one short sentence pointing to the "
+            "passage of the body that backs the headline's promise).\n\n"
+            f"{adapted_content[:2000]}"
+        )
+        if regenerate_instruction:
+            prompt += (
+                "\n\n## Instrucción de regeneración\n\n"
+                "El intento anterior fue rechazado por el headline_critic. "
+                "Aplica esta instrucción al regenerar los titulares:\n\n"
+                f"{regenerate_instruction}"
+            )
         response = self._send_prompt(
             prompt, system=system_prompt, model=self.headlines_model
         )
@@ -1383,12 +1555,15 @@ class EditorAgent:
                         f"Publishing with caveat. Reason: {ed_reason}"
                     )
 
-        # --- STAGE 3: Metadata & Headlines ---
+        # --- STAGE 3: Metadata & Headlines (+ Headline Critic gate) ---
         print("\n--- STAGE 3: Metadata & Headlines ---")
         # Stage 3 is fast enough relative to others, and depends on final content structure.
         # We could cache it, but usually we want to regenerate headlines if we tweak code.
         # For now, we won't cache Stage 3 to allow easier re-runs of the final formatting.
-        headlines = self._generate_headlines(final_content)
+        # The orchestrator runs the headline writer and then gates the result
+        # through prompts.yaml::headline_critic (fidelity gancho-cuerpo +
+        # línea roja de sensacionalismo) with up to 2 retries.
+        headlines = self._generate_headlines_with_critic(final_content)
 
         # --- DETERMINISTIC REPAIR LAYER ---
         final_content, headlines = self._repair_output(
@@ -1518,12 +1693,6 @@ class EditorAgent:
         except Exception as e:
             logger.error(f"❌ Error generating frontmatter: {e}")
             raise
-
-        # Append source link footer if missing
-        # Logic update: explicit footer check because source_url is now in frontmatter too
-        footer_link = f"Fuente original: [{source_url}]({source_url})"
-        if source_url and footer_link not in full_article:
-            full_article += f"\n\n{footer_link}"
 
         # Persist source identity metadata as a hidden comment to keep provenance
         # without widening the frontmatter schema contract.
