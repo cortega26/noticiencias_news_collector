@@ -607,6 +607,12 @@ headline:
     - uses signos de exclamación,
     - uses TODO EN MAYÚSCULAS,
     - uses emojis,
+    - uses hashtags (#palabra) en ningún campo: ni en `direct`, ni en
+      `question`, ni en `benefit`, ni en `excerpt`. Los hashtags son
+      código visual de redes sociales y no pertenecen a un medio
+      editorial. Una categoría temática se transporta por el campo
+      `tags[]` (palabras en minúsculas, sin `#`), no concatenada al
+      titular o al resumen.
     - construyas un curiosity gap sobre algo que el cuerpo no entrega.
 
     ---
