@@ -1667,6 +1667,24 @@ class EditorAgent:
             if hl_variants:
                 model_dict["headlines_variants"] = hl_variants
 
+            if isinstance(raw_text, dict):
+                for key in [
+                    "why_it_matters",
+                    "summary_points",
+                    "uncertainty_note",
+                    "glossary",
+                    "featured",
+                    "featured_rank",
+                    "investigation",
+                ]:
+                    if key in raw_text:
+                        model_dict[key] = raw_text[key]
+
+            requires_uncertainty_note = headlines.get(
+                "requires_uncertainty_note", False
+            )
+            model_dict["requires_uncertainty_note"] = bool(requires_uncertainty_note)
+
             # Dump to YAML
             # Use python mode to preserve native date types and emit
             # YAML date tokens without quotes for Astro z.date() compatibility.

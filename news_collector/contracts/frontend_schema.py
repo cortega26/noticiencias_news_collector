@@ -38,6 +38,13 @@ class SourceItem(BaseModel):
     date: Optional[str] = None
 
 
+class GlossaryItem(BaseModel):
+    """Glossary term and definition."""
+
+    term: str = Field(..., min_length=1)
+    definition: str = Field(..., min_length=1)
+
+
 class ImageObject(BaseModel):
     """Complex image object support."""
 
@@ -88,6 +95,11 @@ class AstroPost(BaseModel):
     confidence: Optional[str] = None
     investigation: bool = Field(default=False)
     featured: bool = Field(default=False)
+    featured_rank: Optional[int] = None
+    summary_points: Optional[List[str]] = None
+    uncertainty_note: Optional[str] = None
+    glossary: Optional[List[GlossaryItem]] = None
+    requires_uncertainty_note: bool = Field(default=False)
 
     fact_check: Optional[List[FactCheckItem]] = None
     why_it_matters: Optional[List[str]] = None

@@ -34,7 +34,7 @@ from news_collector.contracts.frontend_schema import AstroPost, HeadlinesVariant
 # Canonical sibling-repo path.  Works whether the cwd is the repo root or any
 # subdirectory, as long as both repos share the same parent directory.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_FRONTEND_CONFIG = _REPO_ROOT.parent / "noticiencias" / "src" / "content" / "config.ts"
+_FRONTEND_CONFIG = _REPO_ROOT.parent / "noticiencias" / "src" / "content.config.ts"
 
 # ---------------------------------------------------------------------------
 # Helper

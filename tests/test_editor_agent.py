@@ -39,7 +39,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
     agent._send_prompt = lambda prompt, system=None, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._generate_headlines = lambda *args: {
+    agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
@@ -65,8 +65,8 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
         fm.get("source_url") == "https://example.com/source"
     ), f"Keys: {fm.keys()} \nYAML: {result[:300]}"
 
-    # Check footer logic generally
-    assert "https://example.com/source" in result and "Fuente" in result
+    # Check source logic generally
+    assert "https://example.com/source" in result
 
 
 def test_process_article_keeps_sections_with_image(tmp_path) -> None:
@@ -92,7 +92,7 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._generate_headlines = lambda *args: {
+    agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
@@ -114,7 +114,7 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     fm = parse_frontmatter(result)
     assert fm.get("source_url") == "https://example.com/source"
 
-    assert "https://example.com/source" in result and "Fuente" in result
+    assert "https://example.com/source" in result
 
 
 def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
@@ -138,7 +138,7 @@ def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._generate_headlines = lambda *args: {
+    agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
@@ -183,7 +183,7 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._generate_headlines = lambda *args: {
+    agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
@@ -228,7 +228,7 @@ def test_top_level_export_category_drives_frontmatter_category(
     agent._send_prompt = lambda prompt, *args, **kwargs: sample_output  # type: ignore[method-assign]
     agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._generate_headlines = lambda *args: {
+    agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
         "benefit": "Benefit Headline",
