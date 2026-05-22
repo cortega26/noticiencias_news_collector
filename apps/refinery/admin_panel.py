@@ -86,218 +86,232 @@ st.set_page_config(
 # Premium Custom CSS Injection
 def inject_custom_css():
     st.markdown(
-        """
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-    /* Reset and core fonts */
-    html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, button, select, input, textarea {
-        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-    }
-    code, pre, [class*="mono"] {
-        font-family: 'JetBrains Mono', monospace !important;
-    }
+        """<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Reset and core fonts */
+html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, button, select, input, textarea {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+code, pre, [class*="mono"] {
+    font-family: 'JetBrains Mono', monospace !important;
+}
 
-    /* Page Background and Layout adjustments */
-    .stApp {
-        background-color: #0d111d !important;
-        color: #e2e8f0 !important;
-    }
+/* Page Background and Layout adjustments */
+.stApp {
+    background-color: #0d111d !important;
+    color: #e2e8f0 !important;
+}
 
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background-color: #090d16 !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
-        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3) !important;
-    }
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #090d16 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3) !important;
+}
 
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-        font-size: 0.95rem !important;
-        color: #94a3b8 !important;
-    }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+    font-size: 0.95rem !important;
+    color: #94a3b8 !important;
+}
 
-    /* Headings styling */
-    h1 {
-        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800 !important;
-        letter-spacing: -0.03em !important;
-        padding-bottom: 0.4em !important;
-    }
+/* Headings styling */
+h1 {
+    background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    padding-bottom: 0.4em !important;
+}
 
-    h2, h3 {
-        color: #f8fafc !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.02em !important;
-        border-bottom: none !important;
-        margin-top: 1.5rem !important;
-    }
+h2, h3 {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    border-bottom: none !important;
+    margin-top: 1.5rem !important;
+}
 
-    h4, h5, h6 {
-        color: #cbd5e1 !important;
-        font-weight: 600 !important;
-    }
+h4, h5, h6 {
+    color: #cbd5e1 !important;
+    font-weight: 600 !important;
+}
 
-    /* Metric Container overrides */
-    [data-testid="metric-container"] {
-        background: rgba(30, 41, 59, 0.45) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 16px 20px !important;
-        backdrop-filter: blur(10px) !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    [data-testid="metric-container"]:hover {
-        transform: translateY(-2px) !important;
-        border-color: rgba(56, 189, 248, 0.25) !important;
-        box-shadow: 0 8px 30px rgba(56, 189, 248, 0.08) !important;
-    }
+/* Metric Container overrides */
+[data-testid="metric-container"] {
+    background: rgba(30, 41, 59, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 16px 20px !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+[data-testid="metric-container"]:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(56, 189, 248, 0.25) !important;
+    box-shadow: 0 8px 30px rgba(56, 189, 248, 0.08) !important;
+}
 
-    [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-        font-weight: 800 !important;
-        background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
+[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-    [data-testid="stMetricLabel"] {
-        font-size: 0.75rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.1em !important;
-        font-weight: 600 !important;
-        color: #94a3b8 !important;
-    }
+[data-testid="stMetricLabel"] {
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    font-weight: 600 !important;
+    color: #94a3b8 !important;
+}
 
-    /* Custom premium-card class for visual groupings */
-    .premium-card {
-        background: rgba(30, 41, 59, 0.35) !important;
-        border: 1px solid rgba(255, 255, 255, 0.07) !important;
-        border-radius: 16px !important;
-        padding: 24px !important;
-        margin-bottom: 24px !important;
-        backdrop-filter: blur(12px) !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    .premium-card:hover {
-        border-color: rgba(56, 189, 248, 0.2) !important;
-        box-shadow: 0 15px 40px rgba(56, 189, 248, 0.05) !important;
-    }
+/* Custom premium-card class for visual groupings */
+.premium-card {
+    background: rgba(30, 41, 59, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    margin-bottom: 24px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.premium-card:hover {
+    border-color: rgba(56, 189, 248, 0.2) !important;
+    box-shadow: 0 15px 40px rgba(56, 189, 248, 0.05) !important;
+}
 
-    /* Beautiful custom status info badges */
-    .custom-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-right: 8px;
-        margin-bottom: 8px;
-    }
-    .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-    .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .badge-green { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
-    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+/* Beautiful custom status info badges */
+.custom-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.badge-blue {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.badge-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.badge-green {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.badge-purple {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
 
-    /* Buttons styling */
-    .stButton button {
-        background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        padding: 10px 24px !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        border-radius: 10px !important;
-        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25) !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        width: auto !important;
-    }
-    .stButton button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45) !important;
-        background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important;
-    }
-    .stButton button:active {
-        transform: translateY(0px) !important;
-    }
+/* Buttons styling */
+.stButton button {
+    background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: auto !important;
+}
+.stButton button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45) !important;
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important;
+}
+.stButton button:active {
+    transform: translateY(0px) !important;
+}
 
-    /* Secondary actions reset button styling */
-    .stButton button[class*="secondary"] {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: none !important;
-    }
-    .stButton button[class*="secondary"]:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }
+/* Secondary actions reset button styling */
+.stButton button[class*="secondary"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+}
+.stButton button[class*="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
 
-    /* Tab container modifications */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: rgba(15, 23, 42, 0.3) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px 12px 0 0 !important;
-        padding: 6px 12px 0 12px !important;
-        gap: 4px !important;
-    }
+/* Tab container modifications */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: rgba(15, 23, 42, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 6px 12px 0 12px !important;
+    gap: 4px !important;
+}
 
-    .stTabs [data-baseweb="tab"] {
-        color: #94a3b8 !important;
-        font-weight: 500 !important;
-        font-size: 0.95rem !important;
-        padding: 10px 18px !important;
-        border-radius: 8px 8px 0 0 !important;
-        transition: all 0.2s ease !important;
-        border-bottom: none !important;
-    }
+.stTabs [data-baseweb="tab"] {
+    color: #94a3b8 !important;
+    font-weight: 500 !important;
+    font-size: 0.95rem !important;
+    padding: 10px 18px !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: all 0.2s ease !important;
+    border-bottom: none !important;
+}
 
-    .stTabs [data-baseweb="tab"]:hover {
-        color: #f1f5f9 !important;
-        background-color: rgba(255, 255, 255, 0.04) !important;
-    }
+.stTabs [data-baseweb="tab"]:hover {
+    color: #f1f5f9 !important;
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
 
-    .stTabs [aria-selected="true"] {
-        color: #38bdf8 !important;
-        background-color: rgba(30, 41, 59, 0.4) !important;
-        border-bottom: 2px solid #38bdf8 !important;
-        font-weight: 600 !important;
-    }
+.stTabs [aria-selected="true"] {
+    color: #38bdf8 !important;
+    background-color: rgba(30, 41, 59, 0.4) !important;
+    border-bottom: 2px solid #38bdf8 !important;
+    font-weight: 600 !important;
+}
 
-    /* Table / Dataframe wrapper styling */
-    div[data-testid="stDataFrame"] {
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-    }
+/* Table / Dataframe wrapper styling */
+div[data-testid="stDataFrame"] {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
 
-    /* Custom visual progress bar */
-    .progress-bar-container {
-        width: 100%;
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        margin-bottom: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        overflow: hidden;
-    }
-    .progress-bar-fill {
-        height: 8px;
-        border-radius: 8px;
-        background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
-        transition: width 0.5s ease-in-out;
-    }
+/* Custom visual progress bar */
+.progress-bar-container {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 8px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+    transition: width 0.5s ease-in-out;
+}
 
-    /* Tooltip and caption styling */
-    .stCaption {
-        color: #64748b !important;
-        font-size: 0.8rem !important;
-    }
-    </style>
-    """,
+/* Tooltip and caption styling */
+.stCaption {
+    color: #64748b !important;
+    font-size: 0.8rem !important;
+}
+</style>""",
         unsafe_allow_html=True,
     )
 
