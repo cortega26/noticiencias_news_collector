@@ -130,7 +130,7 @@
 | gemini.timeout | int | 300 | Request timeout in seconds. |  |  |
 | nvidia | NvidiaConfig |  |  |  |  |
 | nvidia.api_key | Optional |  | NVIDIA API key from build.nvidia.com. |  |  |
-| nvidia.model | str | "qwen/qwen3-next-80b-a3b-thinking" | NVIDIA NIM model identifier (e.g. 'qwen/qwen3-next-80b-a3b-thinking'). |  |  |
+| nvidia.model | str | "qwen/qwen3-next-80b-a3b-instruct" | NVIDIA NIM model identifier (e.g. 'qwen/qwen3-next-80b-a3b-instruct'). |  |  |
 | nvidia.base_url | str | "https://integrate.api.nvidia.com/v1" | Base URL for the NVIDIA NIM API. |  |  |
 | nvidia.timeout | int | 300 | Request timeout in seconds. |  |  |
 | nvidia.max_tokens | int | 4096 | Maximum number of tokens to generate per request. |  |  |
