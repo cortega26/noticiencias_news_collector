@@ -1,13 +1,16 @@
-# Todo — Migrate Nvidia NIM model to Qwen3-Next-80B-A3B-Instruct
+# Todo — Algorithmic LatAm Filtering and Noise Suppression
 
-- [x] Modify `config.toml` to update default model setting to `qwen/qwen3-next-80b-a3b-instruct`
-- [x] Modify `noticiencias/config_schema.py` to update schema defaults and descriptions
-- [x] Modify `docs/config_fields.md` to update generated documentation
-- [x] Update LLM infrastructure defaults:
-  - [x] Modify `news_collector/infrastructure/llm/nvidia_provider.py`
-  - [x] Modify `news_collector/infrastructure/llm/health.py`
-  - [x] Modify `news_collector/infrastructure/llm/factory.py`
-- [x] Update Streamlit admin panel UI defaults in `apps/refinery/admin_panel.py`
-- [x] Update unit tests in `tests/test_nvidia_routing_fix.py`
-- [x] Verify using automated tests (`make test`)
-- [x] Verify using manual/dry-run run of the collector (`python scripts/run_collector.py --dry-run`)
+- [x] Refine deterministic keywords in `news_collector/scoring/latam_relevance.py`
+  - [x] Add regional entities and terms to `LATAM_KEYWORDS`
+  - [x] Add corporate cloud, US domestic politics, and academic ML preprint jargon to `LOW_VALUE_KEYWORDS`
+- [x] Refine LLM ingestion filtering in `news_collector/scoring/pre_scorer.py`
+  - [x] Update `select_top_candidates` LLM prompt with strict down-ranking rules
+- [x] Refine Cognitive Scorer in `news_collector/scoring/cognitive_scorer.py`
+  - [x] Update `_call_llm_batch` system prompt to specify low scores for corporate tutorials, local politics, and academic preprints
+  - [x] Modify `_finalize_score` to load deterministic keywords, adjust `comp_relevance`, and enforce a relevance gate (capping final score at 0.55 if relevance < 0.4)
+- [x] Refine Heuristic Scorer in `news_collector/scoring/heuristic_scorer.py`
+  - [x] Penalize `LOW_VALUE_KEYWORDS` in `_calculate_latam_affinity`
+- [x] Verify Implementation
+  - [x] Create verification script `scratch/verify_noise_filtering.py`
+  - [x] Run verification script to ensure corporate tutorials and preprints are correctly suppressed while LatAm/global science stories pass
+  - [x] Run validation commands: `make lint`, `make type`, `make test`

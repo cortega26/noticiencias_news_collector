@@ -168,3 +168,81 @@ def test_cache_hit_skips_llm(mock_llm, sample_article):
         mock_llm.generate_async.assert_not_called()
 
     asyncio.run(run_test())
+
+
+def test_relevance_gate_and_noise_suppression(mock_llm):
+    async def run_test():
+        scorer = CognitiveScorer(llm_client=mock_llm)
+        scorer.is_llm_healthy = True
+        scorer._get_from_cache = MagicMock(return_value=None)
+        scorer._save_to_cache = MagicMock()
+
+        # Case 1: Low value keyword (e.g. AWS Bedrock) without LatAm keyword -> relevance should be capped at 0.0, final_score <= 0.55
+        payload_noise = {
+            "article": {
+                "title": "Getting started with AWS Bedrock and SageMaker",
+                "url": "http://test.com/noise",
+                "summary": "A guide to deploying models on AWS.",
+                "content": "Step 1: configure your AWS credential. Step 2: deploy Bedrock.",
+                "published_date": datetime.now(timezone.utc).isoformat(),
+            },
+            "source_config": {"url": "http://test.com"},
+        }
+
+        # Case 2: LatAm keyword present -> relevance boosted
+        payload_latam = {
+            "article": {
+                "title": "Scientific Study of Biodiversity in Galapagos Islands",
+                "url": "http://test.com/latam",
+                "summary": "Researchers in Ecuador examine species.",
+                "content": "Galapagos islands host unique animals.",
+                "published_date": datetime.now(timezone.utc).isoformat(),
+            },
+            "source_config": {"url": "http://test.com"},
+        }
+
+        # Mock LLM response: substance=4, narrative=4, relevance=4, credibility=4
+        mock_llm.generate_async = AsyncMock(
+            return_value={
+                "results": [
+                    {
+                        "item_index": 1,
+                        "scores": {
+                            "substance": 4,
+                            "narrative": 4,
+                            "relevance": 4,
+                            "credibility": 4,
+                        },
+                        "reasoning": "Standard score",
+                    },
+                    {
+                        "item_index": 2,
+                        "scores": {
+                            "substance": 4,
+                            "narrative": 4,
+                            "relevance": 2,  # 0.4 normalized
+                            "credibility": 4,
+                        },
+                        "reasoning": "Standard score",
+                    },
+                ]
+            }
+        )
+
+        results = await scorer.score_batch_async([payload_noise, payload_latam])
+        assert len(results) == 2
+
+        # Check noise article
+        noise_res = results[0]
+        assert noise_res["components"]["nqi_relevance"] == 0.0
+        assert noise_res["final_score"] <= 0.55
+        assert noise_res["should_include"] is False
+        assert noise_res["decision_label"] == "discard"
+
+        # Check LatAm article (relevance boosted)
+        latam_res = results[1]
+        # Original relevance was 2/5 = 0.4. Capped/Boosted to 0.4 + 0.2 = 0.6.
+        assert latam_res["components"]["nqi_relevance"] == 0.6
+        assert latam_res["final_score"] > 0.55
+
+    asyncio.run(run_test())

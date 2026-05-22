@@ -1,6 +1,6 @@
 import re
 
-from news_collector.scoring.latam_relevance import LATAM_KEYWORDS
+from news_collector.scoring.latam_relevance import LATAM_KEYWORDS, LOW_VALUE_KEYWORDS
 from news_collector.storage.models import Article
 
 
@@ -94,6 +94,9 @@ class HeuristicScorer:
         Calculate affinity with Latin America.
         """
         text_lower = text.lower()
+
+        if any(w in text_lower for w in LOW_VALUE_KEYWORDS):
+            return 0.0
 
         hits = sum(1 for w in LATAM_KEYWORDS if w in text_lower)
         if hits > 0:

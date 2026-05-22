@@ -11,6 +11,7 @@ from noticiencias.config_manager import load_config
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+from news_collector.scoring.latam_relevance import LATAM_KEYWORDS, LOW_VALUE_KEYWORDS
 from news_collector.storage.models import Article
 from news_collector.utils.dict_wrapper import SafeNamespace
 from news_collector.utils.logger import get_logger
@@ -330,8 +331,13 @@ class CognitiveScorer(BasicScorer):
             "3. relevance — Universal human interest OR direct LatAm connection. "
             "Health, environment, space, AI, and climate score high even without LatAm mentions. "
             "Direct LatAm connection (researchers, institutions, geography) is a bonus. "
-            "Ask: 'Would a curious, educated person in Mexico City, Buenos Aires, or Bogotá want to share this?' "
-            "Hyper-local US campus news, niche academic awards, student government, product launches, and fundraising rounds score 0-1.\n\n"
+            "Ask: 'Would a curious, educated person in Mexico City, Buenos Aires, or Bogotá want to share this?'\n"
+            "CRITICAL: Score 0-1 on relevance for: commercial developer/software tutorials & corporate cloud guides "
+            "(e.g., AWS, Azure, GCP, SageMaker, Bedrock, Kubernetes, DevOps, Terraform, SDKs, API gateways, deployment guides); "
+            "US domestic/local politics, partisan debates, & court battles (e.g., Supreme Court rulings, election campaigns/results, "
+            "Senate/House debates, GOP/Democrat/republican policy disputes); highly academic/niche computer science preprints "
+            "& ML theoretical jargon (e.g., arXiv, OOD generalization, mechanistic interpretability, sparse autoencoders, "
+            "transformer architecture, mathematical proofs/theorems); and hyper-local university campus/alumni events/fundraisers.\n\n"
             "4. credibility — Trustworthiness, lack of hype. "
             "Named institutions, DOIs, and measured language score high. "
             "Clickbait, 'miracle cure', and unsourced claims score low.\n\n"
@@ -457,6 +463,20 @@ class CognitiveScorer(BasicScorer):
             comp_relevance = to_norm(details.get("relevance", 0))
             comp_credibility = to_norm(details.get("credibility", 0))
 
+        # Deterministic keyword-based relevance adjustments
+        title = str(getattr(article, "title", "") or "")
+        summary = str(getattr(article, "summary", "") or "")
+        content = str(getattr(article, "content", "") or "")
+        text = f"{title} {summary} {content}".lower()
+
+        has_latam = any(kw in text for kw in LATAM_KEYWORDS)
+        has_low_val = any(kw in text for kw in LOW_VALUE_KEYWORDS)
+
+        if has_low_val and not has_latam:
+            comp_relevance = 0.0
+        elif has_latam:
+            comp_relevance = min(1.0, comp_relevance + 0.2)
+
         # 3. Hybrid Usage (Blending LLM with deterministic signals)
 
         # A. Substance (35%): Blend LLM Substance (0.8) with Data Density/Length?
@@ -484,6 +504,10 @@ class CognitiveScorer(BasicScorer):
         )
 
         final_score = max(0.0, min(1.0, final_score))
+
+        # Strict Relevance Gate: Cap final score if relevance is low (< 0.4)
+        if comp_relevance < 0.4:
+            final_score = min(final_score, 0.55)
 
         decision = "discard"
         if final_score >= 0.75:

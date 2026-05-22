@@ -1,22 +1,33 @@
-# Spec: Migrate Nvidia NIM model to Qwen3-Next-80B-A3B-Instruct
+# Spec: Algorithmic LatAm Filtering and Noise Suppression
 
 ## Goals
-- Resolve the HTTP 410 Client Error (Gone) encountered when requesting the decommissioned model `qwen/qwen3-next-80b-a3b-thinking`.
-- Systematically update all defaults, fallback code, configuration docs, and tests to use `qwen/qwen3-next-80b-a3b-instruct`.
-- Maintain identical pipeline behavior and logic.
+- Enhance the filtering and scoring of articles in the news collector to prioritize stories with either a direct Latin American (LatAm) connection or universal public-interest science value.
+- Suppress irrelevant content (specifically, commercial developer tutorials, US local/regional politics/court battles, and highly academic computer science preprints) without relying on Spanish-language sources.
+- Prevent low-value content from being downloaded/scraped (Ingestion gate) and scored high (Scoring gate).
 
 ## Implementation Details
 
-The model name `qwen/qwen3-next-80b-a3b-thinking` will be replaced with `qwen/qwen3-next-80b-a3b-instruct` in:
-- `config.toml` (default config)
-- `noticiencias/config_schema.py` (configuration schema defaults and descriptions)
-- `docs/config_fields.md` (generated settings documentation)
-- `news_collector/infrastructure/llm/nvidia_provider.py` (Nvidia LLM provider implementation)
-- `news_collector/infrastructure/llm/health.py` (Nvidia LLM provider health check)
-- `news_collector/infrastructure/llm/factory.py` (LLM provider factory)
-- `apps/refinery/admin_panel.py` (Streamlit admin panel configuration presets)
-- `tests/test_nvidia_routing_fix.py` (Routing test assertions)
+### 1. Heuristics & Keywords
+In `news_collector/scoring/latam_relevance.py`:
+- Add regional universities, research bodies, geography, and LatAm specific health/scientific terms to `LATAM_KEYWORDS`.
+- Add keywords indicating developer/cloud tutorials, US domestic political campaigns/agencies, and theoretical preprints to `LOW_VALUE_KEYWORDS`.
+
+### 2. Ingestion Filtering (PreScorer)
+In `news_collector/scoring/pre_scorer.py`:
+- Refine the LLM prompt in `select_top_candidates` to explicitly instruct the LLM to down-rank/reject commercial product/developer tutorials, niche academic computer science preprints, and US domestic/local politics.
+
+### 3. Cognitive & Heuristic Scoring
+In `news_collector/scoring/cognitive_scorer.py`:
+- Refine the LLM prompt in `_call_llm_batch` under the relevance criteria to instruct the LLM to score corporate cloud tutorials, niche computer science preprints, and US local/domestic political controversies low (0-1 stars).
+- Modify `_finalize_score` to run deterministic checks using expanded `LOW_VALUE_KEYWORDS` and `LATAM_KEYWORDS` from `latam_relevance.py`.
+- Adjust `comp_relevance` deterministically:
+  - If `LOW_VALUE_KEYWORDS` is present and no `LATAM_KEYWORDS` is present, penalize relevance.
+  - If `LATAM_KEYWORDS` is present, boost relevance.
+- Enforce a strict relevance gate: if `comp_relevance < 0.4` (corresponding to LLM relevance score < 2.0 / 5.0), cap the final score to `0.55` (forces discard/under the 0.60 inclusion threshold).
+
+In `news_collector/scoring/heuristic_scorer.py`:
+- Update `_calculate_latam_affinity` to return `0.0` if `LOW_VALUE_KEYWORDS` are found.
 
 ## Verification
-- Run `make test` to ensure no unit tests are broken.
-- Execute the collector in dry-run mode (`python scripts/run_collector.py --dry-run`) to verify that the pipeline can run using the new model and successfully hit the chat completions API.
+- Run standard backend validation suite: `make lint`, `make type`, `make test`.
+- Create a test script `scratch/verify_noise_filtering.py` to evaluate scorer output on a test dataset containing a mixture of target articles.
