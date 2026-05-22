@@ -43,12 +43,29 @@ class ScoringCoordinator:
             return self._simulate_scoring(collection_results)
 
         pending_articles = self.db_manager.get_pending_articles(status="validated")
+        rescore_days = self.config_override.get(
+            "rescore_days_back"
+        ) or SCORING_CONFIG.get("rescore_days_back", 14)
+        completed_articles = self.db_manager.get_completed_articles_for_rescoring(
+            days_back=rescore_days
+        )
+
+        self.logger.create_module_logger("scoring").info(
+            f"Retrieved {len(pending_articles)} pending articles and {len(completed_articles)} "
+            f"completed but unpublished articles for rescoring (lookback: {rescore_days} days)."
+        )
+
+        all_articles = []
+        all_articles.extend(pending_articles)
+        all_articles.extend(completed_articles)
 
         scoring_stats: Dict[str, Any] = {
             "articles_scored": 0,
             "articles_included": 0,
             "articles_excluded": 0,
             "average_score": 0.0,
+            "new_articles_scored": 0,
+            "completed_articles_rescored": 0,
         }
 
         total_score = 0.0
@@ -62,7 +79,7 @@ class ScoringCoordinator:
         from news_collector.contracts.adapters import adapt_to_scoring_input
 
         payloads: List[Dict[str, Any]] = []
-        for article in pending_articles:
+        for article in all_articles:
             source_config = ALL_SOURCES.get(article.source_id)
             scoring_model = adapt_to_scoring_input(article, source_config)
             payloads.append(scoring_model.model_dump())
@@ -98,7 +115,13 @@ class ScoringCoordinator:
 
         if results:
             bulk_score_updates: List[tuple] = []
-            for article, score_result in zip(pending_articles, results, strict=False):
+            new_scored_count = 0
+            completed_rescored_count = 0
+
+            pending_ids = {art.id for art in pending_articles}
+            completed_ids = {art.id for art in completed_articles}
+
+            for article, score_result in zip(all_articles, results, strict=False):
                 if isinstance(score_result, Exception):
                     self.logger.create_module_logger("scoring").error(
                         f"Error scoring artículo {article.id}: " f"{str(score_result)}"
@@ -110,10 +133,23 @@ class ScoringCoordinator:
                 scoring_stats["articles_scored"] += 1
                 total_score += score_result["final_score"]
 
+                if article.id in pending_ids:
+                    new_scored_count += 1
+                elif article.id in completed_ids:
+                    completed_rescored_count += 1
+
                 if score_result["should_include"]:
                     scoring_stats["articles_included"] += 1
                 else:
                     scoring_stats["articles_excluded"] += 1
+
+            scoring_stats["new_articles_scored"] = new_scored_count
+            scoring_stats["completed_articles_rescored"] = completed_rescored_count
+
+            self.logger.create_module_logger("scoring").info(
+                f"Scoring complete. Total: {scoring_stats['articles_scored']} articles "
+                f"({new_scored_count} new, {completed_rescored_count} rescored)."
+            )
 
             if bulk_score_updates:
                 success = self.db_manager.update_articles_score_bulk(bulk_score_updates)

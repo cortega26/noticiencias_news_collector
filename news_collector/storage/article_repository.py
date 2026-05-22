@@ -721,6 +721,24 @@ class ArticleRepository:
             session.expunge_all()
             return list(pending_articles)
 
+    def get_completed_articles_for_rescoring(
+        self, days_back: int = 14
+    ) -> List[Article]:
+        """Return completed but unpublished articles collected within the last N days."""
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
+        with self._session() as session:
+            completed_articles = (
+                session.query(Article)
+                .filter(Article.processing_status == "completed")
+                .filter(Article.published_url.is_(None))
+                .filter(Article.published_at.is_(None))
+                .filter(Article.collected_date >= cutoff_date)
+                .order_by(Article.collected_date)
+                .all()
+            )
+            session.expunge_all()
+            return list(completed_articles)
+
     # ------------------------------------------------------------------
     # Scoring
     # ------------------------------------------------------------------

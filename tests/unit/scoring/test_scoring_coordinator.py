@@ -199,3 +199,61 @@ class TestEdgeCases:
         coordinator.logger.error.assert_called_with(
             "Failed to perform bulk score updates."
         )
+
+
+class TestRescoring:
+    @pytest.mark.asyncio
+    async def test_rescoring_fetches_and_scores_both_pending_and_completed(self, coordinator):
+        pending = [_MockArticle(id=1, title="Pending A", source_id="src1")]
+        completed = [_MockArticle(id=2, title="Completed B", source_id="src1")]
+
+        coordinator.db_manager.get_pending_articles.return_value = pending
+        coordinator.db_manager.get_completed_articles_for_rescoring.return_value = completed
+
+        coordinator.scorer.score_batch_async = AsyncMock(
+            return_value=[
+                {"final_score": 0.8, "should_include": True},
+                {"final_score": 0.65, "should_include": True},
+            ]
+        )
+        coordinator.db_manager.update_articles_score_bulk.return_value = True
+
+        result = await coordinator.execute({}, dry_run=False)
+
+        assert result["success"] is True
+        # Verify stats detail both
+        assert result["statistics"]["articles_scored"] == 2
+        assert result["statistics"]["new_articles_scored"] == 1
+        assert result["statistics"]["completed_articles_rescored"] == 1
+        assert result["statistics"]["articles_included"] == 2
+        assert result["statistics"]["average_score"] == 0.725
+        assert result["processed_articles"] == 2
+
+        # Verify rescore lookback read from config defaults to 14
+        coordinator.db_manager.get_completed_articles_for_rescoring.assert_called_once_with(days_back=14)
+
+        # Verify both payloads are passed to scorer
+        coordinator.scorer.score_batch_async.assert_called_once()
+        called_payloads = coordinator.scorer.score_batch_async.call_args[0][0]
+        assert len(called_payloads) == 2
+        assert called_payloads[0]["title"] == "Pending A"
+        assert called_payloads[1]["title"] == "Completed B"
+
+        # Verify bulk updates received both
+        coordinator.db_manager.update_articles_score_bulk.assert_called_once()
+        called_updates = coordinator.db_manager.update_articles_score_bulk.call_args[0][0]
+        assert len(called_updates) == 2
+        assert called_updates[0] == (1, {"final_score": 0.8, "should_include": True})
+        assert called_updates[1] == (2, {"final_score": 0.65, "should_include": True})
+
+    @pytest.mark.asyncio
+    async def test_rescoring_lookback_override(self, coordinator):
+        coordinator.config_override = {"rescore_days_back": 7}
+        coordinator.db_manager.get_pending_articles.return_value = []
+        coordinator.db_manager.get_completed_articles_for_rescoring.return_value = []
+
+        await coordinator.execute({}, dry_run=False)
+
+        # Verify lookback overridden correctly
+        coordinator.db_manager.get_completed_articles_for_rescoring.assert_called_once_with(days_back=7)
+
