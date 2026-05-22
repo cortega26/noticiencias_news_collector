@@ -399,10 +399,16 @@ class EditorAgent:
         # internally.  Override all stage attrs to the provider's own model so
         # that (a) call sites pass the correct identifier and (b) the routing log
         # reflects the model that will actually be used.
+        from news_collector.infrastructure.llm.factory import FallbackProvider
         from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
         from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
-        if isinstance(self.provider, (NvidiaProvider, GeminiProvider)):
+        is_cloud = isinstance(self.provider, (NvidiaProvider, GeminiProvider))
+        if isinstance(self.provider, FallbackProvider):
+            primary = self.provider.providers[0]
+            is_cloud = isinstance(primary, (NvidiaProvider, GeminiProvider))
+
+        if is_cloud:
             cloud_model = getattr(self.provider, "model", self.model)
             self.model = cloud_model
             self.translator_model = cloud_model
@@ -569,6 +575,53 @@ class EditorAgent:
             logger.error(f"Error communicating with {provider_name}: {e}")
             raise
 
+    def _load_technical_glossary(self) -> dict:
+        """Loads the technical glossary containing proper nouns, acronyms, and terms."""
+        try:
+            path = (
+                Path(__file__).resolve().parents[3]
+                / "news_collector"
+                / "data"
+                / "technical_glossary.json"
+            )
+            if path.exists():
+                return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load technical glossary: {e}")
+        return {}
+
+    def _format_technical_glossary_for_prompt(self, glossary: dict) -> str:
+        """Formats the glossary into a readable block for LLM prompts."""
+        if not glossary:
+            return ""
+
+        lines = ["\n\nGLOSARIO TÉCNICO Y REGLAS DE TRADUCCIÓN/EDICIÓN:"]
+
+        brands = glossary.get("brands_and_proper_nouns", [])
+        if brands:
+            lines.append(
+                "- Nombres propios de marcas/productos (NO llevan cursiva, usar mayúscula inicial):"
+            )
+            lines.append("  " + ", ".join(brands))
+
+        acronyms = glossary.get("acronyms", {})
+        if acronyms:
+            lines.append(
+                "- Siglas/Acrónimos (deben expandirse en su primera aparición en español de esta manera):"
+            )
+            for acr, desc in acronyms.items():
+                lines.append(f"  * {acr}: {desc}")
+
+        terms = glossary.get("technical_terms", {})
+        if terms:
+            lines.append(
+                "- Términos técnicos estándar (mantener en español o, si se usan en inglés, deben ir en *cursiva*):"
+            )
+            for eng, esp in terms.items():
+                lines.append(f"  * {eng} -> {esp}")
+
+        return "\n".join(lines)
+
     def _load_scientific_entities(self) -> str:
         """Loads the canonical list of scientific entities for prompt injection."""
         try:
@@ -601,6 +654,12 @@ class EditorAgent:
         if entities_context:
             system_prompt += entities_context
 
+        # Inject Technical Glossary
+        glossary = self._load_technical_glossary()
+        glossary_context = self._format_technical_glossary_for_prompt(glossary)
+        if glossary_context:
+            system_prompt += glossary_context
+
         return self._send_prompt(
             content, system=system_prompt, model=self.translator_model
         )
@@ -621,6 +680,13 @@ class EditorAgent:
         """
         editor_cfg = self.prompts.get("editor", {})
         system_prompt = editor_cfg.get("system", "")
+
+        # Inject Technical Glossary
+        glossary = self._load_technical_glossary()
+        glossary_context = self._format_technical_glossary_for_prompt(glossary)
+        if glossary_context:
+            system_prompt += glossary_context
+
         user_template = editor_cfg.get("user_template")
 
         context_block = self._format_editor_context_block(context)
@@ -704,18 +770,48 @@ class EditorAgent:
 
         if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
             logger.info("Translation Guard Disabled (Critic Pass Skipped)")
-            return True, None
+            return True, None, True
 
         system_prompt = "You are a Quality Control Editor. Output ONLY JSON."
 
         # Load entities for the critic to check against
         entities_context = self._load_scientific_entities()
 
+        # Load glossary
+        glossary = self._load_technical_glossary()
+
+        # Build glossary context for the critic
+        glossary_lines = []
+        brands = glossary.get("brands_and_proper_nouns", [])
+        if brands:
+            glossary_lines.append(
+                "Approved Brands and Proper Nouns (must be allowed un-italicized, e.g. normal capitalization):"
+            )
+            glossary_lines.append("  " + ", ".join(brands))
+        acronyms = glossary.get("acronyms", {})
+        if acronyms:
+            glossary_lines.append(
+                "Approved Acronyms (must be allowed, especially when explained or expanded in Spanish on first use):"
+            )
+            for acr, desc in acronyms.items():
+                glossary_lines.append(f"  * {acr} ({desc})")
+        technical_terms = glossary.get("technical_terms", {})
+        if technical_terms:
+            glossary_lines.append(
+                "Approved Technical Terms (must be allowed when in *italics*):"
+            )
+            for eng, esp in technical_terms.items():
+                glossary_lines.append(f"  * {eng} / {esp}")
+
+        glossary_context = "\n".join(glossary_lines) if glossary_lines else ""
+
         prompt = (
             "Analyze the following text across four criteria:\n\n"
             "1. LANGUAGE: Is the body written entirely in Spanish?\n"
             "   - Intentional anglicisms in *italics* (e.g. *machine learning*, *dark matter*) are allowed.\n"
             "   - Named entities kept in English (e.g. 'Dark Energy Survey', 'VLT') are allowed.\n"
+            "   - Proper nouns, brand/product names, or platform names (e.g., Google, Gemini, Common Crawl, OpenAI, Facebook, X, Microsoft, Apple, etc.) do NOT require italics and are fully allowed in Spanish prose.\n"
+            "   - Technical acronyms/siglas (e.g. IPI, SEO, API, LLM) are allowed, and when expanded/explained in Spanish on first use they must NOT be flagged as English fragments.\n"
             "   - FAIL: The entire text is in English instead of Spanish.\n"
             "   - FAIL: mid-sentence English fragments fused with Spanish, e.g. 'makingla invisible', "
             "'whereas los resultados', 'however se observó'. These are untranslated remnants.\n\n"
@@ -726,12 +822,15 @@ class EditorAgent:
             "   Example FAIL (if VLT in text): 'Telescopio Muy Grande' (keep as 'Very Large Telescope' or 'VLT').\n"
             "   If NO entities from the list appear in the text, criterion 3 passes automatically.\n\n"
             "4. COMPLETENESS: Is the text a complete article (not truncated mid-sentence)?\n\n"
+            "Approved Reference Glossary:\n"
+            f"{glossary_context}\n\n"
             "Rate overall confidence 0-100.\n"
-            "Set score=0 ONLY IF at least one criterion fails:\n"
-            "  - Criterion 1: text contains untranslated English fragments fused into Spanish prose.\n"
+            "Set score=0 ONLY IF at least one criterion fails fundamentally:\n"
+            "  - Criterion 1: text contains major untranslated English fragments fused into Spanish prose (exclude approved brand names/acronyms/italicized terms).\n"
             "  - Criterion 2: topic is not science/technology.\n"
             "  - Criterion 3: a canonical entity is literally translated.\n"
             "  - Criterion 4: text is clearly truncated or incomplete.\n\n"
+            "For minor formatting/acronym warnings (e.g., acronyms not expanded on first use, or approved technical terms missing italics), DO NOT set score=0. Instead, deduct only 10-15 points (score should be 80-85, indicating a warning/pass, not failure).\n"
             "Set recoverable=false ONLY when Criterion 2 fails (wrong topic). "
             "Criteria 1, 3, and 4 are always recoverable via rewriting.\n"
             'Output JSON: {"score": integer, "reason": "short string", "recoverable": true_or_false}\n\n'
@@ -1105,7 +1204,37 @@ class EditorAgent:
         """
         logger.info(f"🔧 Repairing Editorial Content based on feedback: {feedback}")
         system_prompt = self.prompts.get("editor", {}).get("system", "")
+
+        # Inject Technical Glossary
+        glossary = self._load_technical_glossary()
+        glossary_context = self._format_technical_glossary_for_prompt(glossary)
+        if glossary_context:
+            system_prompt += glossary_context
+
         context_block = self._format_editor_context_block(context)
+
+        # Dynamic exclusion / correction helper for terms in the feedback
+        mentioned = []
+        for brand in glossary.get("brands_and_proper_nouns", []):
+            if brand.lower() in feedback.lower():
+                mentioned.append(brand)
+        for acr in glossary.get("acronyms", {}):
+            if acr.lower() in feedback.lower():
+                mentioned.append(acr)
+        for eng in glossary.get("technical_terms", {}):
+            if eng.lower() in feedback.lower():
+                mentioned.append(eng)
+
+        extra_instruction = ""
+        if mentioned:
+            extra_instruction = (
+                f"\n\nATENCIÓN: El crítico ha señalado los términos: {mentioned}. "
+                "Recuerda las reglas del glosario:\n"
+                "- Si son nombres propios de marcas/productos (ej. Gemini, Common Crawl), NO llevan cursiva y se usan con mayúscula inicial normal.\n"
+                "- Si son siglas/acrónimos (ej. IPI, SEO), deben expandirse y explicarse en español en su primera aparición (ej. 'inyecciones indirectas de indicaciones (IPI)').\n"
+                "- Si son términos técnicos (ej. *machine learning*), deben ir en *cursiva* si se dejan en inglés, o bien traducirse al español."
+            )
+
         repair_prompt = (
             "La versión anterior fue rechazada por el Editor en Jefe por la siguiente razón:\n"
             f"'{feedback}'\n\n"
@@ -1113,7 +1242,8 @@ class EditorAgent:
             "Mantené el contenido factual del texto base, pero corregí lo señalado.\n"
             "IMPORTANTE: escribí el artículo COMPLETO de principio a fin. No lo trunques. "
             "Debe terminar con una oración completa (que cierre en '.', '!' o '?'). "
-            "Si te quedás sin espacio, resumí en lugar de truncar.\n\n"
+            "Si te quedás sin espacio, resumí en lugar de truncar."
+            f"{extra_instruction}\n\n"
             "## Contexto situacional\n\n"
             f"{context_block}\n\n"
             "## Contenido base a reescribir\n\n"

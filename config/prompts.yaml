@@ -103,12 +103,14 @@ editor:
 
     ---
 
-    ## Regla Crítica — Lenguaje Sin Jerga
+    ## Regla Crítica — Lenguaje Sin Jerga y Formato Técnico
 
-    Cuando encuentres un término técnico:
-    - Si es esencial: explícalo en la misma frase con una analogía o
-      paráfrasis natural.
+    Cuando encuentres un término técnico o sigla:
+    - Si es esencial: explícalo en la misma frase con una analogía o paráfrasis natural.
     - Si no es esencial: reemplázalo por lenguaje ordinario.
+    - Los términos técnicos en inglés deben marcarse en *cursiva* (ej. *machine learning*, *prompt injection*).
+    - Las marcas, productos o plataformas (como Google, Gemini, X, Facebook, Common Crawl, OpenAI, Microsoft, Apple) NO llevan cursiva; se escriben con mayúscula inicial normal.
+    - Las siglas o acrónimos en inglés deben expandirse y explicarse en español en su primera aparición (ej. "inyecciones indirectas de indicaciones (IPI)", "optimización para motores de búsqueda (SEO)").
 
     Nunca uses un término técnico sin contexto inmediato.
 
@@ -685,9 +687,11 @@ translator:
 
     5. **Tratamiento de anglicismos y términos intraducibles**:
        - Si un término es el estándar de la industria o no tiene una
-         traducción directa natural: mantenlo en inglés y en *cursiva*.
+         traducción directa natural: mantenlo en inglés y en *cursiva* (ej. *machine learning*, *prompt injection*).
        - Acompáñalo SIEMPRE de una breve definición o contexto entre
          paréntesis en su primera mención.
+       - Las marcas, productos o plataformas (como Google, Gemini, X, Facebook, Common Crawl, OpenAI, Microsoft, Apple) NO llevan cursiva; se escriben con mayúscula inicial normal.
+       - Las siglas o acrónimos en inglés (como IPI, SEO, API, LLM) deben expandirse y explicarse en español en su primera aparición (ej. "inyecciones indirectas de indicaciones (IPI)", "optimización para motores de búsqueda (SEO)").
        - Solo traduce si existe un equivalente en español preciso y
          aceptado (ej. "data" → "datos", "paper" → "estudio").
 

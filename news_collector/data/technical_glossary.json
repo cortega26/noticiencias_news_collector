@@ -1,0 +1,33 @@
+{
+  "brands_and_proper_nouns": [
+    "Gemini",
+    "Facebook",
+    "X",
+    "Google",
+    "DeepMind",
+    "Common Crawl",
+    "Reddit",
+    "NVIDIA",
+    "NIM",
+    "OpenAI",
+    "ChatGPT",
+    "Microsoft",
+    "Apple"
+  ],
+  "acronyms": {
+    "IPI": "inyecciones indirectas de indicaciones (IPI, del inglés Indirect Prompt Injection)",
+    "SEO": "optimización para motores de búsqueda (SEO, del inglés Search Engine Optimization)",
+    "API": "interfaz de programación de aplicaciones (API, del inglés Application Programming Interface)",
+    "LLM": "modelo de lenguaje grande (LLM, del inglés Large Language Model)",
+    "URL": "dirección web (URL)",
+    "AI": "inteligencia artificial (IA)"
+  },
+  "technical_terms": {
+    "indirect prompt injection": "inyección indirecta de indicaciones",
+    "machine learning": "aprendizaje automático",
+    "deep learning": "aprendizaje profundo",
+    "exfiltration": "exfiltración",
+    "phishing": "phishing",
+    "exploit": "exploit"
+  }
+}

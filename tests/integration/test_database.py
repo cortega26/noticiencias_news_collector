@@ -430,7 +430,9 @@ def test_get_completed_articles_for_rescoring_and_bulk_update(test_db_manager):
             },
         },
     )
-    test_db_manager.mark_article_published(saved2.id, pr_url="https://noticiencias.com/b")
+    test_db_manager.mark_article_published(
+        saved2.id, pr_url="https://noticiencias.com/b"
+    )
 
     # 3. Create completed but old article (outside lookback)
     art3_data = {
@@ -465,7 +467,9 @@ def test_get_completed_articles_for_rescoring_and_bulk_update(test_db_manager):
         session.commit()
 
     # 4. Fetch for rescoring with 14 days lookback
-    rescored_candidates = test_db_manager.get_completed_articles_for_rescoring(days_back=14)
+    rescored_candidates = test_db_manager.get_completed_articles_for_rescoring(
+        days_back=14
+    )
     assert len(rescored_candidates) == 1
     assert rescored_candidates[0].id == saved1.id
 
@@ -493,7 +497,9 @@ def test_get_completed_articles_for_rescoring_and_bulk_update(test_db_manager):
             "engagement": 0.25,
         },
     }
-    success = test_db_manager.update_articles_score_bulk([(saved1.id, new_score_payload)])
+    success = test_db_manager.update_articles_score_bulk(
+        [(saved1.id, new_score_payload)]
+    )
     assert success is True
 
     with test_db_manager.get_session() as session:
@@ -503,4 +509,3 @@ def test_get_completed_articles_for_rescoring_and_bulk_update(test_db_manager):
         # Preserved manually edited fields:
         assert art.title == "Refinery Manually Edited Title"
         assert art.summary == "Refinery Manually Edited Summary"
-
