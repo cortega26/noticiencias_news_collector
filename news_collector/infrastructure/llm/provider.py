@@ -135,6 +135,11 @@ class OllamaProvider:
         model: Optional[str] = None,
     ) -> Dict[str, Any]:
         use_model = model or self.model
+        if use_model is not None and (
+            "/" in str(use_model) or "gemini" in str(use_model).lower()
+        ):
+            use_model = self.model or "qwen2.5:32b"
+
         if use_model is None:
             raise ValueError(
                 "Ollama model is not configured. Provide a model in config or pass model=..."
