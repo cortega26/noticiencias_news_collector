@@ -85,7 +85,7 @@ st.set_page_config(
 
 # Premium Custom CSS Injection
 def inject_custom_css():
-    st.markdown(
+    st.html(
         """<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* Reset and core fonts */
@@ -311,8 +311,7 @@ div[data-testid="stDataFrame"] {
     color: #64748b !important;
     font-size: 0.8rem !important;
 }
-</style>""",
-        unsafe_allow_html=True,
+</style>"""
     )
 
 
