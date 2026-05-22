@@ -183,7 +183,11 @@ class PreScorer:
             f"TASK: Identify the {limit} strongest stories for Noticiencias, a science-and-technology publication for Latin American readers.\n"
             "Prefer stories with either a direct Latin American connection OR strong universal relevance for a curious Spanish-speaking reader.\n"
             "Prioritize: breakthroughs, evidence-driven research, health, climate, AI, space, biodiversity, public-interest science, and consequential technology.\n"
-            "Down-rank hyper-local campus administration, alumni updates, awards, fundraising, internal university announcements, and minor product/partnership news.\n\n"
+            "STRICTLY DOWN-RANK/REJECT the following categories:\n"
+            "1. Commercial developer/software tutorials & corporate cloud guides (e.g., AWS, Azure, GCP, SageMaker, Bedrock, Kubernetes, DevOps, Terraform, SDKs, API gateways, deployment guides, commercial product/feature launches).\n"
+            "2. US domestic/local politics, partisan battles, & court cases (e.g., Supreme Court rulings, election campaigns/results, Senate/House debates, GOP/Democrat/republican policy disputes, local government administrative issues).\n"
+            "3. Highly academic/niche computer science preprints & ML jargon (e.g., arXiv papers, OOD generalization, mechanistic interpretability, sparse autoencoders, transformer architecture, mathematical proofs/theorems).\n"
+            "4. Hyper-local university updates (campus administration, alumni, dean/provost changes, fundraising, commencement, student government).\n\n"
             f"RESPONSE FORMAT: Return valid JSON containing ONLY a list of the integers corresponding to the top {limit} indices, ordered by relevance.\n"
             'Example: {"selected_indices": [3, 0, 7, 1, 4]}'
         )
