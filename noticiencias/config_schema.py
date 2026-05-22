@@ -476,6 +476,10 @@ class ScoringConfig(StrictModel):
         description="Ollama model to use for cognitive scoring.",
         examples=["qwen2.5:14b", "qwen2.5:32b"],
     )
+    rescore_days_back: PositiveInt = Field(
+        default=14,
+        description="Lookback window in days to re-score completed unpublished articles.",
+    )
 
 
 class TextProcessingConfig(StrictModel):

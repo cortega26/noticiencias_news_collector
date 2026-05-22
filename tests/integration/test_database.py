@@ -367,3 +367,140 @@ def test_update_article_audit_status_persists_reason(test_db_manager) -> None:
         assert audit_meta["state"] == "audit_failed"
         assert "timeout" in audit_meta["reason"]
         assert audit_meta["attempts"] == 3
+
+
+def test_get_completed_articles_for_rescoring_and_bulk_update(test_db_manager):
+    # 1. Create completed but unpublished article (within lookback)
+    art1_data = {
+        "title": "Unpublished Completed Article A",
+        "url": "http://test.com/rescore-1",
+        "source_id": "src1",
+        "category": "general",
+        "published_date": datetime.now(timezone.utc),
+        "source_name": "Source A",
+        "summary": "Valid summary content length check pass",
+        "content": "Content " * 200,
+        "word_count": 100,
+        "reading_time_minutes": 1,
+    }
+    saved1 = test_db_manager.save_article(art1_data)
+    test_db_manager.update_article_score(
+        saved1.id,
+        {
+            "final_score": 0.7,
+            "should_include": True,
+            "components": {
+                "source_credibility": 0.7,
+                "recency": 0.7,
+                "content_quality": 0.7,
+                "engagement_potential": 0.7,
+            },
+            "weights": {
+                "source_credibility": 0.25,
+                "recency": 0.25,
+                "content_quality": 0.25,
+                "engagement": 0.25,
+            },
+        },
+    )
+
+    # 2. Create completed but published article
+    art2_data = {
+        **art1_data,
+        "title": "Published Completed Article B",
+        "url": "http://test.com/rescore-2",
+    }
+    saved2 = test_db_manager.save_article(art2_data)
+    test_db_manager.update_article_score(
+        saved2.id,
+        {
+            "final_score": 0.8,
+            "should_include": True,
+            "components": {
+                "source_credibility": 0.8,
+                "recency": 0.8,
+                "content_quality": 0.8,
+                "engagement_potential": 0.8,
+            },
+            "weights": {
+                "source_credibility": 0.25,
+                "recency": 0.25,
+                "content_quality": 0.25,
+                "engagement": 0.25,
+            },
+        },
+    )
+    test_db_manager.mark_article_published(saved2.id, pr_url="https://noticiencias.com/b")
+
+    # 3. Create completed but old article (outside lookback)
+    art3_data = {
+        **art1_data,
+        "title": "Old Completed Article C",
+        "url": "http://test.com/rescore-3",
+    }
+    saved3 = test_db_manager.save_article(art3_data)
+    test_db_manager.update_article_score(
+        saved3.id,
+        {
+            "final_score": 0.6,
+            "should_include": True,
+            "components": {
+                "source_credibility": 0.6,
+                "recency": 0.6,
+                "content_quality": 0.6,
+                "engagement_potential": 0.6,
+            },
+            "weights": {
+                "source_credibility": 0.25,
+                "recency": 0.25,
+                "content_quality": 0.25,
+                "engagement": 0.25,
+            },
+        },
+    )
+    # Manually backdate collected_date for C to 20 days ago
+    with test_db_manager.get_session() as session:
+        art = session.query(Article).filter_by(id=saved3.id).first()
+        art.collected_date = datetime.now(timezone.utc) - timedelta(days=20)
+        session.commit()
+
+    # 4. Fetch for rescoring with 14 days lookback
+    rescored_candidates = test_db_manager.get_completed_articles_for_rescoring(days_back=14)
+    assert len(rescored_candidates) == 1
+    assert rescored_candidates[0].id == saved1.id
+
+    # 5. Simulate manual edits on saved1 in Refinery
+    with test_db_manager.get_session() as session:
+        art = session.query(Article).filter_by(id=saved1.id).first()
+        art.title = "Refinery Manually Edited Title"
+        art.summary = "Refinery Manually Edited Summary"
+        session.commit()
+
+    # 6. Bulk-update score and assert title/summary are preserved
+    new_score_payload = {
+        "final_score": 0.95,
+        "should_include": True,
+        "components": {
+            "source_credibility": 0.95,
+            "recency": 0.95,
+            "content_quality": 0.95,
+            "engagement_potential": 0.95,
+        },
+        "weights": {
+            "source_credibility": 0.25,
+            "recency": 0.25,
+            "content_quality": 0.25,
+            "engagement": 0.25,
+        },
+    }
+    success = test_db_manager.update_articles_score_bulk([(saved1.id, new_score_payload)])
+    assert success is True
+
+    with test_db_manager.get_session() as session:
+        art = session.query(Article).filter_by(id=saved1.id).first()
+        assert art.final_score == 0.95
+        assert art.processing_status == "completed"
+        # Preserved manually edited fields:
+        assert art.title == "Refinery Manually Edited Title"
+        assert art.summary == "Refinery Manually Edited Summary"
+

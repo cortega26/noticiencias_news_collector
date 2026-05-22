@@ -92,6 +92,7 @@
 | scoring.source_cap_percentage | float | 0.5 |  |  |  |
 | scoring.topic_cap_percentage | float | 0.6 |  |  |  |
 | scoring.llm_model | str | "qwen2.5:32b" | Ollama model to use for cognitive scoring. |  | qwen2.5:14b, qwen2.5:32b |
+| scoring.rescore_days_back | int | 14 | Lookback window in days to re-score completed unpublished articles. |  |  |
 | text_processing | TextProcessingConfig |  |  |  |  |
 | text_processing.supported_languages | List | ["en", "es", "pt", "fr"] | Languages supported by NLP routines. |  |  |
 | text_processing.min_content_length | int | 750 | Minimum number of characters required for an article. |  |  |

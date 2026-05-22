@@ -70,6 +70,7 @@ reranker_seed = 1337
 source_cap_percentage = 0.5
 topic_cap_percentage = 0.6
 llm_model = "qwen2.5:32b"
+rescore_days_back = 14
 
 [scoring.weights]
 source_credibility = 0.1

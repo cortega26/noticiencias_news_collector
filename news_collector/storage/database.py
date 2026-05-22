@@ -368,6 +368,11 @@ class DatabaseManager:
     ) -> List[Article]:
         return self.articles.get_pending_articles(limit, status)
 
+    def get_completed_articles_for_rescoring(
+        self, days_back: int = 14
+    ) -> List[Article]:
+        return self.articles.get_completed_articles_for_rescoring(days_back)
+
     def update_validation_status_bulk(self, mappings: List[Dict[str, Any]]) -> bool:
         return self.articles.update_validation_status_bulk(mappings)
 
