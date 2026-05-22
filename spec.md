@@ -1,49 +1,48 @@
-# Spec: Automatic Re-scoring and Re-ranking of Completed Unpublished Articles
+# Spec: Refinery Streamlit App Revamp and Cloud Provider Fix
 
 ## Goals
-- Fix the issue where already scored (vetted) articles are never re-scored or re-ordered, causing their time-decaying scores (like recency) to become stale.
-- Automatically re-score and re-rank completed but unpublished articles from the last N days (default 14 days, configurable via `config.toml`) during each collection cycle.
-- Leverage the cognitive scorer's built-in caching (`data/cache_cognitive.db`) to ensure that already-scored articles do not hit the LLM API, ensuring near-zero overhead while allowing their freshness/recency decay and final score to be recalculated.
-- Protect manually edited metadata: ensure that only `final_score`, `score_components`, and `processing_status` are updated in the database for candidate completed articles, preserving any manual title, summary, category, or tag edits made in Refinery.
+- Resolve the issue where selecting "Cloud" in the Streamlit UI displays a warning that no cloud provider is active, even though `NOTICIENCIAS__NVIDIA__API_KEY` is configured in the `.env` file.
+- Perform a complete revamp of the Streamlit App layout, design, and user experience to make it look premium, intuitive, and highly aligned with the project.
+- Inject a global custom CSS design system (fonts, shadows, slate backgrounds, clean cards, hover states, metric highlights) for a polished, state-of-the-art UI/UX.
 
 ## Implementation Details
 
-### 1. Database Repository Updates
-In `news_collector/storage/article_repository.py` (and exposed via `news_collector/storage/database.py`):
-- Implement `get_completed_articles_for_rescoring(self, days_back: int = 14) -> List[Article]`
-- This method queries the database for articles where:
-  - `processing_status == "completed"`
-  - `published_at` is `None` AND `published_url` is `None` (not yet published)
-  - `collected_date >= now() - days_back`
-- Ensure all returned articles are expunged from the SQLAlchemy session (to avoid thread/session sharing issues, matching other queries).
+### 1. AI Provider Resolution
+- In `apps/refinery/admin_panel.py`, unwrap the active provider if it's a `FallbackProvider` instance.
+- Check if it has a `providers` attribute and is not empty; if so, assign the first item (`_active_provider.providers[0]`) to the resolved active provider variable.
+- This ensures that:
+  - `isinstance(actual_provider, NvidiaProvider)` and `isinstance(actual_provider, GeminiProvider)` checks succeed.
+  - Model attributes are read directly from the underlying provider, avoiding AttributeError exceptions on `FallbackProvider`.
 
-### 2. Scoring Coordinator Updates
-In `news_collector/scoring/coordinator.py`:
-- Retrieve `rescore_days_back` from `SCORING_CONFIG` (default: 14 days).
-- In `execute()`:
-  - Query new articles pending scoring: `pending_articles = self.db_manager.get_pending_articles(status="validated")`.
-  - Query completed articles to be rescored: `completed_articles = self.db_manager.get_completed_articles_for_rescoring(days_back=rescore_days_back)`.
-  - Combine both lists into a single list of articles to score.
-  - Process them through the scorer as usual.
-  - The scorer's cache check will ensure `completed_articles` hit the SQLite cache, fetching cached LLM cognitive dimensions instantly and recalculating time decay.
-  - Use `self.db_manager.update_articles_score_bulk()` to update the scores, components, and status of all scored/rescored articles back to the DB.
-  - Update `scoring_stats` counters and logs to reflect the number of new articles scored versus existing completed articles rescored.
+### 2. UI Restructuring
+- Introduce a **persistent sidebar** to act as a dashboard header:
+  - Display the project logo: Noticiencias Refinery.
+  - Show the resolved Editorial Mode (Strict, Velocity, Standard) with a colored badge or card.
+  - Show the resolved Active AI Engine details (provider type, specific model, status dot).
+  - Show Database Status: active path, size on disk (in MB), and connection state.
+  - Show Repository Status: source/target checkouts, branch info, commit hashes, Pages deploy health metrics.
+- Group the main viewport tabs into:
+  1. `🏠 Escritorio (Curation Desk)`: Focus area for ingestion, sync, and article refining. Includes manual URL load, ranked candidates list, and a clean curation panel for selected articles.
+  2. `🖼️ Cola de Imágenes (Image Queue)`: View and edit briefs for articles lacking images, upload curated images.
+  3. `🚀 Contenido Publicado (Live CMS)`: Display published posts, rigor metrics, Pages deploy status, and actions to unpublish/reset.
+  4. `📡 Gestión de Fuentes (Source Manager)`: View feed status, latency, error reports, and manage RSS feeds.
+  5. `🧠 Prompts (Prompt Lab)`: Edit prompts for translator, editor, and headlines stages.
+  6. `⚙️ Configuración (Settings & Logs)`: Adjust scoring weights, keywords, Ollama endpoint, reset actions, and activity logs.
 
-### 3. Config Updates
-In `config.toml`, add under `[scoring]`:
-```toml
-rescore_days_back = 14
-```
+### 3. Styling Enhancements
+- Load the Google Font `Outfit` for a modern, sleek typography.
+- Inject CSS to color-code alert boxes (success, info, warning, error), tabs, and form buttons.
+- Create container classes like `.refinery-card` for visual grouping.
+- Replace basic text metrics with styled columns and progress bars illustrating score weights (`source_credibility`, `recency`, `content_quality`, `engagement_potential`) on selected candidates.
 
 ## Verification
 
 ### Automated Tests
-- Run standard validations: `make lint`, `make type`, `make test`.
-- Add unit tests in `tests/unit/scoring/test_scoring_coordinator.py` to assert that:
-  - `get_completed_articles_for_rescoring` is called.
-  - Completed unpublished articles are scored alongside pending ones.
-  - The results are saved back via bulk updates.
-- Add integration tests in `tests/integration/test_rescoring.py` (or extend an existing integration test) to verify end-to-end database retrieval, caching, time decay recalculation, and database updates.
+- Run `make lint` to verify coding style and syntax.
+- Run `make type` to verify static typing.
+- Run `make test` to verify full unit tests.
 
 ### Manual Verification
-- Verify in Refinery/SQLite that executing the collection/scoring cycle re-scores older unpublished articles.
+- Launch the Streamlit panel locally using `make refinery`.
+- Verify the cloud provider is correctly detected (displays NVIDIA NIM as active when the API key is set in `.env`).
+- Verify visual improvements on the tabs, sidebar, and score progress bars.
