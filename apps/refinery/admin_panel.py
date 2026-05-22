@@ -45,7 +45,6 @@ run_refinery = refinery_main.main
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from apps.refinery.published_content import (
-    fetch_pages_deploy_health,
     find_local_target_checkout,
     find_published_article_by_refinery_id,
     get_repo_head_sha,
@@ -54,8 +53,6 @@ from apps.refinery.published_content import (
 )
 from news_collector.config import settings as config_settings
 from news_collector.infrastructure.llm.factory import get_provider
-from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
-from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
@@ -85,37 +82,231 @@ st.set_page_config(
     page_title="Panel de Control Noticiencias", page_icon="🎛️", layout="wide"
 )
 
-st.title("🎛️ Panel de Control Unificado Noticiencias")
 
-# --- Editorial Mode Badge ---
-from news_collector.editorial.policy import EditorialPolicy
-
-# Load Config (We need to reload it to get fresh values or just load it here)
-# refinery_main has config object usually?
-# Let's load mode from config.toml directly or via config_manager
-try:
-    sys_config = config_settings.refresh_runtime_config()
-    editorial_mode = getattr(sys_config.app, "editorial_mode", "standard")
-    policy = EditorialPolicy.from_mode(editorial_mode)
-
-    # Display Badge
-    mode_color = "blue"
-    if policy.mode == "strict":
-        mode_color = "red"
-    elif policy.mode == "velocity":
-        mode_color = "green"
-
+# Premium Custom CSS Injection
+def inject_custom_css():
     st.markdown(
-        f"""
-        <div style="padding: 10px; border-radius: 5px; background-color: rgba(28, 131, 225, 0.1); border: 1px solid {mode_color}; margin-bottom: 20px;">
-            <h4 style="margin:0; color: {mode_color};">🛡️ Editorial Mode: {policy.mode.upper()}</h4>
-            <small>Critic Threshold: <b>{policy.critic_threshold}</b> | Auditor Threshold: <b>{policy.auditor_threshold}</b> | Caveats Required: <b>{policy.require_caveats}</b></small>
-        </div>
-        """,
+        """
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+    /* Reset and core fonts */
+    html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, button, select, input, textarea {
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    }
+    code, pre, [class*="mono"] {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Page Background and Layout adjustments */
+    .stApp {
+        background-color: #0d111d !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #090d16 !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        font-size: 0.95rem !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Headings styling */
+    h1 {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800 !important;
+        letter-spacing: -0.03em !important;
+        padding-bottom: 0.4em !important;
+    }
+
+    h2, h3 {
+        color: #f8fafc !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.02em !important;
+        border-bottom: none !important;
+        margin-top: 1.5rem !important;
+    }
+
+    h4, h5, h6 {
+        color: #cbd5e1 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Metric Container overrides */
+    [data-testid="metric-container"] {
+        background: rgba(30, 41, 59, 0.45) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 16px !important;
+        padding: 16px 20px !important;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    [data-testid="metric-container"]:hover {
+        transform: translateY(-2px) !important;
+        border-color: rgba(56, 189, 248, 0.25) !important;
+        box-shadow: 0 8px 30px rgba(56, 189, 248, 0.08) !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
+        background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    [data-testid="stMetricLabel"] {
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.1em !important;
+        font-weight: 600 !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Custom premium-card class for visual groupings */
+    .premium-card {
+        background: rgba(30, 41, 59, 0.35) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
+        margin-bottom: 24px !important;
+        backdrop-filter: blur(12px) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .premium-card:hover {
+        border-color: rgba(56, 189, 248, 0.2) !important;
+        box-shadow: 0 15px 40px rgba(56, 189, 248, 0.05) !important;
+    }
+
+    /* Beautiful custom status info badges */
+    .custom-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-right: 8px;
+        margin-bottom: 8px;
+    }
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-green { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    /* Buttons styling */
+    .stButton button {
+        background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        padding: 10px 24px !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        width: auto !important;
+    }
+    .stButton button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45) !important;
+        background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important;
+    }
+    .stButton button:active {
+        transform: translateY(0px) !important;
+    }
+
+    /* Secondary actions reset button styling */
+    .stButton button[class*="secondary"] {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: none !important;
+    }
+    .stButton button[class*="secondary"]:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Tab container modifications */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: rgba(15, 23, 42, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 6px 12px 0 12px !important;
+        gap: 4px !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        font-weight: 500 !important;
+        font-size: 0.95rem !important;
+        padding: 10px 18px !important;
+        border-radius: 8px 8px 0 0 !important;
+        transition: all 0.2s ease !important;
+        border-bottom: none !important;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #f1f5f9 !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #38bdf8 !important;
+        background-color: rgba(30, 41, 59, 0.4) !important;
+        border-bottom: 2px solid #38bdf8 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Table / Dataframe wrapper styling */
+    div[data-testid="stDataFrame"] {
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+
+    /* Custom visual progress bar */
+    .progress-bar-container {
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 8px;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+        transition: width 0.5s ease-in-out;
+    }
+
+    /* Tooltip and caption styling */
+    .stCaption {
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+    }
+    </style>
+    """,
         unsafe_allow_html=True,
     )
-except Exception as e:
-    st.error(f"Failed to load editorial policy: {e}")
+
+
+inject_custom_css()
+
+st.title("🎛️ Panel de Control Unificado Noticiencias")
+
+# The editorial mode badge has been relocated to the persistent sidebar.
 
 
 # Paths
@@ -313,6 +504,63 @@ def render_article_processing_panel(  # noqa: C901
         st.caption(source_note)
     render_fetch_attempts(fetch_attempts)
 
+    # Render candidate scoring components with custom progress bars
+    components = selected_art.get("components") or {}
+    source_cred = float(components.get("source_credibility", 0.0))
+    recency = float(components.get("recency", 0.0))
+    quality = float(components.get("content_quality", 0.0))
+    engagement = float(
+        components.get(
+            "engagement_potential", components.get("cognitive_engagement_norm", 0.0)
+        )
+    )
+    overall_score = float(selected_art.get("score", 0.0))
+
+    st.markdown(
+        f"""
+    <div class="premium-card">
+        <h4 style="margin-top:0; color:#38bdf8;">🎯 Puntuación de Relevancia: {overall_score:.2f}</h4>
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px;">
+                <span>Credibilidad de Fuente</span>
+                <span>{source_cred * 100:.1f}%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {source_cred * 100:.1f}%; background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 100%);"></div>
+            </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px;">
+                <span>Recencia / Frescura</span>
+                <span>{recency * 100:.1f}%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {recency * 100:.1f}%; background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);"></div>
+            </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px;">
+                <span>Calidad de Contenido</span>
+                <span>{quality * 100:.1f}%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {quality * 100:.1f}%; background: linear-gradient(90deg, #c084fc 0%, #a855f7 100%);"></div>
+            </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px;">
+                <span>Potencial de Engagement</span>
+                <span>{engagement * 100:.1f}%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {engagement * 100:.1f}%; background: linear-gradient(90deg, #34d399 0%, #10b981 100%);"></div>
+            </div>
+        </div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
     with st.expander("📄 Revisar Resumen del Artículo", expanded=False):
         st.write(f"**Título:** {selected_art.get('title')}")
         st.write(f"**Resumen:** {selected_art.get('summary')}")
@@ -501,19 +749,243 @@ def render_article_processing_panel(  # noqa: C901
             st.session_state["op_in_progress"] = False
 
 
-# --- Tabs ---
-tab1, tab_prompts, tab2, tab_images, tab3, tab4, tab5, tab6 = st.tabs(
-    [
-        "⚙️ Motor IA",
-        "📝 Prompts Editoriales",
-        "🕷️ Extractor & Scoring",
-        "🖼️ Briefs de Imagen",
-        "💼 Tareas & PRs",
-        "📈 Analítica",
-        "🚀 Publicados (Live)",
-        "📡 Fuentes",
-    ]
+# --- Sidebar, Global status and Tabs ---
+
+
+@st.cache_data(ttl=600)
+def cached_fetch_pages_deploy_health(
+    target_repo_url: str, current_repo_sha: str | None, github_token: str
+) -> Any:
+    try:
+        from apps.refinery.published_content import fetch_pages_deploy_health
+
+        return fetch_pages_deploy_health(
+            target_repo_url=target_repo_url,
+            current_repo_sha=current_repo_sha,
+            github_token=github_token,
+        )
+    except Exception:
+        return None
+
+
+# Load global configuration and secrets
+global_config_data = load_toml_config() or {}
+global_secrets = dict(load_secrets())
+global_ollama_cfg = global_config_data.get("ollama", {})
+global_current_api = global_ollama_cfg.get(
+    "api_url", "http://localhost:11434/api/generate"
 )
+
+# Resolve active provider for status display
+global_active_provider = None
+with suppress(Exception):
+    global_active_provider = get_provider(
+        config=config_settings.refresh_runtime_config(),
+        api_url=global_current_api,
+        timeout=5,
+    )
+
+global_provider_type = (
+    type(global_active_provider).__name__ if global_active_provider else "NoneType"
+)
+if (
+    global_provider_type == "FallbackProvider"
+    and hasattr(global_active_provider, "providers")
+    and global_active_provider.providers
+):
+    global_active_provider = global_active_provider.providers[0]
+    global_provider_type = (
+        type(global_active_provider).__name__ if global_active_provider else "NoneType"
+    )
+
+global_provider_name = "Ollama (Local)"
+global_provider_model = global_ollama_cfg.get("model", "qwen2.5:32b")
+global_status_dot = "🟢"
+if global_active_provider:
+    if global_provider_type == "NvidiaProvider":
+        global_provider_name = "NVIDIA NIM"
+        global_provider_model = getattr(global_active_provider, "model", "N/A")
+    elif global_provider_type == "GeminiProvider":
+        global_provider_name = "Gemini"
+        global_provider_model = getattr(global_active_provider, "model", "N/A")
+else:
+    global_status_dot = "🔴"
+
+# Database check
+db_size_mb = 0.0
+db_exists = False
+try:
+    if REFINERY_DB_PATH.exists():
+        db_size_mb = REFINERY_DB_PATH.stat().st_size / (1024 * 1024)
+        db_exists = True
+except Exception as e:
+    logging.debug("Could not determine DB stats: %s", e)
+db_status = "🟢 Activa" if db_exists else "🔴 Inexistente"
+db_path_str = REFINERY_DB_PATH.name if db_exists else "N/A"
+
+# Repo Branch & Commit info
+collector_branch = "unknown"
+collector_sha = "unknown"
+try:
+    import git
+
+    repo = git.Repo(PROJECT_ROOT)
+    collector_branch = repo.active_branch.name
+    collector_sha = repo.head.commit.hexsha[:7]
+except Exception as e:
+    logging.debug("Could not determine collector Git stats: %s", e)
+
+target_url = global_secrets.get("TARGET_REPO_URL", "")
+target_branch = "unknown"
+target_sha = "unknown"
+target_dir = BASE_DIR / "temp" / "target"
+try:
+    local_checkout = find_local_target_checkout(
+        target_url,
+        collector_repo_root=PROJECT_ROOT,
+    )
+    if local_checkout and local_checkout.exists():
+        target_repo = git.Repo(local_checkout)
+        target_branch = target_repo.active_branch.name
+        target_sha = target_repo.head.commit.hexsha[:7]
+    elif target_dir.exists():
+        target_repo = git.Repo(target_dir)
+        target_branch = target_repo.active_branch.name
+        target_sha = target_repo.head.commit.hexsha[:7]
+except Exception as e:
+    logging.debug("Could not determine target Git stats: %s", e)
+
+# Pages deploy health
+global_deploy_health = None
+if target_sha and target_sha != "unknown":
+    global_deploy_health = cached_fetch_pages_deploy_health(
+        target_repo_url=target_url,
+        current_repo_sha=target_sha,
+        github_token=global_secrets.get("GITHUB_TOKEN", ""),
+    )
+
+deploy_status_html = ""
+if global_deploy_health:
+    conclusion = global_deploy_health.latest_run_conclusion
+    if conclusion == "success":
+        deploy_status_html = (
+            '<br/>Deploy Pages: <b style="color: #4ade80;">🟢 Exitoso</b>'
+        )
+    elif conclusion == "failure":
+        deploy_status_html = (
+            '<br/>Deploy Pages: <b style="color: #f87171;">🔴 Fallido</b>'
+        )
+    elif conclusion:
+        deploy_status_html = f'<br/>Deploy Pages: <b style="color: #fbbf24;">🟡 {conclusion.capitalize()}</b>'
+    else:
+        deploy_status_html = (
+            '<br/>Deploy Pages: <b style="color: #94a3b8;">⚪ En progreso</b>'
+        )
+
+# Draw persistent sidebar
+with st.sidebar:
+    st.markdown("## 🎛️ Refinería Noticiencias")
+
+    # 1. Editorial Mode Card
+    try:
+        from news_collector.editorial.policy import EditorialPolicy
+
+        sys_config = config_settings.refresh_runtime_config()
+        editorial_mode = getattr(sys_config.app, "editorial_mode", "standard")
+        policy = EditorialPolicy.from_mode(editorial_mode)
+
+        mode_color = "#38bdf8"  # blue/standard
+        if policy.mode == "strict":
+            mode_color = "#f87171"  # red
+        elif policy.mode == "velocity":
+            mode_color = "#4ade80"  # green
+
+        st.markdown(
+            f"""
+            <div style="padding: 14px; border-radius: 12px; background-color: rgba(30, 41, 59, 0.45); border: 1px solid {mode_color}; margin-bottom: 16px;">
+                <h4 style="margin:0; color: {mode_color};">🛡️ Modo Editorial: {policy.mode.upper()}</h4>
+                <div style="font-size: 0.8rem; margin-top: 8px; color: #94a3b8;">
+                    Umbral Crítico: <b>{policy.critic_threshold}</b><br/>
+                    Umbral Auditor: <b>{policy.auditor_threshold}</b><br/>
+                    Advertencias: <b>{"Sí" if policy.require_caveats else "No"}</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    except Exception as e:
+        st.error(f"Error cargando política editorial: {e}")
+
+    # 2. Active AI Engine Card
+    st.markdown(
+        f"""
+        <div style="padding: 14px; border-radius: 12px; background-color: rgba(30, 41, 59, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px;">
+            <h4 style="margin:0; color: #f8fafc;">🤖 Motor de IA {global_status_dot}</h4>
+            <div style="font-size: 0.8rem; margin-top: 8px; color: #94a3b8;">
+                Proveedor: <b>{global_provider_name}</b><br/>
+                Modelo: <code>{global_provider_model}</code>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 3. Database status
+    st.markdown(
+        f"""
+        <div style="padding: 14px; border-radius: 12px; background-color: rgba(30, 41, 59, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px;">
+            <h4 style="margin:0; color: #f8fafc;">💾 Base de Datos</h4>
+            <div style="font-size: 0.8rem; margin-top: 8px; color: #94a3b8;">
+                Estado: <b>{db_status}</b><br/>
+                Archivo: <code>{db_path_str}</code><br/>
+                Tamaño: <b>{db_size_mb:.2f} MB</b>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 4. Repo Status Card
+    st.markdown(
+        f"""
+        <div style="padding: 14px; border-radius: 12px; background-color: rgba(30, 41, 59, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px;">
+            <h4 style="margin:0; color: #f8fafc;">📦 Repositorios</h4>
+            <div style="font-size: 0.8rem; margin-top: 8px; color: #94a3b8;">
+                <b>Colector (Backend):</b><br/>
+                Rama: <code>{collector_branch}</code><br/>
+                SHA: <code>{collector_sha}</code>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(255,255,255,0.08);"/>
+                <b>Sitio Web (Frontend):</b><br/>
+                Rama: <code>{target_branch}</code><br/>
+                SHA: <code>{target_sha}</code>{deploy_status_html}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# --- Consolidated Tabs ---
+tab_escritorio, tab_imagenes, tab_publicado, tab_fuentes, tab_prompts, tab_config = (
+    st.tabs(
+        [
+            "🏠 Escritorio (Curation Desk)",
+            "🖼️ Cola de Imágenes (Image Queue)",
+            "🚀 Contenido Publicado (Live CMS & Analytics)",
+            "📡 Gestión de Fuentes (Source Manager)",
+            "🧠 Prompts (Prompt Lab)",
+            "⚙️ Configuración (Settings & Logs)",
+        ]
+    )
+)
+
+tab3 = tab_escritorio
+tab_images = tab_imagenes
+tab5 = tab_publicado
+tab4 = tab_publicado
+tab6 = tab_fuentes
+tab_prompts = tab_prompts
+tab1 = tab_config
+tab2 = tab_config
 
 # --- Tab 1: AI Settings ---
 with tab1:
@@ -571,8 +1043,21 @@ with tab1:
                 timeout=5,
             )
 
-        _active_is_nvidia = isinstance(_active_provider, NvidiaProvider)
-        _active_is_gemini = isinstance(_active_provider, GeminiProvider)
+        _active_provider_type = (
+            type(_active_provider).__name__ if _active_provider else "NoneType"
+        )
+        if (
+            _active_provider_type == "FallbackProvider"
+            and hasattr(_active_provider, "providers")
+            and _active_provider.providers
+        ):
+            _active_provider = _active_provider.providers[0]
+            _active_provider_type = (
+                type(_active_provider).__name__ if _active_provider else "NoneType"
+            )
+
+        _active_is_nvidia = _active_provider_type == "NvidiaProvider"
+        _active_is_gemini = _active_provider_type == "GeminiProvider"
         _active_is_cloud = _active_is_nvidia or _active_is_gemini
 
         # ── Top-level provider type selector ─────────────────────────────────
@@ -1299,6 +1784,58 @@ with tab2:
                     except Exception as e:
                         st.error(f"Error durante limpieza: {e}")
 
+    st.markdown("---")
+    st.markdown("### 📊 Registro de Actividad Reciente")
+    # Integrated Activity Monitor
+    from news_collector.system.activity_monitor import ActivityMonitor
+
+    # Initialize monitor
+    # Note: We rely on default path resolution in ActivityMonitor, but we can pass explicit if needed.
+    monitor = ActivityMonitor()
+    events = monitor.get_recent_activity(limit=15)  # Show last 15 aggregated events
+
+    from news_collector.utils.refinery_helper import has_no_activity
+
+    if has_no_activity(events):
+        st.info("ℹ️ No hay actividad reciente registrada.")
+    else:
+        for event in reversed(events):  # Show newest first
+            # Icon & Color mapping
+            icon = "🔹"
+            if event.level == "ERROR":
+                icon = "❌"
+            elif event.level == "WARNING":
+                icon = "⚠️"
+            elif event.category == "Lifecycle":
+                icon = "🔄"
+            elif event.category == "Publishing":
+                icon = "🚀"
+            elif event.category == "Scoring":
+                icon = "🧠"
+            elif event.category == "Collection":
+                icon = "📡"
+
+            # Format relative time (approximate)
+            time_label = event.timestamp_str
+            if event.timestamp_dt:
+                time_label = event.timestamp_dt.strftime("%H:%M:%S")
+
+            # Render
+            with st.container():
+                # Columns: Icon | Time | Message
+                c_icon, c_time, c_msg = st.columns([0.5, 1.5, 8])
+                c_icon.write(icon)
+                c_time.caption(time_label)
+                # Style message based on severity
+                if event.level == "ERROR":
+                    c_msg.error(f"[{event.category}] {event.message}")
+                elif event.level == "WARNING":
+                    c_msg.warning(f"[{event.category}] {event.message}")
+                else:
+                    c_msg.markdown(f"**[{event.category}]** {event.message}")
+
+            st.divider()
+
 # --- Tab Images: Editorial Image Briefs ---
 with tab_images:
     st.header("🖼️ Cola Editorial de Imágenes")
@@ -1853,64 +2390,6 @@ with tab3:
     else:
         st.warning("No hay datos. Clic en 'Sincronizar Datos' para buscar artículos.")
 
-    st.markdown("---")
-    st.markdown("### Registro de Actividad Reciente")
-    # Integrated Activity Monitor
-    from news_collector.system.activity_monitor import ActivityMonitor
-
-    st.markdown("### Registro de Actividad Reciente")
-
-    # Initialize monitor
-    # Note: We rely on default path resolution in ActivityMonitor, but we can pass explicit if needed.
-    monitor = ActivityMonitor()
-    events = monitor.get_recent_activity(limit=15)  # Show last 15 aggregated events
-
-    from news_collector.utils.refinery_helper import has_no_activity
-
-    if has_no_activity(events):
-        st.info("ℹ️ No hay actividad reciente registrada.")
-    else:
-        # Custom CSS for timeline-like look (optional, keeping it simple first)
-        for event in reversed(events):  # Show newest first
-
-            # Icon & Color mapping
-            icon = "🔹"
-            if event.level == "ERROR":
-                icon = "❌"
-            elif event.level == "WARNING":
-                icon = "⚠️"
-            elif event.category == "Lifecycle":
-                icon = "🔄"
-            elif event.category == "Publishing":
-                icon = "🚀"
-            elif event.category == "Scoring":
-                icon = "🧠"
-            elif event.category == "Collection":
-                icon = "📡"
-
-            # Format relative time (approximate)
-            time_label = event.timestamp_str
-            if event.timestamp_dt:
-                # Simple "X mins ago" logic could go here, or just show time
-                time_label = event.timestamp_dt.strftime("%H:%M:%S")
-
-            # Render
-            with st.container():
-                # Columns: Icon | Time | Message
-                c_icon, c_time, c_msg = st.columns([0.5, 1.5, 8])
-                c_icon.write(icon)
-                c_time.caption(time_label)
-                # Style message based on severity
-                if event.level == "ERROR":
-                    c_msg.error(f"[{event.category}] {event.message}")
-                elif event.level == "WARNING":
-                    c_msg.warning(f"[{event.category}] {event.message}")
-                else:
-                    # Normal info
-                    c_msg.markdown(f"**[{event.category}]** {event.message}")
-
-            st.divider()
-
 
 # --- Tab 4: Analytics ---
 with tab4:
@@ -2039,53 +2518,6 @@ with tab5:
                 target_url,
                 collector_repo_root=collector_repo_root,
             )
-            deploy_health = None
-            try:
-                deploy_health = fetch_pages_deploy_health(
-                    target_repo_url=target_url,
-                    current_repo_sha=action_repo_sha,
-                    github_token=env_vars.get("GITHUB_TOKEN", ""),
-                )
-            except Exception as exc:
-                st.caption(f"Salud de deploy no disponible: {exc}")
-
-            if deploy_health is not None:
-                deploy_cols = st.columns(3)
-                deploy_cols[0].metric(
-                    "Repo remoto (SHA)",
-                    action_repo_sha[:7] if action_repo_sha else "n/a",
-                )
-                deploy_cols[1].metric(
-                    "Último deploy OK",
-                    (
-                        deploy_health.latest_successful_sha[:7]
-                        if deploy_health.latest_successful_sha
-                        else "n/a"
-                    ),
-                )
-                deploy_cols[2].metric(
-                    "Último run Pages",
-                    deploy_health.latest_run_conclusion or "unknown",
-                )
-
-                if deploy_health.is_live_stale:
-                    stale_url = (
-                        deploy_health.latest_run_url
-                        or deploy_health.latest_successful_url
-                    )
-                    warning = (
-                        "El sitio público está atrasado respecto de `origin/main`. "
-                        "Las acciones editoriales usarán el repo remoto, pero la web seguirá "
-                        "mostrando contenido viejo hasta que el deploy vuelva a estar en verde."
-                    )
-                    if stale_url:
-                        warning += f" Último run: {stale_url}"
-                    st.warning(warning)
-                elif deploy_health.latest_successful_sha:
-                    st.success(
-                        "GitHub Pages está alineado con el HEAD remoto usado por las acciones editoriales."
-                    )
-
             if (
                 local_checkout
                 and local_checkout.resolve() != snapshot.repo_root.resolve()

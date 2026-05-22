@@ -77,7 +77,7 @@ class TestRefineryUIContracts(unittest.TestCase):
         self.assertIn("Artículo Cargado desde URL", content)
 
         # 5. Check image brief queue visibility exists
-        self.assertIn("🖼️ Briefs de Imagen", content)
+        self.assertIn("🖼️ Cola de Imágenes (Image Queue)", content)
         self.assertIn("Cola Editorial de Imágenes", content)
         self.assertIn("Prompt listo para copiar", content)
         self.assertIn("Subir imagen curada", content)
