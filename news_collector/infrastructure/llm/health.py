@@ -30,7 +30,7 @@ class NvidiaHealthChecker(LLMHealthChecker):
         from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
         nvidia_cfg = config.nvidia
-        nvidia_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-thinking")
+        nvidia_model = getattr(nvidia_cfg, "model", "qwen/qwen3-next-80b-a3b-instruct")
         provider = NvidiaProvider(
             api_key=nvidia_cfg.api_key,
             model=nvidia_model,

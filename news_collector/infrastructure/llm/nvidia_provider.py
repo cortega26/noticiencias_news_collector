@@ -70,7 +70,7 @@ class NvidiaProvider:
         max_tokens: int = 4096,
     ):
         self.api_key = api_key
-        self.model = model or "qwen/qwen3-next-80b-a3b-thinking"
+        self.model = model or "qwen/qwen3-next-80b-a3b-instruct"
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
@@ -94,7 +94,7 @@ class NvidiaProvider:
         """
         if model:
             # org/model-slug format (contains '/' but no ':') signals a cloud API model
-            # such as "qwen/qwen3-next-80b-a3b-thinking" or "meta/llama-3.1-70b-instruct".
+            # such as "qwen/qwen3-next-80b-a3b-instruct" or "meta/llama-3.1-70b-instruct".
             # Pass these through unchanged; they are already valid NVIDIA NIM identifiers.
             if "/" in model and ":" not in model:
                 return model

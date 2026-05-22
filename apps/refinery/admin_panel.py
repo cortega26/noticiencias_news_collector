@@ -637,7 +637,7 @@ with tab1:
                 nvidia_cfg = config_data["nvidia"]
 
                 _nvidia_model_options = [
-                    "qwen/qwen3-next-80b-a3b-thinking",
+                    "qwen/qwen3-next-80b-a3b-instruct",
                     "meta/llama-3.1-70b-instruct",
                     "meta/llama-3.3-70b-instruct",
                     "mistralai/mistral-large-2-instruct",
@@ -647,7 +647,7 @@ with tab1:
                     "deepseek-ai/deepseek-r1",
                 ]
                 _current_nvidia_model = nvidia_cfg.get(
-                    "model", "qwen/qwen3-next-80b-a3b-thinking"
+                    "model", "qwen/qwen3-next-80b-a3b-instruct"
                 )
                 _nvidia_model_sel = st.selectbox(
                     "Modelo NVIDIA NIM",
