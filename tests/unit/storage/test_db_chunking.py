@@ -7,14 +7,10 @@ from news_collector.storage.database import DatabaseManager
 
 @pytest.fixture
 def mock_db_manager():
-    # DatabaseManager likely takes no args or config.
-    # Use empty init and mock the internal engine creation if needed
-    # But for these tests we mock get_session anyway.
-
-    # Try default init
     manager = DatabaseManager()
     manager.Session = MagicMock()
-    return manager
+    yield manager
+    manager.close()
 
 
 def test_save_articles_bulk_chunking(mock_db_manager):

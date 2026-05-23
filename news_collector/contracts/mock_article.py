@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, Field, TypeAdapter
 
 from news_collector.contracts import CollectorArticleModel
+
+_mock_url: AnyHttpUrl = TypeAdapter(AnyHttpUrl).validate_python(
+    "https://example.com/mock-article"
+)
 
 
 class MockArticle(CollectorArticleModel):
@@ -13,7 +17,7 @@ class MockArticle(CollectorArticleModel):
     """
 
     id: int = 999999
-    url: AnyHttpUrl = cast(AnyHttpUrl, "https://example.com/mock-article")
+    url: AnyHttpUrl = _mock_url
     title: str = "Mock Article for Simulation"
     summary: str = "This is a simulated article created during a dry-run or test."
     content: Optional[str] = (
@@ -22,7 +26,7 @@ class MockArticle(CollectorArticleModel):
     source_id: str = "mock-source"
     source_name: str = "Mock Source"
     category: str = "general"
-    published_date: datetime = datetime.now(timezone.utc)
+    published_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     authors: List[str] = ["Mock Author"]
     language: str = "en"
     word_count: int = 500

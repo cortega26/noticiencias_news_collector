@@ -286,8 +286,6 @@ class HeadlessEnricher:
 
     def _perform_actions(self, page: Any, allowed_actions: list[str]) -> None:
         """Executes limited user interactions."""
-        # TODO: Implement scrolling, consent clicking based on allowed_actions
-        # For now, minimal implementation
         if "scroll" in allowed_actions:
             try:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")

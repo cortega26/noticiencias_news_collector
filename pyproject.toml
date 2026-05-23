@@ -140,6 +140,13 @@ markers = [
     "audit: real-network source reliability sweep (opt-in, gated by NOTICIENCIAS_AUDIT)",
 ]
 asyncio_mode = "auto"
+filterwarnings = [
+    # SQLAlchemy's compiled-statement LRU cache holds Column refs past engine.dispose();
+    # these ResourceWarnings fire during interpreter shutdown GC and are not actionable.
+    "ignore::ResourceWarning:sqlalchemy",
+    # unittest.mock teardown GC of patched DB objects triggers the same pattern.
+    "ignore::ResourceWarning:unittest.mock",
+]
 
 [tool.coverage.run]
 branch = true

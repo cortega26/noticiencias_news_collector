@@ -7,7 +7,6 @@ phase its own class with explicit dependencies.
 from __future__ import annotations
 
 import asyncio
-import random
 from typing import Any, Dict, List
 
 from news_collector.config import ALL_SOURCES, SCORING_CONFIG
@@ -175,18 +174,14 @@ class ScoringCoordinator:
             "articles_found", 0
         )
 
+        included = articles_found // 2
         simulated_scoring = {
             "success": True,
             "statistics": {
                 "articles_scored": articles_found,
-                "articles_included": random.randint(  # noqa: S311
-                    articles_found // 3, articles_found // 2
-                ),
-                "articles_excluded": articles_found
-                - random.randint(  # noqa: S311
-                    articles_found // 3, articles_found // 2
-                ),
-                "average_score": random.uniform(0.4, 0.8),  # noqa: S311
+                "articles_included": included,
+                "articles_excluded": articles_found - included,
+                "average_score": 0.0,
             },
         }
 

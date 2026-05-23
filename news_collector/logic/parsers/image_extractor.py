@@ -127,8 +127,6 @@ class ImageExtractor:
                 or img.get("src")
             )
 
-            # TODO: Handle srcset parsing if needed
-
             if src:
                 url = self._normalize_url(str(src), base_url)
                 if url and url not in seen:
