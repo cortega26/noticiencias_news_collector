@@ -121,7 +121,7 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reason, "ok")
 
 
-class TestFallbackProvider(unittest.TestCase):
+class TestFallbackProvider(unittest.IsolatedAsyncioTestCase):
     def test_extract_json_delegates(self):
         from news_collector.infrastructure.llm.factory import FallbackProvider
 
@@ -133,6 +133,76 @@ class TestFallbackProvider(unittest.TestCase):
 
         self.assertEqual(result, {"key": "value"})
         mock_provider._extract_json.assert_called_once_with('{"key": "value"}')
+
+    def test_generate_sync_timeout_delegation(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        captured_timeouts = {}
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+
+        def side_effect_p1(*args, **kwargs):
+            captured_timeouts["p1"] = mock_p1.timeout
+            raise Exception("failed")
+
+        mock_p1.generate_sync.side_effect = side_effect_p1
+
+        mock_p2 = MagicMock()
+        mock_p2.timeout = 3600
+
+        def side_effect_p2(*args, **kwargs):
+            captured_timeouts["p2"] = mock_p2.timeout
+            return "success"
+
+        mock_p2.generate_sync.side_effect = side_effect_p2
+
+        fallback = FallbackProvider([mock_p1, mock_p2])
+        result = fallback.generate_sync("hello")
+
+        self.assertEqual(result, "success")
+        # Check that mock_p1 was called with timeout 60
+        self.assertEqual(captured_timeouts.get("p1"), 60)
+        # Check that mock_p2 was called with timeout 3600 (not 60!)
+        self.assertEqual(captured_timeouts.get("p2"), 3600)
+        # Check that timeouts were restored
+        self.assertEqual(mock_p1.timeout, 300)
+        self.assertEqual(mock_p2.timeout, 3600)
+
+    async def test_generate_async_timeout_delegation(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        captured_timeouts = {}
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+
+        async def mock_async_fail(*args, **kwargs):
+            captured_timeouts["p1"] = mock_p1.timeout
+            raise Exception("failed")
+
+        mock_p1.generate_async = mock_async_fail
+
+        mock_p2 = MagicMock()
+        mock_p2.timeout = 3600
+
+        async def mock_async_success(*args, **kwargs):
+            captured_timeouts["p2"] = mock_p2.timeout
+            return "success"
+
+        mock_p2.generate_async = mock_async_success
+
+        fallback = FallbackProvider([mock_p1, mock_p2])
+        result = await fallback.generate_async("hello")
+
+        self.assertEqual(result, "success")
+        # Check that mock_p1 was called with timeout 60
+        self.assertEqual(captured_timeouts.get("p1"), 60)
+        # Check that mock_p2 was called with timeout 3600 (not 60!)
+        self.assertEqual(captured_timeouts.get("p2"), 3600)
+        # Check that timeouts were restored
+        self.assertEqual(mock_p1.timeout, 300)
+        self.assertEqual(mock_p2.timeout, 3600)
 
 
 if __name__ == "__main__":
