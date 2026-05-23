@@ -65,8 +65,13 @@ class FallbackProvider:
         last_error = None
         for i, provider in enumerate(self.providers):
             try:
+                old_timeout = getattr(provider, "timeout", None)
                 # First ones get a fast timeout of 60s to trigger failover quickly
-                current_timeout = 60 if i < len(self.providers) - 1 else (timeout or 60)
+                current_timeout = (
+                    60
+                    if i < len(self.providers) - 1
+                    else (timeout or old_timeout or 60)
+                )
 
                 kwargs: Dict[str, Any] = {
                     "prompt": prompt,
@@ -76,7 +81,6 @@ class FallbackProvider:
                     "log_errors_as_warning": log_errors_as_warning,
                 }
 
-                old_timeout = getattr(provider, "timeout", None)
                 if old_timeout is not None:
                     provider.timeout = current_timeout
 
@@ -121,6 +125,8 @@ class FallbackProvider:
                         provider.timeout = old_timeout
                     return res
             except Exception as e:
+                if old_timeout is not None:
+                    provider.timeout = old_timeout
                 logger.warning(
                     "Provider %s failed during generate_sync: %s. Proceeding to fallback...",
                     provider.__class__.__name__,
@@ -143,7 +149,13 @@ class FallbackProvider:
         last_error = None
         for i, provider in enumerate(self.providers):
             try:
-                current_timeout = 60 if i < len(self.providers) - 1 else (timeout or 60)
+                old_timeout = getattr(provider, "timeout", None)
+                # First ones get a fast timeout of 60s to trigger failover quickly
+                current_timeout = (
+                    60
+                    if i < len(self.providers) - 1
+                    else (timeout or old_timeout or 60)
+                )
                 kwargs: Dict[str, Any] = {
                     "prompt": prompt,
                     "system": system,
@@ -151,7 +163,6 @@ class FallbackProvider:
                     "model": model,
                 }
 
-                old_timeout = getattr(provider, "timeout", None)
                 if old_timeout is not None:
                     provider.timeout = current_timeout
 
@@ -172,6 +183,8 @@ class FallbackProvider:
                     provider.timeout = old_timeout
                 return res
             except Exception as e:
+                if old_timeout is not None:
+                    provider.timeout = old_timeout
                 logger.warning(
                     "Provider %s failed during generate_async: %s. Proceeding to fallback...",
                     provider.__class__.__name__,
