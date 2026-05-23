@@ -123,7 +123,7 @@ class ArticleImageHandler:
             if local_ref:
                 logger.info("Updated article image to local asset: {}", local_ref)
                 alt = article.get("image_alt") or (
-                    f"Imagen editorial de {article.get('title', article_id)}"
+                    f"Imagen de {article.get('title', article_id)}"
                 )
                 return ImageResolution(
                     resolved=True,
@@ -149,7 +149,7 @@ class ArticleImageHandler:
             and raw_image_url != "~/assets/images/default.png"
         ):
             alt = article.get("image_alt") or (
-                f"Imagen editorial de {article.get('title', article_id)}"
+                f"Imagen de {article.get('title', article_id)}"
             )
             return ImageResolution(
                 resolved=True,

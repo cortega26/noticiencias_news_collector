@@ -151,10 +151,10 @@ class ImageBriefStore:
         )
         draft_alt_text = (
             existing.draft_alt_text if existing else ""
-        ) or f"Imagen editorial de {title}"
+        ) or f"Imagen de {title}"
         draft_alt_text = _ensure_min_text(
             draft_alt_text,
-            fallback=f"Imagen editorial de {title or slug}",
+            fallback=f"Imagen de {title or slug}",
             min_length=5,
         )
         tone = _ensure_min_text(

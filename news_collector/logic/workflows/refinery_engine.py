@@ -354,9 +354,7 @@ class RefineryEngine:
             article["image_alt"] = img_resolution.image_alt
 
         if article.get("image_url") and not article.get("image_alt"):
-            article["image_alt"] = (
-                f"Imagen editorial de {article.get('title', article_id)}"
-            )
+            article["image_alt"] = f"Imagen de {article.get('title', article_id)}"
 
         # Apply Policy to Editor
         self.editor.critic_threshold = self.policy.critic_threshold
