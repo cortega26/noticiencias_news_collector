@@ -59,37 +59,20 @@ def test_models_match_migrations(tmp_path: Path):
         # Since we don't have a 'create tables' migration (checked earlier), we must use create_all first.
 
         engine = create_engine(db_url, poolclass=pool.NullPool)
-        Base.metadata.create_all(engine)
+        try:
+            Base.metadata.create_all(engine)
+            command.stamp(alembic_cfg, "head")
 
-        # Now stamp it as "head" because create_all reflects the CURRENT model state.
-        # If we run alembic check now, it should return empty diff.
-        # BUT, to verify migrations are correct, we should ideally:
-        # 1. Create DB from migrations (if full history existed).
-        # 2. Compare.
-
-        # Since we lack full history (repo limitation), strictly checking "drift" means:
-        # "Does the current set of models generate any NEW alembic autogenerate ops?"
-        # So we don't even need to migrate. We just need to connect and check.
-
-        # However, to be extra safe that `alembic_version` is handled:
-        command.stamp(alembic_cfg, "head")
-
-        # 3. Check for drift
-        with engine.connect() as connection:
-            mc = MigrationContext.configure(connection)
-            diff = compare_metadata(mc, Base.metadata)
-
-            # Filter out minor noise if essential (e.g. index naming conventions),
-            # but usually Alembic is good.
-
-            # SQLite specific quirks: sometimes detected as changes if types barely mismatch.
-            # Let's clean the diff if necessary.
-
-            filtered_diff = [d for d in diff if not _is_false_positive(d)]
+            with engine.connect() as connection:
+                mc = MigrationContext.configure(connection)
+                diff = compare_metadata(mc, Base.metadata)
+                filtered_diff = [d for d in diff if not _is_false_positive(d)]
 
             assert (
                 not filtered_diff
             ), f"Schema Drift Detected! Models differ from migrations:\n{filtered_diff}"
+        finally:
+            engine.dispose()
 
 
 def _is_false_positive(diff_item):

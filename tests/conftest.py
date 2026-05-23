@@ -47,6 +47,8 @@ def mock_article_payload():
 
 def pytest_sessionfinish(session, exitstatus):
     """Clean up global sqlite connections after all tests to prevent ResourceWarnings."""
+    import gc
+
     try:
         from news_collector.observability.enrichment_metrics_store import (
             enrichment_metrics,
@@ -59,3 +61,7 @@ def pytest_sessionfinish(session, exitstatus):
         import logging
 
         logging.warning("Skipped cleanup of metrics DB: %s", e)
+
+    # Force GC to flush any SQLAlchemy connection objects before pytest
+    # collects its warning summary, eliminating ResourceWarning noise.
+    gc.collect()
