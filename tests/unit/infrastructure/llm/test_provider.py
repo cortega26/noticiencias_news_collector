@@ -121,5 +121,19 @@ class TestOllamaProvider(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reason, "ok")
 
 
+class TestFallbackProvider(unittest.TestCase):
+    def test_extract_json_delegates(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_provider = MagicMock()
+        mock_provider._extract_json.return_value = {"key": "value"}
+
+        fallback = FallbackProvider([mock_provider])
+        result = fallback._extract_json('{"key": "value"}')
+
+        self.assertEqual(result, {"key": "value"})
+        mock_provider._extract_json.assert_called_once_with('{"key": "value"}')
+
+
 if __name__ == "__main__":
     unittest.main()

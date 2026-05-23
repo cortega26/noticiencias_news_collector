@@ -1,12 +1,11 @@
-# Todo: Fix Deprecated Streamlit use_container_width parameter
+# Todo: Fix FallbackProvider missing _extract_json attribute
 
-- [x] **Phase 1: Implement parameter replacement**
-  - [x] Replace `use_container_width=True` with `width="stretch"` in `apps/refinery/admin_panel.py`.
+- [x] **Phase 1: Implement fallback delegation**
+  - [x] Add `_extract_json` method delegating to `self.providers[0]` in `news_collector/infrastructure/llm/factory.py`.
 
-- [x] **Phase 2: Establish regression guards**
-  - [x] Add static analysis test `test_no_deprecated_streamlit_args` to `tests/test_ui_contracts.py`.
-  - [x] Add guideline about deprecated Streamlit arguments in `docs/AGENTS.md` under Section 3.5.
+- [x] **Phase 2: Establish tests**
+  - [x] Add a unit test verifying `FallbackProvider._extract_json` in `tests/unit/infrastructure/llm/test_provider.py`.
 
 - [x] **Phase 3: Validation**
-  - [x] Run `make lint` (verifying `check-deprecated` target passes).
-  - [x] Run `make test` (verifying test suite and the new static analysis check pass).
+  - [x] Run `make lint` and `make type`.
+  - [x] Run `make test` to verify all tests pass.
