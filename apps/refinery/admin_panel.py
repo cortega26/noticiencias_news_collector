@@ -92,6 +92,11 @@ def inject_custom_css():
 html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, button, select, input, textarea {
     font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
+/* Restore Material Symbols font overridden by the blanket span rule above */
+[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Outlined', 'Material Symbols Rounded', 'Material Icons' !important;
+    font-feature-settings: 'liga' !important;
+}
 code, pre, [class*="mono"] {
     font-family: 'JetBrains Mono', monospace !important;
 }
@@ -2614,7 +2619,7 @@ with tab5:
                         if st.button(
                             "🗑️ Despublicar",
                             key=f"btn_despub_{article.file_name}",
-                            width="stretch",
+                            use_container_width=True,
                         ):
                             delete_target = {"file_name": article.file_name}
                             if refinery_id:
@@ -2642,7 +2647,7 @@ with tab5:
                         if st.button(
                             "♻️ Reset",
                             key=f"btn_rst_{article.file_name}",
-                            width="stretch",
+                            use_container_width=True,
                         ):
                             try:
                                 gh_handler = GitHubPublisher(
@@ -2766,11 +2771,18 @@ with tab6:
         if failed_count > 0:
             st.warning(f"⚠️ {failed_count} fuentes fallando")
             with st.expander("Ver Errores"):
-                for source_id, data in health_data_sources.items():
-                    if isinstance(data, dict) and not data.get("feed_ok"):
-                        st.error(
-                            f"**{source_id}** (Status: {data.get('status')}) - {data.get('last_error_details')}"
-                        )
+                import pandas as pd
+
+                failed_rows = [
+                    {
+                        "Fuente": source_id,
+                        "Estado": data.get("status"),
+                        "Error": data.get("last_error_details"),
+                    }
+                    for source_id, data in health_data_sources.items()
+                    if isinstance(data, dict) and not data.get("feed_ok")
+                ]
+                st.dataframe(pd.DataFrame(failed_rows), use_container_width=True)
 
         # Detailed Health Dataframe
         with st.expander("📊 Ver Matriz de Salud Completa"):
@@ -2794,11 +2806,7 @@ with tab6:
                 styler = styler.highlight_max(
                     axis=0, subset=["latency"], color="#ffcdd2"
                 )
-            st.dataframe(
-                styler,
-                # Deprecated arg replaced by width='stretch'
-                width="stretch",
-            )
+            st.dataframe(styler, use_container_width=True)
 
         st.divider()
     else:
@@ -2834,7 +2842,7 @@ with tab6:
                 }
             )
 
-        st.dataframe(source_list, width="stretch")
+        st.dataframe(source_list, use_container_width=True)
 
     st.divider()
 
