@@ -194,6 +194,10 @@ class FallbackProvider:
             return cast(bool, self.providers[0].check_model_exists(model_name))
         return True
 
+    def _extract_json(self, text: str) -> Dict[str, Any]:
+        """Robust JSON extraction from mixed text."""
+        return cast(Dict[str, Any], self.providers[0]._extract_json(text))
+
     async def close(self) -> None:
         for provider in self.providers:
             if hasattr(provider, "close"):
