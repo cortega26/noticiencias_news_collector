@@ -336,7 +336,8 @@ editor:
       del artículo;
     - uses headings internos como "Cierre", "Reapertura Cognitiva",
       "Construcción del Modelo Mental" u otras etiquetas del proceso
-      editorial.
+      editorial;
+    - uses URLs directas (bare URLs) sin formato en el texto del cuerpo: cualquier URL o dirección web que aparezca en el artículo debe estar envuelta en comillas invertidas (ej. `https://ejemplo.com`) o formateada como un enlace markdown estándar para evitar errores de validación de sintaxis.
 
     El engagement debe provenir de la comprensión y de la frase que se cita.
 
