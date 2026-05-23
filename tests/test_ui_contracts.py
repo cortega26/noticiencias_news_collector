@@ -84,9 +84,13 @@ class TestRefineryUIContracts(unittest.TestCase):
 
         print("✅ Static Contract Verification Passed for admin_panel.py")
 
-    # @patch("apps.refinery.admin_panel.st")
-    # def test_runtime_logic_stub(self, mock_st):
-    #    pass
+    def test_no_deprecated_streamlit_args(self):
+        """Verify that no deprecated Streamlit arguments like use_container_width are present."""
+        with open(
+            PROJECT_ROOT / "apps/refinery/admin_panel.py", "r", encoding="utf-8"
+        ) as f:
+            content = f.read()
+        self.assertNotIn("use_container_width", content)
 
 
 if __name__ == "__main__":

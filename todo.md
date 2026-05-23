@@ -1,32 +1,12 @@
-# Todo: Streamlit UI Revamp and Cloud Provider Fix
+# Todo: Fix Deprecated Streamlit use_container_width parameter
 
-- [ ] **Phase 1: Fix AI Provider Unwrapping**
-  - [ ] Implement `FallbackProvider` detection in `apps/refinery/admin_panel.py`.
-  - [ ] Extract the primary provider (`providers[0]`) for type checks and attribute accesses.
-  - [ ] Verify that cloud provider status resolves correctly (NVIDIA NIM / Gemini).
+- [x] **Phase 1: Implement parameter replacement**
+  - [x] Replace `use_container_width=True` with `width="stretch"` in `apps/refinery/admin_panel.py`.
 
-- [ ] **Phase 2: Global Styling and CSS Injection**
-  - [ ] Inject custom Google Font (`Outfit`) and override global fonts.
-  - [ ] Inject styled CSS overrides for Streamlit tabs, notification blocks, sidebar, buttons, and custom metric containers.
-  - [ ] Add `.refinery-card` styles and colored dot status indicators.
+- [x] **Phase 2: Establish regression guards**
+  - [x] Add static analysis test `test_no_deprecated_streamlit_args` to `tests/test_ui_contracts.py`.
+  - [x] Add guideline about deprecated Streamlit arguments in `docs/AGENTS.md` under Section 3.5.
 
-- [ ] **Phase 3: Restructure Tabs and Implement Sidebar**
-  - [ ] Implement the persistent sidebar displaying:
-    - [ ] Logo / header.
-    - [ ] Editorial mode card.
-    - [ ] Active AI Engine detail.
-    - [ ] Database parameters (path, size on disk, connection status).
-    - [ ] Repo HEAD details and Pages deploy status.
-  - [ ] Consolidate/reorder the tabs:
-    - [ ] Tab 1: `🏠 Escritorio (Curation Desk)` (manual URL, sync, candidate list, curation panel with progress bar components).
-    - [ ] Tab 2: `🖼️ Cola de Imágenes (Image Queue)`.
-    - [ ] Tab 3: `🚀 Contenido Publicado (Live CMS)`.
-    - [ ] Tab 4: `📡 Gestión de Fuentes (Source Manager)`.
-    - [ ] Tab 5: `🧠 Prompts (Prompt Lab)`.
-    - [ ] Tab 6: `⚙️ Configuración (Settings & Logs)` (scoring weights, keywords, Ollama API endpoints, reset system buttons, Activity Monitor timeline).
-
-- [ ] **Phase 4: Verification and Quality Gate**
-  - [ ] Run style linting check: `make lint` (or auto-fix if needed with `make lint-fix`).
-  - [ ] Run static type checking: `make type`.
-  - [ ] Verify unit tests pass: `make test`.
-  - [ ] Manually test the Streamlit app layout and functionalities.
+- [x] **Phase 3: Validation**
+  - [x] Run `make lint` (verifying `check-deprecated` target passes).
+  - [x] Run `make test` (verifying test suite and the new static analysis check pass).
