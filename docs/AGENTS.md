@@ -265,6 +265,7 @@ Must not:
 
 - become a second home for ad hoc schema definitions
 - bypass contracts because the UI "already knows the shape"
+- use deprecated Streamlit APIs or parameters (e.g., use `width="stretch"` or `width="content"` instead of `use_container_width`)
 
 ### 3.6 `serving/`
 

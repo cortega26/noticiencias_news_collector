@@ -2619,7 +2619,7 @@ with tab5:
                         if st.button(
                             "🗑️ Despublicar",
                             key=f"btn_despub_{article.file_name}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             delete_target = {"file_name": article.file_name}
                             if refinery_id:
@@ -2647,7 +2647,7 @@ with tab5:
                         if st.button(
                             "♻️ Reset",
                             key=f"btn_rst_{article.file_name}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             try:
                                 gh_handler = GitHubPublisher(
@@ -2782,7 +2782,7 @@ with tab6:
                     for source_id, data in health_data_sources.items()
                     if isinstance(data, dict) and not data.get("feed_ok")
                 ]
-                st.dataframe(pd.DataFrame(failed_rows), use_container_width=True)
+                st.dataframe(pd.DataFrame(failed_rows), width="stretch")
 
         # Detailed Health Dataframe
         with st.expander("📊 Ver Matriz de Salud Completa"):
@@ -2806,7 +2806,7 @@ with tab6:
                 styler = styler.highlight_max(
                     axis=0, subset=["latency"], color="#ffcdd2"
                 )
-            st.dataframe(styler, use_container_width=True)
+            st.dataframe(styler, width="stretch")
 
         st.divider()
     else:
@@ -2842,7 +2842,7 @@ with tab6:
                 }
             )
 
-        st.dataframe(source_list, use_container_width=True)
+        st.dataframe(source_list, width="stretch")
 
     st.divider()
 
