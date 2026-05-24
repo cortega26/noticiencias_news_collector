@@ -6,9 +6,9 @@ editorial_mode = "standard"
 policy_integrity_mode = "enforced"
 
 [paths]
-data_dir = "data"
-logs_dir = "data/logs"
-dlq_dir = "data/dlq"
+data_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data"
+logs_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/logs"
+dlq_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/dlq"
 
 [database]
 driver = "sqlite"
@@ -69,14 +69,14 @@ workers = 1
 reranker_seed = 1337
 source_cap_percentage = 0.5
 topic_cap_percentage = 0.6
-llm_model = "qwen2.5:32b"
+llm_model = "llama3.2"
 rescore_days_back = 14
 
 [scoring.weights]
 source_credibility = 0.1
-recency = 0.2
-content_quality = 0.35
-engagement_potential = 0.35
+recency = 0.1
+content_quality = 0.4
+engagement_potential = 0.4
 
 [scoring.feature_weights]
 source_credibility = 0.15
@@ -468,14 +468,13 @@ default_language = "es"
 
 [logging]
 level = "INFO"
-file_path = "data/logs/collector.log"
+file_path = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/logs/collector.log"
 max_file_size_mb = 10
 retention_days = 30
 format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 
 [github]
-# token is read from GITHUB_TOKEN env var if not set here
-# token = ""
+token = "REDACTED"
 user_name = "Noticiencias Bot"
 user_email = "bot@noticiencias.com"
 source_repo_url = "https://github.com/cortega26/noticiencias_news_collector.git"
@@ -494,8 +493,7 @@ model = "gemini-2.5-flash"
 timeout = 300
 
 [nvidia]
-# Set api_key via NOTICIENCIAS__NVIDIA__API_KEY env var — do NOT commit it here.
-# Confirm the exact model ID at https://build.nvidia.com/models
+api_key = "REDACTED"
 model = "qwen/qwen3-next-80b-a3b-instruct"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300

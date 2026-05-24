@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -259,19 +259,9 @@ class PublicationIdentityResolver:
 
     @staticmethod
     def _derive_date(article: Dict[str, Any]) -> str:
-        """Derive canonical date from article payload (Priority 3)."""
-        src_date = article.get("published_date")
-        if src_date:
-            if hasattr(src_date, "strftime"):
-                return str(src_date.strftime("%Y-%m-%d"))
-            s = str(src_date).strip()
-            match = re.match(r"^\d{4}-\d{2}-\d{2}", s)
-            if match:
-                return match.group(0)
+        """Derive canonical date from article payload (Priority 3).
 
-        collected = article.get("collected_date")
-        if collected and hasattr(collected, "strftime"):
-            return str(collected.strftime("%Y-%m-%d"))
-
-        # Absolute last resort (known debt — see source-of-truth-backlog.md)
-        return datetime.now().strftime("%Y-%m-%d")
+        Always returns the current publication date (the date when we publish the article).
+        """
+        # Always return the current date in YYYY-MM-DD format
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")

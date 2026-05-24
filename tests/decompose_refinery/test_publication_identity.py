@@ -155,8 +155,8 @@ class TestIdentityFromFilesystem:
 
 
 class TestIdentityCreationMode:
-    def test_ident_03_date_from_published_date(self, tmp_path):
-        """IDENT-03: New article, published_date present → date from source."""
+    def test_ident_03_ignores_published_date_uses_today(self, tmp_path):
+        """IDENT-03: New article, published_date present → ignores it, uses today."""
         db = MagicMock()
         db.get_canonical_slug.return_value = None
 
@@ -172,12 +172,13 @@ class TestIdentityCreationMode:
             posts_dir=posts_dir,
         )
 
-        assert identity.canonical_date == "2025-12-25"
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        assert identity.canonical_date == today
         assert identity.is_new is True
-        assert identity.final_slug.startswith("2025-12-25-")
+        assert identity.final_slug.startswith(f"{today}-")
 
-    def test_ident_04_date_from_collected_date(self, tmp_path):
-        """IDENT-04: No published_date, collected_date present → date from collected."""
+    def test_ident_04_ignores_collected_date_uses_today(self, tmp_path):
+        """IDENT-04: No published_date, collected_date present → ignores it, uses today."""
         db = MagicMock()
         db.get_canonical_slug.return_value = None
         manifest = _make_manifest_stub()
@@ -192,13 +193,14 @@ class TestIdentityCreationMode:
             posts_dir=posts_dir,
         )
 
-        assert identity.canonical_date == "2025-11-10"
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        assert identity.canonical_date == today
         assert identity.is_new is True
+        assert identity.final_slug.startswith(f"{today}-")
 
     def test_ident_05_date_fallback_to_today(self, tmp_path):
-        """IDENT-05: No dates → falls back to today (known debt, documented)."""
+        """IDENT-05: No dates → falls back to today."""
         import re
-        from datetime import datetime as dt
 
         db = MagicMock()
         db.get_canonical_slug.return_value = None
@@ -216,9 +218,8 @@ class TestIdentityCreationMode:
 
         # Date must be valid YYYY-MM-DD
         assert re.match(r"^\d{4}-\d{2}-\d{2}$", identity.canonical_date)
-        # Must be today or very recent (within 1-day tolerance for CI clock skew)
-        today = dt.now().strftime("%Y-%m-%d")
-        assert identity.canonical_date == today or identity.canonical_date <= today
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        assert identity.canonical_date == today
 
     def test_ident_06_collision_avoidance(self, tmp_path):
         """IDENT-06: When target file already exists, suffix counter is appended."""
@@ -230,8 +231,10 @@ class TestIdentityCreationMode:
         posts_dir = tmp_path / "src/content/posts"
         posts_dir.mkdir(parents=True)
 
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        expected_colliding_name = f"{today}-test-article-title.md"
         # Pre-create the file that would be the first choice
-        (posts_dir / "2024-01-01-test-article-title.md").write_text("existing")
+        (posts_dir / expected_colliding_name).write_text("existing")
 
         identity = resolver.resolve(
             article_id="10",
@@ -243,15 +246,11 @@ class TestIdentityCreationMode:
         )
 
         # The resolver must NOT use the colliding filename
-        assert identity.output_filename != "2024-01-01-test-article-title.md"
-        # But must still start with the correct date
-        assert identity.final_slug.startswith("2024-01-01-")
+        assert identity.output_filename != expected_colliding_name
+        # But must still start with today's date
+        assert identity.final_slug.startswith(f"{today}-")
         # And must not overwrite the existing file
-        assert (
-            not (posts_dir / "2024-01-01-test-article-title.md")
-            .read_text()
-            .startswith("---")
-        )
+        assert not (posts_dir / expected_colliding_name).read_text().startswith("---")
 
 
 # ---------------------------------------------------------------------------
