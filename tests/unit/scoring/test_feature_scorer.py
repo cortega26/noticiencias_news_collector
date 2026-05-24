@@ -67,15 +67,15 @@ def test_source_credibility_default(feature_scorer, sample_article):
     # No metadata
     assert feature_scorer._source_credibility(sample_article, None) == 0.5
 
-    # In source config
+    # Configured credibility score is ignored and returns neutral 0.5
     assert (
         feature_scorer._source_credibility(sample_article, {"credibility_score": 0.9})
-        == 0.9
+        == 0.5
     )
 
-    # In article metadata
+    # Credibility score in metadata is ignored and returns neutral 0.5
     sample_article.article_metadata["credibility_score"] = 0.7
-    assert feature_scorer._source_credibility(sample_article, None) == 0.7
+    assert feature_scorer._source_credibility(sample_article, None) == 0.5
 
 
 def test_freshness_score(feature_scorer, sample_article):

@@ -217,16 +217,8 @@ class FeatureBasedScorer(AsyncScorer):
     def _source_credibility(
         self, article: Any, source_config: Optional[Dict[str, Any]]
     ) -> float:
-        if source_config:
-            base_score = source_config.get("credibility_score", 0.5)
-        else:
-            metadata = self._parse_metadata(article)
-            base_score = None
-            if metadata:
-                base_score = metadata.credibility_score
-            if base_score is None:
-                base_score = _get_attr(article, "credibility_score", 0.5)
-        return float(max(0.0, min(1.0, base_score)))
+        # La credibilidad base es fija (neutral) para evaluar noticias por sus propios méritos
+        return 0.5
 
     def _freshness_score(self, article: Any) -> float:
         published_date = _get_attr(article, "published_date")

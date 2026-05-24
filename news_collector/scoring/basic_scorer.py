@@ -244,52 +244,21 @@ class BasicScorer(AsyncScorer):
         self, article: Article, source_config: Dict[str, Any] | None = None
     ) -> float:
         """
-        Evalúa la credibilidad de la fuente.
-
-        Este método es como tener un experto en medios que conoce la reputación
-        de cada fuente y puede evaluar qué tan confiable es la información.
+        Evalúa la credibilidad del artículo basado en sus propios méritos (peer-review, DOI, journal).
+        La credibilidad base de la fuente es ignorada para evaluar las noticias en sus propios méritos.
 
         Factores considerados:
-        - Credibilidad base de la fuente
+        - Credibilidad base neutral (0.5)
         - Si es peer-reviewed vs preprint
         - Reputación del journal
         - Presencia de DOI
         """
         score = 0.0
 
-        # Score base de la fuente (del archivo de configuración)
-        if source_config:
-            base_credibility_raw = source_config.get("credibility_score", 0.5)
-        else:
-            # Fallback: extraer de metadatos del artículo con validación fuerte
-            meta_raw = getattr(article, "article_metadata", None) or {}
-            from pydantic import ValidationError
+        # La credibilidad base es fija (neutral) para evaluar noticias por sus propios méritos
+        base_credibility = 0.5
 
-            from news_collector.contracts import ArticleMetadataModel
-            from news_collector.utils.logger import get_logger
-
-            try:
-                if isinstance(meta_raw, ArticleMetadataModel):
-                    meta_model = meta_raw
-                else:
-                    meta_model = ArticleMetadataModel.model_validate(meta_raw)
-                base_credibility_raw = (
-                    meta_model.credibility_score
-                    if meta_model.credibility_score is not None
-                    else 0.5
-                )
-            except ValidationError as e:
-                get_logger().create_module_logger(__name__).warning(
-                    f"Invalid article_metadata during scoring, falling back to defaults: {e}"
-                )
-                base_credibility_raw = 0.5
-
-        try:
-            base_credibility = float(base_credibility_raw)
-        except (TypeError, ValueError):
-            base_credibility = 0.5
-
-        score += base_credibility * 0.6  # 60% del score viene de la fuente
+        score += base_credibility * 0.6  # 60% del score base viene del baseline neutral
 
         # Bonus por peer review
         if article.peer_reviewed:
