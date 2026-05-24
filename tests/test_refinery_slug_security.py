@@ -91,5 +91,8 @@ def test_slug_collision_handled(tmp_path):
     engine.process_single_article(article1, MagicMock(), tmp_path)
     engine.process_single_article(article2, MagicMock(), tmp_path)
 
-    assert (tmp_path / "src/content/posts/2024-01-01-collision-test.md").exists()
-    assert (tmp_path / "src/content/posts/2024-01-01-collision-test-1.md").exists()
+    from datetime import timezone
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert (tmp_path / f"src/content/posts/{today}-collision-test.md").exists()
+    assert (tmp_path / f"src/content/posts/{today}-collision-test-1.md").exists()
