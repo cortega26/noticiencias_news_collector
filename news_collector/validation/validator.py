@@ -29,6 +29,7 @@ from news_collector.validation.rules import (
     BlocklistPatternRule,
     MinContentLengthRule,
     NewsletterContentRule,
+    PromptInjectionGuardRule,
     TitleBodyRelevanceRule,
     ValidationResult,
     ValidationRule,
@@ -70,6 +71,7 @@ class ContentValidator:
             TitleBodyRelevanceRule(min_match_ratio=0.05),  # Very lenient default
             BlocklistPatternRule(patterns=DEFAULT_BLOCKLIST),
             NewsletterContentRule(),
+            PromptInjectionGuardRule(),
         ]
 
     def validate_article(self, article: Dict[str, Any]) -> ValidationResult:
