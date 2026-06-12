@@ -43,4 +43,13 @@
 - [x] Read and implement Plan 009 prompt-isolation and SSRF test/documentation hardening.
 - [x] Verify Plan 009 focused tests, lint, official type targets, and fast suite.
 - [x] Document and defer DNS pinning because it requires a cross-client transport rewrite.
-- [ ] Continue plans 003-010 sequentially, updating this file as each begins.
+- [x] Read Plan 010, run its drift check, and inspect cluster/API behavior.
+- [x] Query current cluster cardinality and write the spike note.
+- [x] Add the bounded read-only related-articles endpoint.
+- [x] Add no-cluster, clustered-ordering, and not-found serving tests.
+- [x] Run Plan 010 targeted and regression gates.
+- [x] Review Plan 010 scope and update its final status.
+- [x] Resolve Plan 006 by aligning pre-commit mypy with the repository environment.
+- [x] Verify the Plan 006 hook and update its status.
+- [x] Resolve Plan 007 with explicit setuptools package discovery.
+- [x] Rebuild without `setup.py`, run entrypoint/lint checks, and update its status.

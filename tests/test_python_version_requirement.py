@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -26,5 +27,6 @@ def test_python_version_single_source_of_truth() -> None:
     assert f"python-{MIN_PYTHON_VERSION_STR}+-blue.svg" in readme_text
     assert f"Python {MIN_PYTHON_VERSION_STR}+" in readme_text
 
-    setup_text = Path("setup.py").read_text(encoding="utf-8")
-    assert "PYTHON_REQUIRES_SPECIFIER" in setup_text
+    with Path("pyproject.toml").open("rb") as pyproject_file:
+        pyproject = tomllib.load(pyproject_file)
+    assert pyproject["project"]["requires-python"] == PYTHON_REQUIRES_SPECIFIER

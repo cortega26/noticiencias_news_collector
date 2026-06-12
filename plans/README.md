@@ -20,11 +20,11 @@ audit conversation.
 | 003 | Council exact/normalized approval match (`"si" in …` bug) | P1 | S | — | DONE — 7 council tests pass; no failures beyond known frontend baseline |
 | 004 | Unit tests for `HeuristicScorer` (test-only) | P1 | S | — | DONE — 7 tests, 96.97% module coverage, scoring suite green |
 | 005 | Composite index on `score_logs(article_id, calculated_at)` | P2 | S | — | DONE — migration applied; index present; migration/serving checks pass |
-| 006 | Fix pre-commit mypy `files:` path (`src/utils` → `news_collector/utils`) | P2 | S | — | BLOCKED — hook now runs but exposes 38 transitive mypy errors in its isolated env |
-| 007 | Remove redundant `setup.py` (phantom `aiohttp`; pyproject is source of truth) | P2 | S | — | BLOCKED — removal breaks setuptools package discovery; setup.py restored |
+| 006 | Fix pre-commit mypy `files:` path (`src/utils` → `news_collector/utils`) | P2 | S | — | DONE — local hook now shares the bootstrapped mypy environment and all three targets pass |
+| 007 | Remove redundant `setup.py` (phantom `aiohttp`; pyproject is source of truth) | P2 | S | — | DONE — explicit package discovery preserves wheel contents; setup.py removed |
 | 008 | Validation loop: check bulk-update result, report failure accurately | P2 | M | — | DONE — 1039 fast tests pass; persist failure stops and reports false |
 | 009 | Security hardening: prompt-injection isolation (A) + SSRF tests/pinning (B) | P2/P3 | M | — | DONE — isolation/tests/docs complete; IP pinning deferred as cross-client transport rewrite |
-| 010 | Spike: expose article clusters as "master story with sources" | P3 | M | — | TODO |
+| 010 | Spike: expose article clusters as "master story with sources" | P3 | M | — | DONE — note and bounded related endpoint complete; 4 known frontend audit failures remain baseline |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
