@@ -472,6 +472,10 @@ class ScoreLog(Base):
     algorithm_weights = Column(JSON)  # Pesos usados en este cálculo
     external_factors = Column(JSON)  # Factores externos que influyeron
 
+    __table_args__ = (
+        Index("idx_score_logs_article_latest", "article_id", "calculated_at"),
+    )
+
     def __repr__(self):
         return f"<ScoreLog(article_id={self.article_id}, score={self.final_score}, version='{self.score_version}')>"
 

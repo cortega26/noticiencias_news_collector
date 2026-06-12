@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: mypy
         args: [--config-file=pyproject.toml]
-        files: ^(scripts/generate_api_docs\.py|src/utils/(logger|url_canonicalizer)\.py)$
+        files: ^(scripts/generate_api_docs\.py|news_collector/utils/(logger|url_canonicalizer)\.py)$
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.9
     hooks:

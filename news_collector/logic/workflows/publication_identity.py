@@ -91,9 +91,12 @@ class PublicationIdentityResolver:
             logger.info("♻️ Idempotency: Found existing file {}", existing_file.name)
             fn = existing_file.name
             slug = fn.replace(".md", "")
-            canonical_date = self._date_from_slug(slug) or datetime.now().strftime(
-                "%Y-%m-%d"
-            )
+            canonical_date = self._date_from_slug(slug)
+            if canonical_date is None:
+                raise ValueError(
+                    f"Recovered post file '{fn}' for article {article_id} has no "
+                    "parseable date prefix; refusing to invent a non-deterministic date."
+                )
             # Self-heal: write slug into DB
             self.backfill_slug(article_id, slug)
             return PublicationIdentity(

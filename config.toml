@@ -474,7 +474,7 @@ retention_days = 30
 format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
 
 [github]
-token = "REDACTED"
+token = ""
 user_name = "Noticiencias Bot"
 user_email = "bot@noticiencias.com"
 source_repo_url = "https://github.com/cortega26/noticiencias_news_collector.git"
@@ -493,7 +493,7 @@ model = "gemini-2.5-flash"
 timeout = 300
 
 [nvidia]
-api_key = "REDACTED"
+api_key = ""
 model = "qwen/qwen3-next-80b-a3b-instruct"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300

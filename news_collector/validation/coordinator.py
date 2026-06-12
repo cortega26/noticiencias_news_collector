@@ -39,6 +39,7 @@ class ValidationCoordinator:
         total_validated = 0
         total_rejected = 0
         batch_count = 0
+        run_failed = False
         validation_results: Dict[str, List[Any]] = {"invalid": [], "valid": []}
 
         while True:
@@ -66,12 +67,11 @@ class ValidationCoordinator:
 
             batch_results = self.validator.validate_batch(articles_to_validate)
 
-            total_validated += len(pending_articles)
-
             invalid_mappings: List[Dict[str, Any]] = []
+            batch_rejected = 0
             if batch_results["invalid"]:
                 for invalid_item in batch_results["invalid"]:
-                    total_rejected += 1
+                    batch_rejected += 1
                     article_data = invalid_item["article"]
                     reason = invalid_item["reason"]
                     rule_name = invalid_item["rule"]
@@ -101,7 +101,20 @@ class ValidationCoordinator:
 
             all_mappings = invalid_mappings + valid_mappings
             if all_mappings:
-                self.db_manager.update_validation_status_bulk(all_mappings)
+                persisted = self.db_manager.update_validation_status_bulk(all_mappings)
+                if persisted is False:
+                    run_failed = True
+                    self.logger.create_module_logger("validation").error(
+                        {
+                            "event": "validation.persist_failed",
+                            "batch": batch_count,
+                            "mappings": len(all_mappings),
+                        }
+                    )
+                    break
+
+            total_validated += len(pending_articles)
+            total_rejected += batch_rejected
 
         self.logger.create_module_logger("validation").info(
             {
@@ -114,7 +127,7 @@ class ValidationCoordinator:
         )
 
         return {
-            "success": True,
+            "success": not run_failed,
             "validated_count": total_validated,
             "rejected_count": total_rejected,
             "details": validation_results,

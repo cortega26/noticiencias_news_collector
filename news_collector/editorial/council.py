@@ -21,6 +21,7 @@ Failure modes:
 """
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -129,8 +130,15 @@ class EditorialCouncil:
         count = len(assessments) or 1
         average = total_score / count
 
-        editor_approval = data.get("editor_approval", "").lower()
-        is_editor_approved = "sí" in editor_approval or "si" in editor_approval
+        editor_approval = data.get("editor_approval", "").strip().lower()
+        is_negative = (
+            bool(re.match(r"\s*no\b", editor_approval))
+            or "requiere cambios" in editor_approval
+        )
+        is_affirmative = (
+            bool(re.match(r"\s*s[ií]\b", editor_approval)) and not is_negative
+        )
+        is_editor_approved = is_affirmative
 
         # Rule of Publication
         # - Promedio >= 3.5

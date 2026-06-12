@@ -142,3 +142,17 @@ def test_database_manager_creates_content_hash_unique_index(tmp_path: Path) -> N
         assert "uq_articles_content_hash" in indexes
     finally:
         manager.close()
+
+
+def test_database_manager_creates_score_logs_latest_index(tmp_path: Path) -> None:
+    db_path = tmp_path / "score_logs_index.db"
+
+    manager = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with manager.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            indexes = {idx["name"] for idx in inspector.get_indexes("score_logs")}
+
+        assert "idx_score_logs_article_latest" in indexes
+    finally:
+        manager.close()
