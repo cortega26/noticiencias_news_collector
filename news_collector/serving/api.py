@@ -112,6 +112,19 @@ class ArticleResponse(BaseModel):
     why_ranked: List[str]
 
 
+class RelatedSourceResponse(BaseModel):
+    id: str
+    name: str
+
+
+class RelatedArticleResponse(BaseModel):
+    id: int
+    title: str
+    source: RelatedSourceResponse
+    url: str
+    score: Optional[float]
+
+
 class PaginationResponse(BaseModel):
     next_cursor: Optional[str]
     has_more: bool
@@ -378,6 +391,52 @@ def create_app(  # noqa: C901
                 },
                 meta={"generated_at": datetime.now(timezone.utc).isoformat()},
             )
+
+    @app.get(
+        "/v1/articles/{article_id}/related",
+        response_model=List[RelatedArticleResponse],
+    )
+    def get_related_articles(
+        article_id: int,
+        manager: DatabaseManager = Depends(get_db),
+    ) -> List[RelatedArticleResponse]:
+        with manager.get_session() as session:
+            article = (
+                session.query(Article.id, Article.cluster_id)
+                .filter(Article.id == article_id)
+                .first()
+            )
+            if article is None:
+                raise HTTPException(status_code=404, detail="Article not found")
+            if article.cluster_id is None:
+                return []
+
+            related = (
+                session.query(Article)
+                .filter(
+                    Article.cluster_id == article.cluster_id,
+                    Article.id != article_id,
+                )
+                .order_by(
+                    func.coalesce(Article.final_score, 0.0).desc(),
+                    Article.id.desc(),
+                )
+                .limit(20)
+                .all()
+            )
+            return [
+                RelatedArticleResponse(
+                    id=item.id,
+                    title=item.title,
+                    source=RelatedSourceResponse(
+                        id=item.source_id,
+                        name=item.source_name,
+                    ),
+                    url=item.url,
+                    score=item.final_score,
+                )
+                for item in related
+            ]
 
     return app
 

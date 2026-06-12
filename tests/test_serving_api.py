@@ -97,6 +97,7 @@ def db_manager(tmp_path) -> DatabaseManager:
                 published_date=payload["published_date"],
                 collected_date=payload["collected_date"],
                 processing_status="completed",
+                cluster_id="cluster-story",
                 article_metadata={
                     "enrichment": {"topics": payload["topics"]},
                 },
@@ -178,3 +179,44 @@ def test_health_and_readiness(api_client: TestClient):
     ready = api_client.get("/readyz")
     assert ready.status_code == 200
     assert ready.json()["status"] == "ready"
+
+
+def test_related_articles_returns_empty_list_without_cluster(
+    api_client: TestClient, db_manager: DatabaseManager
+):
+    with db_manager.get_session() as session:
+        standalone = Article(
+            title="Standalone report",
+            url="https://example.com/standalone",
+            source_id="solo",
+            source_name="Solo Source",
+            processing_status="completed",
+            cluster_id=None,
+        )
+        session.add(standalone)
+        session.flush()
+        article_id = standalone.id
+
+    response = api_client.get(f"/v1/articles/{article_id}/related")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_related_articles_returns_siblings_in_deterministic_order(
+    api_client: TestClient,
+):
+    response = api_client.get("/v1/articles/2/related")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload] == [1, 3]
+    assert payload[0]["source"] == {"id": "nature", "name": "Nature"}
+    assert [item["score"] for item in payload] == [0.92, 0.82]
+
+
+def test_related_articles_returns_not_found_for_unknown_id(api_client: TestClient):
+    response = api_client.get("/v1/articles/999/related")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Article not found"

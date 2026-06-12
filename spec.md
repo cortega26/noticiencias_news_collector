@@ -55,6 +55,24 @@
 
 - Focused identity tests: 27 passed.
 - `make lint`: passed.
+
+## Follow-up: resolve Plan 007 blocker
+
+- Preserve the baseline wheel package roots: `news_collector`, `noticiencias`, and `scripts`.
+- Add explicit setuptools package discovery in `pyproject.toml` so flat-layout auto-discovery is no longer required.
+- Delete the divergent `setup.py`; do not change dependency pins or lockfiles.
+- Verify the rebuilt wheel has the same package roots and version, then run public entrypoint tests and lint.
+
+### Verification result
+
+- Baseline and rebuilt wheel version: `1.3.3`.
+- Rebuilt wheel roots match the baseline: `news_collector`, `noticiencias`, and `scripts`.
+- `setup.py` is absent and no project code imports `aiohttp`.
+- Python-version metadata test now reads the canonical `pyproject.toml` value.
+- Public entrypoint/version tests: 6 passed.
+- `make lint`: passed.
+- Exact Makefile mypy targets: passed.
+- `make test`: 1048 passed, 2 skipped.
 - mypy phase of `make type`: passed.
 - `make test-boundaries`: 3 passed.
 - Full suite: 1031 passed, 2 skipped, 4 failed in cross-repo E2E scenarios because the copied frontend's `test:audit` currently fails unrelated RSS, topic-strip, and newsletter assertions.
@@ -138,3 +156,49 @@ Before each later plan, update this specification with its exact files, behavior
 - Official incremental mypy targets: passed.
 - `make test`: 1045 passed, 2 skipped.
 - The extended coverage run retained exactly the four known cross-repo frontend audit failures and introduced no new failures.
+
+## Current implementation: Plan 010
+
+### Goals
+
+- Investigate whether persisted article clusters can support a reader-facing "also reported by" surface.
+- Add one read-only endpoint, `GET /v1/articles/{id}/related`, without changing clustering, publication, export, or frontend contracts.
+- Return at most 20 sibling articles, excluding the requested article and ordering by `final_score DESC, id DESC`.
+- Document canonical-member options, cluster stability, observed database cardinality, and the smallest proposed frontend contract delta.
+
+### Implementation details
+
+- Add local Pydantic response models in `news_collector/serving/api.py`; this response is confined to the serving boundary.
+- Return `404` for an unknown article, an empty data list for a known article without a cluster, and typed sibling records containing id, title, source, URL, and score.
+- Treat related membership as a dynamic lookup because save-time merge and revalidation logic may change `cluster_id` values.
+- Create `docs/spikes/cluster-master-story.md` with source references and read-only database evidence.
+
+### Verification
+
+- Run the read-only cluster cardinality query against the configured database.
+- Run `.venv/bin/pytest tests/test_serving_api.py -q` after endpoint and test changes.
+- Run `make lint`, `make type`, `make test`, and `make test-boundaries` for this high-risk serving change.
+- Confirm no Plan 010 changes touch contracts, clustering, publication, or frontend code.
+
+### Verification result
+
+- Configured database: 864 articles in 841 clusters; maximum cluster size 13; 10 clusters have multiple members.
+- Serving tests: 6 passed, covering no cluster, deterministic sibling ordering, and unknown ids.
+- `make lint`: passed.
+- `make test-boundaries`: 3 passed.
+- `make test`: 1048 passed, 2 skipped.
+- The official mypy phase passed. Its bundled extended test run produced 1055 passes, 2 skips, and exactly the four known frontend-audit failures from the established baseline.
+- Plan-scoped source changes are limited to the serving endpoint, serving tests, and the spike note; contracts, clustering, publication, and frontend code remain unchanged.
+
+## Follow-up: resolve Plan 006 blocker
+
+- Replace the isolated `mirrors-mypy` hook with a local hook that invokes `.venv/bin/mypy`.
+- Preserve the corrected target regex and `--config-file=pyproject.toml` argument.
+- This deliberately aligns pre-commit with the repository bootstrap and Makefile environment instead of maintaining a second dependency universe.
+- Verify config validity, direct hook execution on all three targets, lint, and the official mypy phase.
+
+### Verification result
+
+- `pre-commit validate-config`: passed.
+- The mypy hook ran on all three intended targets and passed.
+- `make lint`: passed.
