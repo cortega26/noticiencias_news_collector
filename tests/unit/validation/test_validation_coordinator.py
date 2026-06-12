@@ -175,6 +175,39 @@ class TestMultipleBatches:
         coordinator.logger.error.assert_called()
 
 
+class TestPersistenceFailure:
+    def test_run_stops_and_reports_failure_when_persist_fails(self, coordinator):
+        articles = [_MockArticle(id=1, title="A")]
+        coordinator.db_manager.get_pending_articles.return_value = articles
+        coordinator.validator.validate_batch.return_value = {
+            "invalid": [],
+            "valid": [{"id": 1}],
+        }
+        coordinator.db_manager.update_validation_status_bulk.return_value = False
+
+        result = coordinator.execute({}, dry_run=False)
+
+        assert result["success"] is False
+        assert result["validated_count"] == 0
+        assert result["rejected_count"] == 0
+        coordinator.db_manager.update_validation_status_bulk.assert_called_once()
+        coordinator.db_manager.get_pending_articles.assert_called_once()
+
+    def test_successful_persist_reports_success(self, coordinator):
+        articles = [_MockArticle(id=1, title="A")]
+        coordinator.db_manager.get_pending_articles.side_effect = [articles, []]
+        coordinator.validator.validate_batch.return_value = {
+            "invalid": [],
+            "valid": [{"id": 1}],
+        }
+        coordinator.db_manager.update_validation_status_bulk.return_value = True
+
+        result = coordinator.execute({}, dry_run=False)
+
+        assert result["success"] is True
+        assert result["validated_count"] == 1
+
+
 class TestLoggerInteraction:
     def test_validation_completed_event_logged(self, coordinator):
         coordinator.db_manager.get_pending_articles.return_value = []

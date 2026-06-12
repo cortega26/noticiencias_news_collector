@@ -102,6 +102,39 @@ class TestIdentityFromDB:
 
 
 class TestIdentityFromFilesystem:
+    def test_p2_recovery_dateless_filename_is_deterministic(self, tmp_path):
+        """P2 recovery rejects a filename that cannot yield a stable date."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+
+        existing_file = tmp_path / "some-article-without-date.md"
+        existing_file.write_text("---\n---\nContent")
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = existing_file
+
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+
+        with pytest.raises(ValueError, match="no parseable date prefix"):
+            resolver.resolve(article_id="77", article={}, posts_dir=tmp_path)
+
+        db.set_canonical_slug.assert_not_called()
+
+    def test_p2_recovery_dated_filename_uses_slug_date(self, tmp_path):
+        """P2 recovery keeps deriving canonical dates from valid filenames."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+
+        existing_file = tmp_path / "2026-01-15-some-slug.md"
+        existing_file.write_text("---\n---\nContent")
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = existing_file
+
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+        identity = resolver.resolve(article_id="77", article={}, posts_dir=tmp_path)
+
+        assert identity.canonical_date == "2026-01-15"
+        assert identity.is_new is False
+
     def test_ident_02_existing_file_recovered(self, tmp_path):
         """IDENT-02: No DB slug, but file found on FS → is_new=False, manifest self-healed."""
         db = MagicMock()

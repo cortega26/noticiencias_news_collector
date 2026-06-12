@@ -47,3 +47,11 @@ Dependabot raises `chore:`-prefixed pull requests for the affected manifest and 
 5. Push the fix and re-run the scheduled workflow (or wait for the next schedule) to clear the alert.
 
 Keeping the scheduled scan and Dependabot PRs green ensures our SBOM stays current and no known HIGH severity issues reach production.
+
+## SSRF and DNS rebinding
+
+Outbound HTTP clients validate every requested URL, including redirect targets, before sending the request. Validation permits only HTTP and HTTPS, resolves the hostname, rejects resolution failures, and blocks private, loopback, link-local, reserved, and otherwise non-global IP addresses.
+
+The current clients do not pin the validated IP address to the subsequent network connection. DNS can therefore change between validation and connection, leaving a residual DNS-rebinding window. Closing that window requires transport-specific adapters for both `requests` and `httpx` that preserve the original hostname for HTTP `Host` headers and TLS SNI while connecting to a validated address; that broader transport rewrite is deferred.
+
+Production deployments should also enforce outbound network policy: deny access to private and link-local ranges, block cloud metadata endpoints such as `169.254.169.254`, and allow only required destination ports and networks. Application validation is defense in depth, not a replacement for egress controls.

@@ -1,13 +1,46 @@
-# Todo: Malicious Prompt Injection Protection in News Ingestion
+# Todo: Sequential implementation of plans 001-010
 
-- [x] **Phase 1: Implement prompt injection guard rule**
-  - [x] Add `PromptInjectionGuardRule` class to `news_collector/validation/rules.py` with triggers and security exemptions.
-  - [x] Register `PromptInjectionGuardRule` in `ContentValidator._get_default_rules` in `news_collector/validation/validator.py`.
-
-- [x] **Phase 2: Add validation tests**
-  - [x] Add unit tests verifying prompt injection blocks and exemptions in `tests/validation/test_validator.py`.
-
-- [x] **Phase 3: Validation and Verification**
-  - [x] Run `make lint`.
-  - [x] Run `make type`.
-  - [x] Run `make test` to ensure all tests (including new ones) pass.
+- [x] Read repository governance and the plans index.
+- [x] Read Plan 001 and run its drift check.
+- [x] Implement Plan 001 config and environment documentation changes.
+- [x] Verify Plan 001 secret removal and environment override behavior.
+- [x] Run Plan 001 regression gates (`make config-validate`, `make lint`).
+- [x] Review the Plan 001 diff and update its final status.
+- [x] Read Plan 002 and inspect the publication identity flow and tests.
+- [x] Implement Plan 002 deterministic filesystem recovery behavior.
+- [x] Add and run Plan 002 focused regression tests (27 passed).
+- [x] Run Plan 002 lint, mypy, and boundary checks.
+- [x] Confirm the 4 frontend audit failures independently as the pre-existing baseline.
+- [x] Review the Plan 002 diff and record its blocked status.
+- [x] Read Plan 003 and confirm the prompt's affirmative/negative phrases.
+- [x] Implement the exact normalized council approval predicate.
+- [x] Run focused council tests and regression gates for Plan 003.
+- [x] Review the Plan 003 diff and update its final status.
+- [x] Read Plan 004 and inspect the scorer formula and real keyword lists.
+- [x] Add HeuristicScorer characterization tests without changing production code.
+- [x] Run focused tests, coverage, lint, and regression checks for Plan 004.
+- [x] Review the Plan 004 diff and update its final status.
+- [x] Read Plan 005 and confirm the single Alembic head and serving query shape.
+- [x] Add the ScoreLog composite index, idempotent migration, and index test.
+- [x] Apply migrations and run Plan 005 storage/serving regression gates.
+- [x] Review the Plan 005 diff and update its final status.
+- [x] Read Plan 006 and confirm the stale hook path and absent `src/` directory.
+- [x] Correct the pre-commit mypy path regex.
+- [x] Validate config and regex; confirm the hook now runs on both intended files.
+- [ ] Resolve Plan 006 STOP: isolated pre-commit mypy reports 38 transitive errors while Makefile mypy passes.
+- [x] Record Plan 006 as blocked without changing hook arguments or unrelated type debt.
+- [x] Read Plan 007 and establish the pyproject wheel-build baseline.
+- [x] Confirm no active `setup.py` references or `aiohttp` imports, then remove `setup.py`.
+- [x] Run post-removal build and detect setuptools package-discovery failure.
+- [x] Restore `setup.py` exactly; entrypoint tests and lint remain green.
+- [ ] Resolve Plan 007 STOP by moving explicit package discovery into `pyproject.toml` in a separately approved scope.
+- [x] Record Plan 007 blocked status.
+- [x] Read Plan 008 and inspect coordinator callers and existing loop tests.
+- [x] Check persistence result, stop on explicit failure, and count only persisted batches.
+- [x] Add failure and happy-path persistence tests.
+- [x] Run Plan 008 focused, boundary, lint, type, and fast-suite checks.
+- [x] Review the Plan 008 diff and update its final status.
+- [x] Read and implement Plan 009 prompt-isolation and SSRF test/documentation hardening.
+- [x] Verify Plan 009 focused tests, lint, official type targets, and fast suite.
+- [x] Document and defer DNS pinning because it requires a cross-client transport rewrite.
+- [ ] Continue plans 003-010 sequentially, updating this file as each begins.
