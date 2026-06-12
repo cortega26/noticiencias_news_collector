@@ -12,14 +12,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 make bootstrap        # first-time setup (venv + hash-pinned deps)
-make test             # full unit test suite
-make test tests/path/to/test.py::test_name  # single test
+make test             # fast unit suite (excludes slow tests/e2e_pipeline)
+make test-all         # full suite incl. e2e   |  make test-e2e for e2e only
+.venv/bin/pytest tests/path/to/test.py::test_name  # single test (make test takes no args)
 make lint             # ruff + black + isort (check only)
 make lint-fix         # auto-format + ruff fix
 make type             # mypy strict on targeted files
 make quality          # lint + type + bandit + pip-audit + semgrep
 make quality-gate     # snapshot-based publication quality gate
-make prepush          # test + quality-gate (pre-push gate)
+make prepush          # test-all + quality-gate (pre-push gate)
 make config-validate  # validate config.toml
 make config-docs-check # ensure config docs are up to date
 make test-contracts   # D1 contract enforcement tests
