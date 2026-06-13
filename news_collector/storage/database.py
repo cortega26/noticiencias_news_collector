@@ -323,6 +323,9 @@ class DatabaseManager:
     def is_article_published(self, article_id: int) -> bool:
         return self.articles.is_article_published(article_id)
 
+    def published_ids_in(self, article_ids: list[int]) -> set[int]:
+        return self.articles.published_ids_in(article_ids)
+
     def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
         return self.articles.mark_article_publishing(article_id, branch_name)
 

@@ -176,6 +176,39 @@ class TestIsArticlePublished:
         assert db_manager.is_article_published(99999) is False
 
 
+class TestPublishedIdsIn:
+    """Batch equivalent of is_article_published (avoids N+1 in the refinery UI)."""
+
+    def test_batch_published_filter(self, db_manager):
+        # Article with published_url set (via mark_article_published).
+        by_url = db_manager.save_article(
+            _make_article(url="https://example.com/batch-url", idx=20)
+        )
+        db_manager.mark_article_published(by_url.id, "https://pr.url/20")
+
+        # Article with only published_at set (no published_url).
+        by_date = db_manager.save_article(
+            _make_article(url="https://example.com/batch-date", idx=21)
+        )
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == by_date.id).first()
+            row.published_at = datetime.now(timezone.utc)
+            session.add(row)
+
+        # Unpublished article (neither field set).
+        unpublished = db_manager.save_article(
+            _make_article(url="https://example.com/batch-unpub", idx=22)
+        )
+
+        result = db_manager.published_ids_in([by_url.id, by_date.id, unpublished.id])
+        assert by_url.id in result
+        assert by_date.id in result
+        assert unpublished.id not in result
+
+    def test_empty_ids_returns_empty_set(self, db_manager):
+        assert db_manager.published_ids_in([]) == set()
+
+
 class TestPublishingStateTransitions:
     """B-01 / C-01: Tests for publishing state transitions."""
 

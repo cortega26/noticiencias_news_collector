@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy.orm.attributes import QueryableAttribute
@@ -270,6 +270,29 @@ class ArticleRepository:
             if not article:
                 return False
             return article.published_url is not None or article.published_at is not None
+
+    def published_ids_in(self, article_ids: list[int]) -> set[int]:
+        """Return the subset of ``article_ids`` already published.
+
+        Mirrors :meth:`is_article_published` (``published_url`` set OR
+        ``published_at`` set) but resolves the whole batch in a single query,
+        avoiding the N+1 pattern when filtering candidate lists.
+        """
+        if not article_ids:
+            return set()
+        with self._session() as session:
+            rows = (
+                session.query(Article.id)
+                .filter(Article.id.in_(article_ids))
+                .filter(
+                    or_(
+                        Article.published_url.isnot(None),
+                        Article.published_at.isnot(None),
+                    )
+                )
+                .all()
+            )
+            return {row[0] for row in rows}
 
     def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
         """Mark article as 'publishing' before git operations."""
