@@ -108,10 +108,9 @@ def cmd_all(args: argparse.Namespace) -> int:
         exit_code = 1
 
     # Phase 3: Blacklist suggestions
-    cmd_blacklist_report(args)
-
     # Phase 4: Full report
-    cmd_report(args)
+    # Aggregate sub-phase exit codes (both return int) so failures propagate.
+    exit_code = max(exit_code, cmd_blacklist_report(args), cmd_report(args))
 
     print("\n✅ Full audit pipeline completed.")
     if exit_code:
