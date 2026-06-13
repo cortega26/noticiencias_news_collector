@@ -105,9 +105,9 @@ if entered:
 If no module-level `logger` exists in `admin_panel.py`, add one near the top:
 ```python
 from news_collector.utils.logger import get_logger
-logger = get_logger(__name__)
+logger = get_logger().create_module_logger("RefineryAdminPanel")
 ```
-(Match how other modules in this repo obtain a logger — check `image_handler.py:24`.)
+**Note:** `get_logger()` takes **no** arguments (it returns a factory); `get_logger(__name__)` raises `TypeError`. The established pattern is `get_logger().create_module_logger("<name>")` — verified against `image_handler.py:26`. (Corrected post-execution 2026-06-13.)
 
 **Verify:** `grep -n "entered == token" apps/refinery/admin_panel.py` → no matches; `grep -n "compare_digest" apps/refinery/admin_panel.py` → 1 match.
 
