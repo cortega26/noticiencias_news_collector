@@ -25,8 +25,27 @@ audit conversation.
 | 008 | Validation loop: check bulk-update result, report failure accurately | P2 | M | — | DONE — 1039 fast tests pass; persist failure stops and reports false |
 | 009 | Security hardening: prompt-injection isolation (A) + SSRF tests/pinning (B) | P2/P3 | M | — | DONE — isolation/tests/docs complete; IP pinning deferred as cross-client transport rewrite |
 | 010 | Spike: expose article clusters as "master story with sources" | P3 | M | — | DONE — note and bounded related endpoint complete; 4 known frontend audit failures remain baseline |
+| 011 | CI security & quality gates fail **closed** on missing/empty inputs | P2 | S | — | DONE — focused tests, lint, and standard suite pass; `make quality` has 9 unrelated E2E failures copying the frontend `.codegraph/daemon.sock` |
+| 012 | Refinery auth: constant-time token compare + failed-attempt logging | P3 | S | — | TODO |
+| 013 | Operational scripts must persist changes & report failure (5 scripts) | P2 | M | — | TODO |
+| 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | TODO |
+| 015 | Spike: enrichment-economics dashboard in Analytics tab | P3 | M | — | TODO |
+| 016 | Spike: blacklist lifecycle in Sources tab | P3 | M | 013, 014 | TODO |
+| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+> **Plans 011–012 are from the second audit pass (2026-06-12)** covering the areas
+> the first pass skipped: `apps/refinery/`, `scripts/`, `tools/`.
+>
+> **Coverage:** the second pass began with a security + CI-gate audit (plans 011–012);
+> the four category subagents that initially died on a session limit (refinery
+> correctness/perf, scripts correctness, tech-debt/DX/tests, direction) were **re-run
+> to completion on 2026-06-13**. Findings that became **plans (013–014) or
+> rejections** were confirmed by reading the cited code. The **noted-minor items**
+> below are recorded from the subagent pass and are **not independently verified** —
+> treat their `file:line` references as leads to check before acting, not confirmed
+> facts.
 
 ## Recommended sequencing
 
@@ -70,12 +89,110 @@ sensible cadence:
   "scoring runs without network/DB" rule likely has an intended exception here;
   a DI refactor would fight a deliberate design. Revisit only as a spike if desired.
 
+### Second pass (apps/refinery, scripts, tools) — rejected after vetting
+
+- **Refinery image download SSRF** (`image_handler.py`): rejected. The downloader
+  uses `RobustRequestsClient`, whose `SSRFSafeSession.get_adapter` calls
+  `validate_url_safety` on every request (`infrastructure/requests_client.py:94-115,129`).
+  (The DNS-rebinding residual is already covered by plan 009.)
+- **Refinery `unsafe_allow_html` XSS from article data**: rejected. The 5
+  `unsafe_allow_html=True` sites in `admin_panel.py` render only app/config/GitHub
+  values (floats, policy thresholds, db paths, branch/SHA); untrusted article text
+  is shown via default-escaped `st.write`.
+- **`DELETE FROM {table}` SQL injection** (`admin_panel.py:1770`, `verify_fix.py:30`):
+  rejected (×2). Table names come from a hardcoded list; already `# noqa/nosec`.
+- **Refinery GitHub-`conclusion` HTML injection**: rejected. `conclusion` is a
+  GitHub-controlled workflow enum, not attacker text.
+- **Manual-URL-ingestion SSRF** (`admin_panel.py:2043`): rejected. `manual_ingest.py`
+  uses `validate_url_safety` and the action is auth-gated.
+- **gitleaks allowlist silent regex skip** (`security_gate.py:238`): rejected —
+  fails *safe* (a broken allowlist entry over-blocks, never under-reports secrets).
+
+### Second pass — noted, not planned
+
+- **`admin_panel.py` is a 2951-LOC god module** (31 broad `except Exception`, two
+  silent `pass` swallows at lines ~1730/2612): real tech debt, but no acute bug and
+  L-effort to split; not worth a plan now.
+- **`scripts/` + `tools/` (~12K LOC) excluded from mypy** (`pyproject.toml:117`):
+  a genuine type blind spot, but bringing 85 scripts under strict mypy is an L-effort
+  roadmap item that would surface a large backlog — defer; tackle as a staged
+  initiative, not a one-shot plan.
+- **One-off / low-impact script issues**: `publish_article_206.py` YAML-frontmatter
+  injection (a throwaway single-article script), `tools/portability_path_fix.py`
+  absolute-`--report`-path write (dev tool, self-inflicted only), image-upload
+  extension allowlist in `image_briefs.py` (the upload UI *appears* to restrict
+  extensions — not independently confirmed), `run_secret_scan.py` `--severity`
+  documented as unused. All low value; recorded so they aren't re-audited.
+
+### Third pass (deep re-run, 2026-06-13) — rejected after vetting
+
+- **`REFINERY-10` credibility-zero reset**: rejected (false positive). `float(default_data.get("credibility_score", 0.8))`
+  returns a stored `0` correctly — the `0.8` default applies only when the key is
+  absent. Credibility is the one source field the editor handles right (the real
+  data-loss is the other fields — plan 014 Fix A).
+- **`DEBT-02` "validate_export should import AstroPost"**: downgraded/rejected.
+  `validate_export.py` checks the `news_collector.export.v1` contract
+  (title/url/source_id/published_date/summary), **not** the `AstroPost` frontend
+  schema — importing AstroPost would validate the wrong shape. The real issue in
+  that file (empty-export fail-open) is plan 013 Fix 3.
+
+### Third pass — noted, not planned (recorded from subagent output; not independently verified)
+
+- **`REFINERY-04/05/06/07/08/09`** (refinery minor): non-numeric-ID published-check
+  bypass; a redundant `DatabaseManager()` instantiation; Reset-Total using a
+  hardcoded `refinery.db` path vs the configured one (only bites if `DATABASE_CONFIG.path`
+  is customized); 10-min cache TTL showing stale deploy status after publish; a
+  `except Exception: pass` hiding non-`FileNotFoundError` audit-score read errors; a
+  fragile `provider_mode` radio index pattern. All low-impact UI nits — fix
+  opportunistically when next in `admin_panel.py`, not worth dedicated plans.
+- **`DEBT-01` frontmatter parsing duplicated** across `mark_published.py`,
+  `repair_images.py`, `audit_published_categories.py`: real (M effort) — extract a
+  shared `news_collector.utils` parser. Deferred consolidation.
+- **`TESTS-01/02`** state-mutating scripts (`mark_published`, `validate_export`,
+  `repair_images`) lack tests / swallow per-file errors: partly addressed by plan
+  013 (which adds tests for the scripts it touches); remaining coverage deferred.
+- **`DX-01`** inconsistent `sys.path` bootstrap patterns across many scripts (the
+  subagent's exact pattern/file counts are unverified),
+  **`DX-03`** fragile `importlib`-reload hot-reload in `admin_panel.py:22-36`,
+  **`DEBT-04`** dead one-off scripts (`publish_article_206.py`,
+  `reproduce_scoring_bug.py`, `debug_*`, `patch_json_scores.py`): real DX/tech-debt,
+  L/M effort, no acute bug — roadmap items, not one-shot plans.
+- **`DEBT-03`** `admin_panel.py` tangles ~6 responsibilities (auth, config, article
+  processing, deploy health, source management, layout): the deep read named them
+  with line ranges for a future split, but it remains an L-effort refactor of a
+  test-less live UI — defer until refinery has characterization tests.
+
+## Direction findings — options for the maintainer (third pass, refinery/scripts-grounded)
+
+Not bugs — grounded opportunities surfaced by the deep re-run. Each cites the
+scripts that already compute the data and the UI that lacks it. **Three were
+selected and turned into design/spike plans (015–017); two remain unplanned.**
+
+- **Enrichment-economics dashboard** → **plan 015**. `scripts/generate_autonomous_report.py:16-50`
+  computes per-source yield %, headless/proxy success rates from `enrichment_metrics.db`
+  (store: `observability/enrichment_metrics_store.py`); Analytics tab
+  (`admin_panel.py:2412-2491`) shows only collection volume. (M)
+- **Blacklist lifecycle in the UI** → **plan 016** (depends on 013+014). `scripts/audit_sources.py`
+  has suggest/blacklist/unblacklist CLI; the Sources tab (`admin_panel.py:2730`) has no
+  flag/bulk/rationale. **Note:** blacklist state lives in *two* stores — `sources.yaml`
+  (`config/sources.py:250`) and DB `Source.blacklisted` — which the spike must reconcile. (M)
+- **Bulk article actions** → **plan 017**. `admin_panel.py:2570-2725` exposes per-row
+  despublicar/reset (`:2620`, `:2648`) only; no multi-select for batch revert. (M–L)
+- **Maintenance-ops panel** (unplanned) — `scripts/recluster_articles.py`,
+  `scripts/repair_images.py` are hand-run, state-mutating maintenance with no UI,
+  progress, or logging surface. (L, design-first)
+- **Scoring-tuning surface** — `scripts/score_delta.py`, `reranker_distribution.py`,
+  `dedupe_tuning.py` compute regression/diversity/threshold analytics with no home;
+  a tuning tab would close the experiment loop. (L)
+
 ## What was NOT audited (scope honesty)
 
-Deep audit covered `news_collector/` (all packages), config/build/CI, and tests.
-Not deeply audited: `apps/refinery/` Streamlit internals, `scripts/` (~80 one-off
-scripts, also excluded from mypy), `tools/`, the sibling frontend repo
-`../noticiencias/`, and archived/`temp_*`/`audit/` material. Direction findings
-beyond the four surfaced (translation-fidelity critic, NVIDIA routing completion,
-public-API expansion, source-credibility badge) are recorded in the audit summary
-but not turned into plans.
+Across both passes, audited: `news_collector/` (all packages), config/build/CI,
+tests, `apps/refinery/`, `scripts/`, and `tools/`. **Still not audited**: the sibling
+frontend repo `../noticiencias/` (a separate Astro/TypeScript project — needs its own
+pass with the frontend-security skill, not this Python-oriented one), and
+archived/`temp_*`/`build/`/`audit/` material (historical, not architectural authority).
+Direction findings beyond those surfaced (translation-fidelity critic, NVIDIA routing
+completion, public-API expansion, source-credibility badge) are recorded in the audit
+summaries but not turned into plans; the second-pass direction sweep found no strong
+*new* grounded opportunities beyond them.

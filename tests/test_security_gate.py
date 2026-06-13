@@ -9,6 +9,64 @@ import pytest
 from scripts import security_gate
 
 
+def test_pip_audit_missing_report_fails(tmp_path: Path) -> None:
+    status = tmp_path / "status.json"
+
+    result = security_gate.main(
+        [
+            "pip-audit",
+            str(tmp_path / "missing.json"),
+            "--severity",
+            "HIGH",
+            "--status",
+            str(status),
+        ]
+    )
+
+    assert result == 1
+    assert not status.exists()
+
+
+def test_bandit_empty_report_fails(tmp_path: Path) -> None:
+    report = tmp_path / "bandit.json"
+    report.write_text("", encoding="utf-8")
+    status = tmp_path / "status.json"
+
+    result = security_gate.main(
+        [
+            "bandit",
+            str(report),
+            "--severity",
+            "HIGH",
+            "--status",
+            str(status),
+        ]
+    )
+
+    assert result == 1
+    assert not status.exists()
+
+
+def test_gitleaks_missing_report_is_clean(tmp_path: Path) -> None:
+    status = tmp_path / "status.json"
+
+    result = security_gate.main(
+        [
+            "gitleaks",
+            str(tmp_path / "missing.json"),
+            "--severity",
+            "HIGH",
+            "--status",
+            str(status),
+        ]
+    )
+
+    assert result == 0
+    assert (
+        json.loads(status.read_text(encoding="utf-8"))["gitleaks"]["status"] == "pass"
+    )
+
+
 def test_load_json_lines_handles_json_lines(tmp_path: Path) -> None:
     report = tmp_path / "gitleaks.json"
     payload = {
