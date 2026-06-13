@@ -528,16 +528,22 @@ def render_article_processing_panel(  # noqa: C901
     render_fetch_attempts(fetch_attempts)
 
     # Render candidate scoring components with custom progress bars
+    def _as_float(value, default=0.0):
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
     components = selected_art.get("components") or {}
-    source_cred = float(components.get("source_credibility", 0.0))
-    recency = float(components.get("recency", 0.0))
-    quality = float(components.get("content_quality", 0.0))
-    engagement = float(
+    source_cred = _as_float(components.get("source_credibility"))
+    recency = _as_float(components.get("recency"))
+    quality = _as_float(components.get("content_quality"))
+    engagement = _as_float(
         components.get(
-            "engagement_potential", components.get("cognitive_engagement_norm", 0.0)
+            "engagement_potential", components.get("cognitive_engagement_norm")
         )
     )
-    overall_score = float(selected_art.get("score", 0.0))
+    overall_score = _as_float(selected_art.get("score"))
 
     st.markdown(
         f"""
