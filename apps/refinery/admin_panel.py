@@ -1,3 +1,4 @@
+import hmac
 import importlib.util
 import json
 import logging
@@ -56,6 +57,7 @@ from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
+from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import (
     Config,
     default_config_path,
@@ -76,6 +78,8 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     force=True,
 )
+
+logger = get_logger().create_module_logger("RefineryAdminPanel")
 
 # Page Config
 st.set_page_config(
@@ -382,10 +386,11 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
             key=key,
         )
         if entered:
-            if entered == token:
+            if hmac.compare_digest(str(entered), str(token)):
                 st.session_state["refinery_ui_authenticated"] = True
                 st.success("Autenticación exitosa.")
                 return True
+            logger.warning("refinery.auth.failed")
             st.error("Token inválido.")
     return False
 
