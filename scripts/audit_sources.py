@@ -137,6 +137,9 @@ def cmd_blacklist(args: argparse.Namespace) -> int:
         "%Y-%m-%d"
     )
 
+    # Persist to YAML (mirror cmd_unblacklist ordering: write before success message)
+    save_sources(sources_dict)
+
     print(f"✅ Blacklisted '{source_id}': {reason}")
     return 0
 
