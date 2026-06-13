@@ -2867,6 +2867,31 @@ with tab6:
     if not is_new:
         default_data = current_sources.get(selected_source_id, {}).copy()
 
+    def _index_of(options, value, default=0):
+        try:
+            return options.index(value)
+        except (ValueError, TypeError):
+            return default
+
+    cat_options = [
+        "technology",
+        "science",
+        "medicine",
+        "space",
+        "biology",
+        "multidisciplinary",
+        "popular_science",
+        "artificial_intelligence",
+    ]
+    freq_options = ["daily", "weekly", "hourly", "multiple_daily"]
+    group_options = [
+        "ELITE_JOURNALS",
+        "SCIENCE_MEDIA",
+        "INSTITUTIONAL_SOURCES",
+        "AI_LABS",
+        "CUSTOM",
+    ]
+
     with st.form("source_editor"):
         c1, c2 = st.columns(2)
         with c1:
@@ -2887,34 +2912,19 @@ with tab6:
             )
             category = st.selectbox(
                 "Categoría",
-                [
-                    "technology",
-                    "science",
-                    "medicine",
-                    "space",
-                    "biology",
-                    "multidisciplinary",
-                    "popular_science",
-                    "artificial_intelligence",
-                ],
-                index=0,  # Should try to match existing, but selectbox needs index lookup. Simplified for now.
+                cat_options,
+                index=_index_of(cat_options, default_data.get("category")),
             )
             update_freq = st.selectbox(
                 "Frecuencia Actualización",
-                ["daily", "weekly", "hourly", "multiple_daily"],
-                index=0,
+                freq_options,
+                index=_index_of(freq_options, default_data.get("update_frequency")),
             )
 
         group_tag = st.selectbox(
             "Grupo (Organización Interna)",
-            [
-                "ELITE_JOURNALS",
-                "SCIENCE_MEDIA",
-                "INSTITUTIONAL_SOURCES",
-                "AI_LABS",
-                "CUSTOM",
-            ],
-            index=1,
+            group_options,
+            index=_index_of(group_options, default_data.get("_group"), default=1),
         )
 
         submit = st.form_submit_button("💾 Guardar Fuente")
@@ -2923,18 +2933,23 @@ with tab6:
             if not new_id:
                 st.error("El ID es obligatorio.")
             else:
-                # Update Dictionary
-                new_entry = {
-                    "name": name,
-                    "url": url,
-                    "credibility_score": credibility,
-                    "category": category,
-                    "update_frequency": update_freq,
-                    "language": "en",  # Default
-                    "description": "Added via UI",
-                    "typical_delay": 0,
-                    "_group": group_tag,
-                }
+                # Update Dictionary — preserve existing keys (e.g. blacklisted,
+                # blacklist_reason) instead of replacing the whole entry.
+                new_entry = dict(default_data)
+                new_entry.update(
+                    {
+                        "name": name,
+                        "url": url,
+                        "credibility_score": credibility,
+                        "category": category,
+                        "update_frequency": update_freq,
+                        "_group": group_tag,
+                    }
+                )
+                if is_new:
+                    new_entry.setdefault("language", "en")
+                    new_entry.setdefault("description", "Added via UI")
+                    new_entry.setdefault("typical_delay", 0)
 
                 # Merge checks
                 current_sources[new_id] = new_entry
