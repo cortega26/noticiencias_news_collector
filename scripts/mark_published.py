@@ -150,6 +150,10 @@ def main() -> int:
     print(f"✅ Publicaciones actualizadas: {updated}")
     if skipped:
         print(f"⚠️  Publicaciones omitidas: {skipped}")
+
+    if not args.dry_run and post_paths and updated == 0 and skipped > 0:
+        print("❌ No se marcó ninguna publicación pese a encontrar posts.")
+        return 1
     return 0
 
 
