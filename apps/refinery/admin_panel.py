@@ -2330,29 +2330,34 @@ with tab3:
                 refinery_db = DatabaseManager()
                 available_articles = []
 
+                # Resolve "already published" for the whole candidate set in a
+                # single query (avoids one DB round-trip per article on every
+                # Streamlit rerun).
+                published_id_set: set[int] = set()
+                if not show_processed:
+                    candidate_ids = []
+                    for art in articles:
+                        with suppress(ValueError, TypeError):
+                            candidate_ids.append(
+                                int(str(art.get("id", art.get("title"))))
+                            )
+                    published_id_set = refinery_db.published_ids_in(candidate_ids)
+
                 filtered_count = 0
                 for art in articles:
                     art_id = str(art.get("id", art.get("title")))
 
-                    # DEBUG SPECIFIC ID
-                    if art_id == "169":  # noqa: SIM102
-                        # Only show debug if relevant or debug mode
-                        if not show_processed:  # noqa: SIM102
-                            # Keep this unobtrusive or remove it if user is tired of it
-                            pass
-
                     if not show_processed:
                         try:
                             numeric_id = int(art_id)
-                            # is_article_published is the new method in main DB
-                            if refinery_db.is_article_published(numeric_id):
+                            if numeric_id in published_id_set:
                                 filtered_count += 1
                                 continue
                         except ValueError:
                             pass  # If ID is not int, we can't check efficiently in main DB yet, or assume not processed
 
-                        # Check .md existence is handled by is_article_published?
-                        # No, is_article_published checks DB status.
+                        # Check .md existence is handled by published_ids_in?
+                        # No, published_ids_in checks DB status.
                         # RefineryEngine previously checked file system.
                         # We trust DB status now.
                     available_articles.append(art)
