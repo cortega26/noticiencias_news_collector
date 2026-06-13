@@ -165,11 +165,16 @@ Compute the set of published IDs **once** before the loop, then check membership
        with self._session() as s:
            rows = s.query(Article.id).filter(
                Article.id.in_(ids),
-               Article.processing_status == "published",   # confirm the real published-status column/value
+               or_(Article.published_url.isnot(None), Article.published_at.isnot(None)),
            ).all()
        return {r[0] for r in rows}
    ```
-   (Confirm how `is_article_published` defines "published" — match that exact predicate so behavior is identical.)
+   **CORRECTED PREDICATE (2026-06-13):** the real `is_article_published`
+   (`article_repository.py:266-273`) returns `published_url is not None or
+   published_at is not None` — it does **NOT** use `processing_status == "published"`.
+   Use `or_(published_url.isnot(None), published_at.isnot(None))` (add `or_` to the
+   `from sqlalchemy import ...` line). Add the method to `ArticleRepository` AND a
+   one-line delegate on `DatabaseManager` (mirroring `is_article_published`'s delegation).
 3. In the UI loop, replace the per-article query with `if numeric_id in published_id_set:`.
 
 **Verify:** the loop no longer calls `is_article_published` inside it (`grep -n "is_article_published" apps/refinery/admin_panel.py` → only the new batch usage or none in the hot loop). If you added a storage method, add a unit test for it under `tests/` (it touches the DB layer, which *is* in `make type` scope — so `make type` must stay green). AST parse + `make lint` clean.

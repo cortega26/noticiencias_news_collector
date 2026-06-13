@@ -26,9 +26,9 @@ audit conversation.
 | 009 | Security hardening: prompt-injection isolation (A) + SSRF tests/pinning (B) | P2/P3 | M | — | DONE — isolation/tests/docs complete; IP pinning deferred as cross-client transport rewrite |
 | 010 | Spike: expose article clusters as "master story with sources" | P3 | M | — | DONE — note and bounded related endpoint complete; 4 known frontend audit failures remain baseline |
 | 011 | CI security & quality gates fail **closed** on missing/empty inputs | P2 | S | — | DONE — **verified 2026-06-13** (reviewer re-ran all done criteria on HEAD: 10 gate tests pass, missing/empty pip-audit/bandit exit 1, gitleaks empty still clean, OLLAMA guard real, ruff+black clean, scope = 4 in-scope files). `make quality`'s 9 E2E failures are unrelated (copying the frontend `.codegraph/daemon.sock`). |
-| 012 | Refinery auth: constant-time token compare + failed-attempt logging | P3 | S | — | TODO |
-| 013 | Operational scripts must persist changes & report failure (5 scripts) | P2 | M | — | TODO |
-| 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | TODO |
+| 012 | Refinery auth: constant-time token compare + failed-attempt logging | P3 | S | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/012-refinery-auth-constant-time` (commit `2978167`) in worktree, unmerged. `hmac.compare_digest` + secret-free `logger.warning`; 5 new auth tests (incl. no-secret-leak assert), 87 decompose_refinery tests pass, scope = 2 files, ruff+black clean. |
+| 013 | Operational scripts must persist changes & report failure (5 scripts) | P2 | M | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/013-scripts-report-failure` in worktree, unmerged. 11 new tests pass, scope clean (5 scripts + 3 test files), ruff+black clean. **⚠️ Follow-up: `e2e.yml:35` may need `--allow-empty`** — see Dependency notes. |
+| 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/014-refinery-robustness` (3 commits, head `dc8a253`) in worktree, unmerged. Fix A preserves keys + preselects; Fix B `_as_float`; Fix C batched `published_ids_in` (predicate = `published_url OR published_at`, matches `is_article_published`). 10 new tests pass, scope = 5 files, ruff+black clean. |
 | 015 | Spike: enrichment-economics dashboard in Analytics tab | P3 | M | — | TODO |
 | 016 | Spike: blacklist lifecycle in Sources tab | P3 | M | 013, 014 | TODO |
 | 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | TODO |
@@ -67,6 +67,14 @@ sensible cadence:
   010's new endpoint on top to avoid a merge clash.
 - 001's executor work is independent of operator credential rotation, but the row
   is not truly "done" until rotation is acknowledged (see banner).
+- **013 → CI follow-up (operator decision):** plan 013 Fix 3 makes `validate_export.py`
+  **fail** on an empty export by default. `.github/workflows/e2e.yml:35` runs
+  `validate_export.py output.json` right after a `run_collector.py --dry-run` step.
+  The dry-run does real-network collection (dry-run = no DB persistence), so it
+  normally yields non-empty output — but if all sources return zero in CI, that step
+  will now go red. Either add `--allow-empty` to `e2e.yml:35` (treat empty dry-run as
+  OK) or accept the fail-closed behavior. **Not changed by the executor (workflow was
+  out of plan scope); decide before merging branch `advisor/013-scripts-report-failure`.**
 
 ## Findings considered and rejected (do not re-audit)
 
