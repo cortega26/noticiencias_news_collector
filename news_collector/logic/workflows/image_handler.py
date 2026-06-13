@@ -46,6 +46,16 @@ class ImageResolution:
     queued_brief: bool = False
 
 
+def publication_safe_image_alt(value: object, title: object) -> str:
+    """Return usable Spanish alt text without the prohibited generic prefix."""
+    candidate = str(value or "").strip()
+    if candidate and not candidate.casefold().startswith("imagen de"):
+        return candidate
+
+    subject = str(title or "este artículo").strip() or "este artículo"
+    return f"Ilustración editorial relacionada con {subject}"
+
+
 class ArticleImageHandler:
     """
     Resolves the hero image for an article.
@@ -100,10 +110,9 @@ class ArticleImageHandler:
             return ImageResolution(
                 resolved=True,
                 image_url=resolved_brief_image,
-                image_alt=(
-                    existing_brief.draft_alt_text
-                    if existing_brief is not None
-                    else None
+                image_alt=publication_safe_image_alt(
+                    existing_brief.draft_alt_text if existing_brief else None,
+                    article.get("title", article_id),
                 ),
                 queued_brief=False,
             )
@@ -122,8 +131,8 @@ class ArticleImageHandler:
             local_ref = _dl(raw_image_url, image_slug, target_dir)
             if local_ref:
                 logger.info("Updated article image to local asset: {}", local_ref)
-                alt = article.get("image_alt") or (
-                    f"Imagen de {article.get('title', article_id)}"
+                alt = publication_safe_image_alt(
+                    article.get("image_alt"), article.get("title", article_id)
                 )
                 return ImageResolution(
                     resolved=True,
@@ -148,8 +157,8 @@ class ArticleImageHandler:
             and not raw_image_url.startswith("http")
             and raw_image_url != "~/assets/images/default.png"
         ):
-            alt = article.get("image_alt") or (
-                f"Imagen de {article.get('title', article_id)}"
+            alt = publication_safe_image_alt(
+                article.get("image_alt"), article.get("title", article_id)
             )
             return ImageResolution(
                 resolved=True,

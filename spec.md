@@ -82,6 +82,35 @@
 
 Before each later plan, update this specification with its exact files, behavior, risk classification, and verification commands. Do not begin a later plan until the current plan's regression checks pass or its STOP condition is reported.
 
+## Fix: publication-safe image alt text
+
+### Goals
+
+- Publish the blocked Elias Thorne article with descriptive Spanish alternative text.
+- Prevent Refinery from generating the front-end-prohibited `Imagen de {title}` fallback.
+- Preserve valid editorial alt text and deterministically repair missing or generic values before rendering.
+
+### Implementation
+
+- Add a narrow pure normalization function beside `ArticleImageHandler`, the owner of image resolution.
+- Use it for staged briefs, downloaded images, local images, and the final Refinery guard.
+- Add focused unit coverage for missing, generic, and valid alt text.
+- Update the pending article in the temporary publication checkout and rerun publication validation before moving it into the front-end repository.
+
+### Verification
+
+- Run focused image handler and Refinery engine tests.
+- Run `make lint`, `make type`, `make test`, `make test-boundaries`, and `make quality-gate` in the backend.
+- Run `npm run lint`, `npm run validate:content`, `npm run build`, `npm run test:dist`, and `npm run test:audit` in the front-end.
+
+### Verification result
+
+- Focused image/refinery tests: 27 passed.
+- Backend: lint, mypy, 1053 tests, boundaries, and quality gate passed.
+- Front-end article checkout: lint, content validation, build, and dist sanity passed.
+- Front-end audit reproduced the four documented baseline failures unrelated to image alt text.
+- Recovery branch was pushed and PR #106 was opened.
+
 ## Current implementation: Plan 003
 
 - Replace loose `"si" in editor_approval` matching with an explicit `s[ií]` word-boundary match.

@@ -53,3 +53,7 @@
 - [x] Verify the Plan 006 hook and update its status.
 - [x] Resolve Plan 007 with explicit setuptools package discovery.
 - [x] Rebuild without `setup.py`, run entrypoint/lint checks, and update its status.
+- [x] Diagnose the blocked Elias Thorne publication and identify all generic alt fallbacks.
+- [x] Implement publication-safe alt normalization and regression tests.
+- [x] Repair and publish the blocked article through front-end PR #106.
+- [x] Run backend and front-end required validation gates; record baseline audit failures.
