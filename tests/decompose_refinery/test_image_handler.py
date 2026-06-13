@@ -21,6 +21,7 @@ import pytest
 from news_collector.logic.workflows.image_handler import (
     ArticleImageHandler,
     ImageResolution,
+    publication_safe_image_alt,
 )
 
 # ---------------------------------------------------------------------------
@@ -69,6 +70,18 @@ def _patch_http_client(response):
         "news_collector.infrastructure.requests_client.RobustRequestsClient",
         return_value=mock_client,
     )
+
+
+@pytest.mark.parametrize("value", [None, "", "Imagen de Un título", "imagen de prueba"])
+def test_publication_safe_image_alt_repairs_missing_or_generic_text(value):
+    assert publication_safe_image_alt(value, "Un título") == (
+        "Ilustración editorial relacionada con Un título"
+    )
+
+
+def test_publication_safe_image_alt_preserves_descriptive_text():
+    descriptive = "Un hombre observa el mar desde la playa"
+    assert publication_safe_image_alt(descriptive, "Un título") == descriptive
 
 
 # ---------------------------------------------------------------------------
@@ -301,5 +314,6 @@ class TestResolve:
             )
 
         assert result.resolved is True
-        # Alt text must be non-empty when image is resolved
-        assert result.image_alt
+        assert result.image_alt == (
+            "Ilustración editorial relacionada con Test Article"
+        )

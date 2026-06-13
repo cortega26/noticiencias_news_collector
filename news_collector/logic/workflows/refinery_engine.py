@@ -48,7 +48,11 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
 )
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
-from news_collector.logic.workflows.image_handler import CT_TO_EXT, ArticleImageHandler
+from news_collector.logic.workflows.image_handler import (
+    CT_TO_EXT,
+    ArticleImageHandler,
+    publication_safe_image_alt,
+)
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.logic.workflows.publication_identity import (
     PublicationIdentityResolver,
@@ -353,8 +357,10 @@ class RefineryEngine:
         if img_resolution.image_alt:
             article["image_alt"] = img_resolution.image_alt
 
-        if article.get("image_url") and not article.get("image_alt"):
-            article["image_alt"] = f"Imagen de {article.get('title', article_id)}"
+        if article.get("image_url"):
+            article["image_alt"] = publication_safe_image_alt(
+                article.get("image_alt"), article.get("title", article_id)
+            )
 
         # Apply Policy to Editor
         self.editor.critic_threshold = self.policy.critic_threshold
