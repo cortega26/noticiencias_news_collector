@@ -25,7 +25,7 @@ audit conversation.
 | 008 | Validation loop: check bulk-update result, report failure accurately | P2 | M | — | DONE — 1039 fast tests pass; persist failure stops and reports false |
 | 009 | Security hardening: prompt-injection isolation (A) + SSRF tests/pinning (B) | P2/P3 | M | — | DONE — isolation/tests/docs complete; IP pinning deferred as cross-client transport rewrite |
 | 010 | Spike: expose article clusters as "master story with sources" | P3 | M | — | DONE — note and bounded related endpoint complete; 4 known frontend audit failures remain baseline |
-| 011 | CI security & quality gates fail **closed** on missing/empty inputs | P2 | S | — | DONE — focused tests, lint, and standard suite pass; `make quality` has 9 unrelated E2E failures copying the frontend `.codegraph/daemon.sock` |
+| 011 | CI security & quality gates fail **closed** on missing/empty inputs | P2 | S | — | DONE — **verified 2026-06-13** (reviewer re-ran all done criteria on HEAD: 10 gate tests pass, missing/empty pip-audit/bandit exit 1, gitleaks empty still clean, OLLAMA guard real, ruff+black clean, scope = 4 in-scope files). `make quality`'s 9 E2E failures are unrelated (copying the frontend `.codegraph/daemon.sock`). |
 | 012 | Refinery auth: constant-time token compare + failed-attempt logging | P3 | S | — | TODO |
 | 013 | Operational scripts must persist changes & report failure (5 scripts) | P2 | M | — | TODO |
 | 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | TODO |
