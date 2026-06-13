@@ -81,12 +81,14 @@ def has_valid_image(fm: Dict[str, Any]) -> bool:
     if not image:
         return False
 
-    # If it's a string
-    if isinstance(image, str):
-        if not image.strip():
-            return False
-        if image.startswith("http"):
-            return False  # Needs repair (download)
+    # Guard: any non-string image (e.g. YAML list/dict) is invalid and must not
+    # reach the .startswith() checks below, which would raise AttributeError.
+    if not isinstance(image, str):
+        return False
+
+    image = image.strip()
+    if not image or image.startswith("http"):
+        return False  # Empty after strip, or remote URL needing repair (download)
 
     # Check if local file exists
     # Expected format: ~/assets/images/filename.jpg
