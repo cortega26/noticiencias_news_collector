@@ -57,7 +57,7 @@ def validate_article(article: Dict[str, Any], index: int) -> List[str]:
     return errors
 
 
-def validate_export(file_path: Path) -> bool:  # noqa: C901
+def validate_export(file_path: Path, allow_empty: bool = False) -> bool:  # noqa: C901
     """Reads and validates the JSON export."""
     if not file_path.exists():
         print(f"❌ Error: Export file not found at {file_path}")
@@ -98,10 +98,11 @@ def validate_export(file_path: Path) -> bool:  # noqa: C901
         # Logic to extract from source_details would be needed, but let's focus on selection first.
 
     if not articles:
-        print("⚠️ Warning: No articles found in export to validate.")
-        # If dry-run produced 0 articles, it's technically a pass on schema, but maybe a fail on logic.
-        # flexible for now.
-        return True
+        if allow_empty:
+            print("⚠️ No articles found; --allow-empty set, passing.")
+            return True
+        print("❌ No articles found in export; failing validation.")
+        return False
 
     print(f"🔍 Validating {len(articles)} articles...")
 
@@ -129,9 +130,14 @@ def validate_export(file_path: Path) -> bool:  # noqa: C901
 def main():
     parser = argparse.ArgumentParser(description="Validate Content Export")
     parser.add_argument("file_path", type=Path, help="Path to JSON export file")
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Pass validation when the export contains zero articles (e.g. dry-runs).",
+    )
     args = parser.parse_args()
 
-    success = validate_export(args.file_path)
+    success = validate_export(args.file_path, allow_empty=args.allow_empty)
     sys.exit(0 if success else 1)
 
 
