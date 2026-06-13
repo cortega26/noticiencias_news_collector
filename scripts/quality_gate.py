@@ -24,11 +24,19 @@ class QualityGateValidator:
             sys.exit(1)
 
         cases = sorted([d for d in GOLDEN_DIR.iterdir() if d.is_dir()])
+        if not cases:
+            print(f"❌ QUALITY GATE FAILED. No golden cases found in {GOLDEN_DIR}.")
+            sys.exit(1)
+
         failed_cases = []
 
         # Security: Ensure Ollama is not accidentally used
         if os.getenv("OLLAMA_API_URL"):
-            pass
+            print(
+                "❌ QUALITY GATE: OLLAMA_API_URL is set; "
+                "the snapshot gate must run without an LLM."
+            )
+            sys.exit(1)
 
         for case_dir in cases:
             print(f"\n>> 📂 Case: {case_dir.name}")

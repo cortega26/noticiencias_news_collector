@@ -135,6 +135,23 @@ def _load_json(report_path: Path, default: Any) -> Any:
     return json.loads(content)
 
 
+def _load_required_json(report_path: Path, tool: str) -> Any:
+    if not report_path.exists():
+        raise ValueError(
+            f"{tool} report not found at {report_path} - scan did not run; "
+            "failing closed."
+        )
+
+    content = report_path.read_text().strip()
+    if not content:
+        raise ValueError(
+            f"{tool} report at {report_path} is empty - scan produced no output; "
+            "failing closed."
+        )
+
+    return json.loads(content)
+
+
 def _load_json_lines(report_path: Path) -> list[Dict[str, Any]]:
     """Load a JSON document or JSON lines payload into a list of records."""
 
@@ -184,7 +201,7 @@ def load_allowlist(config_path: Path) -> tuple[list[str], list[str]]:
 
 
 def pip_audit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
-    data = _load_json(report_path, {})
+    data = _load_required_json(report_path, "pip-audit")
     findings: List[Dict[str, Any]] = []
     allowlist = _active_pip_audit_allowlist()
     for dependency in data.get("dependencies", []):
@@ -208,7 +225,7 @@ def pip_audit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]
 
 
 def bandit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
-    data = _load_json(report_path, {})
+    data = _load_required_json(report_path, "bandit")
     findings: List[Dict[str, Any]] = []
     for issue in data.get("results", []):
         severity = (issue.get("issue_severity") or "LOW").upper()
