@@ -31,7 +31,7 @@ audit conversation.
 | 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/014-refinery-robustness` (3 commits, head `dc8a253`) **merged into `main` 2026-06-13** (squash these branches or keep merge commits per your preference). Fix A preserves keys + preselects; Fix B `_as_float`; Fix C batched `published_ids_in` (predicate = `published_url OR published_at`, matches `is_article_published`). 10 new tests pass, scope = 5 files, ruff+black clean. |
 | 015 | Spike: enrichment-economics dashboard in Analytics tab | P3 | M | — | DONE (spike, executor + reviewer **verified 2026-06-14**) — branch `advisor/015-enrichment-economics-spike` (2 commits), unmerged. Note `docs/spikes/enrichment-economics-dashboard.md` (answers all 3 open questions) + read-only per-source table in the Analytics tab via `get_all_metrics()`; AST/lint clean, 95 refinery tests pass, no writes. **⚠️ Follow-up (1-line): the slice reads `EnrichmentMetricsStore` (the `development` DB, normally empty in the Refinery) — swap to `ProductionReadonlyStore` (same module, identical `get_all_metrics()` interface, points at `data/metrics/production/…`, returns `{}` if absent) so it shows real economics. Verified drop-in.** |
 | 016 | Spike: blacklist lifecycle in Sources tab | P3 | M | 013, 014 | DONE (spike — STOPPED-as-success; executor + reviewer **verified 2026-06-14**) — branch `advisor/016-blacklist-lifecycle-spike` (2 commits), unmerged. Note `docs/spikes/blacklist-lifecycle-ui.md` + read-only candidates view in tab6; AST/lint clean, 95 refinery tests pass, slice is read-only (`session.query` only). **Writes deferred** (the documented STOP) — see finding below. |
-| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | TODO |
+| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | ⛔ **PARTIAL — branch `advisor/017-bulk-actions-spike` MUST NOT BE MERGED (exclude from any "merge all").** Investigation **DONE & verified** (note `docs/spikes/bulk-article-actions.md` + pure `run_bulk` helper + 7 passing tests — keep these). The **UI slice is rejected**: it builds a NEW live `clone→pull→per-item delete→commit→origin.push()` batch to the frontend repo (violates the plan's STOP #2 "report, don't reshape"), untested against real git, with a **real divergence bug** — see finding below. 2026-06-14. |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
@@ -87,6 +87,21 @@ sensible cadence:
   at the YAML flag — exclude sources already `blacklisted` in `ALL_SOURCES` — collapsing to
   one store so a UI write can safely reuse `save_sources`. Minor adjacent nit: tab6's Factory
   Reset gates on a checkbox only, not `require_refinery_auth`.
+- **017 → bulk-reset slice is NOT merge-ready (do not ship the UI as built).** The spike's
+  own finding is that *every* per-item reset action is a **network git op** (per-row Reset =
+  `origin.pull()` + unlink + `origin.push()`; Despublicar = a GitHub PR each). The executor's
+  UI slice wired a synchronous batch: `_reset_one_local` deletes the DB rows
+  (`admin_panel.py:188-189`) → `file_path.unlink()` (`:190`) → `index.remove` (`:191`), then a
+  single batched `commit` (`:210`) + `origin.push()` (`:214`) for the whole run.
+  **Divergence bug:** `run_bulk` is continue-on-error, so an item that raises at `unlink` has
+  already lost its DB rows yet is reported "failed" (DB/file/git diverge); and if the final
+  single `push` fails, every "succeeded" item is locally deleted but still live in the remote.
+  **Recommendation (sharper than the executor's "extract `reset_one_local`"):** a synchronous
+  Streamlit rerun is the wrong place for bulk git mutations at all — if bulk revert is wanted
+  it belongs in a **background job** with per-item commit/push + idempotent retry, not an
+  in-request loop. The **reusable deliverables from this spike are the investigation note and
+  the generic `run_bulk` helper + tests**; do not treat the spike as a blessing to ship the
+  in-tab batch UI.
 
 ## Findings considered and rejected (do not re-audit)
 
