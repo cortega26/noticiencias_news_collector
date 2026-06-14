@@ -30,7 +30,7 @@ audit conversation.
 | 013 | Operational scripts must persist changes & report failure (5 scripts) | P2 | M | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/013-scripts-report-failure` **merged into `main` 2026-06-13** (squash these branches or keep merge commits per your preference). 11 new tests pass, scope clean (5 scripts + 3 test files), ruff+black clean. **⚠️ Follow-up: `e2e.yml:35` may need `--allow-empty`** — see Dependency notes. |
 | 014 | Refinery source-editor data loss + null-component crash + per-rerun N+1 | P2 | M | — | DONE (executor + reviewer **verified 2026-06-13**) — branch `advisor/014-refinery-robustness` (3 commits, head `dc8a253`) **merged into `main` 2026-06-13** (squash these branches or keep merge commits per your preference). Fix A preserves keys + preselects; Fix B `_as_float`; Fix C batched `published_ids_in` (predicate = `published_url OR published_at`, matches `is_article_published`). 10 new tests pass, scope = 5 files, ruff+black clean. |
 | 015 | Spike: enrichment-economics dashboard in Analytics tab | P3 | M | — | DONE (spike, executor + reviewer **verified 2026-06-14**) — branch `advisor/015-enrichment-economics-spike` (2 commits), unmerged. Note `docs/spikes/enrichment-economics-dashboard.md` (answers all 3 open questions) + read-only per-source table in the Analytics tab via `get_all_metrics()`; AST/lint clean, 95 refinery tests pass, no writes. **⚠️ Follow-up (1-line): the slice reads `EnrichmentMetricsStore` (the `development` DB, normally empty in the Refinery) — swap to `ProductionReadonlyStore` (same module, identical `get_all_metrics()` interface, points at `data/metrics/production/…`, returns `{}` if absent) so it shows real economics. Verified drop-in.** |
-| 016 | Spike: blacklist lifecycle in Sources tab | P3 | M | 013, 014 | TODO |
+| 016 | Spike: blacklist lifecycle in Sources tab | P3 | M | 013, 014 | DONE (spike — STOPPED-as-success; executor + reviewer **verified 2026-06-14**) — branch `advisor/016-blacklist-lifecycle-spike` (2 commits), unmerged. Note `docs/spikes/blacklist-lifecycle-ui.md` + read-only candidates view in tab6; AST/lint clean, 95 refinery tests pass, slice is read-only (`session.query` only). **Writes deferred** (the documented STOP) — see finding below. |
 | 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
@@ -75,6 +75,18 @@ sensible cadence:
   will now go red. Either add `--allow-empty` to `e2e.yml:35` (treat empty dry-run as
   OK) or accept the fail-closed behavior. **Not changed by the executor (workflow was
   out of plan scope); decide before merging branch `advisor/013-scripts-report-failure`.**
+- **016 → blacklist two-store divergence (confirmed bug, candidate for a future fix plan):**
+  the spike proved YAML (`ALL_SOURCES`, read by the collector skip at `system/__init__.py:304`)
+  is the **sole runtime authority** for `blacklisted`; the DB `Source.blacklisted` column
+  (`models.py:419`) has **no runtime reader** — it's a one-directional YAML→DB startup mirror
+  (`source_repository.py:138`). But the CLI **writer** (`cmd_blacklist` → YAML) and the
+  **suggest reader** (`cmd_suggest_blacklist` → DB column, `audit_sources.py:84`) touch
+  different stores, so after a blacklist write `suggest-blacklist` keeps re-suggesting the
+  just-blacklisted source until the next collector startup. **Recommended fix (prereq for any
+  UI/bulk blacklist write):** point `cmd_suggest_blacklist` (and the new read-only UI view)
+  at the YAML flag — exclude sources already `blacklisted` in `ALL_SOURCES` — collapsing to
+  one store so a UI write can safely reuse `save_sources`. Minor adjacent nit: tab6's Factory
+  Reset gates on a checkbox only, not `require_refinery_auth`.
 
 ## Findings considered and rejected (do not re-audit)
 
