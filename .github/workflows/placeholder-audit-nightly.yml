@@ -2,13 +2,14 @@ name: Placeholder Audit (Nightly)
 
 on:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * 1"
   workflow_dispatch: {}
 
 
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       security-events: write
       actions: read
