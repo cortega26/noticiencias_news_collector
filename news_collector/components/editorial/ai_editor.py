@@ -151,6 +151,7 @@ class HeadlinesSchema(BaseModel):
     # Optional for backward compatibility with cached outputs and older prompts.
     pattern_used: str | None = None
     requires_uncertainty_note: bool = False
+    uncertainty_note: str | None = None
     hook_body_fidelity_check: str | None = None
 
 
@@ -1291,9 +1292,13 @@ class EditorAgent:
             "singular, specific entities/concepts. NO generic tags like "
             "'ciencia', 'tecnologia', 'salud', 'noticia'), 'pattern_used' "
             "(one of: curiosity_gap, stakes, counterintuitive, question, "
-            "human_emotion), 'requires_uncertainty_note' (boolean), and "
-            "'hook_body_fidelity_check' (one short sentence pointing to the "
-            "passage of the body that backs the headline's promise).\n\n"
+            "human_emotion), 'requires_uncertainty_note' (boolean), "
+            "'uncertainty_note' (string, only when requires_uncertainty_note is "
+            "true: one sentence in Spanish explaining what is still uncertain "
+            "or preliminary about this finding — what caveat the reader should "
+            "keep in mind), and 'hook_body_fidelity_check' (one short sentence "
+            "pointing to the passage of the body that backs the headline's "
+            "promise).\n\n"
             f"{adapted_content[:2000]}"
         )
         if regenerate_instruction:
@@ -1830,6 +1835,10 @@ class EditorAgent:
                 "requires_uncertainty_note", False
             )
             model_dict["requires_uncertainty_note"] = bool(requires_uncertainty_note)
+
+            uncertainty_note = headlines.get("uncertainty_note")
+            if uncertainty_note and requires_uncertainty_note:
+                model_dict["uncertainty_note"] = str(uncertainty_note)
 
             # Dump to YAML
             # Use python mode to preserve native date types and emit
