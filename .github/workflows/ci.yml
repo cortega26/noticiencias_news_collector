@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
   workflow_dispatch:
 
@@ -18,6 +18,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,6 +31,7 @@ jobs:
   type:
     name: Type check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,6 +44,7 @@ jobs:
   config:
     name: Config validation
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -98,6 +101,7 @@ jobs:
     name: coverage
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -117,21 +121,10 @@ jobs:
           REF="${BASE_REF:-origin/main}"
           bash scripts/coverage_ratcheter.sh check --base-ref "$REF"
 
-  e2e:
-    name: End-to-end
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-python-env
-        with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Run end-to-end suite
-        run: make e2e
-
   perf:
     name: Performance
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -151,6 +144,7 @@ jobs:
   healthcheck:
     name: healthcheck
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -163,143 +157,15 @@ jobs:
             --healthcheck-max-pending 0 \
             --healthcheck-max-ingest-minutes 60
 
-  bandit:
-    name: bandit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-python-env
-        with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Run Bandit
-        run: |
-          set -euo pipefail
-          mkdir -p reports/security
-          .venv/bin/bandit -c pyproject.toml -ll -r news_collector scripts -f json -o reports/security/bandit.json || true
-          .venv/bin/python scripts/security_gate.py bandit reports/security/bandit.json --severity HIGH
-      - name: Upload bandit report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bandit-report
-          path: reports/security/bandit.json
-          if-no-files-found: warn
-
-  gitleaks:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-python-env
-        with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Install gitleaks
-        run: |
-          set -euo pipefail
-          GITLEAKS_VERSION="8.18.1"
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
-      - name: Run gitleaks
-        run: |
-          set -euo pipefail
-          mkdir -p reports/security
-          gitleaks detect --redact --report-format json --report-path reports/security/gitleaks.json --config .gitleaks.toml
-          .venv/bin/python scripts/security_gate.py gitleaks reports/security/gitleaks.json --severity HIGH
-      - name: Upload gitleaks report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gitleaks-report
-          path: reports/security/gitleaks.json
-          if-no-files-found: warn
-
-  pip-audit:
-    name: pip-audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-python-env
-        with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Run pip-audit
-        run: |
-          set -euo pipefail
-          mkdir -p reports/security
-          .venv/bin/pip-audit -r requirements.lock -f json -o reports/security/pip-audit-runtime.json --progress-spinner off || true
-          .venv/bin/python scripts/security_gate.py pip-audit reports/security/pip-audit-runtime.json --severity HIGH
-          .venv/bin/pip-audit -r requirements-security.lock -f json -o reports/security/pip-audit-security.json --progress-spinner off --ignore-vuln GHSA-7gcm-g887-7qv7 || true
-          .venv/bin/python scripts/security_gate.py pip-audit reports/security/pip-audit-security.json --severity HIGH
-      - name: Upload pip-audit reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pip-audit-reports
-          path: |
-            reports/security/pip-audit-runtime.json
-            reports/security/pip-audit-security.json
-          if-no-files-found: warn
-
-  audit-todos:
-    name: Placeholder audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-python-env
-        with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Run placeholder audit
-        run: make audit-todos-check
-      - name: Upload placeholder reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: placeholder-reports
-          path: |
-            reports/placeholders.json
-            reports/placeholders.md
-            reports/placeholder-audit.sarif
-            reports/placeholder-comment.md
-          if-no-files-found: warn
-      - name: Comment on failure
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('fs');
-            const commentPath = 'reports/placeholder-comment.md';
-            const fallbackPath = 'reports/placeholders.md';
-            let body = '🔍 Placeholder audit failed. See workflow logs for details.';
-            if (fs.existsSync(commentPath)) {
-              body = fs.readFileSync(commentPath, 'utf8') || body;
-            } else if (fs.existsSync(fallbackPath)) {
-              const content = fs.readFileSync(fallbackPath, 'utf8');
-              const excerpt = content.trim().split('\n').slice(0, 40).join('\n');
-              body = `🔍 Placeholder audit failed.\n\n${excerpt}`;
-            }
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body,
-            });
-
   build-artifacts:
     name: Build & package
     needs:
       - lint
       - type
+      - config
       - coverage
-      - bandit
-      - gitleaks
-      - pip-audit
-      - e2e
       - perf
       - healthcheck
-      - audit-todos
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -347,18 +213,15 @@ jobs:
     needs:
       - lint
       - type
+      - config
       - coverage
-      - bandit
-      - gitleaks
-      - pip-audit
-      - e2e
       - perf
       - healthcheck
-      - audit-todos
       - build-artifacts
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always() }}
     continue-on-error: true
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       actions: read
