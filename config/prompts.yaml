@@ -589,6 +589,7 @@ headline:
       "excerpt": "...",                      // dek/resumen para SEO y redes, <=140 chars
       "pattern_used": "curiosity_gap" | "stakes" | "counterintuitive" | "question" | "human_emotion",
       "requires_uncertainty_note": true | false,  // true si el gancho se apoya en hallazgo preliminar
+      "uncertainty_note": "..." | null,          // solo si requires_uncertainty_note es true: 1 frase en español explicando qué es preliminar o incierto del hallazgo y qué cautela debe tener el lector
       "hook_body_fidelity_check": "..."      // 1 frase: qué del cuerpo respalda la sorpresa del titular
     }
 
