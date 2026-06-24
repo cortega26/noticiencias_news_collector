@@ -60,6 +60,53 @@ Additional gates by change type:
 | `config.toml` | Primary runtime configuration |
 | `.env.example` | Environment variable template |
 
+### Project map
+
+```
+noticiencias_news_collector/
+├── news_collector/
+│   ├── contracts/       # Pydantic boundary models + adapters
+│   ├── system/          # orchestration, bootstrap, observability
+│   ├── collectors/      # RSS, HTML, Reddit, headless feed ingestion
+│   ├── enrichment/      # NLP, LLM-based summary/translation strategies
+│   ├── infrastructure/  # HTTP clients, LLM providers, proxy
+│   ├── storage/         # SQLAlchemy ORM, Alembic migrations, persistence
+│   ├── scoring/         # relevance/quality/cognitive/heuristic/pre-scorers
+│   ├── validation/      # quality gate rules
+│   ├── taxonomy/        # category/tag normalization
+│   ├── editorial/       # classification, policy, council, AI editor
+│   ├── reranker/        # final ranking before export
+│   ├── logic/workflows/ # refinery engine, PR orchestration, publication
+│   ├── serving/         # FastAPI read layer
+│   ├── monitoring/      # health checks, detection, canary, reporting
+│   ├── components/      # editorial (AI editor) + publishing (GitHub publisher)
+│   └── utils/           # narrow helpers only (no mixed concerns)
+├── apps/refinery/       # Streamlit editorial admin panel
+├── scripts/             # CLI entrypoints
+├── tests/               # contract, unit, integration, e2e, regression, security
+├── docs/                # ADRs, runbooks, audits, architecture docs
+├── config.toml          # primary runtime config
+└── Makefile             # all validation commands
+```
+
+### Architecture rules
+
+- **Contracts** (`contracts/`) define typed cross-boundary shapes — no raw `dict[str, Any]` across packages.
+- **Adapters** (`contracts/adapters.py`) are the only shape-conversion choke point.
+- **I/O stays at edges** — collectors, enrichment, infrastructure, and serving own network/DB; policy modules (scoring, validation, taxonomy, editorial) must be runnable without network or DB.
+- **Orchestration** (`system/`, `logic/workflows/`) coordinates but does not author rules.
+- **Publication identity** must be deterministic and idempotent — no runtime time/randomness in slugs, filenames, or canonical URLs.
+- **Tests are architectural evidence** — add/update when touching contracts, identity, batch logic, or package boundaries.
+
+### Change validation matrix
+
+| Change type | Risk | Minimum validation |
+|---|---|---|
+| Pure rule change (scoring/validation/editorial/taxonomy) | Medium | `make lint && make type && make test` |
+| Contract/adapter/boundary | High | Baseline + `make test-contracts` |
+| Orchestration/workflow/collector/storage/serving | High | Baseline + `make test-boundaries` |
+| Publication identity / config schema / security | Critical | Baseline + targeted gates + `make quality` |
+
 ### Forbidden assumptions
 
 - `main.py` has been removed. Use `python scripts/run_collector.py`.
