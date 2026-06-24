@@ -6,9 +6,9 @@ editorial_mode = "standard"
 policy_integrity_mode = "enforced"
 
 [paths]
-data_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data"
-logs_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/logs"
-dlq_dir = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/data/dlq"
+data_dir = "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector/data"
+logs_dir = "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector/data/data/logs"
+dlq_dir = "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector/data/data/dlq"
 
 [database]
 driver = "sqlite"
@@ -468,7 +468,7 @@ default_language = "es"
 
 [logging]
 level = "INFO"
-file_path = "/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector/data/logs/collector.log"
+file_path = "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector/data/logs/collector.log"
 max_file_size_mb = 10
 retention_days = 30
 format = "{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} | {message}"
