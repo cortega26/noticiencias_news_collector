@@ -155,6 +155,42 @@ class HeadlinesSchema(BaseModel):
     hook_body_fidelity_check: str | None = None
 
 
+class GlossaryItem(BaseModel):
+    """A technical term and its plain-language definition for readers."""
+
+    term: str = Field(..., min_length=1)
+    definition: str = Field(..., min_length=1)
+
+
+class FactCheckItem(BaseModel):
+    """A verifiable claim extracted from the article with its verification status."""
+
+    label: str = Field(..., min_length=1)
+    status: str = Field(..., min_length=1)
+
+
+class SourceItem(BaseModel):
+    """A cited or referenced source (paper, report, press release, institution)."""
+
+    title: str = Field(..., min_length=1)
+    url: str = Field(..., min_length=1)
+    publisher: str | None = None
+    date: str | None = None
+
+
+class EnrichmentSchema(BaseModel):
+    """Stage 4 structured output: editorial enrichment fields for schema v2+."""
+
+    summary_points: list[str] = Field(
+        default_factory=list, min_length=2, max_length=5
+    )
+    glossary: list[GlossaryItem] = Field(default_factory=list, min_length=1)
+    fact_check: list[FactCheckItem] = Field(default_factory=list, min_length=1)
+    why_it_matters: list[str] = Field(default_factory=list, min_length=1)
+    confidence: str = Field(default="", min_length=1)
+    sources: list[SourceItem] = Field(default_factory=list, min_length=1)
+
+
 class GeneratedArticleValidationError(ValueError):
     """Raised when the generated article body is not publishable."""
 
@@ -317,6 +353,7 @@ class EditorAgent:
         translator_model: str | None = None,
         editor_model: str | None = None,
         headlines_model: str | None = None,
+        enrichment_model: str | None = None,
         config: Any | None = None,
     ):
         self.api_url = api_url
@@ -324,6 +361,7 @@ class EditorAgent:
         self._translator_model_cfg = translator_model
         self._editor_model_cfg = editor_model
         self._headlines_model_cfg = headlines_model
+        self._enrichment_model_cfg = enrichment_model
 
         # Configure regex early; cache directory will be resolved after config
         self._emoji_re = re.compile(
@@ -374,6 +412,7 @@ class EditorAgent:
                     "translator_model": self._translator_model_cfg,
                     "editor_model": self._editor_model_cfg,
                     "headlines_model": self._headlines_model_cfg,
+                    "enrichment_model": self._enrichment_model_cfg,
                 },
                 "scoring": {},
             },
@@ -383,6 +422,7 @@ class EditorAgent:
         self.translator_model = resolved["translator"].model_id
         self.editor_model = resolved["editor"].model_id
         self.headlines_model = resolved["headlines"].model_id
+        self.enrichment_model = resolved["enrichment"].model_id
 
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (3600s) and max_tokens (32768)
@@ -415,12 +455,13 @@ class EditorAgent:
             self.translator_model = cloud_model
             self.editor_model = cloud_model
             self.headlines_model = cloud_model
+            self.enrichment_model = cloud_model
 
         self.category_resolver = EditorialCategoryResolver()
         logger.info(
             f"EditorAgent model routing resolved: default={self.model}, "
             f"translator={self.translator_model}, editor={self.editor_model}, "
-            f"headlines={self.headlines_model}"
+            f"headlines={self.headlines_model}, enrichment={self.enrichment_model}"
         )
 
     def _load_prompts(self) -> dict:
@@ -1190,6 +1231,60 @@ class EditorAgent:
                 )
         return headlines
 
+    @staticmethod
+    def _empty_enrichment_fields() -> dict[str, list | str]:
+        """Return empty enrichment dict for graceful fallback when enrichment fails."""
+        return {
+            "summary_points": [],
+            "glossary": [],
+            "fact_check": [],
+            "why_it_matters": [],
+            "confidence": "",
+            "sources": [],
+        }
+
+    def _generate_enrichment_fields(
+        self, article_content: str, article_title: str = ""
+    ) -> dict[str, list | str]:
+        """Stage 4: Editorial Enrichment Field Generation.
+
+        Analyzes the final edited article and generates structured editorial
+        metadata (summary_points, glossary, fact_check, why_it_matters,
+        confidence, sources) via a single LLM call with Pydantic validation.
+
+        Returns a dict with the enrichment fields. On validation failure or
+        LLM error, falls back to empty defaults so enrichment never blocks
+        publication. Logs errors for observability.
+        """
+        system_prompt = self.prompts.get("enrichment", {}).get("system", "")
+        if not system_prompt:
+            logger.warning(
+                "Enrichment stage skipped: 'enrichment' prompt not configured"
+            )
+            return self._empty_enrichment_fields()
+
+        # Use content sampling to stay within context window constraints.
+        # Prepend the title so the LLM has full article identity for metadata.
+        sample = _sample_for_critic(article_content, max_chars=4000)
+        context = f"## Título\n\n{article_title}\n\n## Artículo\n\n{sample}"
+
+        response = ""
+        try:
+            response = self._send_prompt(
+                context, system=system_prompt, model=self.enrichment_model
+            )
+            data = self._extract_json(response)
+            validated = EnrichmentSchema(**data)
+            return validated.model_dump()
+        except (ValidationError, ValueError, json.JSONDecodeError) as e:
+            logger.error(f"Enrichment Schema Validation Failed: {e}")
+            if response:
+                logger.debug(
+                    f"Raw enrichment response (first 500 chars): "
+                    f"{response[:500]}"
+                )
+            return self._empty_enrichment_fields()
+
     def _editorial_output_repair_reason(self, markdown: str) -> str | None:
         body = _extract_publishable_body(markdown)
         if not body:
@@ -1722,6 +1817,47 @@ class EditorAgent:
         )
         validate_generated_article_markdown(final_content)
 
+        # --- STAGE 4: Editorial Enrichment Fields ---
+        print("\n--- STAGE 4: Editorial Enrichment Fields ---")
+        cache_s4 = self._get_cache_path(article_id, "stage4_enrichment")
+        if cache_s4.exists():
+            print(f"(Loaded from cache: {cache_s4})")
+            try:
+                enrichment_fields = json.loads(
+                    cache_s4.read_text(encoding="utf-8")
+                )
+            except (json.JSONDecodeError, Exception) as e:
+                logger.warning(
+                    f"Invalid enrichment cache, regenerating: {e}"
+                )
+                enrichment_fields = self._generate_enrichment_fields(
+                    final_content, title
+                )
+                try:
+                    cache_s4.write_text(
+                        json.dumps(
+                            enrichment_fields, ensure_ascii=False
+                        ),
+                        encoding="utf-8",
+                    )
+                except Exception as _e:
+                    logger.warning(
+                        f"Failed to persist enrichment cache: {_e}"
+                    )
+        else:
+            enrichment_fields = self._generate_enrichment_fields(
+                final_content, title
+            )
+            try:
+                cache_s4.write_text(
+                    json.dumps(enrichment_fields, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+            except Exception as _e:
+                logger.warning(
+                    f"Failed to persist enrichment cache: {_e}"
+                )
+
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
         final_title = headlines.get("direct", title)  # Fallback to original if fail
@@ -1818,12 +1954,39 @@ class EditorAgent:
             if hl_variants:
                 model_dict["headlines_variants"] = hl_variants
 
+            # V2 Editorial Enrichment Fields (Stage 4 generated).
+            # Generated values serve as defaults. Upstream raw_text values
+            # take precedence when present (allows pipeline overrides and
+            # manual editorial corrections from the Refinery UI).
+            for key in [
+                "summary_points",
+                "glossary",
+                "fact_check",
+                "why_it_matters",
+                "confidence",
+                "sources",
+            ]:
+                generated_value = enrichment_fields.get(key)
+                if generated_value:
+                    model_dict[key] = generated_value
+
+            # Upstream raw_text overrides for enrichment fields
             if isinstance(raw_text, dict):
                 for key in [
-                    "why_it_matters",
                     "summary_points",
-                    "uncertainty_note",
                     "glossary",
+                    "fact_check",
+                    "why_it_matters",
+                    "confidence",
+                    "sources",
+                ]:
+                    if key in raw_text and raw_text[key]:
+                        model_dict[key] = raw_text[key]
+
+            # Non-enrichment passthrough fields (not generated by Stage 4)
+            if isinstance(raw_text, dict):
+                for key in [
+                    "uncertainty_note",
                     "featured",
                     "featured_rank",
                     "investigation",
