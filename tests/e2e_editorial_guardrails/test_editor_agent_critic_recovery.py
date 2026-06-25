@@ -52,6 +52,9 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
     # test stays focused on the technical critic recovery path.
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._headline_critic_pass = lambda *args, **kwargs: (True, None)  # type: ignore[method-assign]
+    agent._generate_enrichment_fields = MagicMock(
+        return_value=EditorAgent._empty_enrichment_fields()
+    )  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {  # type: ignore[method-assign]
         "direct": "Hallazgo con impacto regional",
         "question": "¿Qué cambia con este hallazgo?",

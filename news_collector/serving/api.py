@@ -25,17 +25,22 @@ Failure modes:
 from __future__ import annotations
 
 import base64
+import hmac
+import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from dateutil import parser as date_parser
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import aliased
 
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
+from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
+
+logger = get_logger().create_module_logger("serving.api")
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator
@@ -246,6 +251,32 @@ def _build_article_payload(
     }
 
 
+def verify_webhook_token(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> None:
+    """Verify Bearer token against WEBHOOK_API_KEY env var (constant-time)."""
+    webhook_api_key = os.environ.get("WEBHOOK_API_KEY", "")
+    if not webhook_api_key:
+        return  # dev mode — skip auth
+
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header",
+        )
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format. Use: Bearer <token>",
+        )
+    if not hmac.compare_digest(token, webhook_api_key):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid webhook API key",
+        )
+
+
 def create_app(  # noqa: C901
     database_manager: Optional[DatabaseManager] = None,
 ) -> FastAPI:
@@ -437,6 +468,60 @@ def create_app(  # noqa: C901
                 )
                 for item in related
             ]
+
+    @app.post(
+        "/api/v1/webhook/frontend",
+        status_code=status.HTTP_202_ACCEPTED,
+    )
+    def frontend_webhook(
+        payload: Dict[str, Any],
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_webhook_token),
+    ) -> Dict[str, Any]:
+        """Receive CI callbacks from the Noticiencias frontend.
+
+        Accepts ``validation_result`` (Content Guard) and
+        ``publish_complete`` (GitHub Pages deploy) events.
+        Processing is best-effort — the response is always 202.
+        """
+        from news_collector.contracts.webhook import (
+            PublishCompleteEvent,
+            ValidationResultEvent,
+            parse_webhook_payload,
+        )
+        from news_collector.serving.webhook_handler import (
+            process_publish_complete,
+            process_validation_result,
+        )
+
+        # Validate payload structure
+        try:
+            event = parse_webhook_payload(payload)
+        except Exception as exc:
+            logger.warning("Invalid webhook payload: {}", exc)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid payload: {exc}",
+            ) from exc
+
+        # Dispatch by event type (best-effort — always return 202)
+        try:
+            if isinstance(event, ValidationResultEvent):
+                process_validation_result(event, manager)
+            elif isinstance(event, PublishCompleteEvent):
+                process_publish_complete(event, manager)
+        except Exception as exc:
+            logger.error(
+                "Webhook processing error (event={}): {}",
+                event.event,
+                exc,
+                exc_info=True,
+            )
+
+        return {
+            "accepted": True,
+            "event": event.event,
+        }
 
     return app
 
