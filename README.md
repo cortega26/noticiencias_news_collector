@@ -3,7 +3,7 @@
 *Parte del [ecosistema Tooltician](https://tooltician.com) — periodismo científico, reproducible y open-source.*
 
 ![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)
-[![Tooltician](https://tooltician.com/badge.svg)](https://tooltician.com)
+[![Parte de Tooltician](https://tooltician.com/badge.es.svg)](https://tooltician.com)
 
 Backend ingestion, editorial automation, and publication orchestration repo for the Noticiencias product.
 
