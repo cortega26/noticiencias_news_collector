@@ -261,3 +261,45 @@ create that tree and failed with `PermissionError: /home/carlos`.
 - Run `make config-validate`.
 - Run `python scripts/run_collector.py --dry-run` or the scheduled collector workflow
   and confirm initialization no longer attempts to create `/home/carlos`.
+
+
+## CI baseline recovery and deep-audit campaign
+
+### Goal
+
+Restore every required GitHub Actions gate to green, verify the scheduled collector end
+to end, then run a deep repository audit and persist all findings and evidence.
+
+### Confirmed failures and intended fixes
+
+1. **Dry-run export contract:** preserve side-effect-free collection and export the
+   articles produced by that same run instead of reopening an empty database.
+2. **Dependency locks:** regenerate all lockfiles with the repository's pinned
+   `pip-tools==7.5.3`; do not hand-edit hashes or remove declared runtime extras.
+3. **Security expiry:** remove obsolete suppressions only after checking current
+   advisories; upgrade fixable runtime dependencies and document accepted dev-only risk.
+4. **NO_WARN fixture:** explicitly configure `ollama.enrichment_model`; do not weaken
+   production policy.
+5. **Frontend checkout selection:** make candidate priority explicit and deterministic;
+   a stale temporary clone must not outrank the verified sibling checkout.
+6. **Lint/type debt:** apply Black to the three reported files, remove the unused import
+   and obsolete type ignores, and use a safe local default for the development server.
+7. **Governance portability:** remove the workstation-specific scope path from
+   `docs/AGENTS.md`.
+8. **Deep audit:** after CI is green, inspect correctness, security, architecture,
+   operations, tests, dependency hygiene, determinism, performance and docs drift.
+
+### Risk classification
+
+Critical: dependencies, security, CI and runtime configuration. High: CLI export,
+workflow, serving and Refinery checkout resolution.
+
+### Required verification
+
+- Focused regression tests for every behavior change.
+- `make config-validate`, `make lint`, `make type`, `make test`,
+  `make test-boundaries`, `make quality`.
+- Dependency lock check and E2E contract workflow.
+- Scheduled collector rerun.
+- All PR workflows completed successfully.
+- Audit report under `docs/audits/` with evidence, severity, disposition and backlog.
