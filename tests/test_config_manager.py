@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -204,3 +205,20 @@ def test_implicit_keys_are_defined(path: str) -> None:
         if not entry.get("is_nested")
     }
     assert path in schema_keys
+
+
+def test_active_config_paths_are_repository_relative() -> None:
+    """Prevent workstation-specific paths from breaking CI and deployments."""
+
+    config_file = Path(__file__).resolve().parents[1] / "config.toml"
+    with config_file.open("rb") as handle:
+        raw_config = tomllib.load(handle)
+
+    configured_paths = [
+        raw_config["paths"]["data_dir"],
+        raw_config["paths"]["logs_dir"],
+        raw_config["paths"]["dlq_dir"],
+        raw_config["logging"]["file_path"],
+    ]
+
+    assert all(not Path(value).is_absolute() for value in configured_paths)
