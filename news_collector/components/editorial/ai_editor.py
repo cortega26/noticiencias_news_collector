@@ -181,9 +181,7 @@ class SourceItem(BaseModel):
 class EnrichmentSchema(BaseModel):
     """Stage 4 structured output: editorial enrichment fields for schema v2+."""
 
-    summary_points: list[str] = Field(
-        default_factory=list, min_length=2, max_length=5
-    )
+    summary_points: list[str] = Field(default_factory=list, min_length=2, max_length=5)
     glossary: list[GlossaryItem] = Field(default_factory=list, min_length=1)
     fact_check: list[FactCheckItem] = Field(default_factory=list, min_length=1)
     why_it_matters: list[str] = Field(default_factory=list, min_length=1)
@@ -1280,8 +1278,7 @@ class EditorAgent:
             logger.error(f"Enrichment Schema Validation Failed: {e}")
             if response:
                 logger.debug(
-                    f"Raw enrichment response (first 500 chars): "
-                    f"{response[:500]}"
+                    f"Raw enrichment response (first 500 chars): " f"{response[:500]}"
                 )
             return self._empty_enrichment_fields()
 
@@ -1823,40 +1820,28 @@ class EditorAgent:
         if cache_s4.exists():
             print(f"(Loaded from cache: {cache_s4})")
             try:
-                enrichment_fields = json.loads(
-                    cache_s4.read_text(encoding="utf-8")
-                )
+                enrichment_fields = json.loads(cache_s4.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, Exception) as e:
-                logger.warning(
-                    f"Invalid enrichment cache, regenerating: {e}"
-                )
+                logger.warning(f"Invalid enrichment cache, regenerating: {e}")
                 enrichment_fields = self._generate_enrichment_fields(
                     final_content, title
                 )
                 try:
                     cache_s4.write_text(
-                        json.dumps(
-                            enrichment_fields, ensure_ascii=False
-                        ),
+                        json.dumps(enrichment_fields, ensure_ascii=False),
                         encoding="utf-8",
                     )
                 except Exception as _e:
-                    logger.warning(
-                        f"Failed to persist enrichment cache: {_e}"
-                    )
+                    logger.warning(f"Failed to persist enrichment cache: {_e}")
         else:
-            enrichment_fields = self._generate_enrichment_fields(
-                final_content, title
-            )
+            enrichment_fields = self._generate_enrichment_fields(final_content, title)
             try:
                 cache_s4.write_text(
                     json.dumps(enrichment_fields, ensure_ascii=False),
                     encoding="utf-8",
                 )
             except Exception as _e:
-                logger.warning(
-                    f"Failed to persist enrichment cache: {_e}"
-                )
+                logger.warning(f"Failed to persist enrichment cache: {_e}")
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
