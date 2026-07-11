@@ -64,5 +64,5 @@
 - [x] Inspect the latest scheduled collector failure and confirm the repeated root cause.
 - [x] Replace workstation-specific active paths with repository-relative values.
 - [x] Add regression coverage that rejects absolute paths in `config.toml`.
-- [ ] Run the focused config tests and `make config-validate` in CI.
-- [ ] Re-run the scheduled collector and confirm initialization succeeds.
+- [x] Run the focused config tests and `make config-validate` in CI.
+- [x] Confirm collector initialization and dry-run collection succeed in CI.
