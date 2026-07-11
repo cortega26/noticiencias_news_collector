@@ -57,3 +57,12 @@
 - [x] Implement publication-safe alt normalization and regression tests.
 - [x] Repair and publish the blocked article through front-end PR #106.
 - [x] Run backend and front-end required validation gates; record baseline audit failures.
+
+
+## Fix: portable runtime paths for GitHub Actions
+
+- [x] Inspect the latest scheduled collector failure and confirm the repeated root cause.
+- [x] Replace workstation-specific active paths with repository-relative values.
+- [x] Add regression coverage that rejects absolute paths in `config.toml`.
+- [ ] Run the focused config tests and `make config-validate` in CI.
+- [ ] Re-run the scheduled collector and confirm initialization succeeds.
