@@ -66,3 +66,20 @@
 - [x] Add regression coverage that rejects absolute paths in `config.toml`.
 - [x] Run the focused config tests and `make config-validate` in CI.
 - [x] Confirm collector initialization and dry-run collection succeed in CI.
+
+
+## CI baseline recovery and deep-audit campaign
+
+- [x] Diagnose all failures from the first PR run.
+- [x] Add the CI recovery specification and acceptance criteria.
+- [ ] Fix dry-run export data flow and add regression coverage.
+- [ ] Make frontend checkout selection deterministic.
+- [ ] Correct NO_WARN test coverage without weakening policy.
+- [ ] Resolve expired security suppressions with current advisory evidence.
+- [ ] Regenerate dependency locks mechanically.
+- [ ] Resolve Black, Ruff and mypy failures.
+- [ ] Remove the remaining workstation-specific governance path.
+- [ ] Run the full validation matrix and resolve newly exposed failures.
+- [ ] Re-run the scheduled collector successfully.
+- [ ] Execute the deep audit on the green baseline.
+- [ ] Commit the complete audit report and prioritized findings backlog.
