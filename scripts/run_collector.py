@@ -245,7 +245,7 @@ def run_simple_collection(args):  # noqa: C901
         tracker.print_summary_table()
 
         print("🎉 ¡Recolección completada exitosamente!")
-        return True
+        return results
 
     except KeyboardInterrupt:
         print("\n⚠️  Proceso interrumpido por el usuario")
@@ -323,6 +323,64 @@ def print_top_articles(system, count):
 
     except Exception as e:
         print(f"⚠️  Error mostrando artículos: {str(e)}")
+
+
+
+def _article_value(article, name, default=None):
+    """Read a field from either an ORM/model object or a dry-run mapping."""
+    if isinstance(article, dict):
+        return article.get(name, default)
+    return getattr(article, name, default)
+
+
+def _isoformat_or_value(value):
+    """Serialize date-like values without changing already serialized strings."""
+    if value is None or isinstance(value, str):
+        return value
+    isoformat = getattr(value, "isoformat", None)
+    return isoformat() if callable(isoformat) else value
+
+
+def _serialize_export_article(article):
+    """Normalize persisted and in-memory dry-run articles to export contract v1."""
+    metadata = (
+        _article_value(
+            article,
+            "article_metadata",
+            _article_value(article, "metadata", {}),
+        )
+        or {}
+    )
+    url = _article_value(article, "url")
+    return {
+        "id": _article_value(article, "id"),
+        "title": _article_value(article, "title"),
+        "url": str(url) if url is not None else None,
+        "summary": _article_value(article, "summary"),
+        "content": _article_value(article, "content"),
+        "source_name": _article_value(article, "source_name"),
+        "source_id": _article_value(article, "source_id"),
+        "published_date": _isoformat_or_value(
+            _article_value(article, "published_date")
+        ),
+        "published_at": _isoformat_or_value(
+            _article_value(article, "published_at")
+        ),
+        "published_url": _article_value(article, "published_url"),
+        "collected_date": _isoformat_or_value(
+            _article_value(article, "collected_date")
+        ),
+        "score": _article_value(
+            article,
+            "final_score",
+            _article_value(article, "score"),
+        ),
+        "image_url": metadata.get("image_url") if isinstance(metadata, dict) else None,
+        "metadata": metadata,
+        "authors": _article_value(article, "authors", []),
+        "category": _article_value(article, "category"),
+        "components": _article_value(article, "score_components", {}) or {},
+    }
 
 
 def check_dependencies():
@@ -469,82 +527,46 @@ Ejemplos de uso:
         os.environ["LOG_LEVEL"] = "WARNING"
 
     # Ejecutar recolección
-    success = run_simple_collection(args)
+    collection_report = run_simple_collection(args)
+    success = isinstance(collection_report, dict)
 
-    # Exportar a JSON si se solicitó y la recolección fue exitosa (o si es dry_run)
+    # Exportar a JSON si se solicitó y la recolección fue exitosa.
     if success and args.export_json:
         try:
             print(f"\n📦 Exportando artículos a: {args.export_json}")
-            system = create_system()
-            if system.initialize():
-                # Asegurar que el directorio existe
-                export_path = Path(args.export_json)
-                export_path.parent.mkdir(parents=True, exist_ok=True)
+            export_path = Path(args.export_json)
+            export_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # Obtener artículos
+            if args.dry_run:
+                articles = collection_report.get("selection_results", {}).get(
+                    "articles", []
+                )
+            else:
+                system = create_system()
+                if not system.initialize():
+                    raise RuntimeError("Error inicializando sistema para exportación")
                 articles = system.db_manager.get_articles_by_score(
                     limit=50, exclude_published=True
                 )
 
-                # Serializar
-                import json
+            import json
 
-                serialized_articles = []
-                for art in articles:
-                    art_dict = {
-                        "id": art.id,
-                        "title": art.title,
-                        "url": art.url,
-                        "summary": art.summary,
-                        "content": art.content,
-                        "source_name": art.source_name,
-                        "source_id": art.source_id,
-                        "published_date": (
-                            art.published_date.isoformat()
-                            if art.published_date
-                            else None
-                        ),
-                        "published_at": (
-                            art.published_at.isoformat()
-                            if getattr(art, "published_at", None)
-                            else None
-                        ),
-                        "published_url": getattr(art, "published_url", None),
-                        "collected_date": (
-                            art.collected_date.isoformat()
-                            if art.collected_date
-                            else None
-                        ),
-                        "score": art.final_score,
-                        "image_url": (
-                            art.article_metadata.get("image_url")
-                            if art.article_metadata
-                            else None
-                        ),
-                        "metadata": art.article_metadata,
-                        "authors": art.authors,
-                        "category": art.category,
-                        "components": art.score_components or {},
-                    }
-                    serialized_articles.append(art_dict)
+            serialized_articles = [
+                _serialize_export_article(article) for article in articles
+            ]
+            export_payload = {
+                "schema_version": 1,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "contract": "news_collector.export.v1",
+                "article_count": len(serialized_articles),
+                "articles": serialized_articles,
+            }
 
-                export_payload = {
-                    "schema_version": 1,
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "exported_at": datetime.now(timezone.utc).isoformat(),
-                    "contract": "news_collector.export.v1",
-                    "article_count": len(serialized_articles),
-                    "articles": serialized_articles,
-                }
+            with open(export_path, "w", encoding="utf-8") as export_file:
+                json.dump(export_payload, export_file, indent=2, ensure_ascii=False)
 
-                with open(export_path, "w", encoding="utf-8") as f:
-                    json.dump(export_payload, f, indent=2, ensure_ascii=False)
-
-                print(
-                    f"✅ Exportación completada: {len(serialized_articles)} artículos"
-                )
-            else:
-                print("❌ Error inicializando sistema para exportación")
+            print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
         except Exception as e:
             print(f"❌ Error durante exportación: {e}")
 
