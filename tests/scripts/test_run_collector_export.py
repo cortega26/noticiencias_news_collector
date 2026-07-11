@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from scripts.run_collector import _serialize_export_article
+
+
+def test_serialize_export_article_accepts_dry_run_mapping() -> None:
+    published = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
+    article = {
+        "id": 7,
+        "title": "Portable dry-run export",
+        "url": "https://example.com/article",
+        "summary": "Summary",
+        "content": "Body",
+        "source_name": "Example",
+        "source_id": "example",
+        "published_date": published,
+        "metadata": {"image_url": "https://example.com/image.jpg"},
+        "authors": ["Author"],
+        "category": "technology",
+        "score": 0.9,
+    }
+
+    serialized = _serialize_export_article(article)
+
+    assert serialized["published_date"] == published.isoformat()
+    assert serialized["source_id"] == "example"
+    assert serialized["image_url"] == "https://example.com/image.jpg"
+    assert serialized["score"] == 0.9
