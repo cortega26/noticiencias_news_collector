@@ -2,7 +2,7 @@
 
 Status: Active and binding
 Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`; authoritative over lower-level backend docs
-Scope: `/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector`
+Scope: repository root
 
 This file defines reviewable engineering law for the backend. It exists to keep the codebase operable as the ingestion pipeline, Refinery workflows, contracts, storage, and publishing logic grow. It is intentionally specific. Rules that cannot be checked in code review do not belong here.
 
