@@ -44,13 +44,13 @@ class FrontendWebhookEvent(BaseModel):
 class ValidationResultEvent(FrontendWebhookEvent):
     """Webhook payload when Content Guard completes (pass or fail)."""
 
-    event: Literal["validation_result"] = "validation_result"  # type: ignore[assignment]
+    event: Literal["validation_result"] = "validation_result"
 
 
 class PublishCompleteEvent(FrontendWebhookEvent):
     """Webhook payload when deployment to GitHub Pages completes."""
 
-    event: Literal["publish_complete"] = "publish_complete"  # type: ignore[assignment]
+    event: Literal["publish_complete"] = "publish_complete"
 
 
 # Union type for dispatch
