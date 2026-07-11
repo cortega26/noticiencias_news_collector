@@ -231,3 +231,33 @@ Before each later plan, update this specification with its exact files, behavior
 - `pre-commit validate-config`: passed.
 - The mypy hook ran on all three intended targets and passed.
 - `make lint`: passed.
+
+
+## Fix: portable runtime paths for GitHub Actions
+
+### Goals
+
+- Restore the scheduled collector after six consecutive GitHub Actions failures.
+- Remove workstation-specific absolute paths from the active configuration.
+- Prevent the active `config.toml` from reintroducing absolute runtime paths.
+
+### Root cause
+
+The active configuration pointed data, log, DLQ, and log-file paths at
+`/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector`.
+On GitHub-hosted runners, importing `news_collector.config.settings` attempted to
+create that tree and failed with `PermissionError: /home/carlos`.
+
+### Implementation
+
+- Use repository-relative paths under `data/` in `config.toml`.
+- Add a focused regression test that reads the committed TOML and rejects absolute
+  values for all runtime-owned paths.
+- Do not change path resolution, environment precedence, or runtime configuration code.
+
+### Verification
+
+- Run `pytest tests/test_config_manager.py -q`.
+- Run `make config-validate`.
+- Run `python scripts/run_collector.py --dry-run` or the scheduled collector workflow
+  and confirm initialization no longer attempts to create `/home/carlos`.
