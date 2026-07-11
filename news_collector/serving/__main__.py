@@ -5,6 +5,8 @@ Usage:
     python -m news_collector.serving
 """
 
+import os
+
 from news_collector.serving.api import create_app
 
 app = create_app()
@@ -14,7 +16,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "news_collector.serving.__main__:app",
-        host="0.0.0.0",
+        host=os.environ.get("NOTICIENCIAS_API_HOST", "127.0.0.1"),
         port=8000,
         reload=True,
     )
