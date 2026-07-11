@@ -10,8 +10,6 @@ on backend notification).
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
-
 from news_collector.contracts.webhook import (
     PublishCompleteEvent,
     ValidationResultEvent,
@@ -47,9 +45,7 @@ def process_validation_result(
     with db.get_session() as session:
         candidates = (
             session.query(Article)
-            .filter(
-                Article.processing_status.in_(["publishing", "validated"])
-            )
+            .filter(Article.processing_status.in_(["publishing", "validated"]))
             .all()
         )
         for article in candidates:
@@ -95,9 +91,7 @@ def process_publish_complete(
     with db.get_session() as session:
         candidates = (
             session.query(Article)
-            .filter(
-                Article.processing_status.in_(["publishing", "validated"])
-            )
+            .filter(Article.processing_status.in_(["publishing", "validated"]))
             .all()
         )
         for article in candidates:
