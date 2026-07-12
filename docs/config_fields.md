@@ -125,6 +125,7 @@
 | ollama.translator_model | Optional |  | Model override for translation phase. |  |  |
 | ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
 | ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
+| ollama.enrichment_model | Optional |  | Model override for editorial enrichment phase. |  |  |
 | gemini | GeminiConfig |  |  |  |  |
 | gemini.api_key | Optional |  | Google AI Studio API Key. |  |  |
 | gemini.model | str | "gemini-2.5-flash" | Model identifier to use for generation. |  |  |
