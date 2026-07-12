@@ -19,3 +19,12 @@ jobs:
           python-version: '3.13'
       - name: Refresh lockfiles (check mode)
         run: python scripts/sync_lockfiles.py --check --install-pip-tools
+      - name: Upload regenerated lockfiles on drift
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: regenerated-lockfiles
+          path: |
+            requirements.lock
+            requirements-refinery.lock
+            requirements-security.lock
