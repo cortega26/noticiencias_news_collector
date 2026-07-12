@@ -340,15 +340,27 @@ def _isoformat_or_value(value):
     return isoformat() if callable(isoformat) else value
 
 
+def _metadata_mapping(value):
+    """Normalize metadata models and mappings to a JSON-compatible dictionary."""
+    if isinstance(value, dict):
+        return value
+
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        dumped = model_dump(mode="json")
+        return dumped if isinstance(dumped, dict) else {}
+
+    return {}
+
+
 def _serialize_export_article(article):
     """Normalize persisted and in-memory dry-run articles to export contract v1."""
-    metadata = (
+    metadata = _metadata_mapping(
         _article_value(
             article,
             "article_metadata",
             _article_value(article, "metadata", {}),
         )
-        or {}
     )
     url = _article_value(article, "url")
     return {
@@ -560,8 +572,17 @@ Ejemplos de uso:
                 "articles": serialized_articles,
             }
 
-            with open(export_path, "w", encoding="utf-8") as export_file:
-                json.dump(export_payload, export_file, indent=2, ensure_ascii=False)
+            serialized_payload = json.dumps(
+                export_payload,
+                indent=2,
+                ensure_ascii=False,
+            )
+            temp_export_path = export_path.with_suffix(export_path.suffix + ".tmp")
+            try:
+                temp_export_path.write_text(serialized_payload, encoding="utf-8")
+                os.replace(temp_export_path, export_path)
+            finally:
+                temp_export_path.unlink(missing_ok=True)
 
             print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
         except Exception as e:
