@@ -83,3 +83,12 @@
 - [ ] Re-run the scheduled collector successfully.
 - [ ] Execute the deep audit on the green baseline.
 - [ ] Commit the complete audit report and prioritized findings backlog.
+
+
+### E2E dry-run serialization follow-up
+
+- [x] Capture bulk dry-run articles without database writes.
+- [x] Add a targeted zero-persistence regression test.
+- [ ] Normalize structured article metadata for JSON export.
+- [ ] Write the export atomically.
+- [ ] Verify a non-empty schema-valid E2E export.
