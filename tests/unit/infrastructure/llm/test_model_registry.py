@@ -124,6 +124,7 @@ def test_resolved_map_covers_all_registered_stages(tmp_path: Path):
             'translator_model = "llama3.2:7b"\n'
             'editor_model = "qwen2.5:14b"\n'
             'headlines_model = "mistral:7b"\n'
+            'enrichment_model = "qwen2.5:14b"\n'
             "[scoring]\n"
             'llm_model = "llama3.1:8b"\n'
         ),
