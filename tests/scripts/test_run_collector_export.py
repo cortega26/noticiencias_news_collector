@@ -49,3 +49,16 @@ def test_serialize_export_article_normalizes_metadata_model() -> None:
         "image_url": "https://example.com/model-image.jpg"
     }
     assert serialized["image_url"] == "https://example.com/model-image.jpg"
+
+
+def test_serialize_export_article_derives_missing_summary_from_content() -> None:
+    article = {
+        "title": "Content-only source",
+        "url": "https://example.com/content-only",
+        "summary": "",
+        "content": "  Evidence-backed content.  ",
+    }
+
+    serialized = _serialize_export_article(article)
+
+    assert serialized["summary"] == "Evidence-backed content."
