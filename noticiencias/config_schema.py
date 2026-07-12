@@ -702,8 +702,18 @@ class OllamaConfig(StrictModel):
         default=None,
         description="Model override for headlines phase.",
     )
+    enrichment_model: Optional[str] = Field(
+        default=None,
+        description="Model override for editorial enrichment phase.",
+    )
 
-    @field_validator("model", "translator_model", "editor_model", "headlines_model")
+    @field_validator(
+        "model",
+        "translator_model",
+        "editor_model",
+        "headlines_model",
+        "enrichment_model",
+    )
     @classmethod
     def _validate_model_name(cls, v: str | None) -> str | None:
         if v is None:
