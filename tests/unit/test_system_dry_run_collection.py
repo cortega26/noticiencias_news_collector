@@ -39,9 +39,7 @@ class _FakeCollector:
                 {"title": "Bulk two", "url": "https://example.com/two"},
             ]
         )
-        self.db.save_article(
-            {"title": "Single", "url": "https://example.com/single"}
-        )
+        self.db.save_article({"title": "Single", "url": "https://example.com/single"})
         return {"collection_summary": {"articles_found": 3}}
 
 
