@@ -172,7 +172,8 @@ def test_pip_audit_findings_honors_allowlist(
 
 def test_pip_audit_allowlist_entries_are_not_expired() -> None:
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
-    assert "GHSA-7p94-766c-hgjp" in active
+    assert "GHSA-7p94-766c-hgjp" not in active
+    assert "GHSA-rf74-v2fm-23pw" in active
 
 
 def test_pip_audit_allowlist_expiry_guard(monkeypatch: pytest.MonkeyPatch) -> None:
