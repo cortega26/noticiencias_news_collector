@@ -121,10 +121,6 @@ def iter_candidate_repo_roots(
         seen.add(resolved)
         candidates.append(resolved)
 
-    if extra_candidates:
-        for candidate in extra_candidates:
-            add_candidate(candidate)
-
     add_candidate(Path.cwd())
 
     for parent in Path.cwd().resolve().parents:
@@ -133,9 +129,13 @@ def iter_candidate_repo_roots(
 
     parent_dir = collector_repo_root.parent
     add_candidate(parent_dir)
-    for child in parent_dir.iterdir():
+    for child in sorted(parent_dir.iterdir(), key=lambda path: path.name):
         if child.is_dir():
             add_candidate(child)
+
+    if extra_candidates:
+        for candidate in extra_candidates:
+            add_candidate(candidate)
 
     return candidates
 
