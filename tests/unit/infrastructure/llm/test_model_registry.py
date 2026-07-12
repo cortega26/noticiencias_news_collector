@@ -239,6 +239,7 @@ def test_no_warn_passes_with_explicit_stage_map(
             'translator_model = "llama3.2:7b"\n'
             'editor_model = "qwen2.5:14b"\n'
             'headlines_model = "mistral:7b"\n'
+            'enrichment_model = "qwen2.5:14b"\n'
             "[scoring]\n"
             'llm_model = "llama3.1:8b"\n'
         ),
