@@ -31,14 +31,6 @@ SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Each entry must include an expiry date so suppressions cannot become permanent.
 PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
-    "CVE-2026-0994": {
-        "reason": "Protobuf vulnerability with no fix available (version 6.33.4).",
-        "expires_on": "2026-06-30",
-    },
-    "GHSA-7p94-766c-hgjp": {
-        "reason": "NLTK vulnerability with no upstream fix published for 3.9.2.",
-        "expires_on": "2026-06-30",
-    },
     "GHSA-vfmq-68hx-4jfw": {
         "reason": "lxml 6.0.2 vulnerability - fix available in 6.1.0, pending version bump.",
         "expires_on": "2026-07-31",
