@@ -314,41 +314,51 @@ class NewsCollectorSystem:
     ) -> Dict[str, Any]:
         """Ejecuta la fase de recolección de artículos."""
 
-        # Setup dry_run mock
         original_save = None
+        original_save_bulk = None
+        simulated_articles: List[Any] = []
         if dry_run:
             original_save = self.db_manager.save_article
+            original_save_bulk = self.db_manager.save_articles_bulk
 
             from news_collector.contracts.mock_article import MockArticle
 
-            def mock_save(*args, **kwargs):
+            def mock_save(article_data: Any, *args: Any, **kwargs: Any) -> MockArticle:
+                simulated_articles.append(article_data)
                 return MockArticle()
 
+            def mock_save_bulk(articles: Any, *args: Any, **kwargs: Any) -> int:
+                batch = list(articles)
+                simulated_articles.extend(batch)
+                return len(batch)
+
             self.db_manager.save_article = mock_save
+            self.db_manager.save_articles_bulk = mock_save_bulk
 
         try:
             # Recolección real (incluso en dry_run, solo evitamos guardar)
             if hasattr(self.collector, "collect_from_multiple_sources_async"):
-                # Ejecutar versión async si está disponible
-                return cast(
-                    Dict[str, Any],
-                    await self.collector.collect_from_multiple_sources_async(
-                        sources,
-                        session_id=session_id,
-                        trace_id=trace_id,
-                    ),
-                )
-            return cast(
-                Dict[str, Any],
-                self.collector.collect_from_multiple_sources(
+                results = await self.collector.collect_from_multiple_sources_async(
                     sources,
                     session_id=session_id,
                     trace_id=trace_id,
-                ),
-            )
+                )
+            else:
+                results = self.collector.collect_from_multiple_sources(
+                    sources,
+                    session_id=session_id,
+                    trace_id=trace_id,
+                )
+
+            collection_results = cast(Dict[str, Any], results)
+            if dry_run:
+                collection_results["articles"] = simulated_articles
+            return collection_results
         finally:
             if original_save:
                 self.db_manager.save_article = original_save
+            if original_save_bulk:
+                self.db_manager.save_articles_bulk = original_save_bulk
 
     def _execute_validation(
         self, collection_results: Dict[str, Any], dry_run: bool
