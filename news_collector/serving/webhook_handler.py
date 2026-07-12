@@ -10,6 +10,7 @@ on backend notification).
 from __future__ import annotations
 
 from datetime import datetime, timezone
+
 from news_collector.contracts.webhook import (
     PublishCompleteEvent,
     ValidationResultEvent,
