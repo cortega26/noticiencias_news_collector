@@ -303,3 +303,13 @@ workflow, serving and Refinery checkout resolution.
 - Scheduled collector rerun.
 - All PR workflows completed successfully.
 - Audit report under `docs/audits/` with evidence, severity, disposition and backlog.
+
+
+### E2E dry-run serialization follow-up (2026-07-12)
+
+The corrected in-memory dry-run path exposed structured Pydantic metadata that the
+JSON exporter did not normalize. The exporter must convert model metadata with
+`model_dump(mode="json")`, finish serialization before touching the destination,
+and replace the destination atomically so a serialization error cannot leave an
+invalid partial contract artifact. The E2E contract must export at least one
+article and pass `scripts/validate_export.py`.
