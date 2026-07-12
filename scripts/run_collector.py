@@ -325,7 +325,6 @@ def print_top_articles(system, count):
         print(f"⚠️  Error mostrando artículos: {str(e)}")
 
 
-
 def _article_value(article, name, default=None):
     """Read a field from either an ORM/model object or a dry-run mapping."""
     if isinstance(article, dict):
@@ -363,9 +362,7 @@ def _serialize_export_article(article):
         "published_date": _isoformat_or_value(
             _article_value(article, "published_date")
         ),
-        "published_at": _isoformat_or_value(
-            _article_value(article, "published_at")
-        ),
+        "published_at": _isoformat_or_value(_article_value(article, "published_at")),
         "published_url": _article_value(article, "published_url"),
         "collected_date": _isoformat_or_value(
             _article_value(article, "collected_date")
