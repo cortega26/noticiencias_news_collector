@@ -340,6 +340,19 @@ def _isoformat_or_value(value):
     return isoformat() if callable(isoformat) else value
 
 
+def _summary_or_content(article):
+    """Use source summary when present, otherwise derive a bounded content excerpt."""
+    summary = _article_value(article, "summary")
+    if isinstance(summary, str) and summary.strip():
+        return summary.strip()
+
+    content = _article_value(article, "content")
+    if isinstance(content, str) and content.strip():
+        return content.strip()[:500]
+
+    return summary
+
+
 def _metadata_mapping(value):
     """Normalize metadata models and mappings to a JSON-compatible dictionary."""
     if isinstance(value, dict):
@@ -367,7 +380,7 @@ def _serialize_export_article(article):
         "id": _article_value(article, "id"),
         "title": _article_value(article, "title"),
         "url": str(url) if url is not None else None,
-        "summary": _article_value(article, "summary"),
+        "summary": _summary_or_content(article),
         "content": _article_value(article, "content"),
         "source_name": _article_value(article, "source_name"),
         "source_id": _article_value(article, "source_id"),
