@@ -46,6 +46,8 @@ PLACEHOLDER_BASE ?= $(shell \
 	fi)
 PLACEHOLDER_PATTERNS := tools/placeholder_patterns.yml
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
+PIP_AUDIT_SECURITY_REPORT := $(SECURITY_DIR)/pip-audit-security.json
+PIP_AUDIT_REFINERY_REPORT := $(SECURITY_DIR)/pip-audit-refinery.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
 TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
@@ -142,9 +144,13 @@ quality-ci: bootstrap context-validate ## Run strict quality checks for CI (no f
 	@mkdir -p $(SECURITY_DIR)
 	@$(BANDIT) -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
-	@echo "[quality-ci] Running pip-audit..."
+	@echo "[quality-ci] Running pip-audit for all lockfiles..."
 	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT) --progress-spinner off || true
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@$(PIP_AUDIT) -r requirements-security.lock -f json -o $(PIP_AUDIT_SECURITY_REPORT) --progress-spinner off || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_SECURITY_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@$(PIP_AUDIT) -r requirements-refinery.lock -f json -o $(PIP_AUDIT_REFINERY_REPORT) --progress-spinner off || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REFINERY_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running Semgrep..."
 	@$(SEMGREP) scan --config auto --error || echo "Semgrep found issues (non-blocking for now)"
 
@@ -228,11 +234,13 @@ security: bootstrap ## Run security and dependency scans
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 
 security-dev: bootstrap ## Run security audit on dev and refinery environments
-	@echo "[security-dev] Auditing dev and refinery dependencies..."
-	@# Ignoring GHSA-7gcm-g887-7qv7 (protobuf) - Dev/Refinery only, unreachable in production
-	@$(PIP_AUDIT) -r requirements-security.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
-	@$(PIP_AUDIT) -r requirements-refinery.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
-	@echo "[security-dev] All dev/refinery audits passed (no known vulnerabilities)."
+	@mkdir -p $(SECURITY_DIR)
+	@echo "[security-dev] Auditing security and refinery lockfiles..."
+	@$(PIP_AUDIT) -r requirements-security.lock -f json -o $(PIP_AUDIT_SECURITY_REPORT) --progress-spinner off || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_SECURITY_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@$(PIP_AUDIT) -r requirements-refinery.lock -f json -o $(PIP_AUDIT_REFINERY_REPORT) --progress-spinner off || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REFINERY_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[security-dev] All dev/refinery audits passed policy."
 
 audit-issues: ## Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)
 	@tools/audit_to_issues.sh $(AUDIT_ISSUES_FLAGS)
