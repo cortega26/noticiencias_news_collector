@@ -61,7 +61,7 @@ AUDIT_ISSUES_FLAGS ?=
 
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Setting up virtual environment in $(VENV)"
-	@if [ -d $(VENV) ] && ! $(VENV)/$(BIN_DIR)/python -c "import sys; sys.exit(0)" 2>/dev/null; then \
+	@if [ -d $(VENV) ] && ! $(VENV)/$(BIN_DIR)/python -c "import os, sys; sys.exit(0 if os.path.exists(sys._base_executable) else 1)" 2>/dev/null; then \
 		echo "[bootstrap] Existing venv Python not found, recreating..."; \
 		rm -rf $(VENV); \
 	fi
