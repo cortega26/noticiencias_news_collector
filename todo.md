@@ -72,38 +72,49 @@
 
 - [x] Diagnose all failures from the first PR run.
 - [x] Add the CI recovery specification and acceptance criteria.
-- [ ] Fix dry-run export data flow and add regression coverage.
-- [ ] Make frontend checkout selection deterministic.
-- [ ] Correct NO_WARN test coverage without weakening policy.
-- [ ] Resolve expired security suppressions with current advisory evidence.
-- [ ] Regenerate dependency locks mechanically.
-- [ ] Resolve Black, Ruff and mypy failures.
-- [ ] Remove the remaining workstation-specific governance path.
-- [ ] Run the full validation matrix and resolve newly exposed failures.
-- [ ] Re-run the scheduled collector successfully.
-- [ ] Execute the deep audit on the green baseline.
-- [ ] Commit the complete audit report and prioritized findings backlog.
+- [x] Fix dry-run export data flow and add regression coverage.
+- [x] Make frontend checkout selection deterministic.
+- [x] Correct NO_WARN test coverage without weakening policy.
+- [x] Resolve expired security suppressions with current advisory evidence.
+- [x] Regenerate dependency locks mechanically.
+- [x] Resolve Black, Ruff and mypy failures.
+- [x] Remove the remaining workstation-specific governance path.
+- [x] Run every gate that received a runner and resolve newly exposed repository failures; record F-0054 for the final-head runner outage.
+- [ ] Re-run the scheduled collector after GitHub restores runner availability (F-0054).
+- [x] Execute the equivalent deep audit on the last executable baseline.
+- [x] Commit the complete audit report and prioritized findings backlog.
 
 
 ### E2E dry-run serialization follow-up
 
 - [x] Capture bulk dry-run articles without database writes.
 - [x] Add a targeted zero-persistence regression test.
-- [ ] Normalize structured article metadata for JSON export.
-- [ ] Write the export atomically.
-- [ ] Verify a non-empty schema-valid E2E export.
-- [ ] Remove the tracked workstation virtualenv from repository state.
-- [ ] Ignore `.venv/` and harden bootstrap against a missing recorded base interpreter.
-- [ ] Re-run Code Quality and confirm pip-audit emits a report successfully.
+- [x] Normalize structured article metadata for JSON export.
+- [x] Write the export atomically.
+- [x] Verify a non-empty schema-valid E2E export.
+- [x] Remove the tracked workstation virtualenv from repository state.
+- [x] Ignore `.venv/` and harden bootstrap against a missing recorded base interpreter.
+- [x] Re-run Code Quality and confirm pip-audit emits reports for all three locks.
 
 
-- [ ] Intercept and restore source stats/circuit/feed metadata writes during dry-run.
-- [ ] Skip unsolicited source-health artifact writes during dry-run.
-- [ ] Return non-zero when export serialization or atomic replacement fails.
-- [ ] Test previous-export preservation and temporary-file cleanup on export failure.
-- [ ] Document and verify the trimmed-summary/content-500 fallback contract.
+- [x] Intercept and restore source stats/circuit/feed metadata writes during dry-run.
+- [x] Skip unsolicited source-health artifact writes during dry-run.
+- [x] Return non-zero when export serialization or atomic replacement fails.
+- [x] Test previous-export preservation and temporary-file cleanup on export failure.
+- [x] Document and verify the trimmed-summary/content-500 fallback contract.
 
 
-- [ ] Raise all ten primary-lock packages to their published fixed versions.
-- [ ] Regenerate all lockfiles mechanically after the security floors change.
-- [ ] Confirm fail-closed pip-audit reports no unallowlisted primary-lock findings.
+- [x] Raise all ten primary-lock packages to their published fixed versions.
+- [x] Regenerate all lockfiles mechanically after the security floors change.
+- [x] Confirm fail-closed pip-audit reports no unallowlisted primary-lock findings.
+
+
+## Improve Deep closure follow-ups
+
+- [x] Record F-0030 through F-0054 in the central findings ledger.
+- [x] Reconcile the audit backlog with the authoritative ledger.
+- [x] Scope PYSEC-2026-2132 to Semgrep's isolated Click dependency and add an expiry.
+- [ ] Remove the Semgrep Click exception by 2026-08-31 or when upstream compatibility ships.
+- [ ] Obtain owner-approved edits for the two policy-blocked privileged workflows (F-0042).
+- [ ] Monitor the third-party 403 source subset (F-0048).
+- [ ] Restore GitHub Actions runner availability and rerun the final matrix plus scheduled collector (F-0054).
