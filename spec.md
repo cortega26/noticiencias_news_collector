@@ -327,3 +327,20 @@ must recreate it from lockfiles before running the fail-closed security scan.
 Verification: Code Quality must complete Ruff, mypy, tests, Bandit, pip-audit,
 Semgrep, and the quality gate on the PR head; repository search must find no
 tracked workstation-specific virtualenv path.
+
+
+### Dry-run and export failure-signal closure (2026-07-13)
+
+Dry-run must not persist article or source operational state. During collection it
+must intercept and later restore single/bulk article saves plus source statistics,
+circuit-state, and feed-metadata updates. The CLI must also avoid writing the
+unsolicited source-health artifact in dry-run; an explicitly requested export remains
+allowed. Export serialization or atomic replacement failure must leave any previous
+destination unchanged, remove the temporary file, and exit non-zero. The summary
+contract preserves a nonblank source summary after trimming; otherwise it exports the
+first 500 characters of trimmed content.
+
+Verification: extend the dry-run fake database to call every write API and assert zero
+persistence plus method restoration. Add CLI tests for serialization/replace failure,
+non-zero exit, destination preservation, and temporary-file cleanup.
+
