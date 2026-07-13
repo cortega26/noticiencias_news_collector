@@ -90,6 +90,24 @@ class TestWriteArticle:
         data = json.loads(manifest_path.read_text())
         assert data.get("42") == "2024-01-25-test.md"
 
+    def test_exclusive_write_rejects_concurrent_collision(
+        self, writer, posts_dir, target_dir
+    ):
+        target = posts_dir / "2024-01-25-test.md"
+        target.write_text("winner", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="concurrently created"):
+            writer.write_article(
+                posts_dir=posts_dir,
+                output_filename=target.name,
+                content="loser",
+                article_id="42",
+                target_dir=target_dir,
+                exclusive=True,
+            )
+
+        assert target.read_text(encoding="utf-8") == "winner"
+
     def test_write_07_path_traversal_raises(self, writer, posts_dir, target_dir):
         """WRITE-07: write_article raises ValueError on path traversal attempt."""
         with pytest.raises(ValueError, match="[Pp]ath traversal"):
