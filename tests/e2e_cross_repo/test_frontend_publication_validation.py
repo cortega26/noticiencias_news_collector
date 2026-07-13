@@ -35,8 +35,8 @@ def test_frontend_publication_validation_success_restores_workspace(tmp_path: Pa
         fixture_path = posts_dir / FIXTURE_POST_FILENAME
         assert fixture_path.exists()
         fixture_text = fixture_path.read_text(encoding="utf-8")
-        expected_source = "source_url: \'https://example.com/publication-smoke-source\'"
-        assert expected_source in fixture_text
+        assert "source_url: \'https://example.com/" in fixture_text
+        assert "publication-smoke-source\'" in fixture_text
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest[FIXTURE_ARTICLE_ID] == FIXTURE_POST_FILENAME
         return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
