@@ -314,12 +314,21 @@ class NewsCollectorSystem:
     ) -> Dict[str, Any]:
         """Ejecuta la fase de recolección de artículos."""
 
-        original_save = None
-        original_save_bulk = None
+        original_writes: Dict[str, Any] = {}
         simulated_articles: List[Any] = []
         if dry_run:
-            original_save = self.db_manager.save_article
-            original_save_bulk = self.db_manager.save_articles_bulk
+            write_methods = (
+                "save_article",
+                "save_articles_bulk",
+                "update_source_stats",
+                "update_source_circuit_state",
+                "update_source_feed_metadata",
+            )
+            original_writes = {
+                name: getattr(self.db_manager, name)
+                for name in write_methods
+                if hasattr(self.db_manager, name)
+            }
 
             from news_collector.contracts.mock_article import MockArticle
 
@@ -332,8 +341,18 @@ class NewsCollectorSystem:
                 simulated_articles.extend(batch)
                 return len(batch)
 
+            def mock_source_update(*args: Any, **kwargs: Any) -> bool:
+                return True
+
             self.db_manager.save_article = mock_save
             self.db_manager.save_articles_bulk = mock_save_bulk
+            for name in (
+                "update_source_stats",
+                "update_source_circuit_state",
+                "update_source_feed_metadata",
+            ):
+                if name in original_writes:
+                    setattr(self.db_manager, name, mock_source_update)
 
         try:
             # Recolección real (incluso en dry_run, solo evitamos guardar)
@@ -355,10 +374,8 @@ class NewsCollectorSystem:
                 collection_results["articles"] = simulated_articles
             return collection_results
         finally:
-            if original_save:
-                self.db_manager.save_article = original_save
-            if original_save_bulk:
-                self.db_manager.save_articles_bulk = original_save_bulk
+            for name, original_method in original_writes.items():
+                setattr(self.db_manager, name, original_method)
 
     def _execute_validation(
         self, collection_results: Dict[str, Any], dry_run: bool
