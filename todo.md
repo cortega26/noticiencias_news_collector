@@ -27,13 +27,13 @@
 - [x] Read Plan 006 and confirm the stale hook path and absent `src/` directory.
 - [x] Correct the pre-commit mypy path regex.
 - [x] Validate config and regex; confirm the hook now runs on both intended files.
-- [ ] Resolve Plan 006 STOP: isolated pre-commit mypy reports 38 transitive errors while Makefile mypy passes.
+- [x] Resolve Plan 006 STOP: aligned the hook with the repository environment; later verification passed.
 - [x] Record Plan 006 as blocked without changing hook arguments or unrelated type debt.
 - [x] Read Plan 007 and establish the pyproject wheel-build baseline.
 - [x] Confirm no active `setup.py` references or `aiohttp` imports, then remove `setup.py`.
 - [x] Run post-removal build and detect setuptools package-discovery failure.
 - [x] Restore `setup.py` exactly; entrypoint tests and lint remain green.
-- [ ] Resolve Plan 007 STOP by moving explicit package discovery into `pyproject.toml` in a separately approved scope.
+- [x] Resolve Plan 007 STOP with explicit package discovery in `pyproject.toml`; later wheel verification passed.
 - [x] Record Plan 007 blocked status.
 - [x] Read Plan 008 and inspect coordinator callers and existing loop tests.
 - [x] Check persistence result, stop on explicit failure, and count only persisted batches.
