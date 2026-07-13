@@ -97,8 +97,6 @@ def run_simple_collection(args):  # noqa: C901
 
         # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
 
-        # Importar y crear sistema bajo demanda (evita importar DB si solo --check-deps)
-
         config_override = {}
         if args.fast:
             print("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
@@ -241,7 +239,8 @@ def run_simple_collection(args):  # noqa: C901
         )
 
         # Diagnostics Report
-        tracker.export_json("data/exports/source_health.json")
+        if not args.dry_run:
+            tracker.export_json("data/exports/source_health.json")
         tracker.print_summary_table()
 
         print("🎉 ¡Recolección completada exitosamente!")
@@ -551,6 +550,7 @@ Ejemplos de uso:
     # Ejecutar recolección
     collection_report = run_simple_collection(args)
     success = isinstance(collection_report, dict)
+    export_success = True
 
     # Exportar a JSON si se solicitó y la recolección fue exitosa.
     if success and args.export_json:
@@ -599,9 +599,10 @@ Ejemplos de uso:
 
             print(f"✅ Exportación completada: {len(serialized_articles)} artículos")
         except Exception as e:
+            export_success = False
             print(f"❌ Error durante exportación: {e}")
 
-    sys.exit(0 if success else 1)
+    sys.exit(0 if success and export_success else 1)
 
 
 if __name__ == "__main__":
