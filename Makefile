@@ -124,7 +124,7 @@ quality: bootstrap ## Run all quality checks (lint, type, security, audit)
 	@echo "[quality] Running Bandit (Security)..."
 	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f txt
 	@echo "[quality] Running pip-audit..."
-	@$(PIP_AUDIT) -r requirements.lock --desc --ignore-vuln CVE-2026-0994
+	@$(PIP_AUDIT) -r requirements.lock --desc
 	@echo "[quality] Running Semgrep..."
 	@$(SEMGREP) scan --config .semgrep.yml --error || echo "Semgrep found issues (non-blocking for now)"
 
