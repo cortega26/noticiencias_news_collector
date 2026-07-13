@@ -39,11 +39,21 @@ PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
         "reason": "NLTK 3.9.2 vulnerability with no fix available.",
         "expires_on": "2026-09-30",
     },
+    "PYSEC-2026-2132": {
+        "reason": (
+            "Semgrep 1.169.0 requires click~=8.1.8; this dependency is isolated to "
+            "development security tooling and is not present in the runtime lock."
+        ),
+        "expires_on": "2026-08-31",
+        "dependency": "click",
+    },
 }
 
 
-def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
-    active: dict[str, str] = {}
+def _active_pip_audit_allowlist(
+    today: date | None = None,
+) -> dict[str, dict[str, str]]:
+    active: dict[str, dict[str, str]] = {}
     today = today or date.today()
     expired: list[str] = []
     for vuln_id, payload in PIP_AUDIT_ALLOWLIST.items():
@@ -62,7 +72,7 @@ def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
         if expires_on < today:
             expired.append(f"{vuln_id} (expired {expires_on.isoformat()})")
             continue
-        active[vuln_id] = reason
+        active[vuln_id] = payload
 
     if expired:
         raise ValueError(
@@ -70,6 +80,18 @@ def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
         )
 
     return active
+
+
+def _pip_audit_is_allowlisted(
+    vuln_id: str,
+    dependency_name: str,
+    allowlist: dict[str, dict[str, str]],
+) -> bool:
+    payload = allowlist.get(vuln_id)
+    if payload is None:
+        return False
+    scoped_dependency = payload.get("dependency", "").strip().lower()
+    return not scoped_dependency or scoped_dependency == dependency_name.lower()
 
 
 def load_status(status_path: Path) -> Dict[str, Any]:
@@ -169,7 +191,7 @@ def pip_audit_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]
         version = dependency.get("version")
         for vuln in dependency.get("vulns", []):
             vuln_id = (vuln.get("id") or "").strip()
-            if vuln_id in allowlist:
+            if _pip_audit_is_allowlisted(vuln_id, str(name), allowlist):
                 continue
             severity = (vuln.get("severity") or "UNKNOWN").upper()
             if SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK[threshold]:

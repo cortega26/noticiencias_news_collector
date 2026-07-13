@@ -170,6 +170,17 @@ def test_pip_audit_findings_honors_allowlist(
     ]
 
 
+def test_pip_audit_allowlist_is_dependency_scoped() -> None:
+    active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
+
+    assert security_gate._pip_audit_is_allowlisted(  # type: ignore[attr-defined]
+        "PYSEC-2026-2132", "click", active
+    )
+    assert not security_gate._pip_audit_is_allowlisted(  # type: ignore[attr-defined]
+        "PYSEC-2026-2132", "unrelated-package", active
+    )
+
+
 def test_pip_audit_allowlist_entries_are_not_expired() -> None:
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
     assert "GHSA-7p94-766c-hgjp" not in active
