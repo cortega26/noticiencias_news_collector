@@ -95,3 +95,10 @@
 - [ ] Remove the tracked workstation virtualenv from repository state.
 - [ ] Ignore `.venv/` and harden bootstrap against a missing recorded base interpreter.
 - [ ] Re-run Code Quality and confirm pip-audit emits a report successfully.
+
+
+- [ ] Intercept and restore source stats/circuit/feed metadata writes during dry-run.
+- [ ] Skip unsolicited source-health artifact writes during dry-run.
+- [ ] Return non-zero when export serialization or atomic replacement fails.
+- [ ] Test previous-export preservation and temporary-file cleanup on export failure.
+- [ ] Document and verify the trimmed-summary/content-500 fallback contract.
