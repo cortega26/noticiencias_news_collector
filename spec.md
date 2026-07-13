@@ -344,3 +344,14 @@ Verification: extend the dry-run fake database to call every write API and asser
 persistence plus method restoration. Add CLI tests for serialization/replace failure,
 non-zero exit, destination preservation, and temporary-file cleanup.
 
+
+### Newly disclosed primary-lock vulnerability closure (2026-07-13)
+
+Once pip-audit could run portably, it found 16 advisories across 10 packages in
+the primary runtime lock. Every reported item has a published fixed version. Raise
+minimums for Click 8.3.3, Starlette 1.3.1 (and a compatible FastAPI resolution),
+IDNA 3.15, lxml 6.1.0, Mako 1.3.12, Pygments 2.20.0, python-dotenv 1.2.2,
+Requests 2.33.0, urllib3 2.7.0, and SoupSieve 2.8.4. Regenerate every lock
+mechanically and require dependency-lock sync, full tests, and fail-closed pip-audit
+to pass. Do not add new advisory ignores.
+
