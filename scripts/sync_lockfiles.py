@@ -54,6 +54,8 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--allow-unsafe",
             # Security tooling is isolated from project dependencies because
             # Semgrep intentionally constrains Click below the runtime floor.
+            # Upgrade avoids treating the previous tool lock as a resolver constraint.
+            "--upgrade",
             "--output-file",
             "requirements-security.lock",
             "requirements-security.in",
