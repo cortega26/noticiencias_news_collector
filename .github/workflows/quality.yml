@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -41,8 +41,15 @@ jobs:
       - name: Install Gitleaks
         run: |
           GITLEAKS_VERSION="8.18.1"
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
+          ARCHIVE="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          RELEASE_URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl --fail --show-error --silent --location "${RELEASE_URL}/${ARCHIVE}" --output "/tmp/${ARCHIVE}"
+          curl --fail --show-error --silent --location "${RELEASE_URL}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" --output /tmp/gitleaks_checksums.txt
+          (
+            cd /tmp
+            grep "  ${ARCHIVE}$" gitleaks_checksums.txt | sha256sum --check --strict -
+          )
+          tar -xzf "/tmp/${ARCHIVE}" -C /usr/local/bin gitleaks
 
       - name: Run Quality Checks (CI Strict Mode)
         run: |
@@ -51,7 +58,7 @@ jobs:
 
       - name: Upload Security Reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: quality-reports
           path: reports/security
