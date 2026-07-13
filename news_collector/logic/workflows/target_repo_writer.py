@@ -51,6 +51,7 @@ class TargetRepoWriter:
         content: str,
         article_id: str,
         target_dir: Path,
+        exclusive: bool = False,
     ) -> Path:
         """
         Write refined article content to *posts_dir/output_filename*.
@@ -59,6 +60,7 @@ class TargetRepoWriter:
             ValueError: if *output_filename* would resolve outside *posts_dir*
                         (path-traversal guard).
             OSError: on underlying file-system errors.
+            ValueError: if exclusive creation detects a concurrent file collision.
 
         Returns the Path to the written file.
         """
@@ -76,7 +78,17 @@ class TargetRepoWriter:
                 f"Path traversal detected: {resolved_target} is outside {resolved_posts}"
             ) from err
 
-        target_file_path.write_text(content, encoding="utf-8")
+        if exclusive:
+            try:
+                with target_file_path.open("x", encoding="utf-8") as handle:
+                    handle.write(content)
+            except FileExistsError as err:
+                raise ValueError(
+                    "Refusing to overwrite concurrently created article: "
+                    f"{target_file_path}"
+                ) from err
+        else:
+            target_file_path.write_text(content, encoding="utf-8")
         logger.info("Written content to {}", target_file_path)
 
         if prune_hero_placeholder_allowlist_for_post(target_dir, target_file_path):
