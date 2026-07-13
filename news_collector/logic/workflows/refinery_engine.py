@@ -488,6 +488,7 @@ class RefineryEngine:
                 content=refined_content,
                 article_id=article_id,
                 target_dir=target_dir,
+                exclusive=identity.is_new,
             )
         except ValueError as e:
             logger.error("🚨 S0 GUARD: {}", e)
