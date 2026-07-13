@@ -1,0 +1,13 @@
+# Direct security and test tooling for the isolated quality environment.
+# Keep floors synchronized with pyproject.toml optional dependencies.
+bandit>=1.7.9
+coverage[toml]>=7.0.0
+hypothesis>=6.100.0
+msgpack>=1.2.1
+pip-audit>=2.9.0
+protobuf>=6.33.5
+pytest>=9.0.3
+pytest-asyncio>=0.23.0
+pytest-cov>=6.0.0
+pytest-timeout>=2.3.0
+semgrep>=1.169.0

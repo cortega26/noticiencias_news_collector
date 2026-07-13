@@ -52,17 +52,11 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--no-header",
             "--generate-hashes",
             "--allow-unsafe",
-            # Note: No -c requirements.lock here because semgrep requires
-            # click~=8.1.8 which conflicts with scrapling[fetchers]'s click>=8.3.0
-            # pinned in the main lockfile. These are separate environments so
-            # the constraint is not needed.
-            "--extra",
-            "security",
-            "--extra",
-            "test",
+            # Security tooling is isolated from project dependencies because
+            # Semgrep intentionally constrains Click below the runtime floor.
             "--output-file",
             "requirements-security.lock",
-            "pyproject.toml",
+            "requirements-security.in",
         ),
     ),
 )
