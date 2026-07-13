@@ -313,3 +313,17 @@ JSON exporter did not normalize. The exporter must convert model metadata with
 and replace the destination atomically so a serialization error cannot leave an
 invalid partial contract artifact. The E2E contract must export at least one
 article and pass `scripts/validate_export.py`.
+
+### Portable bootstrap environment follow-up (2026-07-13)
+
+The Code Quality gate exposed a tracked local `.venv` whose `pyvenv.cfg` and
+entrypoints reference `/home/carlos/.pyenv`. Bootstrap accepted the copied Python
+binary because it could execute, but `pip-audit` later followed the stale base
+interpreter and failed before producing a report. The repository must not depend
+on or cache a checked-in virtual environment. Bootstrap must reject a virtualenv
+whose recorded base interpreter is unavailable, `.venv/` must be ignored, and CI
+must recreate it from lockfiles before running the fail-closed security scan.
+
+Verification: Code Quality must complete Ruff, mypy, tests, Bandit, pip-audit,
+Semgrep, and the quality gate on the PR head; repository search must find no
+tracked workstation-specific virtualenv path.
