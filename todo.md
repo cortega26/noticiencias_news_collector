@@ -102,3 +102,8 @@
 - [ ] Return non-zero when export serialization or atomic replacement fails.
 - [ ] Test previous-export preservation and temporary-file cleanup on export failure.
 - [ ] Document and verify the trimmed-summary/content-500 fallback contract.
+
+
+- [ ] Raise all ten primary-lock packages to their published fixed versions.
+- [ ] Regenerate all lockfiles mechanically after the security floors change.
+- [ ] Confirm fail-closed pip-audit reports no unallowlisted primary-lock findings.
