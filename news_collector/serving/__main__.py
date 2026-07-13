@@ -18,5 +18,6 @@ if __name__ == "__main__":
         "news_collector.serving.__main__:app",
         host=os.environ.get("NOTICIENCIAS_API_HOST", "127.0.0.1"),
         port=8000,
-        reload=True,
+        reload=os.environ.get("NOTICIENCIAS_API_RELOAD", "").lower()
+        in {"1", "true", "yes", "on"},
     )
