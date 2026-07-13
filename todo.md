@@ -92,3 +92,6 @@
 - [ ] Normalize structured article metadata for JSON export.
 - [ ] Write the export atomically.
 - [ ] Verify a non-empty schema-valid E2E export.
+- [ ] Remove the tracked workstation virtualenv from repository state.
+- [ ] Ignore `.venv/` and harden bootstrap against a missing recorded base interpreter.
+- [ ] Re-run Code Quality and confirm pip-audit emits a report successfully.
