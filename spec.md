@@ -355,3 +355,19 @@ Requests 2.33.0, urllib3 2.7.0, and SoupSieve 2.8.4. Regenerate every lock
 mechanically and require dependency-lock sync, full tests, and fail-closed pip-audit
 to pass. Do not add new advisory ignores.
 
+
+
+### Improve Deep audit closure and external validation policy (2026-07-13)
+
+The equivalent `/improve deep` audit is authoritative at
+`docs/audits/2026-07-improve-deep.md` and records F-0030 through F-0054.
+Security exceptions must be advisory-specific, optionally dependency-scoped, justified,
+and expiring. The Semgrep Click exception is limited to dependency `click` in the
+isolated security-tool lock and expires 2026-08-31; it must not suppress the advisory
+for runtime or unrelated dependencies.
+
+A GitHub Actions job that never receives a runner, reports no steps, and produces no
+log is external validation evidence, not a passing or code-failing gate. After Actions
+availability is restored, rerun the complete PR matrix and a branch-equivalent daily
+collector invocation before operational closure. Until then the last executable-head
+results and the local dependency-scope regression are the retained evidence.
