@@ -256,3 +256,73 @@ def _make_publish_payload(
         ),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Publication-identity contract tests (Plan 021 Step 1)
+# ---------------------------------------------------------------------------
+
+
+def test_publication_ids_valid_list_accepted() -> None:
+    """Valid publication_ids list passes validation."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = ["refinery-abc", "refinery-def"]
+    event = ValidationResultEvent.model_validate(payload)
+    assert event.publication_ids == ["refinery-abc", "refinery-def"]
+
+
+def test_publication_ids_empty_list_accepted() -> None:
+    """Empty publication_ids is accepted (optional for non-mutation callbacks)."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = []
+    event = ValidationResultEvent.model_validate(payload)
+    assert event.publication_ids == []
+
+
+def test_publication_ids_rejects_non_strings() -> None:
+    """Non-string entries in publication_ids are rejected."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+    from pydantic import ValidationError
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = [42]
+    with pytest.raises(ValidationError):
+        ValidationResultEvent.model_validate(payload)
+
+
+def test_publication_ids_rejects_empty_strings() -> None:
+    """Empty strings in publication_ids are rejected."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+    from pydantic import ValidationError
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = ["  "]
+    with pytest.raises(ValidationError):
+        ValidationResultEvent.model_validate(payload)
+
+
+def test_publication_ids_rejects_oversized_list() -> None:
+    """Lists exceeding MAX_PUBLICATION_IDS are rejected."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+    from pydantic import ValidationError
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = [f"id-{i}" for i in range(201)]
+    with pytest.raises(ValidationError):
+        ValidationResultEvent.model_validate(payload)
+
+
+def test_publication_ids_preserves_commit_sha_as_audit_context() -> None:
+    """commit_sha and branch are preserved alongside publication_ids."""
+    from news_collector.contracts.webhook import ValidationResultEvent
+
+    payload = _make_validation_payload("pass")
+    payload["publication_ids"] = ["refinery-1"]
+    event = ValidationResultEvent.model_validate(payload)
+    assert event.commit_sha == "abc123def"
+    assert event.branch == "publish/test-article-123"
+    assert event.publication_ids == ["refinery-1"]
