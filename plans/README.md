@@ -263,10 +263,10 @@ the three product opportunities end in explicit build/integrate/defer/no-build A
 | 024 | [Canonicalize backend dependencies](024-canonicalize-backend-dependencies.md) | P1 | M | 019 | DONE — pyproject.toml now authoritative; added Click/Playwright/Scrapling to base; sync_lockfiles compiles all from pyproject; manual-lock-sync includes refinery lock |
 | 025 | [Refresh backend security locks](025-refresh-backend-security-locks.md) | P1 | L | 019, 024 | TODO |
 | 026 | [Pin GitHub Actions](026-pin-github-actions.md) | P1 | S | — | DONE |
-| 027 | [Complete Stage 4 wiring and cache](027-complete-stage4-wiring-and-cache.md) | P1 | S | 019 | TODO |
+| 027 | [Complete Stage 4 wiring and cache](027-complete-stage4-wiring-and-cache.md) | P1 | S | 019 | DONE — enrichment_model added to OllamaConfig schema, legacy env mapping, Refinery wiring; all 19 model registry tests pass |
 | 028 | [Enforce the v2 editorial contract](028-enforce-v2-editorial-contract.md) | P1 | M | 020, 027 | TODO |
 | 029 | [Fix the backend coverage ratchet](029-fix-backend-coverage-ratchet.md) | P1 | M | 019 | DONE — coverage expanded to full news_collector (25 packages, 72.96% line); ratcheter paths fixed; baseline recorded
-| 030 | [Lock developer toolchains](030-lock-developer-toolchains.md) | P1 | M | 019, 024 | TODO |
+| 030 | [Lock developer toolchains](030-lock-developer-toolchains.md) | P1 | M | 019, 024 | DONE — frontend: vitest/coverage-v8 pinned to 4.0.18, @types/node aligned to ^24.x; backend: floating pip installs replaced with shared setup-python-env action in 3 workflows; workers vitest synced |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |
 | 032 | [Migrate frontend dependencies](032-migrate-frontend-dependencies.md) | P1 | L | 026, 031 | TODO |
 | 033 | [Make configuration refresh live](033-make-config-refresh-live.md) | P1 | L | 027 | TODO |
