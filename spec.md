@@ -53,7 +53,21 @@ unblocked.
   consumers migrated), Phase 3 (Refinery `save_toml_config` truthful
   return contract), Phase 4 (audit/lint/type/test gates, zero regressions
   vs. pre-existing baseline). See `plans/033/todo.md` for details.
-- **021, 023, 046**: not started — next up per the dependency-driven order.
+- **021 — Rebuild the publication callback contract**: PARTIAL. Only Step 0
+  (a refinery_id identity fix required by the plan's own STOP condition,
+  not an original step) is done. Steps 1-5 are one coordinated
+  backend+frontend change (landing backend matching logic before the
+  frontend populates `publication_ids` would strand every real callback —
+  a regression, not progress) plus an operator-secret boundary for auth.
+  See `plans/021/spec.md` for the full recon and a dedup-guard hazard the
+  next implementer must fix first.
+- **023 — Connect and harden the report pipeline**: PARTIAL. All 5 steps
+  implemented and tested in the frontend repo (contract, honest form
+  behavior, request bounds, durable-sink tracking, KV rate
+  limiting/idempotency, CI gates). Production endpoint stays disabled
+  pending operator R2/KV provisioning (the plan's own STOP condition). See
+  `plans/023/spec.md` and `../noticiencias/docs/report-pipeline-setup.md`.
+- **046**: not started next.
 
 ## Verification
 
