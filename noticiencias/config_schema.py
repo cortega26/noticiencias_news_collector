@@ -457,7 +457,15 @@ class ScoringConfig(StrictModel):
         description="Active scoring pipeline variant (basic|advanced).",
         examples=["basic"],
     )
-    workers: PositiveInt = Field(default=4)
+    workers: PositiveInt = Field(
+        default=4,
+        le=64,
+        description=(
+            "Max concurrent scoring workers. Also used as the bounded "
+            "fallback-concurrency limit for per-article scoring when the "
+            "scorer has no batch method (plan 036)."
+        ),
+    )
     freshness: FreshnessConfig = Field(default_factory=FreshnessConfig)
     diversity_penalty: DiversityPenaltyConfig = Field(
         default_factory=DiversityPenaltyConfig
@@ -479,6 +487,46 @@ class ScoringConfig(StrictModel):
     rescore_days_back: PositiveInt = Field(
         default=14,
         description="Lookback window in days to re-score completed unpublished articles.",
+    )
+    page_size: PositiveInt = Field(
+        default=200,
+        le=5000,
+        description=(
+            "Number of articles fetched per repository page during a "
+            "scoring cycle, instead of loading the entire pending/rescore "
+            "backlog into memory at once."
+        ),
+    )
+    max_prompt_items: PositiveInt = Field(
+        default=20,
+        le=200,
+        description=(
+            "Max articles bundled into a single CognitiveScorer LLM prompt "
+            "chunk. Provider context limits cannot be reliably determined "
+            "without a live model probe, so this is a conservative, "
+            "documented estimate rather than a measured limit."
+        ),
+    )
+    max_prompt_chars: PositiveInt = Field(
+        default=16000,
+        ge=1000,
+        le=200000,
+        description=(
+            "Estimated max total characters per CognitiveScorer LLM prompt "
+            "chunk (sum of each article's own truncated prompt text). A "
+            "chunk closes when the next item would exceed this bound or "
+            "max_prompt_items, whichever comes first."
+        ),
+    )
+    cycle_item_budget: Optional[PositiveInt] = Field(
+        default=None,
+        le=1_000_000,
+        description=(
+            "Optional cap on total articles processed by one scoring "
+            "cycle, across both the pending and rescore sources. None "
+            "means unbounded-by-budget (still bounded by page_size, one "
+            "page at a time)."
+        ),
     )
 
 

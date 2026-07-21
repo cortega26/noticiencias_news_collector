@@ -54,7 +54,7 @@ from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 from news_collector.utils.logger import get_logger
 
 from .analytics_repository import AnalyticsRepository
-from .article_repository import ArticleRepository
+from .article_repository import ArticleCursor, ArticlePage, ArticleRepository
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
 
@@ -399,6 +399,24 @@ class DatabaseManager:
         self, days_back: int = 14
     ) -> List[Article]:
         return self.articles.get_completed_articles_for_rescoring(days_back)
+
+    def get_pending_articles_page(
+        self,
+        limit: int,
+        status: str = PENDING_STATUS,
+        cursor: Optional[ArticleCursor] = None,
+    ) -> ArticlePage:
+        return self.articles.get_pending_articles_page(limit, status, cursor)
+
+    def get_completed_articles_for_rescoring_page(
+        self,
+        limit: int,
+        days_back: int = 14,
+        cursor: Optional[ArticleCursor] = None,
+    ) -> ArticlePage:
+        return self.articles.get_completed_articles_for_rescoring_page(
+            limit, days_back, cursor
+        )
 
     def update_validation_status_bulk(self, mappings: List[Dict[str, Any]]) -> bool:
         return self.articles.update_validation_status_bulk(mappings)

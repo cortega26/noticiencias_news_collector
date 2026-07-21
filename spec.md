@@ -38,12 +38,10 @@
 ## Dependency-driven order (superseding plans/README.md's numeric listing)
 
 Per the dependency column in `plans/README.md`, the plans immediately
-startable (all deps archived/done) are 033, 021, 023, 046. Everything else
-is gated behind those four (see `plans/README.md`'s "Recommended waves" and
-"Cross-plan integration rules" for the full graph). Re-derive the next
-startable set from `plans/README.md` after each plan completes — do not
-hardcode a full ordering up front, since finishing one plan changes what's
-unblocked.
+startable (all deps archived/done) were 033, 021, 023, 046; with 033 done,
+036/037/048 additionally became startable. Re-derive the next startable
+set from `plans/README.md` after each plan completes — do not hardcode a
+full ordering up front, since finishing one plan changes what's unblocked.
 
 ## Sequencing state
 
@@ -108,6 +106,26 @@ unblocked.
   only this boundary opts into real batching. Steps 4-5 (Refinery Streamlit
   caching) not attempted — needs a read-model extraction from the
   ~2951-LOC `admin_panel.py` first; see `plans/038/spec.md`.
+- **036 — Bound scoring memory, prompts, and concurrency**: DONE. Explicit
+  validated workload bounds (`page_size`, `max_prompt_items`,
+  `max_prompt_chars`, `cycle_item_budget` on `ScoringConfig`); new keyset
+  `(collected_date, id)` cursor-paged repository methods added alongside
+  (not replacing) the existing unpaged ones; `ScoringCoordinator.execute()`
+  rewritten to fetch/score/persist one bounded page at a time across both
+  sources, with cross-source dedup, persistence-failure-as-cycle-failure
+  with a resumable cursor, and a semaphore-bounded fallback (reusing the
+  previously dead-code `workers`/`scoring_workers` config slot) instead of
+  unbounded `asyncio.gather`; `CognitiveScorer` chunks prompts by item
+  count/estimated chars after confirming (by reading the prompt/parsing
+  code, not assuming) no cross-article scoring dependency exists; workload
+  telemetry plus `scripts/benchmark_scoring.py` proving the bounds hold on
+  1000 synthetic articles. A full-suite regression run (not just the
+  targeted scoring tests) caught a real infinite-loop regression in 3
+  unrelated tests that mocked the old unpaged DB methods — fixed, and the
+  full suite now passes with the exact same 13 pre-existing failures as
+  baseline. See `plans/036/spec.md` for the full narrative, including the
+  STOP-condition-3 semantic-dependency check and the regression's root
+  cause/fix.
 
 ## Verification
 
