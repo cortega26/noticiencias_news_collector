@@ -452,6 +452,7 @@ def main(  # noqa: C901
         translator_model=resolved_models["translator"],
         editor_model=resolved_models["editor"],
         headlines_model=resolved_models["headlines"],
+        enrichment_model=resolved_models["enrichment"],
         config=config,
     )
 
