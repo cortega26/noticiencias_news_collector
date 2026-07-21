@@ -40,3 +40,15 @@
 - [x] 4.2 Run `black`/`ruff`/`mypy` on touched files — zero new findings vs. pre-existing baseline
 - [x] 4.3 Run `make test` equivalent (`pytest tests --ignore=tests/e2e_pipeline`) — 13 pre-existing failures unchanged, 1149 passed (was 1120), zero new regressions
 - [x] 4.4 Update plan status in `plans/README.md`
+- [x] 4.5 Fresh-subagent gap review (per spec.md's every-~20-iterations check) caught a real bug:
+      `refresh_runtime_config()` returns `RuntimeConfigSnapshot`, not the rich
+      `Config` object, but 4 call sites in `apps/refinery/main.py` and
+      `admin_panel.py` reassigned its return value onto `config`/`sys_config`
+      and read `.github`/`.ollama`/`.app` off it — crashing or silently
+      degrading. Fixed (commit d5faba4): those sites now keep the original
+      `Config` (from `load_config()`) and call `refresh_runtime_config()`
+      only for its side effect of updating the live snapshot. Also reordered
+      `refresh_runtime_config()` to validate before mutating `RUNTIME`, so a
+      failed refresh no longer partially mutates the legacy shim. Re-ran the
+      full test suite after the fix — still exactly the 13 pre-existing
+      failures, 1149 passed.
