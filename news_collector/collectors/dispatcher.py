@@ -146,28 +146,27 @@ class CollectorDispatcher:
                 grouped_sources[ctype] = {}
             grouped_sources[ctype][source_id] = config
 
-        # Dispatch async
-        tasks = []
+        # Dispatch async with metadata for failure attribution
+        tasks: list[asyncio.Task] = []  # type: ignore[type-arg]
+        task_metadata: dict[int, dict[str, Any]] = {}
         for ctype, sources in grouped_sources.items():
             collector = self.collectors.get(ctype)
-            if collector:
-                # Check if collector supports async batch
-                if hasattr(collector, "collect_from_multiple_sources_async"):
-                    tasks.append(
-                        collector.collect_from_multiple_sources_async(
-                            sources, session_id=session_id, trace_id=trace_id
-                        )
-                    )
-                else:
-                    # Wrap sync in thread
-                    tasks.append(
-                        asyncio.to_thread(
-                            collector.collect_from_multiple_sources,
-                            sources,
-                            session_id=session_id,
-                            trace_id=trace_id,
-                        )
-                    )
+            if not collector:
+                continue
+            meta = {"collector_type": ctype, "source_ids": list(sources.keys())}
+            if hasattr(collector, "collect_from_multiple_sources_async"):
+                coro = collector.collect_from_multiple_sources_async(
+                    sources, session_id=session_id, trace_id=trace_id
+                )
+            else:
+                coro = asyncio.to_thread(
+                    collector.collect_from_multiple_sources,
+                    sources,
+                    session_id=session_id,
+                    trace_id=trace_id,
+                )
+            task_metadata[len(tasks)] = meta
+            tasks.append(coro)  # type: ignore[arg-type]
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -182,9 +181,30 @@ class CollectorDispatcher:
             },
         }
 
-        for res in results_list:
+        for idx, res in enumerate(results_list):
+            meta = task_metadata.get(idx, {})
+            ctype = meta.get("collector_type", "unknown")
+            source_ids = meta.get("source_ids", [])
+
             if isinstance(res, Exception):
-                logger.opt(exception=res).error("Collector task failed: {}", res)
+                logger.opt(exception=res).error(
+                    "Collector task failed: type={}, sources={}, error={}",
+                    ctype,
+                    source_ids,
+                    res,
+                )
+                final_results["collection_summary"]["errors_encountered"] += len(
+                    source_ids
+                )
+                final_results["collection_summary"]["sources_processed"] += len(
+                    source_ids
+                )
+                for sid in source_ids:
+                    final_results["source_details"][sid] = {
+                        "success": False,
+                        "error": str(res),
+                        "collector_type": ctype,
+                    }
                 continue
             if not isinstance(res, dict):
                 continue
