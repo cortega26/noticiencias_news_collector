@@ -156,3 +156,31 @@ def test_database_manager_creates_score_logs_latest_index(tmp_path: Path) -> Non
         assert "idx_score_logs_article_latest" in indexes
     finally:
         manager.close()
+
+
+def test_empty_database_upgrades_to_head(tmp_path: Path) -> None:
+    """A fresh database created by SQLAlchemy must reach Alembic head."""
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "empty_to_head.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        mgr = DatabaseManager(database_config=test_db_config)
+        mgr.close()
+        command.stamp(alembic_cfg, "cb486d1d980d")
+        command.upgrade(alembic_cfg, "head")
+
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with mgr.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            tables = inspector.get_table_names()
+        assert "articles" in tables
+        assert "sources" in tables
+        assert "score_logs" in tables
+    finally:
+        mgr.close()
