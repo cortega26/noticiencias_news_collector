@@ -33,8 +33,17 @@ from news_collector.collectors.admission import evaluate_admission
 from news_collector.collectors.rate_limit_utils import calculate_effective_delay
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
+from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 from news_collector.storage.database import get_database_manager
 from news_collector.utils.logger import get_logger
+
+# Batch size for enrichment_metrics writes during a collection cycle (plan
+# 038, Step 3). 1000 events at this size commit at most 25 times. Only
+# enabled for the span of one cycle via enrichment_metrics.batched(), which
+# guarantees a flush (and reset to the safe default of 1) on exit — even on
+# exception — because every writer of this store (enrichment/router.py,
+# infrastructure/proxy_manager.py) only ever runs inside a collection cycle.
+_ENRICHMENT_METRICS_FLUSH_BATCH_SIZE = 40
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
     from news_collector.diagnostics import SourceHealthTracker
@@ -159,9 +168,10 @@ class BaseCollector(ABC):
 
         source_results: Dict[str, Dict[str, Any]] = {}
 
-        for source_id, source_config in sources_config.items():
-            result = self._process_single_source_sync(source_id, source_config)
-            source_results[source_id] = result
+        with enrichment_metrics.batched(_ENRICHMENT_METRICS_FLUSH_BATCH_SIZE):
+            for source_id, source_config in sources_config.items():
+                result = self._process_single_source_sync(source_id, source_config)
+                source_results[source_id] = result
 
         return self._finalize_collection_cycle(source_results)
 
@@ -179,10 +189,13 @@ class BaseCollector(ABC):
         self._reset_stats()
 
         tasks = []
-        for source_id, source_config in sources_config.items():
-            tasks.append(self._process_single_source_async(source_id, source_config))
+        with enrichment_metrics.batched(_ENRICHMENT_METRICS_FLUSH_BATCH_SIZE):
+            for source_id, source_config in sources_config.items():
+                tasks.append(
+                    self._process_single_source_async(source_id, source_config)
+                )
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
         source_results = {}
         for source_id, result in zip(sources_config.keys(), results, strict=False):
