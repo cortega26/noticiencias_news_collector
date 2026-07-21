@@ -6,7 +6,6 @@ from news_collector.collectors.dispatcher import CollectorDispatcher
 
 
 def test_factory_get_collector():
-    # Test valid type
     with patch("news_collector.collectors.rss_collector.RSSCollector") as mock_rss:
         c = create_collector("rss")
         assert c is not None
@@ -20,8 +19,6 @@ def test_factory_invalid_type():
 
 def test_dispatcher_collect_all():
     dispatcher = CollectorDispatcher()
-
-    # Mock collect_from_multiple_sources_async behavior via sync wrapper
     with patch.object(
         dispatcher, "collect_from_multiple_sources_async", new_callable=AsyncMock
     ) as mock_async:
@@ -30,16 +27,66 @@ def test_dispatcher_collect_all():
         assert res["summary"] == "done"
 
 
-# Removed invalid register test
+@pytest.mark.asyncio
+async def test_dispatcher_failed_task_attributed_with_source_identity():
+    """Failed collector tasks must report source IDs and increment counts."""
+    dispatcher = CollectorDispatcher()
+
+    # Register a mock collector that raises
+    mock_collector = MagicMock()
+    mock_collector.collect_from_multiple_sources_async = AsyncMock(
+        side_effect=RuntimeError("connection refused")
+    )
+    dispatcher.collectors["rss"] = mock_collector
+
+    sources = {"source_a": {"collector_type": "rss"}, "source_b": {"collector_type": "rss"}}
+
+    result = await dispatcher.collect_from_multiple_sources_async(sources)
+
+    assert result["collection_summary"]["errors_encountered"] == 2
+    assert result["collection_summary"]["sources_processed"] == 2
+    assert "source_a" in result["source_details"]
+    assert "source_b" in result["source_details"]
+    assert result["source_details"]["source_a"]["success"] is False
+    assert "connection refused" in result["source_details"]["source_a"]["error"]
 
 
 @pytest.mark.asyncio
-async def test_dispatcher_collect_async():
-    CollectorDispatcher()
-    c1 = MagicMock()
-    c1.collect_async = MagicMock()  # Ensure it's mockable if needed
+async def test_dispatcher_partial_failure_mixed_results():
+    """One failing and one succeeding task must both be counted."""
+    dispatcher = CollectorDispatcher()
 
-    # Ideally async dispatcher calls collect_async on collectors
-    # But if collector doesn't support async, it might wrap sync
-    # Let's check implementation if needed, but for now assume standard mock
-    pass
+    fail_collector = MagicMock()
+    fail_collector.collect_from_multiple_sources_async = AsyncMock(
+        side_effect=RuntimeError("timeout")
+    )
+    success_collector = MagicMock()
+    success_collector.collect_from_multiple_sources_async = AsyncMock(
+        return_value={
+            "source_details": {"good_source": {"success": True}},
+            "collection_summary": {
+                "sources_processed": 1,
+                "articles_found": 3,
+                "articles_saved": 3,
+                "errors_encountered": 0,
+            },
+        }
+    )
+    dispatcher.collectors["rss"] = fail_collector
+    dispatcher.collectors["html"] = success_collector
+
+    sources = {
+        "bad_source": {"collector_type": "rss"},
+        "good_source": {"collector_type": "html"},
+    }
+
+    result = await dispatcher.collect_from_multiple_sources_async(sources)
+
+    # Failed source counted
+    assert result["collection_summary"]["errors_encountered"] == 1
+    assert result["collection_summary"]["sources_processed"] == 2
+    assert result["source_details"]["bad_source"]["success"] is False
+
+    # Successful source counted
+    assert result["source_details"]["good_source"]["success"] is True
+    assert result["collection_summary"]["articles_found"] == 3
