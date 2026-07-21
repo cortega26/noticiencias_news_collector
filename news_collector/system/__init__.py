@@ -11,7 +11,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, cast
 
-from news_collector.config import ALL_SOURCES, COLLECTION_CONFIG, SCORING_CONFIG
+from news_collector.config import ALL_SOURCES
+from news_collector.config.settings import get_runtime_config
 
 
 class NewsCollectorSystem:
@@ -157,13 +158,18 @@ class NewsCollectorSystem:
 
             self.is_initialized = True
 
+            startup_config = get_runtime_config()
             self.logger.log_system_startup(
                 version="1.0.0",
                 config_summary={
                     "sources_configured": len(ALL_SOURCES),
                     "database_type": self.db_manager.config["type"],
-                    "collection_interval": COLLECTION_CONFIG["collection_interval"],
-                    "min_score_threshold": SCORING_CONFIG["minimum_score"],
+                    "collection_interval": startup_config.collection_config[
+                        "collection_interval"
+                    ],
+                    "min_score_threshold": startup_config.scoring_config[
+                        "minimum_score"
+                    ],
                 },
             )
 
@@ -392,6 +398,7 @@ class NewsCollectorSystem:
     ) -> Dict[str, Any]:
         """Ejecuta la selección final de mejores artículos."""
         try:
+            scoring_config = get_runtime_config().scoring_config
             # Check for simulated articles in dry-run
             if collection_results and "articles" in collection_results:
                 # Dry-run simulation mode
@@ -406,8 +413,8 @@ class NewsCollectorSystem:
             # Normal path (Database)
             # Obtener mejores artículos
             top_articles = self.db_manager.get_articles_by_score(
-                limit=SCORING_CONFIG["daily_top_count"],
-                min_score=SCORING_CONFIG["minimum_score"],
+                limit=scoring_config["daily_top_count"],
+                min_score=scoring_config["minimum_score"],
             )
 
             # Convertir a formato serializable
@@ -418,8 +425,8 @@ class NewsCollectorSystem:
                 "selected_count": len(selected_articles),
                 "articles": selected_articles,
                 "selection_criteria": {
-                    "minimum_score": SCORING_CONFIG["minimum_score"],
-                    "target_count": SCORING_CONFIG["daily_top_count"],
+                    "minimum_score": scoring_config["minimum_score"],
+                    "target_count": scoring_config["daily_top_count"],
                 },
             }
 

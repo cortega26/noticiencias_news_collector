@@ -39,7 +39,10 @@ async def test_dispatcher_failed_task_attributed_with_source_identity():
     )
     dispatcher.collectors["rss"] = mock_collector
 
-    sources = {"source_a": {"collector_type": "rss"}, "source_b": {"collector_type": "rss"}}
+    sources = {
+        "source_a": {"collector_type": "rss"},
+        "source_b": {"collector_type": "rss"},
+    }
 
     result = await dispatcher.collect_from_multiple_sources_async(sources)
 

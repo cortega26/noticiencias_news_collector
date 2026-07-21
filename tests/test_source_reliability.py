@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import datetime, timedelta, timezone
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -5,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from news_collector.collectors.base_collector import BaseCollector
 from news_collector.collectors.html_collector import HtmlCollector
+from news_collector.config.settings import get_runtime_config
 
 
 class MockCollector(BaseCollector):
@@ -71,12 +73,20 @@ async def test_collect_from_source_async_waits_for_real_result_after_soft_timeou
 
     collector = SlowCollector()
 
+    base_snapshot = get_runtime_config()
+    snapshot = dataclasses.replace(
+        base_snapshot,
+        collection_config={
+            **base_snapshot.collection_config,
+            "source_timeout_seconds": 0.01,
+        },
+    )
+
     with (
         patch.object(collector, "_emit_log") as mock_emit_log,
-        patch.dict(
-            "news_collector.collectors.base_collector.COLLECTION_CONFIG",
-            {"source_timeout_seconds": 0.01},
-            clear=False,
+        patch(
+            "news_collector.collectors.base_collector.get_runtime_config",
+            return_value=snapshot,
         ),
     ):
         result = await collector.collect_from_source_async(

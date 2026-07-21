@@ -13,7 +13,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from news_collector.collectors.base_collector import BaseCollector
-from news_collector.config.settings import COLLECTION_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.utils.security import validate_url_safety
 
 if TYPE_CHECKING:
@@ -36,8 +36,9 @@ class HtmlCollector(BaseCollector):
         health_tracker: Optional[Any] = None,
     ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
+        cfg = get_runtime_config()
         self.headers = {
-            "User-Agent": COLLECTION_CONFIG["user_agent"],
+            "User-Agent": cfg.collection_config["user_agent"],
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
         }
@@ -55,6 +56,7 @@ class HtmlCollector(BaseCollector):
     async def collect_from_source_async(  # noqa: C901
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
+        cfg = get_runtime_config()
         start_time = time.time()
         stats = {
             "source_id": source_id,
@@ -144,7 +146,7 @@ class HtmlCollector(BaseCollector):
                 # Fetch full content
                 if raw.get("url"):
                     async with httpx.AsyncClient(
-                        timeout=COLLECTION_CONFIG.get("request_timeout", 30)
+                        timeout=cfg.collection_config.get("request_timeout", 30)
                     ) as fetch_client:
                         full_text = await self._fetch_article_content(
                             fetch_client, raw["url"], source_config
@@ -347,6 +349,7 @@ class HtmlCollector(BaseCollector):
         Fetches HTML content using conditional GET (ETag/Last-Modified).
         Returns (content, status_code). Content is None if 304 or error.
         """
+        cfg = get_runtime_config()
         cached_headers: Dict[str, Optional[str]] = {
             "etag": None,
             "last_modified": None,
@@ -367,7 +370,7 @@ class HtmlCollector(BaseCollector):
             async with httpx.AsyncClient(
                 follow_redirects=True,
                 headers=headers,
-                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+                timeout=cfg.collection_config.get("request_timeout", 30),
             ) as client:
 
                 max_retries = 3

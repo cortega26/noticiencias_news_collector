@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, NamedTuple
 
-from news_collector.config.settings import LOGGING_CONFIG
+from news_collector.config.settings import get_runtime_config
 
 # --- Data Structures ---
 
@@ -170,7 +170,9 @@ class ActivityMonitor:
             self.log_path = log_path
         else:
             self.log_path = Path(
-                LOGGING_CONFIG.get("file_path", "data/logs/collector.log")
+                get_runtime_config().logging_config.get(
+                    "file_path", "data/logs/collector.log"
+                )
             )
             # Ensure absolute path logic mirrors admin_panel or settings
             from news_collector.config.settings import BASE_DIR

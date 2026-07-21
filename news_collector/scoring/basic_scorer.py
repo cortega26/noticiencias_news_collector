@@ -33,7 +33,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from pydantic import ValidationError
 
-from news_collector.config.settings import SCORING_CONFIG, TEXT_PROCESSING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import ScoringRequestModel
 from news_collector.utils.dict_wrapper import SafeNamespace
 from news_collector.utils.logger import get_logger
@@ -66,7 +66,7 @@ class BasicScorer(AsyncScorer):
             weights: Diccionario con pesos para cada dimensión.
                     Si no se proporciona, usa los valores de configuración.
         """
-        self.weights = weights or SCORING_CONFIG["weights"].copy()
+        self.weights = weights or get_runtime_config().scoring_config["weights"].copy()
         self.version = "1.0"
 
         # Validar que los pesos sumen 1.0
@@ -131,7 +131,9 @@ class BasicScorer(AsyncScorer):
             )
 
             # Determinar si el artículo debe ser incluido
-            should_include = final_score >= SCORING_CONFIG["minimum_score"]
+            should_include = (
+                final_score >= get_runtime_config().scoring_config["minimum_score"]
+            )
 
             result = {
                 "final_score": round(final_score, 4),
@@ -596,7 +598,7 @@ class BasicScorer(AsyncScorer):
         full_text = f"{article.title or ''} {article.summary or ''}".lower()
 
         # Keywords que aumentan la relevancia
-        boost_keywords = TEXT_PROCESSING_CONFIG["boost_keywords"]
+        boost_keywords = get_runtime_config().text_processing_config["boost_keywords"]
 
         # Contar keywords encontrados
         found_keywords = sum(
@@ -800,7 +802,7 @@ class BasicScorer(AsyncScorer):
             ),
             "recommendation": (
                 "include"
-                if final_score >= SCORING_CONFIG["minimum_score"]
+                if final_score >= get_runtime_config().scoring_config["minimum_score"]
                 else "exclude"
             ),
         }

@@ -8,12 +8,12 @@ import logging
 from typing import Any, Dict, Optional
 
 import httpx
-from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
 from tenacity import (
+    AsyncRetrying,
     before_sleep_log,
-    retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -37,14 +37,15 @@ class SmartHttpClient:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[float] = None,
     ):
+        collection_config = get_runtime_config().collection_config
         self._base_headers = {
-            "User-Agent": COLLECTION_CONFIG.get("user_agent", "NoticienciasBot/1.0"),
+            "User-Agent": collection_config.get("user_agent", "NoticienciasBot/1.0"),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
         if headers:
             self._base_headers.update(headers)
 
-        self.timeout = timeout or COLLECTION_CONFIG.get("request_timeout", 30.0)
+        self.timeout = timeout or collection_config.get("request_timeout", 30.0)
 
         # Configure limits closer to what AsyncRSSCollector used
         limits = httpx.Limits(max_keepalive_connections=50, max_connections=50)
@@ -85,18 +86,6 @@ class SmartHttpClient:
         result = await self._get_with_retry(url, params, headers, extensions=extensions)
         return cast(httpx.Response, result)
 
-    @retry(
-        stop=stop_after_attempt(RATE_LIMITING_CONFIG.get("max_retries", 3)),
-        wait=wait_exponential(
-            multiplier=RATE_LIMITING_CONFIG.get("backoff_base", 0.5),
-            min=1,
-            max=RATE_LIMITING_CONFIG.get("backoff_max", 10.0),
-        ),
-        retry=retry_if_exception_type(
-            (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)
-        ),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
     async def _get_with_retry(
         self,
         url: str,
@@ -104,6 +93,36 @@ class SmartHttpClient:
         headers: Optional[Dict[str, str]] = None,
         extensions: Optional[Dict[str, Any]] = None,
     ) -> httpx.Response:
+        """Executes the GET with retries, reading current retry config live.
+
+        The ``AsyncRetrying`` instance is built fresh on every call (instead
+        of a ``@retry`` decorator, which bakes its config in at import time)
+        so a live ``refresh_runtime_config()`` change to retry limits/backoff
+        takes effect on the next request.
+        """
+        rate_limiting_config = get_runtime_config().rate_limiting_config
+        retryer = AsyncRetrying(
+            stop=stop_after_attempt(rate_limiting_config.get("max_retries", 3)),
+            wait=wait_exponential(
+                multiplier=rate_limiting_config.get("backoff_base", 0.5),
+                min=1,
+                max=rate_limiting_config.get("backoff_max", 10.0),
+            ),
+            retry=retry_if_exception_type(
+                (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)
+            ),
+            before_sleep=before_sleep_log(logger, logging.WARNING),
+        )
+        return await retryer(self._do_get_with_retry, url, params, headers, extensions)
+
+    async def _do_get_with_retry(
+        self,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        extensions: Optional[Dict[str, Any]] = None,
+    ) -> httpx.Response:
+        """Single request attempt, invoked by ``_get_with_retry``'s retryer."""
         try:
             response = await self.client.get(
                 url, params=params, headers=headers, extensions=extensions

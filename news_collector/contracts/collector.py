@@ -14,14 +14,19 @@ from pydantic import (
     model_validator,
 )
 
-from news_collector.config.settings import TEXT_PROCESSING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.utils.url_canonicalizer import canonicalize_url
 
 from .common import ArticleMetadata, ArticleMetadataModel
 
-SUPPORTED_LANGUAGES = set(
-    TEXT_PROCESSING_CONFIG.get("supported_languages", ["en", "es"])
-)
+
+def _supported_languages() -> set[str]:
+    """Read live so a refresh_runtime_config() change takes effect immediately."""
+    return set(
+        get_runtime_config().text_processing_config.get(
+            "supported_languages", ["en", "es"]
+        )
+    )
 
 
 def _ensure_not_none(value: Any) -> Any:
@@ -186,9 +191,10 @@ class CollectorArticleModel(BaseModel):
         if value is None:
             return "en"
         normalized = str(value).lower()
-        if normalized not in SUPPORTED_LANGUAGES:
+        supported_languages = _supported_languages()
+        if normalized not in supported_languages:
             raise ValueError(
-                f"language must be one of {sorted(SUPPORTED_LANGUAGES)}, got '{value}'"
+                f"language must be one of {sorted(supported_languages)}, got '{value}'"
             )
         return normalized
 

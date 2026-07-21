@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import Mapping, MutableMapping
 
-from news_collector.config.settings import ENRICHMENT_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.enrichment.nlp_stack import ConfigurableNLPStack, LRUCache
 from news_collector.utils.dedupe import normalize_article_text, sha256_hex
 from news_collector.utils.text_cleaner import detect_language_simple
@@ -40,7 +40,7 @@ class EnrichmentPipeline:
         config: Mapping[str, object] | None = None,
         nlp_stack: ConfigurableNLPStack | None = None,
     ) -> None:
-        self._config = dict(config or ENRICHMENT_CONFIG)
+        self._config = dict(config or get_runtime_config().enrichment_config)
         self._nlp_stack = nlp_stack or ConfigurableNLPStack(self._config)
         cache_size = int(self._config.get("result_cache_size", 256))
         self._cache: LRUCache = LRUCache(cache_size)

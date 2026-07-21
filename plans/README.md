@@ -26,7 +26,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 | 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | TODO |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |
 | 032 | [Migrate frontend dependencies](032-migrate-frontend-dependencies.md) | P1 | L | 026, 031 | TODO |
-| 033 | [Make configuration refresh live](033-make-config-refresh-live.md) | P1 | L | 027 | TODO |
+| 033 | [Make configuration refresh live](033-make-config-refresh-live.md) | P1 | L | 027 | DONE |
 | 034 | [Centralize article admission](034-centralize-article-admission.md) | P1 | M | 033 | TODO |
 | 035 | [Make Astro scripts idempotent](035-make-astro-scripts-idempotent.md) | P1 | M | 031 | TODO |
 | 036 | [Bound scoring work](036-bound-scoring-work.md) | P1 | L | 033 | TODO |
@@ -37,7 +37,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 | 041 | [Add whole-workspace verification](041-add-whole-workspace-verification.md) | P1 | L | 020, 023, 024, 026, 029, 031 | TODO |
 | 043 | [Repair active documentation](043-repair-active-documentation.md) | P1 | M | 020, 021, 023, 024, 028, 032, 039, 041 | TODO |
 | 044 | [Unify pagination and prune dead components](044-unify-pagination-and-prune-dead-components.md) | P2 | M | 031, 032 | TODO |
-| 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | TODO |
+| 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | PARTIAL — Step 1 cursor/pagination tests expanded (6→11, covering traversal, malformed cursor, date boundaries, empty results); Steps 2-5 gated on production cardinality data |
 | 046 | [Prove and automate production migrations](046-prove-and-automate-production-migrations.md) | P1 | M | 024, 030 | TODO |
 | 047 | [Spike the reader correction loop](047-spike-reader-correction-loop.md) | P2 | M | 021, 023 | TODO |
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | TODO |

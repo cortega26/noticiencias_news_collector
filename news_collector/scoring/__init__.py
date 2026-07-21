@@ -1,6 +1,6 @@
 """Scoring package exports."""
 
-from news_collector.config import SCORING_CONFIG
+from news_collector.config.settings import get_runtime_config
 
 from .basic_scorer import BasicScorer
 from .basic_scorer import score_multiple_articles as _basic_score_multiple
@@ -25,9 +25,11 @@ COGNITIVE_SCORING_WEIGHTS = {
 
 def create_scorer(weights=None, mode: str | None = None):
     """Factory returning the configured scorer implementation."""
-    selected_mode = (mode or SCORING_CONFIG.get("mode", "advanced")).lower()
+    scoring_config = get_runtime_config().scoring_config
+    selected_mode = (mode or scoring_config.get("mode", "advanced")).lower()
     print(
-        f"DEBUG: create_scorer selected_mode={selected_mode} (from config: {SCORING_CONFIG.get('mode')})"
+        f"DEBUG: create_scorer selected_mode={selected_mode} "
+        f"(from config: {scoring_config.get('mode')})"
     )
 
     if selected_mode == "cognitive":
@@ -35,17 +37,17 @@ def create_scorer(weights=None, mode: str | None = None):
 
         # Supports dynamic weight adjustment from UI
         return CognitiveScorer(
-            weights=weights or SCORING_CONFIG.get("weights", COGNITIVE_SCORING_WEIGHTS),
+            weights=weights or scoring_config.get("weights", COGNITIVE_SCORING_WEIGHTS),
             llm_client=llm_client,
         )
 
     if selected_mode == "basic":
         return BasicScorer(
-            weights or SCORING_CONFIG.get("weights", DEFAULT_SCORING_WEIGHTS)
+            weights or scoring_config.get("weights", DEFAULT_SCORING_WEIGHTS)
         )
 
     # Default/Advanced
-    return FeatureBasedScorer(SCORING_CONFIG)
+    return FeatureBasedScorer(scoring_config)
 
 
 def get_default_scorer():

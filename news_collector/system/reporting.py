@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from news_collector.config import SCORING_CONFIG
+from news_collector.config.settings import get_runtime_config
 
 
 def get_top_articles(
@@ -27,12 +27,13 @@ def get_top_articles(
 
         from news_collector.reranker import rerank_articles
 
+        scoring_config = get_runtime_config().scoring_config
         reranked = rerank_articles(
             articles_dicts,
             limit=limit,
-            source_cap_percentage=SCORING_CONFIG.get("source_cap_percentage", 0.5),
-            topic_cap_percentage=SCORING_CONFIG.get("topic_cap_percentage", 0.5),
-            seed=SCORING_CONFIG.get("reranker_seed", 42),
+            source_cap_percentage=scoring_config.get("source_cap_percentage", 0.5),
+            topic_cap_percentage=scoring_config.get("topic_cap_percentage", 0.5),
+            seed=scoring_config.get("reranker_seed", 42),
         )
 
         return reranked

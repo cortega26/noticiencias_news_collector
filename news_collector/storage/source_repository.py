@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, cast
 from sqlalchemy.orm import load_only
 from sqlalchemy.orm.attributes import QueryableAttribute
 
-from news_collector.config.settings import COLLECTION_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.utils.logger import get_logger
 
 from .models import Source
@@ -85,8 +85,9 @@ class SourceRepository:
                     str(error_message)[:500] if error_message else "Unknown Error"
                 )
 
-                max_failures = COLLECTION_CONFIG.get("circuit_breaker_max_failures", 3)
-                cooldown_hours = COLLECTION_CONFIG.get(
+                collection_config = get_runtime_config().collection_config
+                max_failures = collection_config.get("circuit_breaker_max_failures", 3)
+                cooldown_hours = collection_config.get(
                     "circuit_breaker_cooldown_hours", 4
                 )
 

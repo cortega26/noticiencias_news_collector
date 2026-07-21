@@ -49,7 +49,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 
-from news_collector.config.settings import DATABASE_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 from news_collector.utils.logger import get_logger
 
@@ -110,9 +110,14 @@ class DatabaseManager:
 
         Args:
             database_config: Configuración de base de datos. Si no se proporciona,
-                           usa la configuración por defecto de settings.py
+                           usa la configuración actual de get_runtime_config().
+
+        Nota: el engine/pool se construye una sola vez aquí. Un cambio de
+        driver/host/credenciales posterior vía refresh_runtime_config() queda
+        marcado restart_required en el snapshot — esta instancia (singleton
+        vía get_database_manager()) no se reconstruye sola.
         """
-        self.config = database_config or DATABASE_CONFIG
+        self.config = database_config or get_runtime_config().database_config
         self.engine = None
         self.SessionLocal = None
         self._setup_database()

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -10,9 +13,53 @@ from noticiencias.config_manager import Config, ConfigError, load_config
 
 from .runtime import RuntimeSettings
 
+
+@dataclass(frozen=True)
+class RuntimeConfigSnapshot:
+    """Immutable, versioned snapshot of all runtime configuration.
+
+    Each successful ``refresh_runtime_config()`` creates a fresh snapshot
+    with a monotonic version number.  Consumers should call
+    ``get_runtime_config()`` at the boundary of each operation / pipeline
+    cycle to obtain the current values.
+
+    Dict fields are deep-copied when the snapshot is built, so callers
+    cannot accidentally mutate a shared reference.
+    """
+
+    version: int
+    data_dir: Path
+    logs_dir: Path
+    dlq_dir: Path
+    environment: str
+    debug: bool
+    is_production: bool
+    is_staging: bool
+    llm_system_available: bool
+    database_config: Dict[str, Any]
+    collection_config: Dict[str, Any]
+    rate_limiting_config: Dict[str, Any]
+    robots_config: Dict[str, Any]
+    dedup_config: Dict[str, Any]
+    scoring_config: Dict[str, Any]
+    text_processing_config: Dict[str, Any]
+    enrichment_config: Dict[str, Any]
+    news_config: Dict[str, Any]
+    gemini_config: Dict[str, Any]
+    logging_config: Dict[str, Any]
+    build_timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    restart_required_keys: frozenset[str] = field(default_factory=frozenset)
+    changed_keys: frozenset[str] = field(default_factory=frozenset)
+
+
 RUNTIME = RuntimeSettings()
 
 _CONFIG_STATE: Any | None = None
+
+_CONFIG_VERSION: int = 0
+_CURRENT_SNAPSHOT: RuntimeConfigSnapshot | None = None
 
 
 class _RuntimeConfigProxy:
@@ -30,9 +77,15 @@ CONFIG = _RuntimeConfigProxy()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -----------------------------------------------------------------------
-# Backward-compatible shims — resolve reads against RUNTIME so existing
-# ``from settings import ENVIRONMENT`` imports keep working without
-# changes.  New code should prefer ``from settings import RUNTIME``.
+# Backward-compatible shims (DEPRECATED — migrate to get_runtime_config())
+#
+# These resolve reads against RUNTIME so that ``settings.COLLECTION_CONFIG``
+# (attribute access on the module) stays live.  However, *by-value* imports
+# such as ``from settings import COLLECTION_CONFIG`` capture the value at
+# import time and will NOT see refreshes.
+#
+# New and migrated code should call ``get_runtime_config()`` at the start
+# of each operation / pipeline cycle and read from the returned snapshot.
 # -----------------------------------------------------------------------
 
 _module_attr_map: Dict[str, str] = {
@@ -204,20 +257,141 @@ def _resolve_builders(cfg: Config) -> None:
     RUNTIME.logging_config = _build_logging_config(cfg)
 
 
-def refresh_runtime_config(config: Any | None = None) -> Any:
-    """Reload runtime config and refresh RUNTIME in place."""
-    global _CONFIG_STATE
+def _build_snapshot_from_runtime() -> RuntimeConfigSnapshot:
+    """Build a frozen snapshot from the current RUNTIME values.
+
+    Dict fields are deep-copied so that callers cannot mutate the
+    snapshot's internal state.
+    """
+    global _CONFIG_VERSION
+    _CONFIG_VERSION += 1
+
+    return RuntimeConfigSnapshot(
+        version=_CONFIG_VERSION,
+        data_dir=RUNTIME.data_dir,
+        logs_dir=RUNTIME.logs_dir,
+        dlq_dir=RUNTIME.dlq_dir,
+        environment=RUNTIME.environment,
+        debug=RUNTIME.debug,
+        is_production=RUNTIME.is_production,
+        is_staging=RUNTIME.is_staging,
+        llm_system_available=RUNTIME.llm_system_available,
+        database_config=copy.deepcopy(RUNTIME.database_config),
+        collection_config=copy.deepcopy(RUNTIME.collection_config),
+        rate_limiting_config=copy.deepcopy(RUNTIME.rate_limiting_config),
+        robots_config=copy.deepcopy(RUNTIME.robots_config),
+        dedup_config=copy.deepcopy(RUNTIME.dedup_config),
+        scoring_config=copy.deepcopy(RUNTIME.scoring_config),
+        text_processing_config=copy.deepcopy(RUNTIME.text_processing_config),
+        enrichment_config=copy.deepcopy(RUNTIME.enrichment_config),
+        news_config=copy.deepcopy(RUNTIME.news_config),
+        gemini_config=copy.deepcopy(RUNTIME.gemini_config),
+        logging_config=copy.deepcopy(RUNTIME.logging_config),
+    )
+
+
+def _diff_keys(
+    old: RuntimeConfigSnapshot | None,
+    new: RuntimeConfigSnapshot,
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Compare two snapshots and return (changed_keys, restart_required_keys).
+
+    restart_required_keys captures settings whose runtime change cannot
+    be effected without a process restart (e.g. database driver/URL).
+    """
+    if old is None:
+        return frozenset(), frozenset()
+
+    config_dict_keys = (
+        "database_config",
+        "collection_config",
+        "rate_limiting_config",
+        "robots_config",
+        "dedup_config",
+        "scoring_config",
+        "text_processing_config",
+        "enrichment_config",
+        "news_config",
+        "gemini_config",
+        "logging_config",
+    )
+    scalar_keys = (
+        "data_dir",
+        "logs_dir",
+        "dlq_dir",
+        "environment",
+        "debug",
+        "is_production",
+        "is_staging",
+        "llm_system_available",
+    )
+
+    restart_candidates = frozenset({"database_config"})
+
+    changed: set[str] = set()
+    restart: set[str] = set()
+
+    for key in config_dict_keys:
+        old_val = getattr(old, key)
+        new_val = getattr(new, key)
+        if old_val != new_val:
+            changed.add(key)
+            if key in restart_candidates:
+                restart.add(key)
+
+    for key in scalar_keys:
+        old_val = getattr(old, key)
+        new_val = getattr(new, key)
+        if old_val != new_val:
+            changed.add(key)
+
+    return frozenset(changed), frozenset(restart)
+
+
+def refresh_runtime_config(config: Any | None = None) -> RuntimeConfigSnapshot:
+    """Reload runtime config, refresh RUNTIME, and atomically swap snapshot.
+
+    Builds all configuration, runs validation, then atomically commits a
+    new ``RuntimeConfigSnapshot``.  If validation fails the current
+    snapshot and RUNTIME state are left untouched (rollback-safe).
+
+    Returns the new snapshot on success.
+    """
+    global _CONFIG_STATE, _CONFIG_VERSION, _CURRENT_SNAPSHOT
 
     cfg = config or load_config()
-    _CONFIG_STATE = cfg
 
     _resolve_paths(cfg)
     _resolve_environment(cfg)
 
     if isinstance(cfg, Config):
+        validate_config(cfg)
         _resolve_builders(cfg)
 
-    return cfg
+    _CONFIG_STATE = cfg
+
+    old_snapshot = _CURRENT_SNAPSHOT
+    new_snapshot = _build_snapshot_from_runtime()
+    changed, restart = _diff_keys(old_snapshot, new_snapshot)
+
+    object.__setattr__(new_snapshot, "changed_keys", changed)
+    object.__setattr__(new_snapshot, "restart_required_keys", restart)
+
+    _CURRENT_SNAPSHOT = new_snapshot
+
+    return new_snapshot
+
+
+def get_runtime_config() -> RuntimeConfigSnapshot:
+    """Return the current immutable runtime configuration snapshot.
+
+    Lazily triggers a one-shot refresh on first call.
+    """
+    global _CURRENT_SNAPSHOT
+    if _CURRENT_SNAPSHOT is None:
+        refresh_runtime_config()
+    assert _CURRENT_SNAPSHOT is not None
+    return _CURRENT_SNAPSHOT
 
 
 def get_config() -> Any:
@@ -300,7 +474,9 @@ __all__ = [
     "LOGGING_CONFIG",  # noqa: F822
     "LLM_SYSTEM_AVAILABLE",  # noqa: F822
     "RUNTIME",  # noqa: F822
+    "RuntimeConfigSnapshot",  # noqa: F822
     "get_config",  # noqa: F822
+    "get_runtime_config",  # noqa: F822
     "refresh_runtime_config",  # noqa: F822
     "set_llm_system_available",  # noqa: F822
     "validate_config",  # noqa: F822

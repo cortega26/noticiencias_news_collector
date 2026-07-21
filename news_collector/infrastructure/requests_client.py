@@ -8,16 +8,17 @@ import time
 from typing import Any, Dict, Optional
 
 import requests
-from news_collector.config.settings import COLLECTION_CONFIG, RATE_LIMITING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
 from requests.adapters import HTTPAdapter
 from tenacity import (
-    retry,
+    Retrying,
     retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
+from tenacity.nap import sleep as tenacity_sleep
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -128,6 +129,10 @@ class RobustRequestsClient:
     def __init__(self, timeout: float = 30.0):
         self.session = SSRFSafeSession()
         self.timeout = timeout
+        # Sleep strategy used between retries; overridable so tests can
+        # skip real waits (tenacity's own docs call this out as the
+        # supported seam — see tenacity.nap.sleep's docstring).
+        self._retry_sleep = tenacity_sleep
         self._configure_session()
 
     def _configure_session(self):
@@ -139,7 +144,10 @@ class RobustRequestsClient:
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         ]
         base_ua = secrets.choice(user_agents)
-        bot_identifier = f"NoticienciasBot/1.0 (+{COLLECTION_CONFIG.get('contact_email', 'admin@noticiencias.com')})"
+        contact_email = get_runtime_config().collection_config.get(
+            "contact_email", "admin@noticiencias.com"
+        )
+        bot_identifier = f"NoticienciasBot/1.0 (+{contact_email})"
         final_ua = f"{base_ua} {bot_identifier}"
 
         self.session.headers.update(
@@ -166,18 +174,6 @@ class RobustRequestsClient:
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
 
-    @retry(
-        stop=stop_after_attempt(RATE_LIMITING_CONFIG.get("max_retries", 3)),
-        wait=wait_exponential(
-            multiplier=RATE_LIMITING_CONFIG.get("backoff_base", 0.5),
-            min=1,
-            max=RATE_LIMITING_CONFIG.get("backoff_max", 10.0),
-        ),
-        retry=retry_if_exception(_is_retryable_error),
-        # re-raise exception after retries exhaustion
-        reraise=True,
-        before_sleep=_safe_retry_log,
-    )
     def _execute_request(
         self,
         url: str,
@@ -187,8 +183,38 @@ class RobustRequestsClient:
         proxies: Optional[Dict[str, str]] = None,
     ) -> requests.Response:
         """
-        Internal method that executes the request with strict retry logic.
+        Executes the request with strict retry logic.
+
+        The ``Retrying`` instance is built fresh on every call (instead of a
+        ``@retry`` decorator, which bakes its config in at import time) so a
+        live ``refresh_runtime_config()`` change to retry limits/backoff
+        takes effect on the next request.
         """
+        rate_limiting_config = get_runtime_config().rate_limiting_config
+        retryer = Retrying(
+            stop=stop_after_attempt(rate_limiting_config.get("max_retries", 3)),
+            wait=wait_exponential(
+                multiplier=rate_limiting_config.get("backoff_base", 0.5),
+                min=1,
+                max=rate_limiting_config.get("backoff_max", 10.0),
+            ),
+            retry=retry_if_exception(_is_retryable_error),
+            # re-raise exception after retries exhaustion
+            reraise=True,
+            before_sleep=_safe_retry_log,
+            sleep=self._retry_sleep,
+        )
+        return retryer(self._do_execute_request, url, params, headers, timeout, proxies)
+
+    def _do_execute_request(
+        self,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
+        proxies: Optional[Dict[str, str]] = None,
+    ) -> requests.Response:
+        """Single request attempt, invoked by ``_execute_request``'s retryer."""
         req_timeout = timeout or self.timeout
 
         # Merge local headers if provided without overwriting defaults completely

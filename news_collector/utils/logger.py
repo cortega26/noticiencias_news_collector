@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from news_collector.config.settings import DEBUG, LOGGING_CONFIG
+from news_collector.config.settings import get_runtime_config
 
 
 class NewsCollectorLogger:
@@ -35,6 +35,10 @@ class NewsCollectorLogger:
     def __init__(self):
         self.is_configured = False
         self.log_file_path: Optional[Path] = None
+        # Set once by configure_logging() (a one-shot process-wide setup —
+        # loguru handlers aren't safely re-addable mid-process, so logging
+        # is restart_required like other long-lived resources).
+        self._debug: bool = False
 
     def configure_logging(self, config: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -51,7 +55,9 @@ class NewsCollectorLogger:
             logger.info("Logger ya configurado, omitiendo reconfiguración")
             return
 
-        config = config or LOGGING_CONFIG
+        runtime_config = get_runtime_config()
+        self._debug = runtime_config.debug
+        config = config or runtime_config.logging_config
 
         # Override level from environment variable to support runtime changes (e.g. CLI args)
         import os
@@ -105,7 +111,7 @@ class NewsCollectorLogger:
                 return False
             return True  # noqa: SIM103
 
-        if DEBUG:
+        if self._debug:
             # Formato desarrollo: colorido y con detalles completos
             console_format = (
                 "<green>{time:HH:mm:ss}</green> | "
@@ -125,8 +131,8 @@ class NewsCollectorLogger:
             level=console_level,
             colorize=True,
             filter=console_filter,  # Aplicar filtro anti-spam
-            backtrace=DEBUG,  # Stack traces detallados solo en desarrollo
-            diagnose=DEBUG,  # Variables locales solo en desarrollo
+            backtrace=self._debug,  # Stack traces detallados solo en desarrollo
+            diagnose=self._debug,  # Variables locales solo en desarrollo
         )
 
     def _configure_file_handler(self, config: Dict[str, Any]) -> None:
@@ -190,7 +196,7 @@ class NewsCollectorLogger:
             return True  # noqa: SIM103
 
         # Aplicar filtros solo si no estamos en modo debug completo
-        if not DEBUG:
+        if not self._debug:
             logger.add(
                 lambda _: None,  # Sink auxiliar para aplicar filtros globalmente
                 filter=lambda record: filter_http_requests(record)
@@ -232,7 +238,7 @@ class NewsCollectorLogger:
         logger.info("🚀 NEWS COLLECTOR SYSTEM INICIADO")
         logger.info("=" * 60)
         logger.info(f"Versión: {version}")
-        logger.info(f"Modo debug: {DEBUG}")
+        logger.info(f"Modo debug: {get_runtime_config().debug}")
 
         if config_summary:
             logger.info("Configuración principal:")
