@@ -91,9 +91,11 @@ this file now tracks the current pass over the 18 remaining plans.
       (`tests/unit/collectors/test_admission_boundary.py`).
 - [x] Step 4: per-reason health-tracker counters added; deliberately did
       NOT unify `basic_scorer`'s clickbait list with config's
-      `penalty_keywords` after confirming the two lists genuinely differ —
-      unifying would silently reweight scores (out of scope). Documented
-      both as intentionally separate.
+      `penalty_keywords` — the two lists partially overlap (not fully
+      diverge, as an earlier draft incorrectly claimed; corrected after
+      subagent review) but each still has exclusive terms, so unifying
+      would silently reweight scores (out of scope). Documented both as
+      intentionally separate.
 - [x] Full regression gates clean (1176 passed, same 13 pre-existing
       failures, same pre-existing lint/type baseline). Committed,
       `plans/README.md` updated to DONE.

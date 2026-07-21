@@ -38,13 +38,19 @@ called) plus a weaker, RSS-only pre-filter.
    hard-reject on `penalty_keywords`, unlike the old dead method. Keyword
    "clickbait" signals stay a soft, scoring-only concern
    (`basic_scorer._evaluate_title_quality`'s own, separately-hardcoded
-   `clickbait_indicators` list). Verified the two keyword lists genuinely
-   differ term-for-term (config's `penalty_keywords` has "conspiracy",
-   "hoax", "fake news", "Trump"; the scorer's list has "amazing",
-   "incredible", none of which overlap exactly) — so unifying them would
-   silently reweight scores for specific keyword hits, which is explicitly
-   out of this plan's scope ("changing score weights"). Left as two
-   independent, documented lists; see Step 4 below.
+   `clickbait_indicators` list). Verified the two keyword lists **partially
+   overlap, not fully diverge**: "you won't believe", "doctors hate", and
+   "secret" appear in both; the scorer's list alone has "amazing",
+   "incredible", "shocking", "miracle"; `penalty_keywords` alone has
+   "conspiracy", "hoax", "fake news", "Trump", "miracle cure". (An earlier
+   draft of this doc and a code comment claimed the lists "genuinely differ
+   term-for-term" — that was wrong, caught by subagent review; corrected
+   here and in the comment.) Because each list still has terms the other
+   lacks, pointing the scorer at `penalty_keywords` would still silently
+   reweight scores (stop penalizing the scorer-only terms, start penalizing
+   the config-only terms) — a scoring-weight change, out of this plan's
+   scope ("changing score weights"). Left as two independent, documented
+   lists; see Step 4 below.
 2. **URL scheme is not re-checked in the new module.**
    `CollectorArticleModel.url: AnyHttpUrl` already structurally guarantees
    an http(s) URL before `evaluate_admission()` is ever reached — adding a

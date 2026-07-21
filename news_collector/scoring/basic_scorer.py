@@ -497,16 +497,20 @@ class BasicScorer(AsyncScorer):
         score = 0.5
         title_lower = title_text.lower()
 
-        # Penalizar clickbait. This list is intentionally separate from
-        # config's text_processing.penalty_keywords: that config is hard
-        # admission-rejection vocabulary, this one is a soft ranking
-        # heuristic, and plan 034 (centralize article admission) confirmed
-        # the two lists genuinely differ term-for-term. Pointing this at the
-        # canonical config list would silently reweight scores for articles
-        # containing terms only present in one list (e.g. "conspiracy",
-        # "fake news") — a scoring-weight change, which is explicitly out of
-        # that plan's scope. Unify only as a deliberate, characterized
-        # scoring change, not an incidental "single source of truth" cleanup.
+        # Penalizar clickbait. This list is intentionally kept separate from
+        # config's text_processing.penalty_keywords, which after plan 034
+        # (centralize article admission) has no consumer at all (its only
+        # caller was a dead admission-rejection code path, removed in that
+        # plan). The two lists partially overlap ("you won't believe",
+        # "doctors hate", "secret" appear in both) but are not the same:
+        # this list alone has "amazing"/"incredible"/"shocking"/"miracle",
+        # penalty_keywords alone has "conspiracy"/"hoax"/"fake news"/"Trump"/
+        # "miracle cure". Pointing this at penalty_keywords would silently
+        # reweight scores — stop penalizing this list's exclusive terms,
+        # start penalizing penalty_keywords' exclusive terms — which is a
+        # scoring-weight change, out of that plan's scope. Unify only as a
+        # deliberate, characterized scoring change, not an incidental
+        # "single source of truth" cleanup.
         clickbait_indicators = [
             "you won't believe",
             "shocking",
