@@ -104,8 +104,6 @@ def test_rss_collector_image_fallback_to_dom(collector):
         collector.session
     )  # Ensure it uses same mocked session
 
-    # Prepare Mock for _validate_article_data
-    collector._validate_article_data = MagicMock(return_value=True)
     # Mock _filter_and_save_articles to capture result
     collector._filter_and_save_articles = MagicMock(return_value=1)
 
@@ -185,7 +183,6 @@ def test_rss_collector_image_missing_source(collector):
         feed_response if "rss" in url else article_response
     )
     collector._filter_and_save_articles = MagicMock(return_value=1)
-    collector._validate_article_data = MagicMock(return_value=True)
 
     collector.collect_from_source(source_id, source_config)
 

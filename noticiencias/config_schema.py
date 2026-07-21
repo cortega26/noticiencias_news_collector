@@ -527,7 +527,16 @@ class TextProcessingConfig(StrictModel):
             "hoax",
             "fake news",
         ],
-        description="Keywords penalizing credibility (clickbait).",
+        description=(
+            "Keywords penalizing credibility (clickbait). Currently has no "
+            "consumer: its previous consumer was a dead code path in "
+            "BaseCollector that was never actually invoked on the real save "
+            "path (removed by plan 034, centralize article admission). "
+            "Admission is now structural-only (title/content length); "
+            "reintroducing keyword-based rejection or wiring this into "
+            "scoring both need a deliberate, characterized decision, not an "
+            "incidental reconnection."
+        ),
     )
 
 

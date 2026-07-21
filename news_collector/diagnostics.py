@@ -34,6 +34,7 @@ class SourceHealth:
 
     # Filter stats
     skipped_short_content: int = 0
+    skipped_short_title: int = 0
     skipped_already_published: int = 0
     skipped_top_n_cutoff: int = 0
 
@@ -95,8 +96,10 @@ class SourceHealthTracker:
 
     def record_filter_rejection(self, source_id: str, filter_type: str, count: int = 1):
         src = self.get_source(source_id)
-        if filter_type == "min_length":
+        if filter_type in ("min_length", "content_too_short"):
             src.skipped_short_content += count
+        elif filter_type == "title_too_short":
+            src.skipped_short_title += count
         elif filter_type == "duplicate":
             src.skipped_already_published += count
         elif filter_type == "top_n":

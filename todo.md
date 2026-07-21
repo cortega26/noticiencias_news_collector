@@ -68,13 +68,46 @@ this file now tracks the current pass over the 18 remaining plans.
       `refinery`/`collector`, host-absolute paths in committed
       `config.toml`) — documented as its own follow-up, not patched around.
 - [x] Committed, `plans/README.md` updated to PARTIAL with full handoff.
+- [x] Follow-up (caught by ~20-iteration subagent review): unified
+      `alembic/env.py`'s own third, independently-drifted URL-builder onto
+      `build_database_url()` — its postgresql branch interpolated
+      user/password into an unescaped f-string, unlike `URL.create()`.
+      Verified the fix (percent-encoding a password with `@:/%`) without
+      needing psycopg2. Committed separately (4c66ec1).
+
+## Plan 034 — Centralize article admission (DONE)
+
+- [x] Step 1: characterized current behavior first — confirmed by reading
+      the code that the old policy was dead (zero real callers) before
+      writing fixtures against it (`tests/unit/collectors/test_admission.py`,
+      9 tests).
+- [x] Step 2: typed `evaluate_admission()` +  `AdmissionDecision`/
+      `AdmissionReason` (`news_collector/collectors/admission.py`) — pure,
+      structural-only (title/content length), URL scheme left to
+      `CollectorArticleModel`'s existing `AnyHttpUrl` type.
+- [x] Step 3: wired into `BaseCollector._filter_and_save_articles` once;
+      deleted the dead method and RSS's weaker override; 4 integration tests
+      prove rejected articles cause zero duplicate-lookup/zero-insert calls
+      (`tests/unit/collectors/test_admission_boundary.py`).
+- [x] Step 4: per-reason health-tracker counters added; deliberately did
+      NOT unify `basic_scorer`'s clickbait list with config's
+      `penalty_keywords` after confirming the two lists genuinely differ —
+      unifying would silently reweight scores (out of scope). Documented
+      both as intentionally separate.
+- [x] Full regression gates clean (1176 passed, same 13 pre-existing
+      failures, same pre-existing lint/type baseline). Committed,
+      `plans/README.md` updated to DONE.
+- Noted, not fixed (out of scope): `canonicalize_url()` silently coerces
+  non-http(s) URL schemes to https instead of rejecting them; `penalty_keywords`
+  config is now fully unconsumed pending a deliberate future decision. See
+  `plans/034/spec.md`.
 
 ## Reassess after each completion
 
-- [x] 033/021/023/046 have each landed (DONE/PARTIAL/PARTIAL/PARTIAL).
-      Newly-startable set per `plans/README.md`'s dependency column: **034,
-      036, 038, 048** depend only on 033 (DONE) and are startable now. 037
-      additionally depends on 034 (still TODO) — not yet startable. 031/032
+- [x] 033/021/023/046/034 have each landed (DONE/PARTIAL/PARTIAL/PARTIAL/DONE).
+      Newly-startable set per `plans/README.md`'s dependency column: **036,
+      037, 038, 048** are all startable now (036/038/048 depended only on
+      033; 037 depended on 033+034, both now DONE). 031/032
       unblock after 023 but belong in the frontend repo (see below). 041/043
       need the full 021+023+... set, which isn't there yet (021/023 are only
       PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs 021+022+028+041 —

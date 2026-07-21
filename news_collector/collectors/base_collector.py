@@ -29,6 +29,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from news_collector.collectors.admission import evaluate_admission
 from news_collector.collectors.rate_limit_utils import calculate_effective_delay
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
@@ -886,54 +887,6 @@ class BaseCollector(ABC):
                 details={"error": str(exc)},
             )
 
-    def _validate_article_data(self, article_data: Dict[str, Any]) -> bool:
-        """
-        Valida que un artículo tenga la información mínima necesaria.
-        """
-        cfg = get_runtime_config()
-        # Verificaciones básicas
-        if not article_data.get("title") or len(
-            article_data["title"].strip()
-        ) < cfg.text_processing_config.get("min_title_length", 10):
-            return False
-
-        if not article_data.get("url") or not article_data["url"].startswith("http"):
-            return False
-
-        # Verificar que el contenido no sea demasiado corto - STRICT CHECK on full content
-        # User requirement: "use the 1000 chars STRICTLY against the full length of the articles and NOTHING ELSE"
-        content = article_data.get("content")
-        if (
-            not content
-            or len(content) < cfg.text_processing_config["min_content_length"]
-        ):
-            self._emit_log(
-                "debug",
-                "collector.article.validation_failed",
-                source_id=article_data.get("source_id"),
-                details={
-                    "reason": "content_too_short",
-                    "length": len(content) if content else 0,
-                    "min_required": cfg.text_processing_config["min_content_length"],
-                },
-            )
-            return False
-
-        # Verificar que no sea spam o clickbait obvio
-        title_lower = article_data["title"].lower()
-        penalty_keywords = cfg.text_processing_config["penalty_keywords"]
-
-        if any(keyword.lower() in title_lower for keyword in penalty_keywords):
-            self._emit_log(
-                "debug",
-                "collector.article.penalty_keyword_rejected",
-                source_id=article_data.get("source_id"),
-                details={"title": article_data["title"]},
-            )
-            return False
-
-        return True
-
     def _filter_and_save_articles(  # noqa: C901
         self,
         source_id: str,
@@ -942,17 +895,17 @@ class BaseCollector(ABC):
     ) -> int:
         """
         Apply strict sequential filters:
-        1. Min Content Length (already done partially in validation, but double checking)
+        1. Structural Admission (title/content length — one shared policy for
+           every collector; see news_collector.collectors.admission)
         2. Duplicate Check
         3. Top-N Sorting
         """
         cfg = get_runtime_config()
         saved_count = 0
-        min_length = cfg.text_processing_config.get("min_content_length", 1000)
 
         valid_candidates = []
 
-        # Filter 1: Validation & Content Length (Pre-validation)
+        # Filter 1: Validation & Structural Admission (Pre-persistence gate)
         for data in articles_data:
             try:
                 # Basic model validation
@@ -961,23 +914,26 @@ class BaseCollector(ABC):
                 else:
                     article = data
 
-                # Strict length check (business rule filter), unless summary_only
-                is_summary_only = (
-                    getattr(article, "content_mode", None) == "summary_only"
-                )
-                if not is_summary_only and len(article.content or "") < min_length:
+                # One shared admission policy for every collector, applied
+                # exactly once, before duplicate lookup and persistence.
+                decision = evaluate_admission(article, cfg)
+                if not decision.accepted:
                     self._emit_log(
                         "info",
-                        "collector.filter.length_rejected",
+                        "collector.filter.admission_rejected",
                         source_id=source_id,
                         details={
                             "url": str(article.url),
-                            "len": len(article.content or ""),
+                            "reason": (
+                                decision.reason.value if decision.reason else None
+                            ),
+                            **decision.details,
                         },
                     )
                     if self.health_tracker:
                         self.health_tracker.record_filter_rejection(
-                            source_id, "min_length"
+                            source_id,
+                            decision.reason.value if decision.reason else "unknown",
                         )
                     continue
 

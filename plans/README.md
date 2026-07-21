@@ -27,7 +27,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |
 | 032 | [Migrate frontend dependencies](032-migrate-frontend-dependencies.md) | P1 | L | 026, 031 | TODO |
 | 033 | [Make configuration refresh live](033-make-config-refresh-live.md) | P1 | L | 027 | DONE |
-| 034 | [Centralize article admission](034-centralize-article-admission.md) | P1 | M | 033 | TODO |
+| 034 | [Centralize article admission](034-centralize-article-admission.md) | P1 | M | 033 | DONE — one shared, typed, structural admission policy (`news_collector/collectors/admission.py`) now runs once in `BaseCollector._filter_and_save_articles`, before duplicate lookup/persistence, for every collector; the previous policy was dead code (zero real callers) and RSS had its own weaker override, both removed. See `plans/034/spec.md` |
 | 035 | [Make Astro scripts idempotent](035-make-astro-scripts-idempotent.md) | P1 | M | 031 | TODO |
 | 036 | [Bound scoring work](036-bound-scoring-work.md) | P1 | L | 033 | TODO |
 | 037 | [Batch article persistence](037-batch-article-persistence.md) | P1 | L | 033, 034 | TODO |
