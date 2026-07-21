@@ -49,19 +49,36 @@ this file now tracks the current pass over the 18 remaining plans.
       then flips `config.yaml`'s endpoint — see
       `../noticiencias/docs/report-pipeline-setup.md`.
 
-## Plan 046 — Prove and automate production migrations
+## Plan 046 — Prove and automate production migrations (PARTIAL)
 
-- [ ] Read `plans/046-prove-and-automate-production-migrations.md` in full.
-- [ ] Implement per its spec.
-- [ ] Run its verification section.
-- [ ] Update `plans/README.md`, commit.
+- [x] Alembic-first SQLite test coverage: every legacy revision + empty DB →
+      head, downgrade→re-upgrade roundtrips (for revisions with a complete
+      downgrade), model/schema parity, single linear history
+      (`tests/test_database_migrations.py`, 18 tests).
+- [x] Read-only revision guard: `news_collector/storage/migration_guard.py` +
+      `scripts/check_migration_revision.py`, 6 tests, verified to never
+      mutate schema in any branch.
+- [x] Corrected stale docs/comments: `database.py` docstring,
+      `scripts/migrate.py` comment, full rewrite of
+      `docs/database_deployment.md` (contradictions + garbled text fixed).
+- [x] Step 1 STOP: no discoverable production deployment topology anywhere
+      in the repo — reported, not invented.
+- [x] Second STOP found empirically: PostgreSQL is not usable yet (no driver
+      in any lockfile, dead `docker-compose.yml` env vars for
+      `refinery`/`collector`, host-absolute paths in committed
+      `config.toml`) — documented as its own follow-up, not patched around.
+- [x] Committed, `plans/README.md` updated to PARTIAL with full handoff.
 
 ## Reassess after each completion
 
-- [ ] After 033/021/023/046 each land, recompute the newly-startable set from
-      `plans/README.md`'s dependency column (031/032 unblock after 023;
-      034/036/037/038/048 unblock after 033; 041/043 need the full
-      021+023+... set; 047 needs 021+023).
+- [x] 033/021/023/046 have each landed (DONE/PARTIAL/PARTIAL/PARTIAL).
+      Newly-startable set per `plans/README.md`'s dependency column: **034,
+      036, 038, 048** depend only on 033 (DONE) and are startable now. 037
+      additionally depends on 034 (still TODO) — not yet startable. 031/032
+      unblock after 023 but belong in the frontend repo (see below). 041/043
+      need the full 021+023+... set, which isn't there yet (021/023 are only
+      PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs 021+022+028+041 —
+      not yet.
 - [ ] Frontend plans (031, 032, 035, 039, 044) belong in the Astro repo
       (`noticiencias`), not here — flag when reached instead of implementing
       from this working directory.

@@ -90,8 +90,10 @@ def run_alembic(args: List[str]) -> None:
     alembic = _resolve_alembic_executable()
     cmd = [alembic] + args
 
-    # Note: runtime schema bootstrapping uses DatabaseManager.create_all +
-    # _run_schema_migrations. Alembic is only for manual/production workflows.
+    # Note: DatabaseManager.create_all only creates missing tables at
+    # runtime (dev/test convenience); it never alters existing ones.
+    # Alembic (this script) is the only thing that applies schema changes,
+    # in dev and in production. See docs/database_deployment.md.
     # We don't need to pass DB url here because env.py reads it from app config.
     try:
         subprocess.run(cmd, cwd=BASE_DIR, check=True)
