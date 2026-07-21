@@ -31,7 +31,7 @@ implementation state.  For contract shapes and failure semantics, see
 
 - **Contract**: `AstroPost` (`contracts/frontend_schema.py`)
 - **Status**: Enforced.  Published MDX frontmatter must satisfy `AstroPost`.  Field-level
-  parity with `../noticiencias/src/content/config.ts` is verified by
+  parity with `../noticiencias/src/content.config.ts` is verified by
   `tests/test_contracts_sync.py::test_frontend_schema_field_parity` on every CI run.
 
 ### 6. Scoring/Validation Adapters

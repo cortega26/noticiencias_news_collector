@@ -152,14 +152,15 @@ PY
 
 changed_modules() {
     local base_ref="$1"
+    local paths=('news_collector/**/*.py' 'apps/**/*.py')
     if git rev-parse --verify "$base_ref" >/dev/null 2>&1; then
         local merge_base
         merge_base=$(git merge-base HEAD "$base_ref")
-        git diff --name-only "$merge_base" HEAD -- 'src/**/*.py'
+        git diff --name-only "$merge_base" HEAD -- "${paths[@]}"
     elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-        git diff --name-only HEAD^ HEAD -- 'src/**/*.py'
+        git diff --name-only HEAD^ HEAD -- "${paths[@]}"
     else
-        git ls-files 'src/**/*.py'
+        git ls-files "${paths[@]}"
     fi
 }
 
@@ -224,7 +225,7 @@ if not baseline_path.exists():
     sys.exit(1)
 baseline = json.loads(baseline_path.read_text("utf-8"))
 
-minimum_global = 80.0
+minimum_global = 72.0  # honest full-package baseline (news_collector + apps)
 minimum_changed = 90.0
 minimum_branch = 70.0
 

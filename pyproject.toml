@@ -26,6 +26,9 @@ dependencies = [
     "loguru>=0.7.3",
     "httpx>=0.28.1",
     "scikit-learn>=1.7.2",
+    "click>=8.3.0",
+    "playwright>=1.58.0",
+    "scrapling[fetchers]>=0.4.0",
     "numpy>=2.3.3,!=2.4.0",
     "toml>=0.10.2",
     "alembic>=1.13.1",
@@ -43,7 +46,6 @@ refinery = [
     "watchdog>=4.0.0",
     "pandas>=2.0.0",
     "toml>=0.10.2",
-    "scrapling[fetchers]>=0.4.0",
 ]
 security = [
     "bandit>=1.7.9",
@@ -135,7 +137,7 @@ ignore_errors = true
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --timeout=10 --cov=news_collector/contracts --cov=news_collector/reranker --cov=news_collector/utils --cov=news_collector/storage --cov=news_collector/logic --cov-branch --cov-report=term-missing"
+addopts = "-ra --timeout=10 --cov=news_collector --cov=apps --cov-branch --cov-report=term-missing"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
@@ -154,7 +156,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-source = ["news_collector/contracts", "news_collector/reranker", "news_collector/utils", "news_collector/storage", "news_collector/logic"]
+source = ["news_collector"]
 omit = [
     "news_collector/utils/logger.py",
     "news_collector/utils/metrics.py",

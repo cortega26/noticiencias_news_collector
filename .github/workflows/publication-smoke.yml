@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout back-end
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - uses: ./.github/actions/setup-python-env
         with:
@@ -35,8 +35,8 @@ jobs:
 
       - name: Checkout front-end (sparse)
         # Fetch only the files required by the real frontend gates used in smoke validation.
-        # Note: path must be inside the workspace for actions/checkout@v6.
-        uses: actions/checkout@v6
+        # Note: path must be inside the workspace for actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: cortega26/noticiencias
           path: .tmp/noticiencias
@@ -57,7 +57,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload smoke summary artifact
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: frontend-publication-validation-summary
           path: data/runtime/publication_smoke/frontend_publication_validation_summary.json

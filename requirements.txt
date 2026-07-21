@@ -1,21 +1,29 @@
-# Direct dependencies (sync with requirements.lock)
+# ⚠️  AUTO-GENERATED — DO NOT EDIT BY HAND
+#
+# This file is compiled from pyproject.toml by scripts/sync_lockfiles.py.
+# The authoritative dependency source is pyproject.toml.
+#
+# To regenerate: python scripts/sync_lockfiles.py
+#
+# Direct dependencies extracted from pyproject.toml:
 alembic>=1.13.1
-beautifulsoup4>=4.12.0
+beautifulsoup4>=4.14.2
 click>=8.3.0
 fastapi>=0.128.0
-feedparser>=6.0.0
-httpx>=0.25.0
-loguru>=0.7.0
-lxml>=4.9.0
+feedparser>=6.0.12
+gitpython>=3.1.41
+httpx>=0.28.1
+loguru>=0.7.3
+lxml>=6.0.2
 nltk>=3.9.2
-numpy>=2.3.3
+numpy>=2.3.3,!=2.4.0
 playwright>=1.58.0
 pydantic>=2.11.9
 python-dateutil>=2.9.0
 python-dotenv>=1.1.1
-PyYAML>=6.0
+PyYAML>=6.0.1
 requests>=2.32.5
-ruamel-yaml>=0.18.6
+ruamel.yaml>=0.18.6
 schedule>=1.2.2
 scikit-learn>=1.7.2
 scrapling[fetchers]>=0.4.0
@@ -27,7 +35,5 @@ toml>=0.10.2
 tomli-w>=1.0.0
 types-python-dateutil==2.9.0.20260124
 types-PyYAML==6.0.12.20250915
-# Dev/test dependencies (in pyproject.toml [project.optional-dependencies])
-# hypothesis, pytest, pytest-cov, pytest-asyncio, pytest-timeout
-# streamlit, pandas, gitpython (refinery UI) — pip install .[refinery]
-# bleach, urllib3 — transitive, not in pyproject.toml
+types-requests>=2.31.0
+uvicorn[standard]>=0.30.0

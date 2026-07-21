@@ -121,7 +121,7 @@ The back-end publication contract mirrors the front-end schema:
 
 | Back-end (source of mirror) | Front-end (render authority) |
 |---|---|
-| `news_collector/contracts/frontend_schema.py` | `../noticiencias/src/content/config.ts` |
+| `news_collector/contracts/frontend_schema.py` | `../noticiencias/src/content.config.ts` |
 
 Any change to either file is a **critical** cross-repo contract change. Run both repos'
 full validation suites and update `docs/PIPELINE_CONTRACTS.md`.

@@ -10,19 +10,19 @@ BIN_DIR := bin
 PYTHON ?= python3
 endif
 
-PIP := $(VENV)/$(BIN_DIR)/pip
-PYTEST := $(VENV)/$(BIN_DIR)/pytest
-RUFF := $(VENV)/$(BIN_DIR)/ruff
-MYPY := $(VENV)/$(BIN_DIR)/mypy
-ALEMBIC := $(VENV)/$(BIN_DIR)/alembic
-BLACK := $(VENV)/$(BIN_DIR)/black
-ISORT := $(VENV)/$(BIN_DIR)/isort
-PRE_COMMIT := $(VENV)/$(BIN_DIR)/pre-commit
-PDOC := $(VENV)/$(BIN_DIR)/pdoc
-PIP_AUDIT := $(VENV)/$(BIN_DIR)/pip-audit
-BANDIT := $(VENV)/$(BIN_DIR)/bandit
-SEMGREP := $(VENV)/$(BIN_DIR)/semgrep
 PYTHON_BIN := $(VENV)/$(BIN_DIR)/python
+PIP := $(PYTHON_BIN) -m pip
+PYTEST := $(PYTHON_BIN) -m pytest
+RUFF := $(PYTHON_BIN) -m ruff
+MYPY := $(PYTHON_BIN) -m mypy
+ALEMBIC := $(PYTHON_BIN) -m alembic
+BLACK := $(PYTHON_BIN) -m black
+ISORT := $(PYTHON_BIN) -m isort
+PRE_COMMIT := $(PYTHON_BIN) -m pre_commit
+PDOC := $(PYTHON_BIN) -m pdoc
+PIP_AUDIT := $(PYTHON_BIN) -m pip_audit
+BANDIT := $(PYTHON_BIN) -m bandit
+SEMGREP := $(PYTHON_BIN) -m semgrep
 
 # Refinery Environment
 PIP_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/pip
@@ -59,11 +59,19 @@ AUDIT_ISSUES_FLAGS ?=
 
 .DEFAULT_GOAL := help
 
+PYTHON_MAJOR := 3
+PYTHON_MINOR := 13
+
 $(BOOTSTRAP_STAMP): requirements.lock
 	@echo "[bootstrap] Setting up virtual environment in $(VENV)"
-	@if [ -d $(VENV) ] && ! $(VENV)/$(BIN_DIR)/python -c "import sys; sys.exit(0)" 2>/dev/null; then \
-		echo "[bootstrap] Existing venv Python not found, recreating..."; \
-		rm -rf $(VENV); \
+	@if [ -d $(VENV) ]; then \
+		if ! $(VENV)/$(BIN_DIR)/python -c "import sys; v=sys.version_info; sys.exit(0 if (v.major,v.minor)==($(PYTHON_MAJOR),$(PYTHON_MINOR)) else 1)" 2>/dev/null; then \
+			echo "[bootstrap] Existing venv Python version mismatch or broken, recreating..."; \
+			rm -rf $(VENV); \
+		elif ! $(VENV)/$(BIN_DIR)/python -c "import pytest, mypy, ruff, black, isort" 2>/dev/null; then \
+			echo "[bootstrap] Existing venv missing key packages, recreating..."; \
+			rm -rf $(VENV); \
+		fi \
 	fi
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 	@$(PYTHON_BIN) -m ensurepip --upgrade 2>/dev/null || true
@@ -71,6 +79,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements.lock
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements-security.lock
 	@$(PYTHON_BIN) -m pip install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
+	@$(PYTHON_BIN) -c "import pytest, mypy, ruff, black, isort; print('[bootstrap] Key packages verified')" || { echo "[bootstrap] Package verification failed"; exit 1; }
 	@touch $(BOOTSTRAP_STAMP)
 
 $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
@@ -178,7 +187,7 @@ news_collector/utils/logger.py \
 news_collector/utils/url_canonicalizer.py
 
 typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
-	@$(MYPY) --config-file=pyproject.toml $(MYPY_TARGETS)
+	@$(PYTHON_BIN) -m mypy --config-file=pyproject.toml $(MYPY_TARGETS)
 
 	@mkdir -p $(COVERAGE_DIR)
 	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
@@ -303,7 +312,7 @@ config-docs-check: bootstrap ## Ensure docs/config_fields.md matches schema outp
 	rm -f "$$TMP_FILE"
 
 clean: ## Remove virtual environment and caches
-	@rm -rf $(VENV) .pytest_cache .mypy_cache
+	@rm -rf $(VENV) $(VENV_REFINERY) .pytest_cache .mypy_cache
 
 help: ## Show this help message
 	@echo "Available targets:"

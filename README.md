@@ -61,7 +61,7 @@ Notes:
 Publication into the frontend repo depends on two files staying aligned:
 
 - backend mirror: `news_collector/contracts/frontend_schema.py`
-- frontend render contract: `../noticiencias/src/content/config.ts`
+- frontend render contract: `../noticiencias/src/content.config.ts`
 
 If either changes, treat it as a cross-repo contract change.
 

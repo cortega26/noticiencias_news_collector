@@ -9,16 +9,17 @@ Tests in this file cover two distinct concerns:
 
 2. test_frontend_schema_field_parity — verifies that the set of top-level field
    names defined in AstroPost matches the set defined in
-   ``../noticiencias/src/content/config.ts``.  This test is the mechanical gate
+   ``../noticiencias/src/content.config.ts``.  This test is the mechanical gate
    for the cross-repo contract described in docs/PIPELINE_CONTRACTS.md and
    frontend ADR-0003.
 
-   The test is skipped (not failed) when the front-end repo is not checked out
-   alongside the back-end repo, so it does not break isolated back-end
-   development.  In CI the front-end config.ts is checked out via a sparse
-   checkout step; see .github/workflows/ci.yml.
+   In CI the front-end content.config.ts is checked out via a sparse
+   checkout step; see .github/workflows/ci.yml.  The test fails closed when
+   CI_EXPECTED_FRONTEND_SCHEMA is set and the file is missing.  In local
+   development the test is skipped when the front-end sibling is absent.
 """
 
+import os
 import re
 from datetime import date
 from pathlib import Path
@@ -51,9 +52,23 @@ def _extract_zod_fields(ts_source: str) -> set[str]:
 
     Matches lines of the form ``        fieldName: z.something(`` inside the
     ``z.object({ ... })`` block.  The 8-space indent is the exact indentation
-    used in src/content/config.ts and is validated by the CI formatter.
+    used in src/content.config.ts and is validated by the CI formatter.
     """
     return set(_ZOD_FIELD_RE.findall(ts_source))
+
+
+def _resolve_frontend_config() -> Path:
+    """Return the expected path; does NOT test existence."""
+    return _FRONTEND_CONFIG
+
+
+def _is_ci_with_expected_schema() -> bool:
+    """True when CI has promised a frontend schema and the test must fail closed."""
+    return os.environ.get("CI_EXPECTED_FRONTEND_SCHEMA", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -93,17 +108,18 @@ def test_astro_post_serialization():
         AstroPost(title="Short", excerpt="Short", date=date(2023, 1, 1))  # Too short
 
 
-@pytest.mark.skipif(
-    not _FRONTEND_CONFIG.exists(),
-    reason=(
-        "Front-end repo not found at expected sibling path "
-        f"({_FRONTEND_CONFIG}).  "
-        "In CI this test requires the front-end config.ts to be checked out; "
-        "see .github/workflows/ci.yml for the sparse-checkout step."
-    ),
-)
+def test_frontend_schema_is_available_in_ci():
+    """In CI the frontend schema copy step must succeed before parity runs."""
+    if not _is_ci_with_expected_schema():
+        pytest.skip("Not running in CI with EXPECTED_FRONTEND_SCHEMA set")
+    assert _FRONTEND_CONFIG.exists(), (
+        f"CI promised a frontend schema at {_FRONTEND_CONFIG} but the file is missing. "
+        "Check the sparse-checkout and copy step in .github/workflows/ci.yml."
+    )
+
+
 def test_frontend_schema_field_parity():
-    """AstroPost field names must match the top-level fields in config.ts.
+    """AstroPost field names must match the top-level fields in content.config.ts.
 
     This test is the mechanical enforcement gate for the cross-repo contract
     described in docs/PIPELINE_CONTRACTS.md §Frontend Publication Contract and
@@ -113,10 +129,23 @@ def test_frontend_schema_field_parity():
     - A field was added to config.ts but not to AstroPost  →  update
       news_collector/contracts/frontend_schema.py.
     - A field was added to AstroPost but not to config.ts  →  update
-      src/content/config.ts in the front-end repo.
+      src/content.config.ts in the front-end repo.
     - Either change is a cross-repo contract event; follow the migration policy
       in ADR-0003 (bump schema_version, backfill, coordinated deploy).
     """
+    if _is_ci_with_expected_schema():
+        assert _FRONTEND_CONFIG.exists(), (
+            f"CI_EXPECTED_FRONTEND_SCHEMA is set but {_FRONTEND_CONFIG} is missing. "
+            "Verify the sparse checkout and copy step in ci.yml."
+        )
+    elif not _FRONTEND_CONFIG.exists():
+        pytest.skip(
+            f"Front-end repo not found at expected sibling path "
+            f"({_FRONTEND_CONFIG}).  "
+            "In CI this test requires the front-end content.config.ts to be "
+            "checked out; see .github/workflows/ci.yml for the sparse-checkout step."
+        )
+
     ts_source = _FRONTEND_CONFIG.read_text(encoding="utf-8")
     zod_fields = _extract_zod_fields(ts_source)
 
@@ -131,15 +160,24 @@ def test_frontend_schema_field_parity():
     missing_in_zod = pydantic_fields - zod_fields
 
     assert not missing_in_pydantic, (
-        f"Fields present in config.ts but missing from AstroPost: "
+        f"Fields present in content.config.ts but missing from AstroPost: "
         f"{sorted(missing_in_pydantic)}.  "
         "Update news_collector/contracts/frontend_schema.py."
     )
     assert not missing_in_zod, (
-        f"Fields present in AstroPost but missing from config.ts: "
+        f"Fields present in AstroPost but missing from content.config.ts: "
         f"{sorted(missing_in_zod)}.  "
-        "Update ../noticiencias/src/content/config.ts."
+        "Update ../noticiencias/src/content.config.ts."
     )
+
+
+def test_frontend_schema_field_parity_missing_in_ci_fails():
+    """When CI promises a schema the parity test must NOT skip."""
+    if not _is_ci_with_expected_schema():
+        pytest.skip("Not running in CI with EXPECTED_FRONTEND_SCHEMA set")
+    assert (
+        _FRONTEND_CONFIG.exists()
+    ), f"CI promised a frontend schema at {_FRONTEND_CONFIG} but the file is absent."
 
 
 if __name__ == "__main__":
