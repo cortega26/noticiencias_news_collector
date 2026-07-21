@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
 from news_collector.config import DATABASE_CONFIG
+from news_collector.storage.database import build_database_url
 from news_collector.storage.models import Base
 
 # ----------------------------------------------------------------------
@@ -32,23 +33,30 @@ if config.config_file_name is not None:
 # ----------------------------------------------------------------------
 target_metadata = Base.metadata
 
-# Construct SQLAlchemy URL from app config
+# Construct SQLAlchemy URL from app config via the same build_database_url()
+# DatabaseManager and the read-only migration guard use — this used to be a
+# third, independent copy of this logic, and it had drifted: its postgresql
+# branch interpolated user/password into an f-string with no percent-encoding,
+# unlike URL.create() (a password containing "@", ":", "/", or "%" would have
+# produced a silently wrong or unparsable URL). One builder, one behavior.
+db_config = dict(DATABASE_CONFIG)
+if db_config.get("type") == "sqlite" and db_config.get("path"):
+    # Alembic can run standalone (CLI), outside get_runtime_config()'s own
+    # path resolution, so a relative sqlite path is resolved here against the
+    # project root — build_database_url() itself does no path resolution.
+    db_path = Path(db_config["path"])
+    if not db_path.is_absolute():
+        db_path = BASE_DIR / db_path
+    db_config["path"] = db_path
+
 db_url = ""
-if DATABASE_CONFIG.get("type") == "sqlite":
-    db_path = DATABASE_CONFIG.get("path")
-    if db_path:
-        # If path is relative, make it absolute relative to project root
-        if not Path(db_path).is_absolute():
-            db_path = BASE_DIR / db_path
-        db_url = f"sqlite:///{db_path}"
-elif DATABASE_CONFIG.get("type") == "postgresql":
-    # Construct PG URL
-    user = DATABASE_CONFIG.get("user")
-    pw = DATABASE_CONFIG.get("password")
-    host = DATABASE_CONFIG.get("host")
-    port = DATABASE_CONFIG.get("port")
-    db = DATABASE_CONFIG.get("name") or DATABASE_CONFIG.get("database")
-    db_url = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
+if db_config.get("type") in ("sqlite", "postgresql"):
+    url = build_database_url(db_config)
+    db_url = (
+        url.render_as_string(hide_password=False)
+        if hasattr(url, "render_as_string")
+        else str(url)
+    )
 
 # Override the url in alembic config object so migrations run against correct DB
 config.set_main_option("sqlalchemy.url", db_url)
