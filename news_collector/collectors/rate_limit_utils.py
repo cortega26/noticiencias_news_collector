@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-from news_collector.config.settings import RATE_LIMITING_CONFIG
+from news_collector.config.settings import get_runtime_config
 
 
 def _normalize_domain(domain: str) -> str:
@@ -31,10 +31,11 @@ def resolve_domain_override(
 ) -> float:
     """Return the configured minimum delay (seconds) for a domain, if any."""
 
+    cfg = get_runtime_config()
     config_overrides = (
         overrides
         if overrides is not None
-        else RATE_LIMITING_CONFIG.get("domain_overrides", {})
+        else cfg.rate_limiting_config.get("domain_overrides", {})
     )
     if not config_overrides:
         return 0.0
@@ -52,12 +53,13 @@ def calculate_effective_delay(
 ) -> float:
     """Combine global, domain, robots.txt and source-specific delays."""
 
+    cfg = get_runtime_config()
     base_delay = float(
-        RATE_LIMITING_CONFIG.get(
-            "domain_default_delay", RATE_LIMITING_CONFIG["delay_between_requests"]
+        cfg.rate_limiting_config.get(
+            "domain_default_delay", cfg.rate_limiting_config["delay_between_requests"]
         )
     )
-    global_min = float(RATE_LIMITING_CONFIG["delay_between_requests"])
+    global_min = float(cfg.rate_limiting_config["delay_between_requests"])
     robots_component = float(robots_delay) if robots_delay is not None else 0.0
     source_component = float(source_min_delay) if source_min_delay is not None else 0.0
     domain_component = resolve_domain_override(domain)

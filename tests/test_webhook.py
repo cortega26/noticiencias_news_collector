@@ -220,15 +220,11 @@ def _make_validation_payload(
                 "check": "frontmatter-dates",
                 "status": status,
                 "filesCount": 12,
-                "errors": (
-                    ["Invalid date in article.md"] if status == "fail" else []
-                ),
+                "errors": (["Invalid date in article.md"] if status == "fail" else []),
             }
         ],
         "frontend_ref": "abc123def",
-        "run_url": (
-            "https://github.com/cortega26/noticiencias/actions/runs/123"
-        ),
+        "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/123"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -251,9 +247,7 @@ def _make_publish_payload(
             }
         ],
         "frontend_ref": "abc123def",
-        "run_url": (
-            "https://github.com/cortega26/noticiencias/actions/runs/456"
-        ),
+        "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/456"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import ValidationError
 
-from news_collector.config import SCORING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import ScoringRequestModel
 from news_collector.utils.dedupe import normalize_article_text
 
@@ -45,7 +45,7 @@ class FeatureBasedScorer(AsyncScorer):
     """Advanced scorer with freshness decay, diversity penalty, and explanations."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        self.config = config or SCORING_CONFIG
+        self.config = config or get_runtime_config().scoring_config
         weights_cfg = self.config.get("feature_weights", {})
         self.weights = FeatureWeights(
             source_credibility=weights_cfg.get("source_credibility", 0.30),

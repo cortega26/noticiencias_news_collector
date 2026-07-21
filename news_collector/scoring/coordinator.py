@@ -9,7 +9,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Dict, List
 
-from news_collector.config import ALL_SOURCES, SCORING_CONFIG
+from news_collector.config import ALL_SOURCES
+from news_collector.config.settings import get_runtime_config
 
 
 class ScoringCoordinator:
@@ -41,10 +42,11 @@ class ScoringCoordinator:
         if dry_run:
             return self._simulate_scoring(collection_results)
 
+        scoring_config = get_runtime_config().scoring_config
         pending_articles = self.db_manager.get_pending_articles(status="validated")
         rescore_days = self.config_override.get(
             "rescore_days_back"
-        ) or SCORING_CONFIG.get("rescore_days_back", 14)
+        ) or scoring_config.get("rescore_days_back", 14)
         completed_articles = self.db_manager.get_completed_articles_for_rescoring(
             days_back=rescore_days
         )
@@ -70,7 +72,7 @@ class ScoringCoordinator:
         total_score = 0.0
 
         # Preserve original expression evaluation — result is intentionally unused
-        self.config_override.get("scoring_workers") or SCORING_CONFIG.get("workers", 4)
+        self.config_override.get("scoring_workers") or scoring_config.get("workers", 4)
 
         if hasattr(self.scorer, "reset_cycle_metrics"):
             self.scorer.reset_cycle_metrics()

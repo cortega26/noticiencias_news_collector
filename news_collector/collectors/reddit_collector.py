@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import requests
 
-from news_collector.config.settings import COLLECTION_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 from news_collector.contracts.common import ArticleMetadataModel
 
@@ -44,11 +44,12 @@ class RedditCollector(BaseCollector):
         health_tracker: Optional[Any] = None,
     ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
+        cfg = get_runtime_config()
         self._client_id = os.getenv("REDDIT_CLIENT_ID", "")
         self._client_secret = os.getenv("REDDIT_CLIENT_SECRET", "")
         self._token: Optional[str] = None
         self._token_expires_at: float = 0.0
-        self._user_agent: str = COLLECTION_CONFIG.get(
+        self._user_agent: str = cfg.collection_config.get(
             "user_agent", "NoticienciasBot/1.0 (+https://noticiencias.com)"
         )
 
@@ -91,6 +92,7 @@ class RedditCollector(BaseCollector):
         return self._fetch_token()
 
     def _api_get(self, path: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        cfg = get_runtime_config()
         if not self._ensure_token():
             return None
         resp = requests.get(
@@ -100,7 +102,7 @@ class RedditCollector(BaseCollector):
                 "User-Agent": self._user_agent,
             },
             params=params,
-            timeout=int(COLLECTION_CONFIG.get("request_timeout_seconds", 30)),
+            timeout=int(cfg.collection_config.get("request_timeout_seconds", 30)),
         )
         resp.raise_for_status()
         return resp.json()  # type: ignore[no-any-return]
@@ -112,6 +114,7 @@ class RedditCollector(BaseCollector):
     def collect_from_source(
         self, source_id: str, source_config: Dict[str, Any]
     ) -> Dict[str, Any]:
+        cfg = get_runtime_config()
         start_time = time.time()
         stats: Dict[str, Any] = {
             "source_id": source_id,
@@ -146,7 +149,7 @@ class RedditCollector(BaseCollector):
         try:
             subreddit = source_config.get("subreddit", "science")
             sort = source_config.get("sort", "new")
-            limit = int(COLLECTION_CONFIG.get("max_articles_per_source", 5))
+            limit = int(cfg.collection_config.get("max_articles_per_source", 5))
             # Over-fetch so filtering doesn't leave us empty
             fetch_limit = min(limit * 4, 25)
 

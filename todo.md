@@ -1,59 +1,63 @@
-# Todo: Sequential implementation of plans 001-010
+# Todo: Implement the remaining plans (see spec.md)
 
-- [x] Read repository governance and the plans index.
-- [x] Read Plan 001 and run its drift check.
-- [x] Implement Plan 001 config and environment documentation changes.
-- [x] Verify Plan 001 secret removal and environment override behavior.
-- [x] Run Plan 001 regression gates (`make config-validate`, `make lint`).
-- [x] Review the Plan 001 diff and update its final status.
-- [x] Read Plan 002 and inspect the publication identity flow and tests.
-- [x] Implement Plan 002 deterministic filesystem recovery behavior.
-- [x] Add and run Plan 002 focused regression tests (27 passed).
-- [x] Run Plan 002 lint, mypy, and boundary checks.
-- [x] Confirm the 4 frontend audit failures independently as the pre-existing baseline.
-- [x] Review the Plan 002 diff and record its blocked status.
-- [x] Read Plan 003 and confirm the prompt's affirmative/negative phrases.
-- [x] Implement the exact normalized council approval predicate.
-- [x] Run focused council tests and regression gates for Plan 003.
-- [x] Review the Plan 003 diff and update its final status.
-- [x] Read Plan 004 and inspect the scorer formula and real keyword lists.
-- [x] Add HeuristicScorer characterization tests without changing production code.
-- [x] Run focused tests, coverage, lint, and regression checks for Plan 004.
-- [x] Review the Plan 004 diff and update its final status.
-- [x] Read Plan 005 and confirm the single Alembic head and serving query shape.
-- [x] Add the ScoreLog composite index, idempotent migration, and index test.
-- [x] Apply migrations and run Plan 005 storage/serving regression gates.
-- [x] Review the Plan 005 diff and update its final status.
-- [x] Read Plan 006 and confirm the stale hook path and absent `src/` directory.
-- [x] Correct the pre-commit mypy path regex.
-- [x] Validate config and regex; confirm the hook now runs on both intended files.
-- [ ] Resolve Plan 006 STOP: isolated pre-commit mypy reports 38 transitive errors while Makefile mypy passes.
-- [x] Record Plan 006 as blocked without changing hook arguments or unrelated type debt.
-- [x] Read Plan 007 and establish the pyproject wheel-build baseline.
-- [x] Confirm no active `setup.py` references or `aiohttp` imports, then remove `setup.py`.
-- [x] Run post-removal build and detect setuptools package-discovery failure.
-- [x] Restore `setup.py` exactly; entrypoint tests and lint remain green.
-- [ ] Resolve Plan 007 STOP by moving explicit package discovery into `pyproject.toml` in a separately approved scope.
-- [x] Record Plan 007 blocked status.
-- [x] Read Plan 008 and inspect coordinator callers and existing loop tests.
-- [x] Check persistence result, stop on explicit failure, and count only persisted batches.
-- [x] Add failure and happy-path persistence tests.
-- [x] Run Plan 008 focused, boundary, lint, type, and fast-suite checks.
-- [x] Review the Plan 008 diff and update its final status.
-- [x] Read and implement Plan 009 prompt-isolation and SSRF test/documentation hardening.
-- [x] Verify Plan 009 focused tests, lint, official type targets, and fast suite.
-- [x] Document and defer DNS pinning because it requires a cross-client transport rewrite.
-- [x] Read Plan 010, run its drift check, and inspect cluster/API behavior.
-- [x] Query current cluster cardinality and write the spike note.
-- [x] Add the bounded read-only related-articles endpoint.
-- [x] Add no-cluster, clustered-ordering, and not-found serving tests.
-- [x] Run Plan 010 targeted and regression gates.
-- [x] Review Plan 010 scope and update its final status.
-- [x] Resolve Plan 006 by aligning pre-commit mypy with the repository environment.
-- [x] Verify the Plan 006 hook and update its status.
-- [x] Resolve Plan 007 with explicit setuptools package discovery.
-- [x] Rebuild without `setup.py`, run entrypoint/lint checks, and update its status.
-- [x] Diagnose the blocked Elias Thorne publication and identify all generic alt fallbacks.
-- [x] Implement publication-safe alt normalization and regression tests.
-- [x] Repair and publish the blocked article through front-end PR #106.
-- [x] Run backend and front-end required validation gates; record baseline audit failures.
+Previous pass (plans 001–016) is complete and archived under `plans/archive/`;
+this file now tracks the current pass over the 18 remaining plans.
+
+## Plan 033 — Make configuration refresh live (DONE)
+
+- [x] Phase 1: `RuntimeConfigSnapshot`, `get_runtime_config()`,
+      `refresh_runtime_config()` atomic rebuild + tests (`tests/unit/config/`,
+      23 passing).
+- [x] Phase 2.1–2.5: migrate base/html/reddit/rss collectors + rate_limit_utils.
+- [x] Phase 2.6–2.21: migrate remaining consumers (scoring x4, storage x3,
+      infrastructure x2, enrichment, system x3, utils/logger, contracts,
+      logic/workflows). Also fixed two decorator-baked tenacity retry
+      policies (requests_client.py, http_client.py) that would otherwise
+      have stayed stale despite the migration, and 2 stale test mocks that
+      patched the old by-value config names.
+- [x] Phase 3: Refinery truthfulness — `save_toml_config()` now validates
+      (both pydantic shape and business rules) before writing to disk,
+      returns `{success, version, changed_keys, restart_required_keys}`,
+      and every "Guardar" button in admin_panel.py surfaces that truthfully
+      via a shared `render_save_result()` helper.
+- [x] Phase 4: import audit clean (only intentionally-live ALL_SOURCES
+      remains), black/ruff/mypy show zero new findings vs. pre-existing
+      baseline, full test run (`pytest tests --ignore=tests/e2e_pipeline`)
+      matches the 13 pre-existing failures exactly with 29 more tests
+      passing (new coverage), `plans/README.md` updated to DONE.
+- [ ] Commit plan 033.
+
+## Plan 021 — Rebuild the publication callback contract
+
+- [ ] Read `plans/021-rebuild-publication-callback-contract.md` in full.
+- [ ] Implement per its spec.
+- [ ] Run its verification section.
+- [ ] Update `plans/README.md`, commit.
+
+## Plan 023 — Connect and harden the report pipeline
+
+- [ ] Read `plans/023-connect-and-harden-report-pipeline.md` in full.
+- [ ] Implement per its spec.
+- [ ] Run its verification section.
+- [ ] Update `plans/README.md`, commit.
+
+## Plan 046 — Prove and automate production migrations
+
+- [ ] Read `plans/046-prove-and-automate-production-migrations.md` in full.
+- [ ] Implement per its spec.
+- [ ] Run its verification section.
+- [ ] Update `plans/README.md`, commit.
+
+## Reassess after each completion
+
+- [ ] After 033/021/023/046 each land, recompute the newly-startable set from
+      `plans/README.md`'s dependency column (031/032 unblock after 023;
+      034/036/037/038/048 unblock after 033; 041/043 need the full
+      021+023+... set; 047 needs 021+023).
+- [ ] Frontend plans (031, 032, 035, 039, 044) belong in the Astro repo
+      (`noticiencias`), not here — flag when reached instead of implementing
+      from this working directory.
+- [ ] Spike plans (047, 048, 049) end in an ADR/decision doc, not shipped
+      code — don't over-build.
+- [ ] Every ~20 iterations: fresh subagent review of spec.md + implementation
+      for gaps; loop on feedback.

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy.orm.attributes import QueryableAttribute
 
-from news_collector.config.settings import DEDUP_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel, ScoringRequestModel
 from news_collector.contracts.frontend_publication import (
     FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
@@ -107,10 +107,6 @@ class ArticleRepository:
 
     def __init__(self, db_manager: Any) -> None:
         self._db = db_manager
-        self.simhash_threshold = DEDUP_CONFIG.get("simhash_threshold", 10)
-        self.simhash_candidate_window = DEDUP_CONFIG.get(
-            "simhash_candidate_window", 500
-        )
 
     @contextmanager
     def _session(self):
@@ -949,6 +945,10 @@ class ArticleRepository:
         simhash_value: int,
         published_date: Optional[datetime],
     ) -> Tuple[str, float]:
+        dedup_config = get_runtime_config().dedup_config
+        simhash_threshold = dedup_config.get("simhash_threshold", 10)
+        simhash_candidate_window = dedup_config.get("simhash_candidate_window", 500)
+
         simhash_value = simhash_normalize_unsigned(simhash_value) or 0
         if not simhash_value:
             return generate_cluster_id(), 0.0
@@ -964,7 +964,7 @@ class ArticleRepository:
             candidate_prefixes.append(prefix + 1)
 
         candidates: List[Article] = []
-        remaining = self.simhash_candidate_window
+        remaining = simhash_candidate_window
         article_id_attr = cast(QueryableAttribute[Any], Article.id)
         article_simhash_attr = cast(QueryableAttribute[Any], Article.simhash)
         article_cluster_id_attr = cast(QueryableAttribute[Any], Article.cluster_id)
@@ -1000,7 +1000,7 @@ class ArticleRepository:
             )
             pref_candidates = query.all()
             candidates.extend(pref_candidates)
-            remaining = self.simhash_candidate_window - len(candidates)
+            remaining = simhash_candidate_window - len(candidates)
             if remaining <= 0:
                 break
 
@@ -1019,7 +1019,7 @@ class ArticleRepository:
                 )
                 .filter(Article.simhash.isnot(None))
                 .order_by(Article.collected_date.desc())
-                .limit(self.simhash_candidate_window)
+                .limit(simhash_candidate_window)
                 .all()
             )
 
@@ -1041,7 +1041,7 @@ class ArticleRepository:
             if candidate_simhash is None:
                 continue
             distance = hamming_distance(simhash_value, candidate_simhash)
-            if distance <= self.simhash_threshold:
+            if distance <= simhash_threshold:
                 hits.append((candidate, distance))
 
         if not hits:
@@ -1085,6 +1085,9 @@ class ArticleRepository:
     def _revalidate_cluster(self, session: Session, cluster_id: Optional[str]) -> None:
         if not cluster_id:
             return
+        simhash_threshold = get_runtime_config().dedup_config.get(
+            "simhash_threshold", 10
+        )
         article_id_attr = cast(QueryableAttribute[Any], Article.id)
         article_simhash_attr = cast(QueryableAttribute[Any], Article.simhash)
         article_cluster_id_attr = cast(QueryableAttribute[Any], Article.cluster_id)
@@ -1119,7 +1122,7 @@ class ArticleRepository:
             if article_simhash is None:
                 continue
             distance = hamming_distance(article_simhash, anchor_simhash)
-            if distance > self.simhash_threshold * 2:
+            if distance > simhash_threshold * 2:
                 new_cluster = generate_cluster_id()
                 article_record = cast(Any, article)
                 article_record.cluster_id = new_cluster

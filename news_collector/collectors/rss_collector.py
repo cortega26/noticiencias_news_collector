@@ -28,7 +28,7 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 ValidationError = get_pydantic_module().ValidationError
 
 
-from news_collector.config.settings import COLLECTION_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
 from news_collector.logic.parsers.image_extractor import ImageCandidate, ImageExtractor
@@ -43,7 +43,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 
 configure_canonicalization_cache(
-    int(COLLECTION_CONFIG.get("canonicalization_cache_size", 0))
+    int(get_runtime_config().collection_config.get("canonicalization_cache_size", 0))
 )
 
 
@@ -414,6 +414,7 @@ class RSSCollector(BaseCollector):
         Fetches feed content with robust handling for bytes, headers, and status codes.
         Returns a dict with success, status_code, content (bytes), url, and error_message.
         """
+        cfg = get_runtime_config()
         url = source_config["url"]
 
         # 1. Check Metadata for Conditional Get
@@ -466,7 +467,7 @@ class RSSCollector(BaseCollector):
                 page = Fetcher.get(
                     url,
                     headers=request_headers,
-                    timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+                    timeout=cfg.collection_config.get("request_timeout", 30),
                     follow_redirects=True,
                 )
                 latency = (time.perf_counter() - start_t) * 1000
@@ -523,7 +524,7 @@ class RSSCollector(BaseCollector):
             response = self.client.get(
                 url,
                 headers=request_headers,
-                timeout=COLLECTION_CONFIG.get("request_timeout", 30),
+                timeout=cfg.collection_config.get("request_timeout", 30),
             )
             latency = (time.perf_counter() - start_t) * 1000
 
@@ -760,6 +761,7 @@ class RSSCollector(BaseCollector):
         """
         Extrae artículos usando el RssParser logic.
         """
+        cfg = get_runtime_config()
         # Fetch multiplier logic is now implicit since parser returns all valid items,
         # but we effectively just get candidates.
 
@@ -768,10 +770,10 @@ class RSSCollector(BaseCollector):
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
         datetime.now(timezone.utc) - timedelta(
-            days=COLLECTION_CONFIG["recent_days_threshold"]
+            days=cfg.collection_config["recent_days_threshold"]
         )
 
-        max_articles = COLLECTION_CONFIG["max_articles_per_source"]
+        max_articles = cfg.collection_config["max_articles_per_source"]
         candidate_multiplier = 4
         fetch_limit = max_articles * candidate_multiplier
 
@@ -964,6 +966,7 @@ class RSSCollector(BaseCollector):
         en bruto y la transforma en un formato estándar, enriquecido
         y listo para análisis posterior.
         """
+        cfg = get_runtime_config()
         try:
             # Validaciones básicas
             if not raw_article.get("url") or not raw_article.get("title"):
@@ -1025,7 +1028,7 @@ class RSSCollector(BaseCollector):
 
             # --- 2. ENRICHMENT STRATEGY ROUTING ---
             enrichment_strategy = (
-                COLLECTION_CONFIG.get("sources", {})
+                cfg.collection_config.get("sources", {})
                 .get(source_id, {})
                 .get("enrichment_strategy")
             )

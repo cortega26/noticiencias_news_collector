@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import git
 from news_collector.config import ALL_SOURCES
-from news_collector.config.settings import SCORING_CONFIG
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import (
     MANIFEST_FILENAME,
     SCHEMA_VERSION,
@@ -526,7 +526,7 @@ def run_pipeline_e2e_scenario(  # noqa: C901
                 system = create_system()
                 if not system.initialize():
                     raise RuntimeError("System initialization failed for E2E harness")
-                system.scorer = FeatureBasedScorer(SCORING_CONFIG)
+                system.scorer = FeatureBasedScorer(get_runtime_config().scoring_config)
                 ALL_SOURCES[source_id] = source_config
                 rss = system.collector.collectors["rss"]
 

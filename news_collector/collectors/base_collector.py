@@ -30,13 +30,7 @@ from urllib.parse import urlparse
 import httpx
 
 from news_collector.collectors.rate_limit_utils import calculate_effective_delay
-from news_collector.config.settings import (
-    COLLECTION_CONFIG,
-    DLQ_DIR,
-    RATE_LIMITING_CONFIG,
-    ROBOTS_CONFIG,
-    TEXT_PROCESSING_CONFIG,
-)
+from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 from news_collector.storage.database import get_database_manager
 from news_collector.utils.logger import get_logger
@@ -123,7 +117,8 @@ class BaseCollector(ABC):
         sistema. Preferimos esperar el resultado real y emitir una alerta
         diagnóstica si la fuente sobrepasa el umbral esperado.
         """
-        timeout = COLLECTION_CONFIG.get("source_timeout_seconds", 300)
+        cfg = get_runtime_config()
+        timeout = cfg.collection_config.get("source_timeout_seconds", 300)
         start = time.monotonic()
         result = await asyncio.to_thread(
             self.collect_from_source, source_id, source_config
@@ -552,10 +547,11 @@ class BaseCollector(ABC):
     # Robots/TOS helpers
     # ==================
     def _get_robots(self, domain: str) -> Optional[robotparser.RobotFileParser]:
-        if not ROBOTS_CONFIG["respect_robots"]:
+        cfg = get_runtime_config()
+        if not cfg.robots_config["respect_robots"]:
             return None
         now = time.time()
-        ttl = ROBOTS_CONFIG["cache_ttl_seconds"]
+        ttl = cfg.robots_config["cache_ttl_seconds"]
         cached = self._robots_cache.get(domain)
         if cached and (now - cached[0] < ttl):
             return cached[1]
@@ -568,7 +564,7 @@ class BaseCollector(ABC):
             resp = httpx.get(
                 robots_url,
                 timeout=5.0,
-                headers={"User-Agent": COLLECTION_CONFIG["user_agent"]},
+                headers={"User-Agent": cfg.collection_config["user_agent"]},
                 follow_redirects=True,
             )
             if resp.status_code >= 400:
@@ -581,14 +577,15 @@ class BaseCollector(ABC):
             return None
 
     def _respect_robots(self, url: str) -> Tuple[bool, Optional[float]]:
-        if not ROBOTS_CONFIG["respect_robots"]:
+        cfg = get_runtime_config()
+        if not cfg.robots_config["respect_robots"]:
             return (True, None)
         try:
             domain = urlparse(url).netloc
             rp = self._get_robots(domain)
             if not rp:
                 return (True, None)
-            ua = COLLECTION_CONFIG["user_agent"]
+            ua = cfg.collection_config["user_agent"]
             try:
                 allowed = rp.can_fetch(ua, url)
             except Exception:
@@ -618,13 +615,14 @@ class BaseCollector(ABC):
         robots_delay: Optional[float] = None,
         source_min_delay: Optional[float] = None,
     ):
+        cfg = get_runtime_config()
         now = time.time()
         last = self._domain_last_request.get(domain, 0.0)
         effective_delay = calculate_effective_delay(
             domain, robots_delay, source_min_delay
         )
         jitter = random.uniform(  # noqa: S311
-            0, RATE_LIMITING_CONFIG.get("jitter_max", 0.3)
+            0, cfg.rate_limiting_config.get("jitter_max", 0.3)
         )
         wait = (last + effective_delay + jitter) - now
         if wait > 0:
@@ -632,8 +630,9 @@ class BaseCollector(ABC):
         self._domain_last_request[domain] = time.time()
 
     def _backoff_sleep(self, attempt: int):
-        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
-        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+        cfg = get_runtime_config()
+        base = cfg.rate_limiting_config.get("backoff_base", 0.5)
+        max_b = cfg.rate_limiting_config.get("backoff_max", 10.0)
         # Full Jitter strategy: Sleep between 0 and min(cap, base * 2**attempt)
         # This prevents thundering herd better than "Equal Jitter" or constant jitter.
         # User requested: "Add jitter to exponential backoff (deterministic in tests)"
@@ -651,8 +650,9 @@ class BaseCollector(ABC):
 
     async def _backoff_sleep_async(self, attempt: int):
         """Async version of backoff sleep to avoid blocking the event loop."""
-        base = RATE_LIMITING_CONFIG.get("backoff_base", 0.5)
-        max_b = RATE_LIMITING_CONFIG.get("backoff_max", 10.0)
+        cfg = get_runtime_config()
+        base = cfg.rate_limiting_config.get("backoff_base", 0.5)
+        max_b = cfg.rate_limiting_config.get("backoff_max", 10.0)
 
         target_delay = min(max_b, (base * (2**attempt)))
 
@@ -700,11 +700,12 @@ class BaseCollector(ABC):
         reason: str,
         context: Optional[Dict[str, Any]] = None,
     ) -> Path:
+        cfg = get_runtime_config()
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         safe_hash = hashlib.sha256(
             f"{source_id}|{url}|{ts}".encode("utf-8")
         ).hexdigest()[:12]
-        path = Path(DLQ_DIR) / f"{self.collector_type}_{source_id}_{safe_hash}.json"
+        path = cfg.dlq_dir / f"{self.collector_type}_{source_id}_{safe_hash}.json"
         payload = {
             "timestamp": ts,
             "collector": self.collector_type,
@@ -889,10 +890,11 @@ class BaseCollector(ABC):
         """
         Valida que un artículo tenga la información mínima necesaria.
         """
+        cfg = get_runtime_config()
         # Verificaciones básicas
         if not article_data.get("title") or len(
             article_data["title"].strip()
-        ) < TEXT_PROCESSING_CONFIG.get("min_title_length", 10):
+        ) < cfg.text_processing_config.get("min_title_length", 10):
             return False
 
         if not article_data.get("url") or not article_data["url"].startswith("http"):
@@ -901,7 +903,10 @@ class BaseCollector(ABC):
         # Verificar que el contenido no sea demasiado corto - STRICT CHECK on full content
         # User requirement: "use the 1000 chars STRICTLY against the full length of the articles and NOTHING ELSE"
         content = article_data.get("content")
-        if not content or len(content) < TEXT_PROCESSING_CONFIG["min_content_length"]:
+        if (
+            not content
+            or len(content) < cfg.text_processing_config["min_content_length"]
+        ):
             self._emit_log(
                 "debug",
                 "collector.article.validation_failed",
@@ -909,14 +914,14 @@ class BaseCollector(ABC):
                 details={
                     "reason": "content_too_short",
                     "length": len(content) if content else 0,
-                    "min_required": TEXT_PROCESSING_CONFIG["min_content_length"],
+                    "min_required": cfg.text_processing_config["min_content_length"],
                 },
             )
             return False
 
         # Verificar que no sea spam o clickbait obvio
         title_lower = article_data["title"].lower()
-        penalty_keywords = TEXT_PROCESSING_CONFIG["penalty_keywords"]
+        penalty_keywords = cfg.text_processing_config["penalty_keywords"]
 
         if any(keyword.lower() in title_lower for keyword in penalty_keywords):
             self._emit_log(
@@ -941,8 +946,9 @@ class BaseCollector(ABC):
         2. Duplicate Check
         3. Top-N Sorting
         """
+        cfg = get_runtime_config()
         saved_count = 0
-        min_length = TEXT_PROCESSING_CONFIG.get("min_content_length", 1000)
+        min_length = cfg.text_processing_config.get("min_content_length", 1000)
 
         valid_candidates = []
 

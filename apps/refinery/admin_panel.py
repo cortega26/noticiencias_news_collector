@@ -60,6 +60,7 @@ from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import (
     Config,
+    ConfigError,
     default_config_path,
     default_env_path,
     load_config,
@@ -67,6 +68,7 @@ from noticiencias.config_manager import (
     save_config,
     save_env_overrides,
 )
+from pydantic import ValidationError
 
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
@@ -437,12 +439,56 @@ def load_toml_config():
     return load_config(CONFIG_FILE).model_dump(mode="python")
 
 
-def save_toml_config(config_data):
-    validated = Config.model_validate(config_data)
+def save_toml_config(config_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate, persist, and live-apply a config.toml change.
+
+    Never claims success it didn't achieve: both validation layers
+    (pydantic shape + validate_config's cross-field business rules) run
+    BEFORE anything is written to disk, so an invalid save never reaches
+    config.toml or the live snapshot. On success, reports the exact
+    version, which keys changed, and which changed keys need a process
+    restart to take effect — callers must surface all three instead of a
+    blanket "saved" message.
+    """
+    try:
+        validated = Config.model_validate(config_data)
+    except ValidationError as exc:
+        return {"success": False, "error": str(exc)}
+
+    try:
+        config_settings.validate_config(validated)
+    except ConfigError as exc:
+        return {"success": False, "error": str(exc)}
+
     current = load_config(CONFIG_FILE)
     validated._metadata = current._metadata
     save_config(validated, CONFIG_FILE)
-    config_settings.refresh_runtime_config(validated)
+    snapshot = config_settings.refresh_runtime_config(validated)
+
+    return {
+        "success": True,
+        "version": snapshot.version,
+        "changed_keys": sorted(snapshot.changed_keys),
+        "restart_required_keys": sorted(snapshot.restart_required_keys),
+    }
+
+
+def render_save_result(result: Dict[str, Any], success_message: str) -> None:
+    """Show the truthful outcome of a save_toml_config() call.
+
+    Shared by every "Guardar" button so failures and restart-required
+    settings are never hidden behind a blanket success toast.
+    """
+    if not result["success"]:
+        st.error(f"❌ No se guardó la configuración: {result['error']}")
+        return
+
+    st.success(f"{success_message} (versión {result['version']})")
+    if result["restart_required_keys"]:
+        st.warning(
+            "⚠️ Estos cambios requieren reiniciar el proceso para aplicarse: "
+            + ", ".join(result["restart_required_keys"])
+        )
 
 
 def load_source_health():
@@ -1189,9 +1235,10 @@ with tab1:
                 config_data["nvidia"]["max_tokens"] = _nvidia_maxtok
 
                 if st.button("💾 Guardar configuración NVIDIA", key="save_nvidia"):
-                    save_toml_config(config_data)
-                    st.success("Configuración NVIDIA guardada.")
-                    st.rerun()
+                    _result = save_toml_config(config_data)
+                    render_save_result(_result, "Configuración NVIDIA guardada.")
+                    if _result["success"]:
+                        st.rerun()
 
                 st.markdown("---")
                 st.markdown("##### 🔍 Resumen de Etapas")
@@ -1224,9 +1271,10 @@ with tab1:
                 config_data["gemini"]["model"] = _gemini_model_sel
 
                 if st.button("💾 Guardar configuración Gemini", key="save_gemini"):
-                    save_toml_config(config_data)
-                    st.success("Configuración Gemini guardada.")
-                    st.rerun()
+                    _result = save_toml_config(config_data)
+                    render_save_result(_result, "Configuración Gemini guardada.")
+                    if _result["success"]:
+                        st.rerun()
 
                 st.markdown("---")
                 st.markdown("##### 🔍 Resumen de Etapas")
@@ -1341,8 +1389,10 @@ with tab1:
                     "headlines_model",
                 ):
                     config_data["ollama"][k] = "llama3.2:latest"
-                save_toml_config(config_data)
-                st.rerun()
+                _result = save_toml_config(config_data)
+                render_save_result(_result, "Preset Producción (CPU) aplicado.")
+                if _result["success"]:
+                    st.rerun()
 
             if col_p2.button(
                 "⚖️ Calidad (GPU)",
@@ -1352,8 +1402,10 @@ with tab1:
                 config_data["ollama"]["translator_model"] = "qwen2.5:14b"
                 config_data["ollama"]["editor_model"] = "qwen2.5:14b"
                 config_data["ollama"]["headlines_model"] = "llama3.2:latest"
-                save_toml_config(config_data)
-                st.rerun()
+                _result = save_toml_config(config_data)
+                render_save_result(_result, "Preset Calidad (GPU) aplicado.")
+                if _result["success"]:
+                    st.rerun()
 
             if col_p3.button(
                 "↺ Reset a Base",
@@ -1361,8 +1413,10 @@ with tab1:
             ):
                 for k in ("translator_model", "editor_model", "headlines_model"):
                     config_data["ollama"].pop(k, None)
-                save_toml_config(config_data)
-                st.rerun()
+                _result = save_toml_config(config_data)
+                render_save_result(_result, "Overrides por fase eliminados.")
+                if _result["success"]:
+                    st.rerun()
 
             st.markdown("---")
 
@@ -1490,10 +1544,10 @@ with tab1:
     # Save Button (Handles Both)
     if st.button("💾 Guardar Configuración (Global)"):
         # 1. Save TOML
-        save_toml_config(config_data)
-        # 2. Save Secrets
+        _result = save_toml_config(config_data)
+        # 2. Save Secrets (independent of config.toml's validation outcome)
         save_secrets(secrets)
-        st.success("¡Configuración y Secretos actualizados!")
+        render_save_result(_result, "¡Configuración y Secretos actualizados!")
 
     # End of Tab 1
 
@@ -1712,8 +1766,8 @@ with tab2:
             ]
 
         if st.button("💾 Guardar Config Colector"):
-            save_toml_config(config_data)
-            st.success("¡config.toml actualizado con éxito!")
+            _result = save_toml_config(config_data)
+            render_save_result(_result, "¡config.toml actualizado con éxito!")
 
         st.markdown("---")
         st.subheader("🧹 Mantenimiento del Sistema")
