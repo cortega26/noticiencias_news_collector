@@ -284,6 +284,50 @@ def test_one_failed_chunk_falls_back_only_for_that_chunk(cognitive_scorer, mock_
     assert cognitive_scorer.is_llm_healthy is False
 
 
+def test_chunk_failure_cascades_to_later_untried_chunks(cognitive_scorer, mock_llm):
+    """Characterizes inherited (pre-chunking) circuit-breaker behavior,
+    surfaced by a subagent review of plan 036: `is_llm_healthy` is a
+    per-cycle flag, not per-chunk. Once any chunk's `_call_llm_batch`
+    returns falsy, every later chunk in the *same* score_batch_async call
+    skips the LLM entirely via `_check_budget()` and goes straight to
+    heuristic — it is not retried, even though it never itself failed.
+    This predates plan 036 (the flag existed for the old single-prompt
+    path); chunking just gives one transient failure a larger blast
+    radius within one cycle. Not changed by plan 036 — characterized here
+    so the behavior is explicit rather than silently assumed."""
+    cognitive_scorer.max_prompt_items = 2
+    articles = _articles(6)  # three chunks of 2
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in articles]
+
+    call_count = 0
+
+    async def _generate(prompt, system=None, json_mode=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _uniform_generate_async(prompt)  # chunk 1: succeeds
+        return None  # chunk 2 and beyond: total LLM failure
+
+    mock_llm.generate_async = AsyncMock(side_effect=_generate)
+
+    results = asyncio.run(cognitive_scorer.score_batch_async(payloads))
+
+    assert len(results) == 6
+    # Chunk 1 (indices 0-1) succeeded via the LLM.
+    assert results[0]["cognitive_details"].get("heuristic") is not True
+    assert results[1]["cognitive_details"].get("heuristic") is not True
+    # Chunk 2 (indices 2-3) genuinely failed and fell back.
+    assert results[2]["cognitive_details"].get("heuristic") is True
+    assert results[3]["cognitive_details"].get("heuristic") is True
+    # Chunk 3 (indices 4-5) never failed itself, but is cascaded to
+    # heuristic anyway because is_llm_healthy is a cycle-wide flag.
+    assert results[4]["cognitive_details"].get("heuristic") is True
+    assert results[5]["cognitive_details"].get("heuristic") is True
+    # Only 2 real LLM calls happened: chunk 3's was never attempted.
+    assert mock_llm.generate_async.call_count == 2
+    assert cognitive_scorer.is_llm_healthy is False
+
+
 def test_no_missing_or_duplicate_item_across_chunks(cognitive_scorer, mock_llm):
     cognitive_scorer.max_prompt_items = 3
     mock_llm.generate_async = AsyncMock(side_effect=_uniform_generate_async)

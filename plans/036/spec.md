@@ -269,6 +269,56 @@ shared, widely-mocked interface boundary. Regression gates for this kind
 of change must include a full-suite run before commit, not just the
 narrower `pytest tests/unit/scoring` slice.
 
+## Follow-up fixes from the ~20-iteration subagent review
+
+A fresh review subagent independently re-verified this plan's claims
+against the actual code (not just spec prose) and found two real issues:
+
+**1. `update_articles_score_bulk`/`update_validation_status_bulk`/
+`update_article_score`/`delete_article` could raise instead of returning
+`False` on a real persistence failure.** Each method's `except Exception:
+return False` handler returned without first calling
+`session.rollback()`. Since `ArticleRepository._session()` wraps
+`DatabaseManager.get_session()`, whose own contextmanager
+unconditionally calls `session.commit()` again on any *normal* exit
+(`get_session()`'s `yield session` is followed by `session.commit()`
+outside the caller's try/except) — a `return False` after a caught
+exception is a normal exit, so that second commit ran against a session
+SQLAlchemy had already marked "needs rollback" from the first failed
+commit, raising `PendingRollbackError` and silently discarding the
+`return False` the caller (here, `ScoringCoordinator._process_page`) was
+relying on. This meant Step 3's "persistence failure is surfaced as
+failure with resumable diagnostics, never unconditional success" claim
+only held in this plan's own tests — which all mock
+`update_articles_score_bulk.return_value = False` directly — not against
+the real method under a genuine constraint violation. Not part of this
+plan's diff (pre-existing, systemic — same pattern in 4 methods), but
+directly undermines a claim this plan makes, so fixed here: added
+`session.rollback()` before every `return False` in the 4 affected
+methods in `article_repository.py`. Verified with a new test
+(`tests/unit/storage/test_bulk_persistence_failure_handling.py`) that
+first *reproduces* the bug (a bare `return`/no-rollback after a real
+`IntegrityError` — a genuine UNIQUE-constraint violation, not a mock —
+does leak `PendingRollbackError` out of `get_session()`), then proves the
+fix (rollback before return lets `get_session()` exit cleanly).
+
+**2. Chunk-failure cascade wasn't tested past 2 chunks.** `is_llm_healthy`
+is a per-cycle flag (reset only by `reset_cycle_metrics()`, once per
+cycle), not per-chunk — once any chunk's `_call_llm_batch` returns
+falsy, every *later* chunk in the same `score_batch_async` call skips the
+LLM entirely (via `_check_budget()`) and goes straight to heuristic, even
+though it never itself failed. This flag predates plan 036 (it existed
+for the old single-prompt path); chunking just gives one transient
+failure a much larger blast radius within a single cycle, since a cycle
+can now span many chunks instead of one prompt. This is inherited
+behavior, not a bug plan 036 introduced, and changing the circuit-breaker
+semantics is out of this plan's scope (out of scope: "changing scoring
+formulas/prompts") — but the existing test only used 2 chunks, which
+cannot distinguish "isolated to the failing chunk" from "cascades to
+everything after it." Added
+`test_chunk_failure_cascades_to_later_untried_chunks` (3 chunks) to make
+this explicit and characterized rather than silently assumed.
+
 ## Out of scope (explicitly, per the plan's own Scope section)
 
 Scoring formulas/prompts' *content*, distributed queues, replacing the
