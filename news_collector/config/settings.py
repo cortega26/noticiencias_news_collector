@@ -361,11 +361,15 @@ def refresh_runtime_config(config: Any | None = None) -> RuntimeConfigSnapshot:
 
     cfg = config or load_config()
 
+    # Validate BEFORE touching RUNTIME so a failed refresh leaves every
+    # legacy RUNTIME/CONFIG field untouched too, not just the snapshot.
+    if isinstance(cfg, Config):
+        validate_config(cfg)
+
     _resolve_paths(cfg)
     _resolve_environment(cfg)
 
     if isinstance(cfg, Config):
-        validate_config(cfg)
         _resolve_builders(cfg)
 
     _CONFIG_STATE = cfg

@@ -416,7 +416,11 @@ def main(  # noqa: C901
 
     from news_collector.config import settings as config_settings
 
-    config = config_settings.refresh_runtime_config(config)
+    # Updates the live RuntimeConfigSnapshot for other consumers; `config`
+    # stays the full pydantic Config object (refresh_runtime_config()
+    # returns the narrower snapshot, not the rich object this function
+    # needs below for config.github/config.ollama/etc).
+    config_settings.refresh_runtime_config(config)
 
     if not fetch_only:
         llm_warnings = preflight_llm_provider(config=config, logger=logger)
