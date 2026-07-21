@@ -231,3 +231,97 @@ Direction findings beyond those surfaced (translation-fidelity critic, NVIDIA ro
 completion, public-API expansion, source-credibility badge) are recorded in the audit
 summaries but not turned into plans; the second-pass direction sweep found no strong
 *new* grounded opportunities beyond them.
+
+---
+
+## 2026-07-21 whole-workspace deep audit
+
+This pass supersedes the earlier statement that the sibling frontend was not audited.
+It covered the active backend, Refinery, Astro frontend, Cloudflare Worker, cross-repo
+publication contracts, dependency/tooling manifests, workflows, tests, scripts, and
+active documentation. Archives, generated/build output, vendored environments, and
+external production infrastructure were inspected only where they affected an active
+contract; plan 046 explicitly stops if the real deployment topology cannot be found.
+
+Planning home remains this backend `plans/` directory so cross-repository dependencies
+have one status ledger. Plans were grounded at backend `e43bd30` and frontend `0cdca74`.
+The operator selected **all net-positive findings**. Low-confidence performance and
+deployment findings are therefore measurement/verification-gated (045 and 046), while
+the three product opportunities end in explicit build/integrate/defer/no-build ADRs
+(047–049) rather than assuming production scope.
+
+### Current execution order and status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 018 | [Gate the entire Refinery surface](018-gate-entire-refinery-surface.md) | P1 | M | — | DONE |
+| 019 | [Remove the tracked virtual environment](019-remove-tracked-virtualenv.md) | P1 | S | — | DONE |
+| 020 | [Enforce cross-repo schema parity](020-enforce-cross-repo-schema-parity.md) | P1 | S | — | DONE |
+| 021 | [Rebuild the publication callback contract](021-rebuild-publication-callback-contract.md) | P1 | L | 020 | TODO |
+| 022 | [Block executable published content](022-block-executable-published-content.md) | P1 | M | — | DONE |
+| 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | TODO |
+| 024 | [Canonicalize backend dependencies](024-canonicalize-backend-dependencies.md) | P1 | M | 019 | DONE — pyproject.toml now authoritative; added Click/Playwright/Scrapling to base; sync_lockfiles compiles all from pyproject; manual-lock-sync includes refinery lock |
+| 025 | [Refresh backend security locks](025-refresh-backend-security-locks.md) | P1 | L | 019, 024 | TODO |
+| 026 | [Pin GitHub Actions](026-pin-github-actions.md) | P1 | S | — | DONE |
+| 027 | [Complete Stage 4 wiring and cache](027-complete-stage4-wiring-and-cache.md) | P1 | S | 019 | TODO |
+| 028 | [Enforce the v2 editorial contract](028-enforce-v2-editorial-contract.md) | P1 | M | 020, 027 | TODO |
+| 029 | [Fix the backend coverage ratchet](029-fix-backend-coverage-ratchet.md) | P1 | M | 019 | DONE — coverage expanded to full news_collector (25 packages, 72.96% line); ratcheter paths fixed; baseline recorded
+| 030 | [Lock developer toolchains](030-lock-developer-toolchains.md) | P1 | M | 019, 024 | TODO |
+| 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |
+| 032 | [Migrate frontend dependencies](032-migrate-frontend-dependencies.md) | P1 | L | 026, 031 | TODO |
+| 033 | [Make configuration refresh live](033-make-config-refresh-live.md) | P1 | L | 027 | TODO |
+| 034 | [Centralize article admission](034-centralize-article-admission.md) | P1 | M | 033 | TODO |
+| 035 | [Make Astro scripts idempotent](035-make-astro-scripts-idempotent.md) | P1 | M | 031 | TODO |
+| 036 | [Bound scoring work](036-bound-scoring-work.md) | P1 | L | 033 | TODO |
+| 037 | [Batch article persistence](037-batch-article-persistence.md) | P1 | L | 033, 034 | TODO |
+| 038 | [Decouple telemetry and Refinery reruns](038-decouple-telemetry-and-refinery-reruns.md) | P1 | L | 033 | TODO |
+| 039 | [Prebuild the browser search index](039-prebuild-browser-search-index.md) | P1 | M | 031, 032 | TODO |
+| 040 | [Account for dispatcher failures](040-account-for-dispatcher-failures.md) | P1 | M | 034 | TODO |
+| 041 | [Add whole-workspace verification](041-add-whole-workspace-verification.md) | P1 | L | 020, 023, 024, 026, 029, 031 | TODO |
+| 042 | [Remove frontend runtime artifacts](042-remove-frontend-runtime-artifacts.md) | P1 | S | — | DONE |
+| 043 | [Repair active documentation](043-repair-active-documentation.md) | P1 | M | 020, 021, 023, 024, 028, 032, 039, 041 | TODO |
+| 044 | [Unify pagination and prune dead components](044-unify-pagination-and-prune-dead-components.md) | P2 | M | 031, 032 | TODO |
+| 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | TODO |
+| 046 | [Prove and automate production migrations](046-prove-and-automate-production-migrations.md) | P1 | M | 024, 030 | TODO |
+| 047 | [Spike the reader correction loop](047-spike-reader-correction-loop.md) | P2 | M | 021, 023 | TODO |
+| 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | TODO |
+| 049 | [Spike a versioned publication feed](049-spike-versioned-publication-feed.md) | P3 | M | 020, 021, 022, 028, 041 | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+### Recommended waves
+
+1. **Immediate boundaries and hygiene:** 018, 019, 020, 022, 026, 042.
+2. **Backend/tooling foundations:** 023 (core delivery), 024, 025, 027, 029, 030.
+3. **Contracts, test truth, and platform migration:** 021, 028, 031, 032, 033, 046.
+4. **Runtime correctness/performance:** 034–040 and 045; 035 can begin after 031.
+5. **Cross-workspace consolidation:** 041, then 043; execute 044 after 031/032.
+6. **Evidence-gated directions:** 047–049 only after their listed foundations.
+
+Plans within a wave may run in parallel when they do not touch the same files, but
+the dependency column is authoritative. Plan 045 may land its measurement harness
+before 046; any new index migration must wait until 046 proves the migration owner.
+
+### Cross-plan integration rules
+
+- **Security before automation:** 018/022/023/026 precede workflows or new public
+  surfaces that would amplify existing trust-boundary gaps.
+- **One schema story:** 020 establishes parity; 027/028 complete the producer/editorial
+  contract; 021 then correlates actual validation and deployment outcomes.
+- **One dependency/toolchain story:** 019 removes the false environment source;
+  024/025/030 make dependency and developer/CI inputs reproducible before 031/032/046.
+- **One verification story:** individual plans add focused regression tests; 041
+  composes truthful repo-level gates and a read-only cross-repo scenario.
+- **Docs last:** 043 follows behavior-changing prerequisites and must describe shipped
+  state, never planned state.
+- **No speculative systems:** 045/046 must report evidence before optimization/deploy
+  mutation; 047–049 are successful when their ADR says not to build and supports that
+  decision with the required evidence.
+
+### Scope and selection record
+
+All 32 findings retained after code-level reconciliation became plans 018–049; none
+of the retained findings was rejected by the operator. This does **not** mean every
+suggested implementation is pre-approved: each plan's STOP conditions, risk gates,
+and explicit out-of-scope section remain binding. Findings already resolved, rejected,
+or documented in plans 001–017 were not duplicated.

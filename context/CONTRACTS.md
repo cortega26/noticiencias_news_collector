@@ -26,7 +26,7 @@
 
 - Adapter-owned conversion remains the current pattern described by `docs/AGENTS.md`.
 - Export compatibility still includes legacy payload handling in Refinery code.
-- The frontend publication mirror summarizes the frontend schema but does not replace `../noticiencias/src/content/config.ts`.
+- The frontend publication mirror summarizes the frontend schema but does not replace `../noticiencias/src/content.config.ts`.
 
 ## Commands
 

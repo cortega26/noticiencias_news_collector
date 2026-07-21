@@ -123,7 +123,7 @@ conforms to `AstroPost` (see `news_collector/contracts/frontend_schema.py`).
 
 | Back-end source | Front-end authority |
 | --- | --- |
-| `news_collector/contracts/frontend_schema.py` (`AstroPost`) | `../noticiencias/src/content/config.ts` (Zod schema) |
+| `news_collector/contracts/frontend_schema.py` (`AstroPost`) | `../noticiencias/src/content.config.ts` (Zod schema) |
 
 Field-level parity is enforced by `tests/test_contracts_sync.py::test_frontend_schema_field_parity`
 on every CI run.  If these two files diverge, that test fails.
@@ -170,7 +170,7 @@ On PR merge the front-end CI builds and deploys to GitHub Pages.  The article is
 
 | Symptom | Most likely cause | Where to look |
 | --- | --- | --- |
-| PR opened but `validate:content` CI fails | `AstroPost` / `config.ts` field mismatch | `tests/test_contracts_sync.py`, `news_collector/contracts/frontend_schema.py`, `src/content/config.ts` |
+| PR opened but `validate:content` CI fails | `AstroPost` / `config.ts` field mismatch | `tests/test_contracts_sync.py`, `news_collector/contracts/frontend_schema.py`, `src/content.config.ts` |
 | PR opened but `npm run build` fails | Missing required frontmatter field in published MDX | Stage 6 publication logic; check `image_alt`, `categories`, `date` |
 | Articles collected but never reach Refinery | Export artifact missing or empty | Stage 4: check `data/export/`; run `python scripts/run_collector.py --dry-run` |
 | Refinery blank screen | Export schema mismatch (V1 vs V2) | `apps/refinery/main.py` compatibility layer; check collector output `schema_version` |
@@ -183,9 +183,9 @@ On PR merge the front-end CI builds and deploys to GitHub Pages.  The article is
 These must hold at all times.  If a change would break one, escalate before merging.
 
 1. Every MDX file committed to `src/content/posts/` must satisfy the Zod schema in
-   `src/content/config.ts`.
+   `src/content.config.ts`.
 2. `news_collector/contracts/frontend_schema.py` field names must be a superset of the
-   top-level Zod field names in `src/content/config.ts`.  The parity test enforces this.
+   top-level Zod field names in `src/content.config.ts`.  The parity test enforces this.
 3. The back-end **never** directly pushes to the front-end `main` branch.  All changes go
    through a PR so the front-end CI gates run.
 4. `Editorial` category is reserved.  The publication layer must refuse to assign it to

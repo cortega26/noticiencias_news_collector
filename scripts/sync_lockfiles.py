@@ -22,7 +22,7 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--generate-hashes",
             "--output-file",
             "requirements.lock",
-            "requirements.txt",
+            "pyproject.toml",
         ),
     ),
     (

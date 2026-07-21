@@ -44,6 +44,27 @@ BLOCKED_GENERATED_BODY_PATTERNS = (
     ),
 )
 
+# Patterns that detect executable content in generated Markdown — script-capable
+# HTML elements, inline event handlers, javascript: URLs, and MDX/JSX expressions
+# that could execute when rendered.  Code-fence regions are excluded before
+# matching so legitimate code examples are never flagged.
+_EXECUTABLE_SCRIPT_TAG = re.compile(
+    r"<\s*(?:script|iframe|object|embed)\b", re.IGNORECASE
+)
+_EXECUTABLE_SVG_TAG = re.compile(r"<\s*svg\b[^>]*\bon[a-z]+\s*=", re.IGNORECASE)
+_EXECUTABLE_EVENT_ATTR = re.compile(r"<\s*\w+[^>]*\son[a-z]+\s*=", re.IGNORECASE)
+_EXECUTABLE_JAVASCRIPT_URL = re.compile(
+    r"""(?xi)
+    (?:href|src|action|formaction|data)\s*=\s*
+    ["']?\s*javascript\s*:
+    """,
+)
+_EXECUTABLE_JAVASCRIPT_MD_LINK = re.compile(r"\]\s*\(\s*javascript\s*:", re.IGNORECASE)
+_EXECUTABLE_MDX_EXPR = re.compile(
+    r"(?:^|\n)\s*(?:export\s+|import\s+.*\s+from\s+)"  # ESM imports/exports
+    r"|\{[^}`]*(?:`[^`]*`[^}`]*)*\}"  # JSX expressions
+)
+
 # Patterns matching LLM meta-instruction preambles (Spanish).
 # Self-referential lines the model prepends to article content, e.g.
 # "Aquí tienes el artículo, redactado con el enfoque de Editor Científico Senior en Noticiencias:"
@@ -181,9 +202,7 @@ class SourceItem(BaseModel):
 class EnrichmentSchema(BaseModel):
     """Stage 4 structured output: editorial enrichment fields for schema v2+."""
 
-    summary_points: list[str] = Field(
-        default_factory=list, min_length=2, max_length=5
-    )
+    summary_points: list[str] = Field(default_factory=list, min_length=2, max_length=5)
     glossary: list[GlossaryItem] = Field(default_factory=list, min_length=1)
     fact_check: list[FactCheckItem] = Field(default_factory=list, min_length=1)
     why_it_matters: list[str] = Field(default_factory=list, min_length=1)
@@ -296,9 +315,54 @@ def _collect_heading_structure_issues(markdown: str) -> list[str]:
     return issues
 
 
+def _strip_fenced_regions(text: str) -> str:
+    """Remove code-fence regions so legitimate code snippets are not flagged."""
+    lines = text.split("\n")
+    result: list[str] = []
+    active_fence: str | None = None
+    for line in lines:
+        fence_match = _FENCE_DELIMITER_RE.match(line)
+        if fence_match:
+            fence_char = fence_match.group(1)[0]
+            if active_fence is None:
+                active_fence = fence_char
+                result.append("")  # replace the opening fence with blank
+                continue
+            elif active_fence == fence_char:
+                active_fence = None
+                result.append("")  # replace the closing fence with blank
+                continue
+        if active_fence is not None:
+            result.append("")  # blank out content inside fences
+        else:
+            result.append(line)
+    return "\n".join(result)
+
+
+def _reject_executable_content(prose: str) -> None:
+    """Raise if prose contains script-capable HTML, event handlers,
+    javascript: URLs, or MDX/JSX expressions."""
+    for label, pattern in (
+        ("script-capable element", _EXECUTABLE_SCRIPT_TAG),
+        ("SVG with event handler", _EXECUTABLE_SVG_TAG),
+        ("inline event handler", _EXECUTABLE_EVENT_ATTR),
+        ("javascript: URL", _EXECUTABLE_JAVASCRIPT_URL),
+        ("javascript: Markdown link", _EXECUTABLE_JAVASCRIPT_MD_LINK),
+        ("MDX/JSX expression", _EXECUTABLE_MDX_EXPR),
+    ):
+        match = pattern.search(prose)
+        if match:
+            snippet = match.group(0)[:80]
+            raise GeneratedArticleValidationError(
+                f"Generated article contains executable {label}: {snippet}",
+                error_code="editorial_executable_content_blocked",
+            )
+
+
 def validate_generated_article_markdown(markdown: str) -> None:
     """
-    Block obvious placeholder/error prose and bodies too thin to be a publishable article.
+    Block obvious placeholder/error prose, bodies too thin to be a publishable
+    article, and generated output containing executable HTML/MDX.
     """
     body = _extract_publishable_body(markdown)
     normalized = re.sub(r"\s+", " ", body).strip()
@@ -325,6 +389,13 @@ def validate_generated_article_markdown(markdown: str) -> None:
         raise GeneratedArticleValidationError(
             f"Generated article body is too thin to publish safely ({word_count} < {GENERATED_BODY_MIN_WORDS} words)."
         )
+
+    # --- Executable-content guard: strip code fences first so legitimate code
+    #     snippets in Markdown never trigger a false positive.  Anything that
+    #     remains outside a fenced region is raw rendered prose and must not
+    #     contain executable constructs.
+    prose = _strip_fenced_regions(body)
+    _reject_executable_content(prose)
 
 
 def _reason_indicates_missing_text(reason: str | None) -> bool:
@@ -1280,8 +1351,7 @@ class EditorAgent:
             logger.error(f"Enrichment Schema Validation Failed: {e}")
             if response:
                 logger.debug(
-                    f"Raw enrichment response (first 500 chars): "
-                    f"{response[:500]}"
+                    f"Raw enrichment response (first 500 chars): " f"{response[:500]}"
                 )
             return self._empty_enrichment_fields()
 
@@ -1823,40 +1893,28 @@ class EditorAgent:
         if cache_s4.exists():
             print(f"(Loaded from cache: {cache_s4})")
             try:
-                enrichment_fields = json.loads(
-                    cache_s4.read_text(encoding="utf-8")
-                )
+                enrichment_fields = json.loads(cache_s4.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, Exception) as e:
-                logger.warning(
-                    f"Invalid enrichment cache, regenerating: {e}"
-                )
+                logger.warning(f"Invalid enrichment cache, regenerating: {e}")
                 enrichment_fields = self._generate_enrichment_fields(
                     final_content, title
                 )
                 try:
                     cache_s4.write_text(
-                        json.dumps(
-                            enrichment_fields, ensure_ascii=False
-                        ),
+                        json.dumps(enrichment_fields, ensure_ascii=False),
                         encoding="utf-8",
                     )
                 except Exception as _e:
-                    logger.warning(
-                        f"Failed to persist enrichment cache: {_e}"
-                    )
+                    logger.warning(f"Failed to persist enrichment cache: {_e}")
         else:
-            enrichment_fields = self._generate_enrichment_fields(
-                final_content, title
-            )
+            enrichment_fields = self._generate_enrichment_fields(final_content, title)
             try:
                 cache_s4.write_text(
                     json.dumps(enrichment_fields, ensure_ascii=False),
                     encoding="utf-8",
                 )
             except Exception as _e:
-                logger.warning(
-                    f"Failed to persist enrichment cache: {_e}"
-                )
+                logger.warning(f"Failed to persist enrichment cache: {_e}")
 
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination

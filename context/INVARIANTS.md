@@ -34,7 +34,7 @@ The compatibility fallback path still exists; documentation should not describe 
 
 ### I-5: Frontend publication is a cross-repo contract
 
-`news_collector/contracts/frontend_schema.py` mirrors the frontend render contract in `../noticiencias/src/content/config.ts`. Either side changing that shape is a cross-repo contract event.
+`news_collector/contracts/frontend_schema.py` mirrors the frontend render contract in `../noticiencias/src/content.config.ts`. Either side changing that shape is a cross-repo contract event.
 
 ### I-6: Backend publication state stops at PR creation
 

@@ -33,7 +33,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: .venv/bin/mypy
+        entry: python -m mypy
         language: system
         args: [--config-file=pyproject.toml]
         files: ^(scripts/generate_api_docs\.py|news_collector/utils/(logger|url_canonicalizer)\.py)$

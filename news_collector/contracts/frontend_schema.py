@@ -1,6 +1,6 @@
 """
 Contract definition for the Frontend Content Schema.
-This file MUST match src/content/config.ts in the frontend repository.
+This file MUST match src/content.config.ts in the frontend repository.
 Any mismatch here will cause continuous deployment failures.
 """
 
@@ -57,7 +57,7 @@ class ImageObject(BaseModel):
 class AstroPost(BaseModel):
     """
     Strict contract for Astro Content Collection 'posts'.
-    Matches src/content/config.ts v1.
+    Matches src/content.config.ts v1.
     """
 
     # Core Fields

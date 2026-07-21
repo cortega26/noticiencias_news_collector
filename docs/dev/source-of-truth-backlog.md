@@ -6,7 +6,7 @@
 
 Problem: The backend mirrors the frontend publication schema, but both repos can still drift independently without a single shared CI gate.  
 Impact: Publication failures and schema mismatches can be discovered late, after changes land in only one repo.  
-Recommendation: Add a coordinated contract-validation step spanning `news_collector/contracts/frontend_schema.py` and `../noticiencias/src/content/config.ts`.  
+Recommendation: Add a coordinated contract-validation step spanning `news_collector/contracts/frontend_schema.py` and `../noticiencias/src/content.config.ts`.  
 Affected repo(s): backend, frontend  
 Suggested priority: critical
 

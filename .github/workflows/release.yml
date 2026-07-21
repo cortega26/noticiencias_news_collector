@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
       - name: Prepare git branch
@@ -33,7 +33,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Generate release notes
         id: notes
-        uses: actions/github-script@v9
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         with:
           script: |
             const tag = "${{ steps.vars.outputs.tag }}";
@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "${{ steps.notes.outputs.body_base64 }}" | base64 --decode > release-notes.md
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
       - name: Update changelog
@@ -85,7 +85,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Prepare image metadata
         id: meta
         run: |
@@ -117,7 +117,7 @@ jobs:
           - Commit: ${{ steps.meta.outputs.short_sha }}
           EOT
       - name: Publicar artefactos
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: collector-container
           path: |

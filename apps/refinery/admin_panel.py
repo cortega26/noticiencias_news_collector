@@ -395,8 +395,14 @@ def require_refinery_auth(env_vars: dict[str, str], key: str = "auth_token") -> 
     return False
 
 
-# Load Secrets for Auth
+# --- Global Authentication Gate ---
+# Every tab and all downstream secrets/widget/DB initialization is behind this
+# boundary.  Unauthenticated sessions see only the auth prompt.
 secrets = load_secrets()
+if not require_refinery_auth(secrets):
+    st.stop()
+
+
 NEWS_COLLECTOR_PATH = PROJECT_ROOT
 # Use configured DB path to ensure we wipe the correct DB
 runtime_config = config_settings.refresh_runtime_config()
@@ -1450,15 +1456,28 @@ with tab1:
         )
 
         st.markdown("##### 🔐 Secretos (.env)")
-        secrets["GITHUB_TOKEN"] = st.text_input(
-            "Token de GitHub", secrets.get("GITHUB_TOKEN", ""), type="password"
-        )
-        secrets[REFINERY_UI_TOKEN_KEY] = st.text_input(
-            "Token UI Refinery",
-            secrets.get(REFINERY_UI_TOKEN_KEY, ""),
+
+        _gh_val = st.text_input(
+            "Token de GitHub",
+            value="",
             type="password",
-            help="Requerido para ejecutar sincronizacion y publicar.",
+            help="Dejar en blanco para conservar el valor existente.",
         )
+        if _gh_val:
+            secrets["GITHUB_TOKEN"] = _gh_val
+        elif st.checkbox("🗑️ Eliminar Token de GitHub", key="clear_gh_token"):
+            secrets["GITHUB_TOKEN"] = ""
+
+        _ui_val = st.text_input(
+            "Token UI Refinery",
+            value="",
+            type="password",
+            help="Dejar en blanco para conservar el valor existente. Requerido para ejecutar sincronizacion y publicar.",
+        )
+        if _ui_val:
+            secrets[REFINERY_UI_TOKEN_KEY] = _ui_val
+        elif st.checkbox("🗑️ Eliminar Token UI", key="clear_ui_token"):
+            secrets[REFINERY_UI_TOKEN_KEY] = ""
         secrets[REFINERY_UI_BYPASS_KEY] = (
             "1"
             if st.checkbox(
@@ -2006,7 +2025,7 @@ with tab3:
 
     st.info("ℹ️ Selecciona un artículo para refinar y publicar.")
     env_vars = dict(load_secrets())
-    auth_ok = require_refinery_auth(env_vars, key="auth_ops")
+    auth_ok = True  # Global auth gate already enforced
 
     # Section 1: Sync
     col_sync, col_status = st.columns([1, 2])
@@ -2515,230 +2534,214 @@ with tab5:
     )
 
     env_vars = dict(load_secrets())
-    if require_refinery_auth(env_vars, key="auth_cms"):
-        # reuse GitHubPublisher logic from main or init new one
-        import git
-        from news_collector.components.publishing import GitHubPublisher
+    # reuse GitHubPublisher logic from main or init new one
+    import git
+    from news_collector.components.publishing import GitHubPublisher
 
-        TARGET_DIR = BASE_DIR / "temp" / "target"
-        collector_repo_root = BASE_DIR.parents[1]
+    TARGET_DIR = BASE_DIR / "temp" / "target"
+    collector_repo_root = BASE_DIR.parents[1]
 
-        refresh_requested = st.button("🔄 Refrescar Lista de Artículos Publicados")
-        initial_refresh_key = "published_live_initial_refresh_done"
-        refresh_clone = refresh_requested or not st.session_state.get(
-            initial_refresh_key, False
+    refresh_requested = st.button("🔄 Refrescar Lista de Artículos Publicados")
+    initial_refresh_key = "published_live_initial_refresh_done"
+    refresh_clone = refresh_requested or not st.session_state.get(
+        initial_refresh_key, False
+    )
+    st.session_state[initial_refresh_key] = True
+
+    target_url = env_vars.get("TARGET_REPO_URL", "")
+
+    try:
+        snapshot = resolve_published_content_snapshot(
+            target_repo_url=target_url,
+            collector_repo_root=collector_repo_root,
+            temp_target_dir=TARGET_DIR,
+            github_token=env_vars.get("GITHUB_TOKEN", ""),
+            refresh_clone=refresh_clone,
+            prefer_remote_checkout=True,
         )
-        st.session_state[initial_refresh_key] = True
+    except Exception as exc:
+        st.error(f"Fallo cargando contenido publicado: {exc}")
+        snapshot = None
 
-        target_url = env_vars.get("TARGET_REPO_URL", "")
-
-        try:
-            snapshot = resolve_published_content_snapshot(
-                target_repo_url=target_url,
-                collector_repo_root=collector_repo_root,
-                temp_target_dir=TARGET_DIR,
-                github_token=env_vars.get("GITHUB_TOKEN", ""),
-                refresh_clone=refresh_clone,
-                prefer_remote_checkout=True,
+    if snapshot is not None:
+        articles = snapshot.articles
+        action_repo_sha = get_repo_head_sha(snapshot.repo_root)
+        local_checkout = find_local_target_checkout(
+            target_url,
+            collector_repo_root=collector_repo_root,
+        )
+        if local_checkout and local_checkout.resolve() != snapshot.repo_root.resolve():
+            st.info(
+                "Checkout local detectado solo como referencia: "
+                f"`{local_checkout}`. Las acciones usan `{snapshot.repo_root}`."
             )
-        except Exception as exc:
-            st.error(f"Fallo cargando contenido publicado: {exc}")
-            snapshot = None
 
-        if snapshot is not None:
-            articles = snapshot.articles
-            action_repo_sha = get_repo_head_sha(snapshot.repo_root)
-            local_checkout = find_local_target_checkout(
-                target_url,
-                collector_repo_root=collector_repo_root,
-            )
-            if (
-                local_checkout
-                and local_checkout.resolve() != snapshot.repo_root.resolve()
-            ):
-                st.info(
-                    "Checkout local detectado solo como referencia: "
-                    f"`{local_checkout}`. Las acciones usan `{snapshot.repo_root}`."
-                )
+        if (
+            refresh_requested
+            and snapshot.source_label != "Checkout local verificado del frontend"
+        ):
+            st.success("Repositorio destino actualizado y sincronizado.")
 
-            if (
-                refresh_requested
-                and snapshot.source_label != "Checkout local verificado del frontend"
-            ):
-                st.success("Repositorio destino actualizado y sincronizado.")
+        if not articles:
+            st.info("No hay artículos en src/content/posts.")
+        else:
+            st.write(f"Encontrados **{len(articles)}** artículos.")
+            st.caption(f"Fuente: {snapshot.source_label} · {snapshot.freshness_label}")
+            st.caption(f"Ruta resuelta: `{snapshot.repo_root}`")
 
-            if not articles:
-                st.info("No hay artículos en src/content/posts.")
-            else:
-                st.write(f"Encontrados **{len(articles)}** artículos.")
-                st.caption(
-                    f"Fuente: {snapshot.source_label} · {snapshot.freshness_label}"
-                )
-                st.caption(f"Ruta resuelta: `{snapshot.repo_root}`")
+            h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
+            h1.markdown("**Título**")
+            h2.markdown("**Archivo**")
+            h3.markdown("**Acción 1**")
+            h4.markdown("**Acción 2**")
+            st.markdown("---")
 
-                h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
-                h1.markdown("**Título**")
-                h2.markdown("**Archivo**")
-                h3.markdown("**Acción 1**")
-                h4.markdown("**Acción 2**")
-                st.markdown("---")
+            for article in articles:
+                file_path = article.file_path
+                refinery_id = article.refinery_id
 
-                for article in articles:
-                    file_path = article.file_path
-                    refinery_id = article.refinery_id
+                c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1.5])
 
-                    c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1.5])
-
-                    with c1:
-                        st.write(article.title)
-                    with c2:
-                        st.caption(article.file_name)
-                        if refinery_id:
-                            st.caption(f"ID: {truncate_refinery_id(refinery_id)}")
-                            try:
-                                score_path = (
-                                    BASE_DIR
-                                    / "data"
-                                    / "article_metadata"
-                                    / str(refinery_id).replace("/", "_")
-                                    / "auditor_score.json"
-                                )
-                                if score_path.exists():
-                                    with open(score_path, "r", encoding="utf-8") as af:
-                                        score_data = json.load(af).get("audit", {})
-                                        epistemic = float(
-                                            score_data.get("epistemic_rigor_score", 0.0)
-                                        )
-
-                                        color = "red"
-                                        border = "🔴"
-                                        if epistemic >= 8.0:
-                                            color = "green"
-                                            border = "🟢"
-                                        elif epistemic >= 5.0:
-                                            color = "orange"
-                                            border = "🟡"
-
-                                        st.markdown(
-                                            f"**{border} Rigor: :{color}[{epistemic:.1f}]**"
-                                        )
-                                else:
-                                    st.caption("⏳ No audit yet")
-                            except Exception:  # noqa: S110
-                                pass
-                        else:
-                            st.caption(
-                                "ID: n/a · se usará el nombre exacto del archivo"
+                with c1:
+                    st.write(article.title)
+                with c2:
+                    st.caption(article.file_name)
+                    if refinery_id:
+                        st.caption(f"ID: {truncate_refinery_id(refinery_id)}")
+                        try:
+                            score_path = (
+                                BASE_DIR
+                                / "data"
+                                / "article_metadata"
+                                / str(refinery_id).replace("/", "_")
+                                / "auditor_score.json"
                             )
+                            if score_path.exists():
+                                with open(score_path, "r", encoding="utf-8") as af:
+                                    score_data = json.load(af).get("audit", {})
+                                    epistemic = float(
+                                        score_data.get("epistemic_rigor_score", 0.0)
+                                    )
 
-                    with c3:
-                        if st.button(
-                            "🗑️ Despublicar",
-                            key=f"btn_despub_{article.file_name}",
-                            width="stretch",
-                        ):
-                            delete_target = {"file_name": article.file_name}
-                            if refinery_id:
-                                delete_target["refinery_id"] = str(refinery_id)
+                                    color = "red"
+                                    border = "🔴"
+                                    if epistemic >= 8.0:
+                                        color = "green"
+                                        border = "🟢"
+                                    elif epistemic >= 5.0:
+                                        color = "orange"
+                                        border = "🟡"
 
-                            with st.spinner("Solicitando eliminación..."):
-                                try:
-                                    if hasattr(refinery_main, "delete_article"):
-                                        res = refinery_main.delete_article(
-                                            delete_target
-                                        )
-                                        if res.get("status") == "success":
-                                            st.toast("✅ PR Creado", icon="🗑️")
-                                            st.markdown(
-                                                f"[Ver PR]({res.get('pr_url')})"
-                                            )
-                                        else:
-                                            st.error(res.get("message"))
-                                    else:
-                                        st.error("Función no cargada")
-                                except Exception as e:
-                                    st.error(str(e))
+                                    st.markdown(
+                                        f"**{border} Rigor: :{color}[{epistemic:.1f}]**"
+                                    )
+                            else:
+                                st.caption("⏳ No audit yet")
+                        except Exception:  # noqa: S110
+                            pass
+                    else:
+                        st.caption("ID: n/a · se usará el nombre exacto del archivo")
 
-                    with c4:
-                        if st.button(
-                            "♻️ Reset",
-                            key=f"btn_rst_{article.file_name}",
-                            width="stretch",
-                        ):
+                with c3:
+                    if st.button(
+                        "🗑️ Despublicar",
+                        key=f"btn_despub_{article.file_name}",
+                        width="stretch",
+                    ):
+                        delete_target = {"file_name": article.file_name}
+                        if refinery_id:
+                            delete_target["refinery_id"] = str(refinery_id)
+
+                        with st.spinner("Solicitando eliminación..."):
                             try:
-                                gh_handler = GitHubPublisher(
-                                    env_vars.get("GITHUB_TOKEN", "")
-                                )
-                                if not TARGET_DIR.exists():
-                                    gh_handler.clone_repo(target_url, TARGET_DIR)
+                                if hasattr(refinery_main, "delete_article"):
+                                    res = refinery_main.delete_article(delete_target)
+                                    if res.get("status") == "success":
+                                        st.toast("✅ PR Creado", icon="🗑️")
+                                        st.markdown(f"[Ver PR]({res.get('pr_url')})")
+                                    else:
+                                        st.error(res.get("message"))
                                 else:
-                                    repo = git.Repo(TARGET_DIR)
-                                    try:
-                                        repo.remotes.origin.pull()
-                                    except Exception:
-                                        import shutil
-
-                                        shutil.rmtree(TARGET_DIR, ignore_errors=True)
-                                        gh_handler.clone_repo(target_url, TARGET_DIR)
-                                        repo = git.Repo(TARGET_DIR)
-
-                                target_posts_dir = TARGET_DIR / "src/content/posts"
-                                target_article = None
-                                if refinery_id:
-                                    target_article = (
-                                        find_published_article_by_refinery_id(
-                                            target_posts_dir, refinery_id
-                                        )
-                                    )
-                                if target_article is None:
-                                    candidate_path = (
-                                        target_posts_dir / article.file_name
-                                    )
-                                    if candidate_path.exists():
-                                        target_article = article.__class__(
-                                            file_path=candidate_path,
-                                            file_name=candidate_path.name,
-                                            title=article.title,
-                                            refinery_id=refinery_id,
-                                            frontmatter=article.frontmatter,
-                                            modified_at=article.modified_at,
-                                        )
-                                if target_article is None:
-                                    st.error(
-                                        "No se encontró el archivo correspondiente en el clon temporal."
-                                    )
-                                else:
-                                    repo = git.Repo(TARGET_DIR)
-                                    repo.index.remove(
-                                        [
-                                            str(
-                                                target_article.file_path.relative_to(
-                                                    TARGET_DIR
-                                                )
-                                            )
-                                        ]
-                                    )
-                                    target_article.file_path.unlink()
-                                    repo.index.commit(
-                                        f"Deleted (Reset) {target_article.file_name}"
-                                    )
-                                    repo.remotes.origin.push()
-
-                                    db_manager = RefineryDatabaseManager(
-                                        {
-                                            "type": "sqlite",
-                                            "path": str(REFINERY_DB_PATH),
-                                        }
-                                    )
-                                    if refinery_id:
-                                        db_manager.delete_article(str(refinery_id))
-                                        db_manager.delete_article(f"{refinery_id}.md")
-                                    st.success("Reset OK")
-                                    st.rerun()
+                                    st.error("Función no cargada")
                             except Exception as e:
                                 st.error(str(e))
 
-                    st.divider()
+                with c4:
+                    if st.button(
+                        "♻️ Reset",
+                        key=f"btn_rst_{article.file_name}",
+                        width="stretch",
+                    ):
+                        try:
+                            gh_handler = GitHubPublisher(
+                                env_vars.get("GITHUB_TOKEN", "")
+                            )
+                            if not TARGET_DIR.exists():
+                                gh_handler.clone_repo(target_url, TARGET_DIR)
+                            else:
+                                repo = git.Repo(TARGET_DIR)
+                                try:
+                                    repo.remotes.origin.pull()
+                                except Exception:
+                                    import shutil
+
+                                    shutil.rmtree(TARGET_DIR, ignore_errors=True)
+                                    gh_handler.clone_repo(target_url, TARGET_DIR)
+                                    repo = git.Repo(TARGET_DIR)
+
+                            target_posts_dir = TARGET_DIR / "src/content/posts"
+                            target_article = None
+                            if refinery_id:
+                                target_article = find_published_article_by_refinery_id(
+                                    target_posts_dir, refinery_id
+                                )
+                            if target_article is None:
+                                candidate_path = target_posts_dir / article.file_name
+                                if candidate_path.exists():
+                                    target_article = article.__class__(
+                                        file_path=candidate_path,
+                                        file_name=candidate_path.name,
+                                        title=article.title,
+                                        refinery_id=refinery_id,
+                                        frontmatter=article.frontmatter,
+                                        modified_at=article.modified_at,
+                                    )
+                            if target_article is None:
+                                st.error(
+                                    "No se encontró el archivo correspondiente en el clon temporal."
+                                )
+                            else:
+                                repo = git.Repo(TARGET_DIR)
+                                repo.index.remove(
+                                    [
+                                        str(
+                                            target_article.file_path.relative_to(
+                                                TARGET_DIR
+                                            )
+                                        )
+                                    ]
+                                )
+                                target_article.file_path.unlink()
+                                repo.index.commit(
+                                    f"Deleted (Reset) {target_article.file_name}"
+                                )
+                                repo.remotes.origin.push()
+
+                                db_manager = RefineryDatabaseManager(
+                                    {
+                                        "type": "sqlite",
+                                        "path": str(REFINERY_DB_PATH),
+                                    }
+                                )
+                                if refinery_id:
+                                    db_manager.delete_article(str(refinery_id))
+                                    db_manager.delete_article(f"{refinery_id}.md")
+                                st.success("Reset OK")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(str(e))
+
+                st.divider()
 
 
 # --- Tab 6: Source Manager ---

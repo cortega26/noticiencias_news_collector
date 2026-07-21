@@ -98,7 +98,7 @@ Mapping between ORM objects, raw export payloads, and contract models belongs in
 
 The backend may publish into the frontend repo, but the frontend remains authoritative for:
 
-- `src/content/config.ts`
+- `src/content.config.ts`
 - `src/config.yaml`
 - frontend route pathnames
 - metadata emission

@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -72,7 +72,7 @@ jobs:
       # Note: actions/checkout no longer supports path outside the repo checkout
       # directory, so we use a subdirectory instead of ../noticiencias.
       - name: Checkout front-end schema (sparse)
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: cortega26/noticiencias
           path: .tmp/frontend-schema
@@ -81,17 +81,19 @@ jobs:
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
-          mkdir -p ../noticiencias/src/content
-          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content/config.ts
+          mkdir -p ../noticiencias/src
+          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
           rm -rf .tmp/frontend-schema
       - name: Run tests
+        env:
+          CI_EXPECTED_FRONTEND_SCHEMA: "1"
         run: |
           set -euo pipefail
           mkdir -p reports/coverage
           .venv/bin/pytest --cov-report=xml:reports/coverage/coverage.xml --cov-report=html:reports/coverage/html
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-reports
           path: reports/coverage
@@ -104,9 +106,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Download coverage artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: coverage-reports
           path: reports/coverage
@@ -127,7 +129,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -135,7 +137,7 @@ jobs:
         run: make perf
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: perf-reports
           path: reports/perf
@@ -147,7 +149,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -170,25 +172,25 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
       - name: Build wheel
         run: make build
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: python-dist
           path: dist/
           if-no-files-found: error
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
       - name: Build Docker image
         id: docker-build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           push: false
@@ -202,7 +204,7 @@ jobs:
           docker run --rm -e NOTICIENCIAS_SMOKE=1 local/noticiencias-news-collector:ci > reports/docker-smoke.log
       - name: Upload smoke test log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docker-smoke-log
           path: reports/docker-smoke.log
@@ -227,7 +229,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Debug CI workflow metadata

@@ -22,11 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs['base-branch'] || 'main' }}
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
       - name: Refresh lockfiles
@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- requirements.lock requirements-security.lock; then
+          if git diff --quiet -- requirements.lock requirements-refinery.lock requirements-security.lock; then
             {
               echo "## Manual follow-up"
               echo "No lockfile changes detected. Nothing to push or review."
@@ -53,7 +53,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
 
           git checkout -b "${branch_name}"
-          git add requirements.lock requirements-security.lock
+          git add requirements.lock requirements-refinery.lock requirements-security.lock
           git commit -m "chore: refresh dependency lockfiles"
           git push --set-upstream origin "${branch_name}"
 
