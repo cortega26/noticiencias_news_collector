@@ -220,3 +220,78 @@ def test_related_articles_returns_not_found_for_unknown_id(api_client: TestClien
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Article not found"
+
+
+# ---------------------------------------------------------------------------
+# Cursor/pagination edge-case tests (Plan 045 Step 1)
+# ---------------------------------------------------------------------------
+
+
+def test_cursor_traversal_completes_without_gaps_or_duplicates(api_client: TestClient):
+    """Every article appears exactly once across all pages."""
+    page_size = 2
+    seen: set[int] = set()
+    cursor = None
+
+    while True:
+        params = {"page_size": page_size}
+        if cursor:
+            params["cursor"] = cursor
+        resp = api_client.get("/v1/articles", params=params)
+        assert resp.status_code == 200
+        body = resp.json()
+        for item in body["data"]:
+            item_id = item["id"]
+            assert item_id not in seen, f"Duplicate article {item_id}"
+            seen.add(item_id)
+        cursor = body["pagination"].get("next_cursor")
+        if not cursor or body["pagination"]["returned"] < page_size:
+            break
+
+    assert len(seen) == 3, f"Expected 3 unique articles, got {len(seen)}"
+
+
+def test_malformed_cursor_returns_400(api_client: TestClient):
+    """A base64-decodable-but-invalid cursor must return 400."""
+    resp = api_client.get("/v1/articles", params={"cursor": "not-valid-base64!!!"})
+    assert resp.status_code == 400
+
+
+def test_ranked_articles_include_final_score(api_client: TestClient):
+    """All ranked articles include the final_score field."""
+    resp = api_client.get("/v1/articles")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) > 0
+    for item in data:
+        assert "final_score" in item
+        assert isinstance(item["final_score"], (int, float, type(None)))
+
+
+def test_date_filter_boundaries_are_inclusive(api_client: TestClient, db_manager):
+    """date_from and date_to include articles on the boundary."""
+    with db_manager.get_session() as session:
+        article = session.query(Article).filter(Article.source_id == "nature").first()
+        assert article and article.published_date
+
+    date_iso = article.published_date.isoformat()
+    resp = api_client.get(
+        "/v1/articles", params={"date_from": date_iso, "date_to": date_iso}
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    ids = [item["id"] for item in data]
+    assert article.id in ids
+
+
+def test_empty_result_set_returns_valid_envelope(api_client: TestClient):
+    """A date range with no matches returns valid empty envelope."""
+    far_future = "2099-01-01T00:00:00"
+    resp = api_client.get(
+        "/v1/articles", params={"date_from": far_future, "date_to": far_future}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["pagination"]["returned"] == 0
+    assert body["data"] == []
+    assert body["pagination"]["next_cursor"] is None
