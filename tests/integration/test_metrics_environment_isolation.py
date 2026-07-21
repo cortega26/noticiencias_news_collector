@@ -7,7 +7,7 @@ from unittest.mock import patch
 from news_collector.enrichment.strategy_optimizer import StrategyOptimizer
 from news_collector.infrastructure.run_context import run_context
 from news_collector.observability.enrichment_metrics_store import (
-    enrichment_metrics,
+    EnrichmentMetricsStore,
 )
 
 
@@ -34,14 +34,17 @@ class TestMetricsEnvironmentIsolation(unittest.TestCase):
         )
         production_metrics_view.conn = None
 
-        # Re-init singleton (hacky but needed for tests)
-        # We can just create new instances since we modified __init__ to check _initialized
-        enrichment_metrics._initialized = False
-        enrichment_metrics.__init__()  # Re-init to pick up 'test' env
+        # A genuinely separate instance for the "test" environment — never
+        # the process-wide `enrichment_metrics` singleton, and no
+        # _initialized/global-path hacking required to isolate it.
+        self.store = EnrichmentMetricsStore.create_isolated(environment="test")
+
+    def tearDown(self):
+        self.store.close()
 
     def test_writes_go_to_correct_env_db(self):
         # Act
-        enrichment_metrics.record_attempt("source_test_iso", "http")
+        self.store.record_attempt("source_test_iso", "http")
 
         # Assert
         test_db = f"{self.test_db_dir}/enrichment_metrics.db"

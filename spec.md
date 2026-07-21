@@ -92,6 +92,22 @@ unblocked.
   (clickbait keywords) after confirming the two keyword lists partially
   overlap but each has exclusive terms — unifying them would still
   silently reweight scores, out of scope. See `plans/034/spec.md`.
+- **038 — Decouple telemetry writes and cache Refinery read models**:
+  PARTIAL. Steps 1-3 done: `enrichment_metrics_store.py` now batches writes
+  (25 commits for 1000 events, vs. 1000 before) while proving — via a
+  worked counter-example, not just green tests — that batching preserves
+  the exact same running-average arithmetic as the per-event original
+  (naively coalescing sum/count would have silently produced a different,
+  wrong number). Explicit store lifecycle (`create_isolated()`) replaced
+  the `_initialized`-mutating test hack. Wired into the real
+  collection-cycle boundary (`base_collector.py`'s
+  `collect_from_multiple_sources`/`_async`) via a context manager that
+  guarantees a flush on exit — confirmed first that the real entrypoint
+  (`scripts/run_collector.py`) never calls the existing `System.shutdown()`
+  hook, so the default stays a safe, byte-identical batch size of 1 and
+  only this boundary opts into real batching. Steps 4-5 (Refinery Streamlit
+  caching) not attempted — needs a read-model extraction from the
+  ~2951-LOC `admin_panel.py` first; see `plans/038/spec.md`.
 
 ## Verification
 

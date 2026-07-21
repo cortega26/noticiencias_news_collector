@@ -104,12 +104,36 @@ this file now tracks the current pass over the 18 remaining plans.
   config is now fully unconsumed pending a deliberate future decision. See
   `plans/034/spec.md`.
 
+## Plan 038 — Decouple telemetry writes and cache Refinery read models (PARTIAL)
+
+- [x] Step 1: interleaving equivalence test locks in exact current
+      arithmetic before refactor; `scripts/benchmark_metrics.py` proves
+      ≤25 commits for 1000 events (was 1000) with byte-identical aggregates.
+- [x] Step 2: `EnrichmentMetricsStore.create_isolated()` replaces the
+      `_initialized`-mutating test hack; 20+ existing callers of the
+      module-level singleton needed zero changes.
+- [x] Step 3: buffered/flushed writes, replaying events through the same
+      pure per-event arithmetic (not a coalesced sum/count, which a
+      pre-implementation check found would silently produce a *different*,
+      wrong average — see spec.md's worked counter-example). Rollback on
+      flush failure never drops or corrupts the buffer. Guaranteed flush
+      wired into `base_collector.py`'s real collection-cycle boundary,
+      after confirming `scripts/run_collector.py` (the actual entrypoint)
+      never calls the existing `System.shutdown()` hook.
+- [ ] Steps 4-5 (Refinery Streamlit caching): not attempted — needs a
+      read-model extraction from `admin_panel.py` first; see
+      `plans/038/spec.md` "Why Steps 4-5 were not attempted".
+- [x] Full regression gates clean (1179 passed, same 13 pre-existing
+      failures, same pre-existing lint/type baseline — two new mypy errors
+      this plan's own changes caused were fixed, not left). Committed,
+      `plans/README.md` updated to PARTIAL.
+
 ## Reassess after each completion
 
-- [x] 033/021/023/046/034 have each landed (DONE/PARTIAL/PARTIAL/PARTIAL/DONE).
-      Newly-startable set per `plans/README.md`'s dependency column: **036,
-      037, 038, 048** are all startable now (036/038/048 depended only on
-      033; 037 depended on 033+034, both now DONE). 031/032
+- [x] 033/021/023/046/034/038 have each landed
+      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL). Newly-startable set per
+      `plans/README.md`'s dependency column: **036, 037, 048** (036/048
+      depended only on 033; 037 depended on 033+034, both now DONE). 031/032
       unblock after 023 but belong in the frontend repo (see below). 041/043
       need the full 021+023+... set, which isn't there yet (021/023 are only
       PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs 021+022+028+041 —

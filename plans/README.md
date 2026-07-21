@@ -31,7 +31,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 | 035 | [Make Astro scripts idempotent](035-make-astro-scripts-idempotent.md) | P1 | M | 031 | TODO |
 | 036 | [Bound scoring work](036-bound-scoring-work.md) | P1 | L | 033 | TODO |
 | 037 | [Batch article persistence](037-batch-article-persistence.md) | P1 | L | 033, 034 | TODO |
-| 038 | [Decouple telemetry and Refinery reruns](038-decouple-telemetry-and-refinery-reruns.md) | P1 | L | 033 | TODO |
+| 038 | [Decouple telemetry and Refinery reruns](038-decouple-telemetry-and-refinery-reruns.md) | P1 | L | 033 | PARTIAL — Steps 1-3 done: `enrichment_metrics_store.py` batches writes (≤25 commits/1000 events vs. 1000 before, aggregates proven byte-identical via a worked interleaving counter-example), explicit store lifecycle (`create_isolated()`), wired into the real collection-cycle boundary with a guaranteed flush; Steps 4-5 (Refinery Streamlit caching) not attempted — needs a read-model extraction from the ~2951-LOC `admin_panel.py` first — see `plans/038/spec.md` |
 | 039 | [Prebuild the browser search index](039-prebuild-browser-search-index.md) | P1 | M | 031, 032 | TODO |
 | 040 | [Account for dispatcher failures](040-account-for-dispatcher-failures.md) | P1 | M | 034 | TODO |
 | 041 | [Add whole-workspace verification](041-add-whole-workspace-verification.md) | P1 | L | 020, 023, 024, 026, 029, 031 | TODO |
