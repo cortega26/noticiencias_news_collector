@@ -406,8 +406,11 @@ if not require_refinery_auth(secrets):
 
 
 NEWS_COLLECTOR_PATH = PROJECT_ROOT
-# Use configured DB path to ensure we wipe the correct DB
-runtime_config = config_settings.refresh_runtime_config()
+# Load the full Config for _metadata/warnings — refresh_runtime_config()
+# returns the narrower RuntimeConfigSnapshot, which has no _metadata field.
+startup_config = load_config()
+# Updates the live snapshot other consumers read via get_runtime_config().
+config_settings.refresh_runtime_config(startup_config)
 configured_db_path = config_settings.DATABASE_CONFIG.get("path", "refinery.db")
 REFINERY_DB_PATH = NEWS_COLLECTOR_PATH / configured_db_path
 
@@ -423,7 +426,7 @@ if LEGACY_REFINERY_ENV_FILE.exists():
     )
 
 for config_warning in getattr(
-    getattr(runtime_config, "_metadata", None), "warnings", []
+    getattr(startup_config, "_metadata", None), "warnings", []
 ):
     st.warning(config_warning.message)
 
@@ -861,7 +864,7 @@ global_current_api = global_ollama_cfg.get(
 global_active_provider = None
 with suppress(Exception):
     global_active_provider = get_provider(
-        config=config_settings.refresh_runtime_config(),
+        config=load_config(),
         api_url=global_current_api,
         timeout=5,
     )
@@ -971,7 +974,7 @@ with st.sidebar:
     try:
         from news_collector.editorial.policy import EditorialPolicy
 
-        sys_config = config_settings.refresh_runtime_config()
+        sys_config = load_config()
         editorial_mode = getattr(sys_config.app, "editorial_mode", "standard")
         policy = EditorialPolicy.from_mode(editorial_mode)
 
@@ -1119,7 +1122,7 @@ with tab1:
         _active_provider = None
         with suppress(Exception):
             _active_provider = get_provider(
-                config=config_settings.refresh_runtime_config(),
+                config=load_config(),
                 api_url=current_api,
                 timeout=5,
             )
