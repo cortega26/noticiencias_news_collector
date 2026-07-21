@@ -3,10 +3,11 @@ Article repository — focused CRUD, dedup, clustering, scoring, and publishing 
 """
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
 
-from sqlalchemy import desc, or_
+from sqlalchemy import and_, desc, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy.orm.attributes import QueryableAttribute
@@ -90,6 +91,22 @@ def time_distance_seconds(a: Optional[datetime], b: Optional[datetime]) -> float
     if normalized_a is None or normalized_b is None:
         return float("inf")
     return abs((normalized_a - normalized_b).total_seconds())
+
+
+@dataclass(frozen=True)
+class ArticleCursor:
+    """Keyset-pagination cursor: the last row seen, by (collected_date, id)."""
+
+    collected_date: datetime
+    id: int
+
+
+@dataclass(frozen=True)
+class ArticlePage:
+    """One page of a keyset-paginated article query."""
+
+    items: List[Article]
+    next_cursor: Optional[ArticleCursor]
 
 
 # ---------------------------------------------------------------------------
@@ -757,6 +774,91 @@ class ArticleRepository:
             )
             session.expunge_all()
             return list(completed_articles)
+
+    @staticmethod
+    def _keyset_predicate(cursor: ArticleCursor):
+        """Tuple-comparison continuation predicate for (collected_date, id).
+
+        A plain ``collected_date > cursor.collected_date`` would skip or
+        duplicate rows that share a timestamp with the cursor row.
+        """
+        return or_(
+            Article.collected_date > cursor.collected_date,
+            and_(
+                Article.collected_date == cursor.collected_date,
+                Article.id > cursor.id,
+            ),
+        )
+
+    def get_pending_articles_page(
+        self,
+        limit: int,
+        status: str = PENDING_STATUS,
+        cursor: Optional[ArticleCursor] = None,
+    ) -> ArticlePage:
+        """Keyset-paginated pending articles, ordered by (collected_date, id).
+
+        Used by ScoringCoordinator to bound one scoring cycle's memory
+        footprint (plan 036) — kept alongside, not instead of,
+        `get_pending_articles` which other callers (validation coordinator,
+        pipeline_e2e snapshots) rely on for its own status-driven pagination.
+        """
+        with self._session() as session:
+            query = session.query(Article).filter(
+                Article.processing_status == status
+            )
+            if cursor is not None:
+                query = query.filter(self._keyset_predicate(cursor))
+            rows = list(
+                query.order_by(Article.collected_date, Article.id)
+                .limit(limit + 1)
+                .all()
+            )
+            session.expunge_all()
+            has_more = len(rows) > limit
+            items = rows[:limit]
+            next_cursor = (
+                ArticleCursor(items[-1].collected_date, items[-1].id)
+                if has_more and items
+                else None
+            )
+            return ArticlePage(items=items, next_cursor=next_cursor)
+
+    def get_completed_articles_for_rescoring_page(
+        self,
+        limit: int,
+        days_back: int = 14,
+        cursor: Optional[ArticleCursor] = None,
+    ) -> ArticlePage:
+        """Keyset-paginated rescore candidates, ordered by (collected_date, id).
+
+        See `get_pending_articles_page` — additive, plan 036.
+        """
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
+        with self._session() as session:
+            query = (
+                session.query(Article)
+                .filter(Article.processing_status == "completed")
+                .filter(Article.published_url.is_(None))
+                .filter(Article.published_at.is_(None))
+                .filter(Article.collected_date >= cutoff_date)
+            )
+            if cursor is not None:
+                query = query.filter(self._keyset_predicate(cursor))
+            rows = list(
+                query.order_by(Article.collected_date, Article.id)
+                .limit(limit + 1)
+                .all()
+            )
+            session.expunge_all()
+            has_more = len(rows) > limit
+            items = rows[:limit]
+            next_cursor = (
+                ArticleCursor(items[-1].collected_date, items[-1].id)
+                if has_more and items
+                else None
+            )
+            return ArticlePage(items=items, next_cursor=next_cursor)
 
     # ------------------------------------------------------------------
     # Scoring

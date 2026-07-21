@@ -128,16 +128,67 @@ this file now tracks the current pass over the 18 remaining plans.
       this plan's own changes caused were fixed, not left). Committed,
       `plans/README.md` updated to PARTIAL.
 
+## Plan 036 — Bound scoring memory, prompts, and concurrency (DONE)
+
+- [x] Step 1: `page_size`/`max_prompt_items`/`max_prompt_chars`/
+      `cycle_item_budget` added to `ScoringConfig`, all rejecting
+      zero/negative/excessive values; `workers` gained an `le=64` guard and
+      became genuinely used (was a dead-code expression before).
+- [x] Step 2: `ArticleCursor`/`ArticlePage` + `get_pending_articles_page`/
+      `get_completed_articles_for_rescoring_page` — additive, keyset
+      `(collected_date, id)` ordering with a tuple-comparison continuation
+      predicate (a naive single-column cursor was proven, via a falsifier
+      test, to skip every row after a tie). No schema index/migration
+      needed — sort works fine without one; noted as a perf follow-up only.
+- [x] Step 3: `ScoringCoordinator.execute()` rewritten to page one source
+      at a time, cross-source `seen_ids` dedup, per-page persist,
+      persistence-failure surfaced as `success: False` +
+      `stop_reason: "persistence_failed"` + a resumable `failed_cursor` —
+      never unconditional success. Extracted `_run_source`/`_process_page`/
+      `_CycleState`/`_PageResult` to keep cyclomatic complexity under the
+      ruff C901 threshold.
+- [x] Step 4: confirmed via direct code-reading (STOP condition 3) that
+      `CognitiveScorer`'s prompt has no cross-article ranking/comparison
+      and its response is parsed purely per-`item_index` — chunking is
+      semantically safe. Chunked `articles_to_process` by item-count/
+      estimated-char bounds preserving order; one chunk's total failure
+      falls back to heuristic for only that chunk. Coordinator's fallback
+      path replaced unbounded `asyncio.gather` with a semaphore bounded by
+      the (now-live) `workers`/`scoring_workers` config.
+- [x] Step 5: workload telemetry (`duration_sec`, `pages_processed`,
+      `max_fallback_inflight_observed`, `committed`, `failed`,
+      `stop_reason`, plus the scorer's own `llm_calls`/`chunks_processed`/
+      `cache_hits`/`prompt_chars_sent` when exposed) — no article content.
+      `scripts/benchmark_scoring.py`: 1000 synthetic articles (incl.
+      timestamp ties), asserts page-size and fallback-concurrency bounds
+      hold; exit 0/PASS.
+- [x] A full-suite regression run (not just the targeted scoring tests)
+      caught a real infinite-loop regression: 3 tests elsewhere
+      (`test_scoring_isolation.py` x2, `test_d1_pipeline_boundaries.py` x1)
+      mocked the old unpaged DB methods, so the coordinator's new
+      `get_pending_articles_page` call returned an unconfigured
+      `MagicMock` that was never falsy/`None` — an infinite loop that grew
+      `unittest.mock`'s internal state without bound (saw ~97GB RSS before
+      killing it). Confirmed via `git stash` A/B that this was caused by
+      this plan's changes (baseline clean at 39s; plan-036 changes
+      reproduced the same growth+hang at the same ~81% point both times).
+      Fixed all 3 fixtures plus a related `AsyncMock`-scorer issue with the
+      new `get_cycle_telemetry` hasattr check. Full suite re-run: 38s,
+      1217 passed, same 13 pre-existing failures, no hang, normal memory.
+      See `plans/036/spec.md` for the full narrative.
+- [x] Full regression gates clean; committed, `plans/README.md` updated to
+      DONE.
+
 ## Reassess after each completion
 
-- [x] 033/021/023/046/034/038 have each landed
-      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL). Newly-startable set per
-      `plans/README.md`'s dependency column: **036, 037, 048** (036/048
-      depended only on 033; 037 depended on 033+034, both now DONE). 031/032
-      unblock after 023 but belong in the frontend repo (see below). 041/043
-      need the full 021+023+... set, which isn't there yet (021/023 are only
-      PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs 021+022+028+041 —
-      not yet.
+- [x] 033/021/023/046/034/038/036 have each landed
+      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE). Newly-startable set
+      per `plans/README.md`'s dependency column: **037, 048** (037 depended
+      on 033+034, both DONE; 048 depended only on 033). 031/032 unblock
+      after 023 but belong in the frontend repo (see below). 041/043 need
+      the full 021+023+... set, which isn't there yet (021/023 are only
+      PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs
+      021+022+028+041 — not yet.
 - [ ] Frontend plans (031, 032, 035, 039, 044) belong in the Astro repo
       (`noticiencias`), not here — flag when reached instead of implementing
       from this working directory.

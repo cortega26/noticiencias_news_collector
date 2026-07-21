@@ -64,8 +64,8 @@ class CognitiveScorer(BasicScorer):
 
         # 2. Components
         # Use provider directly
+        active_config = config or load_config()
         if llm_client is None:
-            active_config = config or load_config()
             model = get_model_for_stage("scoring", config=active_config, logger=logger)
             self.llm: Any = get_provider(
                 config=active_config,
@@ -84,6 +84,16 @@ class CognitiveScorer(BasicScorer):
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
         self.is_llm_healthy = True
+
+        # Plan 036: bound each LLM prompt's item count/estimated size
+        # instead of concatenating every uncached input into one prompt.
+        self.max_prompt_items = active_config.scoring.max_prompt_items
+        self.max_prompt_chars = active_config.scoring.max_prompt_chars
+
+        # Plan 036 Step 5: workload telemetry (no article content).
+        self.cache_hit_count = 0
+        self.chunks_processed_count = 0
+        self.prompt_chars_sent = 0
 
         # 4. Cache Init
         self._init_cache()
@@ -122,6 +132,9 @@ class CognitiveScorer(BasicScorer):
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
+        self.cache_hit_count = 0
+        self.chunks_processed_count = 0
+        self.prompt_chars_sent = 0
         self.is_llm_healthy = True
         if hasattr(self.llm, "check_health"):
             ok, reason = self.llm.check_health(timeout_seconds=2.0)
@@ -132,6 +145,16 @@ class CognitiveScorer(BasicScorer):
                 )
                 self.is_llm_healthy = False
         logger.info("CognitiveScorer Cycle Start.")
+
+    def get_cycle_telemetry(self) -> Dict[str, Any]:
+        """Workload telemetry for the current cycle, no article content."""
+        return {
+            "llm_calls": self.llm_calls_count,
+            "chunks_processed": self.chunks_processed_count,
+            "cache_hits": self.cache_hit_count,
+            "heuristic_used": self.heuristic_used_count,
+            "prompt_chars_sent": self.prompt_chars_sent,
+        }
 
     def _check_budget(self) -> bool:
         """Return True if we have budget left and the circuit breaker is not open."""
@@ -222,67 +245,56 @@ class CognitiveScorer(BasicScorer):
             cached = self._get_from_cache(key)
             if cached:
                 # Apply cache hit immediately
+                self.cache_hit_count += 1
                 results_map[i] = self._finalize_score(
                     art_obj, cached, payload.get("source_config")
                 )
             else:
                 articles_to_process.append((i, art_obj))
 
-        # 3. Process remaining items
+        # 3. Process remaining items — chunked by item count/estimated size
+        # (plan 036) instead of one unbounded prompt for the whole batch.
         if articles_to_process:
             use_llm = self._check_budget()
 
             if use_llm:
-                # Prepare Batch
-                batch_inputs = []
-                indices_for_llm = []
-
-                for idx, art in articles_to_process:
-                    text = f"Title: {art.title}\nSummary: {art.summary}\nContent: {(art.content or '')[:800]}"
-                    batch_inputs.append(text)
-                    indices_for_llm.append(idx)
-
-                # Call LLM Batch
-                llm_results = await self._call_llm_batch(batch_inputs)
-
-                # Check results
-                if llm_results:
-                    for j, res in enumerate(llm_results):
-                        original_idx = indices_for_llm[j]
-                        art = articles_to_process[j][1]  # (idx, art)
-
-                        # Cache it
-                        key = self._get_cache_key(art)
-                        self._save_to_cache(key, res)
-
-                        # Finalize
-                        results_map[original_idx] = self._finalize_score(
-                            art, res, payload_list[original_idx].get("source_config")
-                        )
-                else:
-                    # LLM failed completely for batch -> Fallback to heuristic
-                    self.is_llm_healthy = False
-                    use_llm = False
-
-            if not use_llm:
-                # Heuristic Fallback
-                for idx, art in articles_to_process:
-                    if idx in results_map:
+                for chunk in self._chunk_articles(articles_to_process):
+                    if not self._check_budget():
+                        # Budget/circuit breaker tripped mid-cycle: this
+                        # chunk (and any remaining ones) fall back, but
+                        # chunks already scored above are untouched.
+                        self._heuristic_fallback(chunk, payload_list, results_map)
                         continue
 
-                    self.heuristic_used_count += 1
-                    h_score = self.heuristic.calculate_score(cast(Article, art))
-                    res = {
-                        "score": h_score,
-                        "details": {"heuristic": True},
-                        "reasoning": "Heuristic fallback (Budget/LLM unavailable)",
-                    }
-                    results_map[idx] = self._finalize_score(
-                        art,
-                        res,
-                        payload_list[idx].get("source_config"),
-                        is_heuristic=True,
-                    )
+                    batch_inputs = [text for _, _, text in chunk]
+                    self.chunks_processed_count += 1
+                    self.prompt_chars_sent += sum(len(t) for t in batch_inputs)
+                    llm_results = await self._call_llm_batch(batch_inputs)
+
+                    if llm_results:
+                        for j, res in enumerate(llm_results):
+                            original_idx, art, _ = chunk[j]
+
+                            key = self._get_cache_key(art)
+                            self._save_to_cache(key, res)
+
+                            results_map[original_idx] = self._finalize_score(
+                                art,
+                                res,
+                                payload_list[original_idx].get("source_config"),
+                            )
+                    else:
+                        # This chunk failed completely -> fall back to
+                        # heuristic for just this chunk's articles; other
+                        # (already-scored) chunks are not repeated.
+                        self.is_llm_healthy = False
+                        self._heuristic_fallback(chunk, payload_list, results_map)
+            else:
+                self._heuristic_fallback(
+                    [(idx, art, None) for idx, art in articles_to_process],
+                    payload_list,
+                    results_map,
+                )
 
         # 4. Reconstruct ordered list
         final_results = []
@@ -303,6 +315,64 @@ class CognitiveScorer(BasicScorer):
                 )
 
         return final_results
+
+    def _chunk_articles(self, articles_to_process):
+        """Partition (idx, article) pairs into chunks bounded by both
+        `max_prompt_items` and `max_prompt_chars`, preserving order.
+
+        Each entry becomes (idx, article, prompt_text) so callers never
+        recompute the prompt text. A single article whose own prompt text
+        already exceeds `max_prompt_chars` still becomes its own
+        (oversized) one-item chunk — it cannot be split further.
+        """
+        chunks = []
+        current_chunk: list = []
+        current_chars = 0
+
+        for idx, art in articles_to_process:
+            text = (
+                f"Title: {art.title}\nSummary: {art.summary}\n"
+                f"Content: {(art.content or '')[:800]}"
+            )
+            text_len = len(text)
+            exceeds_items = len(current_chunk) >= self.max_prompt_items
+            exceeds_chars = current_chunk and (
+                current_chars + text_len > self.max_prompt_chars
+            )
+
+            if current_chunk and (exceeds_items or exceeds_chars):
+                chunks.append(current_chunk)
+                current_chunk = []
+                current_chars = 0
+
+            current_chunk.append((idx, art, text))
+            current_chars += text_len
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        return chunks
+
+    def _heuristic_fallback(self, chunk_entries, payload_list, results_map):
+        """Score each (idx, article, ...) entry heuristically, in place."""
+        for entry in chunk_entries:
+            idx, art = entry[0], entry[1]
+            if idx in results_map:
+                continue
+
+            self.heuristic_used_count += 1
+            h_score = self.heuristic.calculate_score(cast(Article, art))
+            res = {
+                "score": h_score,
+                "details": {"heuristic": True},
+                "reasoning": "Heuristic fallback (Budget/LLM unavailable)",
+            }
+            results_map[idx] = self._finalize_score(
+                art,
+                res,
+                payload_list[idx].get("source_config"),
+                is_heuristic=True,
+            )
 
     async def _call_llm_batch(
         self, inputs: List[str]

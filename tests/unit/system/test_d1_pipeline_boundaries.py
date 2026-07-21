@@ -91,9 +91,16 @@ def test_validation_boundary_uses_payload(mock_system):
 @pytest.mark.asyncio
 async def test_scoring_boundary_uses_input_model(mock_system):
     """Verify _execute_scoring uses ScoringInputModel."""
+    from news_collector.storage.article_repository import ArticlePage
+
     # Mock DB
     mock_art = MockORMArticle(id=10, title="Test Scoring", source_id="src1")
-    mock_system.db_manager.get_pending_articles.return_value = [mock_art]
+    mock_system.db_manager.get_pending_articles_page.return_value = ArticlePage(
+        items=[mock_art], next_cursor=None
+    )
+    mock_system.db_manager.get_completed_articles_for_rescoring_page.return_value = (
+        ArticlePage(items=[], next_cursor=None)
+    )
 
     # Mock Config
     from news_collector.config import ALL_SOURCES

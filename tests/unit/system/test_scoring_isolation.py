@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from news_collector.storage.article_repository import ArticlePage
 from news_collector.storage.models import Article
 from news_collector.system import NewsCollectorSystem
 
@@ -12,8 +13,10 @@ def mock_system_components():
     system = NewsCollectorSystem()
     system.db_manager = MagicMock()
     system.scorer = AsyncMock()
-    # Explicitly mock reset_cycle_metrics as SYNC to match production usage and avoid RuntimeWarning
+    # Explicitly mock reset_cycle_metrics/get_cycle_telemetry as SYNC to match
+    # production usage and avoid RuntimeWarning
     system.scorer.reset_cycle_metrics = MagicMock()
+    system.scorer.get_cycle_telemetry = MagicMock(return_value={})
     system.logger = MagicMock()
 
     # Mock logger to accept log calls
@@ -56,7 +59,12 @@ async def test_scoring_fail_all_behavior(
     articles = sample_pending_articles
 
     # Setup DB to return these articles
-    system.db_manager.get_pending_articles.return_value = articles
+    system.db_manager.get_pending_articles_page.return_value = ArticlePage(
+        items=articles, next_cursor=None
+    )
+    system.db_manager.get_completed_articles_for_rescoring_page.return_value = (
+        ArticlePage(items=[], next_cursor=None)
+    )
 
     # Setup Scorer to support batching BUT fail during batch
     system.scorer.score_batch_async = AsyncMock(
@@ -91,8 +99,8 @@ async def test_scoring_fail_all_behavior(
     # Batch should have been called once
     system.scorer.score_batch_async.assert_called_once()
 
-    # Check if get_pending_articles was called
-    system.db_manager.get_pending_articles.assert_called_once()
+    # Check if get_pending_articles_page was called
+    system.db_manager.get_pending_articles_page.assert_called_once()
 
     # Single score should have been called 3 times (fallback)
     assert (
@@ -126,7 +134,12 @@ async def test_scoring_fallback_missing_safety(
     """
     system = mock_system_components
     articles = sample_pending_articles
-    system.db_manager.get_pending_articles.return_value = articles
+    system.db_manager.get_pending_articles_page.return_value = ArticlePage(
+        items=articles, next_cursor=None
+    )
+    system.db_manager.get_completed_articles_for_rescoring_page.return_value = (
+        ArticlePage(items=[], next_cursor=None)
+    )
 
     # Batch fails
     batch_error = Exception("Batch Fatal")
