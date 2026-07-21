@@ -266,3 +266,80 @@ class TestEnrichmentInProcessArticle:
         # But generated fields without upstream override should still appear
         assert "glossary" in fm
         assert len(fm["glossary"]) == 2
+
+    def test_v2_enforcement_rejects_missing_enrichment_fields(self, tmp_path) -> None:
+        """V2 article with empty enrichment output must not reach the writer."""
+        agent = EditorAgent("http://example", "model")
+        agent.cache_dir = tmp_path / "editor-cache"
+        agent.cache_dir.mkdir(parents=True, exist_ok=True)
+        agent.category_resolver._classifier = MagicMock(
+            try_classify_article=MagicMock(return_value=None)
+        )
+        agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
+        agent._critic_pass = lambda *args: (True, None)
+        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)
+        agent._generate_headlines = lambda *args, **kwargs: {
+            "direct": "A v2 article missing enrichment",
+            "question": "Q?",
+            "benefit": "B",
+            "excerpt": "SEO excerpt that is long enough for validation.",
+        }
+        # Stage 4 returns empty / incomplete output
+        agent._generate_enrichment_fields = MagicMock(return_value={})
+
+        from news_collector.components.editorial.ai_editor import (
+            GeneratedArticleValidationError,
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as excinfo:
+            agent.process_article(
+                {
+                    "title": "V2 Missing Enrichment",
+                    "summary": "Resumen " * 20,
+                    "content": "Contenido " * 200,
+                    "url": "https://example.com/source",
+                }
+            )
+        assert excinfo.value.error_code == "editorial_v2_incomplete"
+        assert "summary_points" in str(excinfo.value)
+
+    def test_v2_enrichment_all_fields_succeeds(self, tmp_path) -> None:
+        """V2 article with all enrichment fields is written successfully."""
+        agent = EditorAgent("http://example", "model")
+        agent.cache_dir = tmp_path / "editor-cache"
+        agent.cache_dir.mkdir(parents=True, exist_ok=True)
+        agent.category_resolver._classifier = MagicMock(
+            try_classify_article=MagicMock(return_value=None)
+        )
+        agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
+        agent._critic_pass = lambda *args: (True, None)
+        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)
+        agent._generate_headlines = lambda *args, **kwargs: {
+            "direct": "Full V2 Article",
+            "question": "Q?",
+            "benefit": "B",
+            "excerpt": "SEO excerpt that is long enough for validation.",
+        }
+        agent._generate_enrichment_fields = MagicMock(
+            return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
+        )
+
+        result = agent.process_article(
+            {
+                "title": "V2 Complete",
+                "summary": "Resumen " * 20,
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+            }
+        )
+        fm = parse_frontmatter(result)
+        assert fm.get("schema_version") == 2
+        for field in (
+            "summary_points",
+            "glossary",
+            "fact_check",
+            "why_it_matters",
+            "confidence",
+            "sources",
+        ):
+            assert fm.get(field), f"Missing required v2 field: {field}"
