@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_MAX_PUBLICATION_IDS = 200
 
 
 class DiagnosticResult(BaseModel):
@@ -37,8 +39,25 @@ class FrontendWebhookEvent(BaseModel):
     frontend_ref: str = Field(alias="frontend_ref")
     run_url: str = Field(alias="run_url")
     timestamp: Optional[datetime] = None
+    publication_ids: List[str] = Field(
+        default_factory=list,
+        description="Stable refinery_ids identifying articles in this callback event. "
+        "Required for publication-state mutations.",
+    )
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("publication_ids")
+    @classmethod
+    def _validate_publication_ids(cls, v: List[str]) -> List[str]:
+        if len(v) > _MAX_PUBLICATION_IDS:
+            raise ValueError(
+                f"publication_ids must not exceed {_MAX_PUBLICATION_IDS} entries"
+            )
+        for item in v:
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError("publication_ids must contain non-empty strings")
+        return v
 
 
 class ValidationResultEvent(FrontendWebhookEvent):
