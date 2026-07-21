@@ -22,7 +22,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 021 | [Rebuild the publication callback contract](021-rebuild-publication-callback-contract.md) | P1 | L | 020 | TODO |
+| 021 | [Rebuild the publication callback contract](021-rebuild-publication-callback-contract.md) | P1 | L | 020 | PARTIAL — Step 0 (refinery_id identity fix, not an original step but required by the plan's own STOP condition) done; Steps 1-5 are coordinated cross-repo work that cannot be split into a backend-only slice without stranding real callbacks — see `plans/021/spec.md` |
 | 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | TODO |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |
 | 032 | [Migrate frontend dependencies](032-migrate-frontend-dependencies.md) | P1 | L | 026, 031 | TODO |

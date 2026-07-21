@@ -73,6 +73,35 @@ QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
 )
 
 
+def _resolve_article_identity(article: Dict[str, Any]) -> str:
+    """Return the stable identity string used as this article's refinery_id.
+
+    Prefers the DB primary key (``article["id"]``); every real
+    collector-sourced article has one. Some legitimate non-DB inputs (the
+    filesystem-fallback ingestion path in ``apps/refinery/main.py``, ad hoc
+    test fixtures) have no "id" key at all — for those we fall back to the
+    title, same as the historical behavior, but log so the gap is visible
+    instead of silent.
+
+    Plan 021 (rebuild the publication callback contract) intends to persist
+    this exact string into the DB row's
+    ``article_metadata["publication"]["refinery_id"]`` and match frontend
+    callbacks' ``publication_ids`` against it — that persistence/matching
+    is NOT built yet (see plans/021/spec.md for the remaining work). This
+    function only fixes the identity *source* (id-first, title as a logged
+    fallback) so that future wiring has a stable value to build on.
+    """
+    article_pk = article.get("id")
+    if article_pk not in (None, ""):
+        return str(article_pk)
+    logger.warning(
+        "Article has no DB id; falling back to title for refinery_id "
+        f"(title={article.get('title')!r}). This article won't correlate "
+        "reliably with frontend publication callbacks."
+    )
+    return str(article.get("title", "unknown"))
+
+
 class RefineryEngine:
     """
     Orchestrates the refinement pipeline:
@@ -205,7 +234,7 @@ class RefineryEngine:
             try:
                 self._last_blocked_error = None
                 # Identifier
-                article_id = str(article.get("id", article.get("title")))
+                article_id = _resolve_article_identity(article)
                 logger.info(f"Refining item: {article_id}")
 
                 if self.process_single_article(article, target_repo_obj, target_dir):
@@ -234,7 +263,7 @@ class RefineryEngine:
         Orchestrates full cycle for one article.
         Returns True if successful (PR created), False otherwise.
         """
-        article_id = str(article.get("id", article.get("title")))
+        article_id = _resolve_article_identity(article)
         publication_stages: list[PublicationAttemptStageResult] = []
         branch_name: str | None = None
         final_slug: str | None = None
