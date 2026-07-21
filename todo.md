@@ -25,21 +25,29 @@ this file now tracks the current pass over the 18 remaining plans.
       baseline, full test run (`pytest tests --ignore=tests/e2e_pipeline`)
       matches the 13 pre-existing failures exactly with 29 more tests
       passing (new coverage), `plans/README.md` updated to DONE.
-- [ ] Commit plan 033.
+- [x] Commit plan 033 (f14862b, d5faba4 fix-up after subagent review caught
+      a return-type regression).
 
-## Plan 021 — Rebuild the publication callback contract
+## Plan 021 — Rebuild the publication callback contract (PARTIAL)
 
-- [ ] Read `plans/021-rebuild-publication-callback-contract.md` in full.
-- [ ] Implement per its spec.
-- [ ] Run its verification section.
-- [ ] Update `plans/README.md`, commit.
+- [x] Recon: confirmed Steps 1-5 need coordinated backend+frontend work
+      (see `plans/021/spec.md`) — landing backend-only would strand real
+      callbacks, a regression not progress.
+- [x] Step 0 (not an original plan step, required by its own STOP
+      condition): fixed refinery_id identity resolution in
+      `refinery_engine.py` (`_resolve_article_identity`).
+- [x] Committed (3e3408e), `plans/README.md` updated to PARTIAL with full
+      handoff including a dedup-guard hazard for whoever does Step 2.
 
-## Plan 023 — Connect and harden the report pipeline
+## Plan 023 — Connect and harden the report pipeline (PARTIAL)
 
-- [ ] Read `plans/023-connect-and-harden-report-pipeline.md` in full.
-- [ ] Implement per its spec.
-- [ ] Run its verification section.
-- [ ] Update `plans/README.md`, commit.
+- [x] All 5 steps implemented + tested in the frontend repo (contract
+      mapping, honest form behavior, request bounds, durable-sink
+      tracking, KV rate limiting/idempotency, CI gates).
+- [x] Committed in both repos (frontend dbb12db, backend index b8d84e0).
+- [ ] Remaining: operator provisions R2 bucket + RATE_LIMIT_KV namespace,
+      then flips `config.yaml`'s endpoint — see
+      `../noticiencias/docs/report-pipeline-setup.md`.
 
 ## Plan 046 — Prove and automate production migrations
 
