@@ -89,9 +89,9 @@ unblocked.
   unit test exercised it), and RSS additionally had its own weaker
   extraction-time override; both removed. Kept hard-structural admission
   (title/content length) strictly separate from soft scoring signals
-  (clickbait keywords) after confirming the two keyword lists genuinely
-  differ — unifying them would have silently reweighted scores, out of
-  scope. See `plans/034/spec.md`.
+  (clickbait keywords) after confirming the two keyword lists partially
+  overlap but each has exclusive terms — unifying them would still
+  silently reweight scores, out of scope. See `plans/034/spec.md`.
 
 ## Verification
 
