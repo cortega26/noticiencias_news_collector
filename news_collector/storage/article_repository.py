@@ -876,6 +876,7 @@ class ArticleRepository:
                 return True
             except Exception as e:
                 logger.error("Error in update_validation_status_bulk: %s", e)
+                session.rollback()
                 return False
 
     def update_articles_score_bulk(
@@ -939,6 +940,7 @@ class ArticleRepository:
                 return True
             except Exception as e:
                 logger.error("Error in update_articles_score_bulk: %s", e)
+                session.rollback()
                 return False
 
     def update_article_score(
@@ -995,6 +997,7 @@ class ArticleRepository:
 
             except Exception as e:
                 logger.error("Error updating score: %s", e)
+                session.rollback()
                 return False
 
     # ------------------------------------------------------------------
@@ -1016,6 +1019,7 @@ class ArticleRepository:
                     return True
             except Exception as e:
                 logger.error("Error deleting article %s: %s", article_id, e)
+                session.rollback()
             return False
 
     def clear_all_articles(self) -> int:

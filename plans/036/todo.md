@@ -144,3 +144,27 @@
       spec.md "A real regression found only by running the full suite".
       Re-run after fixes: 38s, 1217 passed, 13 pre-existing failures
       (byte-identical to baseline), 4 skipped, no hang, normal memory.
+
+## Follow-up from ~20-iteration subagent review
+- [x] Fixed real bug: `update_articles_score_bulk`/`update_validation_status_bulk`/
+      `update_article_score`/`delete_article` could raise `PendingRollbackError`
+      instead of returning `False` on a genuine persistence failure (missing
+      `session.rollback()` before `return False`, causing `get_session()`'s
+      own trailing commit to fail against an already-invalidated session).
+      Pre-existing, not part of this plan's diff, but undermined Step 3's
+      "persistence failure surfaced as resumable failure" claim under real
+      (non-mocked) conditions. Fixed in all 4 sites; proved with a new test
+      that reproduces the bug via a real UNIQUE-constraint IntegrityError
+      (`tests/unit/storage/test_bulk_persistence_failure_handling.py`).
+- [x] Characterized (not changed, out of scope): a chunk failure sets
+      `is_llm_healthy=False` for the rest of the cycle, cascading to later
+      untried chunks — inherited behavior, existing test only covered 2
+      chunks. Added `test_chunk_failure_cascades_to_later_untried_chunks`
+      (3 chunks) making this explicit.
+- [x] Independently re-verified by the review subagent: no other test
+      fixture in the tree mocks `db_manager`/`NewsCollectorSystem` and
+      calls `_execute_scoring`/`run_collection_cycle(dry_run=False)`
+      without configuring the new paged methods — the 3 fixed in the
+      first pass were the only ones.
+- [x] Full suite re-run: 40s, 1220 passed, same 13 pre-existing failures,
+      no hang, normal memory. Committed as a follow-up.
