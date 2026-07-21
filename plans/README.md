@@ -264,7 +264,7 @@ the three product opportunities end in explicit build/integrate/defer/no-build A
 | 025 | [Refresh backend security locks](025-refresh-backend-security-locks.md) | P1 | L | 019, 024 | TODO |
 | 026 | [Pin GitHub Actions](026-pin-github-actions.md) | P1 | S | — | DONE |
 | 027 | [Complete Stage 4 wiring and cache](027-complete-stage4-wiring-and-cache.md) | P1 | S | 019 | DONE — enrichment_model added to OllamaConfig schema, legacy env mapping, Refinery wiring; all 19 model registry tests pass |
-| 028 | [Enforce the v2 editorial contract](028-enforce-v2-editorial-contract.md) | P1 | M | 020, 027 | TODO |
+| 028 | [Enforce the v2 editorial contract](028-enforce-v2-editorial-contract.md) | P1 | M | 020, 027 | DONE — backend: v2 articles with missing enrichment fields now raise GeneratedArticleValidationError (editorial_v2_incomplete); 2 new enforcement tests pass; frontend strict switch deferred pending content backfill |
 | 029 | [Fix the backend coverage ratchet](029-fix-backend-coverage-ratchet.md) | P1 | M | 019 | DONE — coverage expanded to full news_collector (25 packages, 72.96% line); ratcheter paths fixed; baseline recorded
 | 030 | [Lock developer toolchains](030-lock-developer-toolchains.md) | P1 | M | 019, 024 | DONE — frontend: vitest/coverage-v8 pinned to 4.0.18, @types/node aligned to ^24.x; backend: floating pip installs replaced with shared setup-python-env action in 3 workflows; workers vitest synced |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | TODO |

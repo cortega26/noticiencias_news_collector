@@ -2061,6 +2061,27 @@ class EditorAgent:
             if uncertainty_note and requires_uncertainty_note:
                 model_dict["uncertainty_note"] = str(uncertainty_note)
 
+            # V2 contract enforcement: a schema_version >= 2 article MUST
+            # carry every enrichment field.  Omission means Stage 4 produced
+            # empty or invalid output — treat as retryable editorial failure.
+            _V2_REQUIRED_FIELDS = (
+                "summary_points",
+                "glossary",
+                "fact_check",
+                "why_it_matters",
+                "confidence",
+                "sources",
+            )
+            schema_ver = model_dict.get("schema_version", 1)
+            if isinstance(schema_ver, int) and schema_ver >= 2:
+                missing = [k for k in _V2_REQUIRED_FIELDS if not model_dict.get(k)]
+                if missing:
+                    raise GeneratedArticleValidationError(
+                        f"V2 article missing required enrichment fields: {missing}. "
+                        "Stage 4 output is incomplete; retry or supply fields manually.",
+                        error_code="editorial_v2_incomplete",
+                    )
+
             # Dump to YAML
             # Use python mode to preserve native date types and emit
             # YAML date tokens without quotes for Astro z.date() compatibility.
