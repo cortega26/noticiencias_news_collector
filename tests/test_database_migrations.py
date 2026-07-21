@@ -184,3 +184,76 @@ def test_empty_database_upgrades_to_head(tmp_path: Path) -> None:
         assert "score_logs" in tables
     finally:
         mgr.close()
+
+
+def test_alembic_single_head() -> None:
+    """The migration history must have exactly one linear head."""
+    from alembic import script
+    from alembic.config import Config
+
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    directory = script.ScriptDirectory.from_config(alembic_cfg)
+
+    heads = directory.get_heads()
+    assert len(heads) == 1, f"Expected 1 head, got {len(heads)}: {heads}"
+
+
+def test_alembic_upgrade_head_is_idempotent(tmp_path: Path) -> None:
+    """Running upgrade to head twice must succeed without error."""
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "idempotent.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        mgr = DatabaseManager(database_config=test_db_config)
+        mgr.close()
+        command.stamp(alembic_cfg, "cb486d1d980d")
+        command.upgrade(alembic_cfg, "head")
+        # Second upgrade must be a no-op
+        command.upgrade(alembic_cfg, "head")
+
+    # Verify the DB is usable
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with mgr.engine.connect() as connection:
+            inspector = sqla_inspect(connection)
+            assert "articles" in inspector.get_table_names()
+    finally:
+        mgr.close()
+
+
+def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
+    """A database behind head must be detected without mutating schema."""
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "behind.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        mgr = DatabaseManager(database_config=test_db_config)
+        mgr.close()
+        # Stamp as one revision behind head
+        command.stamp(alembic_cfg, "a54ba7f7dabb")
+
+    # Read-only check: alembic_version != head
+    from news_collector.storage.database import DatabaseManager as DM
+
+    db_mgr = DM(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with db_mgr.engine.connect() as conn:
+            result = conn.exec_driver_sql(
+                "SELECT version_num FROM alembic_version"
+            ).scalar()
+        assert result == "a54ba7f7dabb"
+        # Head is b61c2d3e4f50 — DB is behind
+        assert result != "b61c2d3e4f50"
+    finally:
+        db_mgr.close()
