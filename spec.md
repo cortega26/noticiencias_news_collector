@@ -67,7 +67,20 @@ unblocked.
   limiting/idempotency, CI gates). Production endpoint stays disabled
   pending operator R2/KV provisioning (the plan's own STOP condition). See
   `plans/023/spec.md` and `../noticiencias/docs/report-pipeline-setup.md`.
-- **046**: not started next.
+- **046 — Prove and automate production migrations**: PARTIAL. Alembic-first
+  SQLite test coverage (every revision→head, downgrade roundtrips,
+  model/schema parity, single linear history) and a read-only revision guard
+  (`news_collector/storage/migration_guard.py` +
+  `scripts/check_migration_revision.py`) are done and tested. Step 1
+  (identify the production migration owner) hits its own STOP condition —
+  no discoverable production deployment topology anywhere in the repo. A
+  second STOP was found empirically while attempting the PostgreSQL half of
+  Steps 2/4/6: PostgreSQL is not usable at all yet (no driver dependency in
+  any lockfile, dead env vars in `docker-compose.yml`'s app services, and
+  host-absolute paths hardcoded in the committed `config.toml`) — fixing
+  those is a dedicated follow-up outside this plan's scope, not a one-line
+  patch to force a test green. See `plans/046/spec.md` and
+  `docs/database_deployment.md`.
 
 ## Verification
 

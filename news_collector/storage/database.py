@@ -62,6 +62,36 @@ from .source_repository import SourceRepository
 logger = get_logger().create_module_logger(__name__)
 
 
+def build_database_url(config: Dict[str, Any]) -> Union[str, URL]:
+    """Build the SQLAlchemy URL for a database config, with no side effects.
+
+    Shared by :class:`DatabaseManager` (which then opens the connection and
+    creates tables) and the read-only migration guard
+    (:mod:`news_collector.storage.migration_guard`), which must never create
+    tables — keeping URL construction in one place stops the two from
+    silently drifting onto different connection targets.
+    """
+    if config["type"] == "sqlite":
+        return f"sqlite:///{config['path']}"
+    elif config["type"] == "postgresql":
+        query_params: Dict[str, Any] = {}
+        ssl_mode = config.get("sslmode")
+        if ssl_mode:
+            query_params["sslmode"] = ssl_mode
+
+        return URL.create(
+            "postgresql",
+            username=config.get("user"),
+            password=config.get("password") or None,
+            host=config.get("host"),
+            port=int(config.get("port", 5432)),
+            database=config.get("name"),
+            query=query_params,
+        )
+    else:
+        raise ValueError(f"Tipo de base de datos no soportado: {config['type']}")
+
+
 class DatabaseManager:
     """
     Clase principal que maneja todas las operaciones de base de datos.
@@ -73,20 +103,22 @@ class DatabaseManager:
 
     Estrategia de migración
     -----------------------
-    La inicialización ejecuta automáticamente una secuencia segura para
-    mantener el esquema alineado con el código:
+    La inicialización hace únicamente dos cosas:
 
     1. Construye el engine con la configuración de pooling y timeouts
        adecuada para el backend seleccionado (incluyendo PostgreSQL en
        producción).
     2. Ejecuta `Base.metadata.create_all` para crear tablas que no
-       existan todavía.
-    3. Corre ``_run_schema_migrations`` que aplica ajustes idempotentes
-       documentados en ``docs/database_deployment.md``.
+       existan todavía (conveniencia de desarrollo/tests; no aplica
+       cambios a tablas ya existentes).
 
-    Antes de un despliegue productivo se debe revisar la guía de
-    despliegue para completar los pasos manuales como verificación de
-    backups y replicación.
+    Alembic es la única autoridad de cambios de esquema (columnas nuevas,
+    índices, backfills). Esta clase nunca los aplica — deben correrse
+    explícitamente vía ``scripts/migrate.py`` / ``alembic upgrade head``
+    antes de que un consumidor nuevo dependa de ellos. Ver
+    ``docs/database_deployment.md`` y
+    ``news_collector.storage.migration_guard`` para la verificación
+    read-only de que el esquema aplicado coincide con el head empaquetado.
 
     .. attribute:: articles
        :type: ArticleRepository
@@ -140,7 +172,7 @@ class DatabaseManager:
                 # Para SQLite, creamos el archivo si no existe
                 db_path = self.config["path"]
                 db_path.parent.mkdir(parents=True, exist_ok=True)
-                database_url = f"sqlite:///{db_path}"
+                database_url = build_database_url(self.config)
 
                 # SQLite con configuraciones optimizadas
                 self.engine = create_engine(
@@ -164,20 +196,7 @@ class DatabaseManager:
                     cursor.close()
 
             elif self.config["type"] == "postgresql":
-                query_params: Dict[str, Any] = {}
-                ssl_mode = self.config.get("sslmode")
-                if ssl_mode:
-                    query_params["sslmode"] = ssl_mode
-
-                database_url = URL.create(
-                    "postgresql",
-                    username=self.config.get("user"),
-                    password=self.config.get("password") or None,
-                    host=self.config.get("host"),
-                    port=int(self.config.get("port", 5432)),
-                    database=self.config.get("name"),
-                    query=query_params,
-                )
+                database_url = build_database_url(self.config)
 
                 connect_args: Dict[str, Any] = {
                     "connect_timeout": int(self.config.get("connect_timeout", 10))
