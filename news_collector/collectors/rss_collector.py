@@ -935,8 +935,11 @@ class RSSCollector(BaseCollector):
                 if "entry_ref" in cand:
                     del cand["entry_ref"]
 
-                if self._validate_article_data(cand):
-                    articles.append(cand)
+                # Structural admission (url/title/content presence + length)
+                # is the shared boundary policy applied once in
+                # BaseCollector._filter_and_save_articles — this extraction
+                # step no longer runs its own weaker pre-filter.
+                articles.append(cand)
 
             except Exception as e:
                 self._emit_log(
@@ -947,14 +950,6 @@ class RSSCollector(BaseCollector):
                 continue
 
         return articles
-
-    def _validate_article_data(self, article: Dict[str, Any]) -> bool:
-        """Helper to validate minimal requirements before returning from extract."""
-        if not article.get("url"):
-            return False
-        if not article.get("title"):  # noqa: SIM103
-            return False
-        return True
 
     def _process_article(  # noqa: C901
         self, raw_article: Dict[str, Any], source_id: str, source_config: Dict[str, Any]

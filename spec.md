@@ -81,6 +81,17 @@ unblocked.
   those is a dedicated follow-up outside this plan's scope, not a one-line
   patch to force a test green. See `plans/046/spec.md` and
   `docs/database_deployment.md`.
+- **034 — Centralize article admission**: DONE. One shared, typed,
+  structural admission policy (`news_collector/collectors/admission.py`)
+  now runs exactly once, in `BaseCollector._filter_and_save_articles`,
+  before duplicate lookup/persistence, for every collector (RSS, HTML,
+  Reddit). The previous policy was dead code (zero real callers — only a
+  unit test exercised it), and RSS additionally had its own weaker
+  extraction-time override; both removed. Kept hard-structural admission
+  (title/content length) strictly separate from soft scoring signals
+  (clickbait keywords) after confirming the two keyword lists genuinely
+  differ — unifying them would have silently reweighted scores, out of
+  scope. See `plans/034/spec.md`.
 
 ## Verification
 
