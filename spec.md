@@ -163,8 +163,12 @@ unblocked.
   goldens, which the plan itself disqualifies as evaluation evidence).
   Zero production files touched (`config.toml`, `config_schema.py`,
   `settings.py`, enrichment/scoring/reranker code, the golden fixture —
-  all confirmed byte-identical via `git diff --stat`). See
-  `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md`.
+  all confirmed byte-identical via `git diff --stat`). **Update
+  (2026-07-22)**: the operator confirmed they will personally review/
+  label the corpus, so Steps 2-3 tooling is now built — see "Session
+  resumption" below. Still PARTIAL: Steps 4-6 depend on the reviewer
+  actually labeling a meaningful sample first. See `plans/048/spec.md`
+  and `docs/adr/0004-curated-enrichment-registry-spike.md`.
 - **040 — Account for every collector-dispatch outcome**: DONE. An
   earlier part of this session had already committed real Step 1/2 work
   (`f64466c`) without updating `plans/README.md` or writing `plans/040/*`
@@ -235,6 +239,38 @@ corpus/reviewer gate; 038's remaining steps fail clause (b) as just
 established. **The startable set is empty. This is the session's actual
 terminus** — not a failure to keep going, but the correct place to stop
 per this rule.
+
+## Session resumption (2026-07-22): "unblock the remaining items"
+
+The user asked directly whether the remaining PARTIAL/TODO plans could be
+unblocked. Since several blockers documented above were operator-input
+gaps (secrets, production topology, a human reviewer), not fixed facts,
+this is genuinely the user's call to make — asked via `AskUserQuestion`
+rather than assumed. Answers received:
+- **046**: no production deployment exists yet — confirms the prior STOP
+  finding rather than changing it; 046 stays PARTIAL (see
+  `plans/046/spec.md`'s 2026-07-22 update).
+- **048**: the operator will personally review/label the evaluation
+  corpus, asynchronously — Steps 2-3 tooling built as a result (see the
+  048 entry above and `plans/048/spec.md`).
+- **023**: the operator opted to supply provisioning, but Cloudflare
+  R2/KV bucket creation and account secrets are actions only they can
+  take (their account, their credentials) — `docs/report-pipeline-setup.md`
+  (written in an earlier pass) already contains the exact `wrangler`
+  commands needed and was re-verified still accurate against the current
+  frontend repo state; no new code was needed here, just confirming the
+  existing guide and handing it back to the operator to execute.
+- **038, frontend plans, 021**: re-opened per the user's "build what I can
+  unblock myself" choice — these do not need operator secrets, only more
+  engineering effort (and, for 021 and the frontend plans, work the
+  earlier single-repo framing had incorrectly scoped as out of reach).
+  See their own entries as this work lands.
+
+This explicitly does NOT invalidate the 2026-07-21 wind-down's reasoning
+at the time it was written — the constraints genuinely changed (a human
+now committed to reviewing 048's corpus; the user authorized frontend-repo
+work; 046's topology question got a real answer) rather than the earlier
+analysis having been wrong.
 
 ## Verification
 

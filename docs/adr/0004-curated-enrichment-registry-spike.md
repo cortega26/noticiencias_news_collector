@@ -1,9 +1,14 @@
 # ADR-0004: Curated multilingual topic/entity registry spike (plan 048)
 
-- **Date**: 2026-07-21
-- **Status**: Accepted (decision: STOP — do not proceed past Step 1 in this
-  session; resume Steps 2-6 once a qualified editorial reviewer and a safe
-  representative corpus are available)
+- **Date**: 2026-07-21 (Steps 2-3 tooling resumed 2026-07-22)
+- **Status**: Superseded in part — the operator has since confirmed they
+  will personally review/label the corpus (asynchronously). The STOP below
+  no longer applies to "no reviewer available"; it is updated in place
+  (not superseded by a new ADR number, since the underlying decision
+  record and alternatives-considered reasoning are still accurate and
+  worth keeping together). See "Update (2026-07-22)" at the end of this
+  document. Steps 4-6 remain un-started pending a sufficiently large
+  reviewed corpus.
 
 ## Context
 
@@ -105,3 +110,33 @@ against policy-module changes without evaluation.
    "Commands you will need" table, using the real corpus from step 2 as
    the first meaningful input.
 4. Resume at Step 3 in `plans/048-spike-curated-enrichment-registry.md`.
+
+## Update (2026-07-22): operator will self-review, Steps 2-3 tooling built
+
+The operator confirmed directly that they will personally label the
+evaluation corpus, asynchronously. This resolves next-step 1 above in
+part — a reviewer now exists — but not fully: the plan's own Step 2
+language asks for **two** independent reviewers who adjudicate
+disagreements, and one person cannot do that. This is documented
+honestly (see `docs/spikes/enrichment-corpus-labeling-guide.md`'s
+"Single-reviewer limitation" section) rather than silently treated as
+equivalent to the original two-reviewer bar.
+
+What changed as a result:
+- `tests/data/enrichment_eval.jsonl`: a 44-record synthetic, stratified
+  seed corpus now exists (next-step 2 above, partially — 44 of the
+  ≥200 target), with draft topic/entity guesses clearly separated from
+  gold labels (which stay `null` until the operator reviews them).
+- `scripts/validate_enrichment_corpus.py` and
+  `scripts/evaluate_enrichment_registry.py` (next-step 3) are both
+  built and tested — the evaluator only ever scores reviewed records
+  and structurally reports `sufficient_evidence: false` below 200
+  reviewed records, so it cannot be mistaken for a real baseline while
+  the corpus is this small.
+
+This ADR's original STOP decision — do not fabricate two-reviewer-
+adjudicated labels — still stands and was not violated: no labels were
+fabricated, only tooling and a to-be-reviewed seed corpus were built.
+Steps 4-6 (candidate registry, paired comparison, adoption decision)
+remain un-started; they depend on a real reviewed corpus of meaningful
+size, which is now in progress but not complete.

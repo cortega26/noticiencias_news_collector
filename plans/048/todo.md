@@ -49,7 +49,7 @@
       why fabricating labels was rejected), and concrete next steps for
       whoever resumes with a real reviewer + corpus.
 
-## Verification
+## Verification (original Step 1 pass)
 - [x] `git diff --stat` (drift-check style, per the plan's own
       "Executor instructions") against `config.toml`,
       `noticiencias/config_schema.py`, `news_collector/config/settings.py`,
@@ -58,3 +58,48 @@
       `tests/data/golden_articles.json` → empty (no changes).
 - [x] `plans/README.md` row for 048 updated to PARTIAL.
 - [x] Root `spec.md` Sequencing state and root `todo.md` updated.
+
+## Follow-up (2026-07-22): operator committed to self-review, resumed Steps 2-3
+- [x] Operator confirmed (via AskUserQuestion) they'll personally
+      review/label the corpus, async — STOP condition on "no reviewer"
+      no longer applies. Documented honestly that this is one reviewer,
+      not the plan's own two-reviewer-adjudication ask (labeling guide's
+      "Single-reviewer limitation" section).
+- [x] Built `tests/data/enrichment_eval.jsonl`: 44-record stratified seed
+      (all 4 languages, all 6 topics + `general`, every adversarial case
+      type the plan names). Draft topic/entity guesses kept in a
+      separate `model_draft_*` field, never conflated with `gold_*`
+      (left `null` until reviewed).
+- [x] Wrote `docs/spikes/enrichment-corpus-labeling-guide.md`: labeling
+      process, schema reference, corpus-growth instructions, the
+      single-reviewer limitation, and the title+summary-vs-content
+      finding below.
+- [x] Built `scripts/validate_enrichment_corpus.py` (Step 2's own Verify
+      criterion) + 7 tests incl. negative cases (duplicate id,
+      dev/heldout overlap, invalid language, reviewed-with-null-gold,
+      email-like text) proving each rejection actually fires.
+- [x] Built `scripts/evaluate_enrichment_registry.py` (Step 3): micro/
+      macro precision/recall/F1 for topics+entities, per-language
+      slices, general/multi-label rates, latency, top FP/FN clusters,
+      corpus/model-version hashes for reproducibility. Only scores
+      `review_status="reviewed"` records — unreviewed drafts silently
+      excluded, never counted as ground truth. `sufficient_evidence`
+      field structurally false below 200 reviewed records. `--compare`
+      errors rather than fabricating a candidate comparison (Step 4
+      still not built).
+- [x] Found and documented a real gap while self-testing: golden_articles.json's
+      `science` topic tag depends on `content` text this corpus schema
+      deliberately excludes (title+summary only, per Step 2's own spec)
+      — not a scoring bug, fixed the test to isolate the arithmetic
+      instead of asserting golden parity it structurally can't reach.
+- [x] 12 tests total, all green:
+      `tests/unit/enrichment/test_enrichment_registry_tooling.py`.
+      `black`/`ruff` clean (scripts/ is mypy-excluded per existing repo
+      convention).
+- [x] End-to-end smoke test: both scripts run cleanly against the seed
+      corpus (0/44 reviewed today, reports correctly reflect that).
+- [ ] Reviewer labels records over time; re-run the evaluator once ≥200
+      are reviewed (or informally sooner, understanding
+      `sufficient_evidence` will read `false` until then).
+- [ ] Steps 4-6 (candidate registry, paired comparison, adoption ADR)
+      remain not attempted — depend on a real reviewed corpus existing.

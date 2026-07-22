@@ -253,6 +253,48 @@ this file now tracks the current pass over the 18 remaining plans.
       the plan's own Done Criterion. `plans/README.md` updated to
       PARTIAL, `plans/048/spec.md` + `todo.md` written.
 
+### Follow-up (2026-07-22): operator committed to self-review
+
+- [x] User asked (via AskUserQuestion) whether they could review the
+      corpus themselves — answered yes. Documented honestly that this is
+      one reviewer, not the plan's own two-independent-reviewer ask (see
+      the labeling guide's "Single-reviewer limitation" section) — no
+      silent downgrade of the plan's actual requirement.
+- [x] Built `tests/data/enrichment_eval.jsonl`: 44-record stratified
+      synthetic seed (4 languages × 6 topics + general + every
+      adversarial case type named in the plan). `model_draft_topics`/
+      `model_draft_entities` hold my own unreviewed guess, kept strictly
+      separate from `gold_topics`/`gold_entities` (null until reviewed)
+      — no fabricated gold labels.
+- [x] Wrote `docs/spikes/enrichment-corpus-labeling-guide.md`: process,
+      schema, corpus-growth instructions, single-reviewer limitation, and
+      a real finding (below).
+- [x] Built `scripts/validate_enrichment_corpus.py` (Step 2's Verify
+      criterion) — 7 tests incl. negative cases (duplicate id,
+      dev/heldout overlap, bad language, reviewed-with-null-gold,
+      email-like text) each proving the rejection fires.
+- [x] Built `scripts/evaluate_enrichment_registry.py` (Step 3) — micro/
+      macro P/R/F1 for topics+entities, per-language slices,
+      general/multi-label rates, latency, top FP/FN clusters,
+      corpus/model-version hashes. Only scores `review_status="reviewed"`
+      records; `sufficient_evidence` structurally false below 200
+      reviewed. `--compare` errors rather than fabricating a comparison
+      (Step 4 not built).
+- [x] Real finding while self-testing: golden_articles.json's `science`
+      tag depends on `content` text this corpus schema deliberately
+      excludes (title+summary only) — not a bug, fixed the sanity-check
+      test to isolate the scoring arithmetic instead of asserting parity
+      it can't reach, documented in the labeling guide.
+- [x] 12 tests total, all green
+      (`tests/unit/enrichment/test_enrichment_registry_tooling.py`);
+      `black`/`ruff` clean; end-to-end smoke test of both scripts passed.
+- [x] Updated `plans/048/spec.md`, `plans/048/todo.md`,
+      `docs/adr/0004-curated-enrichment-registry-spike.md` (in-place
+      update, not a new ADR number — same decision record, updated
+      status), `plans/README.md`.
+- [ ] Reviewer labels records over time; Steps 4-6 remain not attempted,
+      gated on a real reviewed corpus of meaningful size.
+
 ## Plan 040 — Account for every collector-dispatch outcome (DONE)
 
 - [x] **Correction to the prior "natural stopping point" conclusion
@@ -390,3 +432,28 @@ this file now tracks the current pass over the 18 remaining plans.
       principle.
 - [ ] Every ~20 iterations: fresh subagent review of spec.md + implementation
       for gaps; loop on feedback.
+
+## Session resumption (2026-07-22): "unblock the remaining items"
+
+- [x] User asked directly whether the remaining plans could be unblocked.
+      Asked back (AskUserQuestion, not assumed) since several blockers
+      were genuinely the user's call: build-it-myself work vs. operator
+      secrets vs. a human reviewer commitment.
+- [x] Answers: (1) build what's genuinely unblockable without operator
+      input — 038's test harness, frontend-repo plans, 021's cross-repo
+      work; (2) operator will supply 023's Cloudflare provisioning
+      themselves (guided, not done in chat — secrets stay out of the
+      conversation); (3) operator will personally review plan 048's
+      corpus, async.
+- [x] 046: asked directly — no production deployment exists yet. Confirms
+      the prior STOP, doesn't change it. Recorded in `plans/046/spec.md`.
+- [x] 048: Steps 2-3 tooling built (see the follow-up section above under
+      Plan 048).
+- [x] 023: re-verified `docs/report-pipeline-setup.md` (written in an
+      earlier pass) is still accurate against the current frontend repo
+      state — no new code needed, just confirmed and handed back to the
+      operator to execute (R2 bucket, KV namespace, Cloudflare secrets
+      are their account, their credentials, not something to paste into
+      chat).
+- [ ] 038, frontend baseline + plan 031, and 021 (gated finale) — in
+      progress, see their own sections as they land.
