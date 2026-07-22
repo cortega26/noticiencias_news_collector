@@ -220,3 +220,94 @@ class TestSelectCountScaling:
             f"Expected a small, chunk-bounded SELECT count for 100 articles, "
             f"got {counter.count}"
         )
+
+
+class TestClusterMergePropagatesToPendingRows:
+    """Plan 037 review follow-up: `_merge_other_clusters`'s DB-side bulk
+    UPDATE only reaches already-persisted rows. When the cluster being
+    merged away exists ONLY as a not-yet-flushed same-batch row, the
+    merge must still be reflected in memory via `pending_by_cluster` —
+    otherwise that row would be flushed with a stale, now-abandoned
+    cluster_id. White-box test: calls `_resolve_cluster_for_candidates`
+    directly with a persisted candidate and a pending (never-added)
+    candidate, using hand-picked simhash values so the persisted
+    candidate — not the pending one — wins the tie-break, forcing the
+    pending candidate's cluster to be the one merged away."""
+
+    def test_pending_only_cluster_is_merged_into_the_persisted_winner(
+        self, db_manager
+    ):
+        repo = db_manager.articles
+
+        # A persisted "X" article, its own pre-existing cluster.
+        with db_manager.get_session() as session:
+            x = Article(
+                url="https://example.com/merge-x",
+                title="Persisted Anchor Article",
+                source_id="src1",
+                source_name="Source A",
+                processing_status="validated",
+                simhash=0,
+                simhash_prefix=0,
+                cluster_id="cluster-x",
+                duplication_confidence=0.0,
+                collected_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                published_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+            session.add(x)
+            session.flush()
+            x_id = x.id
+
+        # A pending (never added to any session) "A" article representing
+        # an earlier same-batch row already assigned its own new cluster.
+        a_pending = Article(
+            url="https://example.com/merge-a",
+            title="Pending Same-Batch Article",
+            source_id="src1",
+            source_name="Source A",
+            processing_status="validated",
+            simhash=0b10,  # hamming distance 2 from the new row's simhash
+            simhash_prefix=0,
+            cluster_id="cluster-a-pending",
+            duplication_confidence=0.0,
+            collected_date=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            published_date=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        )
+        assert a_pending.id is None  # never flushed — the point of this test
+
+        pending_by_cluster = {"cluster-a-pending": [a_pending]}
+        synthetic_ids = {id(a_pending): 10**9}
+
+        def tie_break_id(article):
+            real_id = getattr(article, "id", None)
+            return int(real_id) if real_id is not None else synthetic_ids.get(
+                id(article), 0
+            )
+
+        with db_manager.get_session() as session:
+            x_reloaded = session.get(Article, x_id)
+
+            # New row's simhash: distance 0 from X, distance 2 from A.
+            # Both are within the default threshold (10), but X is the
+            # strictly closer match, so X — not the pending same-batch
+            # row — must win, forcing cluster-a-pending to be merged away.
+            target_cluster, confidence = repo._resolve_cluster_for_candidates(
+                session,
+                [a_pending, x_reloaded],
+                simhash_value=0,
+                published_date=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                tie_break_id=tie_break_id,
+                pending_by_cluster=pending_by_cluster,
+            )
+            session.commit()
+
+        assert target_cluster == "cluster-x"
+        assert confidence > 0.0
+        # The pending row's in-memory cluster_id must be updated even
+        # though it was never in the DB for the bulk UPDATE to reach.
+        assert a_pending.cluster_id == "cluster-x"
+        # And the bookkeeping dict must reflect the merge too, so a LATER
+        # same-batch row that also matches "cluster-a-pending" would find
+        # nothing there and instead see it under "cluster-x".
+        assert "cluster-a-pending" not in pending_by_cluster
+        assert a_pending in pending_by_cluster["cluster-x"]

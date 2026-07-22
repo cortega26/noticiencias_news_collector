@@ -107,3 +107,25 @@
 - [x] `pytest --ignore=tests/e2e_pipeline -q` with memory watchdog (per
       the plan-036 lesson) → 37.71s, 1225 passed, 13 pre-existing
       failures unchanged, 4 skipped, no hang, normal memory.
+
+## Follow-up from ~20-iteration subagent review
+- [x] Reviewer independently reproduced both oracle probes (old bulk
+      same-batch: different clusters, conf 0.0; `save_article()` x2: same
+      cluster, conf 0.9375 both; new bulk same-batch: same cluster, conf
+      0.9375 both) — confirmed the load-bearing judgment call was correct.
+- [x] Reviewer flagged one real test-coverage gap (not a bug): the
+      cluster-merge propagation to not-yet-flushed same-batch rows
+      (`pending_by_cluster`) was verified only by manual/white-box
+      inspection, no dedicated automated test. Added
+      `TestClusterMergePropagatesToPendingRows` — a precise white-box test
+      calling `_resolve_cluster_for_candidates` directly with hand-picked
+      simhash values so a persisted candidate wins over a pending
+      same-batch candidate, forcing the pending-only cluster to be merged
+      away, and asserting the pending row's in-memory `cluster_id` and the
+      `pending_by_cluster` bookkeeping both reflect the merge.
+- [x] Fixed a minor doc-wording nit in root `todo.md` (said plan 048
+      "depended only on 033", should say "027 (archived/DONE) + 033" per
+      `plans/README.md`'s table — functionally irrelevant since 027 was
+      already done, but imprecise).
+- [x] Re-ran `tests/unit/storage/test_bulk_persistence_parity.py` → 6
+      passed (was 5).
