@@ -52,14 +52,22 @@ unblocked.
   consumers migrated), Phase 3 (Refinery `save_toml_config` truthful
   return contract), Phase 4 (audit/lint/type/test gates, zero regressions
   vs. pre-existing baseline). See `plans/archive/033/todo.md` for details.
-- **021 — Rebuild the publication callback contract**: PARTIAL. Only Step 0
-  (a refinery_id identity fix required by the plan's own STOP condition,
-  not an original step) is done. Steps 1-5 are one coordinated
-  backend+frontend change (landing backend matching logic before the
-  frontend populates `publication_ids` would strand every real callback —
-  a regression, not progress) plus an operator-secret boundary for auth.
-  See `plans/021/spec.md` for the full recon and a dedup-guard hazard the
-  next implementer must fix first.
+- **021 — Rebuild the publication callback contract**: PARTIAL, substantially
+  advanced (2026-07-22). Steps 0-3 and 5 DONE: the state machine no longer
+  marks an article "completed" the instant a PR opens (stays "publishing"
+  until a real webhook names it complete/rejected via its persisted
+  `refinery_id`, matched against the frontend's `publication_ids`, never
+  branch equality); fixed the resulting dedup-guard and duplicate-PR-recovery
+  hazards found while doing this; fixed the frontend's double-envelope bug
+  at the root (exported, directly-callable sender functions instead of a
+  file-based two-script handoff); a genuine cross-repo contract test
+  replays the real frontend sender's output through the real backend
+  models/handler/DB, covering failure/success/replay/unrelated-id/auth/
+  malformed cases. Step 4's code (fail-closed backend auth, frontend bearer
+  token sending) is done on both sides; only the actual
+  `WEBHOOK_API_KEY`/`BACKEND_WEBHOOK_TOKEN` secret values are outstanding —
+  the operator's own credentials. See `plans/021/spec.md` for the full
+  implementation record.
 - **023 — Connect and harden the report pipeline**: PARTIAL. All 5 steps
   implemented and tested in the frontend repo (contract, honest form
   behavior, request bounds, durable-sink tracking, KV rate
@@ -353,6 +361,35 @@ failure. No Worker-test CI gate exists yet — blocked by Step 3.
 Plan 031 lands PARTIAL overall: Steps 1 and 4(partial) DONE, Step 2 DONE
 modulo the open trailing-slash question, Step 3 STOPPED on its own named
 condition. See `plans/031/spec.md` for the full record.
+
+### Plan 021 — gated cross-repo finale, substantially advanced (2026-07-22)
+
+Checked (not assumed) both of the plan's own STOP conditions before
+writing any code — both cleared: `refinery_id` is reliable for every
+article that goes through the real automated collector→refinery pipeline
+(the one exception found, a manually-authored welcome post, never goes
+through this contract at all); a bounded changed-post set is derivable
+from standard GitHub Actions event data via `git diff`.
+
+With both conditions clear, landed the full coordinated unit this plan's
+own earlier analysis said was required — backend Steps 1(remainder)+2,
+frontend Step 3, and the Step 5 cross-repo contract test, together, not
+a partial slice. Full record in `plans/021/spec.md`; summary: the
+publication state machine no longer marks an article "completed" the
+instant a PR opens (a validation failure or an unmerged PR used to leave
+it looking permanently live) — it now stays "publishing" until a real
+webhook callback names it complete or rejected by its persisted
+`refinery_id`, matched against the frontend's `publication_ids`, never
+branch equality. Found and fixed two related hazards while doing this
+(a dedup-guard regression and a duplicate-PR-creation risk in the
+publishing-recovery timeout path) before they could ship. Fixed the
+frontend's double-envelope bug by refactoring the sender script into
+directly-callable functions instead of patching the file-based handoff
+that caused it. Step 4's fail-closed auth code is done on both sides
+(reusing the backend's existing environment-tier concept rather than
+inventing one); only the real secret values remain, which are the
+operator's own credentials to set, consistent with how plans 001/023
+handled the same kind of boundary earlier in this session.
 
 ## Verification
 

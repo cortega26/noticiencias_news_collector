@@ -4,7 +4,40 @@ Authoritative spec: `plans/021-rebuild-publication-callback-contract.md`. This
 file records recon findings and the exact remaining work — read it before
 resuming, it will save re-deriving the same investigation.
 
-## Status: PARTIAL
+## Status (2026-07-22): Steps 0-3 and 5 DONE; Step 4 code DONE, real secrets pending the operator
+
+Resumed after the sections below (written during an earlier pass) correctly
+identified this as a coordinated cross-repo change that couldn't be split.
+This pass landed Steps 1-2 (backend) + Step 3 (frontend) + Step 5 (cross-repo
+contract test) together, as that earlier analysis required, plus Step 4's
+code on both sides. The only thing NOT done is providing the actual
+`WEBHOOK_API_KEY`/`BACKEND_WEBHOOK_TOKEN` secret values and coordinating them
+between the backend's deployment and the frontend's GitHub Actions secrets —
+that is the operator's own action (their account, their credential), not
+something achievable from a chat session, consistent with the standing
+constraint applied throughout this whole session (plan 001, plan 023).
+
+### Pre-flight: both STOP conditions checked and cleared before writing code
+
+- **"Stop if `refinery_id` is not present and unique for every newly
+  generated post"**: confirmed the DB-id path is reliable — checked 29/30
+  real published posts have `refinery_id` (the one exception is a
+  manually-authored welcome post, never processed by the automated
+  pipeline). Traced `refinery_engine.py::process_single_article`'s
+  `_resolve_article_identity(article)` call through to
+  `ai_editor.py::process_article(..., explicit_article_id=article_id)` —
+  confirmed the exact same identity string ends up in both the DB (via
+  `mark_article_published`) and the committed post's `refinery_id`
+  frontmatter field, by construction, for every article that goes through
+  the real collector→refinery pipeline. Cleared.
+- **"Stop if GitHub event data cannot determine a bounded changed-post
+  set"**: `git diff --name-only <base>..<head> -- src/content/posts` against
+  standard GitHub Actions event data (`github.event.pull_request.base/head.sha`
+  for PRs, `github.event.before`/`github.sha` for pushes) is a standard,
+  reliable mechanism — implemented as `scripts/utils/publication-ids.js`.
+  Cleared.
+
+## Original status (superseded above): PARTIAL
 
 Only Step 0 (a prerequisite the plan didn't originally name, but its own
 STOP condition requires) is done. Steps 1–5 are coordinated cross-repo work
@@ -154,3 +187,196 @@ Before touching `mark_article_published`, Step 2's implementer must:
    small design) and frontend bearer-token sending; flag the actual secret
    values as an operator action.
 6. Step 5: the cross-repo contract test, once 1-4 are real.
+
+---
+
+## Implementation record (2026-07-22 resumption)
+
+Landed in this order, exactly as the "recommended next steps" above
+prescribed, each verified against the full backend suite (baseline: 13
+pre-existing, unrelated editorial-pipeline failures — confirmed via
+`git stash`/`git stash pop` before and after each phase — before moving on):
+
+### 1. Dedup guard fixed first, before touching `mark_article_published`
+
+Added `ArticleRepository.is_article_in_flight_or_done`/
+`articles_in_flight_or_done` (checks `processing_status in ("publishing",
+"completed")`, not `published_url`/`published_at`) plus `DatabaseManager`
+passthroughs. Repointed `apps/refinery/main.py:245`'s dedup guard and
+`admin_panel.py`'s two `is_article_published`/`published_ids_in` call sites
+(`:705` UI warning, `:2421` list filter) to the new method — the latter two
+were technically out of this plan's stated file scope, but leaving them on
+the old method would have silently broken their existing behavior (they'd
+stop warning about/filtering out articles with an open, still-pending PR)
+as an unannounced side effect of this plan's change elsewhere, so fixed as
+a mechanical, behavior-preserving one-liner each rather than left as a
+regression.
+
+### 2. Backend Steps 1 (remainder) + 2: the state machine
+
+`mark_article_published(article_id, pr_url, refinery_id=None)`:
+- Keeps `processing_status = "publishing"` (was `"completed"`) —
+  `published_at`/`published_url` are no longer set here at all; they're
+  now **only** set by `complete_publication_attempts` on a real deploy.
+- Persists `article_metadata["publication"]["refinery_id"]` (defaults to
+  `str(article_id)`) — the value `webhook_handler` now matches against.
+- Reused the existing (previously orphaned/inert) `frontend_checks`/`state`
+  metadata scaffold rather than rebuilding it — confirmed via a dedicated
+  Explore-agent investigation that this shape has existed since ancient
+  commit `07805b0` and was never read anywhere; it's a dict key this
+  session started actually updating, not new plumbing.
+
+`get_publishing_state` now also returns `None` once
+`article_metadata["publication"]` exists (a PR was created), even though
+`processing_status` is still `"publishing"` — found empirically that
+without this, `PROrchestrator.attempt_recovery` would re-fire after
+`PUBLISHING_TIMEOUT_SECONDS` (1h) on an article with an already-open PR
+just waiting on a slow-but-healthy Content Guard/deploy run, creating a
+duplicate PR. Not previously documented in this file; found while reasoning
+through the state-machine redesign, not by reading it somewhere.
+
+New: `reject_publication_attempts(refinery_ids, reason)` /
+`complete_publication_attempts(refinery_ids, deploy_url)` — match only
+`processing_status == "publishing"` rows whose
+`article_metadata["publication"]["refinery_id"]` is in the given set
+(never a bulk update of every publishing row), idempotent (an
+already-completed/rejected row is no longer "publishing" so a replay
+matches nothing).
+
+`pr_orchestrator.py::create_pr` now passes its own `article_id` string
+parameter through as `refinery_id` — confirmed this is the exact value
+`_resolve_article_identity()` also writes into the frontmatter (see the
+STOP-condition check above), so DB-side and file-side identity are
+identical by construction, not by convention.
+
+`webhook_handler.py` rewritten: matches by `event.publication_ids` via the
+two new repository methods; a callback with empty `publication_ids` is
+logged and is a no-op (never falls back to branch matching) — this is
+Step 1's "reject empty identity lists for publication-state mutations"
+requirement, implemented at the handler level as the earlier note said it
+must be (the model-level `test_publication_ids_empty_list_accepted` test,
+correctly, still passes unchanged).
+
+Updated 5 existing tests that asserted the old (buggy) behavior
+(`test_storage_coverage.py`, `test_database.py`,
+`test_publishing_state_recovery.py` ×2, `test_refinery_audit_staging.py`,
+`test_refinery_engine.py`) and added ~20 new ones covering the new
+methods, the duplicate-PR-prevention fix, and ID-based matching
+(idempotency, unrelated-id no-op, empty-list no-op).
+
+### 3. Step 4 backend half: fail-closed auth
+
+`verify_webhook_token` now raises 503 when `WEBHOOK_API_KEY` is unset
+**and** the runtime environment isn't `"development"` — reused the
+existing `get_runtime_config().environment`/`is_production`/`is_staging`
+concept (`news_collector/config/settings.py`) rather than inventing a new
+environment-tier abstraction, since one already existed and just wasn't
+being consulted here. `config.toml`'s default environment is
+`"development"`, so today's actual runtime behavior is unchanged unless
+someone sets `environment` to anything else without also setting
+`WEBHOOK_API_KEY` — exactly the "explicit loopback-only development
+setting" the plan asked for.
+
+### 4. Frontend Step 3 + Step 4 (sending half)
+
+In the sibling `noticiencias` repo (see that repo's own commits for the
+full diff):
+- `scripts/backend-notify.js` refactored to export `buildEnvelope()` /
+  `sendWebhookNotification()` (previously a top-level script with no
+  importable surface) — adds `publication_ids` to the envelope and an
+  `Authorization: Bearer $BACKEND_WEBHOOK_TOKEN` header when the secret is
+  set. Never logs the token (verified with a dedicated test).
+- `scripts/post-publish-callback.js` rewritten to call those exports
+  **directly, in-process** — no more building its own full envelope,
+  writing it to a file, and spawning `backend-notify.js` as a subprocess
+  pointed at that file. That file-based indirection was the literal
+  mechanism producing the double-nested envelope bug (a non-array JSON
+  file gets wrapped as `diagnostics: [thatObject]`); calling the exported
+  functions directly makes the bug class structurally impossible, not just
+  patched.
+- New `scripts/utils/publication-ids.js`
+  (`getChangedPostRefineryIds({baseSha, headSha, repoRoot})`): `git diff
+  --diff-filter=ACM --name-only <base>..<head> -- src/content/posts`,
+  parses each changed post's `refinery_id` frontmatter via `gray-matter`
+  (already a project dependency). Returns `[]` (never throws) on any git
+  failure or missing SHA — a bounded-changed-post-set failure degrades to
+  "no articles named," never "guess via branch."
+- `content-guard.yml`/`deploy.yml`: both checkouts now use `fetch-depth: 0`
+  (the git-diff-based derivation needs the base commit, which a shallow
+  checkout wouldn't have); both now pass `GITHUB_BASE_SHA` (from
+  `github.event.pull_request.base.sha`/`github.event.before` as
+  appropriate) and `BACKEND_WEBHOOK_TOKEN` (from a secret that doesn't
+  exist yet — the IDE correctly flags "context access might be invalid,"
+  expected until the operator creates it).
+
+**A real bug caught while testing, not by inspection**: spawning
+`backend-notify.js` as a subprocess from within a Vitest worker process
+and connecting back to a same-process HTTP test server hung indefinitely
+in this sandbox (confirmed via a minimal repro: direct in-process `fetch`
+to the same server worked instantly; the identical request from a spawned
+child process timed out at 5s every time) — a sandbox-specific
+child-process network restriction, not a real bug in the script (a bare
+`node script.js` against a real standalone server worked fine outside
+Vitest). Rather than fight the sandbox, refactored to the exported-function
+design above, which is also a **better testing design independent of the
+sandbox issue** — no subprocess, no real network, no payload files,
+snapshot-style assertions on the exact envelope/headers.
+
+New frontend tests: `tests/publication-ids.test.ts` (7 tests, using real
+ephemeral git repos — not mocked git), `tests/backend-notify.test.ts` (11
+tests), `tests/post-publish-callback.test.ts` (2 tests, `vi.doMock` on
+`sendWebhookNotification` to intercept the envelope without a real
+network call).
+
+### 5. Step 5: the cross-repo contract test
+
+`tests/integration/test_publication_callback_contract.py` (backend repo).
+Calls the frontend's *real* `buildEnvelope()` via a Node subprocess (one
+line of Python `subprocess.run(["node", "--input-type=module"], input=...)`
+capturing stdout — no network, no server, just reading the sibling repo's
+actual file and running it) to build a realistic envelope, validates it
+through the real `parse_webhook_payload`, replays it through the real
+`process_validation_result`/`process_publish_complete` against a real
+SQLite DB after a real `mark_article_published` transition. Skips
+gracefully (`pytest.mark.skipif`) if Node or the sibling repo checkout
+isn't present, rather than failing or being silently omitted from CI.
+
+Covers every case the plan's Step 5 names: PR/Content-Guard failure
+(rejects the named article), deploy success (completes it, sets a real
+`published_url`), replay (asserts identical DB state before/after
+replaying the same event), unrelated id (doesn't touch a different
+article), auth enabled (both a valid-token 202 that actually completes
+the article, and a missing-token 401), and two malformed-envelope cases
+(missing required field, an invalid `publication_ids` entry) — both via
+the real Pydantic validator, not a hand-rolled check.
+
+### Verify
+
+- Backend: `.venv/bin/python -m pytest tests --ignore=tests/e2e_pipeline`
+  → 13 failed (unchanged baseline, confirmed via git-stash diffing before
+  committing), 1275 passed (was 1262 before this session's plan-021 work;
+  +13 net new tests across the state-machine and contract-test additions).
+  `black`/`ruff` clean on every touched file; `mypy` — identical 14
+  pre-existing errors (confirmed via the same stash-diff technique),
+  zero new ones.
+- Frontend: `npm run test:audit` → 38/38 files, 220/220 tests (was
+  35/200 before plan 021's frontend work). `npx astro check` — the one
+  pre-existing, unrelated `Metadata.astro` error only. `prettier`/`eslint`
+  clean.
+
+### What's genuinely still open
+
+- **Real secret values**: `WEBHOOK_API_KEY` (backend deployment
+  environment) and `BACKEND_WEBHOOK_TOKEN` (frontend GitHub Actions
+  secret) — the operator's own account/credentials, per the standing
+  constraint this whole session applied to plan 001/023 too. The code on
+  both sides is ready and tested; only the values are missing.
+- **No live end-to-end run**: this is a fully verified *contract* — real
+  sender code, real backend models, real handler, real DB — but has never
+  round-tripped over an actual HTTPS request to a deployed backend
+  (matches plan 046's finding that no production deployment exists yet;
+  nothing to round-trip against).
+- Two admin_panel.py call sites were repointed to preserve their existing
+  behavior (see "1. Dedup guard fixed first" above) but weren't otherwise
+  audited beyond that — admin_panel.py itself remains explicitly out of
+  this plan's stated scope.
