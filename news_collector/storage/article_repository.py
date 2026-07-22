@@ -282,8 +282,23 @@ class ArticleRepository:
     # Publishing state
     # ------------------------------------------------------------------
 
-    def mark_article_published(self, article_id: int, pr_url: str) -> bool:
-        """Record PR_CREATED publication candidate state."""
+    def mark_article_published(
+        self, article_id: int, pr_url: str, refinery_id: str | None = None
+    ) -> bool:
+        """Record PR_CREATED publication-attempt state.
+
+        Plan 021: opening a PR is not a real publication — keeps
+        ``processing_status = "publishing"`` (previously jumped straight to
+        ``"completed"``, which meant a validation failure or a PR closed
+        without merging still left the article looking permanently live).
+        ``published_at``/``published_url`` are intentionally left unset
+        here too; they now only get set by :meth:`complete_publication_attempts`
+        on a real deploy. Real transitions happen via
+        :meth:`reject_publication_attempts`/:meth:`complete_publication_attempts`,
+        keyed by ``refinery_id`` (persisted here into
+        ``article_metadata["publication"]["refinery_id"]``) once the
+        frontend's webhook callback names this attempt.
+        """
         with self._session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article:
@@ -292,15 +307,14 @@ class ArticleRepository:
                 )
                 return False
 
-            article.processing_status = "completed"
-            article.published_at = datetime.now(timezone.utc)
-            article.published_url = pr_url
+            article.processing_status = "publishing"
             article_metadata = dict(article.article_metadata or {})
             publication_meta = dict(article_metadata.get("publication") or {})
             publication_meta.update(
                 {
                     "state": "PR_CREATED",
                     "pr_url": pr_url,
+                    "refinery_id": refinery_id or str(article_id),
                     "frontend_checks": {
                         "state": "pending",
                         "ready_for_merge": False,
@@ -316,6 +330,92 @@ class ArticleRepository:
             session.add(article)
             logger.info("Marked article %s as PR_CREATED (PR: %s)", article_id, pr_url)
             return True
+
+    def reject_publication_attempts(
+        self, refinery_ids: list[str], reason: str = ""
+    ) -> int:
+        """Transition named, still-in-flight publication attempts to 'rejected'.
+
+        Matches by ``article_metadata["publication"]["refinery_id"]`` — never
+        bulk-updates every 'publishing' row, only ones a frontend callback
+        actually named. Idempotent: an attempt already 'rejected' or
+        'completed' is left alone (a replayed callback is a no-op, not an
+        error).
+        """
+        if not refinery_ids:
+            return 0
+        wanted = set(refinery_ids)
+        updated = 0
+        with self._session() as session:
+            candidates = (
+                session.query(Article)
+                .filter(Article.processing_status == "publishing")
+                .all()
+            )
+            for article in candidates:
+                metadata = article.article_metadata or {}
+                publication = metadata.get("publication") or {}
+                if publication.get("refinery_id") not in wanted:
+                    continue
+                article.processing_status = "rejected"
+                new_metadata = dict(metadata)
+                new_publication = dict(publication)
+                new_publication.update(
+                    {
+                        "state": "REJECTED",
+                        "reason": reason,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+                new_metadata["publication"] = new_publication
+                article.article_metadata = new_metadata
+                session.add(article)
+                updated += 1
+        return updated
+
+    def complete_publication_attempts(
+        self, refinery_ids: list[str], deploy_url: str | None
+    ) -> int:
+        """Transition named, still-in-flight publication attempts to 'completed'.
+
+        Sets the real ``published_at``/``published_url`` here — the only
+        place they get set, now that a PR being opened no longer implies a
+        live deploy. Matches by ``refinery_id``, same idempotency guarantee
+        as :meth:`reject_publication_attempts`.
+        """
+        if not refinery_ids:
+            return 0
+        wanted = set(refinery_ids)
+        now = datetime.now(timezone.utc)
+        updated = 0
+        with self._session() as session:
+            candidates = (
+                session.query(Article)
+                .filter(Article.processing_status == "publishing")
+                .all()
+            )
+            for article in candidates:
+                metadata = article.article_metadata or {}
+                publication = metadata.get("publication") or {}
+                if publication.get("refinery_id") not in wanted:
+                    continue
+                article.processing_status = "completed"
+                article.published_at = now
+                if deploy_url:
+                    article.published_url = deploy_url
+                new_metadata = dict(metadata)
+                new_publication = dict(publication)
+                new_publication.update(
+                    {
+                        "state": "COMPLETED",
+                        "updated_at": now.isoformat(),
+                    }
+                )
+                new_metadata["publication"] = new_publication
+                article.article_metadata = new_metadata
+                session.add(article)
+                updated += 1
+        return updated
 
     def update_article_audit_status(
         self,
@@ -371,6 +471,35 @@ class ArticleRepository:
                 return False
             return article.published_url is not None or article.published_at is not None
 
+    def is_article_in_flight_or_done(self, article_id: int) -> bool:
+        """True if the article already has an open PR or a completed publication.
+
+        Unlike :meth:`is_article_published`, this checks ``processing_status``
+        directly rather than ``published_url``/``published_at`` — the latter
+        pair is only set on a *real* deploy completion (plan 021), not at
+        PR-creation time, so a dedup guard keyed off them alone would stop
+        catching an article that already has an open, still-pending PR and
+        re-select it for processing, producing a duplicate PR.
+        """
+        with self._session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if not article:
+                return False
+            return article.processing_status in ("publishing", "completed")
+
+    def articles_in_flight_or_done(self, article_ids: list[int]) -> set[int]:
+        """Batch version of :meth:`is_article_in_flight_or_done`."""
+        if not article_ids:
+            return set()
+        with self._session() as session:
+            rows = (
+                session.query(Article.id)
+                .filter(Article.id.in_(article_ids))
+                .filter(Article.processing_status.in_(["publishing", "completed"]))
+                .all()
+            )
+            return {row[0] for row in rows}
+
     def published_ids_in(self, article_ids: list[int]) -> set[int]:
         """Return the subset of ``article_ids`` already published.
 
@@ -412,13 +541,26 @@ class ArticleRepository:
             return True
 
     def get_publishing_state(self, article_id: int) -> dict | None:
-        """Return publishing metadata if article is in 'publishing' state."""
+        """Return publishing metadata only while genuinely stuck pre-PR.
+
+        Plan 021 keeps ``processing_status = "publishing"`` for the entire
+        window a PR is open awaiting frontend CI/deploy, not just before
+        the PR exists. Returning state (and thus letting
+        ``PROrchestrator.attempt_recovery`` fire) once a PR already exists
+        would create a duplicate PR after ``PUBLISHING_TIMEOUT_SECONDS``
+        elapses on a slow-but-healthy CI run — so this returns ``None`` as
+        soon as ``article_metadata["publication"]`` exists (a PR was
+        created), even though ``processing_status`` is still
+        ``"publishing"``.
+        """
         with self._session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article or article.processing_status != "publishing":
                 return None
 
             metadata = dict(article.article_metadata or {})
+            if metadata.get("publication"):
+                return None
             return {
                 "publishing_started_at": metadata.get("publishing_started_at"),
                 "publishing_branch": metadata.get("publishing_branch"),
@@ -657,7 +799,10 @@ class ArticleRepository:
         simhash_prefix = simhash_prefix_value(simhash_value)
 
         initial_status = getattr(model, "processing_status_override", None)
-        if initial_status is not None and initial_status not in PROCESSING_STATUS_VALUES:
+        if (
+            initial_status is not None
+            and initial_status not in PROCESSING_STATUS_VALUES
+        ):
             raise ValueError(
                 f"Invalid processing_status: {initial_status}. "
                 f"Allowed: {PROCESSING_STATUS_VALUES}"
@@ -784,7 +929,9 @@ class ArticleRepository:
             with session.begin_nested():
                 session.flush()
         except IntegrityError as e:
-            logger.warning("Bulk insert collision in %s: %s", label, str(e).splitlines()[0])
+            logger.warning(
+                "Bulk insert collision in %s: %s", label, str(e).splitlines()[0]
+            )
             raise
 
     def save_articles_bulk(
@@ -998,9 +1145,7 @@ class ArticleRepository:
         pipeline_e2e snapshots) rely on for its own status-driven pagination.
         """
         with self._session() as session:
-            query = session.query(Article).filter(
-                Article.processing_status == status
-            )
+            query = session.query(Article).filter(Article.processing_status == status)
             if cursor is not None:
                 query = query.filter(self._keyset_predicate(cursor))
             rows = list(
@@ -1382,9 +1527,7 @@ class ArticleRepository:
             current_confidence, float(duplication_confidence(best_distance))
         )
 
-        self._merge_other_clusters(
-            session, hits, target_cluster, pending_by_cluster
-        )
+        self._merge_other_clusters(session, hits, target_cluster, pending_by_cluster)
 
         return str(target_cluster), float(duplication_confidence(best_distance))
 

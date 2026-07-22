@@ -82,7 +82,7 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
 
     assert result is True
     mock_db.mark_article_published.assert_called_once_with(
-        1087, "https://example.test/pr/1087"
+        1087, "https://example.test/pr/1087", "1087"
     )
 
     audit_states = [

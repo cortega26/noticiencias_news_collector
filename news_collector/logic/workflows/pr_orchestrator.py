@@ -106,7 +106,12 @@ class PROrchestrator:
             logger.info("Pull Request created successfully: {}", pr_url)
             try:
                 numeric_id = int(article_id)
-                self._db.mark_article_published(numeric_id, pr_url)
+                # article_id here is the same value refinery_engine's
+                # _resolve_article_identity() writes into the committed
+                # post's `refinery_id` frontmatter field (in the normal,
+                # DB-id case they're the same string) — persisting it lets
+                # webhook_handler match this exact publication attempt.
+                self._db.mark_article_published(numeric_id, pr_url, article_id)
             except ValueError:
                 logger.warning(
                     "Could not mark non-numeric ID %s in main DB. Skipping state update.",

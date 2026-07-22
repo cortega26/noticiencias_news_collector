@@ -320,8 +320,20 @@ class DatabaseManager:
     def articles_exist(self, urls: List[str]) -> Set[str]:
         return self.articles.articles_exist(urls)
 
-    def mark_article_published(self, article_id: int, pr_url: str) -> bool:
-        return self.articles.mark_article_published(article_id, pr_url)
+    def mark_article_published(
+        self, article_id: int, pr_url: str, refinery_id: str | None = None
+    ) -> bool:
+        return self.articles.mark_article_published(article_id, pr_url, refinery_id)
+
+    def reject_publication_attempts(
+        self, refinery_ids: list[str], reason: str = ""
+    ) -> int:
+        return self.articles.reject_publication_attempts(refinery_ids, reason)
+
+    def complete_publication_attempts(
+        self, refinery_ids: list[str], deploy_url: str | None
+    ) -> int:
+        return self.articles.complete_publication_attempts(refinery_ids, deploy_url)
 
     def update_article_audit_status(
         self,
@@ -346,6 +358,12 @@ class DatabaseManager:
 
     def is_article_published(self, article_id: int) -> bool:
         return self.articles.is_article_published(article_id)
+
+    def is_article_in_flight_or_done(self, article_id: int) -> bool:
+        return self.articles.is_article_in_flight_or_done(article_id)
+
+    def articles_in_flight_or_done(self, article_ids: list[int]) -> set[int]:
+        return self.articles.articles_in_flight_or_done(article_ids)
 
     def published_ids_in(self, article_ids: list[int]) -> set[int]:
         return self.articles.published_ids_in(article_ids)

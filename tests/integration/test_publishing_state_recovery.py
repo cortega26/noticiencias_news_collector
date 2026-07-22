@@ -82,7 +82,9 @@ class TestPublishingStateRecoveryWithExistingPR:
         call_kwargs = mock_git.create_pull_request.call_args
         assert call_kwargs[1]["branch_name"] == "content/update-2024-01-01-test-article"
         # Should have marked article as published
-        mock_db.mark_article_published.assert_called_once_with(123, existing_pr_url)
+        mock_db.mark_article_published.assert_called_once_with(
+            123, existing_pr_url, "123"
+        )
         # Should NOT have gone through normal processing (no editor call)
         mock_editor.process_article.assert_not_called()
 
@@ -115,7 +117,7 @@ class TestPublishingStateRecoveryWithoutPR:
 
         assert result is True
         mock_git.create_pull_request.assert_called_once()
-        mock_db.mark_article_published.assert_called_once_with(456, new_pr_url)
+        mock_db.mark_article_published.assert_called_once_with(456, new_pr_url, "456")
         mock_editor.process_article.assert_not_called()
 
 
