@@ -165,6 +165,32 @@ unblocked.
   `settings.py`, enrichment/scoring/reranker code, the golden fixture —
   all confirmed byte-identical via `git diff --stat`). See
   `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md`.
+- **040 — Account for every collector-dispatch outcome**: DONE. An
+  earlier part of this session had already committed real Step 1/2 work
+  (`f64466c`) without updating `plans/README.md` or writing `plans/040/*`
+  — discovered via the plan's own drift-check command, not assumed;
+  closed out the remaining gap rather than re-doing the finished part.
+  Full behavior matrix now covers all-success (through the real merge
+  path), one-exception-plus-success, malformed result, missing collector
+  (even the rss fallback target itself missing), unknown-configured-type
+  (fallback-to-rss kept deliberately per the plan's own STOP condition —
+  confirmed via recon it is untested/undocumented/dead-in-production, so
+  "test/document it rather than silently changing to rejection" means
+  keep + lock in with a test, not switch to rejection), and empty input.
+  `sources_requested`/`sources_succeeded`/`sources_failed` are derived in
+  one pass from the final merged `source_details` so
+  `succeeded + failed == requested` is structural; `success_rate_percent`
+  is always present (`0.0` on empty input). `SourceHealthTracker` now
+  receives `record_attempt`/`record_failure` for every dispatch-level
+  failure, guarded so a telemetry exception never changes the returned
+  summary. Fixed a real pre-existing bug found via recon: dispatcher used
+  key `"error"` but `news_collector/system/observability.py` already read
+  `"error_message"`, so every dispatcher-attributed failure was silently
+  reporting `"unknown"` to `MetricsReporter` — renamed to `error_message`
+  (matching the existing collector-wide convention) plus added
+  `error_class`. Full-suite regression (memory-watchdog discipline):
+  1233 passed, same 13 pre-existing failures as this session's
+  established baseline, no new failures, 24.95s. See `plans/040/spec.md`.
 
 ## Verification
 

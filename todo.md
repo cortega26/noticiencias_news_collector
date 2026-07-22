@@ -253,25 +253,87 @@ this file now tracks the current pass over the 18 remaining plans.
       the plan's own Done Criterion. `plans/README.md` updated to
       PARTIAL, `plans/048/spec.md` + `todo.md` written.
 
+## Plan 040 — Account for every collector-dispatch outcome (DONE)
+
+- [x] **Correction to the prior "natural stopping point" conclusion
+      below**: an advisor consult after landing 048 caught that plan 040
+      (P1, deps = 034 only, DONE) had been skipped over entirely — its
+      only dependency was satisfied and it outranks the P2 spike just
+      finished. Re-derived the startable set directly from
+      `plans/README.md` instead of trusting the earlier enumeration, per
+      the advisor's own instruction not to trust a terminus conclusion
+      until re-checked against the README.
+- [x] Ran the plan's own drift check
+      (`git diff --stat e43bd30..HEAD -- news_collector/collectors/dispatcher.py ...`)
+      before touching anything — discovered real prior work already
+      existed on disk (commit `f64466c`, this same session, before the
+      context-compaction boundary) that never made it into
+      `plans/README.md` or any `plans/040/*` file. Read the current
+      `dispatcher.py`/`test_dispatcher.py` end to end to establish
+      exactly what was already done vs. what Steps 3-4 still needed —
+      see `plans/040/spec.md`'s "Discovered prior state" for the
+      step-by-step gap analysis.
+- [x] Recon via subagent: `SourceHealthTracker`'s real method signatures,
+      confirmed no separate dispatcher-level metrics interface exists
+      (`MetricsReporter` is reached indirectly through `source_details`),
+      found a real pre-existing `error`/`error_message` key-mismatch bug
+      (dispatcher wrote `"error"`, `observability.py` already read
+      `"error_message"` — every dispatcher-attributed failure was
+      silently reporting `"unknown"` to metrics), confirmed the unknown-
+      collector-type fallback is untested/undocumented/dead in
+      production (not externally promised, so the STOP condition's
+      "test/document it rather than silently changing to rejection"
+      applies: kept the fallback, added a test that locks it in, did not
+      switch it to rejection).
+- [x] Wrote 7 new tests (malformed result, missing collector — even the
+      rss fallback target itself absent, unknown-type fallback lock-in,
+      empty input, all-success through the real merge path, health-
+      tracker call assertions, health-tracker-exception-safety) —
+      confirmed all 8 new/changed assertions failed against the pre-fix
+      code first, then implemented `_attribute_dispatch_failure()` (one
+      shared helper instead of duplicating the exception/missing-
+      collector/malformed-result branches three times) plus rewrote
+      `collect_from_multiple_sources_async`'s merge loop: `sources_requested`
+      computed up front; missing-collector and malformed-result groups no
+      longer silently `continue`-skipped, both now attributed as failures;
+      `sources_succeeded`/`sources_failed` derived in one final pass over
+      merged `source_details` (structural invariant, not accumulated
+      per-branch); `success_rate_percent` always present (`0.0` on empty
+      input); `error_message`/`error_class`/`reason` fields added, fixing
+      the key-mismatch bug; `SourceHealthTracker.record_attempt`/
+      `record_failure` now called for every dispatch-level failure,
+      guarded so a telemetry exception never changes the returned
+      summary; `session_id`/`trace_id` added to the structured log calls.
+- [x] `make lint`/mypy clean (fixed 2 new mypy errors from variable-name
+      reuse across the function, `black` reformat applied); full-suite
+      regression with the memory-watchdog discipline (per the plan-036
+      lesson): 1233 passed, same 13 pre-existing failures as this
+      session's established baseline, no new failures, 24.95s, no hang.
+      `plans/README.md` updated TODO → DONE (all 4 steps and Done
+      Criteria genuinely met — unlike 048, this plan required no STOP).
+
 ## Reassess after each completion
 
-- [x] 033/021/023/046/034/038/036/037/048 have each landed
-      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE/PARTIAL).
-      048 was the last plan in `plans/README.md` startable from this
-      backend working directory: 031/032/035/039/044 belong in the
+- [x] 033/021/023/046/034/038/036/037/048/040 have each landed
+      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE/PARTIAL/DONE).
+      With 040 now also DONE: 031/032/035/039/044 still belong in the
       frontend repo; 041/043/047/049 all transitively depend on 021
       and/or 023, which are PARTIAL pending a coordinated backend+frontend
       change and operator secrets this session cannot supply (see their
-      own entries above) — none of them newly unblocked by 048 landing,
-      since 048 is a leaf spike with no plan depending on it.
-- [x] **Natural stopping point reached.** Every remaining TODO/PARTIAL
-      plan in `plans/README.md` is now either out-of-repo (frontend) or
-      blocked on the same two PARTIAL plans (021, 023) whose remaining
-      steps require operator-supplied secrets/provisioning or coordinated
-      frontend changes — not something resolvable by reading the spec and
-      running tests. Per this session's own directive ("do not ask for
-      clarification on anything you can resolve by reading the spec and
-      running tests"), these are correctly left PARTIAL rather than
+      own entries above) — none of them newly unblocked by 040 or 048
+      landing (040 was a leaf bug-fix, 048 a leaf spike; neither
+      appears as a dependency of any other remaining row in
+      `plans/README.md` — re-checked directly against the table, not
+      assumed).
+- [x] **Natural stopping point reached (re-confirmed after the 040
+      correction above).** Every remaining TODO/PARTIAL plan in
+      `plans/README.md` is now either out-of-repo (frontend) or blocked
+      on the same two PARTIAL plans (021, 023) whose remaining steps
+      require operator-supplied secrets/provisioning or coordinated
+      frontend changes — not something resolvable by reading the spec
+      and running tests. Per this session's own directive ("do not ask
+      for clarification on anything you can resolve by reading the spec
+      and running tests"), these are correctly left PARTIAL rather than
       force-advanced. No further plan is autonomously startable from this
       working directory; do not manufacture busywork to keep the loop
       running.
