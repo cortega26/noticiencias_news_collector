@@ -92,7 +92,7 @@ unblocked.
   overlap but each has exclusive terms — unifying them would still
   silently reweight scores, out of scope. See `plans/archive/034/spec.md`.
 - **038 — Decouple telemetry writes and cache Refinery read models**:
-  PARTIAL. Steps 1-3 done: `enrichment_metrics_store.py` now batches writes
+  DONE. Steps 1-3: `enrichment_metrics_store.py` now batches writes
   (25 commits for 1000 events, vs. 1000 before) while proving — via a
   worked counter-example, not just green tests — that batching preserves
   the exact same running-average arithmetic as the per-event original
@@ -101,12 +101,30 @@ unblocked.
   the `_initialized`-mutating test hack. Wired into the real
   collection-cycle boundary (`base_collector.py`'s
   `collect_from_multiple_sources`/`_async`) via a context manager that
-  guarantees a flush on exit — confirmed first that the real entrypoint
-  (`scripts/run_collector.py`) never calls the existing `System.shutdown()`
-  hook, so the default stays a safe, byte-identical batch size of 1 and
-  only this boundary opts into real batching. Steps 4-5 (Refinery Streamlit
-  caching) not attempted — needs a read-model extraction from the
-  ~2951-LOC `admin_panel.py` first; see `plans/038/spec.md`.
+  guarantees a flush on exit. **Steps 4-5 (resumed 2026-07-22, operator
+  authorized "build what I can unblock myself")**: built a real
+  `.venv-refinery` test-running convention from scratch (`make
+  test-refinery`, `tools/ci/pytest_refinery.toml`, `pytest` installed
+  unpinned into that venv) since none existed; wrote an `AppTest`-based
+  characterization test FIRST — before any caching code — that confirmed
+  the app's own `REFINERY_UI_UNSAFE_ALLOW=1` dev bypass clears the auth
+  gate, that Streamlit tabs execute their body every rerun regardless of
+  visual selection (so Tab 4's real analytics queries and metrics are
+  directly assertable), and proved the genuinely uncached baseline (DB
+  re-queried every independent rerun) before writing a single line of
+  caching code. Extracted `apps/refinery/analytics_read_model.py` (pure,
+  no `streamlit` import, unit-tested under the main `.venv` with no
+  Streamlit needed) and wired `st.cache_resource`/`st.cache_data(ttl=60)`
+  + a manual-refresh button + a freshness caption into Tab 4 — then
+  proved, via the same harness rather than by inspection, that a second
+  independent rerun reuses the cache (DB query count stays at 1), that
+  clicking the real refresh button forces a fresh query, and that a
+  forced query error surfaces visibly instead of silently showing stale
+  data as current. Caught and fixed a real test-writing bug along the
+  way: `mock.patch.object(cls, name, wraps=cls.name)` doesn't bind `self`
+  for an unbound method reference — documented inline so it isn't
+  rediscovered. Full-suite regression clean (1252 passed, same 13
+  pre-existing failures). See `plans/archive/038/spec.md`.
 - **036 — Bound scoring memory, prompts, and concurrency**: DONE. Explicit
   validated workload bounds (`page_size`, `max_prompt_items`,
   `max_prompt_chars`, `cycle_item_budget` on `ScoringConfig`); new keyset
@@ -225,8 +243,9 @@ infrastructure from scratch, not just writing the caching code. Shipping
 that caching unverified would mislabel Step 4/5's own Verify criteria
 (cache-hit reuse, TTL expiry, invalidation, no-stale-as-current) as met
 when they are not empirically checked — a worse outcome than staying
-PARTIAL. See `plans/038/spec.md`'s "Re-examined later the same session"
-section for the full reasoning and the precisely-scoped next slice.
+PARTIAL (at the time — since resumed and completed, see the 038 entry
+above and `plans/archive/038/spec.md`'s "Re-examined later the same
+session" section for the full reasoning as it stood then).
 
 **A plan is startable only if its remaining work is both (a) not
 blocked on external input and (b) verifiable from this working
@@ -264,7 +283,8 @@ rather than assumed. Answers received:
   unblock myself" choice — these do not need operator secrets, only more
   engineering effort (and, for 021 and the frontend plans, work the
   earlier single-repo framing had incorrectly scoped as out of reach).
-  See their own entries as this work lands.
+  038 is now DONE (see its own entry above). Frontend baseline + plan 031,
+  and 021's gated cross-repo finale, follow as their own entries land.
 
 This explicitly does NOT invalidate the 2026-07-21 wind-down's reasoning
 at the time it was written — the constraints genuinely changed (a human

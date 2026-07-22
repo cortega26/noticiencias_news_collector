@@ -45,6 +45,7 @@ spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
+from apps.refinery.analytics_read_model import build_analytics_read_model
 from apps.refinery.published_content import (
     find_local_target_checkout,
     find_published_article_by_refinery_id,
@@ -2502,32 +2503,60 @@ with tab3:
 
 
 # --- Tab 4: Analytics ---
+@st.cache_resource
+def _get_refinery_analytics_db() -> DatabaseManager:
+    """Cached DB resource for the Analytics tab only (plan 038 Step 4).
+    Scoped separately from other tabs' own `DatabaseManager()` calls —
+    `DatabaseManager` already sets `check_same_thread=False`
+    (`news_collector/storage/database.py`), so sharing one instance across
+    reruns/threads via `st.cache_resource` is safe."""
+    return DatabaseManager()
+
+
+@st.cache_data(ttl=60)
+def _load_analytics_read_model(_db: DatabaseManager) -> dict:
+    """Cached analytics read model (plan 038 Step 4): a short, explicit TTL
+    per the plan's own instruction. `_db` is underscore-prefixed per
+    Streamlit's convention so the (unhashable) DB resource itself is
+    excluded from the cache key. Manual refresh calls `.clear()` on this
+    function (Step 4's "Invalidate after ... manual refresh")."""
+    return {
+        **build_analytics_read_model(_db),
+        "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+
 with tab4:
     st.header("📈 Analítica del Sistema")
 
     try:
-        # Use simple DB manager pointing to correct path with CONFIG DICT
-        # Actually, global DatabaseManager() is better
-        db = DatabaseManager()  # Using global config
+        db = _get_refinery_analytics_db()
+
+        refresh_col, freshness_col = st.columns([1, 3])
+        with refresh_col:
+            if st.button("🔄 Refrescar analítica", key="analytics_manual_refresh"):
+                _load_analytics_read_model.clear()
+
+        model = _load_analytics_read_model(db)
+
+        with freshness_col:
+            st.caption(
+                f"Datos al: {model['as_of']} (UTC) · se actualiza automáticamente cada 60s"
+            )
+
+        stats = model["stats"]
+        total_articles = model["total_articles"]
+        source_perf = model["source_perf"]
+        avg_score_overall = model["avg_score_overall"]
+        dist = model["dist"]
+        cats = model["cats"]
+        top_sources = model["top_sources"]
 
         # 1. KPIs
         col_k1, col_k2, col_k3 = st.columns(3)
 
-        # Stats
-        stats = db.get_collection_stats(days=30)
-        total_articles = sum(d["count"] for d in stats)
-
         with col_k1:
             st.metric("Total Artículos (30d)", total_articles)
-
-        # Source Performance
-        source_perf = db.get_source_performance()
-        avg_score_overall = (
-            sum(s["avg_score"] * s["article_count"] for s in source_perf)
-            / total_articles
-            if total_articles
-            else 0
-        )
 
         with col_k2:
             st.metric("Score Promedio", f"{avg_score_overall:.2f}")
@@ -2549,7 +2578,6 @@ with tab4:
 
         with col_c2:
             st.subheader("🎯 Distribución de Scores")
-            dist = db.get_score_distribution()
             if dist:
                 st.bar_chart(dist)
             else:
@@ -2561,18 +2589,13 @@ with tab4:
 
         with col_c3:
             st.subheader("🏆 Fuentes Top")
-            if source_perf:
-                # Top 5 by avg score
-                top_sources = sorted(
-                    source_perf, key=lambda x: x["avg_score"], reverse=True
-                )[:5]
+            if top_sources:
                 st.bar_chart({s["source_name"]: s["avg_score"] for s in top_sources})
             else:
                 st.info("No hay datos de fuentes.")
 
         with col_c4:
             st.subheader("📚 Contenido por Categoría")
-            cats = db.get_category_breakdown()
             if cats:
                 st.bar_chart({c["category"]: c["count"] for c in cats})
             else:

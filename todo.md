@@ -104,7 +104,7 @@ this file now tracks the current pass over the 18 remaining plans.
   config is now fully unconsumed pending a deliberate future decision. See
   `plans/archive/034/spec.md`.
 
-## Plan 038 — Decouple telemetry writes and cache Refinery read models (PARTIAL)
+## Plan 038 — Decouple telemetry writes and cache Refinery read models (DONE)
 
 - [x] Step 1: interleaving equivalence test locks in exact current
       arithmetic before refactor; `scripts/benchmark_metrics.py` proves
@@ -120,13 +120,63 @@ this file now tracks the current pass over the 18 remaining plans.
       wired into `base_collector.py`'s real collection-cycle boundary,
       after confirming `scripts/run_collector.py` (the actual entrypoint)
       never calls the existing `System.shutdown()` hook.
-- [ ] Steps 4-5 (Refinery Streamlit caching): not attempted — needs a
-      read-model extraction from `admin_panel.py` first; see
-      `plans/038/spec.md` "Why Steps 4-5 were not attempted".
 - [x] Full regression gates clean (1179 passed, same 13 pre-existing
       failures, same pre-existing lint/type baseline — two new mypy errors
       this plan's own changes caused were fixed, not left). Committed,
-      `plans/README.md` updated to PARTIAL.
+      `plans/README.md` updated to PARTIAL (at the time).
+
+### Steps 4-5 (resumed 2026-07-22, operator-authorized "build what I can unblock myself")
+
+- [x] Built the missing `.venv-refinery` test-running convention from
+      scratch: `pytest` installed unpinned (mirrors the main venv's
+      ruff/mypy/black/isort pattern — outside the hash-pinned
+      `requirements-refinery.lock`), new `make test-refinery` target, new
+      `tools/ci/pytest_refinery.toml` (`testpaths = ["tests_refinery"]`,
+      deliberately outside the main suite's `testpaths = ["tests"]` so
+      `make test` never tries to collect it — the main `.venv` has no
+      `streamlit` at all).
+- [x] Wrote the `AppTest` characterization test FIRST, before any caching
+      code existed, per the plan's own harness-first discipline. Confirmed
+      empirically: `REFINERY_UI_UNSAFE_ALLOW=1` (the app's own existing
+      dev/test bypass) clears the auth gate; Streamlit tabs execute every
+      rerun regardless of visual selection, so Tab 4's real metrics
+      (`Total Artículos (30d)`, `Score Promedio`, `Fuentes Activas`) are
+      directly assertable; proved the genuinely uncached baseline (DB
+      re-queried on every independent rerun) before writing a line of
+      caching code.
+- [x] Caught a real test-writing bug: `mock.patch.object(cls, name,
+      wraps=cls.name)` doesn't bind `self` for an unbound method
+      reference (`MagicMock` isn't a descriptor) — call_count still
+      increments even though the wrapped call raises internally, which
+      would make a naive assertion pass while the real code path never
+      actually ran. Fixed with a plain function wrapper (a real
+      descriptor); documented inline so it isn't rediscovered.
+- [x] Extracted `apps/refinery/analytics_read_model.py`
+      (`build_analytics_read_model`) — pure, zero `streamlit` import,
+      behavior-preserving (same 4 queries, same derivation formulas as
+      the original inline Tab 4 code). 4 unit tests under the main
+      `.venv`, no Streamlit needed
+      (`tests/decompose_refinery/test_analytics_read_model.py`).
+- [x] Wired `st.cache_resource` (DB resource, safe given
+      `DatabaseManager`'s existing `check_same_thread=False`) +
+      `st.cache_data(ttl=60)` (read model) into Tab 4, plus a manual
+      refresh button (`.clear()`) and a freshness caption. Rendering
+      logic (metrics/charts/fallback messages/outer try-except)
+      otherwise untouched — a deliberately behavior-preserving edit.
+- [x] Proved the caching actually works via the harness, not by
+      inspection: `test_second_rerun_reuses_cache_and_does_not_requery`
+      (2 independent AppTest runs, DB query count stays at exactly 1),
+      `test_manual_refresh_button_forces_a_fresh_query` (clicks the real
+      button, not a direct `.clear()` call), `test_a_visible_query_error_does_not_show_stale_data_as_current`
+      (forces a query exception, confirms it surfaces visibly instead of
+      masking with a stale cached value — directly answering Step 5's own
+      concern). 6 tests total in `tests_refinery/`, all green via `make
+      test-refinery`.
+- [x] Full main-suite regression (memory-watchdog discipline): 1252
+      passed, same 13 pre-existing failures, no new ones. `black`/`ruff`
+      clean; `mypy` clean on the new module.
+- [x] `plans/README.md` updated PARTIAL → DONE — all 5 Done Criteria now
+      genuinely met.
 
 ## Plan 036 — Bound scoring memory, prompts, and concurrency (DONE)
 
@@ -401,11 +451,13 @@ this file now tracks the current pass over the 18 remaining plans.
       building new test infrastructure from scratch, not just writing
       caching code — and shipping unverified caching would mislabel
       Step 4/5's own Verify criteria (cache-hit reuse, TTL expiry,
-      invalidation, no-stale-as-current) as met. Decided: 038 stays
-      PARTIAL; documented the precise next slice in `plans/038/spec.md`.
-      No code was changed by this re-examination — decision made before
-      writing any cache/extraction code, exactly to avoid the "looks like
-      progress, isn't" trap of prepping for deferred, unverifiable work.
+      invalidation, no-stale-as-current) as met. Decided (at the time):
+      038 stays PARTIAL; documented the precise next slice in
+      `plans/archive/038/spec.md`. No code was changed by this
+      re-examination — decision made before writing any cache/extraction
+      code, exactly to avoid the "looks like progress, isn't" trap of
+      prepping for deferred, unverifiable work. (038 was later resumed
+      and completed — see its own section above.)
 - [x] **Natural stopping point reached (re-confirmed twice: once after
       the 040 correction, once after re-examining 038).** The governing
       rule going forward: a plan is startable only if its remaining work

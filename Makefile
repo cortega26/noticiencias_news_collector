@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -90,6 +90,9 @@ $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@$(PYTHON_REFINERY) -m pip install --no-deps --require-hashes -r requirements-refinery.lock
 	@# Install app in editable mode, assuming refinery deps cover runtime needs
 	@$(PYTHON_REFINERY) -m pip install -e . --no-deps
+	@# Test-only tooling (unpinned, not part of the hash-pinned runtime lock —
+	@# same pattern as the main venv's ruff/mypy/black/isort dev-tools install).
+	@$(PYTHON_REFINERY) -m pip install pytest
 	@touch $(BOOTSTRAP_REFINERY_STAMP)
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
@@ -107,6 +110,9 @@ migrate: bootstrap ## Run database migrations (up to head)
 
 refinery: bootstrap-refinery migrate ## Launch the Refinery Admin Panel (Streamlit UI) in isolated env
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_REFINERY) -m streamlit run apps/refinery/admin_panel.py
+
+test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests for the Refinery admin panel (isolated env)
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" REFINERY_UI_UNSAFE_ALLOW=1 PYTHONPATH=$(CURDIR) $(PYTHON_REFINERY) -m pytest -c tools/ci/pytest_refinery.toml --rootdir=.
 
 
 debug: bootstrap ## Run the collector in debug mode (verbose)
