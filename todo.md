@@ -223,8 +223,8 @@ this file now tracks the current pass over the 18 remaining plans.
 
 - [x] 033/021/023/046/034/038/036/037 have each landed
       (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE). Newly-startable
-      set per `plans/README.md`'s dependency column: **048** (depended only
-      on 033, now DONE). 031/032 unblock after 023 but belong in the
+      set per `plans/README.md`'s dependency column: **048** (deps 027
+      already archived/DONE + 033, now DONE). 031/032 unblock after 023 but belong in the
       frontend repo (see below). 041/043 need the full 021+023+... set,
       which isn't there yet (021/023 are only PARTIAL). 047 needs 021+023
       fully done — not yet. 049 needs 021+022+028+041 — not yet.
