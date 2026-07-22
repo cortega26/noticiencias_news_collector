@@ -190,7 +190,18 @@ unblocked.
   (matching the existing collector-wide convention) plus added
   `error_class`. Full-suite regression (memory-watchdog discipline):
   1233 passed, same 13 pre-existing failures as this session's
-  established baseline, no new failures, 24.95s. See `plans/040/spec.md`.
+  established baseline, no new failures, 24.95s. A mandated ~20-iteration
+  subagent review then found 2 further real bugs via empirical
+  reproduction, not just prose-reading: known-but-uninitialized collector
+  types (e.g. `headless` missing while `rss` still worked) were silently
+  rerouted to the unknown-type rss-fallback instead of ever reaching the
+  new `collector_unavailable` attribution; and a child collector
+  under-reporting its own assigned sources in an otherwise-valid result
+  could silently break the `succeeded + failed == requested` invariant
+  (contradicting the plan's own Done Criterion 1). Both fixed
+  (`_KNOWN_COLLECTOR_TYPES` distinction; a post-merge reconciliation pass
+  against `sources_config` in both directions), full suite re-run clean
+  at 1236 passed, same 13 pre-existing failures. See `plans/040/spec.md`.
 
 ## Verification
 

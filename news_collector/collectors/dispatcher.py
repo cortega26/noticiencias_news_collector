@@ -36,6 +36,17 @@ class CollectorDispatcher:
     según el tipo de fuente (RSS, HTML, etc.).
     """
 
+    # Every collector_type string create_collector() recognizes (base_collector.py).
+    # Used to distinguish "known type whose collector failed to initialize"
+    # (must be attributed as collector_unavailable) from "genuinely unknown
+    # type string" (kept as a silent fallback to rss — see plan 040's STOP
+    # condition). Conflating the two was a real bug found by review: a
+    # missing `headless`/`reddit` collector used to reroute to rss instead
+    # of being flagged.
+    _KNOWN_COLLECTOR_TYPES = frozenset(
+        {"rss", "html", "async_rss", "headless", "reddit"}
+    )
+
     def __init__(self, logger_factory=None, health_tracker=None):  # noqa: C901
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
@@ -172,20 +183,29 @@ class CollectorDispatcher:
 
         sources_requested = len(sources_config)
 
-        # Group sources by type. An unrecognized `collector_type` falls
-        # back to "rss" (deliberate, kept behavior — see plan 040's STOP
-        # condition: not externally promised elsewhere, but not asked to
-        # be changed either; locked in by
+        # Group sources by type. A genuinely unrecognized `collector_type`
+        # string falls back to "rss" (deliberate, kept behavior — see plan
+        # 040's STOP condition: not externally promised elsewhere, but not
+        # asked to be changed either; locked in by
         # test_dispatcher_unknown_collector_type_falls_back_to_rss).
+        # A *known* type whose collector failed to initialize (e.g.
+        # `headless` without playwright) must NOT take that same silent
+        # fallback — it needs to reach the collector_unavailable branch
+        # below instead, so it stays grouped under its own type name.
         grouped_sources: Dict[str, Dict[str, Any]] = {}
+        source_assigned_type: Dict[str, str] = {}
         for source_id, config in sources_config.items():
             ctype = config.get("collector_type", "rss").lower()
-            if ctype not in self.collectors:
+            if (
+                ctype not in self.collectors
+                and ctype not in self._KNOWN_COLLECTOR_TYPES
+            ):
                 ctype = "rss"
 
             if ctype not in grouped_sources:
                 grouped_sources[ctype] = {}
             grouped_sources[ctype][source_id] = config
+            source_assigned_type[source_id] = ctype
 
         final_results: Dict[str, Any] = {
             "source_details": {},
@@ -295,9 +315,25 @@ class CollectorDispatcher:
                 )
                 continue
 
-            # Merge source details
+            # Merge source details. Only accept entries for sources actually
+            # requested — a child collector reporting a foreign/extra sid
+            # must not inflate sources_succeeded/failed beyond
+            # sources_requested (review finding: the mirror direction of
+            # the under-reporting gap below).
             if "source_details" in res:
-                final_results["source_details"].update(res["source_details"])
+                for sid, detail in res["source_details"].items():
+                    if sid in sources_config:
+                        final_results["source_details"][sid] = detail
+                    else:
+                        logger.warning(
+                            "Collector reported source_details for an "
+                            "unrequested source: type={}, source_id={}, "
+                            "session={}, trace={}",
+                            result_ctype,
+                            sid,
+                            session_id,
+                            trace_id,
+                        )
 
             # Merge summary stats (errors_encountered here reflects a
             # successful group's own reported sub-source error count,
@@ -308,6 +344,42 @@ class CollectorDispatcher:
                 final_summary["articles_found"] += summ.get("articles_found", 0)
                 final_summary["articles_saved"] += summ.get("articles_saved", 0)
                 final_summary["errors_encountered"] += summ.get("errors_encountered", 0)
+
+        # Reconcile against the requested set: a child collector's own
+        # result can be a valid dict whose source_details sub-map still
+        # omits one of the sources assigned to it (a bug inside that
+        # collector, not a dispatch-level exception/malformed-result).
+        # Without this, that source would silently vanish — counted
+        # nowhere — breaking the succeeded+failed==requested invariant
+        # (review finding). Backfill it as an attributed failure instead.
+        missing_ids = [
+            sid for sid in sources_config if sid not in final_results["source_details"]
+        ]
+        if missing_ids:
+            by_type: Dict[str, list] = {}
+            for sid in missing_ids:
+                by_type.setdefault(source_assigned_type.get(sid, "unknown"), []).append(
+                    sid
+                )
+            for ctype, sids in by_type.items():
+                logger.error(
+                    "Collector omitted requested sources from its own "
+                    "result: type={}, sources={}, session={}, trace={}",
+                    ctype,
+                    sids,
+                    session_id,
+                    trace_id,
+                )
+                self._attribute_dispatch_failure(
+                    final_results,
+                    source_ids=sids,
+                    collector_type=ctype,
+                    reason="child_source_missing",
+                    error_class="MissingSourceDetail",
+                    error_message="Collector result omitted this source",
+                    session_id=session_id,
+                    trace_id=trace_id,
+                )
 
         # Derive succeeded/failed from the final merged source_details in
         # one pass, so `succeeded + failed == requested` is structural

@@ -311,6 +311,23 @@ this file now tracks the current pass over the 18 remaining plans.
       session's established baseline, no new failures, 24.95s, no hang.
       `plans/README.md` updated TODO → DONE (all 4 steps and Done
       Criteria genuinely met — unlike 048, this plan required no STOP).
+- [x] **~20-iteration subagent review found 2 real bugs**, both confirmed
+      by empirical reproduction rather than trusting the spec's prose:
+      (1) known-but-uninitialized collector types (e.g. `headless` gone
+      while `rss` still worked) were silently rerouted to the
+      unknown-type rss-fallback instead of ever reaching the new
+      `collector_unavailable` branch — the "collector unavailable"
+      handling was dead code for its own stated motivating scenario;
+      (2) a child collector under-reporting its own assigned sources in
+      an otherwise-valid result could silently break the
+      `succeeded + failed == requested` invariant, directly contradicting
+      Done Criterion 1, which design decision 6 had incorrectly called an
+      explicit non-goal. Fixed both (`_KNOWN_COLLECTOR_TYPES` distinction
+      in the grouping loop; a post-merge reconciliation pass against
+      `sources_config` in both directions — under- and over-reporting),
+      added 3 new tests (each confirmed failing against the pre-fix code
+      first), re-ran full suite clean: 1236 passed, same 13 pre-existing
+      failures, no new ones.
 
 ## Reassess after each completion
 

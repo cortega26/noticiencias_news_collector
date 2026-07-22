@@ -115,6 +115,20 @@ each of the plan's own Verify lines:
    undiscussed behavior change, not asked for by the plan, and not
    forced by any Done Criterion). This is a deliberate, documented
    choice, not an oversight.
+   **Review correction**: the first implementation conflated two
+   different things under this one fallback check (`ctype not in
+   self.collectors`) — a genuinely unknown type string (the case this
+   decision is about) and a *known* type (`headless`, `reddit`, etc.)
+   whose collector simply failed to initialize. Both silently rerouted
+   to `rss`, which meant the new `collector_unavailable` attribution
+   (decision 3) could only ever fire in the total-wipeout case (every
+   collector missing, including `rss` itself) — not the realistic
+   motivating scenario this spec's own "Discovered prior state" section
+   names (`headless` missing while `rss` still works). Fixed by adding
+   `_KNOWN_COLLECTOR_TYPES` (the exact set `create_collector()`
+   recognizes) so only a *genuinely unrecognized* string falls back to
+   `rss`; a known-but-uninitialized type now stays grouped under its own
+   name and correctly reaches `collector_unavailable`.
 5. **Summary field semantics** (Step 3): `sources_requested = len(sources_config)`
    (computed once, up front). `sources_succeeded`/`sources_failed` are
    *derived from the final merged `source_details` dict* (one pass, `success`
@@ -134,17 +148,24 @@ each of the plan's own Verify lines:
    `success_rate_percent` is now unconditionally present, defaulting to
    `0.0` when `sources_requested == 0` (empty input) rather than being
    omitted.
-6. **Explicit non-goal**: if a child collector's own returned dict is a
-   *valid* dict but its own `source_details` sub-map omits an entry for
-   one of the sources the dispatcher assigned to that group (a bug
-   *inside* a child collector, not a dispatch-level failure), the
-   dispatcher does not backfill a synthetic entry for it. The plan's
-   Step 1 Verify list names "malformed result" (the whole return value
-   being unusable) and "missing collector," not "child collector under-
-   reports one source within an otherwise-valid result" — treating that
-   as in-scope would mean re-validating every child collector's own
-   internal contract from the dispatcher, which is a different, larger
-   change not asked for here.
+6. **Reconciliation against the requested set** (revised after review —
+   this decision originally called the case below an explicit non-goal;
+   the review correctly flagged that as contradicting Done Criterion #1,
+   "every requested source represented exactly once," which the plan
+   states as a hard requirement, not an optional extension). If a child
+   collector's own returned dict is *valid* but its `source_details`
+   sub-map omits an entry for one of the sources assigned to it (a bug
+   *inside* that collector, not a dispatch-level failure), the omitted
+   source used to vanish silently — not counted succeeded, not counted
+   failed, absent from `source_details` — breaking
+   `succeeded + failed == requested`. Fixed with a reconciliation pass
+   after the merge loop: any `sources_config` key still missing from
+   `final_results["source_details"]` is backfilled as a failure (reason
+   `child_source_missing`) via the same `_attribute_dispatch_failure`
+   helper. The mirror direction (a child reporting a foreign/extra sid
+   never requested) is filtered out at merge time with a logged warning,
+   so `source_details` — and therefore `succeeded`/`failed` — always
+   reconciles exactly against `sources_config`, in both directions.
 7. **Health tracker wiring** (Step 4): guarded by `if self.health_tracker:`
    and wrapped in `try/except Exception` (log the telemetry failure,
    never let it change or abort the collection result — the plan's own
@@ -183,3 +204,56 @@ each of the plan's own Verify lines:
       and a full-suite regression run (memory-watchdog discipline, per
       the plan-036 lesson) both green, same pre-existing failures as
       baseline.
+
+## Follow-up fixes from the ~20-iteration subagent review
+
+A fresh subagent reviewed this plan's spec and implementation against
+the real code (not just the spec's own narrative) and found two real
+bugs, both confirmed by empirical reproduction, not just re-reading
+prose:
+
+1. **`collector_unavailable` was effectively dead code for its own
+   motivating scenario.** The grouping loop's `if ctype not in
+   self.collectors: ctype = "rss"` fired for *any* unavailable type —
+   so a known type like `headless` failing to initialize (while `rss`
+   still worked) silently rerouted to `rss` instead of ever reaching the
+   `collector_unavailable` branch; that branch could only trigger in the
+   rare total-wipeout case (every collector including `rss` missing).
+   Reviewer reproduced this directly with `dispatcher.collectors.pop("headless")`
+   while `rss` stayed present. **Fixed**: added `_KNOWN_COLLECTOR_TYPES`
+   (the exact set `create_collector()` recognizes) so the silent
+   rss-fallback only applies to a genuinely unrecognized type string; a
+   known-but-uninitialized type now stays grouped under its own name and
+   correctly reaches `collector_unavailable`. New test:
+   `test_dispatcher_known_type_uninitialized_collector_not_rerouted_to_rss`
+   (confirmed failing against the pre-fix code, then passing).
+2. **The "structural invariant" claim was false** when a child
+   collector's own valid-dict result omitted one of its assigned
+   sources from its own `source_details` sub-map — that source vanished
+   with no entry anywhere, silently breaking `succeeded + failed ==
+   requested`. This directly contradicted design decision 6, which had
+   called the scenario an explicit non-goal, while Done Criterion 1
+   ("every requested source represented exactly once") required exactly
+   this. **Fixed**: added a reconciliation pass after the merge loop
+   that backfills any `sources_config` key still missing from
+   `source_details` as a failure (reason `child_source_missing`), plus
+   the mirror fix — a child reporting a foreign/unrequested sid is now
+   filtered out (with a logged warning) instead of inflating the counts.
+   New tests: `test_dispatcher_child_source_details_omission_is_backfilled_as_failure`,
+   `test_dispatcher_foreign_source_id_from_child_is_dropped_not_counted`
+   (both confirmed failing against the pre-fix code, then passing).
+
+Everything else the reviewer checked — the `SourceHealthTracker` call
+signatures/argument order, the `error`/`error_message` key-mismatch fix,
+no double-attribution/cross-group collision risk, downstream-consumer
+compatibility (`reporter.py`, `pipeline_e2e.py`, `scoring/coordinator.py`
+all read via `.get(key, default)`), and the rest of the test matrix —
+was independently confirmed correct, not just trusted from the spec's
+own prose.
+
+- [x] Re-ran `pytest tests/unit/collectors/test_dispatcher.py tests/unit/system tests/unit/collectors -q`
+      → 127 passed (was 102).
+- [x] Re-ran the full-suite regression with the memory-watchdog
+      discipline → 1236 passed (was 1233), same 13 pre-existing
+      failures, no new ones, 26.98s.
+- [x] `make lint`/`black`/mypy clean after the follow-up.
