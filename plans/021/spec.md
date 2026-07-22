@@ -380,3 +380,52 @@ the real Pydantic validator, not a hand-rolled check.
   behavior (see "1. Dedup guard fixed first" above) but weren't otherwise
   audited beyond that — admin_panel.py itself remains explicitly out of
   this plan's stated scope.
+- **Rollout ordering**: the frontend commit (`093bcf6`) must ship
+  with-or-before the backend commit (`e353f3c`), never backend-first —
+  the new fail-closed `verify_webhook_token` (503 outside `development`
+  once `WEBHOOK_API_KEY` is set) and the `refinery_id`/`publication_ids`
+  matching both assume the frontend is already sending the new envelope
+  shape. No stranding risk exists *today* only because there is no live
+  backend deployment yet (see "No live end-to-end run" above) — whoever
+  deploys this must not reverse that order.
+
+### Post-completion verification (2026-07-22, before closing this session)
+
+Two checks that the test suites could not have caught, run empirically
+after all code/docs were already committed:
+
+- **CLI entry points actually run as CLIs.** The rewritten
+  `backend-notify.js`/`post-publish-callback.js` (frontend repo) are only
+  ever exercised in tests via direct import (`buildEnvelope`/
+  `sendWebhookNotification`), so the
+  `if (import.meta.url === \`file://${process.argv[1]}\`)` guard is never
+  actually evaluated `true` by any test — a broken guard would silently
+  no-op `main()` in the real CI path (`content-guard.yml`'s failure step)
+  with no test catching it. Verified directly: `node
+  scripts/backend-notify.js --help` prints usage; `node
+  scripts/post-publish-callback.js` (no webhook URL set) prints its
+  "Deploy complete" / "Skipping notification" lines. Both guards fire
+  correctly.
+- **`"validated"` processing_status was not silently stranded.** The
+  pre-rewrite `webhook_handler.py` matched
+  `processing_status.in_(["publishing", "validated"])`; the rewrite
+  narrows this to `== "publishing"` (via `reject_publication_attempts`/
+  `complete_publication_attempts`). Traced where `"validated"` is
+  actually written (`models.py` defines it as a real, distinct
+  pipeline-stage status, set during scoring/validation — before an
+  article is ever eligible for the publish flow) versus where the
+  publish flow transitions status: `mark_article_publishing`
+  (`refinery_engine.py:498`, pre-PR) and `mark_article_published`
+  (`pr_orchestrator.py:114`, post-PR, unconditional) both set
+  `processing_status = "publishing"` regardless of the prior value. By
+  the time a PR exists — the earliest point any webhook could plausibly
+  act on an article — status has already moved off `"validated"` in
+  every reachable path. The one edge case where it doesn't (a
+  non-numeric `article_id`, caught by a `ValueError` guard at
+  `pr_orchestrator.py:112` that skips `mark_article_published` entirely)
+  already lacked matchable metadata under the *old* branch-equality
+  mechanism too (`publishing_branch` is set inside the same
+  numeric-ID-gated call), so it was already a dead corner, not something
+  this rewrite newly broke. Old `.in_([...])` was defensive code for a
+  path that never actually had reachable metadata either way — the
+  narrowing is safe.
