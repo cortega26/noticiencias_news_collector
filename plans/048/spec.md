@@ -65,6 +65,67 @@ for the full decision record.
    Done Criterion "Production model/configuration remains unchanged
    during the spike" holds trivially (nothing touched).
 
+## Follow-up (2026-07-22): operator will self-review, Steps 2-3 tooling built
+
+The operator confirmed they will personally review/label the evaluation
+corpus, asynchronously — the STOP condition ("no qualified editorial
+reviewer") no longer applies, though the plan's own ask for **two**
+independent reviewers still can't be met with one person (documented
+honestly, not silently downgraded — see the labeling guide's
+"Single-reviewer limitation" section).
+
+Built in this pass:
+- `tests/data/enrichment_eval.jsonl` — a 44-record stratified seed corpus
+  (all 4 languages, all 6 topics + `general`, every adversarial case type
+  the plan names: ambiguous acronym, substring, missing accent, negation,
+  multi-topic, hard negative). Every record is `"review_status":
+  "draft_unreviewed"` with `gold_topics`/`gold_entities` set to `null` —
+  a `model_draft_topics`/`model_draft_entities` field holds my own
+  unreviewed guess, clearly separated from gold, for the reviewer to
+  correct or discard. This is a seed toward the plan's ≥200-record
+  target, not the target itself.
+- `docs/spikes/enrichment-corpus-labeling-guide.md` — the labeling
+  process, schema reference, how to grow the corpus, the single-reviewer
+  limitation, and a real finding surfaced while building this (below).
+- `scripts/validate_enrichment_corpus.py` — enforces Step 2's own Verify
+  criterion (IDs, split, language, provenance class, gold topics/entities
+  present whenever `review_status="reviewed"`, no personal-data-like
+  text, no dev/heldout id overlap). 7 unit tests, including negative
+  cases proving each rejection actually fires.
+- `scripts/evaluate_enrichment_registry.py` — the Step 3 baseline
+  evaluator, built now that a real (if small) corpus and reviewer exist.
+  Only scores records with `review_status="reviewed"` — unreviewed
+  drafts are silently excluded, never treated as ground truth. Reports
+  micro/macro precision/recall/F1 for topics and entities, per-language
+  slices, `general`/multi-label rates, latency, top FP/FN clusters, and
+  a `sufficient_evidence` field that stays `false` below 200 reviewed
+  records (matching the plan's own threshold structurally, not just in
+  a comment). `--compare` is accepted per the plan's own CLI shape but
+  errors rather than fabricating a comparison, since no candidate
+  registry exists (Step 4 still not attempted).
+- **A real finding while self-testing the evaluator**: scoring the
+  existing 6 `golden_articles.json` examples (reused as a determinism
+  check only) against their own `expected` topics showed less than
+  perfect F1 for title+summary alone — those goldens' `science` topic
+  tag depends on the word "scientists" appearing in the `content` field,
+  which this corpus schema deliberately excludes (Step 2 asks for
+  "title-summary records"). Not a bug — documented in the labeling guide
+  so the reviewer expects title+summary-only labeling to genuinely
+  undercount topics a full article might suggest.
+- 12 tests total (`tests/unit/enrichment/test_enrichment_registry_tooling.py`):
+  corpus validator structural checks + rejection cases, evaluator
+  determinism (`evaluate()` called twice on the same input produces
+  identical output except timing), the 6-goldens-marked-insufficient
+  check, a scoring-math sanity check (predicted set to gold by
+  construction ⇒ F1 must be exactly 1.0), and confirmation that
+  unreviewed seed-corpus records are excluded from evaluation.
+
+Still not attempted: Steps 4-6 (candidate registry prototype, paired
+comparison, adoption ADR) — all depend on a real reviewed corpus
+existing first, which is now in progress but not complete (0/44
+reviewed today). Plan 048 stays PARTIAL, not DONE, until the reviewer
+has labeled enough records to run a real (not sanity-check) baseline.
+
 ## Verification
 
 - [x] `docs/spikes/curated-enrichment-registry.md` exists and satisfies
