@@ -201,6 +201,104 @@ async def test_dispatcher_missing_collector_attributed_as_failure():
 
 
 @pytest.mark.asyncio
+async def test_dispatcher_known_type_uninitialized_collector_not_rerouted_to_rss():
+    """Review finding: a KNOWN collector type (e.g. headless without
+    playwright) that failed to initialize must be attributed as
+    collector_unavailable, not silently rerouted to rss the way a
+    genuinely unknown type string is. rss stays present and healthy so
+    this proves the failure isn't just the total-wipeout case."""
+    dispatcher = CollectorDispatcher()
+    dispatcher.collectors.pop("headless", None)
+
+    rss_collector = MagicMock()
+    rss_collector.collect_from_multiple_sources_async = AsyncMock(
+        return_value={
+            "source_details": {"js_source": {"success": True}},
+            "collection_summary": {
+                "sources_processed": 1,
+                "articles_found": 1,
+                "articles_saved": 1,
+                "errors_encountered": 0,
+            },
+        }
+    )
+    dispatcher.collectors["rss"] = rss_collector
+
+    sources = {"js_source": {"collector_type": "headless"}}
+    result = await dispatcher.collect_from_multiple_sources_async(sources)
+
+    rss_collector.collect_from_multiple_sources_async.assert_not_awaited()
+    assert result["source_details"]["js_source"]["success"] is False
+    assert result["source_details"]["js_source"]["reason"] == "collector_unavailable"
+    assert result["source_details"]["js_source"]["collector_type"] == "headless"
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_child_source_details_omission_is_backfilled_as_failure():
+    """Review finding: a child collector's own result can be a valid
+    dict whose source_details sub-map still omits one of the sources
+    assigned to it. That source must not silently vanish from the
+    summary — it must be reconciled and counted as a failure."""
+    dispatcher = CollectorDispatcher()
+
+    under_reporting_collector = MagicMock()
+    under_reporting_collector.collect_from_multiple_sources_async = AsyncMock(
+        return_value={
+            "source_details": {"s1": {"success": True}},  # s2 silently omitted
+            "collection_summary": {
+                "sources_processed": 1,
+                "articles_found": 1,
+                "articles_saved": 1,
+                "errors_encountered": 0,
+            },
+        }
+    )
+    dispatcher.collectors["rss"] = under_reporting_collector
+
+    sources = {"s1": {"collector_type": "rss"}, "s2": {"collector_type": "rss"}}
+    result = await dispatcher.collect_from_multiple_sources_async(sources)
+    summary = result["collection_summary"]
+
+    assert result["source_details"]["s1"]["success"] is True
+    assert result["source_details"]["s2"]["success"] is False
+    assert result["source_details"]["s2"]["reason"] == "child_source_missing"
+    _assert_total_invariant(summary)
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_foreign_source_id_from_child_is_dropped_not_counted():
+    """Mirror of the omission gap: a child collector reporting a sid
+    that was never requested must not inflate succeeded/failed beyond
+    sources_requested."""
+    dispatcher = CollectorDispatcher()
+
+    over_reporting_collector = MagicMock()
+    over_reporting_collector.collect_from_multiple_sources_async = AsyncMock(
+        return_value={
+            "source_details": {
+                "s1": {"success": True},
+                "not_requested": {"success": True},
+            },
+            "collection_summary": {
+                "sources_processed": 2,
+                "articles_found": 2,
+                "articles_saved": 2,
+                "errors_encountered": 0,
+            },
+        }
+    )
+    dispatcher.collectors["rss"] = over_reporting_collector
+
+    sources = {"s1": {"collector_type": "rss"}}
+    result = await dispatcher.collect_from_multiple_sources_async(sources)
+    summary = result["collection_summary"]
+
+    assert "not_requested" not in result["source_details"]
+    assert summary["sources_requested"] == 1
+    _assert_total_invariant(summary)
+
+
+@pytest.mark.asyncio
 async def test_dispatcher_unknown_collector_type_falls_back_to_rss():
     """Deliberate, kept behavior (plan 040 STOP-condition decision): an
     unrecognized `collector_type` in a source's own config silently
