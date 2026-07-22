@@ -319,9 +319,40 @@ a pointless test. Per-file coverage thresholds (not global-only) were
 chosen and proven against a deliberately injected uncovered-branch
 regression, restored byte-for-byte afterward.
 
-Steps 2-4 (deterministic local Playwright tests, Worker fetch-boundary
-tests via the Cloudflare Vitest pool, and wiring these into
-`content-guard.yml`) are not yet attempted — resuming next.
+Step 2 (deterministic local Playwright tests) is done for everything not
+gated on one open question. While fixing it, ran head-first into the
+exact bug the step exists to catch: `playwright.config.ts` silently
+defaulted to the live production site whenever `PLAYWRIGHT_BASE_URL`
+wasn't set, so a test run without it exercised production, not the local
+build — reproduced directly (6 report-form assertions failed against
+prod, passed once correctly pointed at localhost). Fixed by removing the
+live-site default entirely. Also found a genuine, still-unresolved
+local/production trailing-slash mismatch (`/buscar/` = 200 on prod,
+404 locally, and the reverse for `/buscar`) — asked the operator rather
+than guessing which side is "right"; they chose to investigate further,
+so 5 route-load assertions are `test.fixme()` with the reasoning inline,
+not silently skipped or force-picked either way.
+
+Step 3 (Worker fetch-boundary tests via the Cloudflare Vitest pool) hit
+its own plan-specified STOP condition: every published
+`@cloudflare/vitest-pool-workers` version requires `vitest ^4.1.0`, but
+`workers/package.json` pins `vitest: "4.0.18"` — deliberately, synced to
+the main repo's own pin one day before this session (Node 24 alignment,
+the operator's own commit). Upgrading it would undo that recent decision
+and belongs with whoever owns the toolchain lock, not folded quietly
+into a test-authoring plan. Documented as a genuine stop, not pushed
+through.
+
+Step 4 (CI gate wiring) landed for the parts that don't depend on Step
+3: `content-guard.yml`'s build job now runs `npm run test:coverage`
+(Step 1's thresholds actually gate PRs) and a Playwright browser suite
+(`CI=true PLAYWRIGHT_BASE_URL=http://localhost:4321`, explicit rather
+than relying on the config default alone), with artifact upload on
+failure. No Worker-test CI gate exists yet — blocked by Step 3.
+
+Plan 031 lands PARTIAL overall: Steps 1 and 4(partial) DONE, Step 2 DONE
+modulo the open trailing-slash question, Step 3 STOPPED on its own named
+condition. See `plans/031/spec.md` for the full record.
 
 ## Verification
 

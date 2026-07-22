@@ -301,7 +301,105 @@ own scope excludes ("changing article/product behavior").
 - `npx astro check`: same single pre-existing, unrelated error only.
 - `prettier --check` clean on every touched file.
 
-## Step 3-4: not yet done
+## Step 3: Worker fetch-boundary tests via the Cloudflare Vitest pool — STOPPED (2026-07-22)
 
-Feasibility for Step 3 already confirmed (the Cloudflare Vitest pool
-package resolves and installs). Resuming next.
+The plan's own STOP condition fires here: "Stop if the supported
+Cloudflare pool conflicts with the locked test runner; resolve in plan
+030 before continuing." 030 is archived/DONE, so there is no "continue
+in 030" path available — this is a genuine, not a soft, stop.
+
+**The conflict, checked rather than assumed**: `npm view
+@cloudflare/vitest-pool-workers peerDependencies` for every published
+version back to 0.16.11 (the oldest checked) requires `vitest ^4.1.0`.
+`workers/package.json` pins `vitest: "4.0.18"` **exactly** — and that
+pin is not incidental. `git show 8f435bb` (2026-07-21, the day before
+this session, by the operator themselves) is titled "build: align
+vitest, coverage-v8, and @types/node with Node 24 runtime" and explicitly
+"Sync[s] workers vitest to same pinned version" as the main repo, for a
+stated Node-24-compatibility reason. Adopting the Cloudflare pool would
+require bumping `workers/`'s vitest from 4.0.18 to 4.1.x+ — undoing a
+deliberate, one-day-old, reasoned toolchain decision, exactly the kind of
+call this plan's own STOP condition reserves for a dedicated toolchain
+plan (030's lineage), not a test-authoring plan.
+
+**Not attempted**: installing the pool, migrating
+`workers/vitest.config.ts`, writing the 8 fetch-boundary cases (allowed/
+blocked origin, OPTIONS, malformed JSON, schema rejection, success, rate
+limiting, upstream timeout/error, secret absence), enabling
+`typecheck.enabled` (currently `false` in `workers/vitest.config.ts`; the
+`typecheck` npm script already exists — `tsc --noEmit` — so that part of
+Step 3's ask is a one-line config flip, not new tooling, once the vitest
+version conflict is resolved).
+
+**What already exists and would need reusing, not duplicating, once
+unblocked**: `workers/tests/report.handler.test.ts` (208 lines, added by
+plan 023) — read in full; it already covers a substantial share of the
+fetch-boundary surface (success, validation/schema rejection, rate
+limiting) via direct calls to the exported handler with a mocked `Env`,
+just not yet inside an actual `workerd` runtime. Migrating to the
+Cloudflare pool should extend/re-point these fixtures, not replace them.
+
+**To unblock**: either (a) the operator upgrades `workers/`'s vitest to
+4.1.x+ as its own deliberate toolchain decision (verify it doesn't
+reintroduce whatever the Node 24 alignment commit was fixing), or (b) a
+future Cloudflare pool release adds support for vitest 4.0.x (checked as
+of 2026-07-22 — none does). Either way, that call belongs with whoever
+owns the toolchain-lock decision, not folded quietly into this plan.
+
+## Step 4: partially done — gates that don't depend on Step 3 (2026-07-22)
+
+Coverage (Step 1) and Playwright (Step 2) gates are now wired into
+`content-guard.yml`'s `build` job (PR-only, matching the existing job's
+own `if: github.event_name == 'pull_request'`):
+
+- Replaced the `✅ Audit Suite` (`npm run test:audit`) step with
+  `✅ Unit Coverage` (`npm run test:coverage`) — same test files, plus
+  Step 1's per-file thresholds now actually gate the PR instead of just
+  being locally runnable.
+- Added a cached Playwright-browser install step (keyed on
+  `package-lock.json`, matching the existing Astro-image-cache pattern
+  in the same job) and a `🎭 Browser Suite` step running
+  `npx playwright test --project=chromium` with `CI=true` and
+  `PLAYWRIGHT_BASE_URL=http://localhost:4321` explicitly set — never
+  relying on the config's own default, belt-and-suspenders against the
+  exact silent-live-site bug found in Step 2.
+- Added `actions/upload-artifact` (pinned by SHA, verified against the
+  real `v4.6.2` tag via `gh api` rather than guessed — a first attempt at
+  guessing the hash was wrong) on failure, uploading
+  `playwright-report/` and `test-results/`. Confirmed this cannot leak
+  report contents or secrets: every report-form test mocks `page.route`
+  for `**/api/report`, so no real submission ever reaches a real
+  endpoint in these tests.
+- **Not added**: any Worker gate — blocked by Step 3's STOP above. No
+  `content-guard.yml` job currently runs Worker tests at all (that gap
+  pre-dates this plan and remains open).
+
+### Verify
+
+- `npm run test:dist` (166 files), `npm run test:coverage` (thresholds
+  pass), and `CI=true PLAYWRIGHT_BASE_URL=http://localhost:4321 npx
+  playwright test --project=chromium` (23 passed, 7 fixme, sequential
+  `workers: 1` — matches how the real CI job will run it) all run
+  cleanly locally, simulating the new CI steps end-to-end before
+  trusting them to GitHub Actions.
+- YAML validated with `python3 -c "import yaml; yaml.safe_load(...)"`
+  and `prettier --check`. `actionlint` was not available in this
+  sandbox (no Go toolchain/binary) — flagging honestly rather than
+  claiming a check that didn't run.
+
+## Overall plan 031 status: PARTIAL
+
+- Step 1: DONE, verified.
+- Step 2: DONE for everything not gated on the trailing-slash question;
+  5 tests `fixme` pending the operator's own further investigation.
+- Step 3: STOPPED on its own named condition (Cloudflare pool requires
+  vitest ^4.1.0; `workers/` deliberately pins 4.0.18 as of yesterday).
+- Step 4: DONE for the coverage + Playwright gates; Worker gate blocked
+  by Step 3.
+
+Real, load-bearing findings from doing this work rather than assuming:
+the Vitest `~` alias was never wired (masked a real coverage gap), the
+Playwright config silently defaulted to production, a genuine local/
+production trailing-slash mismatch (unresolved, operator's call), and a
+genuine, dated toolchain-version conflict blocking Step 3. None of these
+were guessed at or silently patched around.

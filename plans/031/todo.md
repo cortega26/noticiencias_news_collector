@@ -88,13 +88,49 @@
       still 35/35, 200/200 (Step 1 untouched); `npx astro check` same
       single pre-existing unrelated error; `prettier` clean.
 
-## Steps 3-4: not yet done
-- [ ] Step 3: adopt `@cloudflare/vitest-pool-workers`; fetch-boundary
-      tests covering allowed/blocked origin, OPTIONS, malformed JSON,
-      schema rejection, success, rate limiting, upstream timeout/error,
-      secret absence; add a `typecheck` script.
-- [ ] Step 4: wire coverage/Playwright/Worker gates into
-      `content-guard.yml` as required checks, with artifact-on-failure.
-- [ ] Update `plans/README.md`, root `spec.md`/`todo.md` to reflect final
-      status once Steps 2-4 land (or document why they stopped, if they
-      do).
+## Step 3: Worker fetch-boundary tests — STOPPED (plan's own STOP condition)
+- [x] Checked (not assumed): every published `@cloudflare/vitest-pool-workers`
+      version back to 0.16.11 requires `vitest ^4.1.0`.
+- [x] Checked: `workers/package.json` pins `vitest: "4.0.18"` exactly,
+      deliberately synced to the main repo's pin one day before this
+      session (`git show 8f435bb`, by the operator, for Node 24
+      alignment) — not incidental, not something to quietly bump.
+- [x] This is the plan's own named STOP condition ("Stop if the
+      supported Cloudflare pool conflicts with the locked test runner;
+      resolve in plan 030 before continuing") — 030 is archived/DONE, so
+      there's no "continue in 030" path; documented as a genuine stop,
+      not pushed through.
+- [x] Read `workers/tests/report.handler.test.ts` (208 lines, from plan
+      023) so whoever unblocks this knows it already covers a chunk of
+      the fetch-boundary surface and should extend it, not duplicate it.
+- [ ] Not done: pool installation, config migration, the 8 boundary test
+      cases, enabling `typecheck.enabled` — all blocked on the version
+      conflict above.
+
+## Step 4: content-guard.yml gates — DONE for coverage + Playwright
+- [x] Replaced the `test:audit` CI step with `test:coverage` (same tests
+      + Step 1's thresholds now actually gate PRs).
+- [x] Added a cached Playwright-browser-install step and a browser-suite
+      step with `CI=true PLAYWRIGHT_BASE_URL=http://localhost:4321`
+      explicitly set (never relying on the config default alone).
+- [x] Added `actions/upload-artifact` on failure for
+      `playwright-report/`/`test-results/`, SHA verified against the
+      real `v4.6.2` tag via `gh api` (a first guess at the hash was
+      wrong — checked rather than shipped).
+- [x] Confirmed no report-contents/secret leakage risk: every
+      report-form test mocks `page.route`, nothing hits a real endpoint.
+- [ ] Not added: a Worker-test CI gate — blocked by Step 3.
+- [x] Verify: YAML validates (`python3 -c "import yaml; yaml.safe_load"`,
+      `prettier --check`); simulated the new CI steps locally end-to-end
+      (`test:dist`, `test:coverage`, `CI=true PLAYWRIGHT_BASE_URL=...
+      npx playwright test`) before trusting them to GitHub Actions.
+      `actionlint` unavailable in this sandbox — noted honestly, not
+      silently skipped.
+
+## Plan 031 final status: PARTIAL
+- [x] Step 1: DONE. Step 2: DONE except 5 tests `fixme` pending the
+      operator's trailing-slash investigation. Step 3: STOPPED on its
+      own named condition. Step 4: DONE for coverage+Playwright, blocked
+      on the Worker gate by Step 3.
+- [ ] Update `plans/README.md`, root `spec.md`/`todo.md` to reflect this
+      final PARTIAL status.
