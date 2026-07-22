@@ -205,8 +205,103 @@ value (floored to the nearest whole percent, e.g. 97.67% → 97).
 - `npx prettier --check` / `eslint .` clean on every file this plan
   touched.
 
-## Steps 2-4: not yet done
+## Step 2: deterministic, fail-closed local Playwright tests — mostly done (2026-07-22)
 
-Feasibility for both is already confirmed above (Playwright runs
-headless here with cached chromium binaries; the Cloudflare Vitest pool
-package resolves and installs). Resuming with Step 2 next.
+### The bug this step exists to catch, caught in the act
+
+While fixing this step, I ran `tests/playwright/report-form.test.ts`
+without `PLAYWRIGHT_BASE_URL` set and got 6 failures — the "no endpoint
+configured" test saw a *populated* endpoint (contradicting this repo's
+own `config.yaml`), and every mocked-response test's assertions came back
+empty. Root cause: `playwright.config.ts`'s old default
+(`BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'https://noticiencias.com'`)
+meant that without the env var, `page.goto('/reportar-problema')`
+silently hit **live production**, not the local build — even though the
+`webServer` block dutifully started `npm run preview` in the background
+for readiness-checking purposes. The webServer running does not make it
+the navigation target; only `baseURL` does. I had fallen into exactly the
+bug this plan exists to fix, mid-way through fixing it. Confirmed by
+re-running the identical test with `PLAYWRIGHT_BASE_URL=http://localhost:4321`
+explicitly — all 11 tests passed.
+
+**Fix**: `playwright.config.ts` now defaults `BASE_URL` to
+`http://localhost:4321` unconditionally (no live-site fallback at all),
+and `webServer` now runs in CI too (previously `undefined` in CI, meaning
+a CI run — had one ever been wired up — would have silently exercised
+live production with no local server at all). Live-site checking stays
+exactly where the plan says it belongs: the pre-existing, separate
+`npm run test:deploy` (`scripts/post-deploy-check.js`), untouched.
+
+### Test-file changes
+
+- **`tests/playwright/report-form.test.ts`**: removed the `toBeLessThan(500)`
+  404-acceptance on page load (now requires a real 200) and all 7
+  `if (form.count() === 0) test.skip(...)` conditional skips — the form is
+  always present in a real build, so these were dead branches masking
+  the fact the tests had likely never actually run against anything real
+  before (see finding above).
+- **`tests/playwright/article-rendering.test.ts`**: rewritten. Removed
+  the "no article found, skip" fallback (a local build's search index is
+  never empty) and the vacuous `expect(count).toBeGreaterThanOrEqual(0)`
+  on JSON-LD blocks. New version asserts a hero image has real alt text,
+  and validates *every* JSON-LD block on the page (there are 4 in
+  practice, not the 1 I initially assumed — checked empirically before
+  asserting an exact count).
+- **`tests/playwright/navigation.test.ts`**: removed the
+  `'noticiencias.com redirects to correct domain'` test entirely — git
+  history shows it once did a real `expect(url).toContain('noticiencias.com')`
+  check, but a later commit added an `if (baseURL.includes('localhost'))`
+  branch that made it pass trivially against any host, for any reason,
+  with no actual redirect behavior anywhere in this codebase to test
+  (confirmed: no `_redirects` file, no redirect config in
+  `astro.config.mjs`). A vacuous test, removed rather than patched again.
+- **`tests/playwright/accessibility.test.ts`**: fixed its own
+  `getFirstArticleUrl` helper, which explicitly appended a trailing
+  slash to article URLs ("for local preview consistency" — backwards;
+  see the trailing-slash finding below) causing the article a11y check
+  to 404; now uses the URL from `search.json` as-is, matching
+  `article-rendering.test.ts`'s already-correct pattern. Removed its
+  "no article found" skip for the same reason as above.
+
+### An unresolved, genuinely load-bearing finding: trailing-slash mismatch
+
+`/blog/`, `/buscar/`, `/reportar-problema/`, `/newsletter/` all 404
+locally under `astro preview` (`trailingSlash: false` in
+`src/config.yaml`), while the no-slash form (`/blog`, `/buscar`, etc.)
+returns 200. **Production does the opposite**: confirmed by curling
+`https://noticiencias.com/buscar/` (200) and `https://noticiencias.com/buscar`
+(301, redirecting to the slash form). This is either (a) `config.yaml`'s
+`trailingSlash: false` is stale relative to how the site is actually
+hosted (Cloudflare Pages likely applies its own default trailing-slash
+normalization independent of the Astro build config), or (b) production
+is doing something unexpected that should itself be treated as a bug.
+
+**Asked the operator directly rather than guessing** (this is a real
+infra/deployment question no amount of reading this repo's code can
+answer) — they asked to hold this specific question for further
+investigation rather than pick one now, and confirmed `astro preview`
+(not `wrangler pages dev ./dist`) as the local server for this plan.
+Every route-load assertion that depends on this (5 tests across 3 files)
+is marked `test.fixme(...)` with a comment explaining exactly why and
+pointing back to this finding — not silently skipped, not guessed at.
+`src/navigation.ts`'s own hardcoded `href: '/buscar/'` was **left
+untouched**: given production's observed behavior, that hardcoded
+trailing slash is actually the form that works directly (200) in
+production today, so "fixing" it to match the local build's `never`
+config would plausibly make it *worse* in production (add a redirect
+hop) to fix a local-only symptom — exactly the kind of change plan 031's
+own scope excludes ("changing article/product behavior").
+
+### Verify
+
+- `npx playwright test --project=chromium`: 23 passed, 7 `fixme`
+  (explicitly reasoned, not silent), 0 unexplained failures/skips.
+- `npm run test:audit`: still 35/35 files, 200/200 tests (Step 1
+  untouched).
+- `npx astro check`: same single pre-existing, unrelated error only.
+- `prettier --check` clean on every touched file.
+
+## Step 3-4: not yet done
+
+Feasibility for Step 3 already confirmed (the Cloudflare Vitest pool
+package resolves and installs). Resuming next.

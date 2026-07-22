@@ -50,11 +50,45 @@
       `npx astro check` — one pre-existing, unrelated error only;
       `prettier`/`eslint` clean on every touched file.
 
-## Steps 2-4: not yet done
-- [ ] Step 2: deterministic, fail-closed local-build Playwright tests
-      (remove 404 acceptance, conditional skips, vacuous assertions;
-      require `PLAYWRIGHT_BASE_URL` in CI; keep a live-site smoke test
-      separate).
+## Step 2: Deterministic, fail-closed local Playwright tests — mostly DONE
+- [x] Caught myself hitting exactly the bug this step exists to fix: ran
+      `report-form.test.ts` without `PLAYWRIGHT_BASE_URL` and 6 tests
+      failed against **live production** (the old config's silent
+      default) instead of the local build. Fixed at the root —
+      `playwright.config.ts` now defaults to `http://localhost:4321`
+      unconditionally and runs `webServer` in CI too; no live-site
+      fallback remains anywhere in this config.
+- [x] `report-form.test.ts`: removed the 404-acceptance and all 7
+      conditional `test.skip` blocks (form is always present in a real
+      build).
+- [x] `article-rendering.test.ts`: removed the "no article" skip and the
+      vacuous `>= 0` JSON-LD count check; verified empirically there are
+      4 JSON-LD blocks per article (not 1), validates all of them.
+- [x] `navigation.test.ts`: removed a vacuous "redirects to correct
+      domain" test that no longer tested anything real (confirmed via
+      git history — an `if (localhost)` branch had been added to make it
+      pass trivially everywhere).
+- [x] `accessibility.test.ts`: fixed its `getFirstArticleUrl` helper,
+      which was appending a trailing slash to article URLs and 404ing;
+      removed its "no article" skip too.
+- [x] Found and surfaced (did not silently resolve) a genuine
+      trailing-slash mismatch between the local build (`trailingSlash:
+      false`) and observed production behavior
+      (`/buscar/` = 200, `/buscar` = 301) — asked the operator directly
+      via `AskUserQuestion` rather than guessing. They chose to hold this
+      specific question for further investigation and confirmed
+      `astro preview` as the local server. The 5 affected tests across 3
+      files are marked `test.fixme(...)` with an inline explanation, not
+      silently skipped or force-fixed either direction.
+      `src/navigation.ts`'s own hardcoded `/buscar/` href was
+      deliberately left untouched — out of this plan's scope, and
+      plausibly correct for production as observed.
+- [x] Verify: `npx playwright test --project=chromium` → 23 passed, 7
+      explicit `fixme`, 0 unexplained failures; `npm run test:audit`
+      still 35/35, 200/200 (Step 1 untouched); `npx astro check` same
+      single pre-existing unrelated error; `prettier` clean.
+
+## Steps 3-4: not yet done
 - [ ] Step 3: adopt `@cloudflare/vitest-pool-workers`; fetch-boundary
       tests covering allowed/blocked origin, OPTIONS, malformed JSON,
       schema rejection, success, rate limiting, upstream timeout/error,
