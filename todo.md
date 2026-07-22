@@ -102,7 +102,7 @@ this file now tracks the current pass over the 18 remaining plans.
 - Noted, not fixed (out of scope): `canonicalize_url()` silently coerces
   non-http(s) URL schemes to https instead of rejecting them; `penalty_keywords`
   config is now fully unconsumed pending a deliberate future decision. See
-  `plans/034/spec.md`.
+  `plans/archive/034/spec.md`.
 
 ## Plan 038 — Decouple telemetry writes and cache Refinery read models (PARTIAL)
 
@@ -175,7 +175,7 @@ this file now tracks the current pass over the 18 remaining plans.
       Fixed all 3 fixtures plus a related `AsyncMock`-scorer issue with the
       new `get_cycle_telemetry` hasattr check. Full suite re-run: 38s,
       1217 passed, same 13 pre-existing failures, no hang, normal memory.
-      See `plans/036/spec.md` for the full narrative.
+      See `plans/archive/036/spec.md` for the full narrative.
 - [x] Full regression gates clean; committed, `plans/README.md` updated to
       DONE.
 
@@ -271,7 +271,7 @@ this file now tracks the current pass over the 18 remaining plans.
       `plans/README.md` or any `plans/040/*` file. Read the current
       `dispatcher.py`/`test_dispatcher.py` end to end to establish
       exactly what was already done vs. what Steps 3-4 still needed —
-      see `plans/040/spec.md`'s "Discovered prior state" for the
+      see `plans/archive/040/spec.md`'s "Discovered prior state" for the
       step-by-step gap analysis.
 - [x] Recon via subagent: `SourceHealthTracker`'s real method signatures,
       confirmed no separate dispatcher-level metrics interface exists

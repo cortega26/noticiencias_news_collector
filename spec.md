@@ -51,7 +51,7 @@ unblocked.
 - **033 — Make configuration refresh live**: DONE. Finished Phase 2 (all 21
   consumers migrated), Phase 3 (Refinery `save_toml_config` truthful
   return contract), Phase 4 (audit/lint/type/test gates, zero regressions
-  vs. pre-existing baseline). See `plans/033/todo.md` for details.
+  vs. pre-existing baseline). See `plans/archive/033/todo.md` for details.
 - **021 — Rebuild the publication callback contract**: PARTIAL. Only Step 0
   (a refinery_id identity fix required by the plan's own STOP condition,
   not an original step) is done. Steps 1-5 are one coordinated
@@ -90,7 +90,7 @@ unblocked.
   (title/content length) strictly separate from soft scoring signals
   (clickbait keywords) after confirming the two keyword lists partially
   overlap but each has exclusive terms — unifying them would still
-  silently reweight scores, out of scope. See `plans/034/spec.md`.
+  silently reweight scores, out of scope. See `plans/archive/034/spec.md`.
 - **038 — Decouple telemetry writes and cache Refinery read models**:
   PARTIAL. Steps 1-3 done: `enrichment_metrics_store.py` now batches writes
   (25 commits for 1000 events, vs. 1000 before) while proving — via a
@@ -124,7 +124,7 @@ unblocked.
   targeted scoring tests) caught a real infinite-loop regression in 3
   unrelated tests that mocked the old unpaged DB methods — fixed, and the
   full suite now passes with the exact same 13 pre-existing failures as
-  baseline. See `plans/036/spec.md` for the full narrative, including the
+  baseline. See `plans/archive/036/spec.md` for the full narrative, including the
   STOP-condition-3 semantic-dependency check and the regression's root
   cause/fix.
 - **037 — Make bulk article persistence set-based**: DONE. Reduced
@@ -142,7 +142,7 @@ unblocked.
   STOP-condition against semantic drift. `_resolve_cluster_for_candidates`
   is now shared, unchanged logic between the live single-item path and the
   new batched path, including cluster-merge propagation to not-yet-flushed
-  same-batch rows. See `plans/037/spec.md` for the full empirical
+  same-batch rows. See `plans/archive/037/spec.md` for the full empirical
   investigation and design.
 - **048 — Spike a curated multilingual topic and entity registry**: PARTIAL.
   Step 1 done: `docs/spikes/curated-enrichment-registry.md` maps every real
@@ -201,7 +201,7 @@ unblocked.
   (contradicting the plan's own Done Criterion 1). Both fixed
   (`_KNOWN_COLLECTOR_TYPES` distinction; a post-merge reconciliation pass
   against `sources_config` in both directions), full suite re-run clean
-  at 1236 passed, same 13 pre-existing failures. See `plans/040/spec.md`.
+  at 1236 passed, same 13 pre-existing failures. See `plans/archive/040/spec.md`.
 
 ## Session wind-down (2026-07-21)
 
