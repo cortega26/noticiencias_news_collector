@@ -292,6 +292,37 @@ now committed to reviewing 048's corpus; the user authorized frontend-repo
 work; 046's topology question got a real answer) rather than the earlier
 analysis having been wrong.
 
+### Plan 031 (frontend repo) — Step 1 done, Steps 2-4 in progress
+
+Re-checked 031's actual startability before writing anything: both listed
+deps clear for the part 031 needs (023's Worker/report *contract* is done
+and tested — only production enablement is separately blocked on operator
+Cloudflare provisioning, which is out of scope for 031; 030 is
+archived/DONE). Ran the plan's own drift check first — clean, only 023's
+already-accounted-for growth. Verified, empirically rather than assumed,
+that both harnesses Steps 2 and 3 depend on actually work in this
+environment: Playwright runs headless here (cached chromium, a real
+local-build run against `npm run preview`), and
+`@cloudflare/vitest-pool-workers` resolves on the registry.
+
+Step 1 (honest unit coverage denominator + no-regression thresholds) is
+done and empirically verified — full record in `plans/031/spec.md`. The
+notable finds: `vitest.config.ts` never had the `~` alias `tsconfig.json`
+declares, which silently made several source files unresolvable under
+plain Vitest; the existing workaround (`vi.mock('~/utils/utils', ...)`
+with a hand-copied `trim` reimplementation) had quietly diverged from the
+real function's behavior, meaning `src/utils/utils.ts::trim` had zero
+real coverage despite looking tested. Fixed at the root (added the
+alias) rather than patched around again. A genuinely dead file
+(`src/utils/search-url.ts`, zero importers) was deleted rather than given
+a pointless test. Per-file coverage thresholds (not global-only) were
+chosen and proven against a deliberately injected uncovered-branch
+regression, restored byte-for-byte afterward.
+
+Steps 2-4 (deterministic local Playwright tests, Worker fetch-boundary
+tests via the Cloudflare Vitest pool, and wiring these into
+`content-guard.yml`) are not yet attempted — resuming next.
+
 ## Verification
 
 - Per-plan: follow that plan's own "Verification" / "Done Criteria" section
