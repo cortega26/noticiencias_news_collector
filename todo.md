@@ -536,5 +536,16 @@ this file now tracks the current pass over the 18 remaining plans.
       Step 3).
 - [x] Plan 031 overall: PARTIAL. Full record in `plans/031/spec.md` /
       `plans/031/todo.md`.
-- [ ] 021 (gated cross-repo finale) — fresh checkpoint next, per its own
-      section.
+- [x] Plan 021 (gated cross-repo finale) — fresh checkpoint taken, both
+      STOP conditions checked and cleared (refinery_id reliable for the
+      real pipeline; bounded changed-post set derivable via git diff),
+      then landed the full coordinated unit: backend Steps 1(remainder)+2
+      (state machine no longer completes on PR-open; matches by
+      persisted refinery_id/publication_ids, never branch equality),
+      frontend Step 3 (double-envelope bug fixed at the root), Step 5
+      (cross-repo contract test: real sender → real Pydantic models →
+      real handler → real DB, no network). Step 4's fail-closed auth code
+      done both sides; only real secret values remain (operator's own
+      credentials). Two hazards found and fixed before shipping (a
+      dedup-guard regression, a duplicate-PR-recovery risk). Full record
+      in `plans/021/spec.md` / `plans/021/todo.md`.
