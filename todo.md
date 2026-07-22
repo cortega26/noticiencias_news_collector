@@ -518,7 +518,23 @@ this file now tracks the current pass over the 18 remaining plans.
       alias found and fixed, a masked `trim()` coverage gap from a
       diverging test-double mock, dead `search-url.ts` deleted, 11 new
       test files, per-file thresholds proven against a deliberately
-      injected uncovered-branch regression). Steps 2-4 not yet attempted;
-      resuming next.
-- [ ] Plan 031 Steps 2-4, and 021 (gated finale) — in progress, see their
-      own sections as they land.
+      injected uncovered-branch regression).
+- [x] Plan 031 Step 2 (deterministic local Playwright tests): DONE
+      except 5 tests `fixme` pending the operator's own investigation of
+      a genuine local/production trailing-slash mismatch (asked, not
+      guessed). Caught the exact bug this step targets while fixing it —
+      `playwright.config.ts` silently defaulted to live production
+      without `PLAYWRIGHT_BASE_URL` set; fixed at the root.
+- [x] Plan 031 Step 3 (Worker fetch-boundary tests via Cloudflare's
+      Vitest pool): STOPPED on the plan's own named condition — the pool
+      requires vitest ^4.1.0, `workers/` deliberately pins 4.0.18 (synced
+      to the main repo one day before this session for Node 24
+      alignment). Not this plan's call to un-pin; documented, not pushed
+      through.
+- [x] Plan 031 Step 4 (CI gate wiring): DONE for coverage + Playwright
+      gates in `content-guard.yml`; no Worker gate yet (blocked by
+      Step 3).
+- [x] Plan 031 overall: PARTIAL. Full record in `plans/031/spec.md` /
+      `plans/031/todo.md`.
+- [ ] 021 (gated cross-repo finale) — fresh checkpoint next, per its own
+      section.
