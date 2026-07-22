@@ -507,5 +507,18 @@ this file now tracks the current pass over the 18 remaining plans.
       operator to execute (R2 bucket, KV namespace, Cloudflare secrets
       are their account, their credentials, not something to paste into
       chat).
-- [ ] 038, frontend baseline + plan 031, and 021 (gated finale) — in
-      progress, see their own sections as they land.
+- [x] 038: full test harness + verified caching, DONE — see plan 038's
+      own archived entry above.
+- [x] Frontend baseline (`noticiencias` repo, first touch this session):
+      `npm run test:audit` 24/137 passed, `npm run build` 166 pages, both
+      clean before any change.
+- [x] Plan 031 Step 1 (honest unit coverage denominator + no-regression
+      per-file thresholds): DONE and verified — see `plans/031/spec.md`
+      and `plans/031/todo.md` for the full record (missing `~` Vitest
+      alias found and fixed, a masked `trim()` coverage gap from a
+      diverging test-double mock, dead `search-url.ts` deleted, 11 new
+      test files, per-file thresholds proven against a deliberately
+      injected uncovered-branch regression). Steps 2-4 not yet attempted;
+      resuming next.
+- [ ] Plan 031 Steps 2-4, and 021 (gated finale) — in progress, see their
+      own sections as they land.
