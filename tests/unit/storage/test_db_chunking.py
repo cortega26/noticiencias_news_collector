@@ -42,8 +42,10 @@ def test_save_articles_bulk_chunking(mock_db_manager):
     articles_data = [
         {
             "url": f"http://example.com/u{i}",
-            "title": "Valid Title Length",
-            "summary": "This is a valid summary that is long enough." + ("." * 500),
+            "title": f"Valid Title Length Number {i}",
+            "summary": "This is a valid summary that is long enough."
+            + ("." * 500)
+            + f" unique-{i}",
             "content": "Content matches rules." + ("." * 500),
             "source_id": "src",
             "source_name": "Source Name",
@@ -88,8 +90,10 @@ def test_save_articles_bulk_exact_chunk(mock_db_manager):
     articles_data = [
         {
             "url": f"http://example.com/u{i}",
-            "title": "Valid Title Length",
-            "summary": "This is a valid summary that is long enough." + ("." * 500),
+            "title": f"Valid Title Length Number {i}",
+            "summary": "This is a valid summary that is long enough."
+            + ("." * 500)
+            + f" unique-{i}",
             "content": "Content matches rules." + ("." * 500),
             "source_id": "src",
             "source_name": "Source Name",
@@ -139,8 +143,10 @@ def test_save_articles_no_batch_argument(mock_db_manager):
     articles_data = [
         {
             "url": "http://example.com/u1",
-            "title": "Valid Title Length",
-            "summary": "This is a valid summary that is long enough." + ("." * 500),
+            "title": "Valid Title Length Number 1",
+            "summary": "This is a valid summary that is long enough."
+            + ("." * 500)
+            + " unique-1",
             "content": "Content matches rules." + ("." * 500),
             "source_id": "src",
             "source_name": "Source Name",

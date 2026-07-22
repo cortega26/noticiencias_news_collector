@@ -3,9 +3,20 @@ Article repository — focused CRUD, dedup, clustering, scoring, and publishing 
 """
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from sqlalchemy import and_, desc, or_
 from sqlalchemy.exc import IntegrityError
@@ -107,6 +118,82 @@ class ArticlePage:
 
     items: List[Article]
     next_cursor: Optional[ArticleCursor]
+
+
+@dataclass
+class _ClusterBatchContext:
+    """Plan 037: mutable state for one `save_articles_bulk()` call's
+    in-memory near-duplicate clustering — prefetched candidates grouped by
+    prefix (augmented with not-yet-flushed same-batch rows as they're
+    created), a lazily-memoized global fallback, and a synthetic tie-break
+    id for rows that don't have a real primary key yet."""
+
+    session: Session
+    repo: Any
+    candidates_by_prefix: Dict[int, List[Article]]
+    window: int
+    pending_by_cluster: Dict[str, List[Article]] = field(default_factory=dict)
+    pending_all: List[Article] = field(default_factory=list)
+    synthetic_ids: Dict[int, int] = field(default_factory=dict)
+    synthetic_counter: int = 10**9
+    _fallback_cache: Optional[List[Article]] = None
+
+    def tie_break_id(self, article: Article) -> int:
+        real_id = getattr(article, "id", None)
+        if real_id is not None:
+            return int(real_id)
+        return self.synthetic_ids.get(id(article), 0)
+
+    def fetch_fallback(self) -> List[Article]:
+        if self._fallback_cache is None:
+            self._fallback_cache = (
+                self.session.query(Article)
+                .options(self.repo._cluster_load_only())
+                .filter(Article.simhash.isnot(None))
+                .order_by(Article.collected_date.desc())
+                .limit(self.window)
+                .all()
+            )
+        same_batch = [a for a in self.pending_all if a.simhash is not None]
+        return (same_batch + self._fallback_cache)[: self.window]
+
+    def resolve(self, row: Dict[str, Any]) -> Tuple[str, float]:
+        simhash_value = row["simhash_value"]
+        if not simhash_value or row["simhash_prefix"] is None:
+            return generate_cluster_id(), 0.0
+
+        gathered = ArticleRepository._gather_batch_candidates(
+            self.candidates_by_prefix,
+            row["simhash_prefix"],
+            self.window,
+            self.fetch_fallback,
+        )
+        return cast(
+            Tuple[str, float],
+            self.repo._resolve_cluster_for_candidates(
+                self.session,
+                gathered,
+                simhash_value,
+                row["payload"].get("published_date"),
+                tie_break_id=self.tie_break_id,
+                pending_by_cluster=self.pending_by_cluster,
+            ),
+        )
+
+    def register(self, article: Article, row: Dict[str, Any]) -> None:
+        if not row["simhash_value"] or row["simhash_prefix"] is None:
+            return
+        # Prepend — most recent — matching the recency ordering the DB
+        # prefetch already uses, so later same-batch rows see it first.
+        self.candidates_by_prefix.setdefault(row["simhash_prefix"], []).insert(
+            0, article
+        )
+        self.pending_all.insert(0, article)
+        self.pending_by_cluster.setdefault(cast(str, article.cluster_id), []).append(
+            article
+        )
+        self.synthetic_ids[id(article)] = self.synthetic_counter
+        self.synthetic_counter += 1
 
 
 # ---------------------------------------------------------------------------
@@ -536,7 +623,171 @@ class ArticleRepository:
                 logger.error("Error saving article: %s", e)
                 raise
 
-    def save_articles_bulk(  # noqa: C901
+    def _prepare_bulk_row(
+        self, data: Union[Dict[str, Any], "CollectorArticleModel"]
+    ) -> Optional[Dict[str, Any]]:
+        """Validate/canonicalize/normalize/hash one bulk input exactly once.
+
+        Returns None for an invalid payload (logged, skipped) — never
+        raises for a bad individual row, matching current behavior.
+        """
+        if isinstance(data, CollectorArticleModel):
+            model = data
+        else:
+            try:
+                model = CollectorArticleModel.model_validate(data)
+            except ValidationError as exc:
+                logger.warning("Invalid bulk item skipped: %s", exc)
+                return None
+
+        payload = model.model_dump_for_storage()
+        payload["url"] = canonicalize_url(payload["url"]) or payload["url"]
+
+        normalized_published = ensure_timezone(payload.get("published_date"))
+        if normalized_published:
+            payload["published_date"] = normalized_published
+
+        norm_title, norm_summary, normalized_text = normalize_article_text(
+            payload.get("title", ""),
+            payload.get("summary", ""),
+        )
+        normalized_basis = normalized_text or payload["url"]
+        content_hash = sha256_hex(normalized_basis)
+        simhash_value = simhash_normalize_unsigned(simhash64(normalized_basis))
+        simhash_prefix = simhash_prefix_value(simhash_value)
+
+        initial_status = getattr(model, "processing_status_override", None)
+        if initial_status is not None and initial_status not in PROCESSING_STATUS_VALUES:
+            raise ValueError(
+                f"Invalid processing_status: {initial_status}. "
+                f"Allowed: {PROCESSING_STATUS_VALUES}"
+            )
+
+        return {
+            "payload": payload,
+            "url": payload["url"],
+            "content_hash": content_hash,
+            "simhash_value": int(simhash_value) if simhash_value is not None else 0,
+            "simhash_prefix": simhash_prefix,
+            "norm_title": norm_title,
+            "norm_summary": norm_summary,
+            "initial_status": initial_status,
+        }
+
+    @staticmethod
+    def _dedupe_prepared_rows(
+        prepared_rows: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """In-batch dedup by canonical URL and content hash, first
+        occurrence wins, stable input order."""
+        seen_urls: Set[str] = set()
+        seen_hashes: Set[str] = set()
+        deduped: List[Dict[str, Any]] = []
+        for row in prepared_rows:
+            if row["url"] in seen_urls:
+                continue
+            if row["content_hash"] and row["content_hash"] in seen_hashes:
+                continue
+            seen_urls.add(row["url"])
+            if row["content_hash"]:
+                seen_hashes.add(row["content_hash"])
+            deduped.append(row)
+        return deduped
+
+    def _filter_existing_articles(
+        self, session: Session, prepared_rows: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Step 3: chunked exact-duplicate prefetch (reusing
+        `articles_exist()`'s `CHUNK_SIZE=500` IN-query pattern)."""
+        existing_urls = self._chunked_in_lookup(
+            session, Article.url, [r["url"] for r in prepared_rows]
+        )
+        existing_hashes = self._chunked_in_lookup(
+            session,
+            Article.content_hash,
+            [r["content_hash"] for r in prepared_rows if r["content_hash"]],
+        )
+        return [
+            r
+            for r in prepared_rows
+            if r["url"] not in existing_urls
+            and (not r["content_hash"] or r["content_hash"] not in existing_hashes)
+        ]
+
+    def _build_cluster_batch_context(
+        self, session: Session, filtered_rows: List[Dict[str, Any]]
+    ) -> "_ClusterBatchContext":
+        needed_prefixes: Set[int] = set()
+        for r in filtered_rows:
+            if not r["simhash_value"] or r["simhash_prefix"] is None:
+                continue
+            p = r["simhash_prefix"]
+            needed_prefixes.add(p)
+            if p > 0:
+                needed_prefixes.add(p - 1)
+            if p < 0xFFFF:
+                needed_prefixes.add(p + 1)
+
+        candidates_by_prefix = self._fetch_batch_cluster_candidates(
+            session, needed_prefixes
+        )
+        window = get_runtime_config().dedup_config.get("simhash_candidate_window", 500)
+        return _ClusterBatchContext(
+            session=session,
+            repo=self,
+            candidates_by_prefix=candidates_by_prefix,
+            window=window,
+        )
+
+    def _build_article_from_row(
+        self, row: Dict[str, Any], cluster_id: str, confidence: float
+    ) -> Article:
+        payload = row["payload"]
+        article_metadata = payload.get("article_metadata", {}) or {}
+        article_metadata.setdefault("normalized_title", row["norm_title"])
+        article_metadata.setdefault("normalized_summary", row["norm_summary"])
+        article_metadata.setdefault(
+            "original_url", payload.get("original_url", payload["url"])
+        )
+
+        return Article(
+            url=payload["url"],
+            content_hash=row["content_hash"],
+            simhash=simhash_to_storage(row["simhash_value"]),
+            simhash_prefix=row["simhash_prefix"],
+            title=payload["title"],
+            summary=payload.get("summary"),
+            content=payload.get("content"),
+            source_id=payload["source_id"],
+            source_name=payload["source_name"],
+            published_date=payload.get("published_date"),
+            published_tz_offset_minutes=payload.get("published_tz_offset_minutes"),
+            published_tz_name=payload.get("published_tz_name"),
+            authors=payload.get("authors"),
+            category=payload["category"],
+            doi=payload.get("doi"),
+            journal=payload.get("journal"),
+            is_preprint=payload.get("is_preprint", False),
+            language=payload.get("language", "en"),
+            content_mode=payload.get("content_mode"),
+            processing_status=row["initial_status"] or PENDING_STATUS,
+            article_metadata=article_metadata,
+            word_count=payload.get("word_count"),
+            reading_time_minutes=payload.get("reading_time_minutes"),
+            cluster_id=cluster_id,
+            duplication_confidence=confidence,
+            collected_date=datetime.now(timezone.utc),
+        )
+
+    def _flush_batch(self, session: Session, pending_count: int, label: str) -> None:
+        try:
+            with session.begin_nested():
+                session.flush()
+        except IntegrityError as e:
+            logger.warning("Bulk insert collision in %s: %s", label, str(e).splitlines()[0])
+            raise
+
+    def save_articles_bulk(
         self,
         articles_data: Sequence[Union[Dict[str, Any], CollectorArticleModel]],
         batch_size: int = 50,
@@ -548,145 +799,42 @@ class ArticleRepository:
         if not articles_data:
             return 0
 
-        saved_count = 0
-        pending_count = 0
-        seen_urls: Set[str] = set()
+        # Step 2: normalize/dedupe the input once, in stable input order.
+        prepared_rows = self._dedupe_prepared_rows(
+            [r for r in (self._prepare_bulk_row(d) for d in articles_data) if r]
+        )
+        if not prepared_rows:
+            return 0
 
         with self._session() as session:
             try:
-                for data in articles_data:
-                    if isinstance(data, CollectorArticleModel):
-                        model = data
-                    else:
-                        try:
-                            model = CollectorArticleModel.model_validate(data)
-                        except ValidationError as exc:
-                            logger.warning("Invalid bulk item skipped: %s", exc)
-                            continue
+                filtered_rows = self._filter_existing_articles(session, prepared_rows)
+                if not filtered_rows:
+                    session.commit()
+                    return 0
 
-                    payload = model.model_dump_for_storage()
-                    payload["url"] = canonicalize_url(payload["url"]) or payload["url"]
-                    url = payload["url"]
+                # Step 4: one prefetch across every prefix any row might
+                # need, then resolve each row's cluster in memory.
+                context = self._build_cluster_batch_context(session, filtered_rows)
 
-                    if url in seen_urls:
-                        continue
-                    seen_urls.add(url)
+                saved_count = 0
+                pending_count = 0
 
-                    normalized_published = ensure_timezone(
-                        payload.get("published_date")
-                    )
-                    if normalized_published:
-                        payload["published_date"] = normalized_published
-
-                    # URL dedup
-                    if (
-                        session.query(Article)
-                        .filter_by(url=payload["url"])
-                        .with_entities(Article.id)
-                        .first()
-                    ):
-                        continue
-
-                    norm_title, norm_summary, normalized_text = normalize_article_text(
-                        payload.get("title", ""),
-                        payload.get("summary", ""),
-                    )
-                    normalized_basis = normalized_text or payload["url"]
-                    content_hash = sha256_hex(normalized_basis)
-
-                    # Content hash dedup
-                    if (
-                        session.query(Article)
-                        .filter_by(content_hash=content_hash)
-                        .with_entities(Article.id)
-                        .first()
-                    ):
-                        continue
-
-                    simhash_value = simhash_normalize_unsigned(
-                        simhash64(normalized_basis)
-                    )
-                    simhash_prefix = simhash_prefix_value(simhash_value)
-                    cluster_id, confidence = self._assign_cluster(
-                        session,
-                        int(simhash_value) if simhash_value is not None else 0,
-                        payload.get("published_date"),
-                    )
-
-                    article_metadata = payload.get("article_metadata", {}) or {}
-                    article_metadata.setdefault("normalized_title", norm_title)
-                    article_metadata.setdefault("normalized_summary", norm_summary)
-                    article_metadata.setdefault(
-                        "original_url",
-                        payload.get("original_url", payload["url"]),
-                    )
-
-                    article = Article(
-                        url=payload["url"],
-                        content_hash=content_hash,
-                        simhash=simhash_to_storage(simhash_value),
-                        simhash_prefix=simhash_prefix,
-                        title=payload["title"],
-                        summary=payload.get("summary"),
-                        content=payload.get("content"),
-                        source_id=payload["source_id"],
-                        source_name=payload["source_name"],
-                        published_date=payload.get("published_date"),
-                        published_tz_offset_minutes=payload.get(
-                            "published_tz_offset_minutes"
-                        ),
-                        published_tz_name=payload.get("published_tz_name"),
-                        authors=payload.get("authors"),
-                        category=payload["category"],
-                        doi=payload.get("doi"),
-                        journal=payload.get("journal"),
-                        is_preprint=payload.get("is_preprint", False),
-                        language=payload.get("language", "en"),
-                        content_mode=payload.get("content_mode"),
-                        processing_status=PENDING_STATUS,
-                        article_metadata=article_metadata,
-                        word_count=payload.get("word_count"),
-                        reading_time_minutes=payload.get("reading_time_minutes"),
-                        cluster_id=cluster_id,
-                        duplication_confidence=confidence,
-                    )
-
-                    initial_status = getattr(model, "processing_status_override", None)
-                    if initial_status is not None:
-                        if initial_status not in PROCESSING_STATUS_VALUES:
-                            raise ValueError(
-                                f"Invalid processing_status: {initial_status}. "
-                                f"Allowed: {PROCESSING_STATUS_VALUES}"
-                            )
-                        article.processing_status = initial_status
-
+                for row in filtered_rows:
+                    cluster_id, confidence = context.resolve(row)
+                    article = self._build_article_from_row(row, cluster_id, confidence)
                     session.add(article)
+                    context.register(article, row)
                     pending_count += 1
 
                     if pending_count >= batch_size:
-                        try:
-                            with session.begin_nested():
-                                session.flush()
-                            saved_count += pending_count
-                            pending_count = 0
-                        except IntegrityError as e:
-                            logger.warning(
-                                "Bulk insert collision in batch: %s",
-                                str(e).splitlines()[0],
-                            )
-                            raise
+                        self._flush_batch(session, pending_count, "batch")
+                        saved_count += pending_count
+                        pending_count = 0
 
                 if pending_count > 0:
-                    try:
-                        with session.begin_nested():
-                            session.flush()
-                        saved_count += pending_count
-                    except IntegrityError as e:
-                        logger.warning(
-                            "Bulk insert collision in final batch: %s",
-                            str(e).splitlines()[0],
-                        )
-                        raise
+                    self._flush_batch(session, pending_count, "final batch")
+                    saved_count += pending_count
 
                 session.commit()
                 logger.info("Bulk save completed atomically: %s articles", saved_count)
@@ -696,6 +844,52 @@ class ArticleRepository:
                 session.rollback()
                 logger.error("Fatal error in bulk save, transaction aborted: %s", e)
                 raise
+
+    @staticmethod
+    def _chunked_in_lookup(
+        session: Session, column: Any, values: List[str], chunk_size: int = 500
+    ) -> Set[str]:
+        """Chunked `IN` existence lookup — same pattern as `articles_exist`."""
+        found: Set[str] = set()
+        unique_values = list(dict.fromkeys(v for v in values if v))
+        for i in range(0, len(unique_values), chunk_size):
+            chunk = unique_values[i : i + chunk_size]
+            rows = session.query(column).filter(column.in_(chunk)).all()
+            found.update(r[0] for r in rows)
+        return found
+
+    @staticmethod
+    def _gather_batch_candidates(
+        candidates_by_prefix: Dict[int, List[Article]],
+        prefix: int,
+        window: int,
+        fetch_fallback: Callable[[], List[Article]],
+    ) -> List[Article]:
+        """In-memory equivalent of `_assign_cluster`'s per-prefix querying
+        loop: closest-prefix-first, window-limited, reading from the
+        prefetched (and same-batch-augmented) in-memory map instead of
+        issuing a new query."""
+        candidate_prefixes = [prefix]
+        if prefix > 0:
+            candidate_prefixes.append(prefix - 1)
+        if prefix < 0xFFFF:
+            candidate_prefixes.append(prefix + 1)
+
+        candidates: List[Article] = []
+        remaining = window
+        for pref in sorted(
+            dict.fromkeys(candidate_prefixes), key=lambda p: abs(p - prefix)
+        ):
+            pref_candidates = candidates_by_prefix.get(pref, [])[:remaining]
+            candidates.extend(pref_candidates)
+            remaining = window - len(candidates)
+            if remaining <= 0:
+                break
+
+        if not candidates:
+            candidates = fetch_fallback()
+
+        return candidates
 
     # ------------------------------------------------------------------
     # Query methods
@@ -1045,14 +1239,35 @@ class ArticleRepository:
     # Internal: simhash cluster assignment and revalidation
     # ------------------------------------------------------------------
 
-    def _assign_cluster(  # noqa: C901
+    _CLUSTER_LOAD_ONLY_ATTRS = (
+        "id",
+        "simhash",
+        "cluster_id",
+        "published_date",
+        "duplication_confidence",
+        "collected_date",
+    )
+
+    @classmethod
+    def _cluster_load_only(cls):
+        return load_only(
+            *(
+                cast(QueryableAttribute[Any], getattr(Article, name))
+                for name in cls._CLUSTER_LOAD_ONLY_ATTRS
+            )
+        )
+
+    def _assign_cluster(
         self,
         session: Session,
         simhash_value: int,
         published_date: Optional[datetime],
     ) -> Tuple[str, float]:
+        """Single-item cluster assignment: fetch candidates live, then
+        delegate to the same decision+merge logic the batched path uses
+        (`_resolve_cluster_for_candidates`) — one implementation shared by
+        both, so they cannot silently drift."""
         dedup_config = get_runtime_config().dedup_config
-        simhash_threshold = dedup_config.get("simhash_threshold", 10)
         simhash_candidate_window = dedup_config.get("simhash_candidate_window", 500)
 
         simhash_value = simhash_normalize_unsigned(simhash_value) or 0
@@ -1071,34 +1286,13 @@ class ArticleRepository:
 
         candidates: List[Article] = []
         remaining = simhash_candidate_window
-        article_id_attr = cast(QueryableAttribute[Any], Article.id)
-        article_simhash_attr = cast(QueryableAttribute[Any], Article.simhash)
-        article_cluster_id_attr = cast(QueryableAttribute[Any], Article.cluster_id)
-        article_published_date_attr = cast(
-            QueryableAttribute[Any], Article.published_date
-        )
-        article_dup_conf_attr = cast(
-            QueryableAttribute[Any], Article.duplication_confidence
-        )
-        article_collected_date_attr = cast(
-            QueryableAttribute[Any], Article.collected_date
-        )
 
         for pref in sorted(
             dict.fromkeys(candidate_prefixes), key=lambda p: abs(p - prefix)
         ):
             query = (
                 session.query(Article)
-                .options(
-                    load_only(
-                        article_id_attr,
-                        article_simhash_attr,
-                        article_cluster_id_attr,
-                        article_published_date_attr,
-                        article_dup_conf_attr,
-                        article_collected_date_attr,
-                    )
-                )
+                .options(self._cluster_load_only())
                 .filter(Article.simhash_prefix == pref)
                 .filter(Article.simhash.isnot(None))
                 .order_by(Article.collected_date.desc())
@@ -1113,43 +1307,57 @@ class ArticleRepository:
         if not candidates:
             candidates = (
                 session.query(Article)
-                .options(
-                    load_only(
-                        article_id_attr,
-                        article_simhash_attr,
-                        article_cluster_id_attr,
-                        article_published_date_attr,
-                        article_dup_conf_attr,
-                        article_collected_date_attr,
-                    )
-                )
+                .options(self._cluster_load_only())
                 .filter(Article.simhash.isnot(None))
                 .order_by(Article.collected_date.desc())
                 .limit(simhash_candidate_window)
                 .all()
             )
 
-        if not candidates:
-            return generate_cluster_id(), 0.0
-
-        unique_candidates = {}
+        unique_candidates: Dict[Any, Article] = {}
         for candidate in candidates:
             if candidate.id not in unique_candidates:
                 unique_candidates[candidate.id] = candidate
         candidates = list(unique_candidates.values())
 
-        hits: List[Tuple[Article, int]] = []
-        for candidate in candidates:
-            c_simhash = getattr(candidate, "simhash", None)
-            candidate_simhash = simhash_from_storage(
-                int(c_simhash) if c_simhash is not None else None
-            )
-            if candidate_simhash is None:
-                continue
-            distance = hamming_distance(simhash_value, candidate_simhash)
-            if distance <= simhash_threshold:
-                hits.append((candidate, distance))
+        return self._resolve_cluster_for_candidates(
+            session,
+            candidates,
+            simhash_value,
+            published_date,
+            tie_break_id=lambda c: int(getattr(c, "id", 0) or 0),
+        )
 
+    def _resolve_cluster_for_candidates(
+        self,
+        session: Session,
+        candidates: List[Article],
+        simhash_value: int,
+        published_date: Optional[datetime],
+        tie_break_id: Callable[[Article], int],
+        pending_by_cluster: Optional[Dict[str, List[Article]]] = None,
+    ) -> Tuple[str, float]:
+        """Pure decision logic: hamming-distance filtering, closest-match
+        selection, confidence back-mutation, and other-cluster merging.
+        Shared by the live single-query path (`_assign_cluster`) and the
+        batched in-memory path (`save_articles_bulk`) — `candidates` must
+        already be deduplicated by identity.
+
+        `tie_break_id` resolves the `-int(cand_id)` tie-break key for a
+        candidate; for not-yet-flushed same-batch rows (no real id yet)
+        the caller supplies a synthetic monotonically-increasing id so
+        ties resolve the same way real sequential inserts would (most
+        recently added wins).
+
+        `pending_by_cluster`, if given, lets an other-cluster merge also
+        update not-yet-flushed same-batch articles' in-memory `cluster_id`
+        — the DB-side bulk UPDATE below only reaches already-persisted
+        rows.
+        """
+        if not candidates:
+            return generate_cluster_id(), 0.0
+
+        hits = self._hamming_filter_hits(candidates, simhash_value)
         if not hits:
             return generate_cluster_id(), 0.0
 
@@ -1158,8 +1366,7 @@ class ArticleRepository:
             time_delta = time_distance_seconds(
                 published_date, getattr(cand, "published_date", None)
             )
-            cand_id = getattr(cand, "id", 0)
-            return (dist, time_delta, -int(cand_id))
+            return (dist, time_delta, -tie_break_id(cand))
 
         hits.sort(key=sort_key)
         best_candidate, best_distance = hits[0]
@@ -1175,6 +1382,39 @@ class ArticleRepository:
             current_confidence, float(duplication_confidence(best_distance))
         )
 
+        self._merge_other_clusters(
+            session, hits, target_cluster, pending_by_cluster
+        )
+
+        return str(target_cluster), float(duplication_confidence(best_distance))
+
+    @staticmethod
+    def _hamming_filter_hits(
+        candidates: List[Article], simhash_value: int
+    ) -> List[Tuple[Article, int]]:
+        dedup_config = get_runtime_config().dedup_config
+        simhash_threshold = dedup_config.get("simhash_threshold", 10)
+
+        hits: List[Tuple[Article, int]] = []
+        for candidate in candidates:
+            c_simhash = getattr(candidate, "simhash", None)
+            candidate_simhash = simhash_from_storage(
+                int(c_simhash) if c_simhash is not None else None
+            )
+            if candidate_simhash is None:
+                continue
+            distance = hamming_distance(simhash_value, candidate_simhash)
+            if distance <= simhash_threshold:
+                hits.append((candidate, distance))
+        return hits
+
+    @staticmethod
+    def _merge_other_clusters(
+        session: Session,
+        hits: List[Tuple[Article, int]],
+        target_cluster: str,
+        pending_by_cluster: Optional[Dict[str, List[Article]]],
+    ) -> None:
         other_clusters = {
             cand.cluster_id
             for cand, _ in hits
@@ -1185,8 +1425,40 @@ class ArticleRepository:
             session.query(Article).filter(Article.cluster_id == other_cluster).update(
                 {"cluster_id": target_cluster}, synchronize_session=False
             )
+            if pending_by_cluster is not None:
+                moved = pending_by_cluster.pop(other_cluster, [])
+                for pending_article in moved:
+                    pending_article.cluster_id = target_cluster
+                if moved:
+                    pending_by_cluster.setdefault(target_cluster, []).extend(moved)
 
-        return str(target_cluster), float(duplication_confidence(best_distance))
+    def _fetch_batch_cluster_candidates(
+        self, session: Session, prefixes: Set[int]
+    ) -> Dict[int, List[Article]]:
+        """One prefetch query (chunked at the same 500-item `IN` bound as
+        `articles_exist`) across every prefix any item in the batch might
+        need, grouped by prefix, ordered by collected_date desc (matching
+        each per-item query's own ordering)."""
+        by_prefix: Dict[int, List[Article]] = {p: [] for p in prefixes}
+        if not prefixes:
+            return by_prefix
+
+        prefix_list = list(prefixes)
+        CHUNK_SIZE = 500
+        for i in range(0, len(prefix_list), CHUNK_SIZE):
+            chunk = prefix_list[i : i + CHUNK_SIZE]
+            rows = (
+                session.query(Article)
+                .options(self._cluster_load_only())
+                .filter(Article.simhash_prefix.in_(chunk))
+                .filter(Article.simhash.isnot(None))
+                .order_by(Article.collected_date.desc())
+                .all()
+            )
+            for row in rows:
+                by_prefix.setdefault(cast(int, row.simhash_prefix), []).append(row)
+
+        return by_prefix
 
     def _revalidate_cluster(self, session: Session, cluster_id: Optional[str]) -> None:
         if not cluster_id:

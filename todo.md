@@ -179,16 +179,55 @@ this file now tracks the current pass over the 18 remaining plans.
 - [x] Full regression gates clean; committed, `plans/README.md` updated to
       DONE.
 
+## Plan 037 — Make bulk article persistence set-based (DONE)
+
+- [x] Recon + advisor consult (HIGH risk, L effort): read
+      `save_articles_bulk`/`_assign_cluster`/`articles_exist`/`save_article`/
+      `_revalidate_cluster`; confirmed `SessionLocal` is `autoflush=False`.
+- [x] Two empirical oracle probes before any code change: (1) current bulk
+      code does NOT join two near-duplicate articles submitted in the same
+      batch (autoflush artifact — different cluster_ids, dup_conf=0.0
+      both); (2) `save_article()` called twice (the true "sequential"
+      oracle) DOES join them, back-mutating the matched candidate's
+      confidence to a shared, non-zero value. Conclusion (confirmed with a
+      second advisor consult): building the in-memory same-batch candidate
+      map is the task Step 4 asks for, not a semantics change to avoid —
+      the plan's own Done Criteria targets single/bulk equivalence against
+      the single-save oracle, not against current (gapped) bulk behavior.
+- [x] Step 1: characterization fixtures — SELECT-count instrumentation
+      (baseline 561 for 100 articles) and the load-bearing single-save-vs-
+      batch cluster parity test, confirmed failing against pre-refactor
+      code first.
+- [x] Step 2: `_prepare_bulk_row()`/`_dedupe_prepared_rows()` — normalize
+      once, in-batch dedup extended to content hash (not just URL, a real
+      gap Step 2 explicitly asks to close).
+- [x] Step 3: `_chunked_in_lookup()`/`_filter_existing_articles()` — chunked
+      `IN` prefetch reusing `articles_exist()`'s pattern.
+- [x] Step 4: `_resolve_cluster_for_candidates()` (shared by single-item
+      and batched paths — no drift risk), `_fetch_batch_cluster_candidates()`
+      (one prefetch per bulk call across the union of needed prefixes),
+      `_ClusterBatchContext` (lazy fallback, synthetic tie-break ids,
+      same-batch cluster-merge propagation).
+- [x] Step 5: existing atomic flush/commit/rollback structure preserved
+      untouched (already re-raises, no `PendingRollbackError` risk);
+      `scripts/benchmark_bulk_persistence.py` added.
+- [x] SELECT count: 561 → 4 for a 100-article batch. All parity/regression
+      tests green (106 storage/collector tests, full suite 1225 passed,
+      same 13 pre-existing failures, no hang, normal memory — verified
+      with the same memory watchdog discipline plan 036 established).
+      Fixed one pre-existing test (`test_db_chunking.py`) whose fixture
+      relied on the very in-batch-dedup gap Step 2 closes. Committed,
+      `plans/README.md` updated to DONE.
+
 ## Reassess after each completion
 
-- [x] 033/021/023/046/034/038/036 have each landed
-      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE). Newly-startable set
-      per `plans/README.md`'s dependency column: **037, 048** (037 depended
-      on 033+034, both DONE; 048 depended only on 033). 031/032 unblock
-      after 023 but belong in the frontend repo (see below). 041/043 need
-      the full 021+023+... set, which isn't there yet (021/023 are only
-      PARTIAL). 047 needs 021+023 fully done — not yet. 049 needs
-      021+022+028+041 — not yet.
+- [x] 033/021/023/046/034/038/036/037 have each landed
+      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE). Newly-startable
+      set per `plans/README.md`'s dependency column: **048** (depended only
+      on 033, now DONE). 031/032 unblock after 023 but belong in the
+      frontend repo (see below). 041/043 need the full 021+023+... set,
+      which isn't there yet (021/023 are only PARTIAL). 047 needs 021+023
+      fully done — not yet. 049 needs 021+022+028+041 — not yet.
 - [ ] Frontend plans (031, 032, 035, 039, 044) belong in the Astro repo
       (`noticiencias`), not here — flag when reached instead of implementing
       from this working directory.
