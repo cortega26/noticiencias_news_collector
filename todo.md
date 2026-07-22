@@ -342,13 +342,40 @@ this file now tracks the current pass over the 18 remaining plans.
       appears as a dependency of any other remaining row in
       `plans/README.md` — re-checked directly against the table, not
       assumed).
-- [x] **Natural stopping point reached (re-confirmed after the 040
-      correction above).** Every remaining TODO/PARTIAL plan in
-      `plans/README.md` is now either out-of-repo (frontend) or blocked
-      on the same two PARTIAL plans (021, 023) whose remaining steps
-      require operator-supplied secrets/provisioning or coordinated
-      frontend changes — not something resolvable by reading the spec
-      and running tests. Per this session's own directive ("do not ask
+- [x] **Re-examined 038 before accepting any stopping-point conclusion**:
+      its only dependency (033) is DONE and its remaining Steps 4-5
+      looked, at first glance, like unblocked backend-only work (unlike
+      021/023, which explicitly need operator secrets or frontend
+      coordination) — worth checking rather than assuming still stuck,
+      the same discipline that had just surfaced 040. Confirmed
+      empirically (not assumed): a real Streamlit test harness
+      (`streamlit.testing.v1.AppTest`) is importable, but only in the
+      separate `.venv-refinery` env, with **no existing test-running
+      convention wired for it anywhere in this repo** (no pytest config,
+      no Makefile target, nothing in `make test`/`make prepush`), and the
+      target UI section (`admin_panel.py` Tab 4, 3042 LOC total, zero
+      characterization tests) sits behind an auth gate. Verifying
+      `st.cache_resource`/`st.cache_data` behavior here would mean
+      building new test infrastructure from scratch, not just writing
+      caching code — and shipping unverified caching would mislabel
+      Step 4/5's own Verify criteria (cache-hit reuse, TTL expiry,
+      invalidation, no-stale-as-current) as met. Decided: 038 stays
+      PARTIAL; documented the precise next slice in `plans/038/spec.md`.
+      No code was changed by this re-examination — decision made before
+      writing any cache/extraction code, exactly to avoid the "looks like
+      progress, isn't" trap of prepping for deferred, unverifiable work.
+- [x] **Natural stopping point reached (re-confirmed twice: once after
+      the 040 correction, once after re-examining 038).** The governing
+      rule going forward: a plan is startable only if its remaining work
+      is both (a) not blocked on external input and (b) verifiable from
+      this working directory with what's actually available — not just
+      "the dependency row says DONE." Every remaining TODO/PARTIAL plan
+      in `plans/README.md` now fails (a), (b), or is out-of-repo:
+      021/023/041/043/045/046/047/049 blocked on operator secrets, human
+      reviewers, production topology/data, or unmet transitive deps;
+      031/032/035/039/044 belong in the frontend repo; 048 intentionally
+      STOPPED at its own corpus/reviewer gate; 038 fails verifiability as
+      just established. Per this session's own directive ("do not ask
       for clarification on anything you can resolve by reading the spec
       and running tests"), these are correctly left PARTIAL rather than
       force-advanced. No further plan is autonomously startable from this
