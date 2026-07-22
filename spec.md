@@ -203,6 +203,39 @@ unblocked.
   against `sources_config` in both directions), full suite re-run clean
   at 1236 passed, same 13 pre-existing failures. See `plans/040/spec.md`.
 
+## Session wind-down (2026-07-21)
+
+After 040 landed, the board was re-derived directly from
+`plans/README.md` rather than trusting the prior "048 is the last
+startable plan" conclusion — that check is exactly what surfaced 040 as
+a missed, genuinely startable plan. The same re-check was then applied
+to 038 (deps satisfied, PARTIAL, and its remaining steps looked
+backend-only at first glance) before concluding the session is actually
+done. Two facts, not assumptions, close that question: `streamlit`/
+`AppTest` are importable only in the separate `.venv-refinery`, with no
+test-running convention wired for that environment anywhere in this
+repo, and the target UI section sits behind an auth gate — so verifying
+`st.cache_resource`/`st.cache_data` behavior in `apps/refinery/admin_panel.py`
+(3042 LOC, no characterization tests) would require building new test
+infrastructure from scratch, not just writing the caching code. Shipping
+that caching unverified would mislabel Step 4/5's own Verify criteria
+(cache-hit reuse, TTL expiry, invalidation, no-stale-as-current) as met
+when they are not empirically checked — a worse outcome than staying
+PARTIAL. See `plans/038/spec.md`'s "Re-examined later the same session"
+section for the full reasoning and the precisely-scoped next slice.
+
+**A plan is startable only if its remaining work is both (a) not
+blocked on external input and (b) verifiable from this working
+directory with what's actually available** — not just "the dependency
+row says DONE." On the current board: 021/023/041/043/045/046/047/049
+are all blocked on operator secrets, human editorial reviewers,
+production topology/data, or unmet transitive deps; 031/032/035/039/044
+belong in the frontend repo; 048 is intentionally STOPPED at its own
+corpus/reviewer gate; 038's remaining steps fail clause (b) as just
+established. **The startable set is empty. This is the session's actual
+terminus** — not a failure to keep going, but the correct place to stop
+per this rule.
+
 ## Verification
 
 - Per-plan: follow that plan's own "Verification" / "Done Criteria" section

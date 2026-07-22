@@ -157,3 +157,61 @@ recorded as the next slice for whoever picks this back up:
 - Surface `as_of`/environment/manual-refresh in the UI, plus the new
   `EnrichmentMetricsStore.flush_count` counter this pass added (already
   available for exactly this purpose).
+
+## Re-examined later the same session — still correctly PARTIAL
+
+A later pass in this session re-opened Steps 4-5 (033's dependency was
+DONE and this looked, at first glance, like unblocked backend-only
+work — worth checking rather than assuming still stuck). Two facts were
+confirmed empirically, not assumed, that sharpen the handoff above:
+
+- **A real Streamlit test harness (`streamlit.testing.v1.AppTest`) is
+  importable** — but only in the separate `.venv-refinery` environment
+  (`streamlit==1.53.1` per `requirements-refinery.lock`); the main
+  `.venv` that `make test` runs against does not have `streamlit`
+  installed at all. `tests/decompose_refinery/test_admin_panel_helpers.py`'s
+  own docstring confirms this directly: `admin_panel.py` "cannot be
+  imported under the test venv," which is why that suite extracts
+  closure-free helper functions via AST + `exec` instead of importing
+  the module.
+- **There is no existing test-running convention for `.venv-refinery`
+  at all** — no pytest config, no `Makefile` target, nothing wired into
+  `make test`/`make prepush`. The only existing use of that venv is the
+  live `make refinery` target that launches the real Streamlit server.
+  `apps/refinery/admin_panel.py`'s Tab 4 (Analytics, lines 2505-2585 as
+  of this pass) also sits behind an auth gate
+  (`st.session_state["refinery_ui_authenticated"]`, set around line 392)
+  that an `AppTest` run would need to satisfy before it could even reach
+  the analytics tab.
+
+Conclusion: this is not "a harness exists, so verification is cheap" —
+it is "the library is importable, but the test infrastructure,
+convention, and auth-bootstrapping to actually exercise `st.cache_*`
+behavior in this specific auth-gated, uncharacterized 3042-LOC module
+do not exist yet and would need to be built from scratch." Building that
+infrastructure plus writing the caching code in the same pass would mean
+shipping `st.cache_resource`/`st.cache_data` decorators — whose whole
+purpose is to prevent showing stale data as current (Step 5's own
+concern) — into a module with zero characterization tests, verified only
+by inspection rather than by actually running them. That is a worse
+outcome than staying PARTIAL: it would mislabel unmet Step 4/5 Verify
+criteria ("repeated non-mutating reruns reuse the read model," "manual
+refresh... cause[s] one fresh query set," "UI/helper tests cover cache
+hit, TTL expiry, invalidation, query error") as met when they are not
+empirically checked. Extracting just the read-model function without the
+caching it exists to support was also considered and rejected: absent
+the cache wrapping, relocating the same four queries has no standalone
+value and either goes unwired (dead code) or gets wired into a tab this
+pass still cannot run end-to-end to confirm nothing broke.
+
+**Decision: 038 remains PARTIAL.** Steps 4-5's next slice, more
+precisely scoped than the original handoff:
+1. Decide and build a real test-running convention for `.venv-refinery`
+   first (a `Makefile` target, CI wiring decision) — this is
+   infrastructure work in its own right, prior to any caching code.
+2. Write an `AppTest`-based test that can satisfy `admin_panel.py`'s
+   auth gate and reach Tab 4 at all, as a characterization test *before*
+   any caching change (confirm today's uncached behavior first).
+3. Only then extract the read-model function and add
+   `st.cache_resource`/`st.cache_data`, verified against that harness —
+   not by inspection.
