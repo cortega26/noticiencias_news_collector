@@ -35,6 +35,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import aliased
 
+from news_collector.config.settings import get_runtime_config
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
@@ -254,10 +255,30 @@ def _build_article_payload(
 def verify_webhook_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
-    """Verify Bearer token against WEBHOOK_API_KEY env var (constant-time)."""
+    """Verify Bearer token against WEBHOOK_API_KEY env var (constant-time).
+
+    Plan 021: fails closed outside the explicit "development" environment
+    tier (reusing the existing ``environment``/``is_production``/
+    ``is_staging`` runtime config, not inventing a new concept) when no key
+    is configured — the previous unconditional fail-open made the webhook
+    unauthenticated by default in any deployed environment that simply
+    forgot to set ``WEBHOOK_API_KEY``.
+    """
     webhook_api_key = os.environ.get("WEBHOOK_API_KEY", "")
     if not webhook_api_key:
-        return  # dev mode — skip auth
+        runtime = get_runtime_config()
+        if runtime.environment != "development":
+            logger.error(
+                "WEBHOOK_API_KEY is not set outside the 'development' "
+                "environment (environment={}) — refusing unauthenticated "
+                "webhook access.",
+                runtime.environment,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Webhook authentication is not configured for this environment",
+            )
+        return  # explicit development-only fail-open
 
     if not authorization:
         raise HTTPException(

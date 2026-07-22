@@ -68,12 +68,17 @@ class TestMarkArticlePublished:
 
         with db_manager.get_session() as session:
             updated = session.query(Article).filter(Article.id == article.id).first()
-            assert updated.processing_status == "completed"
-            assert updated.published_url == pr_url
-            assert updated.published_at is not None
+            # Plan 021: a PR being open is not a real publication — stays
+            # "publishing", and published_at/published_url are NOT set
+            # here anymore (only complete_publication_attempts sets them,
+            # on a real deploy).
+            assert updated.processing_status == "publishing"
+            assert updated.published_url is None
+            assert updated.published_at is None
             meta = dict(updated.article_metadata or {})
             assert meta.get("publication", {}).get("state") == "PR_CREATED"
             assert meta.get("publication", {}).get("pr_url") == pr_url
+            assert meta.get("publication", {}).get("refinery_id") == str(article.id)
             assert (
                 meta.get("publication", {}).get("frontend_checks", {}).get("state")
                 == "pending"
@@ -84,6 +89,19 @@ class TestMarkArticlePublished:
                 .get("ready_for_merge")
                 is False
             )
+
+    def test_mark_published_persists_explicit_refinery_id(self, db_manager):
+        article = db_manager.save_article(_make_article(idx=23))
+        assert article is not None
+
+        db_manager.mark_article_published(
+            article.id, "https://pr.url/23", "custom-refinery-id"
+        )
+
+        with db_manager.get_session() as session:
+            updated = session.query(Article).filter(Article.id == article.id).first()
+            meta = dict(updated.article_metadata or {})
+            assert meta["publication"]["refinery_id"] == "custom-refinery-id"
 
     def test_mark_published_nonexistent_article(self, db_manager):
         result = db_manager.mark_article_published(99999, "https://pr.url")
@@ -163,13 +181,26 @@ class TestIsArticlePublished:
         assert article is not None
         assert db_manager.is_article_published(article.id) is False
 
-    def test_published_article(self, db_manager):
+    def test_pr_created_article_is_not_yet_published(self, db_manager):
+        """Plan 021: an open PR is not a real publication."""
         article = db_manager.save_article(
             _make_article(url="https://example.com/pub", idx=8)
         )
         assert article is not None
 
         db_manager.mark_article_published(article.id, "https://pr.url/1")
+        assert db_manager.is_article_published(article.id) is False
+
+    def test_completed_publication_attempt_is_published(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/deployed", idx=24)
+        )
+        assert article is not None
+
+        db_manager.mark_article_published(article.id, "https://pr.url/24")
+        db_manager.complete_publication_attempts(
+            [str(article.id)], "https://noticiencias.com/deployed"
+        )
         assert db_manager.is_article_published(article.id) is True
 
     def test_nonexistent_article(self, db_manager):
@@ -180,11 +211,14 @@ class TestPublishedIdsIn:
     """Batch equivalent of is_article_published (avoids N+1 in the refinery UI)."""
 
     def test_batch_published_filter(self, db_manager):
-        # Article with published_url set (via mark_article_published).
+        # Article with published_url set (via a completed publication attempt).
         by_url = db_manager.save_article(
             _make_article(url="https://example.com/batch-url", idx=20)
         )
         db_manager.mark_article_published(by_url.id, "https://pr.url/20")
+        db_manager.complete_publication_attempts(
+            [str(by_url.id)], "https://noticiencias.com/batch-url"
+        )
 
         # Article with only published_at set (no published_url).
         by_date = db_manager.save_article(
@@ -235,7 +269,12 @@ class TestPublishingStateTransitions:
         state = db_manager.get_publishing_state(article.id)
         assert state is None
 
-    def test_publishing_to_completed_transition(self, db_manager):
+    def test_publishing_state_hidden_once_pr_exists(self, db_manager):
+        """Plan 021: get_publishing_state must stop returning state once a PR
+        exists, even though processing_status is still "publishing" — or
+        PROrchestrator.attempt_recovery would re-fire after
+        PUBLISHING_TIMEOUT_SECONDS on a slow-but-healthy PR and create a
+        duplicate."""
         article = db_manager.save_article(
             _make_article(url="https://example.com/transition", idx=11)
         )
@@ -247,11 +286,13 @@ class TestPublishingStateTransitions:
 
         db_manager.mark_article_published(article.id, "https://pr.url/2")
         state_after = db_manager.get_publishing_state(article.id)
-        assert state_after is None  # No longer in publishing state
+        assert state_after is None  # PR exists — recovery must not re-fire
 
         with db_manager.get_session() as session:
             updated = session.query(Article).filter(Article.id == article.id).first()
-            assert updated.processing_status == "completed"
+            # Still "publishing" (a PR being open isn't a real completion) —
+            # only reject/complete_publication_attempts change this now.
+            assert updated.processing_status == "publishing"
 
     def test_mark_publishing_nonexistent_article(self, db_manager):
         result = db_manager.mark_article_publishing(99999, "some-branch")
@@ -260,3 +301,140 @@ class TestPublishingStateTransitions:
     def test_get_publishing_state_nonexistent(self, db_manager):
         state = db_manager.get_publishing_state(99999)
         assert state is None
+
+
+class TestPublicationAttemptTransitions:
+    """Plan 021: reject/complete_publication_attempts, matched by refinery_id."""
+
+    def test_complete_publication_attempts_sets_completed_and_url(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/complete-1", idx=30)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/30")
+
+        updated = db_manager.complete_publication_attempts(
+            [str(article.id)], "https://noticiencias.com/live"
+        )
+        assert updated == 1
+
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            assert row.processing_status == "completed"
+            assert row.published_url == "https://noticiencias.com/live"
+            assert row.published_at is not None
+            assert row.article_metadata["publication"]["state"] == "COMPLETED"
+
+    def test_reject_publication_attempts_sets_rejected(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/reject-1", idx=31)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/31")
+
+        updated = db_manager.reject_publication_attempts(
+            [str(article.id)], reason="Content Guard failed"
+        )
+        assert updated == 1
+
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            assert row.processing_status == "rejected"
+            assert row.published_url is None
+            assert row.article_metadata["publication"]["state"] == "REJECTED"
+            assert (
+                row.article_metadata["publication"]["reason"] == "Content Guard failed"
+            )
+
+    def test_unnamed_attempts_are_never_touched(self, db_manager):
+        """Only refinery_ids actually named in the callback are mutated —
+        never a bulk update of every 'publishing' row."""
+        named = db_manager.save_article(
+            _make_article(url="https://example.com/named", idx=32)
+        )
+        unnamed = db_manager.save_article(
+            _make_article(url="https://example.com/unnamed", idx=33)
+        )
+        db_manager.mark_article_published(named.id, "https://pr.url/32")
+        db_manager.mark_article_published(unnamed.id, "https://pr.url/33")
+
+        db_manager.complete_publication_attempts([str(named.id)], "https://x/live")
+
+        with db_manager.get_session() as session:
+            named_row = session.query(Article).filter(Article.id == named.id).first()
+            unnamed_row = (
+                session.query(Article).filter(Article.id == unnamed.id).first()
+            )
+            assert named_row.processing_status == "completed"
+            assert unnamed_row.processing_status == "publishing"
+
+    def test_replayed_callback_is_idempotent(self, db_manager):
+        """A completed attempt replayed again is a no-op, not an error."""
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/replay", idx=34)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/34")
+        db_manager.complete_publication_attempts([str(article.id)], "https://x/live")
+
+        # Replay: candidates are only processing_status == "publishing", so
+        # an already-completed attempt is simply not matched again.
+        updated_again = db_manager.complete_publication_attempts(
+            [str(article.id)], "https://x/live-v2"
+        )
+        assert updated_again == 0
+
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            assert row.published_url == "https://x/live"  # unchanged
+
+    def test_empty_refinery_ids_is_a_no_op(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/empty-ids", idx=35)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/35")
+
+        assert db_manager.complete_publication_attempts([], "https://x/live") == 0
+        assert db_manager.reject_publication_attempts([]) == 0
+
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            assert row.processing_status == "publishing"
+
+
+class TestArticlesInFlightOrDone:
+    """Plan 021: dedup guard now checks processing_status, not published fields."""
+
+    def test_pr_created_article_is_in_flight(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/in-flight", idx=40)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/40")
+        assert db_manager.is_article_in_flight_or_done(article.id) is True
+
+    def test_completed_article_is_in_flight_or_done(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/done", idx=41)
+        )
+        db_manager.mark_article_published(article.id, "https://pr.url/41")
+        db_manager.complete_publication_attempts([str(article.id)], "https://x/live")
+        assert db_manager.is_article_in_flight_or_done(article.id) is True
+
+    def test_unpublished_article_is_not_in_flight(self, db_manager):
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/not-in-flight", idx=42)
+        )
+        assert db_manager.is_article_in_flight_or_done(article.id) is False
+
+    def test_batch_matches_single_article_semantics(self, db_manager):
+        in_flight = db_manager.save_article(
+            _make_article(url="https://example.com/batch-flight", idx=43)
+        )
+        not_flight = db_manager.save_article(
+            _make_article(url="https://example.com/batch-not-flight", idx=44)
+        )
+        db_manager.mark_article_published(in_flight.id, "https://pr.url/43")
+
+        result = db_manager.articles_in_flight_or_done([in_flight.id, not_flight.id])
+        assert in_flight.id in result
+        assert not_flight.id not in result
+
+    def test_batch_empty_ids_returns_empty_set(self, db_manager):
+        assert db_manager.articles_in_flight_or_done([]) == set()

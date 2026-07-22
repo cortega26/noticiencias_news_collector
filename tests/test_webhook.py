@@ -34,6 +34,7 @@ def db_manager(tmp_path) -> DatabaseManager:
                 "publication": {
                     "state": "PR_CREATED",
                     "pr_url": "https://github.com/cortega26/noticiencias/pull/99",
+                    "refinery_id": "refinery-test-123",
                 },
             },
         )
@@ -102,6 +103,29 @@ def test_webhook_no_auth_in_dev_mode(api_client: TestClient) -> None:
         assert response.status_code == 202
 
 
+def test_webhook_fails_closed_outside_development_without_key(
+    api_client: TestClient,
+) -> None:
+    """Plan 021: 503 (not silent fail-open) when no WEBHOOK_API_KEY is set
+    and the runtime environment isn't the explicit 'development' tier."""
+    from unittest.mock import MagicMock
+
+    fake_runtime = MagicMock()
+    fake_runtime.environment = "production"
+    with (
+        patch.dict(os.environ, clear=True),
+        patch(
+            "news_collector.serving.api.get_runtime_config", return_value=fake_runtime
+        ),
+    ):
+        payload = _make_validation_payload("pass")
+        response = api_client.post(
+            "/api/v1/webhook/frontend",
+            json=payload,
+        )
+        assert response.status_code == 503
+
+
 # ---------------------------------------------------------------------------
 # Event processing tests
 # ---------------------------------------------------------------------------
@@ -110,8 +134,8 @@ def test_webhook_no_auth_in_dev_mode(api_client: TestClient) -> None:
 def test_validation_result_fail_rejects_articles(
     api_client: TestClient, db_manager: DatabaseManager
 ) -> None:
-    """Articles in publishing state are marked as rejected on fail."""
-    payload = _make_validation_payload("fail")
+    """Named publication attempts are rejected on a Content Guard failure."""
+    payload = _make_validation_payload("fail", publication_ids=["refinery-test-123"])
 
     response = api_client.post("/api/v1/webhook/frontend", json=payload)
 
@@ -122,6 +146,7 @@ def test_validation_result_fail_rejects_articles(
         article = session.query(Article).first()
         assert article is not None
         assert article.processing_status == "rejected"
+        assert article.article_metadata["publication"]["state"] == "REJECTED"
 
 
 def test_validation_result_pass_does_not_change_articles(
@@ -139,11 +164,27 @@ def test_validation_result_pass_does_not_change_articles(
         assert article.processing_status == "publishing"
 
 
+def test_validation_result_fail_without_publication_ids_changes_nothing(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Plan 021: no publication_ids means nothing is safely identifiable to
+    reject — must be a no-op, never a branch-matched guess."""
+    payload = _make_validation_payload("fail")  # no publication_ids
+
+    response = api_client.post("/api/v1/webhook/frontend", json=payload)
+
+    assert response.status_code == 202
+
+    with db_manager.get_session() as session:
+        article = session.query(Article).first()
+        assert article.processing_status == "publishing"
+
+
 def test_publish_complete_marks_articles_live(
     api_client: TestClient, db_manager: DatabaseManager
 ) -> None:
-    """Articles are marked completed with published_at and published_url."""
-    payload = _make_publish_payload()
+    """Named publication attempts are completed with published_at/published_url."""
+    payload = _make_publish_payload(publication_ids=["refinery-test-123"])
 
     response = api_client.post("/api/v1/webhook/frontend", json=payload)
 
@@ -155,13 +196,15 @@ def test_publish_complete_marks_articles_live(
         assert article.processing_status == "completed"
         assert article.published_at is not None
         assert article.published_url == "https://noticiencias.com"
+        assert article.article_metadata["publication"]["state"] == "COMPLETED"
 
 
-def test_webhook_branch_no_match_does_not_change_articles(
+def test_publish_complete_without_publication_ids_changes_nothing(
     api_client: TestClient, db_manager: DatabaseManager
 ) -> None:
-    """Articles on a different branch are not affected."""
-    payload = _make_publish_payload(branch="some-other-branch")
+    """Plan 021: no publication_ids means nothing is safely identifiable to
+    complete — must be a no-op, never a branch-matched guess."""
+    payload = _make_publish_payload()  # no publication_ids
 
     response = api_client.post("/api/v1/webhook/frontend", json=payload)
 
@@ -169,7 +212,22 @@ def test_webhook_branch_no_match_does_not_change_articles(
 
     with db_manager.get_session() as session:
         article = session.query(Article).first()
-        # Branch doesn't match, so article should still be publishing
+        assert article.processing_status == "publishing"
+        assert article.published_at is None
+
+
+def test_webhook_unrelated_id_does_not_change_articles(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """An id naming a different article does not affect this one."""
+    payload = _make_publish_payload(publication_ids=["some-other-refinery-id"])
+
+    response = api_client.post("/api/v1/webhook/frontend", json=payload)
+
+    assert response.status_code == 202
+
+    with db_manager.get_session() as session:
+        article = session.query(Article).first()
         assert article.processing_status == "publishing"
         assert article.published_at is None
 
@@ -207,7 +265,9 @@ def test_webhook_missing_required_fields(api_client: TestClient) -> None:
 
 
 def _make_validation_payload(
-    status: str, branch: str = "publish/test-article-123"
+    status: str,
+    branch: str = "publish/test-article-123",
+    publication_ids: list[str] | None = None,
 ) -> dict:
     """Build a valid validation_result payload."""
     return {
@@ -226,11 +286,13 @@ def _make_validation_payload(
         "frontend_ref": "abc123def",
         "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/123"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "publication_ids": publication_ids or [],
     }
 
 
 def _make_publish_payload(
     branch: str = "publish/test-article-123",
+    publication_ids: list[str] | None = None,
 ) -> dict:
     """Build a valid publish_complete payload."""
     return {
@@ -249,6 +311,7 @@ def _make_publish_payload(
         "frontend_ref": "abc123def",
         "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/456"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "publication_ids": publication_ids or [],
     }
 
 

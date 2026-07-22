@@ -239,10 +239,14 @@ def _load_export_articles(  # noqa: C901
                     )
                 art["source_name"] = canonical_source_name
 
-        # Check if already processed using Main DB
+        # Check if already processed using Main DB. Uses processing_status
+        # (in-flight-or-done), not is_article_published's published_url/
+        # published_at check — those only reflect a real deploy completion
+        # (plan 021), not PR creation, so they'd stop catching an article
+        # that already has an open, still-pending PR.
         try:
             numeric_id = int(art_id)
-            if not process_id and db_manager.is_article_published(numeric_id):
+            if not process_id and db_manager.is_article_in_flight_or_done(numeric_id):
                 continue
         except ValueError:
             # Fallback or skip if ID is not numeric (rare/legacy)

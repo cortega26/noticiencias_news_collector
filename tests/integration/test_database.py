@@ -318,8 +318,15 @@ def test_mark_article_published_uses_original_url(test_db_manager) -> None:
 
     with test_db_manager.get_session() as session:
         art = session.query(Article).filter_by(id=saved.id).first()
-        assert art.published_url == "https://github.com/org/repo/pull/1"
-        assert art.processing_status == "completed"  # Updated to match implementation
+        # Plan 021: opening a PR is not a real publication — published_url
+        # stays unset and processing_status stays "publishing" until a
+        # real deploy completes via complete_publication_attempts.
+        assert art.published_url is None
+        assert art.processing_status == "publishing"
+        assert (
+            art.article_metadata["publication"]["pr_url"]
+            == "https://github.com/org/repo/pull/1"
+        )
         assert art.article_metadata["publication"]["state"] == "PR_CREATED"
         assert (
             art.article_metadata["publication"]["frontend_checks"]["state"] == "pending"

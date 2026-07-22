@@ -702,7 +702,10 @@ def render_article_processing_panel(  # noqa: C901
     refinery_db = DatabaseManager()
     is_pub = False
     with suppress(ValueError):
-        is_pub = refinery_db.is_article_published(int(selected_id))
+        # in-flight-or-done (not is_article_published, which post-plan-021
+        # only reflects a real deploy) — preserves this warning's original
+        # intent: also warn while a PR is open and still pending deploy.
+        is_pub = refinery_db.is_article_in_flight_or_done(int(selected_id))
 
     if is_pub:
         st.error(
@@ -2418,7 +2421,12 @@ with tab3:
                             candidate_ids.append(
                                 int(str(art.get("id", art.get("title"))))
                             )
-                    published_id_set = refinery_db.published_ids_in(candidate_ids)
+                    # in-flight-or-done, not published_ids_in — see the
+                    # analogous note where this filter's single-article
+                    # counterpart is used above.
+                    published_id_set = refinery_db.articles_in_flight_or_done(
+                        candidate_ids
+                    )
 
                 filtered_count = 0
                 for art in articles:
