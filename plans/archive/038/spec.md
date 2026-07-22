@@ -215,3 +215,116 @@ precisely scoped than the original handoff:
 3. Only then extract the read-model function and add
    `st.cache_resource`/`st.cache_data`, verified against that harness —
    not by inspection.
+
+## Resumption (2026-07-22): Steps 4-5 completed, harness-first as planned
+
+The operator explicitly authorized building the missing test
+infrastructure for this ("build what I can unblock myself" — this is
+engineering effort, not an operator-secret gap). Followed exactly the
+3-step next slice above, in order, stopping to re-assess after each:
+
+**1. Built the `.venv-refinery` test-running convention.**
+`Makefile`'s `bootstrap-refinery` target now also installs `pytest`
+(unpinned, same pattern as the main venv's ruff/mypy/black/isort —
+outside the hash-pinned `requirements-refinery.lock`). New
+`test-refinery` target runs `pytest -c tools/ci/pytest_refinery.toml
+--rootdir=.` under `$(PYTHON_REFINERY)` with `REFINERY_UI_UNSAFE_ALLOW=1`
+and `NEWS_COLLECTOR_PATH` set. New `tools/ci/pytest_refinery.toml`
+(mirrors the existing `pytest_system.toml`/`pytest_contracts.toml`
+pattern) scopes `testpaths = ["tests_refinery"]` — a directory
+deliberately OUTSIDE the main `pyproject.toml`'s `testpaths = ["tests"]`,
+so `make test`/`make test-all` never try to collect it (which would fail
+immediately since the main `.venv` has no `streamlit` installed).
+
+**2. Wrote the AppTest characterization test FIRST, before any caching
+code existed**, per the plan's own STOP-condition discipline. Confirmed
+empirically — not assumed — that:
+- `REFINERY_UI_UNSAFE_ALLOW=1` (the app's own existing, documented
+  dev/test auth bypass — not a new hack) correctly gets `AppTest` past
+  the auth gate.
+- Streamlit tabs are a layout construct, not conditional execution —
+  every `with tabN:` block's body runs on every script execution
+  regardless of which tab is visually "selected," so Tab 4's real
+  analytics queries execute and its real metrics
+  (`Total Artículos (30d)`, `Score Promedio`, `Fuentes Activas`, ...)
+  render and are directly assertable via `at.metric`.
+- **Uncached baseline, proven not assumed**: instrumented
+  `DatabaseManager.get_collection_stats`/`get_source_performance` with a
+  call counter and confirmed a second independent `AppTest` run
+  re-queried the database — no caching existed yet, exactly as expected,
+  establishing the "before" number the caching change is compared
+  against. (This specific test was later superseded once caching landed
+  — see `tests_refinery/test_admin_panel_characterization.py`'s own
+  module docstring and git history; its role was to unblock proceeding
+  to step 3, not to remain a permanent fixture once its job was done.)
+- **A real test-writing bug caught along the way**:
+  `unittest.mock.patch.object(cls, name, wraps=cls.name)` does NOT bind
+  `self` correctly for an unbound method reference (a `MagicMock` is not
+  a descriptor) — it raises `missing 1 required positional argument:
+  'self'` on every call while still incrementing `call_count`, which
+  would have made a naive `spy.call_count >= 1` assertion pass even
+  though the real method body never ran and the tab's own
+  `except Exception` silently absorbed the failure. Fixed with a plain
+  function wrapper (a real descriptor, binds `self` normally) instead of
+  a `MagicMock`+`wraps` — this exact gotcha is documented inline in
+  `_call_counter()`'s docstring so it isn't rediscovered later.
+
+**3. Extracted the read model and added caching, both verified against
+the harness, not by inspection.**
+- `apps/refinery/analytics_read_model.py` (new): `build_analytics_read_model(db)`,
+  a pure function with zero `streamlit` import — extracted verbatim from
+  Tab 4's inline query composition (same 4 queries: `get_collection_stats`,
+  `get_source_performance`, `get_score_distribution`,
+  `get_category_breakdown`; same derived `avg_score_overall`/`top_sources`
+  formulas). Importable and independently unit-tested under the *main*
+  `.venv` (`tests/decompose_refinery/test_analytics_read_model.py`, 4
+  tests, no Streamlit needed) — this is the behavior-preserving,
+  verifiable-without-Streamlit half of the extraction.
+- `admin_panel.py`'s Tab 4 block rewritten to call it through two cached
+  wrappers: `_get_refinery_analytics_db()` (`st.cache_resource` — safe
+  per `DatabaseManager`'s existing `check_same_thread=False`, confirmed
+  by reading `database.py` before relying on it) and
+  `_load_analytics_read_model(_db)` (`st.cache_data(ttl=60)` — a short
+  explicit TTL, per the plan's own Step 4 wording; `_db`
+  underscore-prefixed per Streamlit's own convention to exclude the
+  unhashable resource from the cache key). A manual refresh button
+  (`🔄 Refrescar analítica`) calls `.clear()` on the cached loader
+  (Step 4's "Invalidate after ... manual refresh"); a freshness caption
+  (`Datos al: <UTC timestamp>`) satisfies Step 5's freshness-display ask.
+  Rendering logic (metrics, charts, fallback messages, the outer
+  `try/except` boundary) is otherwise untouched — a deliberately
+  behavior-preserving edit, not a rewrite.
+- **Caching behavior proven via the harness**, not asserted by
+  inspection: `test_second_rerun_reuses_cache_and_does_not_requery`
+  (two independent `AppTest` "page loads" — DB query count stays at
+  exactly 1, proving the cache hit is real); `test_manual_refresh_button_forces_a_fresh_query`
+  (clicks the real button via `AppTest`, not a direct `.clear()` call —
+  proves the button is actually wired, not just that the API works);
+  `test_a_visible_query_error_does_not_show_stale_data_as_current`
+  (forces `get_collection_stats` to raise — confirms the existing
+  `except Exception -> st.error` path still surfaces visibly rather than
+  a stale cached value silently standing in, directly answering Step 5's
+  own "must never present stale data as current" concern);
+  `test_analytics_freshness_caption_is_shown`. 6 tests total in
+  `tests_refinery/`, all passing against the real app via `make
+  test-refinery`.
+- 4 new tests for the pure read model
+  (`tests/decompose_refinery/test_analytics_read_model.py`) run under the
+  main `.venv`, no Streamlit needed: total/avg-score derivation, top-5
+  sort-and-cap, zero-articles division-by-zero safety, exactly-once
+  query-call verification via a fake DB.
+
+**Verification (this pass)**: `make test-refinery` → 6/6 passed.
+`.venv/bin/pytest tests/decompose_refinery/test_analytics_read_model.py`
+→ 4/4 passed. `black`/`ruff` clean on all touched files; `mypy` clean on
+the new `analytics_read_model.py` (apps/ is in mypy's scope, unlike
+`scripts/`/`tools/`). Full main-suite regression (memory-watchdog
+discipline): 1252 passed, same 13 pre-existing failures as this
+session's established baseline, no new failures, 27.32s.
+
+**Plan 038 is now DONE** (all 5 Done Criteria genuinely met): telemetry
+commits scale with batches (Steps 1-3, prior pass); stores are
+explicitly constructed and environment-isolated (Steps 1-3); reports
+observe flushed metrics (Steps 1-3); Refinery analytics queries are
+cached/invalidation-aware and show freshness (Steps 4-5, this pass,
+harness-verified); benchmarks and full backend checks pass.

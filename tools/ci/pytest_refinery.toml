@@ -1,0 +1,12 @@
+[project]
+name = "noticiencias-news-collector-refinery-tests"
+dynamic = ["version"]
+description = "AppTest-based characterization tests for apps/refinery (isolated .venv-refinery environment)"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests_refinery"]
+pythonpath = ["."]
+addopts = "-ra"
