@@ -38,10 +38,11 @@
 ## Dependency-driven order (superseding plans/README.md's numeric listing)
 
 Per the dependency column in `plans/README.md`, the plans immediately
-startable (all deps archived/done) were 033, 021, 023, 046; with 033 done,
-036/037/048 additionally became startable. Re-derive the next startable
-set from `plans/README.md` after each plan completes — do not hardcode a
-full ordering up front, since finishing one plan changes what's unblocked.
+startable (all deps archived/done) were 033, 021, 023, 046; with 033 (and
+034) done, 036/037/048 additionally became startable. Re-derive the next
+startable set from `plans/README.md` after each plan completes — do not
+hardcode a full ordering up front, since finishing one plan changes what's
+unblocked.
 
 ## Sequencing state
 
@@ -126,6 +127,23 @@ full ordering up front, since finishing one plan changes what's unblocked.
   baseline. See `plans/036/spec.md` for the full narrative, including the
   STOP-condition-3 semantic-dependency check and the regression's root
   cause/fix.
+- **037 — Make bulk article persistence set-based**: DONE. Reduced
+  `save_articles_bulk()`'s SELECT count from 561 to 4 for a 100-article
+  batch (URL/content-hash exact-dup checks now chunked `IN` queries;
+  near-duplicate candidates prefetched once per batch across the union of
+  needed simhash prefixes instead of up to 3 queries per article). Two
+  empirical probes before any refactor (per an advisor consult) found that
+  current bulk code does NOT join two near-duplicate articles submitted in
+  the same batch (an `autoflush=False` artifact), while the true
+  "sequential" oracle — `save_article()` called twice — does join them and
+  back-mutates the matched candidate's confidence. Building the in-memory
+  candidate map so same-batch near-duplicates join (the plan's Step 4, as
+  literally written) closes this real gap rather than violating the
+  STOP-condition against semantic drift. `_resolve_cluster_for_candidates`
+  is now shared, unchanged logic between the live single-item path and the
+  new batched path, including cluster-merge propagation to not-yet-flushed
+  same-batch rows. See `plans/037/spec.md` for the full empirical
+  investigation and design.
 
 ## Verification
 
