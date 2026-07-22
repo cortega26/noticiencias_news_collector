@@ -101,6 +101,15 @@ runbook) — nothing in this repository can currently name it. Full detail:
 `docs/database_deployment.md` § "Production deployment topology — not
 discoverable in this repository".
 
+**Update (2026-07-22, operator-confirmed)**: asked directly — no production
+deployment of this backend exists yet. This confirms the STOP finding above
+rather than changing it: there is still nothing to point Steps 2/4/6's
+PostgreSQL-specific work at, and the second STOP below (PostgreSQL isn't
+usable yet regardless of deployment topology) remains independently true.
+046 stays PARTIAL; this is not a gap in the prior pass, it's the STOP
+condition operating exactly as designed. Revisit once a production
+deployment is stood up.
+
 ## Second, empirically-discovered STOP: PostgreSQL is not usable yet
 
 Plan 046 asks for a disposable PostgreSQL migration test
