@@ -219,19 +219,68 @@ this file now tracks the current pass over the 18 remaining plans.
       relied on the very in-batch-dedup gap Step 2 closes. Committed,
       `plans/README.md` updated to DONE.
 
+## Plan 048 — Spike a curated multilingual topic and entity registry (PARTIAL)
+
+- [x] Recon via subagent: `config.toml`'s `pattern_v1` block,
+      `config_schema.py`'s topic/entity schema, `settings.py`'s
+      normalization, `ConfigurableNLPStack` behavior end to end, and every
+      real consumer — confirmed only 4 (feature scoring, topic-diversity
+      reranking, serving API, image briefs); `CognitiveScorer` and
+      monitoring/observability are NOT content consumers, contradicting
+      the plan's own broader "monitoring" framing.
+- [x] Step 1: wrote `docs/spikes/curated-enrichment-registry.md` — the
+      plan's own literal Step-1 Verify target. Five-way label vocabulary,
+      full consumer table, stable-ID/deprecation/cross-language-equivalence
+      gap analysis, allowed-entity-label examples/non-examples per
+      language, the one existing ambiguity rule (`case_sensitive` on
+      `TECH`/"IA"), multi-topic 5-cap semantics, and what `general`
+      actually means (residual fallback, not a curated topic).
+- [x] Steps 2-6: STOPPED at the plan's own condition — "no qualified
+      editorial reviewer or safe representative data" — this session has
+      neither. Explicitly rejected fabricating a ≥200-record
+      "two-reviewer-adjudicated" corpus with self-generated labels dressed
+      as independent review (fabricated governance, not caution). Also
+      did not build the Step 3 evaluator scaffold: it would only be
+      runnable against the 6 existing golden examples, which the plan's
+      own Step 3 Verify line disqualifies as sufficient evidence.
+- [x] Wrote `docs/adr/0004-curated-enrichment-registry-spike.md`: STOP
+      decision, context, consequences, 4 alternatives considered, and
+      concrete next steps for whoever resumes with a real reviewer and
+      corpus.
+- [x] `git diff --stat` confirmed zero changes to `config.toml`,
+      `config_schema.py`, `settings.py`, enrichment/scoring/reranker code,
+      or the golden fixture — production behavior untouched, satisfying
+      the plan's own Done Criterion. `plans/README.md` updated to
+      PARTIAL, `plans/048/spec.md` + `todo.md` written.
+
 ## Reassess after each completion
 
-- [x] 033/021/023/046/034/038/036/037 have each landed
-      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE). Newly-startable
-      set per `plans/README.md`'s dependency column: **048** (deps 027
-      already archived/DONE + 033, now DONE). 031/032 unblock after 023 but belong in the
-      frontend repo (see below). 041/043 need the full 021+023+... set,
-      which isn't there yet (021/023 are only PARTIAL). 047 needs 021+023
-      fully done — not yet. 049 needs 021+022+028+041 — not yet.
+- [x] 033/021/023/046/034/038/036/037/048 have each landed
+      (DONE/PARTIAL/PARTIAL/PARTIAL/DONE/PARTIAL/DONE/DONE/PARTIAL).
+      048 was the last plan in `plans/README.md` startable from this
+      backend working directory: 031/032/035/039/044 belong in the
+      frontend repo; 041/043/047/049 all transitively depend on 021
+      and/or 023, which are PARTIAL pending a coordinated backend+frontend
+      change and operator secrets this session cannot supply (see their
+      own entries above) — none of them newly unblocked by 048 landing,
+      since 048 is a leaf spike with no plan depending on it.
+- [x] **Natural stopping point reached.** Every remaining TODO/PARTIAL
+      plan in `plans/README.md` is now either out-of-repo (frontend) or
+      blocked on the same two PARTIAL plans (021, 023) whose remaining
+      steps require operator-supplied secrets/provisioning or coordinated
+      frontend changes — not something resolvable by reading the spec and
+      running tests. Per this session's own directive ("do not ask for
+      clarification on anything you can resolve by reading the spec and
+      running tests"), these are correctly left PARTIAL rather than
+      force-advanced. No further plan is autonomously startable from this
+      working directory; do not manufacture busywork to keep the loop
+      running.
 - [ ] Frontend plans (031, 032, 035, 039, 044) belong in the Astro repo
       (`noticiencias`), not here — flag when reached instead of implementing
       from this working directory.
-- [ ] Spike plans (047, 048, 049) end in an ADR/decision doc, not shipped
-      code — don't over-build.
+- [x] Spike plans (047, 048, 049) end in an ADR/decision doc, not shipped
+      code — don't over-build. 048 is the first of these actually
+      attempted this session; it landed as Step-1-only + STOP ADR per this
+      principle.
 - [ ] Every ~20 iterations: fresh subagent review of spec.md + implementation
       for gaps; loop on feedback.

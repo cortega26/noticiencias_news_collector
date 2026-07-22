@@ -144,6 +144,27 @@ unblocked.
   new batched path, including cluster-merge propagation to not-yet-flushed
   same-batch rows. See `plans/037/spec.md` for the full empirical
   investigation and design.
+- **048 — Spike a curated multilingual topic and entity registry**: PARTIAL.
+  Step 1 done: `docs/spikes/curated-enrichment-registry.md` maps every real
+  consumer (feature scoring, topic-diversity reranking, serving API,
+  image briefs — with monitoring/observability and `CognitiveScorer`
+  confirmed NOT to be content consumers, contrary to the plan's broader
+  framing), a five-way label vocabulary (editorial category / broad topic
+  / named entity / synonym-alias / trend term), and the concrete schema
+  gaps (no stable opaque IDs, no deprecation/replacement links, no
+  cross-language canonical grouping, only one ad hoc ambiguity rule
+  today). Steps 2-6 STOPPED at the plan's own condition ("no qualified
+  editorial reviewer or safe representative data") — this is an
+  unattended autonomous session with no human available to independently
+  label/adjudicate the required ≥200-record corpus; fabricating such a
+  corpus and dressing self-generated labels as independently reviewed
+  would be fabricated governance, not caution, so Step 3's evaluator was
+  also deliberately not built (it would only run against the 6 existing
+  goldens, which the plan itself disqualifies as evaluation evidence).
+  Zero production files touched (`config.toml`, `config_schema.py`,
+  `settings.py`, enrichment/scoring/reranker code, the golden fixture —
+  all confirmed byte-identical via `git diff --stat`). See
+  `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md`.
 
 ## Verification
 
