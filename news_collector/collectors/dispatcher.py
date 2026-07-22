@@ -125,6 +125,43 @@ class CollectorDispatcher:
             )
         )
 
+    def _attribute_dispatch_failure(
+        self,
+        final_results: Dict[str, Any],
+        *,
+        source_ids: list,
+        collector_type: str,
+        reason: str,
+        error_class: str,
+        error_message: str,
+        session_id: Optional[str],
+        trace_id: Optional[str],
+    ) -> None:
+        """Record one source_details entry + health-tracker call per
+        affected source for a dispatcher-level failure (a whole-group
+        exception, an unavailable collector, or a malformed result).
+        Never raises: a telemetry failure must not take down the
+        collection result (plan 040 Step 4)."""
+        details = {"error_class": error_class, "error_message": error_message}
+        for sid in source_ids:
+            final_results["source_details"][sid] = {
+                "success": False,
+                "reason": reason,
+                "collector_type": collector_type,
+                **details,
+            }
+            if self.health_tracker:
+                try:
+                    self.health_tracker.record_attempt(sid)
+                    self.health_tracker.record_failure(sid, "unknown", reason, details)
+                except Exception as tracker_exc:  # noqa: BLE001
+                    logger.opt(exception=tracker_exc).warning(
+                        "health_tracker call failed for source={} reason={}: {}",
+                        sid,
+                        reason,
+                        tracker_exc,
+                    )
+
     async def collect_from_multiple_sources_async(  # noqa: C901
         self,
         sources_config: Dict[str, Dict[str, Any]],
@@ -133,27 +170,62 @@ class CollectorDispatcher:
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
 
-        # Group sources by type
+        sources_requested = len(sources_config)
+
+        # Group sources by type. An unrecognized `collector_type` falls
+        # back to "rss" (deliberate, kept behavior — see plan 040's STOP
+        # condition: not externally promised elsewhere, but not asked to
+        # be changed either; locked in by
+        # test_dispatcher_unknown_collector_type_falls_back_to_rss).
         grouped_sources: Dict[str, Dict[str, Any]] = {}
         for source_id, config in sources_config.items():
             ctype = config.get("collector_type", "rss").lower()
             if ctype not in self.collectors:
-                # Fallback to RSS if not specified? Or error?
-                # Default to rss for backward compatibility
                 ctype = "rss"
 
             if ctype not in grouped_sources:
                 grouped_sources[ctype] = {}
             grouped_sources[ctype][source_id] = config
 
+        final_results: Dict[str, Any] = {
+            "source_details": {},
+            "collection_summary": {
+                "sources_requested": sources_requested,
+                "sources_processed": 0,
+                "sources_succeeded": 0,
+                "sources_failed": 0,
+                "articles_found": 0,
+                "articles_saved": 0,
+                "errors_encountered": 0,
+            },
+        }
+
         # Dispatch async with metadata for failure attribution
-        tasks: list[asyncio.Task] = []  # type: ignore[type-arg]
+        tasks: list[asyncio.Task] = []
         task_metadata: dict[int, dict[str, Any]] = {}
         for ctype, sources in grouped_sources.items():
             collector = self.collectors.get(ctype)
+            source_ids = list(sources.keys())
             if not collector:
+                logger.error(
+                    "Collector unavailable: type={}, sources={}, session={}, trace={}",
+                    ctype,
+                    source_ids,
+                    session_id,
+                    trace_id,
+                )
+                self._attribute_dispatch_failure(
+                    final_results,
+                    source_ids=source_ids,
+                    collector_type=ctype,
+                    reason="collector_unavailable",
+                    error_class="CollectorUnavailable",
+                    error_message=f"No collector registered for type '{ctype}'",
+                    session_id=session_id,
+                    trace_id=trace_id,
+                )
                 continue
-            meta = {"collector_type": ctype, "source_ids": list(sources.keys())}
+            meta = {"collector_type": ctype, "source_ids": source_ids}
             if hasattr(collector, "collect_from_multiple_sources_async"):
                 coro = collector.collect_from_multiple_sources_async(
                     sources, session_id=session_id, trace_id=trace_id
@@ -170,67 +242,89 @@ class CollectorDispatcher:
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Merge results
-        final_results: Dict[str, Any] = {
-            "source_details": {},
-            "collection_summary": {
-                "sources_processed": 0,
-                "articles_found": 0,
-                "articles_saved": 0,
-                "errors_encountered": 0,
-            },
-        }
-
         for idx, res in enumerate(results_list):
             meta = task_metadata.get(idx, {})
-            ctype = meta.get("collector_type", "unknown")
-            source_ids = meta.get("source_ids", [])
+            result_ctype: str = str(meta.get("collector_type", "unknown"))
+            result_source_ids: list = list(meta.get("source_ids", []))
 
             if isinstance(res, Exception):
                 logger.opt(exception=res).error(
-                    "Collector task failed: type={}, sources={}, error={}",
-                    ctype,
-                    source_ids,
+                    "Collector task failed: type={}, sources={}, session={}, trace={}, error={}",
+                    result_ctype,
+                    result_source_ids,
+                    session_id,
+                    trace_id,
                     res,
                 )
                 final_results["collection_summary"]["errors_encountered"] += len(
-                    source_ids
+                    result_source_ids
                 )
-                final_results["collection_summary"]["sources_processed"] += len(
-                    source_ids
+                self._attribute_dispatch_failure(
+                    final_results,
+                    source_ids=result_source_ids,
+                    collector_type=result_ctype,
+                    reason="dispatcher_task_exception",
+                    error_class=type(res).__name__,
+                    error_message=str(res),
+                    session_id=session_id,
+                    trace_id=trace_id,
                 )
-                for sid in source_ids:
-                    final_results["source_details"][sid] = {
-                        "success": False,
-                        "error": str(res),
-                        "collector_type": ctype,
-                    }
                 continue
             if not isinstance(res, dict):
+                logger.error(
+                    "Collector returned malformed result: type={}, sources={}, "
+                    "session={}, trace={}, result_type={}",
+                    result_ctype,
+                    result_source_ids,
+                    session_id,
+                    trace_id,
+                    type(res).__name__,
+                )
+                final_results["collection_summary"]["errors_encountered"] += len(
+                    result_source_ids
+                )
+                self._attribute_dispatch_failure(
+                    final_results,
+                    source_ids=result_source_ids,
+                    collector_type=result_ctype,
+                    reason="malformed_result",
+                    error_class=type(res).__name__,
+                    error_message="Collector returned a non-dict result",
+                    session_id=session_id,
+                    trace_id=trace_id,
+                )
                 continue
 
             # Merge source details
             if "source_details" in res:
                 final_results["source_details"].update(res["source_details"])
 
-            # Merge summary stats
+            # Merge summary stats (errors_encountered here reflects a
+            # successful group's own reported sub-source error count,
+            # distinct from dispatch-level failures above)
             if "collection_summary" in res:
                 summ = res["collection_summary"]
                 final_summary = final_results["collection_summary"]
-                final_summary["sources_processed"] += summ.get("sources_processed", 0)
                 final_summary["articles_found"] += summ.get("articles_found", 0)
                 final_summary["articles_saved"] += summ.get("articles_saved", 0)
                 final_summary["errors_encountered"] += summ.get("errors_encountered", 0)
 
-        # Recalculate rates
-        s_proc = final_results["collection_summary"]["sources_processed"]
-        if s_proc > 0:
-            success_count = sum(
-                1 for r in final_results["source_details"].values() if r.get("success")
-            )
-            final_results["collection_summary"]["success_rate_percent"] = round(
-                (success_count / s_proc) * 100, 2
-            )
+        # Derive succeeded/failed from the final merged source_details in
+        # one pass, so `succeeded + failed == requested` is structural
+        # rather than accumulated per-branch (plan 040 Step 3).
+        succeeded = sum(
+            1 for r in final_results["source_details"].values() if r.get("success")
+        )
+        failed = len(final_results["source_details"]) - succeeded
+        final_summary = final_results["collection_summary"]
+        final_summary["sources_succeeded"] = succeeded
+        final_summary["sources_failed"] = failed
+        final_summary["sources_processed"] = sources_requested
+        final_summary["success_rate_percent"] = (
+            round((succeeded / sources_requested) * 100, 2)
+            if sources_requested > 0
+            else 0.0
+        )
 
         return final_results
 
