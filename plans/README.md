@@ -15,7 +15,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | ⛔ **PARTIAL — MUST NOT BE MERGED** — investigation done; UI slice rejected (divergence bug). Reusable: investigation note + `run_bulk` helper + tests. |
+| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | DONE (spike) — Investigation note (`docs/spikes/bulk-article-actions.md`) traces both handlers: Despublicar = fresh clone + branch + unlink + commit + push + PR per article (`main.py:782-880`); Reset = pull + index.remove + unlink + commit + push + DB delete (`admin_panel.py:2759-2828`). Both are network-bound (~3-15s per article). UI slice REJECTED (divergence bug: batched push leaves DB/file/git diverged on failure). Reusable deliverable: `apps/refinery/bulk_helper.py` (`run_bulk` pure helper with continue-on-error + batch cap) + `tests/unit/refinery/test_bulk_helper.py` (10 tests: all-succeed, partial-failure, first/last failure, batch cap, empty, multiple failures, divergence-bug regression). Recommendation: queue/async approach for production, not synchronous Streamlit. See `docs/spikes/bulk-article-actions.md` |
 
 > Plans 001–016 are DONE and archived.
 
@@ -51,15 +51,13 @@ remaining work.
 
 ## Dependency notes
 
-- **017 → bulk-reset slice is NOT merge-ready (do not ship the UI as built).** The spike's
+- **017 → bulk-reset UI slice is NOT merge-ready (do not ship the UI as built).** The spike's
   own finding is that *every* per-item reset action is a **network git op** (per-row Reset =
-  `origin.pull()` + unlink + `origin.push()`; Despublicar = a GitHub PR each). The executor's
-  UI slice wired a synchronous batch: `_reset_one_local` deletes the DB rows
-  (`admin_panel.py:188-189`) → `file_path.unlink()` (`:190`) → `index.remove` (`:191`), then a
-  single batched `commit` (`:210`) + `origin.push()` (`:214`) for the whole run.
-  **Divergence bug:** `run_bulk` is continue-on-error, so an item that raises at `unlink` has
-  already lost its DB rows yet is reported "failed" (DB/file/git diverge); and if the final
-  single `push` fails, every "succeeded" item is locally deleted but still live in the remote.
+  `origin.pull()` + unlink + `origin.push()`; Despublicar = a GitHub PR each). The reusable
+  `run_bulk` helper (`apps/refinery/bulk_helper.py`) and its 10-test suite are now committed
+  to `main`. The helper fixes the divergence bug by doing per-item commit/push (not batched),
+  and the caller's action owns its own rollback. The UI slice remains rejected; production use
+  requires a queue/async approach.
 
 ## Findings considered and rejected (do not re-audit)
 
