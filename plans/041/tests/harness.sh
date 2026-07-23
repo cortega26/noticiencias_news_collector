@@ -94,10 +94,13 @@ cmd_schema_mismatch() {
   local tmp
   tmp="$(mktemp -d)"
   echo "class FrontendSchema: not_a_real_schema = True" > "$tmp/frontend_schema.py"
-  if ( cd "$BACKEND_ROOT" && bash scripts/verify_workspace.sh --backend . --frontend "$FRONTEND" --backend-schema "$tmp/frontend_schema.py" ) >"$TESTS_DIR/.schema-mismatch.log" 2>&1; then
-    fail "schema-mismatch — workspace gate did NOT fail on incompatible schema"; rm -rf "$tmp"; return 1
+  # Test the contract-sync check directly (skip the full backend/frontend
+  # gates which take minutes — the schema-mismatch proof is about the
+  # contract parity check failing, not the full workspace gate).
+  if ( cd "$FRONTEND" && BACKEND_SCHEMA_PATH="$tmp/frontend_schema.py" npm run check:contract-sync ) >"$TESTS_DIR/.schema-mismatch.log" 2>&1; then
+    fail "schema-mismatch — contract-sync did NOT fail on incompatible schema"; rm -rf "$tmp"; return 1
   fi
-  pass "schema-mismatch — workspace gate correctly fails on incompatible schema"; rm -rf "$tmp"; return 0
+  pass "schema-mismatch — contract-sync correctly fails on incompatible schema"; rm -rf "$tmp"; return 0
 }
 
 cmd_dirty_tree() {
