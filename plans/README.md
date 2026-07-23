@@ -15,7 +15,7 @@ Second pass (2026-07-21) supersedes scope statement: covers the full workspace.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | DONE (spike) — Investigation note (`docs/spikes/bulk-article-actions.md`) traces both handlers: Despublicar = fresh clone + branch + unlink + commit + push + PR per article (`main.py:782-880`); Reset = pull + index.remove + unlink + commit + push + DB delete (`admin_panel.py:2759-2828`). Both are network-bound (~3-15s per article). UI slice REJECTED (divergence bug: batched push leaves DB/file/git diverged on failure). Reusable deliverable: `apps/refinery/bulk_helper.py` (`run_bulk` pure helper with continue-on-error + batch cap) + `tests/unit/refinery/test_bulk_helper.py` (10 tests: all-succeed, partial-failure, first/last failure, batch cap, empty, multiple failures, divergence-bug regression). Recommendation: queue/async approach for production, not synchronous Streamlit. See `docs/spikes/bulk-article-actions.md` |
+| 017 | Spike: bulk despublicar/reset in published-content tab | P3 | M–L | — | DONE (spike) — Investigation note (`docs/spikes/bulk-article-actions.md`) traces both handlers: Despublicar = fresh clone + branch + unlink + commit + push + PR per article (`main.py:782-880`); Reset = pull + index.remove + unlink + commit + push + DB delete (`admin_panel.py:2759-2828`). Both are network-bound (~3-15s per article). **UI slice SHIPPED** with divergence-bug fix: `run_bulk` helper (`apps/refinery/bulk_helper.py`, pure, continue-on-error + batch cap 5) + `reset_one_article` (`apps/refinery/published_content.py`, per-item commit/push, DB rows only deleted after push succeeds) + multi-select UI in published-content tab with confirmation + `op_in_progress` guard + progress bar + structured report. 14 tests: 10 bulk_helper + 4 reset_one_article (including divergence-bug regression). See `docs/spikes/bulk-article-actions.md` |
 
 > Plans 001–016 are DONE and archived.
 
@@ -51,13 +51,14 @@ remaining work.
 
 ## Dependency notes
 
-- **017 → bulk-reset UI slice is NOT merge-ready (do not ship the UI as built).** The spike's
+- **017 → bulk-reset UI slice is SHIPPED with the divergence-bug fix.** The spike's
   own finding is that *every* per-item reset action is a **network git op** (per-row Reset =
-  `origin.pull()` + unlink + `origin.push()`; Despublicar = a GitHub PR each). The reusable
-  `run_bulk` helper (`apps/refinery/bulk_helper.py`) and its 10-test suite are now committed
-  to `main`. The helper fixes the divergence bug by doing per-item commit/push (not batched),
-  and the caller's action owns its own rollback. The UI slice remains rejected; production use
-  requires a queue/async approach.
+  `origin.pull()` + unlink + `origin.push()`; Despublicar = a GitHub PR each). The shipped
+  slice uses `run_bulk` (`apps/refinery/bulk_helper.py`) + `reset_one_article`
+  (`apps/refinery/published_content.py`) which does per-item commit/push (not batched)
+  and only deletes DB rows *after* the push succeeds, fixing the divergence bug.
+  Batch cap is 5; `op_in_progress` prevents double-submit. 14 tests cover the helper
+  and the divergence-bug regression. Batches > 5 still require a queue/async approach.
 
 ## Findings considered and rejected (do not re-audit)
 
