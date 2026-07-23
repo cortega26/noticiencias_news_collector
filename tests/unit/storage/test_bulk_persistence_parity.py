@@ -155,9 +155,11 @@ class TestExactDuplicateDedupe:
         saved = db_manager.save_articles_bulk([payload, payload_dup])
         assert saved == 1
         with db_manager.get_session() as session:
-            rows = session.query(Article).filter_by(
-                url="https://example.com/dup-url"
-            ).all()
+            rows = (
+                session.query(Article)
+                .filter_by(url="https://example.com/dup-url")
+                .all()
+            )
             assert len(rows) == 1
             assert rows[0].title == "First Title Long Enough"
 
@@ -234,9 +236,7 @@ class TestClusterMergePropagatesToPendingRows:
     candidate — not the pending one — wins the tie-break, forcing the
     pending candidate's cluster to be the one merged away."""
 
-    def test_pending_only_cluster_is_merged_into_the_persisted_winner(
-        self, db_manager
-    ):
+    def test_pending_only_cluster_is_merged_into_the_persisted_winner(self, db_manager):
         repo = db_manager.articles
 
         # A persisted "X" article, its own pre-existing cluster.
@@ -280,8 +280,10 @@ class TestClusterMergePropagatesToPendingRows:
 
         def tie_break_id(article):
             real_id = getattr(article, "id", None)
-            return int(real_id) if real_id is not None else synthetic_ids.get(
-                id(article), 0
+            return (
+                int(real_id)
+                if real_id is not None
+                else synthetic_ids.get(id(article), 0)
             )
 
         with db_manager.get_session() as session:

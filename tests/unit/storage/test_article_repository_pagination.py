@@ -33,9 +33,7 @@ def db_manager(tmp_path):
     manager.close()
 
 
-def _make_pending(
-    db_manager, count, status="validated", start=None, tie_every=None
-):
+def _make_pending(db_manager, count, status="validated", start=None, tie_every=None):
     """Insert `count` articles with distinct/tied collected_date+id.
 
     tie_every, if set, makes every `tie_every`-th article share the exact
@@ -108,9 +106,7 @@ class TestPendingPagination:
         assert len(seen_ids) == 10
         assert len(set(seen_ids)) == 10
 
-    def test_naive_single_column_cursor_would_duplicate_or_skip_ties(
-        self, db_manager
-    ):
+    def test_naive_single_column_cursor_would_duplicate_or_skip_ties(self, db_manager):
         """Falsifier: a cursor keyed on collected_date alone breaks on ties."""
         _make_pending(db_manager, 6, status="validated", tie_every=100)
 
@@ -162,9 +158,7 @@ class TestPendingPagination:
         this is the "newly updated rows cannot reappear" property.
         """
         _make_pending(db_manager, 5, status="validated")
-        page1 = db_manager.get_pending_articles_page(
-            limit=2, status="validated"
-        )
+        page1 = db_manager.get_pending_articles_page(limit=2, status="validated")
         assert len(page1.items) == 2
         cursor = page1.next_cursor
         assert cursor is not None
