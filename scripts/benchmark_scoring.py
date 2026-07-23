@@ -86,7 +86,10 @@ class _FakeRepository:
         self._page_size_tracker = page_size_tracker
 
     def get_pending_articles_page(
-        self, limit: int, status: str = "validated", cursor: Optional[ArticleCursor] = None
+        self,
+        limit: int,
+        status: str = "validated",
+        cursor: Optional[ArticleCursor] = None,
     ) -> ArticlePage:
         self._page_size_tracker.append(limit)
         rows = self._articles
@@ -183,9 +186,7 @@ def main() -> int:
 
     failures = []
     if committed != args.articles:
-        failures.append(
-            f"committed ({committed}) != total articles ({args.articles})"
-        )
+        failures.append(f"committed ({committed}) != total articles ({args.articles})")
     if observed_inflight > args.assert_max_inflight:
         failures.append(
             f"observed in-flight ({observed_inflight}) exceeds bound "

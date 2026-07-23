@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "news_collector.serving.__main__:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # noqa: S104 — intended for local dev server
         port=8000,
         reload=True,
     )

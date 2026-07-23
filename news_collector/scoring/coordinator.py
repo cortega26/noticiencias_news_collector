@@ -139,7 +139,9 @@ class ScoringCoordinator:
                 module_logger,
             )
 
-        return self._build_result(state, module_logger, time.perf_counter() - cycle_start)
+        return self._build_result(
+            state, module_logger, time.perf_counter() - cycle_start
+        )
 
     async def _run_source(
         self,
@@ -328,9 +330,7 @@ class ScoringCoordinator:
 
         if use_batch:
             try:
-                return cast(
-                    List[Any], await self.scorer.score_batch_async(payloads)
-                )
+                return cast(List[Any], await self.scorer.score_batch_async(payloads))
             except Exception as batch_error:
                 module_logger.error(
                     f"Batch scoring failed ({len(payloads)} items): {batch_error}"
@@ -366,9 +366,7 @@ class ScoringCoordinator:
                         self._inflight -= 1
 
         tasks = [_score_one(p) for p in payloads]
-        return cast(
-            List[Any], await asyncio.gather(*tasks, return_exceptions=True)
-        )
+        return cast(List[Any], await asyncio.gather(*tasks, return_exceptions=True))
 
     def _simulate_scoring(self, collection_results: Dict[str, Any]) -> Dict[str, Any]:
         """Simulate scoring for dry-run mode (preserved from original)."""
