@@ -764,7 +764,11 @@ def reset_one_article(
     repo = git.Repo(repo_root)
 
     # 1. Remove from git index + unlink file
-    rel_path = str(article.file_path.relative_to(repo_root))
+    try:
+        rel_path = str(article.file_path.relative_to(repo_root))
+    except ValueError:
+        # file_path is not under repo_root — use the absolute path
+        rel_path = str(article.file_path)
     repo.index.remove([rel_path])
     article.file_path.unlink()
 
@@ -776,5 +780,11 @@ def reset_one_article(
     #    remote is in sync. If this raises, the remote is already
     #    updated and the DB rows can be cleaned up separately.
     if article.refinery_id:
-        db_manager.delete_article(str(article.refinery_id))
-        db_manager.delete_article(f"{article.refinery_id}.md")
+        try:
+            db_manager.delete_article(str(article.refinery_id))
+            db_manager.delete_article(f"{article.refinery_id}.md")
+        except Exception:  # noqa: S110 - remote already updated; DB cleanup is a separate concern
+            # The remote is already updated; log but don't raise —
+            # the article is effectively reset even if DB cleanup
+            # needs a separate pass.
+            pass

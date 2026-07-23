@@ -90,13 +90,20 @@ class FeedStore:
         # Validate parent
         if rev.parent is not None:
             if rev.parent != rev.revision - 1:
-                raise ValueError(f"Parent must be revision-1: parent={rev.parent}, revision={rev.revision}")
+                raise ValueError(
+                    f"Parent must be revision-1: parent={rev.parent}, revision={rev.revision}"
+                )
 
         # Check for duplicate (same refinery_id + content_hash)
         for idx in self._by_id.get(rev.refinery_id, []):
             existing = self._revisions[idx]
-            if existing.content_hash == rev.content_hash and existing.operation == rev.operation:
-                raise ValueError(f"Duplicate revision: {rev.refinery_id} + {rev.content_hash[:8]}")
+            if (
+                existing.content_hash == rev.content_hash
+                and existing.operation == rev.operation
+            ):
+                raise ValueError(
+                    f"Duplicate revision: {rev.refinery_id} + {rev.content_hash[:8]}"
+                )
 
         # Tombstone requires prior upsert
         if rev.operation == FeedOperation.TOMBSTONE:
@@ -210,12 +217,16 @@ class TestDeterminism:
     def test_replay_is_deterministic(self):
         store = FeedStore()
         for i in range(1, 11):
-            rev = make_revision(revision=i, parent=i - 1 if i > 1 else None, body=f"# Article v{i}")
+            rev = make_revision(
+                revision=i, parent=i - 1 if i > 1 else None, body=f"# Article v{i}"
+            )
             rev.generated_at = f"2026-01-01T00:00:0{i}Z"  # deterministic timestamp
             store.append(rev)
         replay1 = store.replay()
         replay2 = store.replay()
-        assert [r.canonical_json() for r in replay1] == [r.canonical_json() for r in replay2]
+        assert [r.canonical_json() for r in replay1] == [
+            r.canonical_json() for r in replay2
+        ]
 
 
 class TestReplayAndRollback:
@@ -233,7 +244,10 @@ class TestReplayAndRollback:
         store.append(make_revision(revision=1, refinery_id="art-1"))
         store.append(
             make_revision(
-                revision=2, parent=1, refinery_id="art-1", operation=FeedOperation.TOMBSTONE
+                revision=2,
+                parent=1,
+                refinery_id="art-1",
+                operation=FeedOperation.TOMBSTONE,
             )
         )
         current = store.current_state("art-1")
@@ -251,3 +265,46 @@ class TestReplayAndRollback:
         current = store.current_state("art-1")
         assert current.body == "corrected"
         assert current.prior_revision == 1
+
+    def test_rollback_to_zero_returns_empty(self):
+        store = FeedStore()
+        store.append(make_revision(revision=1, body="v1"))
+        state = store.rollback_to(0)
+        assert len(state) == 0
+
+    def test_current_state_for_nonexistent_returns_none(self):
+        store = FeedStore()
+        store.append(make_revision(revision=1, refinery_id="art-1"))
+        assert store.current_state("nonexistent") is None
+
+    def test_double_tombstone_rejected_as_duplicate(self):
+        store = FeedStore()
+        store.append(make_revision(revision=1, refinery_id="art-1", body="original"))
+        store.append(
+            make_revision(
+                revision=2,
+                parent=1,
+                refinery_id="art-1",
+                operation=FeedOperation.TOMBSTONE,
+            )
+        )
+        # Second tombstone with same content_hash (empty body) is a duplicate
+        with pytest.raises(ValueError, match="Duplicate"):
+            store.append(
+                make_revision(
+                    revision=3,
+                    parent=2,
+                    refinery_id="art-1",
+                    operation=FeedOperation.TOMBSTONE,
+                )
+            )
+
+    def test_content_hash_changes_when_body_changes(self):
+        r1 = make_revision(body="content A")
+        r2 = make_revision(body="content B")
+        assert r1.content_hash != r2.content_hash
+
+    def test_empty_store_replay(self):
+        store = FeedStore()
+        assert store.replay() == []
+        assert store.current_state("anything") is None

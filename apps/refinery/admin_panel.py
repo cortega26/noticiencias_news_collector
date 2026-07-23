@@ -2718,50 +2718,56 @@ with tab5:
                         if fn in file_to_article
                     ]
 
-                    db_mgr = RefineryDatabaseManager(
-                        {"type": "sqlite", "path": str(REFINERY_DB_PATH)}
-                    )
-
-                    progress = st.progress(0.0, text="Iniciando reset masivo...")
-                    processed = [0]
-
-                    def _reset_action(article):
-                        reset_one_article(
-                            repo_root=snapshot.repo_root,
-                            article=article,
-                            db_manager=db_mgr,
-                        )
-                        processed[0] += 1
-                        progress.progress(
-                            processed[0] / len(items),
-                            text=f"Procesado {processed[0]}/{len(items)}",
-                        )
-
-                    bulk_result = run_bulk(
-                        items=items,
-                        action=_reset_action,
-                        batch_cap=5,
-                    )
-
-                    st.session_state["op_in_progress"] = False
-
-                    # Render the structured report
-                    if bulk_result.all_succeeded:
-                        st.success(
-                            f"✅ {bulk_result.summary}. "
-                            f"Todos los artículos fueron reseteados."
-                        )
+                    if not items:
+                        st.session_state["op_in_progress"] = False
+                        st.error("No se seleccionaron artículos válidos.")
                     else:
-                        st.warning(f"⚠️ Reset masivo: {bulk_result.summary}.")
-                        for failure in bulk_result.failed:
-                            if failure.item is not None:
-                                st.error(
-                                    f"Falló `{failure.item.file_name}`: {failure.error}"
-                                )
-                            else:
-                                st.caption(failure.error)
-                    if bulk_result.succeeded:
-                        st.rerun()
+                        db_mgr = RefineryDatabaseManager(
+                            {"type": "sqlite", "path": str(REFINERY_DB_PATH)}
+                        )
+
+                        progress = st.progress(0.0, text="Iniciando reset masivo...")
+                        processed = [0]
+                        total_items = len(items)
+
+                        def _reset_action(article):
+                            reset_one_article(
+                                repo_root=snapshot.repo_root,
+                                article=article,
+                                db_manager=db_mgr,
+                            )
+                            processed[0] += 1
+                            progress.progress(
+                                min(processed[0] / total_items, 1.0),
+                                text=f"Procesado {processed[0]}/{total_items}",
+                            )
+
+                        try:
+                            bulk_result = run_bulk(
+                                items=items,
+                                action=_reset_action,
+                                batch_cap=5,
+                            )
+                        finally:
+                            st.session_state["op_in_progress"] = False
+
+                        # Render the structured report
+                        if bulk_result.all_succeeded:
+                            st.success(
+                                f"✅ {bulk_result.summary}. "
+                                f"Todos los artículos fueron reseteados."
+                            )
+                        else:
+                            st.warning(f"⚠️ Reset masivo: {bulk_result.summary}.")
+                            for failure in bulk_result.failed:
+                                if failure.item is not None:
+                                    st.error(
+                                        f"Falló `{failure.item.file_name}`: {failure.error}"
+                                    )
+                                else:
+                                    st.caption(failure.error)
+                        if bulk_result.succeeded:
+                            st.rerun()
 
             h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
             h1.markdown("**Título**")

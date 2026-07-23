@@ -130,3 +130,48 @@ class TestResetOneArticle:
         mock_repo.remotes.origin.push.assert_called_once()
         # DB rows were NOT deleted (no refinery_id)
         mock_db.delete_article.assert_not_called()
+
+    def test_file_path_not_under_repo_root_uses_absolute(self, tmp_path: Path):
+        """
+        Edge case: if article.file_path is not under repo_root,
+        relative_to raises ValueError. The function should fall back
+        to the absolute path instead of crashing.
+        """
+        # Create the article file in a different directory
+        other_dir = tmp_path / "other"
+        other_dir.mkdir()
+        article = _make_article(other_dir, file_name="external.md")
+
+        mock_repo = MagicMock()
+        mock_db = MagicMock()
+
+        with patch("apps.refinery.published_content.git.Repo", return_value=mock_repo):
+            reset_one_article(tmp_path, article, mock_db)
+
+        # index.remove was called with the absolute path
+        mock_repo.index.remove.assert_called_once()
+        called_path = mock_repo.index.remove.call_args[0][0][0]
+        assert "external.md" in called_path
+        assert not article.file_path.exists()  # file was unlinked
+
+    def test_db_delete_failure_after_push_does_not_raise(self, tmp_path: Path):
+        """
+        Edge case: if db_manager.delete_article raises after the push
+        succeeded, the function should NOT raise — the remote is already
+        updated and the DB rows can be cleaned up separately.
+        """
+        article = _make_article(tmp_path)
+        mock_repo = MagicMock()
+        mock_db = MagicMock()
+        mock_db.delete_article.side_effect = RuntimeError("DB locked")
+
+        with patch("apps.refinery.published_content.git.Repo", return_value=mock_repo):
+            # Should NOT raise
+            reset_one_article(tmp_path, article, mock_db)
+
+        # Push succeeded
+        mock_repo.remotes.origin.push.assert_called_once()
+        # DB delete was attempted but failed gracefully
+        mock_db.delete_article.assert_called()
+        # File was still unlinked
+        assert not article.file_path.exists()

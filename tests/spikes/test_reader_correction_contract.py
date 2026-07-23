@@ -69,7 +69,9 @@ class ReportEnvelope:
         raw = f"{self.public_url}:{self.type.value}:{self.content_revision}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
-    def transition(self, new_status: ReportStatus, actor: str, reason: str = "") -> None:
+    def transition(
+        self, new_status: ReportStatus, actor: str, reason: str = ""
+    ) -> None:
         allowed = {
             ReportStatus.RECEIVED: {ReportStatus.TRIAGED},
             ReportStatus.TRIAGED: {
@@ -154,11 +156,49 @@ class TestLifecycle:
         with pytest.raises(ValueError, match="Invalid transition"):
             report.transition(ReportStatus.ACCEPTED, "editor")
 
+    def test_rejected_is_terminal(self):
+        report = make_report()
+        report.transition(ReportStatus.TRIAGED, "editor")
+        report.transition(ReportStatus.REJECTED, "editor", "not actionable")
+        with pytest.raises(ValueError, match="Invalid transition"):
+            report.transition(ReportStatus.ACCEPTED, "editor")
+
+    def test_closed_is_terminal(self):
+        report = make_report()
+        report.transition(ReportStatus.TRIAGED, "editor")
+        report.transition(ReportStatus.ACCEPTED, "editor")
+        report.transition(ReportStatus.CORRECTION_PROPOSED, "editor")
+        report.transition(ReportStatus.CORRECTION_PUBLISHED, "bot")
+        report.transition(ReportStatus.CLOSED, "editor")
+        with pytest.raises(ValueError, match="Invalid transition"):
+            report.transition(ReportStatus.TRIAGED, "editor")
+
+    def test_transition_with_empty_reason(self):
+        report = make_report()
+        report.transition(ReportStatus.TRIAGED, "editor")  # reason defaults to ""
+        assert report.events[-1].reason == ""
+
+    def test_no_contact_report(self):
+        report = make_report(contact=None)
+        assert report.contact is None
+        report.transition(ReportStatus.TRIAGED, "editor")
+        report.transition(ReportStatus.REJECTED, "editor", "no contact")
+        report.close()
+        assert report.contact is None
+
 
 class TestIdempotency:
     def test_same_report_same_key(self):
-        r1 = make_report(url="https://noticiencias.com/a", type=ReportType.FACTUAL_ERROR, revision="v1")
-        r2 = make_report(url="https://noticiencias.com/a", type=ReportType.FACTUAL_ERROR, revision="v1")
+        r1 = make_report(
+            url="https://noticiencias.com/a",
+            type=ReportType.FACTUAL_ERROR,
+            revision="v1",
+        )
+        r2 = make_report(
+            url="https://noticiencias.com/a",
+            type=ReportType.FACTUAL_ERROR,
+            revision="v1",
+        )
         assert r1.idempotency_key == r2.idempotency_key
 
     def test_different_url_different_key(self):
