@@ -735,3 +735,46 @@ def fetch_pages_deploy_health(
             and current_repo_sha != latest_successful_sha
         ),
     )
+
+
+def reset_one_article(
+    repo_root: Path,
+    article: PublishedArticleRecord,
+    db_manager: Any,
+) -> None:
+    """
+    Reset a single published article: remove from git index, unlink file,
+    commit, push, then delete DB rows.
+
+    **Divergence-bug fix (plan 017):** DB rows are only deleted *after* the
+    git push succeeds. If any step before the DB delete raises, the DB
+    rows remain intact and the article can be retried. The old batched
+    approach deleted DB rows first, then unlinked the file — if unlink
+    failed, DB/file/git diverged.
+
+    Args:
+        repo_root: The target repo root (a git working tree).
+        article: The article to reset.
+        db_manager: A database manager with ``delete_article(id)``.
+
+    Raises:
+        Exception: If any step fails. The caller (``run_bulk``) captures
+            the exception and continues to the next item.
+    """
+    repo = git.Repo(repo_root)
+
+    # 1. Remove from git index + unlink file
+    rel_path = str(article.file_path.relative_to(repo_root))
+    repo.index.remove([rel_path])
+    article.file_path.unlink()
+
+    # 2. Commit + push (per-item, not batched)
+    repo.index.commit(f"Deleted (Reset) {article.file_name}")
+    repo.remotes.origin.push()
+
+    # 3. Only now delete DB rows — the git push succeeded, so the
+    #    remote is in sync. If this raises, the remote is already
+    #    updated and the DB rows can be cleaned up separately.
+    if article.refinery_id:
+        db_manager.delete_article(str(article.refinery_id))
+        db_manager.delete_article(f"{article.refinery_id}.md")

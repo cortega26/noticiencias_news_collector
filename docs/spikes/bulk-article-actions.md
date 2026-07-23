@@ -1,8 +1,9 @@
 # Bulk article actions — spike investigation note (plan 017)
 
-> **Status**: SPIKE — investigation complete. The UI slice is REJECTED
-> (do-not-merge). The `run_bulk` helper and its partial-failure test are
-> the reusable deliverables. Production use requires a queue/async approach.
+> **Status**: SPIKE COMPLETE. The UI slice is now SHIPPED with the
+> divergence-bug fix. The `run_bulk` helper, `reset_one_article` per-item
+> action, and their tests are the reusable deliverables. Production use
+> above the 5-article cap still requires a queue/async approach.
 
 ## What one Despublicar does (per row)
 
@@ -34,15 +35,36 @@
 - **Despublicar** = opens a PR (review-gated deletion)
 - **Reset** = pushes directly to the target branch (immediate deletion, no review)
 
-## Partial-failure semantics (the divergence bug)
+## Partial-failure semantics (the divergence bug — FIXED)
 
-The deleted `advisor/017-*` branch wired a synchronous batch that called `_reset_one_local` in a loop, then a single batched `commit` + `origin.push()` for the whole run. This has a **divergence bug**:
+The original `advisor/017-*` branch wired a synchronous batch that called
+`_reset_one_local` in a loop, then a single batched `commit` + `origin.push()`
+for the whole run. This had a **divergence bug**:
 
-1. **Continue-on-error means an item that raises at `unlink` has already lost its DB rows** (deleted at step 2) yet is reported "failed" — DB says deleted, filesystem says deleted, but git index still has the file (never removed because `unlink` raised). DB/file/git diverge.
+1. **Continue-on-error meant an item that raised at `unlink` had already
+   lost its DB rows** (deleted at step 2) yet was reported "failed" — DB
+   says deleted, filesystem says deleted, but git index still has the file.
+2. **If the final single `push` failed, every "succeeded" item was locally
+   deleted** but still live in the remote.
 
-2. **If the final single `push` fails, every "succeeded" item is locally deleted** (file unlinked, DB rows gone) **but still live in the remote** — the local clone diverges from origin, and the DB no longer has the rows needed to retry.
+**Fix (shipped):** the shipped bulk action uses three pieces:
 
-**Fix**: the `run_bulk` helper (below) does per-item commit+push, not a batched push. If item 7 fails, items 1-6 are already committed and pushed; item 7's DB rows are not touched until the filesystem operation succeeds; the report shows 6 succeeded, 1 failed with reason, and the loop continues.
+- **`apps/refinery/bulk_helper.py` (`run_bulk`)** — a pure helper that
+  runs a per-item callable with continue-on-error + batch cap. It never
+  touches DB/git/filesystem itself; the caller's action owns the lifecycle.
+- **`apps/refinery/published_content.py` (`reset_one_article`)** — the
+  per-item action that does: `index.remove` → `unlink` → `commit` →
+  `push` → `delete DB rows`. **DB rows are only deleted *after* the push
+  succeeds.** If any step before the DB delete raises, the DB rows
+  remain intact and the article can be retried.
+- **`admin_panel.py` bulk-action UI** — multi-select + confirmation
+  checkbox + `op_in_progress` double-submit guard + progress bar +
+  structured per-item success/failure report. Batch cap is 5.
+
+If item 7 of a 5-item batch fails at `push`, items 1-6 are already
+committed and pushed (remote is in sync); item 7's DB rows were never
+touched (the push failed before the DB delete); the report shows 6
+succeeded, 1 failed with reason.
 
 ## Batch cap
 
@@ -63,7 +85,14 @@ The `op_in_progress` session flag pattern (`admin_panel.py:720,722,750`) disable
 
 ## Recommendation
 
-- **DO NOT ship the synchronous UI slice** — the divergence bug and the Streamlit rerun timeout risk make it unsafe for production.
-- **The `run_bulk` helper is reusable** — it encapsulates the per-item commit/push + continue-on-error + report pattern, and is unit-tested.
-- **For production**: implement a queue-based approach (e.g., a background task that processes the batch and reports progress via a status file or websocket). This is a separate plan, not part of this spike.
-- **Extending to both actions**: possible, but Despublicar (PR-based) is slower than Reset (direct push), so the cap should be lower (3 articles for Despublicar, 5 for Reset).
+- **The synchronous UI slice is SHIPPED** with the divergence-bug fix
+  (per-item commit/push, DB rows only deleted after push succeeds).
+  The batch cap is 5 articles.
+- **`run_bulk` helper is reusable** — pure, testable, no Streamlit/git/DB
+  dependencies. Can be reused for future batch actions (e.g., bulk
+  despublicar).
+- **For production batches > 5 articles**: implement a queue-based
+  approach (background task + status file/websocket). This is a separate
+  plan, not part of this spike.
+- **Extending to Despublicar**: possible, but Despublicar (PR-based) is
+  slower than Reset (direct push), so the cap should be lower (3 articles).
