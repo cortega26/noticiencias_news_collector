@@ -1,0 +1,10 @@
+
+> noticiencias-astro@0.1.0 test:e2e
+> playwright test
+
+
+Running 60 tests using 1 worker
+·°°°°·······°°············°····°°°°·······°°············°···
+::notice title=🎭 Playwright Run Summary::  14 skipped%0A  46 passed (22.3s)
+  14 skipped
+  46 passed (22.3s)
