@@ -49,7 +49,8 @@ class BulkResult:
 
     @property
     def total(self) -> int:
-        return len(self.succeeded) + len(self.failed)
+        """Number of items actually processed (excludes the cap-exceeded note)."""
+        return len(self.succeeded) + sum(1 for f in self.failed if f.item is not None)
 
     @property
     def summary(self) -> str:
@@ -57,7 +58,8 @@ class BulkResult:
 
     @property
     def all_succeeded(self) -> bool:
-        return len(self.failed) == 0
+        """True only if no real items failed (cap-exceeded note is a warning, not a failure)."""
+        return all(f.item is None for f in self.failed)
 
 
 def run_bulk(
@@ -75,20 +77,22 @@ def run_bulk(
       the caller's ``action`` is responsible for the full per-item
       lifecycle (find, delete file, commit, push, delete DB rows).
     - The batch is capped at ``batch_cap`` items; excess items are
-      ignored and a note is added to the first failure.
+      ignored and a note is added to the failures list (with ``item=None``).
+    - A ``batch_cap`` of 0 or negative means no cap (process all items).
 
     Args:
         items: The list of items to process.
         action: A callable that takes one item and performs the per-item
                 operation. If it raises, the item is recorded as failed.
-        batch_cap: Maximum number of items to process.
+        batch_cap: Maximum number of items to process. 0 or negative
+                   means no cap.
 
     Returns:
         A :class:`BulkResult` with succeeded/failed lists.
     """
     result = BulkResult()
 
-    if len(items) > batch_cap:
+    if batch_cap > 0 and len(items) > batch_cap:
         result.failed.append(
             BulkFailure(
                 item=None,

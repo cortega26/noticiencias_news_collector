@@ -171,3 +171,61 @@ class TestRunBulk:
         # "if the action raises, the item is failed; the loop continues."
         assert state["db_deleted"] is True  # the action's side effect
         assert state["file_deleted"] is False  # the action's failure
+
+    def test_batch_cap_zero_means_no_cap(self):
+        """A batch_cap of 0 means no cap — all items are processed."""
+        results: list[int] = []
+
+        def action(item: int) -> None:
+            results.append(item)
+
+        result = run_bulk(
+            items=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], action=action, batch_cap=0
+        )
+
+        assert len(result.succeeded) == 10
+        assert len(result.failed) == 0
+        assert result.all_succeeded is True
+
+    def test_batch_cap_negative_means_no_cap(self):
+        """A negative batch_cap means no cap — all items are processed."""
+        results: list[int] = []
+
+        def action(item: int) -> None:
+            results.append(item)
+
+        result = run_bulk(items=[1, 2, 3], action=action, batch_cap=-1)
+
+        assert len(result.succeeded) == 3
+        assert len(result.failed) == 0
+
+    def test_cap_exceeded_note_is_warning_not_failure(self):
+        """The cap-exceeded note (item=None) should not make all_succeeded False."""
+        result = run_bulk(
+            items=[1, 2, 3, 4, 5, 6, 7, 8],
+            action=lambda x: None,
+            batch_cap=3,
+        )
+
+        # 3 items succeeded, 1 cap-exceeded note (item=None)
+        assert len(result.succeeded) == 3
+        assert len(result.failed) == 1
+        assert result.failed[0].item is None
+        # all_succeeded is True because no real items failed
+        assert result.all_succeeded is True
+        # total counts only real items (3 processed), not the note
+        assert result.total == 3
+
+    def test_cap_exceeded_with_real_failure(self):
+        """Cap-exceeded note + a real failure: all_succeeded is False."""
+
+        def action(item: int) -> None:
+            if item == 2:
+                raise RuntimeError("fail on 2")
+
+        result = run_bulk(items=[1, 2, 3, 4, 5, 6, 7, 8], action=action, batch_cap=3)
+
+        assert len(result.succeeded) == 2  # 1 and 3
+        assert len(result.failed) == 2  # item 2 (real failure) + cap note
+        assert result.all_succeeded is False
+        assert result.total == 3  # 2 succeeded + 1 real failure
