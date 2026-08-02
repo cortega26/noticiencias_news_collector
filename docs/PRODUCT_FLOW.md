@@ -59,7 +59,7 @@ RSS feeds
    │
    ▼
 [9. Deploy]             GitHub Pages  (cortega26/noticiencias)
-                        Live article at noticiencias.cl/post/<permalink>
+                        Live article at noticiencias.com/<permalink>
 ```
 
 ---
@@ -162,7 +162,7 @@ not automatically notified; the operator must inspect the PR.
 ### Stage 9 — Deploy
 
 On PR merge the front-end CI builds and deploys to GitHub Pages.  The article is live at
-`https://noticiencias.cl/post/<permalink>`.
+`https://noticiencias.com/<permalink>`.
 
 ---
 

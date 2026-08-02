@@ -46,10 +46,12 @@ run_refinery = refinery_main.main
 
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from apps.refinery.analytics_read_model import build_analytics_read_model
+from apps.refinery.bulk_helper import run_bulk
 from apps.refinery.published_content import (
     find_local_target_checkout,
     find_published_article_by_refinery_id,
     get_repo_head_sha,
+    reset_one_article,
     resolve_published_content_snapshot,
     truncate_refinery_id,
 )
@@ -2676,6 +2678,96 @@ with tab5:
             st.write(f"Encontrados **{len(articles)}** artículos.")
             st.caption(f"Fuente: {snapshot.source_label} · {snapshot.freshness_label}")
             st.caption(f"Ruta resuelta: `{snapshot.repo_root}`")
+
+            # ── Bulk Reset action (plan 017) ──────────────────────────
+            # Multi-select + one bounded bulk action (Reset) with
+            # confirmation, progress, per-item failure capture, and
+            # op_in_progress double-submit guard. The per-item action
+            # (reset_one_article) does per-item commit/push (not
+            # batched), fixing the divergence bug.
+            with st.expander("♻️ Acción Masiva (Reset)", expanded=False):
+                st.warning(
+                    "⚠️ Esta acción elimina los artículos seleccionados del repositorio "
+                    "remoto (push directo) y de la base de datos. Límite: 5 artículos."
+                )
+                selected_files = st.multiselect(
+                    "Seleccionar artículos para Reset masivo:",
+                    options=[a.file_name for a in articles],
+                    key="bulk_reset_select",
+                )
+                confirm_bulk = st.checkbox(
+                    f"Confirmo que deseo resetear {len(selected_files)} artículo(s).",
+                    key="bulk_reset_confirm",
+                )
+                if st.button(
+                    f"♻️ Reset Masivo ({len(selected_files)})",
+                    type="primary",
+                    disabled=(
+                        not confirm_bulk
+                        or len(selected_files) == 0
+                        or st.session_state.get("op_in_progress", False)
+                    ),
+                    key="bulk_reset_btn",
+                ):
+                    st.session_state["op_in_progress"] = True
+                    # Build the list of article records to process
+                    file_to_article = {a.file_name: a for a in articles}
+                    items = [
+                        file_to_article[fn]
+                        for fn in selected_files
+                        if fn in file_to_article
+                    ]
+
+                    if not items:
+                        st.session_state["op_in_progress"] = False
+                        st.error("No se seleccionaron artículos válidos.")
+                    else:
+                        db_mgr = RefineryDatabaseManager(
+                            {"type": "sqlite", "path": str(REFINERY_DB_PATH)}
+                        )
+
+                        progress = st.progress(0.0, text="Iniciando reset masivo...")
+                        processed = [0]
+                        total_items = len(items)
+
+                        def _reset_action(article):
+                            reset_one_article(
+                                repo_root=snapshot.repo_root,
+                                article=article,
+                                db_manager=db_mgr,
+                            )
+                            processed[0] += 1
+                            progress.progress(
+                                min(processed[0] / total_items, 1.0),
+                                text=f"Procesado {processed[0]}/{total_items}",
+                            )
+
+                        try:
+                            bulk_result = run_bulk(
+                                items=items,
+                                action=_reset_action,
+                                batch_cap=5,
+                            )
+                        finally:
+                            st.session_state["op_in_progress"] = False
+
+                        # Render the structured report
+                        if bulk_result.all_succeeded:
+                            st.success(
+                                f"✅ {bulk_result.summary}. "
+                                f"Todos los artículos fueron reseteados."
+                            )
+                        else:
+                            st.warning(f"⚠️ Reset masivo: {bulk_result.summary}.")
+                            for failure in bulk_result.failed:
+                                if failure.item is not None:
+                                    st.error(
+                                        f"Falló `{failure.item.file_name}`: {failure.error}"
+                                    )
+                                else:
+                                    st.caption(failure.error)
+                        if bulk_result.succeeded:
+                            st.rerun()
 
             h1, h2, h3, h4 = st.columns([3, 2, 1.5, 1.5])
             h1.markdown("**Título**")

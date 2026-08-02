@@ -99,9 +99,7 @@ class TestBatchPath:
     @pytest.mark.asyncio
     async def test_batch_scoring_success(self, coordinator):
         articles = [_MockArticle(id=1, title="A"), _MockArticle(id=2, title="B")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -127,9 +125,7 @@ class TestBatchPath:
     @pytest.mark.asyncio
     async def test_batch_failure_falls_back_to_sequential(self, coordinator):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -152,9 +148,7 @@ class TestBatchPath:
     @pytest.mark.asyncio
     async def test_batch_failure_raises_when_no_fallback(self, coordinator):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -172,9 +166,7 @@ class TestSequentialPath:
     @pytest.mark.asyncio
     async def test_sequential_when_no_batch_method(self, coordinator):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -194,9 +186,7 @@ class TestSequentialPath:
     @pytest.mark.asyncio
     async def test_sequential_handles_exception_per_article(self, coordinator):
         articles = [_MockArticle(id=1, title="A"), _MockArticle(id=2, title="B")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -221,9 +211,7 @@ class TestSequentialPath:
         """Step 4: the sequential fallback must never exceed the
         configured worker limit's in-flight concurrency."""
         articles = [_MockArticle(id=i, title=f"A{i}") for i in range(1, 9)]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -245,9 +233,7 @@ class TestSequentialPath:
                 in_flight -= 1
             return {"final_score": 0.5, "should_include": True}
 
-        coordinator.scorer.score_article_async = AsyncMock(
-            side_effect=_score_article
-        )
+        coordinator.scorer.score_article_async = AsyncMock(side_effect=_score_article)
         coordinator.db_manager.update_articles_score_bulk.return_value = True
 
         result = await coordinator.execute({}, dry_run=False)
@@ -276,9 +262,7 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_all_excluded(self, coordinator):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -295,9 +279,7 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_bulk_update_failure_stops_cycle_as_failure(self, coordinator):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -433,13 +415,9 @@ class TestPaging:
 
 class TestTelemetry:
     @pytest.mark.asyncio
-    async def test_telemetry_reports_pages_committed_and_stop_reason(
-        self, coordinator
-    ):
+    async def test_telemetry_reports_pages_committed_and_stop_reason(self, coordinator):
         articles = [_MockArticle(id=1, title="A"), _MockArticle(id=2, title="B")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -458,9 +436,7 @@ class TestTelemetry:
     @pytest.mark.asyncio
     async def test_telemetry_counts_per_article_scoring_failures(self, coordinator):
         articles = [_MockArticle(id=1, title="A"), _MockArticle(id=2, title="B")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -482,9 +458,7 @@ class TestTelemetry:
         self, coordinator
     ):
         articles = [_MockArticle(id=1, title="A")]
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            articles
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
             _EMPTY_PAGE
         )
@@ -508,9 +482,7 @@ class TestRescoring:
         pending = [_MockArticle(id=1, title="Pending A", source_id="src1")]
         completed = [_MockArticle(id=2, title="Completed B", source_id="src1")]
 
-        coordinator.db_manager.get_pending_articles_page.return_value = _page(
-            pending
-        )
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(pending)
         coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = _page(
             completed
         )
@@ -533,7 +505,9 @@ class TestRescoring:
         assert result["processed_articles"] == 2
 
         # Verify rescore lookback read from config defaults to 14
-        _, kwargs = coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
+        _, kwargs = (
+            coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
+        )
         assert kwargs["days_back"] == 14
 
         # Verify both bulk-update calls (one per page/source) happened.
@@ -549,5 +523,7 @@ class TestRescoring:
 
         await coordinator.execute({}, dry_run=False)
 
-        _, kwargs = coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
+        _, kwargs = (
+            coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
+        )
         assert kwargs["days_back"] == 7
