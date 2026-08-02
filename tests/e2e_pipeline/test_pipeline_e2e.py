@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import socket
 from pathlib import Path
 
 import pytest
 
-from news_collector.logic.workflows.pipeline_e2e import run_pipeline_e2e_scenario
+from news_collector.logic.workflows.pipeline_e2e import (
+    FRONTEND_COPY_IGNORE,
+    NODE_MODULES_COPY_IGNORE,
+    run_pipeline_e2e_scenario,
+)
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "pipeline_e2e"
 pytestmark = pytest.mark.timeout(180)
@@ -152,3 +159,50 @@ def test_pipeline_e2e_bundle_root_is_repeatable(tmp_path: Path) -> None:
     assert first.selected_article_id == second.selected_article_id
     assert first.root_failure_stage is None
     assert second.root_failure_stage is None
+
+
+def _create_special_files(source: Path) -> None:
+    """Crea un socket Unix real y una FIFO dentro de *source*."""
+    sock_path = source / "daemon.sock"
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.bind(str(sock_path))
+    finally:
+        sock.close()
+    os.mkfifo(source / "build_pipe.fifo")
+
+
+def test_frontend_copy_ignore_skips_sockets_and_fifos(tmp_path: Path) -> None:
+    source = tmp_path / "frontend_source"
+    source.mkdir()
+    (source / "regular.txt").write_text("contenido", encoding="utf-8")
+    (source / ".git").mkdir()
+    _create_special_files(source)
+
+    target = tmp_path / "frontend_target"
+    shutil.copytree(source, target, ignore=FRONTEND_COPY_IGNORE)
+
+    assert (target / "regular.txt").read_text(encoding="utf-8") == "contenido"
+    assert not (target / ".git").exists()
+    assert not (target / "daemon.sock").exists()
+    assert not (target / "build_pipe.fifo").exists()
+
+
+def test_node_modules_copy_ignore_skips_sockets(tmp_path: Path) -> None:
+    source = tmp_path / "node_modules_source"
+    source.mkdir()
+    (source / "package.json").write_text("{}", encoding="utf-8")
+    (source / ".cache").mkdir()
+    sock_path = source / "daemon.sock"
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.bind(str(sock_path))
+    finally:
+        sock.close()
+
+    target = tmp_path / "node_modules_target"
+    shutil.copytree(source, target, ignore=NODE_MODULES_COPY_IGNORE)
+
+    assert (target / "package.json").read_text(encoding="utf-8") == "{}"
+    assert not (target / ".cache").exists()
+    assert not (target / "daemon.sock").exists()

@@ -7,12 +7,13 @@ import errno
 import json
 import os
 import shutil
+import stat
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import mkdtemp
 from types import SimpleNamespace
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Iterable, List, Mapping
 from unittest.mock import patch
 
 import git
@@ -31,8 +32,57 @@ from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
 from news_collector.utils.slug import slugify
 
-FRONTEND_COPY_IGNORE = shutil.ignore_patterns(".git", "node_modules", "dist", ".astro")
-NODE_MODULES_COPY_IGNORE = shutil.ignore_patterns(".cache")
+
+def _ignore_special_files(directory: str, names: list[str]) -> set[str]:
+    """Excluye sockets, FIFOs y archivos de dispositivo del árbol fuente.
+
+    `shutil.copy2` no puede copiar archivos especiales (no son datos), así
+    que un socket Unix vivo (p. ej. el daemon de una herramienta) o una
+    FIFO en el árbol fuente haría fallar `copytree` entero. Se detectan con
+    `os.lstat`; si el archivo desaparece entre el listado y el stat, se
+    ignora igualmente (no se propaga el error). Los enlaces simbólicos NO
+    se excluyen: `copytree` los maneja bien y el repo frontend real
+    contiene symlinks (p. ej. `node_modules/.bin/*`).
+    """
+    ignored: set[str] = set()
+    for name in names:
+        try:
+            mode = os.lstat(os.path.join(directory, name)).st_mode
+        except OSError:
+            ignored.add(name)
+            continue
+        if (
+            stat.S_ISSOCK(mode)
+            or stat.S_ISFIFO(mode)
+            or stat.S_ISBLK(mode)
+            or stat.S_ISCHR(mode)
+        ):
+            ignored.add(name)
+    return ignored
+
+
+def _combined_copy_ignore(
+    *ignore_callables: Callable[[str, list[str]], set[str]],
+) -> Callable[[str, list[str]], set[str]]:
+    """Combina varios callables `ignore` de copytree en uno solo."""
+
+    def _combined(directory: str, names: list[str]) -> set[str]:
+        excluded: set[str] = set()
+        for ignore in ignore_callables:
+            excluded |= ignore(directory, names)
+        return excluded
+
+    return _combined
+
+
+FRONTEND_COPY_IGNORE = _combined_copy_ignore(
+    shutil.ignore_patterns(".git", "node_modules", "dist", ".astro"),
+    _ignore_special_files,
+)
+NODE_MODULES_COPY_IGNORE = _combined_copy_ignore(
+    shutil.ignore_patterns(".cache"),
+    _ignore_special_files,
+)
 
 
 def _slugify(value: str) -> str:
