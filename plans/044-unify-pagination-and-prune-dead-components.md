@@ -88,11 +88,11 @@ Check archive, one category, one tag, one article, and home at 375px and 1280px.
 
 ## Done criteria
 
-- [ ] Blog, category, and tag pagination use one configured value.
-- [ ] A regression to an inline page size fails focused tests.
-- [ ] Component deletions are backed by repeatable reachability evidence and a green production build.
-- [ ] No active route, layout, content, dynamic entrypoint, or asset is broken.
-- [ ] Required automated and manual frontend validation passes.
+- [x] Blog, category, and tag pagination use one configured value.
+- [x] A regression to an inline page size fails focused tests.
+- [x] Component deletions are backed by repeatable reachability evidence and a green production build.
+- [x] No active route, layout, content, dynamic entrypoint, or asset is broken.
+- [x] Required automated and manual frontend validation passes — Step 5 manual check (2026-08-02): `npm run build` (168 pages) + `npm run preview`, Playwright at 375px/1280px against home, `/blog`, `/blog/5` (partial last page), `/categorias/tecnologia`, `/categorias/tecnologia/2`, `/temas/cosmologia`, and one article. All 14 checks: 200 status, correct canonical, zero console errors, zero deleted-component markup (`WhyTrustUs`, `EditorialFigure`, `KeyTakeaways`, `ArticleSidebar`, `SinglePost`, `ToBlogLink`), zero missing `alt`. Prev/next walked `/blog` → `/blog/5` → back through real Astro transitions, no console errors. Incidental finding (pre-existing, not caused by this plan): `astro preview` 404s on trailing-slash URLs — same mismatch already tracked under plan 031's `fixme` tests.
 
 ## STOP conditions
 
