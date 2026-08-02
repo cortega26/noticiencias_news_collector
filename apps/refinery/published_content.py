@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,8 @@ from news_collector.contracts.frontend_publication import (
     FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS,
 )
 from news_collector.utils.slug import slugify
+
+logger = logging.getLogger(__name__)
 
 POSTS_SUBPATH = Path("src/content/posts")
 HERO_PLACEHOLDER_ALLOWLIST_SUBPATH = Path("data/hero-image-placeholder-allowlist.json")
@@ -783,8 +786,12 @@ def reset_one_article(
         try:
             db_manager.delete_article(str(article.refinery_id))
             db_manager.delete_article(f"{article.refinery_id}.md")
-        except Exception:  # noqa: S110 - remote already updated; DB cleanup is a separate concern
+        except Exception:
             # The remote is already updated; log but don't raise —
             # the article is effectively reset even if DB cleanup
             # needs a separate pass.
-            pass
+            logger.warning(
+                "Remote updated but DB cleanup failed for %s",
+                article.refinery_id,
+                exc_info=True,
+            )
