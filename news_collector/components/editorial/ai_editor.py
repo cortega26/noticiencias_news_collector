@@ -1654,7 +1654,7 @@ class EditorAgent:
             import hashlib
 
             if article_id == "unknown":
-                article_id = hashlib.md5(content.encode()).hexdigest()[:8]  # noqa: S324
+                article_id = hashlib.sha256(content.encode()).hexdigest()[:8]
             raw_category = None
             metadata_category = None
 
