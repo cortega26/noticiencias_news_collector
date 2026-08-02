@@ -188,6 +188,8 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
+verify-ci: lint type test test-contracts test-boundaries security config-docs-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+
 MYPY_TARGETS := scripts/generate_api_docs.py \
 news_collector/utils/logger.py \
 news_collector/utils/url_canonicalizer.py
