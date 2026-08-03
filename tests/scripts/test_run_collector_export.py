@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
 import scripts.run_collector as run_collector
 from scripts.run_collector import _serialize_export_article
 
