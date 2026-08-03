@@ -155,6 +155,24 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
         },
     )
     monkeypatch.setattr(agent, "_repair_output", lambda c, h, _i: (c, h))
+    monkeypatch.setattr(
+        agent,
+        "_generate_enrichment_fields",
+        lambda *args, **kwargs: {
+            "summary_points": ["Punto resumido"],
+            "glossary": [{"term": "Término", "definition": "Definición"}],
+            "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+            "why_it_matters": ["Relevancia regional"],
+            "confidence": "Alta — metodología sólida.",
+            "sources": [
+                {
+                    "title": "Fuente",
+                    "url": "https://example.com/fuente",
+                    "publisher": "Editorial",
+                }
+            ],
+        },
+    )
 
     article = {
         "id": "160",
@@ -236,6 +254,24 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
         },
     )
     monkeypatch.setattr(agent, "_repair_output", lambda c, h, _i: (c, h))
+    monkeypatch.setattr(
+        agent,
+        "_generate_enrichment_fields",
+        lambda *args, **kwargs: {
+            "summary_points": ["Punto resumido"],
+            "glossary": [{"term": "Término", "definition": "Definición"}],
+            "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+            "why_it_matters": ["Relevancia regional"],
+            "confidence": "Alta — metodología sólida.",
+            "sources": [
+                {
+                    "title": "Fuente",
+                    "url": "https://example.com/fuente",
+                    "publisher": "Editorial",
+                }
+            ],
+        },
+    )
 
     article = {
         "id": "160",

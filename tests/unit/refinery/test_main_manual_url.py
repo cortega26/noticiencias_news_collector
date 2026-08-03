@@ -77,6 +77,7 @@ def test_main_article_url_uses_manual_ingest_export_and_normal_processing(
             "translator": "translator-model",
             "editor": "editor-model",
             "headlines": "headlines-model",
+            "enrichment": "enrichment-model",
         },
     )
     monkeypatch.setattr(refinery_main, "EditorAgent", lambda **_kwargs: MagicMock())
@@ -185,6 +186,7 @@ def test_main_article_url_propagates_processing_error_code(tmp_path: Path, monke
             "translator": "translator-model",
             "editor": "editor-model",
             "headlines": "headlines-model",
+            "enrichment": "enrichment-model",
         },
     )
     monkeypatch.setattr(refinery_main, "EditorAgent", lambda **_kwargs: MagicMock())
@@ -301,6 +303,7 @@ def test_main_refreshes_runtime_config_and_passes_same_config_to_editor_agent(
             "translator": "translator-model",
             "editor": "editor-model",
             "headlines": "headlines-model",
+            "enrichment": "enrichment-model",
         },
     )
     monkeypatch.setattr(

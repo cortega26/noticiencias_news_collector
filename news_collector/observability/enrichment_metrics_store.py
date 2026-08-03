@@ -238,16 +238,46 @@ class EnrichmentMetricsStore:
     ):
         env = environment or run_context.get_context().get("environment", "development")
         self.db_path = db_path or f"data/metrics/{env}/enrichment_metrics.db"
+        self._conn_inode: Optional[int] = None
 
         logger.info(f"Initializing Metrics Store for env='{env}' at '{self.db_path}'")
 
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        try:
+            self._conn_inode = os.stat(self.db_path).st_ino
+        except OSError:
+            self._conn_inode = None
         self._create_tables()
+
+    def _ensure_open(self) -> None:
+        """Re-open the connection if it was closed or its file was removed.
+
+        Tests that reset the singleton (or that clean up the metrics
+        directory between tests) can leave the global connection pointing at
+        a deleted database file; lazily reconnecting keeps later writes from
+        failing with a stale, effectively read-only handle.
+        """
+        if self.conn is None or not os.path.exists(self.db_path):
+            if self.conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    self.conn.close()
+            self._init_db(environment=None, db_path=self.db_path)
+            return
+        try:
+            if (
+                self._conn_inode is not None
+                and os.stat(self.db_path).st_ino != self._conn_inode
+            ):
+                self.conn.close()
+                self._init_db(environment=None, db_path=self.db_path)
+        except OSError:
+            self._init_db(environment=None, db_path=self.db_path)
 
     @property
     def cursor(self):
         """Backward compatibility shim for older tests expecting a direct cursor."""
+        self._ensure_open()
         return self.conn.cursor()
 
     def _create_tables(self):
@@ -415,6 +445,7 @@ class EnrichmentMetricsStore:
             for event in events:
                 by_source.setdefault(event["source_id"], []).append(event)
 
+            self._ensure_open()
             cur = self.conn.cursor()
             try:
                 final_rows: Dict[str, Dict[str, Any]] = {}
