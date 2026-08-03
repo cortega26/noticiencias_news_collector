@@ -36,10 +36,10 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from news_collector.system import create_system
     from news_collector import setup_logging
     from news_collector.config import ALL_SOURCES
     from news_collector.diagnostics import SourceHealthTracker
+    from news_collector.system import create_system
 except ImportError as e:
     print(f"❌ Error importando módulos: {e}")
     print(
