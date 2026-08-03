@@ -122,7 +122,7 @@ def line_stats(cls):
     return covered, total, branch_hits, branch_total
 
 files: dict[str, dict[str, float | None]] = {}
-for cls in root.findall("packages/package/class"):
+for cls in root.findall(".//class"):
     filename = cls.get("filename")
     if not filename:
         continue
@@ -249,6 +249,9 @@ violations = []
 branch_violations = []
 for path in changed:
     stats = files.get(path)
+    if stats is None:
+        stripped = path.removeprefix("news_collector/").removeprefix("apps/")
+        stats = files.get(stripped)
     if stats is None:
         missing.append(path)
         continue
