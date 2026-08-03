@@ -15,6 +15,57 @@ from news_collector.config import ALL_SOURCES
 from news_collector.config.settings import get_runtime_config
 
 
+def _install_dry_run_mocks(
+    db_manager: Any, simulated_articles: List[Any]
+) -> Dict[str, Any]:
+    """Reemplaza los métodos de persistencia con simulaciones sin side effects.
+
+    Devuelve un mapeo nombre->método original para restaurarlos en un ``finally``.
+    Solo se reemplazan los métodos que el db_manager realmente posee, de modo que
+    los fakes mínimos en tests no filtren mocks.
+    """
+    from news_collector.contracts.mock_article import MockArticle
+
+    write_methods = (
+        "save_article",
+        "save_articles_bulk",
+        "update_source_stats",
+        "update_source_circuit_state",
+        "update_source_feed_metadata",
+    )
+    original_writes = {
+        name: getattr(db_manager, name)
+        for name in write_methods
+        if hasattr(db_manager, name)
+    }
+
+    def mock_save(article_data: Any, *args: Any, **kwargs: Any) -> MockArticle:
+        simulated_articles.append(article_data)
+        return MockArticle()
+
+    def mock_save_bulk(articles: Any, *args: Any, **kwargs: Any) -> int:
+        batch = list(articles)
+        simulated_articles.extend(batch)
+        return len(batch)
+
+    def mock_source_update(*args: Any, **kwargs: Any) -> bool:
+        return True
+
+    if "save_article" in original_writes:
+        db_manager.save_article = mock_save
+    if "save_articles_bulk" in original_writes:
+        db_manager.save_articles_bulk = mock_save_bulk
+    for name in (
+        "update_source_stats",
+        "update_source_circuit_state",
+        "update_source_feed_metadata",
+    ):
+        if name in original_writes:
+            setattr(db_manager, name, mock_source_update)
+
+    return original_writes
+
+
 class NewsCollectorSystem:
     """
     Clase principal que coordina la operación completa del sistema de recopilación de noticias.
@@ -323,42 +374,9 @@ class NewsCollectorSystem:
         original_writes: Dict[str, Any] = {}
         simulated_articles: List[Any] = []
         if dry_run:
-            write_methods = (
-                "save_article",
-                "save_articles_bulk",
-                "update_source_stats",
-                "update_source_circuit_state",
-                "update_source_feed_metadata",
+            original_writes = _install_dry_run_mocks(
+                self.db_manager, simulated_articles
             )
-            original_writes = {
-                name: getattr(self.db_manager, name)
-                for name in write_methods
-                if hasattr(self.db_manager, name)
-            }
-
-            from news_collector.contracts.mock_article import MockArticle
-
-            def mock_save(article_data: Any, *args: Any, **kwargs: Any) -> MockArticle:
-                simulated_articles.append(article_data)
-                return MockArticle()
-
-            def mock_save_bulk(articles: Any, *args: Any, **kwargs: Any) -> int:
-                batch = list(articles)
-                simulated_articles.extend(batch)
-                return len(batch)
-
-            def mock_source_update(*args: Any, **kwargs: Any) -> bool:
-                return True
-
-            self.db_manager.save_article = mock_save
-            self.db_manager.save_articles_bulk = mock_save_bulk
-            for name in (
-                "update_source_stats",
-                "update_source_circuit_state",
-                "update_source_feed_metadata",
-            ):
-                if name in original_writes:
-                    setattr(self.db_manager, name, mock_source_update)
 
         try:
             # Recolección real (incluso en dry_run, solo evitamos guardar)
@@ -422,12 +440,13 @@ class NewsCollectorSystem:
         self,
         scoring_results: Dict[str, Any],
         collection_results: Optional[Dict[str, Any]] = None,
+        dry_run: bool = False,
     ) -> Dict[str, Any]:
         """Ejecuta la selección final de mejores artículos."""
         try:
             scoring_config = get_runtime_config().scoring_config
             # Check for simulated articles in dry-run
-            if collection_results and "articles" in collection_results:
+            if dry_run and collection_results and "articles" in collection_results:
                 # Dry-run simulation mode
                 selected_articles = collection_results["articles"]
                 return {

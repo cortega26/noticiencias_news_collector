@@ -152,13 +152,15 @@ PY
 
 changed_modules() {
     local base_ref="$1"
-    local paths=('news_collector/**/*.py' 'apps/**/*.py')
+    # `**` requires at least one directory level, so root-level modules
+    # (e.g. news_collector/__init__.py) need their own pattern.
+    local paths=('news_collector/*.py' 'news_collector/**/*.py' 'apps/*.py' 'apps/**/*.py')
     if git rev-parse --verify "$base_ref" >/dev/null 2>&1; then
         local merge_base
         merge_base=$(git merge-base HEAD "$base_ref")
-        git diff --name-only "$merge_base" HEAD -- "${paths[@]}"
+        git diff --name-only --diff-filter=ACMR "$merge_base" HEAD -- "${paths[@]}"
     elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-        git diff --name-only HEAD^ HEAD -- "${paths[@]}"
+        git diff --name-only --diff-filter=ACMR HEAD^ HEAD -- "${paths[@]}"
     else
         git ls-files "${paths[@]}"
     fi
@@ -247,7 +249,26 @@ files = snapshot.get("files", {})
 missing = []
 violations = []
 branch_violations = []
+
+# Files excluded from measurement (pyproject [tool.coverage.run] omit)
+# never appear in the XML; a PR touching them must not trip the gate.
+import tomllib
+import fnmatch
+omit_patterns: list[str] = []
+try:
+    with open("pyproject.toml", "rb") as fh:
+        omit_patterns = list(
+            tomllib.load(fh).get("tool", {}).get("coverage", {}).get("run", {}).get("omit", []) or []
+        )
+except (OSError, tomllib.TOMLDecodeError):
+    omit_patterns = []
+
+def is_omitted(path: str) -> bool:
+    return any(fnmatch.fnmatch(path, pat) for pat in omit_patterns)
+
 for path in changed:
+    if is_omitted(path):
+        continue
     stats = files.get(path)
     if stats is None:
         stripped = path.removeprefix("news_collector/").removeprefix("apps/")

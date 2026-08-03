@@ -58,6 +58,26 @@ class _FakeCollector:
         return {"collection_summary": {"articles_found": 3}}
 
 
+class _FakeSelectionDatabase:
+    def __init__(self) -> None:
+        self.selection_queries = 0
+
+    def get_articles_by_score(self, *, limit: int, min_score: float) -> list[Any]:
+        self.selection_queries += 1
+        assert limit > 0
+        assert min_score >= 0
+        return [_FakeArticle("Persisted", "https://example.com/persisted")]
+
+
+class _FakeArticle:
+    def __init__(self, title: str, url: str) -> None:
+        self._title = title
+        self._url = url
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"title": self._title, "url": self._url}
+
+
 def test_dry_run_captures_bulk_articles_without_persisting() -> None:
     system = NewsCollectorSystem(skip_initialization=True)
     db = _FakeDatabase()
@@ -90,3 +110,53 @@ def test_dry_run_captures_bulk_articles_without_persisting() -> None:
         db.update_source_feed_metadata.__func__
         is _FakeDatabase.update_source_feed_metadata
     )
+
+
+def test_dry_run_uses_simulation_branch() -> None:
+    system = NewsCollectorSystem(skip_initialization=True)
+    system.db_manager = _FakeSelectionDatabase()
+
+    simulated = [{"title": "Simulated", "url": "https://example.com/simulated"}]
+    results = system._execute_final_selection(
+        scoring_results={},
+        collection_results={"articles": simulated},
+        dry_run=True,
+    )
+
+    assert results["success"] is True
+    assert results["articles"] == simulated
+    assert results["selection_criteria"]["mode"] == "dry_run_simulation"
+    assert system.db_manager.selection_queries == 0
+
+
+def test_collection_articles_key_does_not_trigger_simulation_without_dry_run() -> None:
+    system = NewsCollectorSystem(skip_initialization=True)
+    db = _FakeSelectionDatabase()
+    system.db_manager = db
+
+    results = system._execute_final_selection(
+        scoring_results={},
+        collection_results={"articles": [{"title": "Decoy"}]},
+        dry_run=False,
+    )
+
+    assert db.selection_queries == 1
+    assert results["success"] is True
+    assert [a["title"] for a in results["articles"]] == ["Persisted"]
+    assert "mode" not in results["selection_criteria"]
+
+
+def test_dry_run_without_articles_key_falls_back_to_database_path() -> None:
+    system = NewsCollectorSystem(skip_initialization=True)
+    db = _FakeSelectionDatabase()
+    system.db_manager = db
+
+    results = system._execute_final_selection(
+        scoring_results={},
+        collection_results={"collection_summary": {"articles_found": 0}},
+        dry_run=True,
+    )
+
+    assert db.selection_queries == 1
+    assert results["success"] is True
+    assert [a["title"] for a in results["articles"]] == ["Persisted"]

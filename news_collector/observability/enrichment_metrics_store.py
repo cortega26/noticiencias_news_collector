@@ -731,6 +731,7 @@ class EnrichmentMetricsStore:
         with self._lock:
             self._buffer.clear()
             self.flush_count = 0
+            self._ensure_open()
             cur = self.conn.cursor()
             cur.execute("DELETE FROM enrichment_metrics")
             cur.execute("DELETE FROM enrichment_history")
