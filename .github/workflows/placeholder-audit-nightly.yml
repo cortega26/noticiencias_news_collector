@@ -25,7 +25,7 @@ jobs:
       - name: Run full placeholder audit
         id: audit
         run: |
-          python -m tools.placeholder_audit --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
+          .venv/bin/python -m tools.placeholder_audit --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@e4c79b4e9ebfe577d446333c2e31ed81079e7b03 # v4
         with:

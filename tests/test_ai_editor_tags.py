@@ -36,6 +36,22 @@ class TestEditorAgentTags(unittest.TestCase):
                 "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
             }
         )
+        self.agent._generate_enrichment_fields = MagicMock(
+            return_value={
+                "summary_points": ["Punto resumido"],
+                "glossary": [{"term": "Término", "definition": "Definición"}],
+                "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+                "why_it_matters": ["Relevancia regional"],
+                "confidence": "Alta — metodología sólida.",
+                "sources": [
+                    {
+                        "title": "Fuente",
+                        "url": "https://example.com/fuente",
+                        "publisher": "Editorial",
+                    }
+                ],
+            }
+        )
         # Prevent real LLM calls from the category classifier (uses its own provider)
         self.agent.category_resolver._classifier = MagicMock(
             try_classify_article=MagicMock(return_value=None)

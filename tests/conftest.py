@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import sqlite3
+
 import pytest
 from news_collector.storage import database as database_module
 
@@ -47,6 +49,8 @@ def mock_article_payload():
 
 def pytest_sessionfinish(session, exitstatus):
     """Clean up global sqlite connections after all tests to prevent ResourceWarnings."""
+    import logging
+
     try:
         from news_collector.observability.enrichment_metrics_store import (
             enrichment_metrics,
@@ -55,7 +59,5 @@ def pytest_sessionfinish(session, exitstatus):
 
         enrichment_metrics.close()
         production_metrics_view.close()
-    except (ImportError, AttributeError) as e:
-        import logging
-
+    except (ImportError, AttributeError, sqlite3.OperationalError) as e:
         logging.warning("Skipped cleanup of metrics DB: %s", e)

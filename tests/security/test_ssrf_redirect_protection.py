@@ -31,6 +31,7 @@ def test_robust_requests_client_blocks_redirects(monkeypatch):
             resp.status_code = 302
             resp.headers["Location"] = "http://169.254.169.254/metadata"
             resp.url = request.url
+            resp.request = request
             from urllib3.response import HTTPResponse
             from io import BytesIO
 
