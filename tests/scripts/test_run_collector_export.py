@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
+import pytest
+import scripts.run_collector as run_collector
 from scripts.run_collector import _serialize_export_article
 
 
@@ -62,3 +66,67 @@ def test_serialize_export_article_derives_missing_summary_from_content() -> None
     serialized = _serialize_export_article(article)
 
     assert serialized["summary"] == "Evidence-backed content."
+
+
+def _run_export_main(
+    monkeypatch: pytest.MonkeyPatch,
+    destination: Path,
+    article: dict[str, object],
+) -> int:
+    report = {"selection_results": {"articles": [article]}}
+    monkeypatch.setattr(run_collector, "check_dependencies", lambda: True)
+    monkeypatch.setattr(run_collector, "run_simple_collection", lambda args: report)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_collector.py",
+            "--dry-run",
+            "--export-json",
+            str(destination),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_collector.main()
+    return int(exc_info.value.code)
+
+
+def test_export_serialization_failure_exits_nonzero_without_partial_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    destination = tmp_path / "articles.json"
+    article = {
+        "title": "Unserializable metadata",
+        "url": "https://example.com/unserializable",
+        "metadata": {"invalid": object()},
+    }
+
+    exit_code = _run_export_main(monkeypatch, destination, article)
+
+    assert exit_code == 1
+    assert not destination.exists()
+    assert not destination.with_suffix(".json.tmp").exists()
+
+
+def test_atomic_replace_failure_preserves_previous_export(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    destination = tmp_path / "articles.json"
+    destination.write_text("previous export", encoding="utf-8")
+    article = {
+        "title": "Valid article",
+        "url": "https://example.com/valid",
+        "summary": "Summary",
+        "metadata": {},
+    }
+
+    def fail_replace(source: Path, target: Path) -> None:
+        raise OSError("simulated atomic replace failure")
+
+    monkeypatch.setattr(run_collector.os, "replace", fail_replace)
+    exit_code = _run_export_main(monkeypatch, destination, article)
+
+    assert exit_code == 1
+    assert destination.read_text(encoding="utf-8") == "previous export"
+    assert not destination.with_suffix(".json.tmp").exists()
