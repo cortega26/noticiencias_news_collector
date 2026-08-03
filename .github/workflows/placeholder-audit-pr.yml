@@ -28,7 +28,7 @@ jobs:
         id: audit
         continue-on-error: true
         run: |
-          python -m tools.placeholder_audit --pr-diff-only --base origin/main --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
+          .venv/bin/python -m tools.placeholder_audit --pr-diff-only --base origin/main --halo 10 --sarif audit.sarif --comment placeholder-report.md --format table
       - name: Upload SARIF
         continue-on-error: true
         if: always()

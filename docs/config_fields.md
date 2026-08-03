@@ -64,7 +64,7 @@
 | scoring.daily_top_count | int | 10 | Number of articles promoted per day. |  |  |
 | scoring.minimum_score | float | 0.3 | Minimum score required for surfacing an article. |  |  |
 | scoring.mode | str | "advanced" | Active scoring pipeline variant (basic|advanced). |  | basic |
-| scoring.workers | int | 4 |  |  |  |
+| scoring.workers | int | 4 | Max concurrent scoring workers. Also used as the bounded fallback-concurrency limit for per-article scoring when the scorer has no batch method (plan 036). |  |  |
 | scoring.freshness | FreshnessConfig |  |  |  |  |
 | scoring.freshness.half_life_hours | float | 18.0 |  |  |  |
 | scoring.freshness.max_decay_hours | float | 168.0 |  |  |  |
@@ -93,11 +93,15 @@
 | scoring.topic_cap_percentage | float | 0.6 |  |  |  |
 | scoring.llm_model | str | "qwen2.5:32b" | Ollama model to use for cognitive scoring. |  | qwen2.5:14b, qwen2.5:32b |
 | scoring.rescore_days_back | int | 14 | Lookback window in days to re-score completed unpublished articles. |  |  |
+| scoring.page_size | int | 200 | Number of articles fetched per repository page during a scoring cycle, instead of loading the entire pending/rescore backlog into memory at once. |  |  |
+| scoring.max_prompt_items | int | 20 | Max articles bundled into a single CognitiveScorer LLM prompt chunk. Provider context limits cannot be reliably determined without a live model probe, so this is a conservative, documented estimate rather than a measured limit. |  |  |
+| scoring.max_prompt_chars | int | 16000 | Estimated max total characters per CognitiveScorer LLM prompt chunk (sum of each article's own truncated prompt text). A chunk closes when the next item would exceed this bound or max_prompt_items, whichever comes first. |  |  |
+| scoring.cycle_item_budget | Optional |  | Optional cap on total articles processed by one scoring cycle, across both the pending and rescore sources. None means unbounded-by-budget (still bounded by page_size, one page at a time). |  |  |
 | text_processing | TextProcessingConfig |  |  |  |  |
 | text_processing.supported_languages | List | ["en", "es", "pt", "fr"] | Languages supported by NLP routines. |  |  |
 | text_processing.min_content_length | int | 750 | Minimum number of characters required for an article. |  |  |
 | text_processing.boost_keywords | List | ["breakthrough", "discovery", "research", "study", "clinical trial", "peer-reviewed", "published", "journal", "university", "scientists", "artificial intelligence", "machine learning", "climate change", "medical", "technology", "innovation", "Nobel", "FDA approved"] | Keywords boosting article relevance. |  |  |
-| text_processing.penalty_keywords | List | ["shocking", "you won't believe", "doctors hate", "miracle cure", "secret", "conspiracy", "hoax", "fake news"] | Keywords penalizing credibility (clickbait). |  |  |
+| text_processing.penalty_keywords | List | ["shocking", "you won't believe", "doctors hate", "miracle cure", "secret", "conspiracy", "hoax", "fake news"] | Keywords penalizing credibility (clickbait). Currently has no consumer: its previous consumer was a dead code path in BaseCollector that was never actually invoked on the real save path (removed by plan 034, centralize article admission). Admission is now structural-only (title/content length); reintroducing keyword-based rejection or wiring this into scoring both need a deliberate, characterized decision, not an incidental reconnection. |  |  |
 | enrichment | EnrichmentConfig |  |  |  |  |
 | enrichment.default_model | str | "pattern_v1" |  |  |  |
 | enrichment.analysis_cache_size | int | 512 |  |  |  |
@@ -125,6 +129,7 @@
 | ollama.translator_model | Optional |  | Model override for translation phase. |  |  |
 | ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
 | ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
+| ollama.enrichment_model | Optional |  | Model override for enrichment phase (Stage 4). |  |  |
 | gemini | GeminiConfig |  |  |  |  |
 | gemini.api_key | Optional |  | Google AI Studio API Key. |  |  |
 | gemini.model | str | "gemini-2.5-flash" | Model identifier to use for generation. |  |  |

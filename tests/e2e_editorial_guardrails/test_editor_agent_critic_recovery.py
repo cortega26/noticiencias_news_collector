@@ -53,7 +53,20 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._headline_critic_pass = lambda *args, **kwargs: (True, None)  # type: ignore[method-assign]
     agent._generate_enrichment_fields = MagicMock(
-        return_value=EditorAgent._empty_enrichment_fields()
+        return_value={
+            "summary_points": ["Punto resumido"],
+            "glossary": [{"term": "Término", "definition": "Definición"}],
+            "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+            "why_it_matters": ["Relevancia regional"],
+            "confidence": "Alta — metodología sólida.",
+            "sources": [
+                {
+                    "title": "Fuente",
+                    "url": "https://example.com/fuente",
+                    "publisher": "Editorial",
+                }
+            ],
+        }
     )  # type: ignore[method-assign]
     agent._generate_headlines = lambda *args: {  # type: ignore[method-assign]
         "direct": "Hallazgo con impacto regional",
