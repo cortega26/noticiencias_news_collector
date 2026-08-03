@@ -28,3 +28,24 @@ def test_serialize_export_article_accepts_dry_run_mapping() -> None:
     assert serialized["source_id"] == "example"
     assert serialized["image_url"] == "https://example.com/image.jpg"
     assert serialized["score"] == 0.9
+
+
+class _MetadataModel:
+    def model_dump(self, *, mode: str) -> dict[str, str]:
+        assert mode == "json"
+        return {"image_url": "https://example.com/model-image.jpg"}
+
+
+def test_serialize_export_article_normalizes_metadata_model() -> None:
+    article = {
+        "title": "Structured metadata",
+        "url": "https://example.com/structured",
+        "metadata": _MetadataModel(),
+    }
+
+    serialized = _serialize_export_article(article)
+
+    assert serialized["metadata"] == {
+        "image_url": "https://example.com/model-image.jpg"
+    }
+    assert serialized["image_url"] == "https://example.com/model-image.jpg"
