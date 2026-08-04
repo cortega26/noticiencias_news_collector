@@ -58,6 +58,42 @@ jobs:
       - name: Ensure config field documentation is up to date
         run: make config-docs-check
 
+  contract-parity:
+    name: Contract parity (frontend strict gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Checkout front-end contract checker (sparse)
+        # The front-end repo owns the authoritative cross-repo parity checker
+        # (scripts/check-contract-sync.js, the same one Content Guard runs).
+        # Sparse-checkout its checker, the Astro Zod schema, and package.json
+        # (needed for ESM resolution) so backend CI enforces the exact same
+        # strict gate — catching type/constraint/optionality drift at backend
+        # CI time instead of only on the next frontend push.
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: cortega26/noticiencias
+          path: .tmp/frontend-contract
+          sparse-checkout: |
+            src/content.config.ts
+            scripts/check-contract-sync.js
+            package.json
+          sparse-checkout-cone-mode: false
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+      - name: Run strict contract parity
+        # --strict fails on any genuine drift (field presence, types,
+        # constraints, optionality, defaults, nested models); the four
+        # documented intentional divergences are always tolerated.
+        run: |
+          node .tmp/frontend-contract/scripts/check-contract-sync.js --strict \
+            news_collector/contracts/frontend_schema.py \
+            .tmp/frontend-contract/src/content.config.ts
+
   test:
     name: test
     runs-on: ubuntu-latest
