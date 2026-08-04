@@ -78,6 +78,30 @@ class _FakeArticle:
         return {"title": self._title, "url": self._url}
 
 
+class _MinimalDatabase:
+    """Fake that only owns some write methods — like production fakes in
+    other tests. Missing methods must not be patched, or the restoration
+    step would leak mocks onto the instance."""
+
+    def __init__(self) -> None:
+        self.save_article_calls = 0
+
+    def save_article(self, article: Any) -> object:
+        self.save_article_calls += 1
+        return object()
+
+
+class _MinimalCollector:
+    async def collect_from_multiple_sources_async(
+        self,
+        sources: dict[str, dict[str, Any]],
+        *,
+        session_id: str | None,
+        trace_id: str | None,
+    ) -> dict[str, Any]:
+        return {"collection_summary": {"articles_found": 1}}
+
+
 def test_dry_run_captures_bulk_articles_without_persisting() -> None:
     system = NewsCollectorSystem(skip_initialization=True)
     db = _FakeDatabase()
@@ -160,3 +184,26 @@ def test_dry_run_without_articles_key_falls_back_to_database_path() -> None:
     assert db.selection_queries == 1
     assert results["success"] is True
     assert [a["title"] for a in results["articles"]] == ["Persisted"]
+
+
+def test_dry_run_with_minimal_db_manager_leaves_no_mock_leaks() -> None:
+    system = NewsCollectorSystem(skip_initialization=True)
+    db = _MinimalDatabase()
+    system.db_manager = db
+    system.collector = _MinimalCollector()
+
+    results = asyncio.run(
+        system._execute_collection(
+            {"source": {}},
+            dry_run=True,
+            session_id="session",
+            trace_id="trace",
+        )
+    )
+
+    assert results["articles"] == []
+    assert db.save_article_calls == 0
+    assert not hasattr(db, "save_articles_bulk")
+    assert not hasattr(db, "update_source_stats")
+    assert not hasattr(db, "update_source_circuit_state")
+    assert not hasattr(db, "update_source_feed_metadata")

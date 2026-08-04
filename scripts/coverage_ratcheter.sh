@@ -157,7 +157,13 @@ changed_modules() {
     local paths=('news_collector/*.py' 'news_collector/**/*.py' 'apps/*.py' 'apps/**/*.py')
     if git rev-parse --verify "$base_ref" >/dev/null 2>&1; then
         local merge_base
-        merge_base=$(git merge-base HEAD "$base_ref")
+        merge_base=$(git merge-base HEAD "$base_ref" 2>/dev/null || true)
+        if [[ -z "$merge_base" ]]; then
+            # Unrelated histories: fall back to the strictest check (all files),
+            # never to a silent empty diff that would bypass the gate.
+            git ls-files "${paths[@]}"
+            return 0
+        fi
         git diff --name-only --diff-filter=ACMR "$merge_base" HEAD -- "${paths[@]}"
     elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
         git diff --name-only --diff-filter=ACMR HEAD^ HEAD -- "${paths[@]}"
@@ -212,9 +218,11 @@ if [[ "$COMMAND" == "check" ]]; then
     fi
     mapfile -t CHANGED < <(changed_modules "$BASE_REF")
     CHANGED_MODULES=$(printf "%s\n" "${CHANGED[@]}") SNAPSHOT_JSON="$SNAPSHOT" python - <<'PY'
+import fnmatch
 import json
 import os
 import sys
+import tomllib
 from pathlib import Path
 
 snapshot = json.loads(os.environ["SNAPSHOT_JSON"])
@@ -252,8 +260,6 @@ branch_violations = []
 
 # Files excluded from measurement (pyproject [tool.coverage.run] omit)
 # never appear in the XML; a PR touching them must not trip the gate.
-import tomllib
-import fnmatch
 omit_patterns: list[str] = []
 try:
     with open("pyproject.toml", "rb") as fh:

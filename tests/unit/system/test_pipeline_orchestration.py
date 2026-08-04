@@ -52,6 +52,7 @@ class _FakeSystem:
         self.current_session: str | None = None
         self.logger = _FakeLogger()
         self.metrics = _FakeMetrics()
+        self.last_selection_dry_run: bool | None = None
 
     def _get_sources_to_process(self, sources_filter: Any) -> dict[str, dict[str, Any]]:
         return {"source": {}}
@@ -94,7 +95,7 @@ class _FakeSystem:
         collection_results: Any = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        assert dry_run is True
+        self.last_selection_dry_run = dry_run
         return {
             "success": True,
             "selected_count": 1,
@@ -124,6 +125,7 @@ def test_run_cycle_orchestration_happy_path() -> None:
 
     assert report["summary"]["sources_processed"] == 1
     assert system.current_session is not None
+    assert system.last_selection_dry_run is True
     event_names = {
         payload["event"]
         for _, payload in system.logger.events
