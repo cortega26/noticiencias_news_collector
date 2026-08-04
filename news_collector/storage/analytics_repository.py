@@ -84,7 +84,7 @@ class AnalyticsRepository:
         with self._session() as session:
             result = cleanup_old_data(session, days_to_keep)
             logger.info(
-                "Cleanup complete: %s articles, %s logs deleted",
+                "Cleanup complete: {} articles, {} logs deleted",
                 result["deleted_articles"],
                 result["deleted_score_logs"],
             )

@@ -114,7 +114,7 @@ class PROrchestrator:
                 self._db.mark_article_published(numeric_id, pr_url, article_id)
             except ValueError:
                 logger.warning(
-                    "Could not mark non-numeric ID %s in main DB. Skipping state update.",
+                    "Could not mark non-numeric ID {} in main DB. Skipping state update.",
                     article_id,
                 )
 

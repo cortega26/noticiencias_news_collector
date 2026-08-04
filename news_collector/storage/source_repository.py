@@ -77,7 +77,7 @@ class SourceRepository:
                     source.next_retry_at = None
                     source.error_message = None
                     logger.info(
-                        "Source %s recovered/healthy. Reset circuit.", source_id
+                        "Source {} recovered/healthy. Reset circuit.", source_id
                     )
             else:
                 source.consecutive_failures = (source.consecutive_failures or 0) + 1
@@ -95,8 +95,7 @@ class SourceRepository:
                     source.status = "COOLDOWN"
                     source.next_retry_at = force_cooldown_until
                     logger.warning(
-                        "Circuit breaker forced: source %s entering COOLDOWN "
-                        "until %s (reason: %s)",
+                        "Circuit breaker forced: source {} entering COOLDOWN until {} (reason: {})",
                         source_id,
                         source.next_retry_at,
                         error_message,
@@ -107,8 +106,7 @@ class SourceRepository:
                         hours=cooldown_hours
                     )
                     logger.warning(
-                        "Circuit breaker tripped: source %s entering COOLDOWN "
-                        "until %s",
+                        "Circuit breaker tripped: source {} entering COOLDOWN until {}",
                         source_id,
                         source.next_retry_at,
                     )
@@ -158,7 +156,7 @@ class SourceRepository:
                     )
                     session.add(new_source)
 
-            logger.info("%s sources initialised/updated", len(sources_config))
+            logger.info("{} sources initialised/updated", len(sources_config))
 
     # ------------------------------------------------------------------
     # Feed metadata (ETag / Last-Modified)
