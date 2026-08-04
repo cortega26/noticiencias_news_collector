@@ -303,7 +303,7 @@ class ArticleRepository:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article:
                 logger.warning(
-                    "Could not find article %s to mark as published.", article_id
+                    "Could not find article {} to mark as published.", article_id
                 )
                 return False
 
@@ -328,7 +328,7 @@ class ArticleRepository:
             article_metadata["publication"] = publication_meta
             article.article_metadata = article_metadata
             session.add(article)
-            logger.info("Marked article %s as PR_CREATED (PR: %s)", article_id, pr_url)
+            logger.info("Marked article {} as PR_CREATED (PR: {})", article_id, pr_url)
             return True
 
     def reject_publication_attempts(
@@ -433,7 +433,7 @@ class ArticleRepository:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article:
                 logger.warning(
-                    "Could not find article %s to update audit status.", article_id
+                    "Could not find article {} to update audit status.", article_id
                 )
                 return False
 
@@ -459,7 +459,7 @@ class ArticleRepository:
             article.article_metadata = article_metadata
             session.add(article)
             logger.info(
-                "Updated audit state for article %s: %s", article_id, audit_status
+                "Updated audit state for article {}: {}", article_id, audit_status
             )
             return True
 
@@ -619,7 +619,7 @@ class ArticleRepository:
 
             if article.canonical_slug and article.canonical_slug != slug:
                 logger.warning(
-                    "Attempted to overwrite existing slug %s with %s. Ignored.",
+                    "Attempted to overwrite existing slug {} with {}. Ignored.",
                     article.canonical_slug,
                     slug,
                 )
@@ -672,7 +672,7 @@ class ArticleRepository:
                 )
                 if existing:
                     logger.warning(
-                        "Found existing article by URL: %s (ID: %s)",
+                        "Found existing article by URL: {} (ID: {})",
                         payload["url"],
                         existing.id,
                     )
@@ -683,7 +683,7 @@ class ArticleRepository:
                     session.query(Article).filter_by(content_hash=content_hash).first()
                 )
                 if existing_by_content:
-                    logger.debug("Duplicate content found for: %s", payload["title"])
+                    logger.debug("Duplicate content found for: {}", payload["title"])
                     return None
 
                 simhash_value = simhash_normalize_unsigned(simhash64(normalized_basis))
@@ -747,7 +747,7 @@ class ArticleRepository:
                 if cluster_id:
                     self._revalidate_cluster(session, cluster_id)
 
-                logger.info("Article saved: %s...", article.title[:50])
+                logger.info("Article saved: {}...", article.title[:50])
                 return article
 
             except IntegrityError as e:
@@ -755,14 +755,14 @@ class ArticleRepository:
                 err_msg = str(e).lower()
                 if "unique" in err_msg or "duplicate" in err_msg:
                     logger.warning(
-                        "Concurrent duplicate insertion trapped by DB constraint: %s",
+                        "Concurrent duplicate insertion trapped by DB constraint: {}",
                         e,
                     )
                     return None
-                logger.error("Critical IntegrityError saving article: %s", e)
+                logger.error("Critical IntegrityError saving article: {}", e)
                 raise
             except Exception as e:
-                logger.error("Error saving article: %s", e)
+                logger.error("Error saving article: {}", e)
                 raise
 
     def _prepare_bulk_row(
@@ -779,7 +779,7 @@ class ArticleRepository:
             try:
                 model = CollectorArticleModel.model_validate(data)
             except ValidationError as exc:
-                logger.warning("Invalid bulk item skipped: %s", exc)
+                logger.warning("Invalid bulk item skipped: {}", exc)
                 return None
 
         payload = model.model_dump_for_storage()
@@ -930,7 +930,7 @@ class ArticleRepository:
                 session.flush()
         except IntegrityError as e:
             logger.warning(
-                "Bulk insert collision in %s: %s", label, str(e).splitlines()[0]
+                "Bulk insert collision in {}: {}", label, str(e).splitlines()[0]
             )
             raise
 
@@ -984,12 +984,12 @@ class ArticleRepository:
                     saved_count += pending_count
 
                 session.commit()
-                logger.info("Bulk save completed atomically: %s articles", saved_count)
+                logger.info("Bulk save completed atomically: {} articles", saved_count)
                 return saved_count
 
             except Exception as e:
                 session.rollback()
-                logger.error("Fatal error in bulk save, transaction aborted: %s", e)
+                logger.error("Fatal error in bulk save, transaction aborted: {}", e)
                 raise
 
     @staticmethod
@@ -1214,7 +1214,7 @@ class ArticleRepository:
                 session.commit()
                 return True
             except Exception as e:
-                logger.error("Error in update_validation_status_bulk: %s", e)
+                logger.error("Error in update_validation_status_bulk: {}", e)
                 session.rollback()
                 return False
 
@@ -1237,7 +1237,7 @@ class ArticleRepository:
                     score_model = ScoringRequestModel.model_validate(score_data)
                 except ValidationError as exc:
                     logger.error(
-                        "Invalid scoring payload for article %s: %s",
+                        "Invalid scoring payload for article {}: {}",
                         article_id,
                         exc,
                     )
@@ -1278,7 +1278,7 @@ class ArticleRepository:
                 session.commit()
                 return True
             except Exception as e:
-                logger.error("Error in update_articles_score_bulk: %s", e)
+                logger.error("Error in update_articles_score_bulk: {}", e)
                 session.rollback()
                 return False
 
@@ -1305,7 +1305,7 @@ class ArticleRepository:
             try:
                 article = session.query(Article).filter_by(id=article_id).first()
                 if not article:
-                    logger.warning("Article not found for score update: %s", article_id)
+                    logger.warning("Article not found for score update: {}", article_id)
                     return False
 
                 article.final_score = payload["final_score"]
@@ -1328,14 +1328,14 @@ class ArticleRepository:
 
                 session.add(score_log)
                 logger.info(
-                    "Score updated for article %s: %s",
+                    "Score updated for article {}: {}",
                     article_id,
                     payload["final_score"],
                 )
                 return True
 
             except Exception as e:
-                logger.error("Error updating score: %s", e)
+                logger.error("Error updating score: {}", e)
                 session.rollback()
                 return False
 
@@ -1357,7 +1357,7 @@ class ArticleRepository:
                     session.delete(article)
                     return True
             except Exception as e:
-                logger.error("Error deleting article %s: %s", article_id, e)
+                logger.error("Error deleting article {}: {}", article_id, e)
                 session.rollback()
             return False
 
@@ -1371,13 +1371,13 @@ class ArticleRepository:
                 deleted_logs = session.query(ScoreLog).delete()
                 deleted_articles = session.query(Article).delete()
                 logger.info(
-                    "Cache cleared: %s articles and %s logs deleted.",
+                    "Cache cleared: {} articles and {} logs deleted.",
                     deleted_articles,
                     deleted_logs,
                 )
                 return int(deleted_articles)
             except Exception as e:
-                logger.error("Error clearing cache: %s", e)
+                logger.error("Error clearing cache: {}", e)
                 raise
 
     # ------------------------------------------------------------------
