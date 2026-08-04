@@ -257,6 +257,58 @@ class TestBufferedFlushEquivalence(unittest.TestCase):
         result = _apply_success(row, "not_a_real_strategy", 1.0, 1, True)
         self.assertIsNone(result)
 
+    def test_reset_reopens_when_database_file_was_removed(self):
+        # Regression: the CI cascade removes the metrics directory between
+        # test runs, leaving the connection pointing at a deleted file.
+        # reset() must re-open (like flush does) instead of failing on a
+        # stale, effectively read-only handle.
+        tmpdir = tempfile.mkdtemp()
+        db_file = Path(tmpdir) / "reset_reopen.db"
+        store = EnrichmentMetricsStore.create_isolated(
+            environment="test",
+            db_path=str(db_file),
+            flush_batch_size=100,
+        )
+        try:
+            store.record_attempt("source_i", strategy="http")
+            store.flush()
+            self.assertEqual(
+                store.get_metrics("source_i")["total_enrichment_attempted"], 1
+            )
+
+            db_file.unlink()
+
+            store.reset()
+            self.assertIsNone(store.get_metrics("source_i"))
+
+            store.record_attempt("source_i", strategy="http")
+            metrics = store.get_metrics("source_i")
+            self.assertEqual(metrics["total_enrichment_attempted"], 1)
+        finally:
+            store.close()
+
+    def test_reset_reopens_when_connection_was_closed(self):
+        tmpdir = tempfile.mkdtemp()
+        db_file = Path(tmpdir) / "reset_reopen_closed.db"
+        store = EnrichmentMetricsStore.create_isolated(
+            environment="test",
+            db_path=str(db_file),
+            flush_batch_size=100,
+        )
+        try:
+            store.record_attempt("source_j", strategy="http")
+            store.flush()
+            store.conn.close()
+            store.conn = None
+
+            store.reset()
+            store.record_attempt("source_j", strategy="http")
+            self.assertEqual(
+                store.get_metrics("source_j")["total_enrichment_attempted"], 1
+            )
+        finally:
+            store.close()
+
 
 if __name__ == "__main__":
     unittest.main()
