@@ -1,0 +1,23 @@
+# Slim image for the Noticiencias webhook serving layer (news_collector.serving).
+# NOT the full collector: no playwright browsers, no ollama, no refinery UI.
+# Purpose: receive backend webhook notifications (e.g. /api/v1/webhook/frontend).
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+COPY pyproject.toml README.md LICENSE ./
+COPY config.toml ./
+COPY news_collector ./news_collector
+COPY noticiencias ./noticiencias
+
+RUN pip install --no-cache-dir .
+
+EXPOSE 8000
+
+# No --reload: the container runtime owns restarts.
+CMD ["python", "-m", "uvicorn", "news_collector.serving.__main__:app", "--host", "0.0.0.0", "--port", "8000"]

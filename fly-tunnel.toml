@@ -1,0 +1,18 @@
+# Fly.io app: Cloudflare Tunnel connector for api.noticiencias.com.
+# Runs the existing tunnel (noticiencias-webhook) from the cloud so the
+# webhook endpoint stays up without the local PC.
+# Deploy:
+#   fly apps create noticiencias-tunnel
+#   fly secrets set TUNNEL_TOKEN=<cloudflared tunnel token noticiencias-webhook>
+#   fly deploy --config fly-tunnel.toml --image cloudflare/cloudflared:latest
+app = "noticiencias-tunnel"
+primary_region = "cdg"
+
+[env]
+
+[processes]
+  app = "tunnel run"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

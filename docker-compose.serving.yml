@@ -1,0 +1,19 @@
+# Webhook serving layer + Cloudflare Tunnel sidecar.
+# Usage:
+#   docker compose -f docker-compose.serving.yml up -d --build
+# Requires WEBHOOK_API_KEY and TUNNEL_TOKEN in the environment (backend .env works).
+services:
+  serving:
+    build:
+      context: .
+      dockerfile: Dockerfile.serving
+    environment:
+      WEBHOOK_API_KEY: "${WEBHOOK_API_KEY:?required: set WEBHOOK_API_KEY in .env}"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: "tunnel run --token ${TUNNEL_TOKEN:?required: set TUNNEL_TOKEN in .env}"
+    restart: unless-stopped
