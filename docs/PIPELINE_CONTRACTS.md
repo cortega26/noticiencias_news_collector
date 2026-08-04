@@ -88,6 +88,7 @@ The serving layer is not the owner of editorial mutation workflows.
 
 ## Current Gaps To Treat As Gaps
 
-- Cross-repo schema parity is mirrored in code and tests, but not enforced by a single shared CI pipeline spanning both repositories.
+- The backend's own parity test (`tests/test_contracts_sync.py`) covers only top-level field names; the full type/constraint/optionality comparison is enforced by the frontend's checker, which backend CI runs in strict mode (`.github/workflows/ci.yml` → `contract-parity` job) and the frontend runs on every push (Content Guard).
+- Frontend validation-failure notifications (`POST /api/v1/webhook/frontend`, `serving/api.py`) depend on `BACKEND_WEBHOOK_URL`/`BACKEND_WEBHOOK_TOKEN` being configured in the frontend repository — they must be set for the failure loop to close.
 - Publication identity reuse is strong but still has fallback branches that can use non-source dates.
 - `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.
