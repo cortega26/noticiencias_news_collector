@@ -100,7 +100,7 @@ async def run_cycle_orchestration(
         )
 
         final_selection = system._execute_final_selection(
-            scoring_results, collection_results
+            scoring_results, collection_results, dry_run=dry_run
         )
         final_report = system._generate_session_report(
             collection_results, scoring_results, final_selection, session_id
