@@ -157,3 +157,23 @@ def test_check_without_changed_files_passes(tmp_path: Path) -> None:
     result = _run_check(root)
 
     assert result.returncode == 0, result.stderr
+
+
+def test_check_fails_loudly_when_base_has_no_common_ancestor(tmp_path: Path) -> None:
+    root = _make_repo(tmp_path)
+    _git(root, "checkout", "-q", "--orphan", "other")
+    _git(root, "rm", "-q", "-rf", ".")
+    for rel, content in (
+        (".coverage-baseline", BASELINE),
+        ("coverage.xml", COVERAGE_XML),
+        ("pyproject.toml", PYPROJECT_OMIT),
+        ("news_collector/b.py", "B = 1\n"),
+    ):
+        _write(root, rel, content)
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "unrelated history")
+
+    result = _run_check(root)
+
+    assert result.returncode == 1
+    assert "below 90%" in result.stderr
