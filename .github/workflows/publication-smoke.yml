@@ -59,6 +59,7 @@ jobs:
             AGENTS.md
             CLAUDE.md
             docs/
+            .github/workflows/
           sparse-checkout-cone-mode: false
 
       - name: Set up Node
