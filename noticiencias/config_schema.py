@@ -239,6 +239,10 @@ class CollectionConfig(StrictModel):
         default=8,
         description="Concurrency limit for async collectors.",
     )
+    max_concurrent_sources: PositiveInt = Field(
+        default=10,
+        description="Cap on sources collected concurrently during async fan-out.",
+    )
     max_articles_per_source: PositiveInt = Field(
         default=50,
         description="Cap on articles per source per run.",

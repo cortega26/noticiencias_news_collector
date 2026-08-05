@@ -677,7 +677,7 @@ class EditorAgent:
 
             result = "".join(full_text).strip()
             logger.debug(
-                "Raw LLM response: %d chars, preview: %.200s",
+                "Raw LLM response: {} chars, preview: {:.200}",
                 len(result),
                 result[:200].replace("\n", " "),
             )

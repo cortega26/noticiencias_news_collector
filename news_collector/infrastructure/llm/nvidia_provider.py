@@ -191,6 +191,34 @@ class NvidiaProvider:
             header = resp.headers.get("Retry-After")
         return parse_retry_after(header)
 
+    @staticmethod
+    def _should_retry(exc: BaseException) -> bool:
+        """Whether a failure is transient and worth a retry attempt.
+
+        Deterministic client errors (any 4xx other than 429, e.g. 410 Gone
+        entitlement failures or 403) fail fast instead of burning backoff
+        retries. Network-level errors, timeouts, 429, and 5xx remain
+        retryable.
+
+        Order matters: httpx.HTTPStatusError subclasses httpx.RequestError and
+        requests.HTTPError subclasses requests.RequestException, so the
+        status-carrying types must be inspected first.
+        """
+        if isinstance(exc, httpx.HTTPStatusError):
+            status = exc.response.status_code
+            return status == 429 or status >= 500
+        if isinstance(exc, httpx.RequestError):
+            return True
+        if isinstance(exc, requests.HTTPError):
+            resp = exc.response
+            if resp is None:
+                return True
+            status = resp.status_code
+            return status == 429 or status >= 500
+        if isinstance(exc, requests.RequestException):
+            return True
+        return isinstance(exc, TimeoutError)
+
     # ---- Response helpers ----
 
     @staticmethod
@@ -343,7 +371,7 @@ class NvidiaProvider:
                         self.max_retries,
                         safe_msg,
                     )
-                    if attempt_num < self.max_retries:
+                    if attempt_num < self.max_retries and self._should_retry(e):
                         delay = self._backoff_delay(attempt_num)
                         await __import__("asyncio").sleep(delay)
                         continue
@@ -435,7 +463,7 @@ class NvidiaProvider:
                 if is_rate_limit and limiter.circuit_breaker.is_open:
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
 
-                if attempt_num < self.max_retries:
+                if attempt_num < self.max_retries and self._should_retry(e):
                     delay = (
                         retry_after or self._backoff_delay(attempt_num)
                         if is_rate_limit
