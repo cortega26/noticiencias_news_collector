@@ -21,10 +21,11 @@ When adding a NEW logger call, use braces and pass values as arguments:
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[3]
 SCAN_ROOTS = ("news_collector", "apps/refinery", "scripts")
@@ -103,3 +104,105 @@ def test_loguru_braces_render_values() -> None:
 
     assert messages and "7" in messages[0]
     assert "%" not in messages[0]
+
+
+# ---------------------------------------------------------------------------
+# Brace-regression guard
+# ---------------------------------------------------------------------------
+
+_LOGURU_LEVELS = frozenset(
+    {"info", "warning", "error", "debug", "exception", "success", "critical"}
+)
+_RECEIVER_RE = re.compile(r"logger(?:\s*\.|$)")
+_MODULO_RE = re.compile(r"%\s*\(")
+
+
+def _unbalanced_brace(message: str) -> Optional[str]:
+    """Return a description of the first unbalanced brace in ``message``.
+
+    loguru formats messages like :meth:`str.format`: every ``{`` starts a
+    field and every ``}`` closes one, with ``{{``/``}}`` as literal escapes.
+    An unbalanced brace raises at render time (KeyError/IndexError/ValueError),
+    so the guard flags them the same way a runtime would. Nested replacement
+    fields (``{name:{width}}``) are not used anywhere in this codebase and are
+    intentionally flagged to keep the scanner simple.
+    """
+    i = 0
+    n = len(message)
+    while i < n:
+        char = message[i]
+        if char == "{":
+            if i + 1 < n and message[i + 1] == "{":
+                i += 2
+                continue
+            j = i + 1
+            while j < n and message[j] != "}":
+                if message[j] == "{":
+                    return (
+                        f"nested/extra `{{` at offset {j} (unexpected in flat fields)"
+                    )
+                j += 1
+            if j >= n:
+                return f"unclosed `{{` at offset {i}"
+            i = j + 1
+        elif char == "}":
+            if i + 1 < n and message[i + 1] == "}":
+                i += 2
+                continue
+            return f"single `}}` at offset {i}"
+        else:
+            i += 1
+    return None
+
+
+def _iter_loguru_message_literals(path: Path):
+    """Yield (lineno, plain-str-literal message) for loguru call sites.
+
+    Uses the AST so string concatenation and multi-line calls are captured
+    reliably. Only plain string literal messages are checked; f-strings are
+    already rendered at the call site. Sites that pre-build the message with
+    ``%``-modulo (e.g. ``"..." % (a, b)``) are skipped: the braces, if any, are
+    resolved before loguru ever sees the string.
+    """
+    text = path.read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _LOGURU_LEVELS
+            and isinstance(node.func.value, (ast.Name, ast.Call, ast.Attribute))
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            continue
+        receiver = ast.get_source_segment(text, node.func.value) or "?"
+        if not _RECEIVER_RE.match(receiver.strip()):
+            continue
+        call_src = ast.get_source_segment(text, node) or ""
+        if _MODULO_RE.search(call_src):
+            continue
+        yield node.lineno, node.args[0].value
+
+
+def test_no_unbalanced_braces_in_loguru_messages() -> None:
+    violations: List[Tuple[Path, int, str]] = []
+    for root in SCAN_ROOTS:
+        base = ROOT / root
+        if not base.exists():
+            continue
+        for path in base.rglob("*.py"):
+            if any(part in EXCLUDE_DIR_PARTS for part in path.parts):
+                continue
+            if _is_stdlib_logging(path):
+                continue  # %-format: braces are literal, not format fields
+            for lineno, message in _iter_loguru_message_literals(path):
+                problem = _unbalanced_brace(message)
+                if problem is not None:
+                    violations.append((path, lineno, f"{problem}: {message[:80]!r}"))
+
+    assert violations == [], (
+        "loguru message literal(s) have unbalanced braces — they raise at "
+        f"render time: {violations}"
+    )
