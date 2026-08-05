@@ -533,6 +533,7 @@ def estimate_time(art_len: int, model: str) -> str:
     if (
         "llama3.3" in model_name
         or "70b" in model_name
+        or "80b" in model_name
         or "32b" in model_name
         or "qwen2.5:14b" in model_name
     ):
@@ -889,7 +890,9 @@ if (
     )
 
 global_provider_name = "Ollama (Local)"
-global_provider_model = global_ollama_cfg.get("model", "qwen2.5:32b")
+global_provider_model = global_ollama_cfg.get(
+    "model", "qwen3-next:80b-a3b-instruct-q4_K_M"
+)
 global_status_dot = "🟢"
 if global_active_provider:
     if global_provider_type == "NvidiaProvider":
@@ -1097,7 +1100,7 @@ with tab1:
     # Pre-resolve stage models from config so col2 widgets can reference them
     # regardless of which provider branch is selected in col1.
     _pre_ollama_cfg = config_data.get("ollama", {})
-    _pre_base = _pre_ollama_cfg.get("model", "qwen2.5:32b")
+    _pre_base = _pre_ollama_cfg.get("model", "qwen3-next:80b-a3b-instruct-q4_K_M")
     r_trans = _pre_ollama_cfg.get("translator_model") or _pre_base
     r_edit = _pre_ollama_cfg.get("editor_model") or _pre_base
     r_head = _pre_ollama_cfg.get("headlines_model") or _pre_base
@@ -1118,7 +1121,7 @@ with tab1:
                 return False
             m_lower = m_name.lower()
             return any(
-                tok in m_lower for tok in ("14b", "32b", "27b", "70b", "mixtral")
+                tok in m_lower for tok in ("14b", "32b", "27b", "70b", "80b", "mixtral")
             )
 
         # ── Detect currently active provider (without side-effects) ──────────
@@ -1327,6 +1330,7 @@ with tab1:
                     available_models = _active_provider.list_models()
 
             _ollama_base_options = [
+                "qwen3-next:80b-a3b-instruct-q4_K_M",
                 "qwen2.5:32b",
                 "qwen2.5:14b",
                 "llama3.2:latest",
@@ -1338,7 +1342,7 @@ with tab1:
             )
 
             # Base model
-            current_base = ollama_cfg.get("model", "qwen2.5:32b")
+            current_base = ollama_cfg.get("model", "qwen3-next:80b-a3b-instruct-q4_K_M")
             if is_heavy_model(current_base):
                 st.warning(
                     f"⚠️ El modelo base `{current_base}` requiere mucha RAM. "
@@ -1389,15 +1393,11 @@ with tab1:
 
             if col_p1.button(
                 "🚀 Producción (CPU)",
-                help="Llama 3.2 en todo — sin GPU requerida.",
+                help="Qwen3 Next en traducir/editar — llama3.2 solo para titulares. Sin GPU requerida.",
             ):
-                for k in (
-                    "model",
-                    "translator_model",
-                    "editor_model",
-                    "headlines_model",
-                ):
-                    config_data["ollama"][k] = "llama3.2:latest"
+                for k in ("model", "translator_model", "editor_model"):
+                    config_data["ollama"][k] = "qwen3-next:80b-a3b-instruct-q4_K_M"
+                config_data["ollama"]["headlines_model"] = "llama3.2:latest"
                 _result = save_toml_config(config_data)
                 render_save_result(_result, "Preset Producción (CPU) aplicado.")
                 if _result["success"]:

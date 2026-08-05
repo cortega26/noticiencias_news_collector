@@ -744,7 +744,7 @@ class OllamaConfig(StrictModel):
         description="Base URL for the Ollama API.",
     )
     model: str = Field(
-        default="qwen2.5:32b",
+        default="qwen3-next:80b-a3b-instruct-q4_K_M",
         description="Model tag to use for generation.",
     )
     timeout: PositiveInt = Field(

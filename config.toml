@@ -486,10 +486,10 @@ target_repo_url = "https://github.com/cortega26/noticiencias.git"
 
 [ollama]
 api_url = "http://localhost:11434/api/generate"
-model = "qwen2.5:32b"
+model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 timeout = 7200
-translator_model = "qwen2.5:32b"
-editor_model = "qwen2.5:32b"
+translator_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
+editor_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 headlines_model = "llama3.2:latest"
 
 [gemini]
