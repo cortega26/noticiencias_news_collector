@@ -80,11 +80,19 @@ jobs:
             src/content.config.ts
             scripts/check-contract-sync.js
             package.json
+            package-lock.json
           sparse-checkout-cone-mode: false
       - name: Setup Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 24
+      - name: Install contract checker dependencies
+        # check-contract-sync.js imports prettier at runtime (used to format the
+        # synthesized schema); the sparse checkout ships package.json but installs
+        # nothing, so without npm ci the gate dies on ERR_MODULE_NOT_FOUND before
+        # ever comparing schemas.
+        run: npm ci --legacy-peer-deps
+        working-directory: .tmp/frontend-contract
       - name: Run strict contract parity
         # --strict fails on any genuine drift (field presence, types,
         # constraints, optionality, defaults, nested models); the four

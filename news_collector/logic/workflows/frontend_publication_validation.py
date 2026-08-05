@@ -38,6 +38,7 @@ def build_fixture_post() -> AstroPost:
         image="https://example.com/placeholder.jpg",
         image_alt="Smoke test placeholder image",
         permalink="/smoke-test-ci-fixture/",
+        source_url="https://example.com/smoke-test-ci-fixture-source",
         investigation=False,
         featured=False,
     )
@@ -56,6 +57,8 @@ def render_fixture_markdown(post: AstroPost) -> str:
     lines.append(f"image_alt: {post.image_alt!r}")
     if post.permalink:
         lines.append(f"permalink: {post.permalink!r}")
+    if post.source_url:
+        lines.append(f"source_url: {str(post.source_url)!r}")
     lines.append(f"investigation: {str(post.investigation).lower()}")
     lines.append(f"featured: {str(post.featured).lower()}")
     lines.append("---")

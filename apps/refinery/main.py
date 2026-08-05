@@ -143,7 +143,7 @@ def _load_export_articles(  # noqa: C901
         )
     except (TypeError, ValueError):
         logger.warning(
-            "Export payload schema_version is invalid (%r). Treating payload as legacy v1.",
+            "Export payload schema_version is invalid ({!r}). Treating payload as legacy v1.",
             schema_version_raw,
         )
         schema_version = 1
@@ -151,14 +151,13 @@ def _load_export_articles(  # noqa: C901
     is_legacy_export = schema_version == 1 or contract_name.endswith(".v1")
     if schema_version is None:
         logger.warning(
-            "Export payload at %s has no schema_version. Assuming legacy v1 compatibility path.",
+            "Export payload at {} has no schema_version. Assuming legacy v1 compatibility path.",
             export_path,
         )
         is_legacy_export = True
     elif is_legacy_export:
         logger.warning(
-            "Legacy export schema detected at %s (schema_version=%s, contract=%s). "
-            "Applying source_name->source_id compatibility mapping.",
+            "Legacy export schema detected at {} (schema_version={}, contract={}). Applying source_name->source_id compatibility mapping.",
             export_path,
             schema_version,
             contract_name or "n/a",
@@ -186,8 +185,7 @@ def _load_export_articles(  # noqa: C901
 
     if ambiguous_names:
         logger.warning(
-            "Detected ambiguous source display names in config; "
-            "fallback source_name->source_id mapping disabled for %d names.",
+            "Detected ambiguous source display names in config; fallback source_name->source_id mapping disabled for {} names.",
             len(ambiguous_names),
         )
 
@@ -206,8 +204,7 @@ def _load_export_articles(  # noqa: C901
             )
         except ValueError as exc:
             logger.error(
-                "Invalid export payload for article %s: %s | keys=%s | source_id=%r | "
-                "source=%r | sourceId=%r | source_url=%r | source_name=%r | source_slug=%r",
+                "Invalid export payload for article {}: {} | keys={} | source_id={!r} | source={!r} | sourceId={!r} | source_url={!r} | source_name={!r} | source_slug={!r}",
                 art_id,
                 exc,
                 sorted(art.keys()),
@@ -230,8 +227,7 @@ def _load_export_articles(  # noqa: C901
                 incoming_name = str(art.get("source_name", "")).strip()
                 if incoming_name != canonical_source_name:
                     logger.warning(
-                        "Normalizing source_name for article %s from %r to canonical %r "
-                        "(source_id=%s).",
+                        "Normalizing source_name for article {} from {!r} to canonical {!r} (source_id={}).",
                         art_id,
                         incoming_name or None,
                         canonical_source_name,
@@ -504,7 +500,7 @@ def main(  # noqa: C901
         process_id = str(manual_ingest_result["article_id"])
         preferred_export_path = Path(manual_ingest_result["export_path"]).expanduser()
         logger.info(
-            "Manual URL ingest ready for article %s using export %s",
+            "Manual URL ingest ready for article {} using export {}",
             process_id,
             preferred_export_path,
         )
@@ -785,7 +781,7 @@ def delete_article(target: str | dict[str, str]) -> dict:  # noqa: C901
     identifier (`refinery_id` or `file_name`) and creates a Pull Request.
     """
     target_info = _normalize_delete_target(target)
-    logger.info("Initiating One-Click Unpublish for target: %s", target_info)
+    logger.info("Initiating One-Click Unpublish for target: {}", target_info)
 
     try:
         config = load_config()
@@ -817,7 +813,7 @@ def delete_article(target: str | dict[str, str]) -> dict:  # noqa: C901
 
         if not target_file or target_article is None:
             logger.warning(
-                "Delete target %s not found in published content.", target_info
+                "Delete target {} not found in published content.", target_info
             )
             return {
                 "status": "error",
@@ -848,7 +844,7 @@ def delete_article(target: str | dict[str, str]) -> dict:  # noqa: C901
             )
         if removed_manifest_keys:
             logger.info(
-                "Removed stale refinery manifest entries for %s: %s",
+                "Removed stale refinery manifest entries for {}: {}",
                 filename,
                 ", ".join(removed_manifest_keys),
             )

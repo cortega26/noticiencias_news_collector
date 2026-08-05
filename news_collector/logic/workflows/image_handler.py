@@ -103,7 +103,7 @@ class ArticleImageHandler:
         resolved_brief_image = self._resolve_brief_image(existing_brief, target_dir)
         if resolved_brief_image:
             logger.info(
-                "Using staged editorial image for article %s from brief %s",
+                "Using staged editorial image for article {} from brief {}",
                 article_id,
                 existing_brief.slug if existing_brief else "unknown",
             )
