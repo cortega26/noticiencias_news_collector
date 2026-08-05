@@ -19,12 +19,12 @@ jobs:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
 
       - name: Install mutation tooling
-        run: pip install mutmut
+        run: .venv/bin/pip install mutmut
 
       - name: Run mutation smoke tests
-        run: python -m pytest tests/mutation_smoke
+        run: .venv/bin/python -m pytest tests/mutation_smoke
 
       - name: Run MutMut
         run: |
-          mutmut run --CI
-          mutmut results
+          .venv/bin/mutmut run --CI
+          .venv/bin/mutmut results
