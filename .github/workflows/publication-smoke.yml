@@ -55,6 +55,10 @@ jobs:
             eslint.config.mjs
             tests/
             vitest.config.ts
+            README.md
+            AGENTS.md
+            CLAUDE.md
+            docs/
           sparse-checkout-cone-mode: false
 
       - name: Set up Node
