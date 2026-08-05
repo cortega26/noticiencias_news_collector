@@ -587,6 +587,9 @@ nih_news:
   tier: "A"
   fetchability_score: 98
   crawl_interval_seconds: 600
+  blacklisted: true
+  blacklist_reason: "403 behind Cloudflare 'security verification' — blocked by IP from datacenter egress (verified 2026-08-04): httpx browser-UA 403; scrapling curl_cffi Fetcher 403 (Turnstile challenge 'Just a moment'); Playwright headless intermittent 200/403, unreliable. Keep blacklisted until egress proxy or allowed-IP path exists."
+  blacklisted_date: "2026-08-04"
 
 arxiv_ai:
   name: arXiv AI/ML

@@ -448,5 +448,424 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertEqual(synced_allowlist["allowedPlaceholders"], {})
 
 
+class TestRefineryEngineCoverage(unittest.TestCase):
+    """Coverage-focused tests for editorial/workflow paths not exercised elsewhere."""
+
+    def setUp(self):
+        self.mock_db = MagicMock()
+        self.mock_git = MagicMock()
+        self.mock_git.create_branch.return_value = "content/update/test-branch"
+        self.mock_git.create_pull_request.return_value = (
+            "https://github.com/owner/repo/pull/1"
+        )
+        self.mock_editor = MagicMock()
+        self.mock_config = MagicMock()
+        self.mock_config.github = SimpleNamespace(
+            target_repo_url="http://github.com/target"
+        )
+        self.mock_config.app.policy_integrity_mode = "disabled"
+
+        self.mock_db.get_publishing_state.return_value = None
+
+        self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
+        self.git_patch.start()
+        self.auditor_patch = patch(
+            "news_collector.logic.workflows.refinery_engine.EditorialAuditor"
+        )
+        self.mock_auditor_cls = self.auditor_patch.start()
+        self.mock_auditor = MagicMock()
+        self.mock_auditor.should_run_fast.return_value = False
+        self.mock_auditor.get_cached_score.return_value = None
+        self.mock_auditor_cls.return_value = self.mock_auditor
+
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        self.engine = RefineryEngine(
+            self.mock_db, self.mock_git, self.mock_editor, self.mock_config
+        )
+        self.engine._download_image = MagicMock(
+            return_value="~/assets/images/test-image.png"
+        )
+
+    def tearDown(self):
+        self.auditor_patch.stop()
+        self.git_patch.stop()
+
+    def _make_engine(self, config):
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        return RefineryEngine(self.mock_db, self.mock_git, self.mock_editor, config)
+
+    def _mock_now(self, dt):
+        dt.now.return_value.strftime.return_value = "2026-01-01"
+        dt.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+        return dt
+
+    def _article(self, aid="500", image=True):
+        article = {
+            "id": aid,
+            "title": f"Coverage article {aid}",
+            "url": f"http://x/{aid}",
+            "summary": "This is a sufficiently long summary for refinery coverage.",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        if image:
+            article["image_url"] = f"https://example.com/{aid}.png"
+        return article
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_blocks_quoted_date_only_frontmatter_reaching_guard(
+        self, mock_dt_refinery, mock_dt_identity
+    ):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("501")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: quote-guard\ndate: '2026-03-02'\n---\nContent"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.engine.process_single_article(
+                article, MagicMock(), Path(tmpdir)
+            )
+
+        self.assertFalse(result)
+        self.mock_git.create_branch.assert_not_called()
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_blocks_translation_guardrail(self, mock_dt_refinery, mock_dt_identity):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("502")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.side_effect = ValueError(
+            "Editorial Policy (Critic): Translation Guardrail triggered."
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.engine.process_single_article(
+                article, MagicMock(), Path(tmpdir)
+            )
+
+        self.assertFalse(result)
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_blocks_when_output_filename_missing(
+        self, mock_dt_refinery, mock_dt_identity
+    ):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("503")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: no-filename\n---\nContent"
+        )
+        self.engine.identity_resolver.finalize_slug = MagicMock(
+            return_value=SimpleNamespace(
+                is_new=True, final_slug="no-filename", output_filename=None
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.engine.process_single_article(
+                article, MagicMock(), Path(tmpdir)
+            )
+
+        self.assertFalse(result)
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_continues_when_mark_publishing_fails(
+        self, mock_dt_refinery, mock_dt_identity
+    ):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("504")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_db.mark_article_publishing.side_effect = RuntimeError("db down")
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: publish-fail\n---\nContent"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.engine.process_single_article(
+                article, MagicMock(), Path(tmpdir)
+            )
+
+        self.mock_git.create_branch.assert_called()
+        self.assertTrue(result)
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_s0_guard_value_error_on_write(self, mock_dt_refinery, mock_dt_identity):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("505")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: badwrite\n---\nContent"
+        )
+        with patch.object(
+            self.engine.writer, "write_article", side_effect=ValueError("bad write")
+        ):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                result = self.engine.process_single_article(
+                    article, MagicMock(), Path(tmpdir)
+                )
+
+        self.assertFalse(result)
+        self.mock_git.commit_and_push.assert_not_called()
+
+    @patch("news_collector.logic.workflows.publication_identity.datetime")
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_pr_failure_returns_false(self, mock_dt_refinery, mock_dt_identity):
+        self._mock_now(mock_dt_refinery)
+        self._mock_now(mock_dt_identity)
+
+        article = self._article("506")
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = "---\nslug: no-pr\n---\nContent"
+        self.engine.pr_orchestrator.create_pr = MagicMock(
+            return_value=SimpleNamespace(pr_url=None)
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.engine.process_single_article(
+                article, MagicMock(), Path(tmpdir)
+            )
+
+        self.assertFalse(result)
+
+    def test_process_articles_requires_full_context(self):
+        self.engine._safe_publication_artifact_name("du-pa").replace("du-pa", "ok")
+        messages = []
+        with patch.object(
+            self.engine,
+            "_persist_publication_attempt_summary",
+            side_effect=lambda **kw: messages.append(kw),
+        ):
+            fname = self.engine._safe_publication_artifact_name("á_b$c")
+            self.assertNotEqual(fname, "á_b$c")
+
+    def test_record_audit_status_handles_missing_db_method(self):
+        self.mock_db.update_article_audit_status = None
+        self.engine._record_audit_status(1, "audit_pending", "r", attempts=0)
+
+    def test_record_audit_status_swallows_db_error(self):
+        self.mock_db.update_article_audit_status = MagicMock(
+            side_effect=RuntimeError("boom")
+        )
+        self.engine._record_audit_status(1, "audit_pending", "r", attempts=0)
+
+    def test_normalize_article_payload_branches(self):
+        nested = SimpleNamespace(model_dump=lambda mode=None: {"x": 1})
+        payload = self.engine._normalize_article_payload(
+            {"a": nested, "b": (1, 2), "c": None}
+        )
+        self.assertEqual(payload["a"], {"x": 1})
+        self.assertEqual(payload["b"], [1, 2])
+        self.assertIsNone(payload["c"])
+
+        with self.assertRaises(TypeError):
+            self.engine._normalize_article_payload("not-a-dict")
+
+    def test_enforce_editorial_policy_handles_error(self):
+        with patch.object(self.engine, "_log_enforcement_decision"):
+            result = self.engine._enforce_editorial_policy(
+                "1", {"epistemic_rigor_score": "not-a-number"}
+            )
+        self.assertFalse(result)
+
+    def test_download_image_rejects_non_http(self):
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = RefineryEngine._download_image(
+                self.engine, "not-http", "slug", Path(tmpdir)
+            )
+        self.assertIsNone(result)
+
+    def test_download_image_extension_heuristics(self):
+        from news_collector.infrastructure.requests_client import (
+            RobustRequestsClient,
+        )
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for content_type, url, expected in [
+                ("", "https://x.com/a", ".jpg"),
+                ("", "https://x.com/a.png?size=1", ".png"),
+                ("image/svg+xml", "https://x.com/a", ".svg"),
+            ]:
+                mock_client = MagicMock()
+                mock_client.__enter__.return_value = mock_client
+                response = MagicMock()
+                response.headers = {"Content-Type": content_type}
+                response.content = b"\x89PNG"
+                mock_client.get.return_value = response
+                with patch(
+                    "news_collector.infrastructure.requests_client.RobustRequestsClient",
+                    return_value=mock_client,
+                ):
+                    result = RefineryEngine._download_image(
+                        self.engine, url, "slug", Path(tmpdir)
+                    )
+                self.assertEqual(result, f"~/assets/images/slug{expected}")
+
+    def test_policy_integrity_warn_mode(self):
+        mock_policy = MagicMock()
+        mock_policy.verify_integrity.side_effect = RuntimeError("integrity broke")
+        mock_policy.mode = "standard"
+        mock_policy.critic_threshold = 80.0
+        mock_policy.auditor_threshold = 50.0
+
+        config = MagicMock()
+        config.github = SimpleNamespace(target_repo_url="http://x")
+        config.app.policy_integrity_mode = "warn"
+
+        with patch(
+            "news_collector.editorial.policy.EditorialPolicy.from_mode",
+            return_value=mock_policy,
+        ):
+            engine = self._make_engine(config)
+        self.assertIsNotNone(engine.policy)
+
+    def test_policy_integrity_non_fatal_outer_error(self):
+        config = MagicMock()
+        config.github = SimpleNamespace(target_repo_url="http://x")
+        config.app.policy_integrity_mode = "warn"
+
+        with patch("news_collector.editorial.__file__", None):
+            engine = self._make_engine(config)
+        self.assertIsNotNone(engine.policy)
+
+    def test_data_dir_dict_paths(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = MagicMock()
+            config.github = SimpleNamespace(target_repo_url="http://x")
+            config.app.policy_integrity_mode = "disabled"
+            config.app.editorial_mode = "standard"
+            config.paths = {"data_dir": tmpdir}
+            engine = self._make_engine(config)
+            self.assertEqual(str(engine.data_dir), tmpdir)
+
+    def test_data_dir_non_pathlike(self):
+        config = MagicMock()
+        config.github = SimpleNamespace(target_repo_url="http://x")
+        config.app.policy_integrity_mode = "disabled"
+        config.app.editorial_mode = "standard"
+        config.paths = {"data_dir": 123}
+        engine = self._make_engine(config)
+        self.assertEqual(engine.data_dir, Path("./data"))
+
+    def test_has_quoted_date_only_unclosed_frontmatter(self):
+        self.assertFalse(
+            self.engine._has_quoted_date_only_frontmatter(
+                "---\ndate: '2026-03-02'\nnever closes"
+            )
+        )
+
+    def test_schedule_optional_audit_backpressure(self):
+        pending = MagicMock()
+        pending.done.return_value = False
+        self.engine._last_audit_future = pending
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            self.engine._schedule_optional_audit(
+                article_id="1",
+                article_numeric_id=1,
+                content="c",
+                source_url="http://x",
+                article_data={},
+            )
+        recorder.assert_called_once()
+        self.assertEqual(
+            recorder.call_args.kwargs["status"], "audit_skipped_backpressure"
+        )
+
+    def test_schedule_optional_audit_submission_failure(self):
+        self.engine._last_audit_future = None
+        self.engine.executor = MagicMock()
+        self.engine.executor.submit.side_effect = RuntimeError("pool gone")
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            self.engine._schedule_optional_audit(
+                article_id="1",
+                article_numeric_id=1,
+                content="c",
+                source_url="http://x",
+                article_data={},
+            )
+        recorder.assert_called_once()
+        self.assertEqual(recorder.call_args.kwargs["status"], "audit_failed")
+
+    def test_schedule_optional_audit_callback_crash(self):
+        future = MagicMock()
+        done_fake = MagicMock()
+        done_fake.result.side_effect = RuntimeError("crashed")
+        self.engine._last_audit_future = None
+        self.engine.executor = MagicMock()
+        self.engine.executor.submit.return_value = future
+
+        self.engine._schedule_optional_audit(
+            article_id="1",
+            article_numeric_id=1,
+            content="c",
+            source_url="http://x",
+            article_data={},
+        )
+        callback = future.add_done_callback.call_args[0][0]
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            callback(done_fake)
+        recorder.assert_called_once_with(
+            article_numeric_id=1,
+            status="audit_failed",
+            reason=unittest.mock.ANY,
+            attempts=0,
+        )
+
+    def test_schedule_optional_audit_callback_bad_types(self):
+        future = MagicMock()
+        done_fake = MagicMock()
+        done_fake.result.return_value = {
+            "status": "audit_passed",
+            "reason": "ok",
+            "attempts": "not-int",
+            "timeout_seconds": "not-int",
+            "model": "m",
+            "endpoint": "e",
+        }
+        self.engine._last_audit_future = None
+        self.engine.executor = MagicMock()
+        self.engine.executor.submit.return_value = future
+
+        self.engine._schedule_optional_audit(
+            article_id="1",
+            article_numeric_id=1,
+            content="c",
+            source_url="http://x",
+            article_data={},
+        )
+        callback = future.add_done_callback.call_args[0][0]
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            callback(done_fake)
+        recorder.assert_called_once()
+        self.assertEqual(recorder.call_args.kwargs["attempts"], 0)
+        self.assertIsNone(recorder.call_args.kwargs["timeout_seconds"])
+
+
 if __name__ == "__main__":
     unittest.main()

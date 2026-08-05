@@ -468,8 +468,7 @@ class RefineryEngine:
 
         if self._has_quoted_date_only_frontmatter(refined_content):
             logger.error(
-                "Quoted date-only frontmatter detected for article %s. "
-                "Aborting before branch/commit/push.",
+                "Quoted date-only frontmatter detected for article {}. Aborting before branch/commit/push.",
                 article_id,
             )
             record_stage("frontmatter_guard", False, reason="quoted_date_only")
@@ -771,7 +770,7 @@ class RefineryEngine:
 
                 if status != "audit_passed":
                     logger.warning(
-                        "Optional auditor did not pass for article %s: %s",
+                        "Optional auditor did not pass for article {}: {}",
                         article_id,
                         reason,
                     )
