@@ -166,6 +166,28 @@ For configuration questions see `docs/faq.md` and `docs/config_fields.md`.
 
 ---
 
+## Webhook hosting (production)
+
+The frontend CI posts validation results to `POST https://api.noticiencias.com/api/v1/webhook/frontend`
+(`WEBHOOK_API_KEY` Bearer token, fail-closed). The endpoint is served from the cloud so it
+does not depend on a local PC:
+
+- **App** — Fly.io `noticiencias-serve`: `docker build -f Dockerfile.serving .` +
+  `fly deploy --config fly-serving.toml` (uvicorn on port 8000; `WEBHOOK_API_KEY` as a Fly secret).
+- **Tunnel** — Cloudflare Tunnel `noticiencias-webhook` (remotely managed; do not recreate
+  locally) with a connector running as the Fly app `noticiencias-tunnel`
+  (`cloudflare/cloudflared:latest`; secret `TUNNEL_TOKEN` from
+  `cloudflared tunnel token noticiencias-webhook`):
+  `fly deploy --config fly-tunnel.toml --image cloudflare/cloudflared:latest`
+  (the `--image` flag is required — `[image]` in the toml is ignored by Fly).
+- **Route** — Zero Trust dashboard: hostname `api.noticiencias.com` → service
+  `https://noticiencias-serve.fly.dev` (public URL, not `noticiencias-serve.internal`:
+  each Fly app gets its own private network, so internal DNS does not resolve across apps).
+- Local connectors are no longer used; the `~/.cloudflared/config.yml` was retired
+  (2026-08-04) once the tunnel became remotely managed.
+
+---
+
 ## Docker (optional)
 
 The `docker-compose.yml` provides a PostgreSQL-backed stack for production-parity
