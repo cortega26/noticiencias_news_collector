@@ -26,5 +26,5 @@ jobs:
 
       - name: Run MutMut
         run: |
-          .venv/bin/mutmut run --CI
+          .venv/bin/mutmut run
           .venv/bin/mutmut results
