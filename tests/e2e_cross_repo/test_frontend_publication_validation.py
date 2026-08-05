@@ -6,6 +6,8 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     FIXTURE_ARTICLE_ID,
     FIXTURE_POST_FILENAME,
     MANIFEST_FILENAME,
+    build_fixture_post,
+    render_fixture_markdown,
     run_frontend_publication_validation,
 )
 
@@ -20,6 +22,16 @@ def _prepare_frontend_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return frontend_root
+
+
+def test_fixture_post_renders_absolute_source_url() -> None:
+    """The frontend content-quality gate requires an absolute http(s) source_url
+    on every post; the smoke fixture must satisfy it or the CI gate fails."""
+    post = build_fixture_post()
+    assert post.source_url is not None
+    assert post.source_url.scheme in ("http", "https")
+    rendered = render_fixture_markdown(post)
+    assert "source_url: 'https://" in rendered
 
 
 def test_frontend_publication_validation_success_restores_workspace(tmp_path: Path):
