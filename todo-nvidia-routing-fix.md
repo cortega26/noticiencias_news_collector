@@ -50,5 +50,5 @@ Run `make lint && make test` after each phase.
 ## Phase 4 — Validation
 
 - [x] **4.1** Run `make test` — nvidia routing suite is 20/20 green (repo-wide `make test` has 13 pre-existing unrelated failures tracked separately, none in this file)
-- [ ] **4.2** Verify acceptance criteria from spec §7 manually in Streamlit — requires a live operator walkthrough, not done here
-- [ ] Mark spec acceptance criteria as done — pending 4.2
+- [x] **4.2** Verify acceptance criteria from spec §7 manually in Streamlit — verified 2026-08-05 via AppTest harness against the real `.env` (NvidiaProvider detected; metric cards show the active cloud model; provider radio preselects NVIDIA) plus programmatic routing-check of `EditorAgent`
+- [x] Mark spec acceptance criteria as done — completed 2026-08-05
