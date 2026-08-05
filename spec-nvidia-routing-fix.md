@@ -173,4 +173,4 @@ When `get_provider()` returns an `OllamaProvider`, per-stage models retain their
 - [ ] The Streamlit Configuration Summary shows `qwen/qwen3-next-80b-a3b-thinking` (or active NVIDIA model) in all three metric cards when NVIDIA is active.
 - [ ] The Presets and Manual Config sections are collapsed/de-emphasised when NVIDIA is active.
 - [ ] `make test` passes with 0 failures.
-- [ ] `codacy_cli_analyze` on changed files produces no new issues.
+- [x] `codacy_cli_analyze` on changed files produces no new issues. (Verified 2026-08-05 with opengrep against pre-fix baseline `5cde827`: no new findings in `admin_panel.py`/`ai_editor.py`; the pre-existing `md5` finding in `ai_editor.py` was actually fixed to `sha256`.)

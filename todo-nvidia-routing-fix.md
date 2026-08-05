@@ -36,14 +36,14 @@ Run `make lint && make test` after each phase.
 
 - [x] **2.1** Change A: Provider-aware Configuration Summary (spec §5.1)
 - [x] **2.2** Change B: Ollama sections inside expander when cloud provider active (spec §5.1)
-- [ ] Run `codacy_cli_analyze` on `admin_panel.py` — not re-verified in this reconciliation
+- [x] Run `codacy_cli_analyze` on `admin_panel.py` — re-verified; no new issues (the only SQL finding is pre-existing at the table-wipe block, documented with `# noqa S608 # nosemgrep # nosec`)`
 
 ---
 
 ## Phase 3 — `news_collector/components/editorial/ai_editor.py`
 
 - [x] **3.1** Change C: Override per-stage models to cloud model when cloud provider active (spec §5.2)
-- [ ] Run `codacy_cli_analyze` on `ai_editor.py` — not re-verified in this reconciliation
+- [x] Run `codacy_cli_analyze` on `ai_editor.py` — re-verified; the pre-existing md5 finding (line 881) was fixed by this work (now sha256), zero findings remain
 
 ---
 
