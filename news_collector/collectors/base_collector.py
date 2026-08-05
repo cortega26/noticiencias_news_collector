@@ -190,10 +190,22 @@ class BaseCollector(ABC):
 
         tasks = []
         with enrichment_metrics.batched(_ENRICHMENT_METRICS_FLUSH_BATCH_SIZE):
+            max_concurrent = int(
+                get_runtime_config().collection_config.get("max_concurrent_sources", 10)
+            )
+            semaphore = asyncio.Semaphore(max(max_concurrent, 1))
+
+            async def _process_source(source_id: str, source_config: Dict[str, Any]):
+                # The semaphore bounds concurrent source collection so a large
+                # source catalog cannot saturate the network / DB with an
+                # unbounded fan-out.
+                async with semaphore:
+                    return await self._process_single_source_async(
+                        source_id, source_config
+                    )
+
             for source_id, source_config in sources_config.items():
-                tasks.append(
-                    self._process_single_source_async(source_id, source_config)
-                )
+                tasks.append(_process_source(source_id, source_config))
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 

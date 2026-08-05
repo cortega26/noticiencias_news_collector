@@ -153,7 +153,12 @@ def check_system_health(
     try:
         db_health = db_manager.get_health_status()
         if db_health.get("failed_sources", 0) > 0:
-            warning_message = f"{db_health['failed_sources']} fuentes fallando"
+            failed_sources = db_health["failed_sources"]
+            warning_message = (
+                f"{failed_sources} fuente fallando"
+                if failed_sources == 1
+                else f"{failed_sources} fuentes fallando"
+            )
             warnings.append(warning_message)
             issues.append(warning_message)
 

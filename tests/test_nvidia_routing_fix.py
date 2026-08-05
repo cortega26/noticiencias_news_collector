@@ -335,3 +335,227 @@ class TestNvidiaProviderThinkingTrace:
 
         assert NvidiaProvider._extract_text({}) == ""
         assert NvidiaProvider._extract_text({"choices": []}) == ""
+
+
+# ---------------------------------------------------------------------------
+# G6 – Retry policy for deterministic 4xx (spec-logs-warnings-concurrency.md)
+# ---------------------------------------------------------------------------
+
+
+class TestShouldRetry:
+    """_should_retry must fail fast on deterministic client errors."""
+
+    def _httpx_status_error(self, status):
+        import httpx
+
+        request = httpx.Request(
+            "POST", "https://integrate.api.nvidia.com/v1/chat/completions"
+        )
+        response = httpx.Response(status, request=request)
+        return httpx.HTTPStatusError(
+            f"{status} for url", request=request, response=response
+        )
+
+    def _requests_http_error(self, status):
+        import requests
+        from requests.models import Response
+
+        resp = Response()
+        resp.status_code = status
+        resp.reason = "reason"
+        return requests.HTTPError(f"{status} Server Error", response=resp)
+
+    def test_httpx_deterministic_4xx_no_retry(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        for status in (400, 403, 404, 410):
+            assert (
+                NvidiaProvider._should_retry(self._httpx_status_error(status)) is False
+            )
+
+    def test_requests_deterministic_4xx_no_retry(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        for status in (400, 403, 404, 410):
+            assert (
+                NvidiaProvider._should_retry(self._requests_http_error(status)) is False
+            )
+
+    def test_httpx_429_and_5xx_retry(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        for status in (429, 500, 502, 503, 504):
+            assert (
+                NvidiaProvider._should_retry(self._httpx_status_error(status)) is True
+            )
+
+    def test_requests_429_and_5xx_retry(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        for status in (429, 500, 502, 503, 504):
+            assert (
+                NvidiaProvider._should_retry(self._requests_http_error(status)) is True
+            )
+
+    def test_network_errors_retry(self):
+        import httpx
+        import requests
+
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        req = httpx.Request(
+            "POST", "https://integrate.api.nvidia.com/v1/chat/completions"
+        )
+        assert (
+            NvidiaProvider._should_retry(httpx.ConnectError("boom", request=req))
+            is True
+        )
+        assert (
+            NvidiaProvider._should_retry(httpx.TimeoutException("slow", request=req))
+            is True
+        )
+        assert NvidiaProvider._should_retry(requests.ConnectionError("boom")) is True
+        assert NvidiaProvider._should_retry(TimeoutError("took too long")) is True
+
+    def test_other_exceptions_no_retry(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        assert NvidiaProvider._should_retry(ValueError("nope")) is False
+
+
+class TestRetryFailFast:
+    """Deterministic 4xx must not burn retry attempts."""
+
+    def _provider(self):
+        from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+        return NvidiaProvider(
+            api_key="nvapi-test",
+            model="qwen/qwen3-next-80b-a3b-instruct",
+            max_retries=3,
+        )
+
+    def _limiter(self):
+        class _FakeLimiter:
+            def __init__(self):
+                self.circuit_breaker = SimpleNamespace(
+                    is_open=False,
+                    record_error=lambda *a, **k: None,
+                    record_rate_limit=lambda *a, **k: None,
+                    record_success=lambda *a, **k: None,
+                )
+
+            def acquire_sync(self):
+                return True
+
+            def release_sync(self):
+                return None
+
+            async def acquire_async(self):
+                return True
+
+            async def release_async(self):
+                return None
+
+        return _FakeLimiter()
+
+    def test_sync_410_fails_fast_single_attempt(self, monkeypatch):
+        import requests
+        from requests.models import Response
+
+        from news_collector.config import settings
+        from news_collector.infrastructure.llm.nvidia_provider import (
+            LLMRateLimiter,
+            NvidiaProvider,
+        )
+
+        resp = Response()
+        resp.status_code = 410
+        call_count = {"n": 0}
+
+        def _post(*args, **kwargs):
+            call_count["n"] += 1
+            raise requests.HTTPError("410 Gone", response=resp)
+
+        monkeypatch.setattr(
+            "news_collector.infrastructure.llm.nvidia_provider.requests.post", _post
+        )
+        monkeypatch.setattr(
+            LLMRateLimiter, "get_instance", staticmethod(lambda: self._limiter())
+        )
+        monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
+
+        provider = self._provider()
+        with pytest.raises(requests.HTTPError):
+            provider.generate_sync("hello")
+        assert call_count["n"] == 1, "deterministic 410 must not retry"
+
+    def test_sync_503_retries_then_raises(self, monkeypatch):
+        import requests
+        from requests.models import Response
+
+        from news_collector.config import settings
+        from news_collector.infrastructure.llm.nvidia_provider import (
+            LLMRateLimiter,
+            NvidiaProvider,
+        )
+
+        resp = Response()
+        resp.status_code = 503
+        call_count = {"n": 0}
+
+        def _post(*args, **kwargs):
+            call_count["n"] += 1
+            raise requests.HTTPError("503 Service Unavailable", response=resp)
+
+        monkeypatch.setattr(
+            "news_collector.infrastructure.llm.nvidia_provider.requests.post", _post
+        )
+        monkeypatch.setattr(
+            LLMRateLimiter, "get_instance", staticmethod(lambda: self._limiter())
+        )
+        monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
+        monkeypatch.setattr(
+            NvidiaProvider, "_backoff_delay", staticmethod(lambda attempt: 0.0)
+        )
+
+        provider = self._provider()
+        with pytest.raises(requests.HTTPError):
+            provider.generate_sync("hello")
+        assert call_count["n"] == 3, "transient 503 must exhaust retries"
+
+    async def test_async_410_fails_fast_single_attempt(self, monkeypatch):
+        import httpx
+
+        from news_collector.infrastructure.llm.nvidia_provider import (
+            LLMRateLimiter,
+            NvidiaProvider,
+        )
+
+        request = httpx.Request(
+            "POST", "https://integrate.api.nvidia.com/v1/chat/completions"
+        )
+        response = httpx.Response(410, request=request)
+        exc = httpx.HTTPStatusError("410 Gone", request=request, response=response)
+        call_count = {"n": 0}
+
+        class _FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def post(self, *args, **kwargs):
+                call_count["n"] += 1
+                raise exc
+
+            async def aclose(self):
+                return None
+
+        monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+        monkeypatch.setattr(
+            LLMRateLimiter, "get_instance", staticmethod(lambda: self._limiter())
+        )
+
+        provider = self._provider()
+        with pytest.raises(httpx.HTTPStatusError):
+            await provider.generate_async("hello")
+        assert call_count["n"] == 1, "deterministic 410 must not retry"

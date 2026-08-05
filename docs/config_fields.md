@@ -30,6 +30,7 @@
 | collection.request_timeout_seconds | int | 30 | HTTP request timeout used by collectors. |  |  |
 | collection.async_enabled | bool | false | Enable asyncio-based fetchers when available. |  |  |
 | collection.max_concurrent_requests | int | 8 | Concurrency limit for async collectors. |  |  |
+| collection.max_concurrent_sources | int | 10 | Cap on sources collected concurrently during async fan-out. |  |  |
 | collection.max_articles_per_source | int | 50 | Cap on articles per source per run. |  |  |
 | collection.recent_days_threshold | int | 7 | Number of trailing days considered 'recent'. |  |  |
 | collection.user_agent | str | "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" | HTTP User-Agent header sent to providers. |  |  |

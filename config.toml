@@ -29,6 +29,7 @@ collection_interval_hours = 12
 request_timeout_seconds = 30
 async_enabled = true
 max_concurrent_requests = 1
+max_concurrent_sources = 10
 max_articles_per_source = 5
 recent_days_threshold = 365
 user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
