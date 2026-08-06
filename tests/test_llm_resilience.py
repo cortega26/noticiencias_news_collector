@@ -13,9 +13,9 @@ def test_ollama_health_check_graceful_failure():
                 "Ollama preflight failed to reach /api/tags: Connection refused"
             ),
         ),
-        patch("news_collector.config.settings.refresh_runtime_config") as mock_refresh,
+        patch("news_collector.config.settings.get_config") as mock_config,
     ):
-        mock_cfg = mock_refresh.return_value
+        mock_cfg = mock_config.return_value
         mock_cfg.nvidia = SimpleNamespace(api_key=None)
         mock_cfg.gemini = SimpleNamespace(api_key=None)
         mock_cfg.ollama = SimpleNamespace(

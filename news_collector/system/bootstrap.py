@@ -256,7 +256,12 @@ def _verify_llm_health(  # noqa: C901
         is_strict_mode_enabled,
     )
 
-    active_config = config or config_settings.refresh_runtime_config()
+    # Use the full Config, not the RuntimeConfigSnapshot: the snapshot is the
+    # immutable runtime view and intentionally omits provider credentials
+    # (e.g. .nvidia/.gemini), which resolve_health_checker() needs to pick
+    # the right provider. Falling back to the snapshot silently redirected
+    # the health check to Ollama even when NVIDIA was configured and healthy.
+    active_config = config or config_settings.get_config()
     strict_llm_mode = is_strict_mode_enabled() or is_no_warn_mode_enabled()
 
     checker = resolve_health_checker(active_config)

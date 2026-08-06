@@ -48,10 +48,8 @@ class TestPublicEntrypoints:
         from news_collector.system.bootstrap import bootstrap_system
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
-            with patch(
-                "news_collector.config.settings.refresh_runtime_config"
-            ) as mock_refresh:
-                mock_cfg = mock_refresh.return_value
+            with patch("news_collector.config.settings.get_config") as mock_config:
+                mock_cfg = mock_config.return_value
                 mock_cfg.nvidia = SimpleNamespace(api_key=None)
                 mock_cfg.gemini = SimpleNamespace(api_key=None)
                 mock_cfg.ollama = SimpleNamespace(
@@ -78,10 +76,8 @@ class TestPublicEntrypoints:
         from news_collector.system.bootstrap import bootstrap_system
 
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_STRICT": "1"}, clear=False):
-            with patch(
-                "news_collector.config.settings.refresh_runtime_config"
-            ) as mock_refresh:
-                mock_cfg = mock_refresh.return_value
+            with patch("news_collector.config.settings.get_config") as mock_config:
+                mock_cfg = mock_config.return_value
                 mock_cfg.nvidia = SimpleNamespace(api_key=None)
                 mock_cfg.gemini = SimpleNamespace(api_key=None)
                 mock_cfg.ollama = SimpleNamespace(
@@ -119,10 +115,8 @@ class TestPublicEntrypoints:
             clear=False,
         ):
             # Also force Ollama path so registry error is reached
-            with patch(
-                "news_collector.config.settings.refresh_runtime_config"
-            ) as mock_refresh:
-                mock_cfg = mock_refresh.return_value
+            with patch("news_collector.config.settings.get_config") as mock_config:
+                mock_cfg = mock_config.return_value
                 mock_cfg.nvidia = SimpleNamespace(api_key=None)
                 mock_cfg.gemini = SimpleNamespace(api_key=None)
                 mock_cfg.ollama = SimpleNamespace(
