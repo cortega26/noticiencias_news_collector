@@ -821,8 +821,10 @@ class NvidiaConfig(StrictModel):
         description="NVIDIA API key from build.nvidia.com.",
     )
     model: str = Field(
-        default="qwen/qwen3-next-80b-a3b-instruct",
-        description="NVIDIA NIM model identifier (e.g. 'qwen/qwen3-next-80b-a3b-instruct').",
+        default="nvidia/nemotron-3-super-120b-a12b",
+        description=(
+            "NVIDIA NIM model identifier (e.g. 'nvidia/nemotron-3-super-120b-a12b')."
+        ),
     )
     base_url: str = Field(
         default="https://integrate.api.nvidia.com/v1",

@@ -22,7 +22,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 
-def _make_nvidia_provider(model: str = "qwen/qwen3-next-80b-a3b-instruct"):
+def _make_nvidia_provider(model: str = "nvidia/nemotron-3-super-120b-a12b"):
     """Return a real NvidiaProvider (no network calls)."""
     from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
@@ -69,7 +69,7 @@ class TestConfigSummary:
 
     def test_config_summary_shows_nvidia_model_when_nvidia_active(self):
         """G1: When NVIDIA is the active provider all three stage metrics show the NVIDIA model."""
-        nvidia = _make_nvidia_provider("qwen/qwen3-next-80b-a3b-instruct")
+        nvidia = _make_nvidia_provider("nvidia/nemotron-3-super-120b-a12b")
         ollama_cfg = {
             "model": "qwen2.5:32b",
             "translator_model": "qwen2.5:32b",
@@ -79,9 +79,9 @@ class TestConfigSummary:
         r_trans, r_edit, r_head = self._compute_summary_models(
             nvidia, ollama_cfg, base_model_sel="qwen2.5:32b"
         )
-        assert r_trans == "qwen/qwen3-next-80b-a3b-instruct"
-        assert r_edit == "qwen/qwen3-next-80b-a3b-instruct"
-        assert r_head == "qwen/qwen3-next-80b-a3b-instruct"
+        assert r_trans == "nvidia/nemotron-3-super-120b-a12b"
+        assert r_edit == "nvidia/nemotron-3-super-120b-a12b"
+        assert r_head == "nvidia/nemotron-3-super-120b-a12b"
 
     def test_config_summary_shows_gemini_model_when_gemini_active(self):
         """G1: Same behaviour for Gemini provider."""
@@ -179,13 +179,13 @@ class TestEditorAgentModelRouting:
 
     def test_editor_agent_routing_uses_nvidia_model(self, tmp_path):
         """G3: When NvidiaProvider is active, all stage model attrs equal the NVIDIA model."""
-        nvidia = _make_nvidia_provider("qwen/qwen3-next-80b-a3b-instruct")
+        nvidia = _make_nvidia_provider("nvidia/nemotron-3-super-120b-a12b")
         agent = self._build_agent_with_provider(nvidia, tmp_path)
 
-        assert agent.model == "qwen/qwen3-next-80b-a3b-instruct"
-        assert agent.translator_model == "qwen/qwen3-next-80b-a3b-instruct"
-        assert agent.editor_model == "qwen/qwen3-next-80b-a3b-instruct"
-        assert agent.headlines_model == "qwen/qwen3-next-80b-a3b-instruct"
+        assert agent.model == "nvidia/nemotron-3-super-120b-a12b"
+        assert agent.translator_model == "nvidia/nemotron-3-super-120b-a12b"
+        assert agent.editor_model == "nvidia/nemotron-3-super-120b-a12b"
+        assert agent.headlines_model == "nvidia/nemotron-3-super-120b-a12b"
 
     def test_editor_agent_routing_uses_gemini_model(self, tmp_path):
         """G3: When GeminiProvider is active, all stage models equal the Gemini model."""
@@ -212,7 +212,7 @@ class TestEditorAgentModelRouting:
 
     def test_provider_generate_receives_nvidia_model_not_ollama_name(self, tmp_path):
         """G3 end-to-end: provider.generate is called with the NVIDIA model, not an Ollama name."""
-        nvidia = _make_nvidia_provider("qwen/qwen3-next-80b-a3b-instruct")
+        nvidia = _make_nvidia_provider("nvidia/nemotron-3-super-120b-a12b")
         nvidia.generate = MagicMock(return_value="translated text")
 
         agent = self._build_agent_with_provider(nvidia, tmp_path)
@@ -231,7 +231,7 @@ class TestEditorAgentModelRouting:
         assert (
             ":" not in model_arg
         ), f"Provider received Ollama model name '{model_arg}' instead of NVIDIA model"
-        assert model_arg == "qwen/qwen3-next-80b-a3b-instruct"
+        assert model_arg == "nvidia/nemotron-3-super-120b-a12b"
 
 
 # ---------------------------------------------------------------------------
@@ -431,7 +431,7 @@ class TestRetryFailFast:
 
         return NvidiaProvider(
             api_key="nvapi-test",
-            model="qwen/qwen3-next-80b-a3b-instruct",
+            model="nvidia/nemotron-3-super-120b-a12b",
             max_retries=3,
         )
 

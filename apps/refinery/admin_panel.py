@@ -1215,17 +1215,19 @@ with tab1:
                 nvidia_cfg = config_data["nvidia"]
 
                 _nvidia_model_options = [
-                    "qwen/qwen3-next-80b-a3b-instruct",
-                    "meta/llama-3.1-70b-instruct",
+                    "nvidia/nemotron-3-super-120b-a12b",
+                    "nvidia/nemotron-3-ultra-550b-a55b",
+                    "nvidia/nemotron-nano-3-30b-a3b",
+                    "deepseek-ai/deepseek-v4-pro",
+                    "deepseek-ai/deepseek-v4-flash",
                     "meta/llama-3.3-70b-instruct",
-                    "mistralai/mistral-large-2-instruct",
-                    "mistralai/mixtral-8x22b-instruct-v0.1",
-                    "google/gemma-3-27b-it",
-                    "microsoft/phi-4",
-                    "deepseek-ai/deepseek-r1",
+                    "meta/llama-3.1-70b-instruct",
+                    "mistralai/mistral-nemotron",
+                    "mistralai/mixtral-8x22b-v0.1",
+                    "openai/gpt-oss-120b",
                 ]
                 _current_nvidia_model = nvidia_cfg.get(
-                    "model", "qwen/qwen3-next-80b-a3b-instruct"
+                    "model", "nvidia/nemotron-3-super-120b-a12b"
                 )
                 _nvidia_model_sel = st.selectbox(
                     "Modelo NVIDIA NIM",

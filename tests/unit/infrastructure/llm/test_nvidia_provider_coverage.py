@@ -32,7 +32,7 @@ from news_collector.infrastructure.llm.rate_limiter import parse_retry_after
 def _provider(**kwargs) -> NvidiaProvider:
     opts = {
         "api_key": "nvapi-test",
-        "model": "qwen/qwen3-next-80b-a3b-instruct",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
         "max_retries": 3,
     }
     opts.update(kwargs)
@@ -236,7 +236,7 @@ class TestListModels:
             "news_collector.infrastructure.llm.nvidia_provider.requests.get",
             lambda *a, **k: fake,
         )
-        assert _provider().list_models() == ["qwen/qwen3-next-80b-a3b-instruct"]
+        assert _provider().list_models() == ["nvidia/nemotron-3-super-120b-a12b"]
 
     def test_request_error_falls_back(self, monkeypatch):
         def _boom(*a, **k):
@@ -245,7 +245,7 @@ class TestListModels:
         monkeypatch.setattr(
             "news_collector.infrastructure.llm.nvidia_provider.requests.get", _boom
         )
-        assert _provider().list_models() == ["qwen/qwen3-next-80b-a3b-instruct"]
+        assert _provider().list_models() == ["nvidia/nemotron-3-super-120b-a12b"]
 
     def test_non_200_falls_back(self, monkeypatch):
         fake = _FakeResp(status=500, payload={})
@@ -253,7 +253,7 @@ class TestListModels:
             "news_collector.infrastructure.llm.nvidia_provider.requests.get",
             lambda *a, **k: fake,
         )
-        assert _provider().list_models() == ["qwen/qwen3-next-80b-a3b-instruct"]
+        assert _provider().list_models() == ["nvidia/nemotron-3-super-120b-a12b"]
 
 
 class TestCheckHealth:
