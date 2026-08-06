@@ -172,5 +172,5 @@ When `get_provider()` returns an `OllamaProvider`, per-stage models retain their
 - [x] Running `make refinery` and clicking "Iniciar Recopilación" produces logs with the NVIDIA model in the EditorAgent routing line. (Verified 2026-08-05: `EditorAgent model routing resolved: default=qwen/qwen3-next-80b-a3b-instruct, translator=...enrichment=...` when NVIDIA is configured.)
 - [x] The Streamlit Configuration Summary shows `qwen/qwen3-next-80b-a3b-thinking` (or active NVIDIA model) in all three metric cards when NVIDIA is active. (Verified 2026-08-05 via AppTest against the real `.env`: cards 1-3 show `qwen/qwen3-next-80b-a3b-instruct` with delta `Cloud`.)
 - [x] The Presets and Manual Config sections are collapsed/de-emphasised when NVIDIA is active. (Verified 2026-08-05: with NVIDIA active the page opens in the Cloud branch; the Ollama Presets/Manual sections live in the separate Local branch.)
-- [ ] `make test` passes with 0 failures.
+- [x] `make test` passes with 0 failures. (Verified 2026-08-05: full suite `1684 passed, 4 skipped, 0 failed`.)
 - [x] `codacy_cli_analyze` on changed files produces no new issues. (Verified 2026-08-05 with opengrep against pre-fix baseline `5cde827`: no new findings in `admin_panel.py`/`ai_editor.py`; the pre-existing `md5` finding in `ai_editor.py` was actually fixed to `sha256`.)
