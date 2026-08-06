@@ -161,6 +161,13 @@ omit = [
     "news_collector/utils/logger.py",
     "news_collector/utils/metrics.py",
     "news_collector/utils/datetime_utils.py",
+    # Streamlit UI entrypoint: cannot be imported under the test venv
+    # (Streamlit isn't installed there). Its helpers are exercised via AST
+    # decomposition in tests/decompose_refinery/ and
+    # tests/unit/refinery/test_save_toml_config.py. Excluded so the gate
+    # doesn't demand an unreachable 90% line coverage (see
+    # scripts/coverage_ratcheter.sh omit handling).
+    "apps/refinery/admin_panel.py",
 ]
 
 [tool.coverage.report]

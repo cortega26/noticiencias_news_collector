@@ -417,6 +417,32 @@ class TestArticlesInFlightOrDone:
         db_manager.complete_publication_attempts([str(article.id)], "https://x/live")
         assert db_manager.is_article_in_flight_or_done(article.id) is True
 
+    def test_scored_only_completed_article_is_not_in_flight(self, db_manager):
+        """Scoring marks articles 'completed' once scored (plan 021 never
+        publishes). A scored-but-never-published article is a valid editorial
+        candidate, so it must NOT be considered in-flight-or-done."""
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/scored-only", idx=45)
+        )
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            row.processing_status = "completed"
+            session.add(row)
+        assert db_manager.is_article_in_flight_or_done(article.id) is False
+
+    def test_published_by_date_only_is_in_flight_or_done(self, db_manager):
+        """A real deploy sets published fields even if processing_status is
+        still 'completed' — plan 021 distinguishes deploys by those fields."""
+        article = db_manager.save_article(
+            _make_article(url="https://example.com/date-only", idx=46)
+        )
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == article.id).first()
+            row.processing_status = "completed"
+            row.published_at = datetime.now(timezone.utc)
+            session.add(row)
+        assert db_manager.is_article_in_flight_or_done(article.id) is True
+
     def test_unpublished_article_is_not_in_flight(self, db_manager):
         article = db_manager.save_article(
             _make_article(url="https://example.com/not-in-flight", idx=42)
@@ -430,11 +456,22 @@ class TestArticlesInFlightOrDone:
         not_flight = db_manager.save_article(
             _make_article(url="https://example.com/batch-not-flight", idx=44)
         )
+        scored_only = db_manager.save_article(
+            _make_article(url="https://example.com/batch-scored", idx=47)
+        )
         db_manager.mark_article_published(in_flight.id, "https://pr.url/43")
+        with db_manager.get_session() as session:
+            row = session.query(Article).filter(Article.id == scored_only.id).first()
+            row.processing_status = "completed"
+            session.add(row)
 
-        result = db_manager.articles_in_flight_or_done([in_flight.id, not_flight.id])
+        result = db_manager.articles_in_flight_or_done(
+            [in_flight.id, not_flight.id, scored_only.id]
+        )
         assert in_flight.id in result
         assert not_flight.id not in result
+        # Scored-only ('completed', never deployed) must remain a candidate.
+        assert scored_only.id not in result
 
     def test_batch_empty_ids_returns_empty_set(self, db_manager):
         assert db_manager.articles_in_flight_or_done([]) == set()

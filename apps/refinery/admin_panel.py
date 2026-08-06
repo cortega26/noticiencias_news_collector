@@ -705,9 +705,9 @@ def render_article_processing_panel(  # noqa: C901
     refinery_db = DatabaseManager()
     is_pub = False
     with suppress(ValueError):
-        # in-flight-or-done (not is_article_published, which post-plan-021
-        # only reflects a real deploy) — preserves this warning's original
-        # intent: also warn while a PR is open and still pending deploy.
+        # in-flight-or-done: open PR (publishing) OR confirmed deploy
+        # (published_url/published_at). Plain "completed" (scored, never
+        # published) is a valid candidate, so it doesn't trigger this warning.
         is_pub = refinery_db.is_article_in_flight_or_done(int(selected_id))
 
     if is_pub:
@@ -2414,9 +2414,16 @@ with tab3:
                 refinery_db = DatabaseManager()
                 available_articles = []
 
-                # Resolve "already published" for the whole candidate set in a
+                # Resolve "already processed" for the whole candidate set in a
                 # single query (avoids one DB round-trip per article on every
                 # Streamlit rerun).
+                #
+                # articles_in_flight_or_done() now means "open PR (publishing)
+                # OR confirmed deploy (published_url/published_at set)" — a
+                # plain "completed" status does NOT count as done, because the
+                # scoring phase marks articles "completed" once scored, so a
+                # scored-but-never-published article is still a valid editorial
+                # candidate.
                 published_id_set: set[int] = set()
                 if not show_processed:
                     candidate_ids = []
@@ -2425,9 +2432,6 @@ with tab3:
                             candidate_ids.append(
                                 int(str(art.get("id", art.get("title"))))
                             )
-                    # in-flight-or-done, not published_ids_in — see the
-                    # analogous note where this filter's single-article
-                    # counterpart is used above.
                     published_id_set = refinery_db.articles_in_flight_or_done(
                         candidate_ids
                     )
@@ -2453,7 +2457,7 @@ with tab3:
 
                 if filtered_count > 0:
                     st.caption(
-                        f"Se ocultaron {filtered_count} artículos ya publicados."
+                        f"Se ocultaron {filtered_count} artículos en publicación o ya publicados."
                     )
 
                 if not available_articles:

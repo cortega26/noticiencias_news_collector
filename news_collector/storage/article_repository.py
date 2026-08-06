@@ -474,18 +474,24 @@ class ArticleRepository:
     def is_article_in_flight_or_done(self, article_id: int) -> bool:
         """True if the article already has an open PR or a completed publication.
 
-        Unlike :meth:`is_article_published`, this checks ``processing_status``
-        directly rather than ``published_url``/``published_at`` — the latter
-        pair is only set on a *real* deploy completion (plan 021), not at
-        PR-creation time, so a dedup guard keyed off them alone would stop
-        catching an article that already has an open, still-pending PR and
-        re-select it for processing, producing a duplicate PR.
+        ``processing_status == "publishing"`` covers an open, still-pending PR
+        (plan 021 keeps that status for the whole PR window, not just
+        pre-PR). ``published_url``/``published_at`` cover a real deploy
+        completion. Plain ``completed`` does *not* count as done: the scoring
+        phase sets ``completed`` as soon as scoring finishes, so a scored-but-
+        never-published article must remain a valid editorial candidate.
+        Consuming code that only needs the deploy-completion signal should
+        call :meth:`is_article_published` instead.
         """
         with self._session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
             if not article:
                 return False
-            return article.processing_status in ("publishing", "completed")
+            return (
+                article.processing_status == "publishing"
+                or article.published_url is not None
+                or article.published_at is not None
+            )
 
     def articles_in_flight_or_done(self, article_ids: list[int]) -> set[int]:
         """Batch version of :meth:`is_article_in_flight_or_done`."""
@@ -495,7 +501,13 @@ class ArticleRepository:
             rows = (
                 session.query(Article.id)
                 .filter(Article.id.in_(article_ids))
-                .filter(Article.processing_status.in_(["publishing", "completed"]))
+                .filter(
+                    or_(
+                        Article.processing_status == "publishing",
+                        Article.published_url.isnot(None),
+                        Article.published_at.isnot(None),
+                    )
+                )
                 .all()
             )
             return {row[0] for row in rows}

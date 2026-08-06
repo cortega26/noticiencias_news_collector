@@ -73,6 +73,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | [`adr/0001-adapter-pattern-contracts.md`](adr/0001-adapter-pattern-contracts.md) | Adapter pattern as the only shape-conversion choke point |
 | [`adr/0002-hash-pinned-lockfiles.md`](adr/0002-hash-pinned-lockfiles.md) | Hash-pinned dependency lockfiles for reproducible builds |
 | [`adr/0003-two-repo-split-and-schema-versioning.md`](adr/0003-two-repo-split-and-schema-versioning.md) | Two-repo split and cross-repo schema versioning strategy |
+| [`adr/0005-completed-is-scoring-state-not-publication.md`](adr/0005-completed-is-scoring-state-not-publication.md) | `completed` is a scoring state; publication proof lives in `published_url`/`published_at` |
 
 ---
 
