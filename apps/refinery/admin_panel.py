@@ -76,6 +76,72 @@ from pydantic import ValidationError
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
 
+SCORING_WEIGHT_KEYS: tuple[str, ...] = (
+    "source_credibility",
+    "recency",
+    "content_quality",
+    "engagement_potential",
+)
+
+
+def _balance_scoring_weights(
+    previous: Dict[str, float],
+    moved_key: str,
+    keep: float,
+) -> Dict[str, float]:
+    """Rebalance scoring weights so they sum to 1.0 (± rounding tolerance).
+
+    The four weight sliders are edited independently; if a user moves one
+    weight (e.g. recency 0.10 -> 0.30) and the others are left untouched the
+    sum drifts away from 1.0, which ``config_settings.validate_config()``
+    rejects, silently discarding the whole save. This helper keeps the slider
+    the user has just moved at its new value and rescales the other three
+    proportionally so the total is 1.0 again.
+
+    ``keep`` is clamped to [0, 1]; when it is 1.0 the other three collapse to
+    0.0. The remaining keys are scaled from ``previous`` so untouched sliders
+    shift by the minimal proportional amount. When ``previous`` is empty or
+    sums to zero, 0.25 is used as a neutral baseline for the untouched keys.
+
+    Rounding: values are rounded to 4 decimals, and the last untouched key
+    absorbs the rounding residual so the four weights sum to exactly 1.0
+    (not merely within ``config_settings.validate_config()``'s ``±0.01``
+    window), keeping the UI's displayed total truthful.
+    """
+    if moved_key not in SCORING_WEIGHT_KEYS:
+        raise ValueError(f"unknown scoring weight: {moved_key!r}")
+
+    keep = max(0.0, min(1.0, float(keep)))
+    others = [k for k in SCORING_WEIGHT_KEYS if k != moved_key]
+    other_previous_total = sum(previous.get(k, 0.25) for k in others) or 1.0
+    scale = (1.0 - keep) / other_previous_total
+
+    balanced: Dict[str, float] = {}
+    for k in others[:-1]:
+        balanced[k] = round(previous.get(k, 0.25) * scale, 4)
+    balanced[others[-1]] = round(max(0.0, 1.0 - keep - sum(balanced.values())), 4)
+    balanced[moved_key] = round(keep, 4)
+    return balanced
+
+
+def _on_weight_slider_changed(moved_key: str) -> None:
+    """Streamlit on_change handler: rebalance sibling weight sliders.
+
+    Runs before the rest of the script re-executes, so writing the sibling
+    widget keys here is legal (their widgets are not instantiated yet this
+    run). The slider that triggered the change keeps its value; the other
+    three are rescaled so the total returns to 1.0.
+    """
+    previous = {
+        k: float(st.session_state.get(f"w_{k}", 0.25)) for k in SCORING_WEIGHT_KEYS
+    }
+    keep = float(st.session_state.get(f"w_{moved_key}", previous[moved_key]))
+    balanced = _balance_scoring_weights(previous, moved_key, keep)
+    for k, value in balanced.items():
+        if k != moved_key:
+            st.session_state[f"w_{k}"] = value
+
+
 # Configure logging with timestamps for console output
 logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(message)s",
@@ -1733,27 +1799,55 @@ with tab2:
         if "scoring" in config_data and "weights" in config_data["scoring"]:
             weights = config_data["scoring"]["weights"]
 
+            # Seed slider widget state from config on first render. Widget keys
+            # (w_<name>) persist in st.session_state across reruns; the
+            # on_change handler rebalances sibling sliders so the total stays
+            # 1.0 and validate_config() accepts the save.
+            for key in SCORING_WEIGHT_KEYS:
+                if f"w_{key}" not in st.session_state:
+                    st.session_state[f"w_{key}"] = float(weights.get(key, 0.25))
+
             w_col1, w_col2 = st.columns(2)
             with w_col1:
-                weights["source_credibility"] = st.slider(
+                st.slider(
                     "Credibilidad Fuente",
                     0.0,
                     1.0,
-                    weights.get("source_credibility", 0.25),
+                    key="w_source_credibility",
+                    on_change=_on_weight_slider_changed,
+                    args=("source_credibility",),
                 )
-                weights["recency"] = st.slider(
-                    "Recencia / Frescura", 0.0, 1.0, weights.get("recency", 0.2)
+                st.slider(
+                    "Recencia / Frescura",
+                    0.0,
+                    1.0,
+                    key="w_recency",
+                    on_change=_on_weight_slider_changed,
+                    args=("recency",),
                 )
             with w_col2:
-                weights["content_quality"] = st.slider(
-                    "Calidad Contenido", 0.0, 1.0, weights.get("content_quality", 0.25)
+                st.slider(
+                    "Calidad Contenido",
+                    0.0,
+                    1.0,
+                    key="w_content_quality",
+                    on_change=_on_weight_slider_changed,
+                    args=("content_quality",),
                 )
-                weights["engagement_potential"] = st.slider(
+                st.slider(
                     "Potencial Engagement (Cognitivo)",
                     0.0,
                     1.0,
-                    weights.get("engagement_potential", 0.3),
+                    key="w_engagement_potential",
+                    on_change=_on_weight_slider_changed,
+                    args=("engagement_potential",),
                 )
+
+            # The on_change handler already rebalanced the widgets; write the
+            # current widget values (which now sum to ~1.0) into the dict that
+            # the "Guardar Config Colector" button persists.
+            for key in SCORING_WEIGHT_KEYS:
+                weights[key] = float(st.session_state.get(f"w_{key}", 0.25))
 
         # Keywords
         st.subheader("🔑 Palabras Clave")
