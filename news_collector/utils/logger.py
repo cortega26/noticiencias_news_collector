@@ -68,6 +68,31 @@ class NewsCollectorLogger:
             config = config.copy()
             config["level"] = env_level
 
+        # Under pytest, never write to the production log file — tests
+        # would otherwise share data/logs/collector.log with real collector
+        # runs (confirmed: pytest worker PIDs interleaved with a real
+        # collector run's PID in the same rotated log file). Redirect to an
+        # isolated temp path instead of skipping file logging entirely, so
+        # any future test that does want to assert on file-logging
+        # behavior still can.
+        # NOTE: PYTEST_CURRENT_TEST is only set once pytest starts running
+        # tests, which is too late — configure_logging() runs on the first
+        # module import (during collection). tests/conftest.py sets
+        # NEWS_COLLECTOR_TEST_MODE=1 in pytest_configure, which runs before
+        # collection, so that is the authoritative signal; PYTEST_CURRENT_TEST
+        # is kept as a secondary signal for any out-of-tree runner.
+        if os.environ.get("NEWS_COLLECTOR_TEST_MODE") is not None or (
+            os.environ.get("PYTEST_CURRENT_TEST") is not None
+        ):
+            import tempfile
+
+            config = config.copy()
+            config["file_path"] = str(
+                Path(tempfile.gettempdir())
+                / "news_collector_test_logs"
+                / "collector.log"
+            )
+
         # Remover configuración por defecto de loguru
         logger.remove()
 

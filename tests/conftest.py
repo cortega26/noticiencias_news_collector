@@ -1,5 +1,15 @@
 from datetime import datetime, timezone
 
+import os
+
+# Set test mode BEFORE importing any news_collector package module:
+# get_logger() configures the loguru file sink on first import, and that
+# first import happens while this conftest module is being loaded (via
+# `from news_collector.storage import database` below) — before any
+# pytest_configure hook runs. Without this, pytest would write test noise
+# into the production data/logs/collector.log.
+os.environ.setdefault("NEWS_COLLECTOR_TEST_MODE", "1")
+
 import sqlite3
 
 import pytest
