@@ -288,6 +288,93 @@ def test_mark_article_published_excludes_from_scores(test_db_manager) -> None:
     assert not any(a.id == saved.id for a in candidates_after)
 
 
+def test_get_articles_by_score_honors_age_gate(test_db_manager) -> None:
+    """Plan 050: max_age_days excludes candidates whose reference date
+    (published_date, else collected_date) is older than the cutoff."""
+    now = datetime.now(timezone.utc)
+    articles = [
+        {
+            "title": f"Fresh Candidate {i}",
+            "url": f"https://example.com/fresh-{i}",
+            "source_id": "test",
+            "source_name": "Test Source",
+            "category": "general",
+            "published_date": now - timedelta(days=2),
+            "summary": "Summary content.",
+            "content": "Content " * 200,
+            "word_count": 100,
+            "reading_time_minutes": 1,
+            "article_metadata": {},
+        }
+        for i in range(2)
+    ]
+    fresh_ids = {test_db_manager.save_article(a).id for a in articles}
+
+    old = {
+        "title": "Ancient Candidate",
+        "url": "https://example.com/ancient",
+        "source_id": "test",
+        "source_name": "Test Source",
+        "category": "general",
+        "published_date": now - timedelta(days=31),
+        "summary": "Summary content.",
+        "content": "Content " * 200,
+        "word_count": 100,
+        "reading_time_minutes": 1,
+        "article_metadata": {},
+    }
+    old_id = test_db_manager.save_article(old).id
+
+    for aid in fresh_ids:
+        test_db_manager.update_article_score(
+            aid,
+            {
+                "final_score": 0.9,
+                "should_include": True,
+                "components": {
+                    "source_credibility": 0.9,
+                    "recency": 0.9,
+                    "content_quality": 0.9,
+                    "engagement_potential": 0.9,
+                },
+                "weights": {
+                    "source_credibility": 0.25,
+                    "recency": 0.25,
+                    "content_quality": 0.25,
+                    "engagement_potential": 0.25,
+                },
+            },
+        )
+    test_db_manager.update_article_score(
+        old_id,
+        {
+            "final_score": 0.9,
+            "should_include": True,
+            "components": {
+                "source_credibility": 0.9,
+                "recency": 0.9,
+                "content_quality": 0.9,
+                "engagement_potential": 0.9,
+            },
+            "weights": {
+                "source_credibility": 0.25,
+                "recency": 0.25,
+                "content_quality": 0.25,
+                "engagement_potential": 0.25,
+            },
+        },
+    )
+
+    # Without the gate, both appear.
+    unfiltered = test_db_manager.get_articles_by_score()
+    assert any(a.id == old_id for a in unfiltered)
+
+    # With the 30-day gate, only fresh survive.
+    gated = test_db_manager.get_articles_by_score(max_age_days=30)
+    assert not any(a.id == old_id for a in gated)
+    assert all(a.id in fresh_ids for a in gated)
+
+
 def test_mark_article_published_uses_original_url(test_db_manager) -> None:
     # 1. Create Article with different original_url
     url = "https://example.com/canonical"

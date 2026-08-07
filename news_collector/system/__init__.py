@@ -461,6 +461,7 @@ class NewsCollectorSystem:
             top_articles = self.db_manager.get_articles_by_score(
                 limit=scoring_config["daily_top_count"],
                 min_score=scoring_config["minimum_score"],
+                max_age_days=scoring_config.get("candidate_max_age_days", 30),
             )
 
             # Convertir a formato serializable

@@ -9,7 +9,7 @@ import os
 import shutil
 import stat
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import mkdtemp
 from types import SimpleNamespace
@@ -142,7 +142,72 @@ def _load_fixture(path: Path) -> Dict[str, Any]:
     return payload
 
 
+def _parse_published(value: str) -> datetime | None:
+    """Parse an article fixture ``published`` timestamp into an aware UTC datetime."""
+    normalized = value.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _relative_fixture_dates(fixture: Mapping[str, Any]) -> dict[str, Any]:
+    """Shift hardcoded ``published`` timestamps to be relative to "now".
+
+    E2E fixtures were authored with absolute publish dates. Scoring enforces
+    ``candidate_max_age_days`` and a recency curve that reaches 0.0 at the
+    cutoff, so stale fixture timestamps would age out of the candidate pool
+    over time and the scenarios would flip their expected outcome. Shift every
+    article's ``published`` value so the newest one lands ~2h before now,
+    preserving the original relative gaps between articles.
+    """
+    payload = dict(fixture)
+    raw_events = payload.get("replay_events", [])
+    if not isinstance(raw_events, list):
+        return payload
+    events = [dict(item) for item in raw_events]
+
+    newest = _newest_published(events)
+    if newest is None:
+        return payload
+
+    offset = datetime.now(timezone.utc) - timedelta(hours=2) - newest
+
+    for event in events:
+        for article in event.get("articles", []):
+            published = article.get("published")
+            if not published:
+                continue
+            dt = _parse_published(published)
+            if dt is None:
+                continue
+            article["published"] = (dt + offset).astimezone(timezone.utc).isoformat()
+
+    payload["replay_events"] = events
+    return payload
+
+
+def _newest_published(events: list[dict[str, Any]]) -> datetime | None:
+    """Return the newest valid ``published`` timestamp across all replay events."""
+    newest: datetime | None = None
+    for event in events:
+        for article in event.get("articles", []):
+            published = article.get("published")
+            if not published:
+                continue
+            dt = _parse_published(published)
+            if dt is None:
+                continue
+            if newest is None or dt > newest:
+                newest = dt
+    return newest
+
+
 def _build_replay_session(fixture: Mapping[str, Any]) -> CollectorReplaySession:
+    fixture = _relative_fixture_dates(fixture)
     events_payload = fixture.get("replay_events", [])
     events = [ReplayEvent.from_mapping(dict(item)) for item in events_payload]
     return CollectorReplaySession(events)

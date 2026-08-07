@@ -83,6 +83,40 @@ def test_recency_decay(basic_scorer, sample_article):
     assert s3 < s2
 
 
+def test_recency_reaches_zero_at_candidate_cutoff(basic_scorer, sample_article):
+    """Plan 050: recency must hit 0.0 at the candidate age cutoff and be
+    ~0.00 a minute before it — no 0.05 floor."""
+    now = datetime.now(timezone.utc)
+
+    # 29d23h59m old → effectively 0.00
+    sample_article.published_date = now - timedelta(days=29, hours=23, minutes=59)
+    s_at_limit = basic_scorer._calculate_recency_score(sample_article)
+    assert 0.0 <= s_at_limit < 0.001
+
+    # Exactly 30 days (candidate_max_age_days=30) → 0.0
+    sample_article.published_date = now - timedelta(days=30)
+    assert basic_scorer._calculate_recency_score(sample_article) == 0.0
+
+    # Well beyond (45d, 90d) → 0.0
+    sample_article.published_date = now - timedelta(days=45)
+    assert basic_scorer._calculate_recency_score(sample_article) == 0.0
+    sample_article.published_date = now - timedelta(days=90)
+    assert basic_scorer._calculate_recency_score(sample_article) == 0.0
+
+
+def test_recency_monotonic_no_floor(basic_scorer, sample_article):
+    """Plan 050: strictly decreasing across the whole 30-day window and no
+    visible 0.05 floor below day 30."""
+    now = datetime.now(timezone.utc)
+    last = None
+    for days in (0, 1, 3, 7, 15, 20, 25, 29):
+        sample_article.published_date = now - timedelta(days=days)
+        s = basic_scorer._calculate_recency_score(sample_article)
+        if last is not None:
+            assert s < last, f"not monotone at {days}d ({s} >= {last})"
+        last = s
+
+
 def test_quality_metrics(basic_scorer):
     # Title quality
     assert (

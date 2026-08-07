@@ -62,10 +62,13 @@ class _FakeSelectionDatabase:
     def __init__(self) -> None:
         self.selection_queries = 0
 
-    def get_articles_by_score(self, *, limit: int, min_score: float) -> list[Any]:
+    def get_articles_by_score(
+        self, *, limit: int, min_score: float, max_age_days: int | None = None
+    ) -> list[Any]:
         self.selection_queries += 1
         assert limit > 0
         assert min_score >= 0
+        assert max_age_days is None or max_age_days > 0
         return [_FakeArticle("Persisted", "https://example.com/persisted")]
 
 

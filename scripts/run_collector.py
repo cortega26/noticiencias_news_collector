@@ -567,8 +567,13 @@ Ejemplos de uso:
                 system = create_system()
                 if not system.initialize():
                     raise RuntimeError("Error inicializando sistema para exportación")
+                from news_collector.config.settings import get_runtime_config
+
+                max_age_days = get_runtime_config().scoring_config.get(
+                    "candidate_max_age_days", 30
+                )
                 articles = system.db_manager.get_articles_by_score(
-                    limit=50, exclude_published=True
+                    limit=50, exclude_published=True, max_age_days=max_age_days
                 )
 
             import json

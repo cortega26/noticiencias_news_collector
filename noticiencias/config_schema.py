@@ -492,6 +492,16 @@ class ScoringConfig(StrictModel):
         default=14,
         description="Lookback window in days to re-score completed unpublished articles.",
     )
+    candidate_max_age_days: PositiveInt = Field(
+        default=30,
+        description=(
+            "Maximum age in days of an article's reference date "
+            "(published_date, else collected_date) for it to remain a "
+            "candidate. Applied by candidate/selection/export queries and "
+            "by the recency decay tail, which reaches 0.0 exactly at this "
+            "cutoff."
+        ),
+    )
     page_size: PositiveInt = Field(
         default=200,
         le=5000,

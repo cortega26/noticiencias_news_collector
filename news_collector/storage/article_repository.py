@@ -18,7 +18,7 @@ from typing import (
     cast,
 )
 
-from sqlalchemy import and_, desc, or_
+from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy.orm.attributes import QueryableAttribute
@@ -1059,8 +1059,14 @@ class ArticleRepository:
         limit: int = 10,
         min_score: float = 0.0,
         exclude_published: bool = False,
+        max_age_days: Optional[int] = None,
     ) -> List[Article]:
-        """Return the highest-ranked articles."""
+        """Return the highest-ranked articles.
+
+        `max_age_days` optionally bounds candidates to articles whose
+        reference date (published_date, falling back to collected_date)
+        is within that many days — the candidate recency gate.
+        """
         with self._session() as session:
             query = (
                 session.query(Article)
@@ -1069,6 +1075,12 @@ class ArticleRepository:
             )
             if exclude_published:
                 query = query.filter(Article.published_at.is_(None))
+            if max_age_days is not None:
+                cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+                query = query.filter(
+                    func.coalesce(Article.published_date, Article.collected_date)
+                    >= cutoff
+                )
 
             return list(
                 query.order_by(desc(Article.final_score), Article.collected_date.desc())

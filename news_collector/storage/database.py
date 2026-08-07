@@ -400,8 +400,11 @@ class DatabaseManager:
         limit: int = 10,
         min_score: float = 0.0,
         exclude_published: bool = False,
+        max_age_days: Optional[int] = None,
     ) -> List[Article]:
-        return self.articles.get_articles_by_score(limit, min_score, exclude_published)
+        return self.articles.get_articles_by_score(
+            limit, min_score, exclude_published, max_age_days
+        )
 
     def get_articles_by_category(
         self, category: str, days_back: int = 7

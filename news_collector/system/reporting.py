@@ -18,16 +18,19 @@ def get_top_articles(
         raise RuntimeError("Sistema no inicializado")
 
     try:
+        scoring_config = get_runtime_config().scoring_config
         if category:
             articles = system.db_manager.get_articles_by_category(category)
         else:
-            articles = system.db_manager.get_articles_by_score(limit)
+            articles = system.db_manager.get_articles_by_score(
+                limit,
+                max_age_days=scoring_config.get("candidate_max_age_days", 30),
+            )
 
         articles_dicts = [article.to_dict() for article in articles]
 
         from news_collector.reranker import rerank_articles
 
-        scoring_config = get_runtime_config().scoring_config
         reranked = rerank_articles(
             articles_dicts,
             limit=limit,
@@ -53,8 +56,11 @@ def export_latest_articles(
         raise RuntimeError("Sistema no inicializado")
 
     try:
+        scoring_config = get_runtime_config().scoring_config
         articles = system.db_manager.get_articles_by_score(
-            limit=limit, exclude_published=True
+            limit=limit,
+            exclude_published=True,
+            max_age_days=scoring_config.get("candidate_max_age_days", 30),
         )
 
         from news_collector.contracts.adapters import adapt_article_to_export

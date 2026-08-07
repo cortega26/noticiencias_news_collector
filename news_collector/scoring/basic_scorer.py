@@ -284,11 +284,15 @@ class BasicScorer(AsyncScorer):
         Evalúa qué tan reciente es el artículo.
 
         Este método es como tener un editor de noticias que entiende que
-        la información más reciente generalmente es más valiosa, pero
-        que la importancia de la recencia varía según el tipo de contenido.
+        la información más reciente generalmente es más valiosa, pero que
+        la importancia de la recencia varía según la etapa del release.
 
-        La función de decay es logarítmica: las primeras horas/días son
-        cruciales, pero después la pérdida de valor es más gradual.
+        La curva es monótona decreciente y alcanza exactamente 0.0 en el
+        corte de candidatura `candidate_max_age_days` (30 días por
+        defecto): las primeras horas/días son cruciales, el decaimiento se
+        suaviza durante la primera semana y la cola decae linealmente
+        hasta 0.0 en el límite. A partir de ese punto el score es 0.0
+        (y la consulta de candidatos excluye los artículos).
         """
         if not article.published_date:
             # Si no hay fecha, usar fecha de recolección con penalización
@@ -317,8 +321,13 @@ class BasicScorer(AsyncScorer):
             # Fallback safe value
             age_hours = 24 * 7  # Assume 1 week old on error
 
-        # Función de decay logarítmica
-        # Score alto para las primeras 24 horas, decay gradual después
+        max_age_hours = 24 * int(
+            get_runtime_config().scoring_config.get("candidate_max_age_days", 30)
+        )
+
+        # Función de decay logarítmica + cola lineal al corte
+        # Score alto para las primeras 24 horas, decay gradual después,
+        # 0.0 exacto en el límite de candidatos.
         if age_hours <= 1:
             score = 1.0  # Máximo score para la primera hora
         elif age_hours <= 24:
@@ -327,11 +336,17 @@ class BasicScorer(AsyncScorer):
         elif age_hours <= 168:  # Una semana
             # Decay más pronunciado después del primer día
             score = 0.7 * math.exp(-(age_hours - 24) / 48)
+        elif age_hours < max_age_hours:
+            # Cola lineal: desde el valor de la semana hasta 0.0 exacto
+            # en el corte de candidatos (continuo en 168h).
+            week_score = 0.7 * math.exp(-(168 - 24) / 48)
+            remaining = (max_age_hours - age_hours) / (max_age_hours - 168)
+            score = week_score * remaining
         else:
-            # Después de una semana, score mínimo pero no cero
-            score = 0.1 * math.exp(-(age_hours - 168) / 336)
+            # Fuera del límite de candidatos: recency nula.
+            score = 0.0
 
-        return max(0.05, min(1.0, score * penalty))  # Mínimo 5%, máximo 100%
+        return max(0.0, min(1.0, score * penalty))  # Rango [0%, 100%]
 
     def _calculate_content_quality_score(self, article: Article) -> float:
         """
