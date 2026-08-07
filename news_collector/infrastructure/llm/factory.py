@@ -1,6 +1,5 @@
 """Provider Factory for LLM connections."""
 
-import logging
 from typing import Any, Dict, Generator, Optional, Union, cast
 
 from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
@@ -10,9 +9,22 @@ from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
     LLMRateLimiter,
 )
+from news_collector.utils.logger import get_logger
 from noticiencias.config_manager import load_config
 
-logger = logging.getLogger("news_collector.infrastructure.llm.factory")
+logger = get_logger().create_module_logger("infrastructure.llm.factory")
+
+
+def _is_degraded(provider: Any) -> bool:
+    """
+    Return True when a provider is degraded.
+
+    Uses the method defined on the concrete class type so duck-typed mocks
+    (MagicMock returns a truthy stub for any attribute) are not skipped.
+    """
+    if getattr(type(provider), "is_degraded", None) is None:
+        return False
+    return bool(provider.is_degraded())
 
 
 def _ensure_rate_limiter(cfg: Any) -> None:
@@ -64,6 +76,12 @@ class FallbackProvider:
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
         last_error = None
         for i, provider in enumerate(self.providers):
+            if _is_degraded(provider):
+                logger.info(
+                    "Skipping degraded provider {} during generate_sync",
+                    provider.__class__.__name__,
+                )
+                continue
             try:
                 old_timeout = getattr(provider, "timeout", None)
                 # First ones get a fast timeout of 60s to trigger failover quickly
@@ -89,7 +107,7 @@ class FallbackProvider:
                     kwargs["timeout"] = current_timeout
 
                 logger.info(
-                    "FallbackProvider attempting generate_sync with %s (timeout=%s)...",
+                    "FallbackProvider attempting generate_sync with {} (timeout={})...",
                     provider.__class__.__name__,
                     current_timeout,
                 )
@@ -128,7 +146,7 @@ class FallbackProvider:
                 if old_timeout is not None:
                     provider.timeout = old_timeout
                 logger.warning(
-                    "Provider %s failed during generate_sync: %s. Proceeding to fallback...",
+                    "Provider {} failed during generate_sync: {}. Proceeding to fallback...",
                     provider.__class__.__name__,
                     e,
                 )
@@ -148,6 +166,12 @@ class FallbackProvider:
     ) -> Union[str, Dict[str, Any]]:
         last_error = None
         for i, provider in enumerate(self.providers):
+            if _is_degraded(provider):
+                logger.info(
+                    "Skipping degraded provider {} during generate_async",
+                    provider.__class__.__name__,
+                )
+                continue
             try:
                 old_timeout = getattr(provider, "timeout", None)
                 # First ones get a fast timeout of 60s to trigger failover quickly
@@ -171,7 +195,7 @@ class FallbackProvider:
                     kwargs["timeout"] = current_timeout
 
                 logger.info(
-                    "FallbackProvider attempting generate_async with %s (timeout=%s)...",
+                    "FallbackProvider attempting generate_async with {} (timeout={})...",
                     provider.__class__.__name__,
                     current_timeout,
                 )
@@ -186,7 +210,7 @@ class FallbackProvider:
                 if old_timeout is not None:
                     provider.timeout = old_timeout
                 logger.warning(
-                    "Provider %s failed during generate_async: %s. Proceeding to fallback...",
+                    "Provider {} failed during generate_async: {}. Proceeding to fallback...",
                     provider.__class__.__name__,
                     e,
                 )
@@ -248,8 +272,14 @@ def get_provider(
             nvidia_cfg, "base_url", "https://integrate.api.nvidia.com/v1"
         )
         use_max_tokens = max_tokens or getattr(nvidia_cfg, "max_tokens", 4096)
+        use_degraded_threshold = getattr(nvidia_cfg, "degraded_failure_threshold", 2)
+        use_degraded_cooldown = getattr(nvidia_cfg, "degraded_cooldown_seconds", 300.0)
+        use_degraded_probe_timeout = getattr(
+            nvidia_cfg, "degraded_probe_timeout_seconds", 5.0
+        )
+        use_degraded_window = getattr(nvidia_cfg, "degraded_window_size", 5)
         logger.info(
-            "Configuring NvidiaProvider with model %s (max_tokens=%s)",
+            "Configuring NvidiaProvider with model {} (max_tokens={})",
             use_model,
             use_max_tokens,
         )
@@ -261,6 +291,10 @@ def get_provider(
                 timeout=timeout,
                 max_retries=max_retries,
                 max_tokens=use_max_tokens,  # type: ignore[arg-type]
+                degraded_failure_threshold=use_degraded_threshold,
+                degraded_cooldown_seconds=use_degraded_cooldown,
+                degraded_probe_timeout_seconds=use_degraded_probe_timeout,
+                degraded_window_size=use_degraded_window,
             )
         )
 
@@ -279,7 +313,7 @@ def get_provider(
         ):
             use_gemini_model = use_model
 
-        logger.info("Configuring GeminiProvider with model %s", use_gemini_model)
+        logger.info("Configuring GeminiProvider with model {}", use_gemini_model)
         providers.append(
             GeminiProvider(
                 api_key=gemini_api_key,
@@ -300,7 +334,7 @@ def get_provider(
     ):
         use_ollama_model = default_ollama_model
 
-    logger.info("Configuring OllamaProvider with model %s", use_ollama_model)
+    logger.info("Configuring OllamaProvider with model {}", use_ollama_model)
     providers.append(
         OllamaProvider(
             api_url=api_url or getattr(ollama_cfg, "api_url", None),
@@ -313,7 +347,7 @@ def get_provider(
     # Return FallbackProvider if there are multiple providers configured
     if len(providers) > 1:
         logger.info(
-            "Returning FallbackProvider with chain: %s",
+            "Returning FallbackProvider with chain: {}",
             [p.__class__.__name__ for p in providers],
         )
         return FallbackProvider(providers)

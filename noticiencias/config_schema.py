@@ -848,6 +848,34 @@ class NvidiaConfig(StrictModel):
         default=4096,
         description="Maximum number of tokens to generate per request.",
     )
+    degraded_failure_threshold: PositiveInt = Field(
+        default=2,
+        description=(
+            "Consecutive LLM failures before the NVIDIA provider is marked "
+            "degraded and skipped by the fallback chain."
+        ),
+    )
+    degraded_cooldown_seconds: PositiveFloat = Field(
+        default=300.0,
+        description=(
+            "Seconds the provider stays degraded before a health probe "
+            "is allowed to re-arm it."
+        ),
+    )
+    degraded_probe_timeout_seconds: PositiveFloat = Field(
+        default=5.0,
+        description="Timeout used for the health probe that re-arms a degraded provider.",
+    )
+    degraded_window_size: PositiveInt = Field(
+        default=5,
+        description=(
+            "Number of most-recent LLM call outcomes to track when deciding "
+            "whether to mark the NVIDIA provider degraded. A provider is "
+            "marked degraded once `degraded_failure_threshold` failures "
+            "appear within this window — not only on strictly consecutive "
+            "failures."
+        ),
+    )
 
     @field_validator("api_key", mode="before")
     @classmethod

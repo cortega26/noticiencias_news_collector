@@ -503,6 +503,10 @@ model = "nvidia/nemotron-3-super-120b-a12b"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300
 max_tokens = 32768
+degraded_failure_threshold = 2
+degraded_cooldown_seconds = 300.0
+degraded_probe_timeout_seconds = 5.0
+degraded_window_size = 5
 
 [llm_rate_limiting]
 max_concurrent_requests = 2

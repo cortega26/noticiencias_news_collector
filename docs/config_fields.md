@@ -142,6 +142,10 @@
 | nvidia.base_url | str | "https://integrate.api.nvidia.com/v1" | Base URL for the NVIDIA NIM API. |  |  |
 | nvidia.timeout | int | 300 | Request timeout in seconds. |  |  |
 | nvidia.max_tokens | int | 4096 | Maximum number of tokens to generate per request. |  |  |
+| nvidia.degraded_failure_threshold | int | 2 | Consecutive LLM failures before the NVIDIA provider is marked degraded and skipped by the fallback chain. |  |  |
+| nvidia.degraded_cooldown_seconds | float | 300.0 | Seconds the provider stays degraded before a health probe is allowed to re-arm it. |  |  |
+| nvidia.degraded_probe_timeout_seconds | float | 5.0 | Timeout used for the health probe that re-arms a degraded provider. |  |  |
+| nvidia.degraded_window_size | int | 5 | Number of most-recent LLM call outcomes to track when deciding whether to mark the NVIDIA provider degraded. A provider is marked degraded once `degraded_failure_threshold` failures appear within this window — not only on strictly consecutive failures. |  |  |
 | llm_rate_limiting | LLMRateLimitingConfig |  |  |  |  |
 | llm_rate_limiting.max_concurrent_requests | int | 2 | Maximum number of concurrent in-flight LLM requests. |  |  |
 | llm_rate_limiting.min_delay_between_requests | float | 1.0 | Minimum seconds between consecutive LLM requests. |  |  |

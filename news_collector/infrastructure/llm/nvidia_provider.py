@@ -13,7 +13,9 @@ Rate-limit aware:
 import json
 import random
 import re
+import threading
 import time
+from collections import deque
 from typing import Any, Dict, Generator, Optional, Union
 
 import httpx
@@ -47,6 +49,46 @@ class RateLimitError(Exception):
         self.retry_after = retry_after
 
 
+class ProviderDegradedError(RuntimeError):
+    """Raised when the provider is inside a degradation window and skipped."""
+
+
+class _DegradationState:
+    """Shared degradation state for one (base_url, model) NVIDIA endpoint.
+
+    Multiple NvidiaProvider instances constructed for the same endpoint
+    (PreScorer, CognitiveScorer, Classifier, Council, Auditor, AIEditor each
+    build their own via get_provider()) share one of these so degradation
+    discovered by one caller is immediately visible to the others.
+    """
+
+    def __init__(self, window_size: int) -> None:
+        self.lock = threading.Lock()
+        self.recent_outcomes: "deque[bool]" = deque(maxlen=window_size)
+        self.degraded_until: float = 0.0
+        self.degraded_announced: bool = False
+
+
+_DEGRADATION_REGISTRY: Dict[str, _DegradationState] = {}
+_REGISTRY_LOCK = threading.Lock()
+
+
+def _get_degradation_state(key: str, window_size: int) -> _DegradationState:
+    """Return the shared degradation state for an endpoint key.
+
+    Note: if the same (base_url, model) is ever constructed first with
+    different window/cooldown values, the first instance wins and later
+    instances silently reuse its window size (none of the current callers do
+    this — all read from the same global cfg.nvidia).
+    """
+    with _REGISTRY_LOCK:
+        state = _DEGRADATION_REGISTRY.get(key)
+        if state is None:
+            state = _DegradationState(window_size)
+            _DEGRADATION_REGISTRY[key] = state
+        return state
+
+
 class NvidiaProvider:
     """
     Unified client for the NVIDIA NIM API (OpenAI-compatible).
@@ -68,6 +110,10 @@ class NvidiaProvider:
         timeout: int = 300,
         max_retries: int = 3,
         max_tokens: int = 4096,
+        degraded_failure_threshold: int = 2,
+        degraded_cooldown_seconds: float = 300.0,
+        degraded_probe_timeout_seconds: float = 5.0,
+        degraded_window_size: int = 5,
     ):
         self.api_key = api_key
         self.model = model or "qwen/qwen3-next-80b-a3b-instruct"
@@ -75,9 +121,23 @@ class NvidiaProvider:
         self.timeout = timeout
         self.max_retries = max_retries
         self.max_tokens = max_tokens
+        self.degraded_failure_threshold = degraded_failure_threshold
+        self.degraded_cooldown_seconds = degraded_cooldown_seconds
+        self.degraded_probe_timeout_seconds = degraded_probe_timeout_seconds
+        # Coerce to a positive int so a non-int value from a mocked/false
+        # config (e.g. a MagicMock flowing through get_provider in tests)
+        # cannot crash deque(maxlen=...) below.
+        self.degraded_window_size = (
+            degraded_window_size
+            if isinstance(degraded_window_size, int) and degraded_window_size > 0
+            else 5
+        )
 
         self._endpoint_url = f"{self.base_url}{_CHAT_COMPLETIONS_PATH}"
         self.async_client = httpx.AsyncClient(timeout=timeout)
+        self._state = _get_degradation_state(
+            f"{self.base_url}|{self.model}", self.degraded_window_size
+        )
 
     async def close(self) -> None:
         await self.async_client.aclose()
@@ -302,6 +362,8 @@ class NvidiaProvider:
         )
         use_model = payload["model"]
 
+        self._fail_fast_if_degraded()
+
         limiter = LLMRateLimiter.get_instance()
 
         for attempt_num in range(1, self.max_retries + 1):
@@ -337,6 +399,7 @@ class NvidiaProvider:
                     "Async NVIDIA NIM complete in {:.2f}s", time.time() - start
                 )
                 limiter.circuit_breaker.record_success()
+                self._record_success()
 
                 if json_mode:
                     return self._extract_json(text)
@@ -364,6 +427,7 @@ class NvidiaProvider:
                         continue
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
                 else:
+                    self._record_failure()
                     limiter.circuit_breaker.record_error()
                     logger.error(
                         "Async NVIDIA NIM error (attempt {}/{}): {}",
@@ -404,6 +468,8 @@ class NvidiaProvider:
         if not settings.LLM_SYSTEM_AVAILABLE:
             raise ValueError("LLM System is marked as unavailable (Disabled).")
 
+        self._fail_fast_if_degraded()
+
         limiter = LLMRateLimiter.get_instance()
 
         for attempt_num in range(1, self.max_retries + 1):
@@ -435,6 +501,7 @@ class NvidiaProvider:
                 text = self._extract_text(data)
 
                 limiter.circuit_breaker.record_success()
+                self._record_success()
 
                 if json_mode:
                     return self._extract_json(text)
@@ -449,6 +516,7 @@ class NvidiaProvider:
                     limiter.circuit_breaker.record_rate_limit(retry_after)
                     log_fn = logger.warning
                 else:
+                    self._record_failure()
                     limiter.circuit_breaker.record_error()
                     log_fn = logger.warning if log_errors_as_warning else logger.error
 
@@ -493,6 +561,87 @@ class NvidiaProvider:
             return False, f"http_{response.status_code}"
         except requests.RequestException as exc:
             return False, redact_message(str(exc))
+
+    # ---- Degradation state ----
+
+    def is_degraded(self) -> bool:
+        """True while the provider is inside a degradation window."""
+        with self._state.lock:
+            if self._state.degraded_until == 0.0:
+                return False
+            if time.monotonic() < self._state.degraded_until:
+                if not self._state.degraded_announced:
+                    self._state.degraded_announced = True
+                    logger.warning(
+                        "NVIDIA NIM degraded — skipping until {:.0f}s",
+                        self._state.degraded_until - time.monotonic(),
+                    )
+                return True
+            return False
+
+    def maybe_attempt(self) -> bool:
+        """True if a request may be made (healthy or half-open probing).
+
+        When the cooldown window has elapsed, a single cheap ``check_health``
+        probe decides between re-arming the provider and extending the
+        degradation window.
+        """
+        with self._state.lock:
+            if self._state.degraded_until == 0.0:
+                return True
+            if time.monotonic() < self._state.degraded_until:
+                return False
+        ok, _status = self.check_health(
+            timeout_seconds=self.degraded_probe_timeout_seconds
+        )
+        if ok:
+            self._record_success()
+            return True
+        with self._state.lock:
+            self._state.degraded_until = (
+                time.monotonic() + self.degraded_cooldown_seconds
+            )
+            self._state.degraded_announced = False
+        logger.warning(
+            "NVIDIA NIM probe failed — extending degraded window by {:.0f}s",
+            self.degraded_cooldown_seconds,
+        )
+        return False
+
+    def _fail_fast_if_degraded(self) -> None:
+        """Raise ProviderDegradedError when the provider cannot be attempted.
+
+        Extracted so the retry loops in generate_async/generate_sync stay
+        under the cyclomatic-complexity limit.
+        """
+        if not self.maybe_attempt():
+            raise ProviderDegradedError("NVIDIA NIM is degraded — skipping request")
+
+    def _record_failure(self) -> None:
+        with self._state.lock:
+            self._state.recent_outcomes.append(False)
+            failures = self._state.recent_outcomes.count(False)
+            if failures >= self.degraded_failure_threshold:
+                self._state.degraded_until = (
+                    time.monotonic() + self.degraded_cooldown_seconds
+                )
+                self._state.degraded_announced = False
+                logger.warning(
+                    "NVIDIA NIM marked degraded for {:.0f}s after {} failures "
+                    "in the last {} attempts",
+                    self.degraded_cooldown_seconds,
+                    failures,
+                    len(self._state.recent_outcomes),
+                )
+                self._state.recent_outcomes.clear()
+
+    def _record_success(self) -> None:
+        with self._state.lock:
+            self._state.recent_outcomes.append(True)
+            if self._state.degraded_until != 0.0:
+                self._state.degraded_until = 0.0
+                self._state.degraded_announced = False
+                logger.warning("NVIDIA NIM recovered after a successful response")
 
     def _stream_generator(
         self, response: requests.Response
