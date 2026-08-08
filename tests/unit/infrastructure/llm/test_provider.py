@@ -1,6 +1,7 @@
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from news_collector.infrastructure.llm.ollama_errors import OllamaAdmissionError
 from news_collector.infrastructure.llm.provider import OllamaProvider
@@ -204,6 +205,242 @@ class TestFallbackProvider(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_p1.timeout, 300)
         self.assertEqual(mock_p2.timeout, 3600)
 
+    def test_init_empty_providers_raises(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        with self.assertRaises(ValueError):
+            FallbackProvider([])
+
+    def test_generate_sync_stream_buffers_chunks(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        def stream_side_effect(*args, **kwargs):
+            yield "chunk1"
+            yield "chunk2"
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+        mock_p1.generate_sync.side_effect = stream_side_effect
+
+        fallback = FallbackProvider([mock_p1])
+        result = fallback.generate_sync("hello", stream=True)
+
+        self.assertEqual(list(result), ["chunk1", "chunk2"])
+        self.assertEqual(mock_p1.timeout, 300)
+
+    def test_generate_sync_stream_error_restores_timeout_and_raises(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        def broken_stream(*args, **kwargs):
+            yield "chunk1"
+            raise RuntimeError("mid-stream failure")
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+        mock_p1.generate_sync.side_effect = broken_stream
+
+        fallback = FallbackProvider([mock_p1])
+        with self.assertRaises(RuntimeError):
+            fallback.generate_sync("hello", stream=True)
+
+        self.assertEqual(mock_p1.timeout, 300)
+
+    def test_generate_sync_all_fail_raises_last_error(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+        mock_p1.generate_sync.side_effect = RuntimeError("p1 failed")
+
+        mock_p2 = MagicMock()
+        mock_p2.timeout = 300
+        mock_p2.generate_sync.side_effect = RuntimeError("p2 failed")
+
+        fallback = FallbackProvider([mock_p1, mock_p2])
+        with self.assertRaisesRegex(RuntimeError, "p2 failed"):
+            fallback.generate_sync("hello")
+
+        self.assertEqual(mock_p1.timeout, 300)
+
+    def test_generate_sync_no_usable_providers_raises_runtime_error(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        class DegradedProvider:
+            def is_degraded(self) -> bool:
+                return True
+
+            def generate_sync(self, *args, **kwargs):
+                raise AssertionError("should not be called")
+
+        fallback = FallbackProvider([DegradedProvider(), DegradedProvider()])
+        with self.assertRaisesRegex(RuntimeError, "no active providers"):
+            fallback.generate_sync("hello")
+
+    async def test_generate_async_all_fail_raises_last_error(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        async def async_fail(*args, **kwargs):
+            raise TimeoutError("p1 timed out")
+
+        mock_p1 = MagicMock()
+        mock_p1.timeout = 300
+        mock_p1.generate_async = async_fail
+
+        mock_p2 = MagicMock()
+        mock_p2.timeout = 300
+        mock_p2.generate_async = async_fail
+
+        fallback = FallbackProvider([mock_p1, mock_p2])
+        with self.assertRaises(TimeoutError):
+            await fallback.generate_async("hello")
+
+        self.assertEqual(mock_p1.timeout, 300)
+
+    async def test_generate_async_no_usable_providers_raises_runtime_error(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        class DegradedAsyncProvider:
+            def is_degraded(self) -> bool:
+                return True
+
+            async def generate_async(self, *args, **kwargs):
+                raise AssertionError("should not be called")
+
+        fallback = FallbackProvider([DegradedAsyncProvider(), DegradedAsyncProvider()])
+        with self.assertRaisesRegex(RuntimeError, "no active providers"):
+            await fallback.generate_async("hello")
+
+    def test_check_health_delegates(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_provider = MagicMock()
+        mock_provider.check_health.return_value = (True, "ok")
+
+        fallback = FallbackProvider([mock_provider])
+        self.assertEqual(fallback.check_health(), (True, "ok"))
+        mock_provider.check_health.assert_called_once_with(2.0)
+
+    def test_list_models_delegates(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_provider = MagicMock()
+        mock_provider.list_models.return_value = ["model-a", "model-b"]
+
+        fallback = FallbackProvider([mock_provider])
+        self.assertEqual(fallback.list_models(), ["model-a", "model-b"])
+
+    def test_check_model_exists_delegates_when_supported(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_provider = MagicMock()
+        mock_provider.check_model_exists.return_value = True
+
+        fallback = FallbackProvider([mock_provider])
+        self.assertTrue(fallback.check_model_exists("some-model"))
+        mock_provider.check_model_exists.assert_called_once_with("some-model")
+
+    def test_check_model_exists_defaults_true_when_unsupported(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        class MinimalProvider:
+            model = "test-model"
+
+        fallback = FallbackProvider([MinimalProvider()])
+        self.assertTrue(fallback.check_model_exists("some-model"))
+
+    async def test_close_closes_providers_with_close(self):
+        from news_collector.infrastructure.llm.factory import FallbackProvider
+
+        mock_p1 = AsyncMock()
+        mock_p1.timeout = 300
+
+        class MinimalProvider:
+            model = "test-model"
+
+        fallback = FallbackProvider([mock_p1, MinimalProvider()])
+        await fallback.close()
+        mock_p1.close.assert_awaited_once()
+
+
+class TestGetProvider(unittest.TestCase):
+    def setUp(self):
+        self._rate_limiter_patcher = patch(
+            "news_collector.infrastructure.llm.rate_limiter.LLMRateLimiter"
+        )
+        self._mock_limiter_cls = self._rate_limiter_patcher.start()
+        self._mock_limiter_cls._instance = None
+        self._mock_limiter_cls.get_instance.side_effect = lambda cfg: None
+
+    def tearDown(self):
+        self._rate_limiter_patcher.stop()
+
+    def test_get_provider_cloud_model_falls_back_to_ollama_default(self):
+        from news_collector.infrastructure.llm import factory as factory_module
+
+        cfg = SimpleNamespace(
+            nvidia=SimpleNamespace(api_key=None),
+            gemini=SimpleNamespace(api_key=None),
+            ollama=SimpleNamespace(
+                model="qwen2.5:32b", api_url="http://localhost:11434"
+            ),
+            llm_rate_limiting=None,
+        )
+
+        with patch.object(factory_module, "OllamaProvider") as mock_ollama_cls:
+            mock_ollama_instance = MagicMock()
+            mock_ollama_cls.return_value = mock_ollama_instance
+
+            provider = factory_module.get_provider(model="gemini-2.5-flash", config=cfg)
+
+            mock_ollama_cls.assert_called_once()
+            _, kwargs = mock_ollama_cls.call_args
+            self.assertEqual(kwargs["model"], "qwen2.5:32b")
+            self.assertIs(provider, mock_ollama_instance)
+
+    def test_get_provider_returns_ollama_when_single_provider(self):
+        from news_collector.infrastructure.llm import factory as factory_module
+
+        cfg = SimpleNamespace(
+            n=SimpleNamespace(api_key=None),
+            gemini=SimpleNamespace(api_key=None),
+            ollama=SimpleNamespace(
+                model="qwen2.5:32b", api_url="http://localhost:11434"
+            ),
+        )
+
+        with patch.object(factory_module, "load_config") as mock_load_config:
+            mock_load_config.return_value = MagicMock()
+            with patch.object(factory_module, "OllamaProvider") as mock_ollama_cls:
+                mock_ollama_instance = MagicMock()
+                mock_ollama_cls.return_value = mock_ollama_instance
+                provider = factory_module.get_provider(config=cfg)
+            self.assertIs(provider, mock_ollama_instance)
+
+    def test_ensure_rate_limiter_uses_default_config_when_rate_limiting_absent(self):
+        from news_collector.infrastructure.llm import factory as factory_module
+        from news_collector.infrastructure.llm.rate_limiter import LLMRateLimitConfig
+
+        cfg = SimpleNamespace(
+            nvidia=SimpleNamespace(api_key=None),
+            gemini=SimpleNamespace(api_key=None),
+            ollama=SimpleNamespace(
+                model="qwen2.5:32b", api_url="http://localhost:11434"
+            ),
+        )
+
+        with patch.object(
+            factory_module.LLMRateLimiter, "get_instance"
+        ) as mock_get_instance:
+            with patch.object(
+                factory_module.LLMRateLimiter, "_instance", None, create=True
+            ):
+                factory_module._ensure_rate_limiter(cfg)
+
+            mock_get_instance.assert_called_once()
+            created_cfg = mock_get_instance.call_args[0][0]
+            self.assertIsInstance(created_cfg, LLMRateLimitConfig)
+
 
 if __name__ == "__main__":
+
     unittest.main()
