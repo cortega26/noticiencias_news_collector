@@ -191,7 +191,7 @@ class FactCheckItem(BaseModel):
 
 
 class SourceItem(BaseModel):
-    """A cited or referenced source (paper, report, press release, institution)."""
+    """A referenced per-source record (paper, report, press release, institution)."""
 
     title: str = Field(..., min_length=1)
     url: str = Field(..., min_length=1)
@@ -208,6 +208,20 @@ class EnrichmentSchema(BaseModel):
     why_it_matters: list[str] = Field(default_factory=list, min_length=1)
     confidence: str = Field(default="", min_length=1)
     sources: list[SourceItem] = Field(default_factory=list, min_length=1)
+
+
+# Fields a schema_version >= 2 article must carry before publication. Used by
+# both the frontmatter enforcement gate and the Stage 4 cache-validity check
+# (a cached artifact missing any of these is treated as poisoned and
+# regenerated, instead of failing every subsequent run).
+_V2_REQUIRED_ENRICHMENT_FIELDS = (
+    "summary_points",
+    "glossary",
+    "fact_check",
+    "why_it_matters",
+    "confidence",
+    "sources",
+)
 
 
 class GeneratedArticleValidationError(ValueError):
@@ -1315,13 +1329,26 @@ class EditorAgent:
         }
 
     def _generate_enrichment_fields(
-        self, article_content: str, article_title: str = ""
+        self,
+        article_content: str,
+        article_title: str = "",
+        source_url: str = "",
+        source_name: str = "",
     ) -> dict[str, list | str]:
         """Stage 4: Editorial Enrichment Field Generation.
 
         Analyzes the final edited article and generates structured editorial
         metadata (summary_points, glossary, fact_check, why_it_matters,
         confidence, sources) via a single LLM call with Pydantic validation.
+
+        The prompt allows the LLM to omit fields it cannot derive from the
+        article. ``sources`` is the field most often dropped (the model cannot
+        see the original feed metadata), and an empty ``sources`` list blocks
+        V2 publication (``editorial_v2_incomplete``). To keep Stage 4 from
+        failing every run, the article's own original URL/name (always known
+        by the caller) is injected into the prompt context as the fallback
+        source of truth, and if the LLM still returns an empty ``sources``
+        list, that original feed source is used as the deterministic default.
 
         Returns a dict with the enrichment fields. On validation failure or
         LLM error, falls back to empty defaults so enrichment never blocks
@@ -1338,6 +1365,14 @@ class EditorAgent:
         # Prepend the title so the LLM has full article identity for metadata.
         sample = _sample_for_critic(article_content, max_chars=4000)
         context = f"## Título\n\n{article_title}\n\n## Artículo\n\n{sample}"
+        # Give the model the original feed source so it never has to omit
+        # ``sources``: it can always cite the article's own origin.
+        if source_url or source_name:
+            context += (
+                "\n\n## Fuente original del artículo\n"
+                f"Nombre: {source_name or 'n/a'}\n"
+                f"URL: {source_url or 'n/a'}"
+            )
 
         response = ""
         try:
@@ -1346,7 +1381,21 @@ class EditorAgent:
             )
             data = self._extract_json(response)
             validated = EnrichmentSchema(**data)
-            return validated.model_dump()
+            result = validated.model_dump()
+            if not result.get("sources") and (source_url or source_name):
+                logger.warning(
+                    "Enrichment returned no sources; falling back to the "
+                    "article's original source (url={}).",
+                    source_url,
+                )
+                result["sources"] = [
+                    {
+                        "title": source_name or article_title or "Fuente original",
+                        "url": source_url,
+                        "publisher": source_name or None,
+                    }
+                ]
+            return result
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
             logger.error(f"Enrichment Schema Validation Failed: {e}")
             if response:
@@ -1890,14 +1939,40 @@ class EditorAgent:
         # --- STAGE 4: Editorial Enrichment Fields ---
         print("\n--- STAGE 4: Editorial Enrichment Fields ---")
         cache_s4 = self._get_cache_path(article_id, "stage4_enrichment")
+
+        def _enrichment_cache_is_usable(cached: Any) -> bool:
+            """A Stage 4 cache artifact is usable only when it carries every
+            V2-required enrichment field. A cache with an empty ``sources``
+            list (LLM omitted it, per prompt) would otherwise fail the V2
+            frontmatter gate on every run, blocking publication forever
+            without ever regenerating the artifact."""
+            if not isinstance(cached, dict):
+                return False
+            return all(cached.get(key) for key in _V2_REQUIRED_ENRICHMENT_FIELDS)
+
         if cache_s4.exists():
             print(f"(Loaded from cache: {cache_s4})")
             try:
-                enrichment_fields = json.loads(cache_s4.read_text(encoding="utf-8"))
+                cached_enrichment = json.loads(cache_s4.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, Exception) as e:
                 logger.warning(f"Invalid enrichment cache, regenerating: {e}")
+                cached_enrichment = None
+            if cached_enrichment is not None and not _enrichment_cache_is_usable(
+                cached_enrichment
+            ):
+                logger.warning(
+                    "Incomplete enrichment cache ignored (missing required V2 "
+                    "fields); regenerating."
+                )
+                cached_enrichment = None
+            if cached_enrichment is not None:
+                enrichment_fields = cached_enrichment
+            else:
                 enrichment_fields = self._generate_enrichment_fields(
-                    final_content, title
+                    final_content,
+                    title,
+                    source_url=source_url or "",
+                    source_name=source_name or "",
                 )
                 try:
                     cache_s4.write_text(
@@ -1907,7 +1982,12 @@ class EditorAgent:
                 except Exception as _e:
                     logger.warning(f"Failed to persist enrichment cache: {_e}")
         else:
-            enrichment_fields = self._generate_enrichment_fields(final_content, title)
+            enrichment_fields = self._generate_enrichment_fields(
+                final_content,
+                title,
+                source_url=source_url or "",
+                source_name=source_name or "",
+            )
             try:
                 cache_s4.write_text(
                     json.dumps(enrichment_fields, ensure_ascii=False),
@@ -2064,17 +2144,11 @@ class EditorAgent:
             # V2 contract enforcement: a schema_version >= 2 article MUST
             # carry every enrichment field.  Omission means Stage 4 produced
             # empty or invalid output — treat as retryable editorial failure.
-            _V2_REQUIRED_FIELDS = (
-                "summary_points",
-                "glossary",
-                "fact_check",
-                "why_it_matters",
-                "confidence",
-                "sources",
-            )
             schema_ver = model_dict.get("schema_version", 1)
             if isinstance(schema_ver, int) and schema_ver >= 2:
-                missing = [k for k in _V2_REQUIRED_FIELDS if not model_dict.get(k)]
+                missing = [
+                    k for k in _V2_REQUIRED_ENRICHMENT_FIELDS if not model_dict.get(k)
+                ]
                 if missing:
                     raise GeneratedArticleValidationError(
                         f"V2 article missing required enrichment fields: {missing}. "

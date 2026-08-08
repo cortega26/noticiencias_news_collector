@@ -147,6 +147,75 @@ class TestEnrichmentGeneration:
         # Falls back to empty on validation error
         assert result["summary_points"] == []
 
+    def test_sources_fallback_when_omitted_by_llm(self) -> None:
+        """LLM returning valid JSON without ``sources`` must not poison Stage 4:
+        the article's own original source is used as the deterministic default."""
+        response_without_sources = json.dumps(
+            {
+                "summary_points": ["Punto uno.", "Punto dos."],
+                "glossary": [{"term": "Plasma", "definition": "Estado de la materia."}],
+                "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+                "why_it_matters": ["Impacto en la región."],
+                "confidence": "Alta — revisado por pares.",
+            }
+        )
+        agent = EditorAgent("http://example", "model")
+        agent._send_prompt = MagicMock(return_value=response_without_sources)
+
+        result = agent._generate_enrichment_fields(
+            "Article body",
+            "Test Title",
+            source_url="https://example.com/original",
+            source_name="Example Journal",
+        )
+
+        assert len(result["sources"]) == 1
+        assert result["sources"][0]["title"] == "Example Journal"
+        assert result["sources"][0]["url"] == "https://example.com/original"
+        assert result["sources"][0]["publisher"] == "Example Journal"
+
+    def test_sources_empty_list_rejected_by_schema(self) -> None:
+        """Explicit ``sources: []`` in the LLM response fails pydantic's
+        ``min_length=1`` and falls back to empty defaults (fail-closed: no
+        fabricated source is invented). The real production bug is the
+        OMITTED key, covered by test_sources_fallback_when_omitted_by_llm."""
+        response_empty_sources = json.dumps(
+            {
+                "summary_points": ["Punto uno", "Punto dos"],
+                "glossary": [{"term": "Plasma", "definition": "Definición"}],
+                "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+                "why_it_matters": ["Relevancia regional"],
+                "confidence": "Alta",
+                "sources": [],
+            }
+        )
+        agent = EditorAgent("http://example", "model")
+        agent._send_prompt = MagicMock(return_value=response_empty_sources)
+
+        result = agent._generate_enrichment_fields(
+            "Article body",
+            "Test Title",
+            source_url="https://feed.example/item/1",
+            source_name="Example Feed",
+        )
+
+        # Validation rejected the empty list: fail-closed, no fabricated source
+        assert result["sources"] == []
+
+    def test_no_fallback_without_source_metadata(self) -> None:
+        """Without source metadata there is nothing truthful to fall back to:
+        sources stays empty (the V2 gate will reject it, as designed)."""
+        agent = EditorAgent("http://example", "model")
+        agent._send_prompt = MagicMock(return_value=VALID_ENRICHMENT_RESPONSE)
+
+        result = agent._generate_enrichment_fields("Article body", "Test Title")
+
+        # Valid response keeps its own sources; no fallback needed
+        assert len(result["sources"]) == 1
+        assert result["sources"][0]["title"] == (
+            "Nature - Stable plasma maintenance in nuclear fusion experiments"
+        )
+
     def test_empty_enrichment_fields_static(self) -> None:
         """Verify _empty_enrichment_fields returns correct shape."""
         result = EditorAgent._empty_enrichment_fields()
@@ -332,6 +401,14 @@ class TestEnrichmentInProcessArticle:
                 "url": "https://example.com/source",
             }
         )
+        result = agent.process_article(
+            {
+                "title": "V2 Complete",
+                "summary": "Resumen " * 20,
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+            }
+        )
         fm = parse_frontmatter(result)
         assert fm.get("schema_version") == 2
         for field in (
@@ -343,3 +420,76 @@ class TestEnrichmentInProcessArticle:
             "sources",
         ):
             assert fm.get(field), f"Missing required v2 field: {field}"
+
+
+class TestPoisonedStage4Cache:
+    """A cached Stage 4 artifact with an empty ``sources`` list must never be
+    reused: it would fail the V2 frontmatter gate on every run. The cache is
+    ignored and regenerated instead (the exact production failure mode that
+    made the pipeline 'consistently fail on Stage 4')."""
+
+    def _make_agent(self, tmp_path) -> EditorAgent:
+        agent = EditorAgent("http://example", "model")
+        agent.cache_dir = tmp_path / "editor-cache"
+        agent.cache_dir.mkdir(parents=True, exist_ok=True)
+        agent.category_resolver._classifier = MagicMock(
+            try_classify_article=MagicMock(return_value=None)
+        )
+        agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
+        agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
+        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
+        agent._generate_headlines = lambda *args, **kwargs: {  # type: ignore[method-assign]
+            "direct": "Direct Headline",
+            "question": "Question Headline?",
+            "benefit": "Benefit Headline",
+            "excerpt": "This is an SEO excerpt that is long enough for validation.",
+        }
+        return agent
+
+    def test_poisoned_cache_is_regenerated(self, tmp_path) -> None:
+        """Cache with all fields but sources=[] must be ignored and regenerated."""
+        from news_collector.components.editorial.ai_editor import (
+            _V2_REQUIRED_ENRICHMENT_FIELDS,
+        )
+
+        poisoned = {
+            key: (
+                ["Item de ejemplo"]
+                if key in ("summary_points", "glossary", "fact_check", "why_it_matters")
+                else "Alta" if key == "confidence" else []
+            )
+            for key in _V2_REQUIRED_ENRICHMENT_FIELDS
+        }
+        cache_dir = tmp_path / "editor-cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_path = cache_dir / "demo_stage4_enrichment.txt"
+        cache_path.write_text(
+            json.dumps(poisoned, ensure_ascii=False), encoding="utf-8"
+        )
+
+        agent = self._make_agent(tmp_path)
+        # Regeneration must produce complete output
+        agent._generate_enrichment_fields = MagicMock(
+            return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
+        )
+
+        result = agent.process_article(
+            {
+                "id": "demo",
+                "title": "Poisoned Cache Demo",
+                "summary": "Resumen " * 20,
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+                "source_name": "Example Feed",
+            }
+        )
+        fm = parse_frontmatter(result)
+        assert fm != {}
+        # Sources came from the regenerated (valid) artifact, not the cache
+        assert len(fm["sources"]) == 1
+        assert fm["sources"][0]["title"] == (
+            "Nature - Stable plasma maintenance in nuclear fusion experiments"
+        )
+        # And the on-disk cache was overwritten with the valid artifact
+        regenerated = json.loads(cache_path.read_text(encoding="utf-8"))
+        assert len(regenerated["sources"]) == 1
