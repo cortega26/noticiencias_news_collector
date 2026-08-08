@@ -741,7 +741,18 @@ def render_article_processing_panel(  # noqa: C901
             try:
                 import re
 
+                # Los stage caches se nombran con el refinery_id que el
+                # pipeline usa al escribir (ver _resolve_article_identity en
+                # refinery_engine): el id numérico si el payload lo conserva,
+                # o el título sanitizado como fallback. El adaptador de
+                # export (extra="forbid") descarta "id", así que en la
+                # práctica los archivos quedan con el prefijo del título.
+                # Limpiamos ambos prefijos para cubrir las dos variantes.
                 safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", selected_id)
+                safe_title = re.sub(
+                    r"[^a-zA-Z0-9_-]", "", str(selected_art.get("title") or "")
+                )
+                prefixes = {p for p in (safe_id, safe_title) if p}
                 count = 0
                 cache_dirs = [
                     NEWS_COLLECTOR_PATH / "data" / "cache" / "editor",
@@ -755,9 +766,10 @@ def render_article_processing_panel(  # noqa: C901
 
                 for cache_dir in cache_dirs:
                     if cache_dir.exists():
-                        for file_path in cache_dir.glob(f"{safe_id}_*.txt"):
-                            file_path.unlink()
-                            count += 1
+                        for prefix in prefixes:
+                            for file_path in cache_dir.glob(f"{prefix}_*.txt"):
+                                file_path.unlink()
+                                count += 1
 
                 if count > 0:
                     st.success(f"✅ Caché eliminada ({count} archivos).")
