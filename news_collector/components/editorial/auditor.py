@@ -398,17 +398,23 @@ class EditorialAuditor:
             # This satisfies Objective 6 (Invariant: never raise exception from output type)
             validated_result = self._normalize_audit_result(raw_data)
 
-            # Save Score
-            self._save_score(article_id, validated_result)
+            # Only persist a score when the provider actually returned usable
+            # data. Persisting the all-zeros default as a real "audit_passed"
+            # score poisons the cache: a later editorial run with a threshold
+            # enabled would block the article forever even though it was never
+            # really audited.
+            if raw_data:
+                # Save Score
+                self._save_score(article_id, validated_result)
 
-            # Update Rolling Average
-            self._update_rolling_average(validated_result)
+                # Update Rolling Average
+                self._update_rolling_average(validated_result)
 
             # SUCCESS: Reset Circuit Breaker
             self.failure_count = 0
 
             result = {
-                "status": "audit_passed",
+                "status": "audit_passed" if raw_data else "audit_unavailable",
                 "reason": "",
                 "model": self.model,
                 "endpoint": self.api_url,

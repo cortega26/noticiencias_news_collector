@@ -118,15 +118,13 @@ def test_configured_penalty_phrase_title_is_structurally_accepted(config):
     assert decision.reason is None
 
 
-def test_non_http_scheme_is_silently_coerced_not_rejected_by_contract():
-    """Documents current (pre-existing, out-of-scope-for-plan-034) behavior:
-    canonicalize_url() force-rewrites any non-http(s) scheme to "https"
-    rather than rejecting the URL (news_collector/utils/url_canonicalizer.py,
-    "if scheme not in (http, https) ... scheme = https"). So an
-    ftp:// URL does NOT reach evaluate_admission as a rejection case — it's
-    silently turned into an https:// URL before admission ever sees it. This
-    module intentionally does not re-implement scheme checking; the actual
-    gap here (coercion instead of rejection) is a separate, pre-existing
-    bug in URL canonicalization, not an admission-policy gap."""
-    article = _article(url="ftp://example.com/article")
-    assert str(article.url).startswith("https://")
+def test_non_http_scheme_is_rejected_by_contract():
+    """Documents the fixed behavior: canonicalize_url() preserves non-web
+    schemes (mailto:, ftp:, javascript:) instead of force-rewriting them into
+    https (news_collector/utils/url_canonicalizer.py). A ftp:// URL therefore
+    reaches CollectorArticleModel untouched and fails Pydantic AnyHttpUrl
+    validation — it is rejected by the contract, not silently coerced into a
+    bogus https URL. This module intentionally does not re-implement scheme
+    checking; the scheme rejection lives in the contract boundary."""
+    with pytest.raises(Exception):
+        _article(url="ftp://example.com/article")

@@ -465,6 +465,9 @@ class BaseCollector(ABC):
             "total_errors": 0,
             "processing_time_seconds": 0.0,
         }
+        # Job keys are scoped per collection session; a retry with the same
+        # source/target must not be treated as a duplicate of a previous session.
+        self._job_keys_seen.clear()
 
     def _update_global_stats(self, source_result: Dict[str, Any]):
         """

@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import os
 import random
 import sys
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -18,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from news_collector.system import create_system
 from news_collector.config import ALL_SOURCES
-from news_collector.perf import CollectorReplaySession, load_replay_fixture
+from news_collector.perf import CollectorReplaySession, ReplayEvent, load_replay_fixture
 
 SMOKE_SOURCE_ID = "smoke_replay_source"
 SMOKE_FIXTURE_PATH = (
@@ -26,12 +28,60 @@ SMOKE_FIXTURE_PATH = (
 )
 
 
+def _shift_fixture_dates(events: List[ReplayEvent]) -> List[ReplayEvent]:
+    """Shift fixture publish dates to land within the recency window.
+
+    Smoke fixtures use absolute publish dates (e.g. 2024-01-01) for
+    determinism, but ``recent_days_threshold`` in config.toml (365) would
+    age them out of collection. Mirror pipeline_e2e._relative_fixture_dates:
+    shift every article so the newest one lands ~2h before now, preserving
+    relative gaps.
+    """
+    newest: datetime | None = None
+    for event in events:
+        for article in event.articles:
+            normalized = (article.published or "").replace("Z", "+00:00")
+            if not normalized:
+                continue
+            try:
+                dt = datetime.fromisoformat(normalized)
+            except ValueError:
+                continue
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if newest is None or dt > newest:
+                newest = dt
+
+    if newest is None:
+        return events
+
+    offset = datetime.now(timezone.utc) - timedelta(hours=2) - newest
+
+    shifted: List[ReplayEvent] = []
+    for event in events:
+        articles = []
+        for article in event.articles:
+            published = article.published
+            normalized = (published or "").replace("Z", "+00:00")
+            if normalized:
+                try:
+                    dt = datetime.fromisoformat(normalized)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    published = (dt + offset).astimezone(timezone.utc).isoformat()
+                except ValueError:
+                    pass
+            articles.append(dataclasses.replace(article, published=published))
+        shifted.append(dataclasses.replace(event, articles=tuple(articles)))
+    return shifted
+
+
 def _load_smoke_source() -> Tuple[CollectorReplaySession, Dict[str, Any]]:
     if not SMOKE_FIXTURE_PATH.exists():
         raise FileNotFoundError(f"Missing smoke fixture: {SMOKE_FIXTURE_PATH}")
 
     events = load_replay_fixture(SMOKE_FIXTURE_PATH)
-    replay_session = CollectorReplaySession(events)
+    replay_session = CollectorReplaySession(_shift_fixture_dates(events))
     source_config_map = replay_session.build_source_config()
 
     if SMOKE_SOURCE_ID not in source_config_map:

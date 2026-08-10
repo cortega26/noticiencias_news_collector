@@ -639,6 +639,13 @@ class ArticleRepository:
 
             article.canonical_slug = slug
             session.add(article)
+            try:
+                session.commit()
+            except IntegrityError:
+                # Concurrent worker registered the same deterministic slug
+                # first; the identity is already locked. Treat as success.
+                session.rollback()
+                return True
             return True
 
     # ------------------------------------------------------------------

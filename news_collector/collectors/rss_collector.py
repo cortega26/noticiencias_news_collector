@@ -769,7 +769,7 @@ class RSSCollector(BaseCollector):
 
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
-        datetime.now(timezone.utc) - timedelta(
+        recent_threshold = datetime.now(timezone.utc) - timedelta(
             days=cfg.collection_config["recent_days_threshold"]
         )
 
@@ -782,9 +782,15 @@ class RSSCollector(BaseCollector):
             if count >= fetch_limit:
                 break
 
-            # Date filter
-            # if cand.get("published_date") and cand["published_date"] < recent_threshold:
-            #     continue
+            # Date filter: drop items older than the configured recency
+            # window (feed dates are parsed as UTC-aware datetimes; naive
+            # items are assumed UTC).
+            published = cand.get("published_date")
+            if published is not None:
+                if isinstance(published, datetime) and published.tzinfo is None:
+                    published = published.replace(tzinfo=timezone.utc)
+                if published < recent_threshold:
+                    continue
 
             # Duplicate filter
             if self.db_manager.article_exists(cand["url"]):

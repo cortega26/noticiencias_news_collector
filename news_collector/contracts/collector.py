@@ -176,6 +176,34 @@ class CollectorArticleModel(BaseModel):
     def ensure_datetime(cls, value: Any) -> datetime:
         return _coerce_published_date(value)
 
+    @field_validator("word_count", mode="before")
+    @classmethod
+    def sanitize_word_count(cls, value: Any) -> int:
+        """Clamp invalid word counts (NaN, negative, non-numeric) to safe values."""
+        if value is None:
+            return 0
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return 0
+        if numeric != numeric:  # NaN
+            return 0
+        return max(0, int(numeric))
+
+    @field_validator("reading_time_minutes", mode="before")
+    @classmethod
+    def sanitize_reading_time(cls, value: Any) -> int:
+        """Clamp reading-time to a positive integer; the schema requires > 0."""
+        if value is None:
+            return 1
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return 1
+        if numeric != numeric:  # NaN
+            return 1
+        return max(1, int(numeric))
+
     @field_validator("authors", mode="before")
     @classmethod
     def normalize_authors(cls, value: Any) -> List[str]:

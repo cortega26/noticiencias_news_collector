@@ -18,9 +18,10 @@ class TestUrlCanonicalizer(unittest.TestCase):
         self.assertEqual(
             canonicalize_url("https://example.com:443/"), "https://example.com/"
         )
-        # http://example.com:80/ -> https://example.com:80/ (Port 80 preserved as it's not default for https)
+        # http://example.com:80/ -> https://example.com/ (80 is the default
+        # http port; after consolidating to https the explicit port is redundant)
         self.assertEqual(
-            canonicalize_url("http://example.com:80/"), "https://example.com:80/"
+            canonicalize_url("http://example.com:80/"), "https://example.com/"
         )
         # Trailing slash path normalization
         self.assertEqual(

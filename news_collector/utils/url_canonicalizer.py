@@ -63,8 +63,12 @@ SAFE_PATH_CHARS = "@:$&'()*+,;=-._~!%/"
 def _clean_host(host: str) -> str:
     host = host.lower()
     for prefix in MOBILE_HOST_PREFIXES:
-        if host.startswith(prefix) and len(host) > len(prefix):
-            host = host[len(prefix) :]
+        if not host.startswith(prefix):
+            continue
+        remainder = host[len(prefix) :]
+        if not remainder or "." not in remainder:
+            continue
+        host = remainder
     return host
 
 
@@ -118,6 +122,23 @@ def _canonicalize_url_impl(url: str) -> str:  # noqa: C901
     path = parsed.path
     query = parsed.query
 
+    # Preserve non-web schemes untouched: forcing "mailto:"/"javascript:" into
+    # https produces garbage canonical URLs (e.g. the host is the whole payload).
+    # urlparse misreads "example.com:80/foo" as scheme="example.com", so only
+    # treat it as a foreign scheme when the remainder is not host:port shaped.
+    if parsed.scheme and parsed.scheme.lower() not in ("http", "https"):
+        looks_like_hostport = re.match(r"^\d{1,5}(/.*)?$", path) is not None
+        if not looks_like_hostport:
+            return url
+        # Rebuild host:port from the misread pieces so the scheme-less path
+        # below can process it normally.
+        port_match = re.match(r"^(\d{1,5})(/?.*)$", path)
+        port_part = port_match.group(1) if port_match else ""
+        remainder = port_match.group(2) if port_match else ""
+        netloc = f"{parsed.scheme}:{port_part}"
+        scheme = "https"
+        path = remainder or "/"
+
     # Handle scheme-less URLs like example.com/foo
     if not netloc and path:
         if "/" not in path:
@@ -151,22 +172,15 @@ def _canonicalize_url_impl(url: str) -> str:  # noqa: C901
 
     fragment = ""
 
-    if scheme not in ("http", "https") or scheme == "http":
+    if scheme == "http":
         scheme = "https"
 
-    # Remove default ports after scheme normalization
+    # Remove default ports after scheme normalization.
+    # Both 80 and 443 are default ports of the web schemes we consolidate to
+    # https, so an explicit http://host:80/ or https://host:443/ loses nothing.
     if ":" in host:
         bare_host, port = host.rsplit(":", 1)
-        # Port 80 is standard for http, 443 for https.
-        # Since we force https, we might want to strip 443.
-        # If the original was http:80, we upgraded to https:80, which is non-standard but technically what we requested.
-        # However, to pass the test and simplify: let's just strip 443 if scheme is https.
-        # But wait, the bug is that 'scheme' is already 'https', so 'scheme == "http"' is dead.
-        # Let's strip 80 too if we consider it default? No, https:80 is explicit.
-        # I will preserve the logic but use original scheme if I could, but I can't easily.
-        # I will allow port 80 to remain for https (as it is explicit) and fix the TEST expectation.
-        # Reverting this thought: I won't change code logic if it's debatable. I will fix the TEST.
-        if (scheme == "https" and port == "443") or (scheme == "http" and port == "80"):
+        if port in ("80", "443"):
             host = bare_host
 
     if not host:

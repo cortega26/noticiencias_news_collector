@@ -5,7 +5,10 @@ from urllib.parse import urljoin
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
+from news_collector.collectors.admission import evaluate_admission
 from news_collector.collectors.base_collector import BaseCollector
+from news_collector.config.settings import get_runtime_config
+from news_collector.contracts import CollectorArticleModel
 
 # from news_collector.utils.url_utils import normalize_url # Removed invalid import
 
@@ -170,6 +173,42 @@ class HeadlessCollector(BaseCollector):
                     or 1
                 )
                 article["reading_time_minutes"] = max(1, article["word_count"] // 200)
+
+                try:
+                    admission = evaluate_admission(
+                        CollectorArticleModel(
+                            **{
+                                key: value
+                                for key, value in article.items()
+                                if key in CollectorArticleModel.model_fields
+                            }
+                        ),
+                        get_runtime_config(),
+                    )
+                except Exception as e:
+                    self._emit_log(
+                        "error",
+                        "collector.headless.admission_validation_failed",
+                        source_id=source_id,
+                        details={"url": article.get("url"), "error": str(e)},
+                    )
+                    continue
+
+                if not admission.accepted:
+                    self._emit_log(
+                        "info",
+                        "collector.filter.admission_rejected",
+                        source_id=source_id,
+                        details={
+                            "url": article.get("url"),
+                            "reason": (
+                                admission.reason.value
+                                if admission.reason is not None
+                                else "unknown"
+                            ),
+                        },
+                    )
+                    continue
 
                 if self._save_article(article):
                     articles_saved += 1

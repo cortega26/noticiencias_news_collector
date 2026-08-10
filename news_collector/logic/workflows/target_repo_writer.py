@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
+import yaml
 from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.utils.logger import get_logger
@@ -170,7 +171,9 @@ class TargetRepoWriter:
                                 break
                             content_head.append(line)
 
-                    if f'refinery_id: "{article_id}"' in "".join(content_head):
+                    if self._frontmatter_refinery_id_matches(
+                        "".join(content_head), article_id
+                    ):
                         # Self-heal the manifest
                         self.update_manifest(posts_dir, article_id, file_path.name)
                         return file_path
@@ -180,3 +183,25 @@ class TargetRepoWriter:
             logger.error("Error scanning for existing files: {}", e)
 
         return None
+
+    @staticmethod
+    def _frontmatter_refinery_id_matches(content_head: str, article_id: str) -> bool:
+        """Compare the frontmatter ``refinery_id`` value against article_id.
+
+        The value may be dumped by different YAML writers as an int, a plain
+        string, or single/double-quoted (``123``, ``"123"``, ``'123'``), so a
+        string literal search misidentifies post files.  Parse only the
+        frontmatter block and compare the normalized str() value.
+        """
+        if not content_head.startswith("---\n"):
+            return False
+        end_marker_idx = content_head.find("\n---", 4)
+        frontmatter_block = content_head[4:end_marker_idx]
+        try:
+            parsed = yaml.safe_load(frontmatter_block) or {}
+        except yaml.YAMLError:
+            return False
+        if not isinstance(parsed, dict):
+            return False
+        raw_id = parsed.get("refinery_id")
+        return raw_id is not None and str(raw_id).strip() == str(article_id).strip()

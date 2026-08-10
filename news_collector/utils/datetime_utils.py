@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import time as _time
 from datetime import datetime, timedelta, timezone
 from typing import Tuple, Union
@@ -43,7 +44,10 @@ def parse_to_utc_with_tzinfo(
     if isinstance(value, datetime):
         dt = value
     elif isinstance(value, _time.struct_time):
-        dt = datetime.fromtimestamp(_time.mktime(value), tz=timezone.utc)
+        # calendar.timegm interprets struct_time as UTC (feed dates are
+        # expressed in UTC); mktime used the host's local timezone, which
+        # produced host-timezone-dependent timestamps and overflows pre-2038.
+        dt = datetime.fromtimestamp(calendar.timegm(value), tz=timezone.utc)
     else:
         # string or other
         dt = date_parser.parse(str(value))

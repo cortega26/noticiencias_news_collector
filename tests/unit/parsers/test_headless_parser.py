@@ -75,7 +75,11 @@ async def test_headless_fetches_full_content_when_missing(headless_collector):
             with patch.object(
                 headless_collector, "_fetch_full_content", new_callable=AsyncMock
             ) as mock_fetch:
-                mock_fetch.return_value = "Full article content fetched separately."
+                # Content long enough to pass the shared admission gate
+                # (min_content_length in config.toml) once fetched.
+                mock_fetch.return_value = (
+                    "Full article content fetched separately. " * 40
+                )
 
                 # Mock _save_article to always succeed (BaseCollector dependency)
                 with patch.object(
