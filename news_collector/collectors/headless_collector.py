@@ -175,16 +175,19 @@ class HeadlessCollector(BaseCollector):
                 article["reading_time_minutes"] = max(1, article["word_count"] // 200)
 
                 try:
-                    admission = evaluate_admission(
-                        CollectorArticleModel(
-                            **{
-                                key: value
-                                for key, value in article.items()
-                                if key in CollectorArticleModel.model_fields
-                            }
-                        ),
-                        get_runtime_config(),
+                    # Build the contract model once and reuse it: the raw
+                    # dict carries collector-only keys (tags, published_at)
+                    # that extra="forbid" would reject at save time, so the
+                    # admission check and the save must use the same filtered,
+                    # validated model or every headless article is dropped.
+                    article_model = CollectorArticleModel(
+                        **{
+                            key: value
+                            for key, value in article.items()
+                            if key in CollectorArticleModel.model_fields
+                        }
                     )
+                    admission = evaluate_admission(article_model, get_runtime_config())
                 except Exception as e:
                     self._emit_log(
                         "error",
@@ -210,7 +213,7 @@ class HeadlessCollector(BaseCollector):
                     )
                     continue
 
-                if self._save_article(article):
+                if self._save_article(article_model):
                     articles_saved += 1
 
             success = True

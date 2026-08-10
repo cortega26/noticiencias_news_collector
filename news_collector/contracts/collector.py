@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, time, timezone
 from typing import Any, Dict, List, TypedDict
 
@@ -179,14 +180,14 @@ class CollectorArticleModel(BaseModel):
     @field_validator("word_count", mode="before")
     @classmethod
     def sanitize_word_count(cls, value: Any) -> int:
-        """Clamp invalid word counts (NaN, negative, non-numeric) to safe values."""
+        """Clamp invalid word counts (NaN, ±inf, negative, non-numeric) to safe values."""
         if value is None:
             return 0
         try:
             numeric = float(value)
         except (TypeError, ValueError):
             return 0
-        if numeric != numeric:  # NaN
+        if not math.isfinite(numeric):  # NaN, inf, -inf
             return 0
         return max(0, int(numeric))
 
@@ -200,7 +201,7 @@ class CollectorArticleModel(BaseModel):
             numeric = float(value)
         except (TypeError, ValueError):
             return 1
-        if numeric != numeric:  # NaN
+        if not math.isfinite(numeric):  # NaN, inf, -inf
             return 1
         return max(1, int(numeric))
 

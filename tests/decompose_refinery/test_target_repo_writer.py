@@ -202,3 +202,45 @@ class TestFindExistingFile:
         """find_existing_file returns None for unknown article_id."""
         result = writer.find_existing_file(posts_dir, "nonexistent-999")
         assert result is None
+
+    def test_frontmatter_crlf_file_still_matches(self, writer, posts_dir):
+        """CRLF line endings must not hide a matching refinery_id."""
+        real_file = posts_dir / "2024-06-01-crlf.md"
+        real_file.write_bytes(b'---\r\nrefinery_id: "77"\r\n---\r\nContent with CRLF')
+
+        result = writer.find_existing_file(posts_dir, "77")
+        assert result == real_file
+
+    def test_frontmatter_int_value_matches(self, writer, posts_dir):
+        """An integer (unquoted) refinery_id must match the string id."""
+        real_file = posts_dir / "2024-06-01-int.md"
+        real_file.write_text("---\nrefinery_id: 88\n---\nContent")
+
+        result = writer.find_existing_file(posts_dir, "88")
+        assert result == real_file
+
+    def test_head_without_closing_marker_is_not_matched(self, writer, posts_dir):
+        """A head whose frontmatter never closes must not be parsed from the
+        body (the old code sliced from the opening marker to the END of the
+        file head, so a body line like 'refinery_id: 99' could false-match)."""
+        # Frontmatter opens but never closes within the scanned head; the
+        # body mimics the target key.
+        real_file = posts_dir / "2024-06-01-unclosed.md"
+        real_file.write_text(
+            "---\nrefinery_id: 999\nbody line\nrefinery_id: 42\nmore body"
+        )
+
+        # 42 is NOT this file's id (its id is 999, in the unclosed block)
+        assert writer.find_existing_file(posts_dir, "42") is None
+
+    def test_refinery_id_value_after_closing_marker_is_ignored(self, writer, posts_dir):
+        """Only the frontmatter block counts; a matching value in the body
+        must not self-heal the wrong file."""
+        real_file = posts_dir / "2024-06-01-body.md"
+        real_file.write_text(
+            '---\nrefinery_id: "33"\n---\nbody text with refinery_id: "44"'
+        )
+
+        result = writer.find_existing_file(posts_dir, "33")
+        assert result == real_file
+        assert writer.find_existing_file(posts_dir, "44") is None

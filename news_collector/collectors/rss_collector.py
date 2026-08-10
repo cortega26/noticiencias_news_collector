@@ -784,10 +784,12 @@ class RSSCollector(BaseCollector):
 
             # Date filter: drop items older than the configured recency
             # window (feed dates are parsed as UTC-aware datetimes; naive
-            # items are assumed UTC).
+            # items are assumed UTC). Non-datetime values are skipped rather
+            # than compared (a raw string would raise TypeError and kill the
+            # whole source).
             published = cand.get("published_date")
-            if published is not None:
-                if isinstance(published, datetime) and published.tzinfo is None:
+            if isinstance(published, datetime):
+                if published.tzinfo is None:
                     published = published.replace(tzinfo=timezone.utc)
                 if published < recent_threshold:
                     continue

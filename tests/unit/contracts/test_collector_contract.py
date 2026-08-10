@@ -127,3 +127,66 @@ def test_dump_for_storage():
         dump["url"] == "https://example.com/"
     )  # Canonicalized: http → https + trailing slash
     assert dump["article_metadata"]["credibility_score"] == 0.9
+
+
+@pytest.mark.parametrize(
+    "bad_word_count,expected",
+    [
+        (float("inf"), 0),
+        (float("-inf"), 0),
+        ("1e999", 0),
+        (float("nan"), 0),
+        ("not-a-number", 0),
+        (None, 0),
+        (-17, 0),
+        ("", 0),
+    ],
+)
+def test_word_count_sanitizer_clamps_all_non_finite(bad_word_count, expected):
+    """±inf/1e999/NaN/negative/non-numeric word counts must not crash or leak."""
+    data = {
+        "url": "http://example.com",
+        "title": "Title sufficient length",
+        "summary": "x" * 60,
+        "published_date": datetime.now(timezone.utc),
+        "source_id": "src_id",
+        "source_name": "SrcName",
+        "category": "category",
+        "word_count": bad_word_count,
+        "reading_time_minutes": 1,
+        "content": "A" * 501,
+    }
+    model = CollectorArticleModel(**data)
+    assert model.word_count == expected
+
+
+@pytest.mark.parametrize(
+    "bad_reading_time,expected",
+    [
+        (float("inf"), 1),
+        (float("-inf"), 1),
+        ("1e999", 1),
+        (float("nan"), 1),
+        ("not-a-number", 1),
+        (None, 1),
+        (-5, 1),
+        (0, 1),
+        ("", 1),
+    ],
+)
+def test_reading_time_sanitizer_clamps_all_non_finite(bad_reading_time, expected):
+    """±inf/1e999/NaN/negative/zero reading times must clamp to a safe minimum."""
+    data = {
+        "url": "http://example.com",
+        "title": "Title sufficient length",
+        "summary": "x" * 60,
+        "published_date": datetime.now(timezone.utc),
+        "source_id": "src_id",
+        "source_name": "SrcName",
+        "category": "category",
+        "word_count": 10,
+        "reading_time_minutes": bad_reading_time,
+        "content": "A" * 501,
+    }
+    model = CollectorArticleModel(**data)
+    assert model.reading_time_minutes == expected

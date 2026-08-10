@@ -399,11 +399,17 @@ class EditorialAuditor:
             validated_result = self._normalize_audit_result(raw_data)
 
             # Only persist a score when the provider actually returned usable
-            # data. Persisting the all-zeros default as a real "audit_passed"
-            # score poisons the cache: a later editorial run with a threshold
+            # data — i.e. at least one of the real audit fields is present.
+            # Persisting the all-zeros default as a real "audit_passed" score
+            # poisons the cache: a later editorial run with a threshold
             # enabled would block the article forever even though it was never
-            # really audited.
-            if raw_data:
+            # really audited. A truthy-but-keyless dict (e.g. {"error": ...})
+            # is exactly as poisonous as an empty one, so key presence (not
+            # truthiness) is the discriminator.
+            has_usable_data = bool(raw_data) and any(
+                key in raw_data for key in self._get_default_audit_result()
+            )
+            if has_usable_data:
                 # Save Score
                 self._save_score(article_id, validated_result)
 
@@ -414,7 +420,7 @@ class EditorialAuditor:
             self.failure_count = 0
 
             result = {
-                "status": "audit_passed" if raw_data else "audit_unavailable",
+                "status": "audit_passed" if has_usable_data else "audit_unavailable",
                 "reason": "",
                 "model": self.model,
                 "endpoint": self.api_url,

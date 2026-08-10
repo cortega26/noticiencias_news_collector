@@ -127,7 +127,16 @@ def _canonicalize_url_impl(url: str) -> str:  # noqa: C901
     # urlparse misreads "example.com:80/foo" as scheme="example.com", so only
     # treat it as a foreign scheme when the remainder is not host:port shaped.
     if parsed.scheme and parsed.scheme.lower() not in ("http", "https"):
-        looks_like_hostport = re.match(r"^\d{1,5}(/.*)?$", path) is not None
+        scheme_lower = parsed.scheme.lower()
+        # A scheme-less host:port URL ("example.com:80") is misread by
+        # urlparse as scheme="example.com". A genuine scheme (tel:, data:,
+        # javascript:) never contains a dot and never looks like a hostname,
+        # so use the scheme itself as the discriminator: only rebuild a
+        # host:port when the "scheme" contains a dot or is "localhost".
+        hostlike = "." in scheme_lower or scheme_lower == "localhost"
+        looks_like_hostport = (
+            hostlike and re.match(r"^\d{1,5}(/.*)?$", path) is not None
+        )
         if not looks_like_hostport:
             return url
         # Rebuild host:port from the misread pieces so the scheme-less path

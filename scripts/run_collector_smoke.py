@@ -40,7 +40,13 @@ def _shift_fixture_dates(events: List[ReplayEvent]) -> List[ReplayEvent]:
     newest: datetime | None = None
     for event in events:
         for article in event.articles:
-            normalized = (article.published or "").replace("Z", "+00:00")
+            published = article.published or ""
+            # Only a trailing "Z" is UTC; replace it anchored so an embedded
+            # "Z" elsewhere in the string cannot corrupt the offset.
+            if published.endswith("Z"):
+                normalized = published[:-1] + "+00:00"
+            else:
+                normalized = published
             if not normalized:
                 continue
             try:
@@ -62,10 +68,11 @@ def _shift_fixture_dates(events: List[ReplayEvent]) -> List[ReplayEvent]:
         articles = []
         for article in event.articles:
             published = article.published
-            normalized = (published or "").replace("Z", "+00:00")
-            if normalized:
+            if published and published.endswith("Z"):
+                published = published[:-1] + "+00:00"
+            if published:
                 try:
-                    dt = datetime.fromisoformat(normalized)
+                    dt = datetime.fromisoformat(published)
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)
                     published = (dt + offset).astimezone(timezone.utc).isoformat()

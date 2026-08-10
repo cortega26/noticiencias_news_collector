@@ -642,10 +642,23 @@ class ArticleRepository:
             try:
                 session.commit()
             except IntegrityError:
-                # Concurrent worker registered the same deterministic slug
-                # first; the identity is already locked. Treat as success.
+                # The unique index rejected the write. This can be either a
+                # benign concurrent retry of the SAME article (the slug is
+                # already persisted for this row) or a genuine slug collision
+                # with a DIFFERENT article (two distinct articles produced the
+                # same deterministic slug). Only the former is success; the
+                # latter must not report the identity as locked.
                 session.rollback()
-                return True
+                current = session.query(Article).filter(Article.id == val_id).first()
+                if current is not None and current.canonical_slug == slug:
+                    return True
+                logger.warning(
+                    "Slug {} could not be locked to article {} (collision or "
+                    "other constraint); identity not persisted.",
+                    slug,
+                    val_id,
+                )
+                return False
             return True
 
     # ------------------------------------------------------------------

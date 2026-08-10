@@ -103,3 +103,66 @@ async def test_headless_fetches_full_content_when_missing(headless_collector):
                     mock_fetch.assert_called_once()
                     args, _ = mock_fetch.call_args
                     assert "https://openai.com/article/1" in args[1]  # url is 2nd arg
+
+
+@pytest.mark.asyncio
+async def test_headless_saves_validated_model_not_raw_dict(headless_collector):
+    """
+    The admission gate must hand _save_article the filtered, validated
+    CollectorArticleModel — the raw dict carries collector-only keys
+    (tags, published_at) that extra='forbid' would reject at save time,
+    silently dropping every headless article.
+    """
+    source_config = {
+        "url": "https://openai.com/research",
+        "selectors": {"item": "div.item", "title": "h2", "link": "a"},
+    }
+
+    mock_browser = AsyncMock()
+    mock_context = AsyncMock()
+    mock_page = AsyncMock()
+
+    headless_collector.browser = mock_browser
+    mock_browser.new_context.return_value = mock_context
+    mock_context.new_page.return_value = mock_page
+    mock_page.content.return_value = "<html>Debug content</html>"
+    type(mock_page).url = PropertyMock(return_value="https://openai.com/blog")
+
+    with patch.object(headless_collector, "_ensure_browser", new_callable=AsyncMock):
+        with patch.object(headless_collector, "_emit_log"):
+            mock_item = AsyncMock()
+            mock_title_el = AsyncMock()
+            mock_title_el.inner_text.return_value = "Test Article Title"
+            mock_link_el = AsyncMock()
+            mock_link_el.get_attribute.return_value = "https://openai.com/article/1"
+            mock_item.query_selector.side_effect = lambda sel: (
+                mock_title_el if sel == "h2" else mock_link_el if sel == "a" else None
+            )
+            mock_page.query_selector_all.return_value = [mock_item]
+
+            with patch.object(
+                headless_collector, "_fetch_full_content", new_callable=AsyncMock
+            ) as mock_fetch:
+                mock_fetch.return_value = (
+                    "Full article content fetched separately. " * 40
+                )
+
+                with patch.object(
+                    headless_collector, "_save_article", return_value=True
+                ) as mock_save:
+                    result = await headless_collector.collect_from_source_async(
+                        "test_source", source_config
+                    )
+
+                    assert result["success"] is True
+                    assert result["articles_saved"] == 1
+
+                    # _save_article must receive a validated model, never the
+                    # raw dict (which contains tags/published_at → extra keys).
+                    mock_save.assert_called_once()
+                    saved_arg = mock_save.call_args.args[0]
+                    from news_collector.contracts import CollectorArticleModel
+
+                    assert isinstance(saved_arg, CollectorArticleModel)
+                    assert saved_arg.word_count >= 1
+                    assert saved_arg.reading_time_minutes >= 1

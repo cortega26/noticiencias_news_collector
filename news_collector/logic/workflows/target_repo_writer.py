@@ -193,10 +193,18 @@ class TargetRepoWriter:
         string literal search misidentifies post files.  Parse only the
         frontmatter block and compare the normalized str() value.
         """
-        if not content_head.startswith("---\n"):
+        # Normalize line endings: files written on Windows use CRLF, and
+        # both the opening marker check and the closing-marker search below
+        # assume LF.
+        content = content_head.replace("\r\n", "\n")
+        if not content.startswith("---\n"):
             return False
-        end_marker_idx = content_head.find("\n---", 4)
-        frontmatter_block = content_head[4:end_marker_idx]
+        end_marker_idx = content.find("\n---", 4)
+        if end_marker_idx == -1:
+            # No closing marker within the scanned head (malformed file or
+            # head truncated mid-frontmatter): do not guess from the body.
+            return False
+        frontmatter_block = content[4:end_marker_idx]
         try:
             parsed = yaml.safe_load(frontmatter_block) or {}
         except yaml.YAMLError:

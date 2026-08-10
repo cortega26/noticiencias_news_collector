@@ -217,6 +217,25 @@ def test_canonical_slug(db_manager):
     assert db_manager.articles.set_canonical_slug(99999, "new-slug") is False
 
 
+def test_canonical_slug_collision_with_other_article(db_manager):
+    """A slug collision with a DIFFERENT article must not report the
+    identity as locked (the slug must never be silently 'lost')."""
+    article_a = db_manager.articles.save_article(_payload("https://x.com/a"))
+    article_b = db_manager.articles.save_article(_payload("https://x.com/b"))
+    slug = "shared-deterministic-slug"
+
+    # A locks the slug first.
+    assert db_manager.articles.set_canonical_slug(int(article_a.id), slug)
+
+    # B's attempt collides at the unique index (B has no pre-existing slug,
+    # so the in-memory guard passes and the DB rejects the write).
+    assert db_manager.articles.set_canonical_slug(int(article_b.id), slug) is False
+    # B must NOT end up with a slug that was never persisted.
+    assert db_manager.articles.get_canonical_slug(int(article_b.id)) is None
+    # A keeps its identity.
+    assert db_manager.articles.get_canonical_slug(int(article_a.id)) == slug
+
+
 # ---------------------------------------------------------------------------
 # Category query and bulk validation
 # ---------------------------------------------------------------------------

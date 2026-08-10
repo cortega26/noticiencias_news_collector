@@ -151,3 +151,76 @@ def test_keyword_word_boundary_matching(monkeypatch, tmp_path: Path) -> None:
         article,
         "una nueva cura para la enfermedad fue descubierta",
     )
+
+
+def _make_auditor(monkeypatch, tmp_path: Path) -> EditorialAuditor:
+    monkeypatch.setattr(
+        "news_collector.components.editorial.auditor.get_model_for_stage",
+        lambda *args, **kwargs: "registry-auditor:13b",
+    )
+    cfg = SimpleNamespace(
+        editorial_auditor=SimpleNamespace(
+            enabled=True,
+            sampling_rate=1.0,
+            blocking=False,
+            timeout_seconds=5,
+            max_retries=2,
+            health_timeout_seconds=1,
+        ),
+        paths=SimpleNamespace(data_dir=tmp_path),
+        ollama=SimpleNamespace(api_url="http://localhost:11434/api/generate"),
+    )
+    return EditorialAuditor(cfg)
+
+
+def test_auditor_junk_dict_is_not_persisted_as_score(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A truthy provider dict without any real audit field must not be
+    persisted as an all-zeros 'audit_passed' score (cache poison)."""
+    auditor = _make_auditor(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        auditor.provider, "check_health", lambda timeout_seconds: (True, "ok")
+    )
+    monkeypatch.setattr(
+        auditor.provider,
+        "generate_sync",
+        lambda *args, **kwargs: {"error": "model returned junk", "foo": "bar"},
+    )
+
+    result = auditor.audit_article_sync(
+        article_id="1089",
+        content="Contenido de prueba",
+        source_url="https://example.com/article-1089",
+        article_data={"title": "Junk dict test"},
+    )
+
+    assert result["status"] == "audit_unavailable"
+    score_file = tmp_path / "article_metadata" / "1089" / "auditor_score.json"
+    assert not score_file.exists(), "junk dict must not be persisted as a score"
+
+
+def test_auditor_real_dict_is_persisted(monkeypatch, tmp_path: Path) -> None:
+    """A provider dict carrying at least one real audit field is a usable
+    audit and must be persisted."""
+    auditor = _make_auditor(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        auditor.provider, "check_health", lambda timeout_seconds: (True, "ok")
+    )
+    monkeypatch.setattr(
+        auditor.provider,
+        "generate_sync",
+        lambda *args, **kwargs: {"epistemic_rigor_score": 8.0, "issues": []},
+    )
+
+    result = auditor.audit_article_sync(
+        article_id="1090",
+        content="Contenido de prueba",
+        source_url="https://example.com/article-1090",
+        article_data={"title": "Real dict test"},
+    )
+
+    assert result["status"] == "audit_passed"
+    score_file = tmp_path / "article_metadata" / "1090" / "auditor_score.json"
+    payload = json.loads(score_file.read_text(encoding="utf-8"))
+    assert payload["audit"]["epistemic_rigor_score"] == 8.0
