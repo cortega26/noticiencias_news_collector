@@ -58,6 +58,40 @@
     fixture publish dates are shifted into the recency window, mirroring
     plan 050's `_relative_fixture_dates` in e2e tests.
 
+## Follow-up audit (2026-08-10, committed `053509b`)
+
+Adversarial audit of the batch found and fixed 7 bugs + 19 new regression
+tests (450 insertions):
+
+1. **Sanitizer OverflowError**: `sanitize_word_count`/`sanitize_reading_time`
+   crashed on ±inf / `'1e999'` (`int(inf)` uncaught); NaN was handled but
+   infinity wasn't. Now `math.isfinite`.
+2. **Foreign-scheme mangling**: the hostport misparse heuristic rewrote
+   `tel:12345`/`data:12345`/`javascript:12345` into `https://tel:12345/`.
+   Discriminator is now the scheme itself (dot or `localhost`).
+3. **Frontmatter CRLF + missing `---`**: `_frontmatter_refinery_id_matches`
+   failed on CRLF files and sliced the whole head when the closing marker
+   was absent (body parsed as YAML → false match). Normalized + guarded.
+4. **Headless never saved**: admission gate validated a filtered model but
+   `_save_article` received the raw dict (`tags`/`published_at` →
+   `extra="forbid"` → ValidationError → article dropped). Model now saved.
+5. **Auditor junk dict**: `if raw_data:` only guarded the empty dict; a
+   truthy junk dict (`{"error": ...}`) still persisted all-zeros as real
+   `audit_passed`. Key-presence check now the discriminator.
+6. **Slug collision lie**: `set_canonical_slug` returned True on ANY
+   IntegrityError — including a collision with a *different* article whose
+   slug was never persisted. Now re-queries and verifies ownership.
+7. **RSS filter TypeError**: recency filter compared non-datetime
+   `published_date` (crash); smoke script `Z`→`+00:00` replace was global
+   not trailing-anchored.
+
+Validation: `make lint`/`make type`/`make test` green (1758 passed / 4
+skipped). `make test-contracts` coverage gate 78.38% vs 80% remains the
+pre-existing failure documented in plans 050/051 (clean tree: 77.03% —
+this audit raised it). One pre-existing flaky e2e
+(`test_pipeline_e2e_bundle_root_is_repeatable`) fails intermittently on
+the clean tree too (passes in isolation / full-file runs).
+
 ## Verification
 
 ```bash
