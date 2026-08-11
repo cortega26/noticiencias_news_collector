@@ -507,6 +507,7 @@ degraded_failure_threshold = 2
 degraded_cooldown_seconds = 300.0
 degraded_probe_timeout_seconds = 5.0
 degraded_window_size = 5
+slow_response_seconds = 60.0
 
 [llm_rate_limiting]
 max_concurrent_requests = 2

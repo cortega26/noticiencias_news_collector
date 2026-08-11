@@ -876,6 +876,16 @@ class NvidiaConfig(StrictModel):
             "failures."
         ),
     )
+    slow_response_seconds: Optional[float] = Field(
+        default=60.0,
+        description=(
+            "Treat successful responses at or above this many seconds as "
+            "degradation signals (counted in the same window as failures, "
+            "with the same threshold). Guards against slow-but-successful "
+            "endpoints that never trip the error-based mechanism. Set to 0 "
+            "or empty to disable latency-based degradation."
+        ),
+    )
 
     @field_validator("api_key", mode="before")
     @classmethod

@@ -114,6 +114,7 @@ class NvidiaProvider:
         degraded_cooldown_seconds: float = 300.0,
         degraded_probe_timeout_seconds: float = 5.0,
         degraded_window_size: int = 5,
+        slow_response_seconds: Optional[float] = None,
     ):
         self.api_key = api_key
         self.model = model or "qwen/qwen3-next-80b-a3b-instruct"
@@ -131,6 +132,15 @@ class NvidiaProvider:
             degraded_window_size
             if isinstance(degraded_window_size, int) and degraded_window_size > 0
             else 5
+        )
+        # Coerce to a positive float; a non-numeric value from a mocked/false
+        # config (e.g. a MagicMock flowing through get_provider in tests)
+        # disables latency-based degradation instead of crashing comparisons.
+        self.slow_response_seconds = (
+            slow_response_seconds
+            if isinstance(slow_response_seconds, (int, float))
+            and slow_response_seconds > 0
+            else None
         )
 
         self._endpoint_url = f"{self.base_url}{_CHAT_COMPLETIONS_PATH}"
@@ -399,7 +409,7 @@ class NvidiaProvider:
                     "Async NVIDIA NIM complete in {:.2f}s", time.time() - start
                 )
                 limiter.circuit_breaker.record_success()
-                self._record_success()
+                self._record_success(elapsed=time.time() - start)
 
                 if json_mode:
                     return self._extract_json(text)
@@ -477,6 +487,7 @@ class NvidiaProvider:
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
+            start = time.time()
             try:
                 logger.debug(
                     "Sending sync prompt to NVIDIA NIM ({}) (timeout={}s, attempt={}/{})",
@@ -501,7 +512,7 @@ class NvidiaProvider:
                 text = self._extract_text(data)
 
                 limiter.circuit_breaker.record_success()
-                self._record_success()
+                self._record_success(elapsed=time.time() - start)
 
                 if json_mode:
                     return self._extract_json(text)
@@ -635,8 +646,34 @@ class NvidiaProvider:
                 )
                 self._state.recent_outcomes.clear()
 
-    def _record_success(self) -> None:
+    def _record_success(self, elapsed: Optional[float] = None) -> None:
+        slow = (
+            self.slow_response_seconds is not None
+            and elapsed is not None
+            and elapsed >= self.slow_response_seconds
+        )
         with self._state.lock:
+            if slow:
+                # Slow-but-successful responses count as degradation signals
+                # in the same window as failures: a limping endpoint that
+                # never errors still gets caught by the fallback chain.
+                self._state.recent_outcomes.append(False)
+                failures = self._state.recent_outcomes.count(False)
+                if failures >= self.degraded_failure_threshold:
+                    self._state.degraded_until = (
+                        time.monotonic() + self.degraded_cooldown_seconds
+                    )
+                    self._state.degraded_announced = False
+                    logger.warning(
+                        "NVIDIA NIM marked degraded for {:.0f}s after {} slow "
+                        "responses (>= {}s) in the last {} attempts",
+                        self.degraded_cooldown_seconds,
+                        failures,
+                        self.slow_response_seconds,
+                        len(self._state.recent_outcomes),
+                    )
+                    self._state.recent_outcomes.clear()
+                return
             self._state.recent_outcomes.append(True)
             if self._state.degraded_until != 0.0:
                 self._state.degraded_until = 0.0

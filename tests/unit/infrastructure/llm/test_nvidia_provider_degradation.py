@@ -435,3 +435,78 @@ class TestSharedDegradationState:
         provider._record_success()
         provider._record_success()
         assert provider.is_degraded() is False
+
+
+class TestLatencyBasedDegradation:
+    """Slow-but-successful responses must count toward degradation
+    (plans ledger #247)."""
+
+    def test_slow_successes_trip_degradation(self):
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=30.0,
+        )
+        provider._record_success(elapsed=31.0)
+        assert provider.is_degraded() is False
+        provider._record_success(elapsed=45.0)
+        assert provider.is_degraded() is True
+
+    def test_fast_success_never_trips(self):
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=30.0,
+        )
+        provider._record_success(elapsed=1.0)
+        provider._record_success(elapsed=2.0)
+        provider._record_success(elapsed=3.0)
+        assert provider.is_degraded() is False
+
+    def test_slow_below_threshold_is_healthy(self):
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=30.0,
+        )
+        provider._record_success(elapsed=29.0)
+        provider._record_success(elapsed=29.5)
+        assert provider.is_degraded() is False
+
+    def test_latency_tracking_disabled_by_default(self):
+        provider = _provider(degraded_failure_threshold=2, degraded_window_size=5)
+        provider._record_success(elapsed=999.0)
+        provider._record_success(elapsed=999.0)
+        assert provider.is_degraded() is False
+
+    def test_zero_or_nonnumeric_threshold_disables_tracking(self):
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=0,
+        )
+        provider._record_success(elapsed=999.0)
+        provider._record_success(elapsed=999.0)
+        assert provider.is_degraded() is False
+
+        from unittest.mock import MagicMock
+
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=MagicMock(),
+        )
+        assert provider.slow_response_seconds is None
+
+    def test_slow_success_does_not_clear_prior_degradation(self):
+        provider = _provider(
+            degraded_failure_threshold=2,
+            degraded_window_size=5,
+            slow_response_seconds=30.0,
+        )
+        provider._record_success(elapsed=31.0)
+        provider._record_success(elapsed=45.0)
+        assert provider.is_degraded() is True
+        # A slow success while degraded must not count as a recovery signal.
+        provider._record_success(elapsed=50.0)
+        assert provider.is_degraded() is True

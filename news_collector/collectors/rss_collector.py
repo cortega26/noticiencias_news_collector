@@ -293,7 +293,11 @@ class RSSCollector(BaseCollector):
 
             if self.health_tracker:
                 self.health_tracker.record_success(source_id, "fetch")
-                self.health_tracker.record_success(source_id, "parse")
+                # FOUND column semantics: count actual parsed articles, not
+                # the implicit count-1 (which made FOUND always 1 per cycle).
+                self.health_tracker.record_success(
+                    source_id, "parse", count=len(raw_articles)
+                )
 
             # Batch process candidates for filtering pipeline
             processed_candidates = []

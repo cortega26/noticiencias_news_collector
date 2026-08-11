@@ -141,3 +141,47 @@ def test_extract_articles_recency_filter_skips_non_datetime(rss_collector):
         assert "https://old.example.com/a" not in urls
         assert "https://fresh.example.com/b" in urls
         assert "https://str.example.com/c" in urls
+
+
+def test_parse_success_records_article_count_as_found(rss_collector):
+    """FOUND column must count parsed articles, not the implicit count-1
+    (regression for the FOUND/SAVED mislabeling, plans ledger #248)."""
+    from news_collector.diagnostics import SourceHealthTracker
+
+    tracker = SourceHealthTracker()
+    candidates = [
+        {
+            "title": f"Title {i} is long enough",
+            "url": f"http://feed.com/{i}",
+            "summary": "Summary",
+            "published_date": datetime(2026, 8, 1, 12, 0, 0),
+        }
+        for i in range(3)
+    ]
+
+    with (
+        patch.object(
+            rss_collector,
+            "_fetch_feed_robust",
+            return_value={
+                "success": True,
+                "status_code": 200,
+                "content": b"xml-content",
+                "url": "http://feed.com",
+            },
+        ),
+        patch.object(
+            rss_collector,
+            "_parse_feed_robust",
+            return_value={"success": True, "parsed_feed": object()},
+        ),
+        patch.object(rss_collector.parser, "extract_items", return_value=candidates),
+    ):
+        rss_collector.health_tracker = tracker
+        rss_collector.db_manager.article_exists.return_value = False
+        rss_collector.collect_from_source(
+            "s1", {"url": "http://feed.com", "name": "RSS"}
+        )
+
+    source = tracker.get_source("s1")
+    assert source.parsed_ok == 3

@@ -146,6 +146,7 @@
 | nvidia.degraded_cooldown_seconds | float | 300.0 | Seconds the provider stays degraded before a health probe is allowed to re-arm it. |  |  |
 | nvidia.degraded_probe_timeout_seconds | float | 5.0 | Timeout used for the health probe that re-arms a degraded provider. |  |  |
 | nvidia.degraded_window_size | int | 5 | Number of most-recent LLM call outcomes to track when deciding whether to mark the NVIDIA provider degraded. A provider is marked degraded once `degraded_failure_threshold` failures appear within this window — not only on strictly consecutive failures. |  |  |
+| nvidia.slow_response_seconds | Optional | 60.0 | Treat successful responses at or above this many seconds as degradation signals (counted in the same window as failures, with the same threshold). Guards against slow-but-successful endpoints that never trip the error-based mechanism. Set to 0 or empty to disable latency-based degradation. |  |  |
 | llm_rate_limiting | LLMRateLimitingConfig |  |  |  |  |
 | llm_rate_limiting.max_concurrent_requests | int | 2 | Maximum number of concurrent in-flight LLM requests. |  |  |
 | llm_rate_limiting.min_delay_between_requests | float | 1.0 | Minimum seconds between consecutive LLM requests. |  |  |

@@ -278,6 +278,7 @@ def get_provider(
             nvidia_cfg, "degraded_probe_timeout_seconds", 5.0
         )
         use_degraded_window = getattr(nvidia_cfg, "degraded_window_size", 5)
+        use_slow_response_seconds = getattr(nvidia_cfg, "slow_response_seconds", None)
         logger.info(
             "Configuring NvidiaProvider with model {} (max_tokens={})",
             use_model,
@@ -295,6 +296,7 @@ def get_provider(
                 degraded_cooldown_seconds=use_degraded_cooldown,
                 degraded_probe_timeout_seconds=use_degraded_probe_timeout,
                 degraded_window_size=use_degraded_window,
+                slow_response_seconds=use_slow_response_seconds,
             )
         )
 
