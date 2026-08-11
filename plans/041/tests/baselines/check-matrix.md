@@ -12,12 +12,12 @@ Every workflow job / Make / npm target, with trigger, command, and canonical own
 | Unit test | `make test` | `ci.yml` (test job) | push/PR | `test` | fast, excludes e2e |
 | Full test | `make test-all` | — | manual/prepush | `test-all` | includes slow e2e |
 | Coverage | `make check-coverage` | `ci.yml` (coverage job) | push/PR | `check-coverage` | ≥80% |
-| Contracts | `make test-contracts` | `ci.yml` (contracts job) | push/PR | `test-contracts` | D1 contract enforcement |
-| Boundaries | `make test-boundaries` | `ci.yml` (boundaries job) | push/PR | `test-boundaries` | D1 system boundary |
+| Contracts | `make test-contracts` | `verify-ci` (no dedicated ci.yml job; coverage gate ≥80% on news_collector/contracts) | push/PR | `test-contracts` | D1 contract enforcement |
+| Boundaries | `make test-boundaries` | `verify-ci` (no dedicated ci.yml job) | push/PR | `test-boundaries` | D1 system boundary |
 | System | `make test-system` | `system-verification.yml` | push/PR | `test-system` | S1 scoped |
-| Security | `make security` | `quality.yml` | push/PR + scheduled | `security` | supply-chain + secret scan |
+| Security | `make security` | `quality.yml` (quality-gate job) | push/PR + scheduled | `security` | supply-chain + bandit + gitleaks secret scan |
 | Build | `make build` | `release.yml` | release | `build` | wheel artifact |
-| Config docs | `make config-docs-check` | `ci.yml` (config-docs job) | push/PR | `config-docs-check` | schema/docs parity |
+| Config docs | `make config-docs-check` | `ci.yml` (config job) | push/PR | `config-docs-check` | schema/docs parity |
 | Quality gate | `make quality-gate` | `quality.yml` | push/PR | `quality-gate` | snapshot-first |
 | Prepush | `make prepush` | — | manual | `prepush` | test-all + quality-gate |
 | Perf | `make perf` | — | manual | `perf` | performance-marked tests |

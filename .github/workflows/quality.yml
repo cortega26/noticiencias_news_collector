@@ -52,6 +52,16 @@ jobs:
           make quality-ci
           make quality-gate
 
+      - name: Run Secret Scan (gitleaks)
+        run: |
+          mkdir -p reports/security
+          gitleaks detect --source . --config .gitleaks.toml \
+            --report-format json --report-path reports/security/gitleaks.json \
+            --redact --no-banner || true
+          .venv/bin/python scripts/security_gate.py gitleaks \
+            reports/security/gitleaks.json --severity HIGH \
+            --status reports/security/status.json
+
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

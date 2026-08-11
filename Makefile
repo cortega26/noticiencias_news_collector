@@ -47,7 +47,7 @@ PLACEHOLDER_BASE ?= $(shell \
 PLACEHOLDER_PATTERNS := tools/placeholder_patterns.yml
 PIP_AUDIT_REPORT := $(SECURITY_DIR)/pip-audit.json
 BANDIT_REPORT := $(SECURITY_DIR)/bandit.json
-TRUFFLEHOG_REPORT := $(SECURITY_DIR)/trufflehog.json
+GITLEAKS_REPORT := $(SECURITY_DIR)/gitleaks.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 BOOTSTRAP_REFINERY_STAMP := $(VENV_REFINERY)/.bootstrap-complete
@@ -239,10 +239,17 @@ security: bootstrap ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
 	@echo "[security] Running pip-audit"
 	@$(PIP_AUDIT) -r requirements.lock --format json --output $(PIP_AUDIT_REPORT) || true
-	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@$(PYTHON_BIN) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running bandit"
 	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high || true
-	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@$(PYTHON_BIN) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
+	@echo "[security] Running gitleaks"
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks detect --source . --config .gitleaks.toml --report-format json --report-path $(GITLEAKS_REPORT) --redact --no-banner || true; \
+		$(PYTHON_BIN) scripts/security_gate.py gitleaks $(GITLEAKS_REPORT) --severity HIGH --status $(SECURITY_STATUS); \
+	else \
+		echo "[security] gitleaks not installed; skipping secret scan (CI installs it)."; \
+	fi
 
 security-dev: bootstrap ## Run security audit on dev and refinery environments
 	@echo "[security-dev] Auditing dev and refinery dependencies..."

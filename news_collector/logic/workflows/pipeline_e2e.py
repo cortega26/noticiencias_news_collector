@@ -324,6 +324,31 @@ class LocalPRGitHandler:
         return f"https://example.test/pr/{branch_name}"
 
 
+class LocalEditorialAuditor:
+    """Deterministic auditor seam for E2E publication runs.
+
+    The real ``EditorialAuditor`` performs network LLM health checks and
+    submissions on a background ``ThreadPoolExecutor`` that is never shut
+    down; under full-suite load the leaked executor thread and the
+    random-sampling trigger made ``test_pipeline_e2e_bundle_root_is_repeatable``
+    exceed its 180s pytest-timeout nondeterministically.  This stub always
+    declines audits (``should_run_fast`` → False), so no score is cached and
+    the policy gate fails open exactly like "no score available".
+    """
+
+    def should_run_fast(self, article, content) -> bool:
+        del article, content
+        return False
+
+    def get_cached_score(self, article_id) -> None:
+        del article_id
+        return None
+
+    def audit_article_sync(self, *args, **kwargs):
+        del args, kwargs
+        return {"status": "audit_unavailable", "reason": "e2e harness stub"}
+
+
 def _fixture_check_script() -> str:
     return """\
 const fs = require("fs");
@@ -838,6 +863,10 @@ def run_pipeline_e2e_scenario(  # noqa: C901
                 config=_make_engine_config(bundle_dir),
             )
             engine._download_image = lambda url, slug, target: url
+            # Deterministic auditor seam: the real auditor performs network
+            # LLM calls on a leaked background thread, which made the two-run
+            # repeatability test exceed its timeout under full-suite load.
+            engine.auditor = LocalEditorialAuditor()
 
             if fixture.get("publication", {}).get("seed_publishing_state"):
                 publication_db.mark_article_publishing(
