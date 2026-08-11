@@ -7,10 +7,11 @@ The News Collector operates with two database profiles:
 - **Development:** defaults to SQLite stored under `data/news.db`. This mode
   is optimized for local workflows and does not require any external
   services.
-- **Production/Staging:** *intended* to promote the storage layer to
-  PostgreSQL whenever `ENV`, `APP_ENV`, or `ENVIRONMENT` resolve to
-  `production`, `prod`, `staging`, or `stage` — but see "PostgreSQL is not
-  actually usable yet" below before relying on this.
+- **Production:** **SQLite is the chosen production database** (operator
+  decision, 2026-08-11, plan 046 REJECTED: "si podemos alcanzar las mismas
+  funcionalidades con sqlite así se hará"). The PostgreSQL path is not in
+  the roadmap; do not pursue it unless the operator explicitly reverses
+  this decision.
 
 The runtime environment is detected via `noticiencias/config_manager.py` and the
 selected profile is exposed through `get_runtime_config().database_config`.
@@ -63,13 +64,15 @@ current migration doc or comment should imply otherwise.
   writing anything — see `news_collector/storage/migration_guard.py`. Use
   this to detect drift; never wire it to auto-migrate (see below).
 
-## PostgreSQL is not actually usable yet
+## PostgreSQL is not actually usable yet — and is not planned to be
 
 While investigating plan 046 ("Prove and automate production database
 migrations"), attempting to run a real disposable-PostgreSQL migration test
 surfaced three independent, stacked gaps — each would have to be fixed before
 any PostgreSQL deployment of this backend (production or otherwise) could
-work at all:
+work at all. Plan 046 was subsequently REJECTED (operator decision,
+2026-08-11: SQLite-only); the gaps below are recorded for completeness and
+are **not** scheduled work:
 
 1. **No PostgreSQL driver is installed.** `psycopg2` (or any other
    `postgresql` DBAPI) is absent from `pyproject.toml`, `requirements.txt`,

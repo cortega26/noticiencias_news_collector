@@ -1,6 +1,24 @@
 # Plan 046: Prove and automate production database migrations — spec
 
-## Outcome: PARTIAL (STOP conditions hit; safe, deployment-independent scope delivered)
+## Outcome: REJECTED (operator decision 2026-08-11 — SQLite-only, no PostgreSQL)
+
+> **Operator decision (2026-08-11):** "De momento no, si podemos alcanzar las
+> mismas funcionalidades con sqlite así se hará." — PostgreSQL is not in the
+> roadmap; SQLite stays the production database for as long as it covers the
+> required functionality. The remaining PostgreSQL-specific scope of this
+> plan (driver dependency, compose env-var fix, `config.toml` portability,
+> disposable-Postgres migration test, production pre-deploy job) is
+> explicitly **not** to be pursued. Do not re-audit as new work.
+
+## What was delivered before the rejection (stays on main)
+
+Everything this plan shipped that is SQLite-safe and deployment-independent
+remains valid and tested: Alembic-first SQLite test coverage (18 tests),
+the read-only migration revision guard (`migration_guard.py` +
+`scripts/check_migration_revision.py`), and the doc corrections. These are
+the durable value of the plan and are unaffected by the rejection.
+
+## Original outcome record (PARTIAL — STOP conditions hit)
 
 This plan's own STOP conditions are worded as instructions to follow, not
 obstacles to route around:
