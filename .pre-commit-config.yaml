@@ -46,3 +46,13 @@ repos:
           - python-dotenv
         pass_filenames: false
         stages: [pre-commit, manual]
+      # Free-tier equivalent of GitHub server-side push protection (private
+      # repos require GHAS for that). Runs on `pre-commit install
+      # --hook-type pre-push`; blocks any push whose history/tree contains a
+      # secret, using the same config + baseline as CI (make security).
+      - id: gitleaks-push
+        name: gitleaks secret scan (pre-push)
+        entry: gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json --no-banner
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
