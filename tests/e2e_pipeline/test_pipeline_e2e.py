@@ -15,7 +15,10 @@ from news_collector.logic.workflows.pipeline_e2e import (
 )
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "pipeline_e2e"
-pytestmark = pytest.mark.timeout(180)
+# The repeatability test runs the full pipeline twice; under full-suite
+# load (make type / verify-ci with coverage instrumentation) two runs
+# exceed 180s. 300s covers the worst observed case with margin.
+pytestmark = pytest.mark.timeout(300)
 
 
 @pytest.mark.parametrize(
