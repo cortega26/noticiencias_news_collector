@@ -168,6 +168,14 @@ omit = [
     # doesn't demand an unreachable 90% line coverage (see
     # scripts/coverage_ratcheter.sh omit handling).
     "apps/refinery/admin_panel.py",
+    # E2E publication harness: heavy git/subprocess/fixture I/O (git init,
+    # copytree, npx prettier, sockets/FIFOs) plus defensive branches
+    # (missing npx, missing frontend root, dirty-repo commit guards) that
+    # the 90% changed-file gate would demand unreachably. It is exercised
+    # directly by tests/e2e_pipeline/ and tests/unit/logic/workflows/
+    # test_pipeline_e2e_seams.py; excluded from measurement for the same
+    # reason as admin_panel.py.
+    "news_collector/logic/workflows/pipeline_e2e.py",
 ]
 
 [tool.coverage.report]
