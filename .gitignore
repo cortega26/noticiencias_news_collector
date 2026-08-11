@@ -144,8 +144,8 @@ final_lint_log.txt
 cloudflare.env
 
 # Plan test harness scratch (baselines/ and harness.sh stay tracked)
-plans/*/tests/.astrolib-rg.txt
-plans/*/tests/.metadata-run/
+plans/**/tests/.astrolib-rg.txt
+plans/**/tests/.metadata-run/
 
 
 *.db-wal
