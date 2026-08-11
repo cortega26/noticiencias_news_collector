@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check plans-ledger-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist test:audit test:e2e check:contract-sync` |
 | Whole workspace (read-only) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; never publishes, pushes, or uses secrets |
 
@@ -59,6 +59,7 @@ make security
 make quality-gate
 make build
 make perf
+make plans-ledger-check  # plans/README.md ledger drift (statuses, DONE-in-root, commit refs)
 ```
 
 The complete PR-equivalent local gate is:
