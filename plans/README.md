@@ -6,9 +6,11 @@ Third pass (2026-08-07): backend correctness/regression sweep (see Open/Rejected
 
 **Last verified:** `644e07f` (2026-08-11) — statuses reconciled against `plans/` on
 disk and git history; DONE plans archived; see `scripts/validate_plans_ledger.py`.
+Updated 2026-08-11: plan 043 completed and archived (Steps 3-4 landed); OLLAMA_MODEL
+finding (#246) resolved.
 
 > Completed plans (001–017, 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040,
-> 041, 042, 044, 047, 049, 050, 051, 053, 054, 055, 056)
+> 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, 056)
 > have been moved to `plans/archive/`.
 > **Read first — out-of-band action:** Plan 001 covers code hygiene for committed
 > secrets — the operator must still **rotate both credentials** and decide on
@@ -32,12 +34,11 @@ disk and git history; DONE plans archived; see `scripts/validate_plans_ledger.py
 | 021 | [Rebuild the publication callback contract](021-rebuild-publication-callback-contract.md) | P1 | L | 020 | PARTIAL — Steps 0-3 and 5 DONE (stable refinery_id-based identity persisted end to end, publication state machine rebuilt with a real "publishing → PR_CREATED → rejected/completed" flow instead of instant-completed-on-PR, frontend envelope double-nesting bug fixed at the root, a genuine cross-repo contract test replaying the real sender against the real backend). Step 4 (auth) code is done on both sides and fails closed outside `development`; only the real `WEBHOOK_API_KEY`/`BACKEND_WEBHOOK_TOKEN` secret values remain — the operator's own credentials, not something this session could set. See `plans/021/spec.md` |
 | 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | PARTIAL — all 5 steps implemented and tested in the frontend repo (contract, honest form, request bounds, durable-sink tracking, rate limiting/idempotency); production endpoint stays disabled pending operator R2/KV provisioning — see `plans/023/spec.md` and `../noticiencias/docs/report-pipeline-setup.md` |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | PARTIAL — Steps 1-2 and 4 (partial) done: honest per-file coverage thresholds (verified against an injected-branch regression), deterministic local-build Playwright tests (caught and fixed the config silently defaulting to live production), coverage+Playwright gates wired into `content-guard.yml`. Step 3 (Worker fetch-boundary tests) hits its own STOP condition — `@cloudflare/vitest-pool-workers` requires vitest ^4.1.0, `workers/` deliberately pins 4.0.18 (synced to the main repo one day before this session for Node 24 alignment) — resolving it is a toolchain-lock decision, not this plan's to make. 5 browser tests are `test.fixme()` pending the operator's own investigation into a local/production trailing-slash mismatch. See `plans/031/spec.md` |
-| 043 | [Repair active documentation](043-repair-active-documentation.md) | P1 | M | 020, 021, 023, 024, 028, 032, 039, 041 | PARTIAL — Steps 1-2 done: stale-string check clean (no active matches for `src/content/config.ts`, `Astro 5`, `audit-security.yml`, `security.yml`, `noticiencias.cl/post`). Frontend README updated to Astro 7; `docs/tagging.md` path fixed to `src/content.config.ts`; `docs/ARCHITECTURE.md` and `docs/SOURCE_OF_TRUTH.md` search flow updated for plan 039; backend `docs/PRODUCT_FLOW.md` domain fixed to `noticiencias.com`. Steps 3-4 (expand doc drift checker, declare historical boundaries) deferred pending plan 041 full completion. See `plans/043/spec.md` |
 | 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | PARTIAL — Step 1 cursor/pagination tests expanded (6→11, covering traversal, malformed cursor, date boundaries, empty results); Steps 2-5 gated on production cardinality data |
 | 046 | [Prove and automate production migrations](046-prove-and-automate-production-migrations.md) | P1 | M | 024, 030 | PARTIAL — Alembic-first SQLite test coverage (every revision→head, downgrade roundtrips, model/schema parity, single linear history) and a read-only revision guard (`migration_guard.py` + `scripts/check_migration_revision.py`) are done and tested; Step 1 (production topology) hits its own STOP condition (undiscoverable in-repo) and a second STOP was found empirically — PostgreSQL is not usable yet (no driver dependency, dead compose env vars, host-absolute `config.toml` paths) — see `plans/046/spec.md` and `docs/database_deployment.md` |
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Step 1 done (ontology/consumer map). Operator confirmed they'll self-review the corpus, so Steps 2-3 tooling is now built: `tests/data/enrichment_eval.jsonl` (44-record stratified seed, draft labels kept separate from gold), `scripts/validate_enrichment_corpus.py`, `scripts/evaluate_enrichment_registry.py` (only scores reviewed records; `sufficient_evidence` stays false below 200), plus `docs/spikes/enrichment-corpus-labeling-guide.md`. Single-reviewer limitation vs. the plan's own two-reviewer ask documented honestly, not silently downgraded. Steps 4-6 still not attempted — depend on the reviewer actually labeling a meaningful sample. See `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md` |
 
-> Plans 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 044, 047,
+> Plans 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 047,
 > 049, 050, 051, 053, 054, 055, and 056 are DONE and archived.
 
 Status values: TODO | IN PROGRESS | PARTIAL | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale).
@@ -47,9 +48,16 @@ A DONE plan that stays in `plans/` root must carry `KEEP: <reason>` in its row �
 ## Completed (archived)
 
 All plan files for plans 001–017, 018–030, 032, 033, 034, 035, 036, 037, 038, 039,
-040, 041, 042, 044, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
+040, 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
 `plans/archive/` (including each plan's `spec.md`/`todo.md` working folder, where
 one exists). The status ledger above covers only remaining work.
+
+Plan 043 (repair active documentation) completed in full on 2026-08-11: the frontend
+`check:doc-drift.js` and new backend `scripts/check_doc_drift.py` (`make docs-check`,
+wired into `verify-ci`) now validate declared invariants — schema path, site host,
+framework/runtime majors, workflow files, make targets, cross-repo refs — plus
+`scripts/check_doc_review.py` (`make docs-review`) as a changed-file gate; historical
+boundaries and fact ownership are declared in both repos. See `plans/archive/043/spec.md`.
 
 ## Dependency notes (remaining work)
 
@@ -70,7 +78,20 @@ one exists). The status ledger above covers only remaining work.
 
 ### Third pass (2026-08-07, backend correctness/regression sweep)
 
-- **`OLLAMA_MODEL=qwen2.5:32b` (`.env:4`) resolves the `auditor`/`default` Ollama stages to a model not present in `ollama list`.** Operator note (2026-08-07): "qwen2.5:32b se cambió a nemotron... más nuevo (más rápido y eficiente)." Measured, same day: `.env:4` = `OLLAMA_MODEL=qwen2.5:32b`; the "Resolved Ollama model map" printed by two live `--dry-run` runs shows `"auditor"` and `"default"` both resolving to `qwen2.5:32b` with `"source":"ENV"`; `ollama list` / `curl localhost:11434/api/tags` returns `['qwen3-next:80b-a3b-instruct-q4_K_M', 'deepseek-v4-flash:cloud', 'kimi-k2.5:cloud', 'llama3.2:latest']` — **no `nemotron`-tagged model is pulled locally**, and `grep -rn nemotron config.toml .env noticiencias/config_schema.py` only finds it in `[nvidia].model = "nvidia/nemotron-3-super-120b-a12b"` (the cloud NIM model, migrated in commit `b40c9d0`, a different config key entirely from the local Ollama stage map). The likely reading is that the operator's note describes the NVIDIA-side migration (already done, already in config) and the local Ollama `auditor`/`default` stage in `.env` is a separate, still-open item — but this file could not confirm that without guessing at the operator's intent, so it's filed open rather than resolved. Needs one of: (a) `.env:4` updated to a locally-installed Nemotron Ollama tag if one is meant to be pulled, or (b) confirmation that `qwen2.5:32b` there is intentional/unrelated to the NVIDIA migration.
+- **RESOLVED 2026-08-11 (issue #246): `OLLAMA_MODEL=qwen2.5:32b` (`.env:4`)**
+  was the original finding; the value now reads `qwen3-next:80b-a3b-instruct-q4_K_M`,
+  which is the most appropriate local model for the collector's needs: it is
+  present in `ollama list` (50GB, pulled locally), matches `config.toml [ollama]`
+  (`model`/`translator_model`/`editor_model`) and the `config_schema.py` default,
+  and a live resolution of `resolve_ollama_model_map` (2026-08-11) shows
+  `auditor` and `default` resolving from `ENV` to `qwen3-next:80b-a3b-instruct-q4_K_M`
+  with no normalization. The cloud-tagged models (`deepseek-v4-flash:cloud`,
+  `kimi-k2.5:cloud`) are not appropriate for the local `auditor`/`default` stages:
+  the pipeline is local-first (localhost:11434, offline dry-runs), and
+  `llama3.2:latest` stays reserved for the cheap `headlines`/`scoring` stages.
+  The operator's nemotron note refers to the NVIDIA NIM cloud migration
+  (`[nvidia].model = "nvidia/nemotron-3-super-120b-a12b"`), a different key,
+  already landed. No further action; issue can be closed.
 - **Degradation mechanism (plans 051/053) doesn't catch slow-but-successful NVIDIA responses**: noted, not planned as its own item — folded into plan 053's "Maintenance notes" as an acknowledged limitation instead, since fixing it is a product/design call (what latency counts as "degraded"?) rather than a mechanical bug fix. Live evidence (2026-08-07): two real `PreScorer` calls succeeded in 51s and 27s with no error logged, while NVIDIA's own health-check endpoint responded in 0.8s. Revisit as a real plan only after 053+055 land and make it observable which provider actually served each call.
 - **`SourceHealthTracker`'s "FOUND"/"SAVED" health-table columns don't mean what their headers imply.** Both live `--dry-run` runs (2026-08-07) printed `medicalxpress | ✅ WORKING | 1 | 5 | 0 | 0` — SAVED (5) exceeding FOUND (1), which looks impossible for columns meaning "articles found" / "articles saved." Root cause, read in `news_collector/diagnostics.py` and `news_collector/collectors/rss_collector.py:296`: the "FOUND" column displays `data.parsed_ok`, incremented by exactly 1 per source per collection cycle whenever the feed parses successfully at all (`self.health_tracker.record_success(source_id, "parse")`, called once, unconditionally, regardless of article count) — not an article count. "SAVED" (`data.saved`) genuinely counts per-article (`base_collector.py:1030`, once per `saved_count` from `save_articles_bulk`), which in dry-run comes from `_install_dry_run_mocks` (`system/__init__.py:18`) simulating the save without touching the real DB — confirmed safe: `news.db`'s mtime was unchanged (2026-07-21) after both test runs. So this is a diagnostic-table mislabeling (cosmetic, no data-safety impact, no effect on real behavior), not the data-integrity bug it first looks like. Worth a small fix (`record_success(source_id, "parse", count=len(raw_articles))` at `rss_collector.py:296` instead of the implicit count-1 default) if the health table is relied on for real monitoring, but not planned here — flagging for the operator to decide if it's worth a plan.
 
@@ -85,12 +106,11 @@ keeps only the pointer.
 ## Recommended waves (remaining work)
 
 1. **Unblock operator-gated plans:** 021 (needs secrets), 023 (needs KV/R2 provisioning), 031 (toolchain-lock decision), 046 (production topology + PG enablement), 048 (corpus labeling).
-2. **Close PARTIAL plans:** 043 (steps 3-4 after 041), 045 (steps 2-5 after production cardinality data).
+2. **Close remaining PARTIAL plan:** 045 (steps 2-5 after production cardinality data).
 
 ## Cross-plan integration rules (remaining)
 
 - **021 → 023 → 031**: the callback-contract, report-pipeline, and frontend-test plans share the same `workers/` + webhook surface; land in that order.
-- **043 last**: documentation repair closes only after the plans it references are done.
 - **No speculative systems:** 045/046 measure first; no new spikes without a foundation plan.
 
 ## Scope and selection record

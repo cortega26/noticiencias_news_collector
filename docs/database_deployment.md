@@ -12,8 +12,8 @@ The News Collector operates with two database profiles:
   `production`, `prod`, `staging`, or `stage` — but see "PostgreSQL is not
   actually usable yet" below before relying on this.
 
-The runtime environment is detected via `config/settings.py` and the selected
-profile is exposed through `get_runtime_config().database_config`.
+The runtime environment is detected via `noticiencias/config_manager.py` and the
+selected profile is exposed through `get_runtime_config().database_config`.
 
 ## Environment Variables
 

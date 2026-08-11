@@ -79,9 +79,10 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 
 ## Audit artifacts
 
-These are historical audit records. They are useful as context but are **not** the operational
+These are **historical** audit records. They are useful as context but are **not** the operational
 source of truth for current architecture or behavior. If any audit finding conflicts with
 `ARCHITECTURE.md`, `AGENTS.md`, or `PIPELINE_CONTRACTS.md`, the live governance docs win.
+Historical documents are preserved as written; do not bulk-edit them to match current behavior.
 
 | File/Folder | Contents |
 |---|---|
@@ -90,6 +91,10 @@ source of truth for current architecture or behavior. If any audit finding confl
 | `SPRINT_B_REPORT.md` | Sprint B outcome summary |
 | `archive/` | Archived refactor artifacts |
 | `CHANGELOG.md` | Docs-layer changelog (see repo-root `CHANGELOG.md` for releases) |
+
+**Historical boundary rule:** edits under `audits/`, `reports/`, `archive/`, and dated changelogs
+are historical evidence — do not rewrite them to describe the current system. Current behavior
+claims belong in the active docs above, and `make docs-check` enforces that split.
 
 ---
 

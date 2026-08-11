@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -176,6 +176,12 @@ docs-api: bootstrap ## Generate API reference documentation with pdoc
 
 docs: docs-api ## Alias for generating API documentation
 
+docs-check: bootstrap ## Validate active docs: paths, make targets, workflow files, declared invariants (plan 043)
+	@$(PYTHON_BIN) scripts/check_doc_drift.py
+
+docs-review: bootstrap ## Changed-file gate: protected code changes require an active-doc review (plan 043)
+	@$(PYTHON_BIN) scripts/check_doc_review.py
+
 format: lint-fix ## Alias for auto-formatting helpers
 
 type: typecheck ## Alias for static type checking (mypy)
@@ -188,7 +194,7 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
-verify-ci: lint type test test-contracts test-boundaries security config-docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test test-contracts test-boundaries security config-docs-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py

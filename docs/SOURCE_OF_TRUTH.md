@@ -121,6 +121,24 @@ Current publication identity reuse order is:
 
 The current-date fallback is compatibility debt, not a desired long-term invariant.
 
+## Fact Ownership
+
+Each cross-cutting fact type has one owning file (or pair of files, when a
+backend/frontend mirror exists). When that fact changes, the owner is
+responsible for updating the active docs that repeat it — and the doc-drift
+gates (`make docs-check`, `npm run check:doc-drift`) enforce the reference.
+
+| Fact | Owning file(s) | Repeaters to keep in sync |
+|---|---|---|
+| Publication frontmatter schema | frontend `src/content.config.ts` (render authority); backend mirror `news_collector/contracts/frontend_schema.py` | `docs/PIPELINE_CONTRACTS.md`, `docs/PRODUCT_FLOW.md` |
+| Runtime config schema | `noticiencias/config_schema.py` + `config.toml` | `docs/config_fields.md` (generated), `docs/database_deployment.md` |
+| Validation commands | `Makefile` + `.github/workflows/*.yml` | `docs/ci.md`, `README.md`, `docs/AGENTS.md` |
+| Cross-repo contracts and failure semantics | `news_collector/contracts/*.py` | `docs/PIPELINE_CONTRACTS.md`, `context/CONTRACTS.md` (derived) |
+| Publication workflow states | `news_collector/logic/workflows/refinery_engine.py` | `docs/PRODUCT_FLOW.md`, `docs/SOURCE_OF_TRUTH.md` |
+| Deployment/host facts | frontend `src/config.yaml` / `astro.config.mjs` | `docs/PRODUCT_FLOW.md`, `docs/RUNBOOK_LOCAL_DEV.md` |
+| Search implementation | frontend `src/pages/search.json.js` + `src/utils/build-search-index.ts` | frontend `docs/ARCHITECTURE.md`, `docs/SOURCE_OF_TRUTH.md` |
+| Security/CI gates | `.github/workflows/quality.yml`, `scripts/security_gate.py` | `docs/security.md`, `docs/ci.md` |
+
 ## Non-Authoritative Material
 
 The following are useful but not architectural authority:
@@ -133,3 +151,15 @@ The following are useful but not architectural authority:
   analysis scripts that were generated during specific investigations. These are read-only
   historical records; they do not govern current system behavior and must not be relied upon
   as documentation of active design decisions.
+
+## Historical Boundaries
+
+Files under `docs/audits/`, `docs/archive/`, `docs/reports/`, dated changelogs, and ADR records
+are **historical evidence**, not active documentation. Rules:
+
+- They document what was decided or observed when they were written.
+- Do not bulk-edit them to match current behavior; preserve them as the record they are.
+- If a current doc conflicts with a historical record, the active doc wins (see
+  `docs/SOURCE_OF_TRUTH.md` authority chain and `docs/INDEX.md`).
+- `make docs-check` checks only active docs; historical scopes are deliberately excluded.
+- A PR that only edits historical scopes does not need an active-doc review.

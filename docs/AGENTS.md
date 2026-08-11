@@ -393,6 +393,12 @@ Before considering a backend change complete, verify:
 - No new abstraction was added without concrete justification.
 - Tests cover the changed invariant.
 - The required validation commands for the change class were run.
+- **Docs follow code:** if the change touches `contracts/`, `config.toml`, the
+  config schema, `.github/workflows/`, or serving/storage boundaries, the
+  corresponding active doc (`docs/PIPELINE_CONTRACTS.md`, `docs/ci.md`,
+  `docs/PRODUCT_FLOW.md`, `docs/AGENTS.md`, `README.md`) must be updated in
+  the same PR — `make docs-check` must stay green. Archive/audit-only edits
+  do not trigger this requirement.
 
 ## 10) Change Matrix
 

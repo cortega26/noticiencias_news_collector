@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check plans-ledger-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check docs-check plans-ledger-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist test:audit test:e2e check:contract-sync` |
 | Whole workspace (read-only) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; never publishes, pushes, or uses secrets |
 
@@ -24,6 +24,7 @@ Current jobs:
 - `lint` — `make lint`
 - `type` — `make type` (mypy strict + full test suite + coverage ratchet)
 - `config` — `make config-validate` + `make config-docs-check`
+- `docs` — `make docs-check` (active-doc paths, make targets, workflow files, declared invariants; plan 043)
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — full pytest suite with coverage XML
 - `coverage` — coverage ratchet vs base branch
