@@ -55,4 +55,5 @@ repos:
         entry: gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json --no-banner
         language: system
         pass_filenames: false
+        always_run: true
         stages: [pre-push]
