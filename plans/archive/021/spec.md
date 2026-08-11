@@ -4,7 +4,20 @@ Authoritative spec: `plans/021-rebuild-publication-callback-contract.md`. This
 file records recon findings and the exact remaining work — read it before
 resuming, it will save re-deriving the same investigation.
 
-## Status (2026-07-22): Steps 0-3 and 5 DONE; Step 4 code DONE, real secrets pending the operator
+## Status (2026-08-11): DONE — deployed and verified live end to end
+
+All steps are complete. The 2026-07-22 pass landed Steps 1-2 (backend) + Step 3
+(frontend) + Step 5 (cross-repo contract test) plus Step 4's code on both sides.
+The operator then deployed the full stack on 2026-08-04 (Fly `noticiencias-serve`
++ Cloudflare tunnel + both GH secrets) and a real deploy run round-tripped
+`Notification sent (202)` on 2026-08-11. Verified live this session:
+no-token/wrong-token POST → 401 (fail-closed auth intact), `/healthz` healthy.
+See `spec-fly-webhook-hosting.md` for the deployment record and
+`plans/README.md` for the ledger row. Archived as DONE.
+
+Rollout-order note (stays binding for future contract changes): the frontend
+sender commit must ship with-or-before the backend fail-closed auth commit,
+never backend-first.
 
 Resumed after the sections below (written during an earlier pass) correctly
 identified this as a coordinated cross-repo change that couldn't be split.

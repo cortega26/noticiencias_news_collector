@@ -9,7 +9,7 @@ disk and git history; DONE plans archived; see `scripts/validate_plans_ledger.py
 Updated 2026-08-11: plan 043 completed and archived (Steps 3-4 landed); operator
 items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 
-> Completed plans (001–017, 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040,
+> Completed plans (001–017, 018–030, 021, 032, 033, 034, 035, 036, 037, 038, 039, 040,
 > 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, 056)
 > have been moved to `plans/archive/`.
 > **Read first — out-of-band action:** Plan 001 covers code hygiene for committed
@@ -31,7 +31,6 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 021 | [Rebuild the publication callback contract](021-rebuild-publication-callback-contract.md) | P1 | L | 020 | PARTIAL — Steps 0-3 and 5 DONE (stable refinery_id-based identity persisted end to end, publication state machine rebuilt with a real "publishing → PR_CREATED → rejected/completed" flow instead of instant-completed-on-PR, frontend envelope double-nesting bug fixed at the root, a genuine cross-repo contract test replaying the real sender against the real backend). Step 4 (auth) code is done on both sides and fails closed outside `development`; only the real `WEBHOOK_API_KEY`/`BACKEND_WEBHOOK_TOKEN` secret values remain — the operator's own credentials, not something this session could set. See `plans/021/spec.md` |
 | 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | PARTIAL — all 5 steps implemented and tested in the frontend repo (contract, honest form, request bounds, durable-sink tracking, rate limiting/idempotency); production endpoint stays disabled pending operator R2/KV provisioning — see `plans/023/spec.md` and `../noticiencias/docs/report-pipeline-setup.md` |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | PARTIAL — Steps 1-2 and 4 (partial) done: honest per-file coverage thresholds (verified against an injected-branch regression), deterministic local-build Playwright tests (caught and fixed the config silently defaulting to live production), coverage+Playwright gates wired into `content-guard.yml`. Step 3 (Worker fetch-boundary tests) hits its own STOP condition — `@cloudflare/vitest-pool-workers` requires vitest ^4.1.0, `workers/` deliberately pins 4.0.18 (synced to the main repo one day before this session for Node 24 alignment) — resolving it is a toolchain-lock decision, not this plan's to make. 5 browser tests are `test.fixme()` pending the operator's own investigation into a local/production trailing-slash mismatch. See `plans/031/spec.md` |
 | 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | PARTIAL — Step 1 cursor/pagination tests expanded (6→11, covering traversal, malformed cursor, date boundaries, empty results); Steps 2-5 gated on production cardinality data |
@@ -47,10 +46,19 @@ A DONE plan that stays in `plans/` root must carry `KEEP: <reason>` in its row �
 
 ## Completed (archived)
 
-All plan files for plans 001–017, 018–030, 032, 033, 034, 035, 036, 037, 038, 039,
+All plan files for plans 001–017, 018–030, 021, 032, 033, 034, 035, 036, 037, 038, 039,
 040, 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
 `plans/archive/` (including each plan's `spec.md`/`todo.md` working folder, where
 one exists). The status ledger above covers only remaining work.
+
+Plan 021 (rebuild the publication callback contract) completed on 2026-08-11: the
+deployment is live end to end — `noticiencias-serve` on Fly (cdg) with
+`WEBHOOK_API_KEY` set, Cloudflare tunnel serving
+`https://api.noticiencias.com/api/v1/webhook/frontend`, frontend GH secrets
+`BACKEND_WEBHOOK_TOKEN`/`BACKEND_WEBHOOK_URL` set (2026-08-04), fail-closed auth
+verified live (no-token/wrong-token → 401), and a real deploy run round-tripped
+`[backend-notify] Notification sent (202)` on 2026-08-11. See
+`plans/archive/021/spec.md`.
 
 Plan 043 (repair active documentation) completed in full on 2026-08-11: the frontend
 `check:doc-drift.js` and new backend `scripts/check_doc_drift.py` (`make docs-check`,
@@ -61,8 +69,8 @@ boundaries and fact ownership are declared in both repos. See `plans/archive/043
 
 ## Dependency notes (remaining work)
 
-- **021 Step 4 (auth)** is the only code-complete-but-unlanded piece — needs the
-  operator's real `WEBHOOK_API_KEY`/`BACKEND_WEBHOOK_TOKEN` secret values.
+- **023** is blocked on the operator provisioning the Worker's R2 bucket +
+  KV namespace and setting the frontend `form.endpoint`.
 - **031 Step 3** is blocked on a toolchain-lock decision (vitest ^4.1.0 vs the
   deliberately pinned 4.0.18 in `workers/`) — operator decision, not plan scope.
 - **046** is blocked on production topology data (STOP condition) plus PostgreSQL
@@ -122,12 +130,12 @@ keeps only the pointer.
 
 ## Recommended waves (remaining work)
 
-1. **Unblock operator-gated plans:** 021 (needs secrets), 023 (needs KV/R2 provisioning), 031 (toolchain-lock decision), 046 (production topology + PG enablement), 048 (corpus labeling).
+1. **Unblock operator-gated plans:** 023 (needs R2/KV provisioning), 031 (toolchain-lock decision), 046 (production topology + PG enablement), 048 (corpus labeling).
 2. **Close remaining PARTIAL plan:** 045 (steps 2-5 after production cardinality data).
 
 ## Cross-plan integration rules (remaining)
 
-- **021 → 023 → 031**: the callback-contract, report-pipeline, and frontend-test plans share the same `workers/` + webhook surface; land in that order.
+- **023 → 031**: the report-pipeline and frontend-test plans share the same `workers/` + webhook surface; land in that order.
 - **No speculative systems:** 045/046 measure first; no new spikes without a foundation plan.
 
 ## Scope and selection record
