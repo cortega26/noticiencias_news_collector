@@ -248,7 +248,7 @@ security: bootstrap ## Run security and dependency scans
 	@$(PYTHON_BIN) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running gitleaks"
 	@if command -v gitleaks >/dev/null 2>&1; then \
-		gitleaks detect --source . --config .gitleaks.toml --report-format json --report-path $(GITLEAKS_REPORT) --redact --no-banner || true; \
+		gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json --report-format json --report-path $(GITLEAKS_REPORT) --redact --no-banner || true; \
 		$(PYTHON_BIN) scripts/security_gate.py gitleaks $(GITLEAKS_REPORT) --severity HIGH --status $(SECURITY_STATUS); \
 	else \
 		echo "[security] gitleaks not installed; skipping secret scan (CI installs it)."; \

@@ -115,3 +115,13 @@ make verify-ci
 - When proposing branch-protection requirements, reference the current workflow job names exactly.
 - Do not describe jobs as required unless branch protection has actually been configured that way outside the repo.
 - `make verify-ci` is the single command that proves this repo's PR gate locally; use it before pushing.
+- **Wiring a new gate: run it report-only first.** The gitleaks gate was "downloaded but
+  never run" for weeks (plan 041) and its first real execution surfaced a full backlog
+  (33 findings, 30 of them false positives). When adding a new CI gate: (1) run it in
+  report-only mode, (2) triage every finding — allowlist/baseline the true non-issues,
+  (3) only then enable it as a failure. An always-red gate trains everyone to ignore
+  red and lets the first real issue slip through.
+- **Secrets gate policy:** `gitleaks` fails on any finding not in `.gitleaks-baseline.json`.
+  The baseline pins known historical debt (see issue #249) — new secrets must never be
+  added to it; the correct fix for a baseline entry is rotation + history purge, after
+  which the entry is deleted.

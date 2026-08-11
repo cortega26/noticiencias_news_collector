@@ -55,7 +55,7 @@ jobs:
       - name: Run Secret Scan (gitleaks)
         run: |
           mkdir -p reports/security
-          gitleaks detect --source . --config .gitleaks.toml \
+          gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json \
             --report-format json --report-path reports/security/gitleaks.json \
             --redact --no-banner || true
           .venv/bin/python scripts/security_gate.py gitleaks \

@@ -17,6 +17,17 @@ paths = [
   '''^\.env\.example$''',
   '''^news_collector/config/sources\.yaml$''',
   '''^README\.md$''',
+  # Tracked generated export (schema-validated article text, not hand-edited);
+  # allowlisted so prose like "key responsibilities" does not mask real findings
+  # in hand-written files. Revisit if the export becomes hand-editable.
+  '''^data/exports/latest_articles\.json$''',
+  # Placeholder/fixture values in test and documentation files.
+  '''^tests/integration/test_publication_callback_contract\.py$''',
+  '''^tests_refinery/test_admin_panel_weights\.py$''',
+  '''^docs/RUNBOOK_LOCAL_DEV\.md$''',
+  '''^fly-tunnel\.toml$''',
+  '''^plans/001-externalize-committed-secrets\.md$''',
+  '''^plans/033-make-config-refresh-live\.md$''',
 ]
 regexes = [
   '''dummy(_|-)secret''',

@@ -108,8 +108,11 @@ def ensure_piptools_installed(force: bool) -> None:
     else:
         LOGGER.info("Reinstalling pip-tools as requested.")
 
+    # pip>=26 removed pip._internal.utils.compat.stdlib_pkgs, which pip-tools
+    # 7.5.3 still imports; keep pip on the known-good pairing until pip-tools
+    # is bumped to a version compatible with pip 26+.
     run_command(
-        (sys.executable, "-m", "pip", "install", "pip-tools==7.5.3", "pip<27.0")
+        (sys.executable, "-m", "pip", "install", "pip-tools==7.5.3", "pip<26.0")
     )
 
 

@@ -1,0 +1,71 @@
+[
+ {
+  "Description": "Generic API or secret token",
+  "StartLine": 477,
+  "EndLine": 477,
+  "StartColumn": 1,
+  "EndColumn": 49,
+  "Match": "token = \"REDACTED",
+  "Secret": "token",
+  "File": "config.toml",
+  "SymlinkFile": "",
+  "Commit": "763a49dc06c563c7c5df879ad82861ea33d1c011",
+  "Entropy": 2.321928,
+  "Author": "Carlos Ortega",
+  "Email": "carlosortega77@gmail.com",
+  "Date": "2026-05-24T17:12:37Z",
+  "Message": "Update publication date to current date",
+  "Tags": [
+   "secret",
+   "generic"
+  ],
+  "RuleID": "generic-api-key",
+  "Fingerprint": "763a49dc06c563c7c5df879ad82861ea33d1c011:config.toml:generic-api-key:477"
+ },
+ {
+  "Description": "Generic API or secret token",
+  "StartLine": 496,
+  "EndLine": 496,
+  "StartColumn": 5,
+  "EndColumn": 81,
+  "Match": "key = \"REDACTED",
+  "Secret": "key",
+  "File": "config.toml",
+  "SymlinkFile": "",
+  "Commit": "763a49dc06c563c7c5df879ad82861ea33d1c011",
+  "Entropy": 1.5849625,
+  "Author": "Carlos Ortega",
+  "Email": "carlosortega77@gmail.com",
+  "Date": "2026-05-24T17:12:37Z",
+  "Message": "Update publication date to current date",
+  "Tags": [
+   "secret",
+   "generic"
+  ],
+  "RuleID": "generic-api-key",
+  "Fingerprint": "763a49dc06c563c7c5df879ad82861ea33d1c011:config.toml:generic-api-key:496"
+ },
+ {
+  "Description": "Generic API or secret token",
+  "StartLine": 475,
+  "EndLine": 475,
+  "StartColumn": 2,
+  "EndColumn": 50,
+  "Match": "token = \"REDACTED",
+  "Secret": "token",
+  "File": "config.toml",
+  "SymlinkFile": "",
+  "Commit": "d20944593b9008ee020fc69d76fcec310c0f0a81",
+  "Entropy": 2.321928,
+  "Author": "Carlos Ortega",
+  "Email": "carlosortega77@gmail.com",
+  "Date": "2026-04-18T02:35:42Z",
+  "Message": "feat: update configuration and enhance testing setup; add agent rules for compliance",
+  "Tags": [
+   "secret",
+   "generic"
+  ],
+  "RuleID": "generic-api-key",
+  "Fingerprint": "d20944593b9008ee020fc69d76fcec310c0f0a81:config.toml:generic-api-key:475"
+ }
+]
