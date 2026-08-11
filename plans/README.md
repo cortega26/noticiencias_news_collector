@@ -6,8 +6,8 @@ Third pass (2026-08-07): backend correctness/regression sweep (see Open/Rejected
 
 **Last verified:** `644e07f` (2026-08-11) — statuses reconciled against `plans/` on
 disk and git history; DONE plans archived; see `scripts/validate_plans_ledger.py`.
-Updated 2026-08-11: plan 043 completed and archived (Steps 3-4 landed); OLLAMA_MODEL
-finding (#246) resolved.
+Updated 2026-08-11: plan 043 completed and archived (Steps 3-4 landed); operator
+items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 
 > Completed plans (001–017, 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040,
 > 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, 056)
@@ -92,8 +92,25 @@ boundaries and fact ownership are declared in both repos. See `plans/archive/043
   The operator's nemotron note refers to the NVIDIA NIM cloud migration
   (`[nvidia].model = "nvidia/nemotron-3-super-120b-a12b"`), a different key,
   already landed. No further action; issue can be closed.
-- **Degradation mechanism (plans 051/053) doesn't catch slow-but-successful NVIDIA responses**: noted, not planned as its own item — folded into plan 053's "Maintenance notes" as an acknowledged limitation instead, since fixing it is a product/design call (what latency counts as "degraded"?) rather than a mechanical bug fix. Live evidence (2026-08-07): two real `PreScorer` calls succeeded in 51s and 27s with no error logged, while NVIDIA's own health-check endpoint responded in 0.8s. Revisit as a real plan only after 053+055 land and make it observable which provider actually served each call.
-- **`SourceHealthTracker`'s "FOUND"/"SAVED" health-table columns don't mean what their headers imply.** Both live `--dry-run` runs (2026-08-07) printed `medicalxpress | ✅ WORKING | 1 | 5 | 0 | 0` — SAVED (5) exceeding FOUND (1), which looks impossible for columns meaning "articles found" / "articles saved." Root cause, read in `news_collector/diagnostics.py` and `news_collector/collectors/rss_collector.py:296`: the "FOUND" column displays `data.parsed_ok`, incremented by exactly 1 per source per collection cycle whenever the feed parses successfully at all (`self.health_tracker.record_success(source_id, "parse")`, called once, unconditionally, regardless of article count) — not an article count. "SAVED" (`data.saved`) genuinely counts per-article (`base_collector.py:1030`, once per `saved_count` from `save_articles_bulk`), which in dry-run comes from `_install_dry_run_mocks` (`system/__init__.py:18`) simulating the save without touching the real DB — confirmed safe: `news.db`'s mtime was unchanged (2026-07-21) after both test runs. So this is a diagnostic-table mislabeling (cosmetic, no data-safety impact, no effect on real behavior), not the data-integrity bug it first looks like. Worth a small fix (`record_success(source_id, "parse", count=len(raw_articles))` at `rss_collector.py:296` instead of the implicit count-1 default) if the health table is relied on for real monitoring, but not planned here — flagging for the operator to decide if it's worth a plan.
+- **RESOLVED 2026-08-11 (issue #247): degradation mechanism now catches
+  slow-but-successful NVIDIA responses.** Operator commit `644e07f` added
+  `slow_response_seconds` (default 60.0, `[nvidia]` in `config.toml`, 0
+  disables) to `NvidiaProvider`/`config_schema.py`; responses at or above
+  the threshold count as degradation signals in the same windowed mechanism
+  as failures, so a limping endpoint that never errors now trips the
+  fallback chain. Six tests in
+  `tests/unit/infrastructure/llm/test_nvidia_provider_degradation.py`
+  (trip, healthy, below-threshold, disabled, MagicMock coercion,
+  no-recovery-on-slow) — all pass. No further action; issue can be closed.
+- **RESOLVED 2026-08-11 (issue #248): `SourceHealthTracker` "FOUND" column
+  now counts actual parsed articles.** Operator commit `644e07f` changed
+  `rss_collector.py:296` to
+  `record_success(source_id, "parse", count=len(raw_articles))` instead of
+  the implicit count-1 that made FOUND always 1 per cycle; regression test
+  asserts `parsed_ok == 3` for a 3-article feed
+  (`tests/unit/collectors/test_rss_collector.py`). The health table now
+  shows FOUND as a real article count alongside the per-article SAVED
+  column. No further action; issue can be closed.
 
 ## Findings considered and rejected (do not re-audit)
 
