@@ -21,6 +21,10 @@ paths = [
   # allowlisted so prose like "key responsibilities" does not mask real findings
   # in hand-written files. Revisit if the export becomes hand-editable.
   '''^data/exports/latest_articles\.json$''',
+  # Identifiers in code/docs matched by generic-api-key (Secret is just
+  # "key"/"KEY"); provably not credentials — re-check if content changes.
+  '''^noticiencias/config_manager\.py$''',
+  '''^audit/03_config_matrix\.md$''',
   # Placeholder/fixture values in test and documentation files.
   '''^tests/integration/test_publication_callback_contract\.py$''',
   '''^tests_refinery/test_admin_panel_weights\.py$''',
@@ -32,6 +36,9 @@ paths = [
 regexes = [
   '''dummy(_|-)secret''',
   '''test(_|-)api(_|-)key''',
+  # Code/doc identifiers matched by generic-api-key, provably not credentials:
+  '''_serialize_for_toml''',
+  '''ENRICHMENT_PROVIDER''',
 ]
 commits = [
   "9c9bdf23e48ba2d0154d59404eac61b29ce24a40",
