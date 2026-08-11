@@ -9,7 +9,7 @@ disk and git history; DONE plans archived; see `scripts/validate_plans_ledger.py
 Updated 2026-08-11: plan 043 completed and archived (Steps 3-4 landed); operator
 items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 
-> Completed plans (001–017, 018–030, 021, 032, 033, 034, 035, 036, 037, 038, 039, 040,
+> Completed plans (001–017, 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039, 040,
 > 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, 056)
 > have been moved to `plans/archive/`.
 > **Read first — out-of-band action:** Plan 001 covers code hygiene for committed
@@ -31,13 +31,12 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 023 | [Connect and harden the report pipeline](023-connect-and-harden-report-pipeline.md) | P1 | M | 018 for Refinery follow-on only | PARTIAL — all 5 steps implemented and tested in the frontend repo (contract, honest form, request bounds, durable-sink tracking, rate limiting/idempotency); production endpoint stays disabled pending operator R2/KV provisioning — see `plans/023/spec.md` and `../noticiencias/docs/report-pipeline-setup.md` |
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | PARTIAL — Steps 1-2 and 4 (partial) done: honest per-file coverage thresholds (verified against an injected-branch regression), deterministic local-build Playwright tests (caught and fixed the config silently defaulting to live production), coverage+Playwright gates wired into `content-guard.yml`. Step 3 (Worker fetch-boundary tests) hits its own STOP condition — `@cloudflare/vitest-pool-workers` requires vitest ^4.1.0, `workers/` deliberately pins 4.0.18 (synced to the main repo one day before this session for Node 24 alignment) — resolving it is a toolchain-lock decision, not this plan's to make. 5 browser tests are `test.fixme()` pending the operator's own investigation into a local/production trailing-slash mismatch. See `plans/031/spec.md` |
 | 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | PARTIAL — Step 1 cursor/pagination tests expanded (6→11, covering traversal, malformed cursor, date boundaries, empty results); Steps 2-5 gated on production cardinality data |
 | 046 | [Prove and automate production migrations](046-prove-and-automate-production-migrations.md) | P1 | M | 024, 030 | PARTIAL — Alembic-first SQLite test coverage (every revision→head, downgrade roundtrips, model/schema parity, single linear history) and a read-only revision guard (`migration_guard.py` + `scripts/check_migration_revision.py`) are done and tested; Step 1 (production topology) hits its own STOP condition (undiscoverable in-repo) and a second STOP was found empirically — PostgreSQL is not usable yet (no driver dependency, dead compose env vars, host-absolute `config.toml` paths) — see `plans/046/spec.md` and `docs/database_deployment.md` |
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Step 1 done (ontology/consumer map). Operator confirmed they'll self-review the corpus, so Steps 2-3 tooling is now built: `tests/data/enrichment_eval.jsonl` (44-record stratified seed, draft labels kept separate from gold), `scripts/validate_enrichment_corpus.py`, `scripts/evaluate_enrichment_registry.py` (only scores reviewed records; `sufficient_evidence` stays false below 200), plus `docs/spikes/enrichment-corpus-labeling-guide.md`. Single-reviewer limitation vs. the plan's own two-reviewer ask documented honestly, not silently downgraded. Steps 4-6 still not attempted — depend on the reviewer actually labeling a meaningful sample. See `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md` |
 
-> Plans 018–030, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 047,
+> Plans 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 047,
 > 049, 050, 051, 053, 054, 055, and 056 are DONE and archived.
 
 Status values: TODO | IN PROGRESS | PARTIAL | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale).
@@ -46,10 +45,20 @@ A DONE plan that stays in `plans/` root must carry `KEEP: <reason>` in its row �
 
 ## Completed (archived)
 
-All plan files for plans 001–017, 018–030, 021, 032, 033, 034, 035, 036, 037, 038, 039,
+All plan files for plans 001–017, 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039,
 040, 041, 042, 043, 044, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
 `plans/archive/` (including each plan's `spec.md`/`todo.md` working folder, where
 one exists). The status ledger above covers only remaining work.
+
+Plan 023 (connect and harden the report pipeline) completed on 2026-08-11: the
+Worker is live in production — R2 bucket `noticiencias-reports` + `RATE_LIMIT_KV`
+namespace bound (the id had initially landed in the unused `STATUS_KV` block and
+was moved), deployed as `noticiencias-api-production`; verified live: `POST
+/api/report` → 201 with report id, idempotent retries return the same id, object
+durably stored in R2. `form.endpoint` enabled; the newsletter form was decoupled
+to its own `newsletter_endpoint` key (sharing the report endpoint would have
+POSTed email subscriptions to the report wire contract). See
+`plans/archive/023/spec.md`.
 
 Plan 021 (rebuild the publication callback contract) completed on 2026-08-11: the
 deployment is live end to end — `noticiencias-serve` on Fly (cdg) with
@@ -69,8 +78,6 @@ boundaries and fact ownership are declared in both repos. See `plans/archive/043
 
 ## Dependency notes (remaining work)
 
-- **023** is blocked on the operator provisioning the Worker's R2 bucket +
-  KV namespace and setting the frontend `form.endpoint`.
 - **031 Step 3** is blocked on a toolchain-lock decision (vitest ^4.1.0 vs the
   deliberately pinned 4.0.18 in `workers/`) — operator decision, not plan scope.
 - **046** is blocked on production topology data (STOP condition) plus PostgreSQL
@@ -130,12 +137,11 @@ keeps only the pointer.
 
 ## Recommended waves (remaining work)
 
-1. **Unblock operator-gated plans:** 023 (needs R2/KV provisioning), 031 (toolchain-lock decision), 046 (production topology + PG enablement), 048 (corpus labeling).
+1. **Unblock operator-gated plans:** 031 (toolchain-lock decision), 046 (production topology + PG enablement), 048 (corpus labeling).
 2. **Close remaining PARTIAL plan:** 045 (steps 2-5 after production cardinality data).
 
 ## Cross-plan integration rules (remaining)
 
-- **023 → 031**: the report-pipeline and frontend-test plans share the same `workers/` + webhook surface; land in that order.
 - **No speculative systems:** 045/046 measure first; no new spikes without a foundation plan.
 
 ## Scope and selection record

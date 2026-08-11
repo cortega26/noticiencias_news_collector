@@ -132,14 +132,27 @@ pages) — out of scope for this plan, flagging here so it isn't lost.
   `git log` that file predates this session).
 - `npx eslint`/`npx prettier --check` on every touched file — clean.
 
-## Remaining work (operator action, see docs/report-pipeline-setup.md)
+## Status (2026-08-11): DONE — endpoint live in production
 
-1. `npx wrangler r2 bucket create noticiencias-reports`, uncomment the R2
-   binding in `workers/wrangler.toml`.
-2. `npx wrangler kv namespace create RATE_LIMIT_KV`, uncomment + fill in
-   the id.
-3. (Optional) email provider secrets (`EMAIL_API_KEY`/`EMAIL_FROM`/
-   `EMAIL_TO`) if a second notification channel is wanted.
-4. Only then: set `src/config.yaml`'s `form.endpoint` to
-   `https://noticiencias.com/api/report` and deploy both the Worker and
-   the frontend.
+All 5 steps + the operator actions are complete and verified live:
+
+1. R2 bucket `noticiencias-reports` provisioned; binding uncommented.
+2. `RATE_LIMIT_KV` namespace provisioned; the id initially landed in the
+   unused `STATUS_KV` binding block (code never reads it) and was moved to
+   the `RATE_LIMIT_KV` binding — rate limiting/idempotency now active.
+3. Worker deployed (`noticiencias-api-production`, version
+   `0c6177fa-1315-490f-bff5-7d406896c54c`) with both bindings live.
+4. Live verification: `POST /api/report` -> 201 with report id; identical
+   retry returns the SAME id (idempotency window works); the object was
+   confirmed durably stored in R2 (`reports/2026-08-11/<id>.json`) and
+   then deleted after the smoke test.
+5. `src/config.yaml` `form.endpoint` = `https://noticiencias.com/api/report`;
+   `ReportForm.astro` test-override semantics fixed so the empty-endpoint
+   (disabled) state stays testable now that production config sets a real
+   endpoint; freeze-check allowlist updated for the plan-scoped template
+   edit; Playwright report-form suite 22/22 green.
+6. (Optional, not done) email second sink — `EMAIL_API_KEY`/`EMAIL_FROM`/
+   `EMAIL_TO` can be added later; R2 alone satisfies the durable-sink rule.
+
+Only the optional email notification channel remains unconfigured, by
+design. Archived as DONE.

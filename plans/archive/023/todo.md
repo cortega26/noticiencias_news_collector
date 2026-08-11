@@ -21,18 +21,17 @@
 ## Step 4: Require durable acceptance
 - [x] Track R2/email outcomes independently; 201 only if ≥1 succeeded, 503 otherwise
 - [x] Verified no PII (email/description) in logs (dedicated test)
-- [ ] Provision the production R2 bucket — **operator action**, see docs/report-pipeline-setup.md
+- [x] R2 bucket `noticiencias-reports` provisioned + binding uncommented (2026-08-11)
 
 ## Step 5: Add abuse controls and deploy gates
 - [x] KV-backed rate limiting (5/min/IP) — free-tier, not paid infra (STOP condition)
 - [x] KV-backed idempotency (10-min window, keyed by payload hash)
 - [x] Deploy gate: added typecheck + coverage (80% thresholds) to deploy-worker.yml
-- [ ] Provision RATE_LIMIT_KV namespace — **operator action**
+- [x] `RATE_LIMIT_KV` namespace provisioned + binding fixed (id had landed in the unused STATUS_KV block)
 
 ## Final gate
-- [ ] Flip `src/config.yaml`'s `form.endpoint` to the real URL — **only after** the two
-      operator actions above; this is the plan's explicit STOP condition, not a
-      choice I can make from code alone.
+- [x] `src/config.yaml` `form.endpoint` = `https://noticiencias.com/api/report` (2026-08-11)
+      — done only after the R2 sink was verified live (201 + durable object + idempotent retry).
 
 ## Verification (all run this session, all green)
 - [x] `workers/`: `npm test` (27), `tsc --noEmit`, `npm run test:coverage` (thresholds met)
