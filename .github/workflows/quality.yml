@@ -55,9 +55,12 @@ jobs:
       - name: Run Secret Scan (gitleaks)
         run: |
           mkdir -p reports/security
+          # No --redact: baseline matching (gitleaks 8.18) is content-based, so
+          # redacting the match would disable .gitleaks-baseline.json. The report
+          # goes to a file and stdout only prints counts, not secrets.
           gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json \
             --report-format json --report-path reports/security/gitleaks.json \
-            --redact --no-banner || true
+            --no-banner || true
           .venv/bin/python scripts/security_gate.py gitleaks \
             reports/security/gitleaks.json --severity HIGH \
             --status reports/security/status.json
