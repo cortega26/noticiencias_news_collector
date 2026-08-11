@@ -275,10 +275,6 @@ class RSSCollector(BaseCollector):
             raw_articles = self._extract_articles_from_feed(
                 parsed_feed, source_config, source_id
             )
-            print(
-                f"DEBUG: RSSCollector source={source_id} raw_articles={len(raw_articles)}",
-                flush=True,
-            )
             stats["articles_found"] = len(raw_articles)
 
             if not raw_articles:
@@ -1178,7 +1174,6 @@ class RSSCollector(BaseCollector):
 
                 return article_model
             except ValidationError as exc:
-                print(f"DEBUG VALIDATION ERROR: {exc}", flush=True)
                 self._emit_log(
                     "warning",
                     "collector.article.validation_failed",
