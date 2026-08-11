@@ -12,17 +12,23 @@
 ### Before making any change
 
 1. Read [`docs/AGENTS.md`](docs/AGENTS.md) in full.
-2. Inspect the package boundaries touched by the change.
-3. Classify the change using the **Change Matrix** in `docs/AGENTS.md §10`.
-4. Run the required validation commands for that class.
+2. Follow the **mandatory spec-driven workflow** (`docs/AGENTS.md §0.1`): create `spec.md` + `todo.md` + tests before starting, keep them updated, and run the tests after every meaningful commit.
+3. Inspect the package boundaries touched by the change.
+4. Classify the change using the **Change Matrix** in `docs/AGENTS.md §10`.
+5. Run the required validation commands for that class.
 
 ### Baseline validation commands
 
 ```bash
-make lint       # Ruff + Black + isort
-make type       # mypy strict
-make test       # full unit test suite
+make lint       # black --check + ruff (incl. isort rules) + Makefile-tab + Streamlit-deprecation checks
+make type       # mypy (incremental: 3 files only) + pytest coverage run + coverage ratchet gate
+make test       # unit suite (excludes slow tests/e2e_pipeline; use make test-all for the full suite)
 ```
+
+> `make type` is not a strict-mypy gate. It type-checks a small target list
+> (`scripts/generate_api_docs.py`, `utils/logger.py`, `utils/url_canonicalizer.py`),
+> then runs pytest with coverage and fails if changed files drop below the
+> coverage ratchet baseline (computed against `origin/main`).
 
 Additional gates by change type:
 
@@ -33,17 +39,23 @@ Additional gates by change type:
 | Publication identity or Refinery publishing | `make quality-gate` |
 | Config schema or doc generation | `make config-docs-check` |
 | Dependencies, security, CI | `make quality` |
-| Before pushing | `make prepush` |
+| Before pushing | `make prepush` (`test-all` + `quality-gate`) |
+| Canonical CI gate (plan 041) | `make verify-ci` |
 
 ### Safe entry points
 
 | Task | Command |
 |---|---|
-| First-time setup | `make bootstrap` |
+| First-time setup | `make bootstrap` (Python 3.13; hash-pinned installs from `requirements.lock`) |
 | Validate config | `make config-validate` |
 | Run collector (no side effects) | `python scripts/run_collector.py --dry-run` |
-| Launch Refinery UI | `make refinery` |
+| Launch Refinery UI | `make refinery` (isolated `.venv-refinery`; runs migrations first) |
 | Run full quality gate | `make quality` |
+
+Notes:
+
+- `make quality-gate` is snapshot-first and needs no LLM; `make quality-gate-refresh` regenerates snapshots using a local LLM (overwrites committed snapshots — use deliberately).
+- Refinery has its own venv (`bootstrap-refinery`); test it with `make test-refinery`.
 
 ### Key files
 
@@ -54,6 +66,7 @@ Additional gates by change type:
 | `docs/PRODUCT_FLOW.md` | RSS-to-live-page product flow |
 | `docs/PIPELINE_CONTRACTS.md` | Cross-repo contract shapes and failure semantics |
 | `docs/ARCHITECTURE.md` | Package map, dependency direction, extension rules |
+| `docs/ci.md` | What CI workflows/gates actually run |
 | `docs/SOURCE_OF_TRUTH.md` | Which files win when docs and code disagree |
 | `docs/INDEX.md` | Full docs directory index |
 | `news_collector/contracts/frontend_schema.py` | Cross-repo publication contract mirror |
