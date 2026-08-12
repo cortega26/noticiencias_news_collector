@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence,
 from dateutil import parser as date_parser
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from sqlalchemy import and_, func, or_
+from sqlalchemy.engine import Row as RowType
 from sqlalchemy.orm import aliased
 
 from news_collector.config.settings import get_runtime_config
@@ -158,31 +159,30 @@ def _decode_cursor(raw_cursor: str) -> Tuple[float, datetime, int]:
         raise HTTPException(status_code=400, detail="Invalid cursor") from exc
 
 
-def _encode_cursor(article: Article) -> str:
-    score = article.final_score or 0.0
-    collected = article.collected_date or datetime.now(timezone.utc)
-    payload = f"{score:.6f}|{collected.isoformat()}|{article.id}"
+def _encode_cursor(row: RowType) -> str:
+    score = row.final_score or 0.0
+    collected = row.collected_date or datetime.now(timezone.utc)
+    payload = f"{score:.6f}|{collected.isoformat()}|{row.article_id}"
     return base64.urlsafe_b64encode(payload.encode("utf-8")).decode("utf-8")
 
 
-def _extract_topics(article: Article) -> List[str]:
-    metadata: Dict[str, Any] = (
-        article.article_metadata if isinstance(article.article_metadata, dict) else {}
-    )
-    enrichment = metadata.get("enrichment") if isinstance(metadata, dict) else {}
+def _extract_topics_from_metadata(metadata: Any, keywords: Any) -> List[str]:
+    """Extract topics from an article's metadata dict (JSON column value)."""
+    meta: Dict[str, Any] = metadata if isinstance(metadata, dict) else {}
+    enrichment = meta.get("enrichment") if isinstance(meta, dict) else {}
     topics = enrichment.get("topics") if isinstance(enrichment, dict) else None
     if isinstance(topics, (list, tuple)):
         return [str(topic) for topic in topics]
-    keywords_obj = article.keywords
-    keywords: List[Any] = keywords_obj if isinstance(keywords_obj, list) else []
-    return [str(keyword) for keyword in keywords] if keywords else []
+    keyword_list: List[Any] = keywords if isinstance(keywords, list) else []
+    return [str(keyword) for keyword in keyword_list] if keyword_list else []
 
 
 def _summarize_why_ranked(  # noqa: C901
-    article: Article, score_log: Optional[ScoreLog]
+    row: RowType,
 ) -> List[str]:
-    if score_log and isinstance(score_log.score_explanation, dict):
-        explanation = score_log.score_explanation
+    score_log: Any = {"score_explanation": row.score_explanation}
+    if isinstance(score_log.get("score_explanation"), dict):
+        explanation = score_log["score_explanation"]
         strengths = explanation.get("key_strengths")
         if isinstance(strengths, list) and strengths:
             return [str(item) for item in strengths][:3]
@@ -198,7 +198,7 @@ def _summarize_why_ranked(  # noqa: C901
         if factors:
             return factors[:3]
     components: Dict[str, Any] = (
-        article.score_components if isinstance(article.score_components, dict) else {}
+        row.score_components if isinstance(row.score_components, dict) else {}
     )
     if isinstance(components, dict) and components:
         ordered = sorted(
@@ -233,22 +233,26 @@ def _apply_topic_filters(query, topics: Sequence[str]):
     return query
 
 
-def _build_article_payload(
-    article: Article, score_log: Optional[ScoreLog]
-) -> Dict[str, Any]:
+def _build_article_payload(row: RowType) -> Dict[str, Any]:
+    """Build the article payload from an explicit-projection row (plan 045).
+
+    The row carries exactly the columns the response needs — no full ORM
+    hydration of Article/ScoreLog entities.
+    """
+    topics = _extract_topics_from_metadata(row.article_metadata, row.keywords)
     return {
-        "id": article.id,
-        "title": article.title,
-        "summary": article.summary,
-        "url": article.url,
-        "source": {"id": article.source_id, "name": article.source_name},
-        "category": article.category,
-        "topics": _extract_topics(article),
-        "published_at": article.published_date,
-        "collected_at": article.collected_date,
-        "final_score": article.final_score,
-        "score_components": article.score_components,
-        "why_ranked": _summarize_why_ranked(article, score_log),
+        "id": row.article_id,
+        "title": row.title,
+        "summary": row.summary,
+        "url": row.url,
+        "source": {"id": row.source_id, "name": row.source_name},
+        "category": row.category,
+        "topics": topics,
+        "published_at": row.published_date,
+        "collected_at": row.collected_date,
+        "final_score": row.final_score,
+        "score_components": row.score_components,
+        "why_ranked": _summarize_why_ranked(row),
     }
 
 
@@ -361,8 +365,27 @@ def create_app(  # noqa: C901
 
             score_log_alias = aliased(ScoreLog)
 
+            # Explicit projection (plan 045): select exactly the columns the
+            # payload and cursor need instead of hydrating full Article and
+            # ScoreLog ORM entities (which include heavy Text/JSON columns).
             query = (
-                session.query(Article, score_log_alias)
+                session.query(
+                    Article.id.label("article_id"),
+                    Article.title,
+                    Article.summary,
+                    Article.url,
+                    Article.source_id,
+                    Article.source_name,
+                    Article.category,
+                    Article.published_date,
+                    Article.collected_date,
+                    Article.final_score,
+                    Article.score_components,
+                    Article.article_metadata,
+                    Article.keywords,
+                    score_log_alias.id.label("score_log_id"),
+                    score_log_alias.score_explanation,
+                )
                 .outerjoin(
                     latest_log_subquery,
                     latest_log_subquery.c.article_id == Article.id,
@@ -414,16 +437,14 @@ def create_app(  # noqa: C901
                 Article.id.desc(),
             )
 
-            records: List[Tuple[Article, Optional[ScoreLog]]] = query.limit(
-                params.page_size + 1
-            ).all()
+            records: List[RowType] = query.limit(params.page_size + 1).all()
 
             has_more = len(records) > params.page_size
             if has_more:
                 records = records[: params.page_size]
 
-            payload = [_build_article_payload(article, log) for article, log in records]
-            next_cursor = _encode_cursor(records[-1][0]) if has_more else None
+            payload = [_build_article_payload(row) for row in records]
+            next_cursor = _encode_cursor(records[-1]) if has_more else None
 
             return ArticlesEnvelope(
                 data=[ArticleResponse(**item) for item in payload],

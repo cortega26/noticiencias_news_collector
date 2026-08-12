@@ -32,10 +32,9 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 031 | [Enforce representative frontend tests](031-enforce-representative-frontend-tests.md) | P1 | L | 023, 030 | PARTIAL — Steps 1-4 effectively done: honest per-file coverage thresholds, deterministic local-build Playwright tests (config no longer silently defaults to live production), coverage+Playwright+Worker gates wired into `content-guard.yml`. Step 3 (Worker fetch-boundary tests) landed 2026-08-11 — the vitest 4.0.18/^4.1.0 STOP resolved itself when Dependabot bumped `workers/` to 4.1.10; `@cloudflare/vitest-pool-workers@0.21.1` installed with the new `cloudflareTest()` plugin API, 12 boundary tests run inside workerd (routing, CORS, malformed/schema/oversize, rate limiting, idempotency, secret absence), coverage provider v8→istanbul, 39 tests + 91.71% lines green, audit clean. Only remainder: 5 browser tests `test.fixme()` pending the operator's own trailing-slash investigation. See `plans/031/spec.md` |
-| 045 | [Measure and optimize the ranked API query](045-measure-and-optimize-ranked-api-query.md) | P2 | M | 029 | PARTIAL — Step 1 cursor/pagination tests expanded (6→11, covering traversal, malformed cursor, date boundaries, empty results); Steps 2-5 gated on production cardinality data |
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Step 1 done (ontology/consumer map). Operator confirmed they'll self-review the corpus, so Steps 2-3 tooling is now built: `tests/data/enrichment_eval.jsonl` (44-record stratified seed, draft labels kept separate from gold), `scripts/validate_enrichment_corpus.py`, `scripts/evaluate_enrichment_registry.py` (only scores reviewed records; `sufficient_evidence` stays false below 200), plus `docs/spikes/enrichment-corpus-labeling-guide.md`. Single-reviewer limitation vs. the plan's own two-reviewer ask documented honestly, not silently downgraded. Steps 4-6 still not attempted — depend on the reviewer actually labeling a meaningful sample. See `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md` |
 
-> Plans 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 047,
+> Plans 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 047,
 > 049, 050, 051, 053, 054, 055, and 056 are DONE and archived. Plan **046** is
 > REJECTED (operator decision 2026-08-11: SQLite-only, no PostgreSQL) and archived.
 
@@ -46,9 +45,21 @@ A DONE plan that stays in `plans/` root must carry `KEEP: <reason>` in its row �
 ## Completed (archived)
 
 All plan files for plans 001–017, 018–030, 021, 023, 032, 033, 034, 035, 036, 037, 038, 039,
-040, 041, 042, 043, 044, 046, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
+040, 041, 042, 043, 044, 045, 046, 047, 049, 050, 051, 053, 054, 055, and 056 have been moved to
 `plans/archive/` (including each plan's `spec.md`/`todo.md` working folder, where
 one exists). The status ledger above covers only remaining work.
+
+Plan 045 (measure and optimize the ranked API query) completed on 2026-08-11:
+`scripts/benchmark_serving_api.py` (seeded deterministic benchmark + baseline in
+`reports/perf/serving_api.json`), a non-timing structural perf gate
+(`tests/perf/test_serving_api_perf.py`, 7 tests: statement count <= 1, payload
+<= 32KB, contract stable), and an explicit projection in the ranked query
+(measured p50 225.8 -> 209.0ms @100k). The proposed ranked-cursor index was
+evaluated at 100k and REJECTED by evidence — DESC variant measured 2.3x SLOWER
+(418-466ms vs 185-199ms) because the coalesce() ORDER BY defeats index ordering
+and DESC forces random rowid lookups; the window-function rewrite was also
+slower. No schema change shipped; the grouped latest-log subquery is retained.
+See `plans/archive/045/spec.md`.
 
 Plan 046 (prove and automate production migrations) REJECTED on 2026-08-11 —
 operator decision: "si podemos alcanzar las mismas funcionalidades con sqlite
@@ -144,12 +155,11 @@ keeps only the pointer.
 
 ## Recommended waves (remaining work)
 
-1. **Unblock operator-gated plans:** 031 (toolchain-lock decision), 048 (corpus labeling).
-2. **Close remaining PARTIAL plan:** 045 (steps 2-5 after production cardinality data).
+1. **Unblock operator-gated plan:** 031 (trailing-slash investigation for the 5 `fixme` browser tests) and 048 (corpus labeling).
 
 ## Cross-plan integration rules (remaining)
 
-- **No speculative systems:** 045 measures first; no new spikes without a foundation plan.
+- **No speculative systems:** no new spikes without a foundation plan.
 
 ## Scope and selection record
 

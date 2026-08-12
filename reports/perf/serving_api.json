@@ -1,0 +1,69 @@
+{
+  "dataset": {
+    "articles": 10000,
+    "score_logs_per_article": 3,
+    "seed": 42,
+    "checksum": "2d72af78a6952263"
+  },
+  "environment": {
+    "database": "sqlite",
+    "db_path": "/tmp/bench-serving-jgoauwu7/bench.db",
+    "python": "3.13.12"
+  },
+  "cases": {
+    "unfiltered": {
+      "p50_ms": 23.359,
+      "p95_ms": 31.568,
+      "min_ms": 19.053,
+      "max_ms": 35.287,
+      "payload_bytes": 12828,
+      "statement_count": 1,
+      "explain_fingerprint": "87ef14cc8997fa12"
+    },
+    "source": {
+      "p50_ms": 19.579,
+      "p95_ms": 27.527,
+      "min_ms": 16.277,
+      "max_ms": 28.801,
+      "payload_bytes": 12907,
+      "statement_count": 1,
+      "explain_fingerprint": "9f09ddd3a0dec61e"
+    },
+    "date": {
+      "p50_ms": 19.441,
+      "p95_ms": 25.006,
+      "min_ms": 16.01,
+      "max_ms": 25.071,
+      "payload_bytes": 870,
+      "statement_count": 1,
+      "explain_fingerprint": ""
+    },
+    "one_topic": {
+      "p50_ms": 31.539,
+      "p95_ms": 43.633,
+      "min_ms": 24.38,
+      "max_ms": 51.245,
+      "payload_bytes": 12995,
+      "statement_count": 1,
+      "explain_fingerprint": "0b429ece240a4855"
+    },
+    "multi_topic": {
+      "p50_ms": 28.441,
+      "p95_ms": 35.329,
+      "min_ms": 25.241,
+      "max_ms": 37.441,
+      "payload_bytes": 13004,
+      "statement_count": 1,
+      "explain_fingerprint": ""
+    },
+    "deep_cursor": {
+      "p50_ms": 25.507,
+      "p95_ms": 29.492,
+      "min_ms": 22.662,
+      "max_ms": 38.354,
+      "payload_bytes": 12917,
+      "statement_count": 1,
+      "explain_fingerprint": ""
+    }
+  }
+}
