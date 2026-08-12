@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from datetime import date as _dt
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -203,9 +204,33 @@ class TestAgentHelpers:
             {"a": Custom(), "b": None, "c": [1, "x"], "d": {"k": 2}}
         )
         assert result["a"] == "custom-str"
-        assert result["b"] is None
+        # None values are dropped, not emitted as YAML `null`: the frontend
+        # schema declares optional fields as z.string().optional() which
+        # accepts absence but rejects null (sources[].date regression,
+        # plan 021/048 found 2026-08-11).
+        assert "b" not in result
         assert result["c"] == [1, "x"]
         assert result["d"] == {"k": 2}
+
+    def test_normalize_frontmatter_drops_none_in_source_items(self):
+        """Regression: sources[].date: null failed the frontend schema
+        (expected string, received null). None must serialize as absent."""
+        agent = _bare_agent()
+        payload = {
+            "title": "T",
+            "date": _dt(2026, 8, 11),
+            "sources": [
+                {"title": "S", "url": "https://x.io", "publisher": None, "date": None},
+                {"title": "S2", "url": "https://y.io", "date": "2026-01-01"},
+            ],
+            "glossary": [{"term": "t", "definition": "d", "alt": None}],
+        }
+        result = agent._normalize_frontmatter_for_yaml(payload)
+        assert "publisher" not in result["sources"][0]
+        assert "date" not in result["sources"][0]
+        assert result["sources"][1]["date"] == "2026-01-01"
+        assert "alt" not in result["glossary"][0]
+        assert result["date"] == _dt(2026, 8, 11)
 
     def test_send_prompt_success(self):
         agent = _bare_agent()

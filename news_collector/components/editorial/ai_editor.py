@@ -643,11 +643,22 @@ class EditorAgent:
         Normalize frontmatter payload before YAML serialization.
         Keeps date/datetime objects as native types so PyYAML emits
         unquoted YAML timestamps for schema-aligned fields like `date`.
+
+        None values are DROPPED (not emitted as YAML ``null``): the frontend
+        content schema declares optional fields as ``z.string().optional()``
+        etc., which accepts absence but rejects an explicit ``null``
+        (``sources[].date: null`` fails ``expected string, received null``,
+        plan 048/021 regression found 2026-08-11). Omitting the key is the
+        serialization that matches the contract.
         """
 
         def normalize_value(value):
             if isinstance(value, dict):
-                return {str(k): normalize_value(v) for k, v in value.items()}
+                return {
+                    str(k): normalize_value(v)
+                    for k, v in value.items()
+                    if v is not None
+                }
             if isinstance(value, list):
                 return [normalize_value(item) for item in value]
             if isinstance(value, (dt_date, dt_datetime, bool, int, float, str)):
@@ -656,7 +667,11 @@ class EditorAgent:
                 return None
             return str(value)
 
-        return {str(key): normalize_value(val) for key, val in payload.items()}
+        return {
+            str(key): normalize_value(val)
+            for key, val in payload.items()
+            if val is not None
+        }
 
     def _send_prompt(
         self, prompt: str, system: str | None = None, model: str | None = None

@@ -241,6 +241,29 @@ class RefineryEngine:
                     processed_count += 1
                 elif self._last_blocked_error:
                     errors.append({"id": article_id, **self._last_blocked_error})
+                else:
+                    # process_single_article returned False WITHOUT raising and
+                    # WITHOUT a blocked-error code — e.g. a stage like
+                    # frontend_publication_validation failed closed. The
+                    # attempt summary was persisted with success=False; surface
+                    # the failure to the caller instead of silently reporting
+                    # "0 processed = success" (found 2026-08-11: a taxonomy
+                    # contract violation aborted publication but the CLI/UI
+                    # reported success).
+                    errors.append(
+                        {
+                            "id": article_id,
+                            "error": (
+                                "Publication pipeline failed (see attempt summary "
+                                "in data/runtime/publication_attempts/)"
+                            ),
+                            "message": (
+                                "El pipeline de publicación falló antes de crear "
+                                "el PR (validación de frontend u otra etapa). "
+                                "Revisa data/runtime/publication_attempts/."
+                            ),
+                        }
+                    )
 
             except Exception as e:
                 logger.error(f"Failed to process {article_id}: {e}")

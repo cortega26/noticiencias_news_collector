@@ -130,9 +130,11 @@ class TestRefineryEngine(unittest.TestCase):
         summary = self.engine.process_articles(articles, MagicMock(), MagicMock())
 
         self.assertEqual(summary["processed_count"], 1)
-        self.assertEqual(
-            len(summary["errors"]), 0
-        )  # Returns False generally doesn't mean Exception unless raised
+        # A False return WITHOUT a blocked-error code is now surfaced as an
+        # error (2026-08-11 regression: frontend validation failures aborted
+        # publication but the CLI reported success with 0 processed).
+        self.assertEqual(len(summary["errors"]), 1)
+        self.assertIn("Publication pipeline failed", summary["errors"][0]["error"])
 
         # If one raises exception
         self.engine.process_single_article = MagicMock(side_effect=Exception("Boom"))
