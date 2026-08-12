@@ -969,7 +969,7 @@ class RefineryEngine:
         # (2026-08-12 regression: standard-mode threshold 8.0 blocked a
         # re-selected article with a cached 6.5 advisory score, even though
         # the auditor had already been allowed to publish it).
-        if not self.auditor.blocking:
+        if not getattr(self.auditor, "blocking", False):
             decision = "allowed"
             reason = "Auditor is non-blocking (config editorial_auditor.blocking=false); score advisory only"
             self._log_enforcement_decision(article_id, cached_score, decision, reason)
