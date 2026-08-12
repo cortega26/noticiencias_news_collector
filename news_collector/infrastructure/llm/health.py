@@ -98,6 +98,7 @@ class OllamaHealthChecker(LLMHealthChecker):
     def check(self, config: Any, logger: Any) -> HealthResult:
         try:
             import requests
+
             from news_collector.infrastructure.llm.model_registry import (
                 ModelAvailabilityError,
                 ModelRegistryError,

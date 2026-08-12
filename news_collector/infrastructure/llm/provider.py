@@ -16,6 +16,7 @@ from typing import Any, Dict, Generator, Optional, Union
 
 import httpx
 import requests
+
 from news_collector.infrastructure.llm.model_registry import (
     NonCanonicalModelIdError,
     canonicalize_model_id,

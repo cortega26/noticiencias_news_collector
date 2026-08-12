@@ -8,12 +8,13 @@ import time
 from typing import Any, Dict, Optional
 
 import requests
-from news_collector.config.settings import get_runtime_config
-from news_collector.utils.logger import get_logger
-from news_collector.utils.security import validate_url_safety
 from requests.adapters import HTTPAdapter
 from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 from tenacity.nap import sleep as tenacity_sleep
+
+from news_collector.config.settings import get_runtime_config
+from news_collector.utils.logger import get_logger
+from news_collector.utils.security import validate_url_safety
 
 logger = get_logger().create_module_logger(__name__)
 

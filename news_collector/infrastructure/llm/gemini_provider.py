@@ -6,6 +6,7 @@ from typing import Any, Dict, Generator, Optional, Union
 
 import httpx
 import requests
+
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimiter,
     parse_retry_after,

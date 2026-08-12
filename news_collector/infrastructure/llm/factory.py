@@ -2,6 +2,8 @@
 
 from typing import Any, Dict, Generator, Optional, Union, cast
 
+from noticiencias.config_manager import load_config
+
 from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
 from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 from news_collector.infrastructure.llm.provider import OllamaProvider
@@ -10,7 +12,6 @@ from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimiter,
 )
 from news_collector.utils.logger import get_logger
-from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger("infrastructure.llm.factory")
 
