@@ -5,7 +5,6 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
-
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)

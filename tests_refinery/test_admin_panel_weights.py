@@ -101,9 +101,8 @@ def test_rebalanced_weights_are_what_the_save_button_would_persist():
     """The visible sliders after a move must satisfy validate_config(), i.e.
     the same values the 'Guardar Config Colector' button submits via
     save_toml_config() would pass the cross-field sum-to-1.0 business rule."""
-    from noticiencias.config_manager import Config, load_config
-
     from news_collector.config.settings import validate_config
+    from noticiencias.config_manager import Config, load_config
 
     at = AppTest.from_file(ADMIN_PANEL)
     at.run(timeout=60)

@@ -14,10 +14,9 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 import yaml
+from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
-
-from news_collector.editorial.category_resolver import EditorialCategoryResolver
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",

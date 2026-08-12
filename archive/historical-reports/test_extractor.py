@@ -1,5 +1,4 @@
 import requests
-
 from news_collector.logic.parsers.image_extractor import ImageExtractor
 
 url = "https://scitechdaily.com/a-massive-star-suddenly-vanished-and-left-a-black-hole-behind/"
