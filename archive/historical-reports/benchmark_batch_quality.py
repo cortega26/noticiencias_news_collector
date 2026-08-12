@@ -8,6 +8,7 @@ from pathlib import Path
 # Setup paths
 sys.path.append(str(Path.cwd()))
 from benchmark_articles import ALL_ARTICLES
+
 from news_collector.components.editorial.ai_editor import EditorAgent
 
 # Configure Logger to show info

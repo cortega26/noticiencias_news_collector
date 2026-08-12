@@ -44,6 +44,18 @@ refinery_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(refinery_main)
 run_refinery = refinery_main.main
 
+from noticiencias.config_manager import (
+    Config,
+    ConfigError,
+    default_config_path,
+    default_env_path,
+    load_config,
+    load_env_overrides,
+    save_config,
+    save_env_overrides,
+)
+from pydantic import ValidationError
+
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
 from apps.refinery.analytics_read_model import build_analytics_read_model
 from apps.refinery.bulk_helper import run_bulk
@@ -62,17 +74,6 @@ from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
-from noticiencias.config_manager import (
-    Config,
-    ConfigError,
-    default_config_path,
-    default_env_path,
-    load_config,
-    load_env_overrides,
-    save_config,
-    save_env_overrides,
-)
-from pydantic import ValidationError
 
 # Alias for compatibility if legacy code relies on this name
 RefineryDatabaseManager = DatabaseManager
@@ -2777,6 +2778,7 @@ with tab5:
     env_vars = dict(load_secrets())
     # reuse GitHubPublisher logic from main or init new one
     import git
+
     from news_collector.components.publishing import GitHubPublisher
 
     TARGET_DIR = BASE_DIR / "temp" / "target"

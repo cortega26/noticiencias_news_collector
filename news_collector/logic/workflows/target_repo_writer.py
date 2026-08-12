@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Dict
 
 import yaml
+
 from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.utils.logger import get_logger

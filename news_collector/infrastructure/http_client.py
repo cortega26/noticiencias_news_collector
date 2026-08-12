@@ -8,9 +8,6 @@ import logging
 from typing import Any, Dict, Optional
 
 import httpx
-from news_collector.config.settings import get_runtime_config
-from news_collector.utils.logger import get_logger
-from news_collector.utils.security import validate_url_safety
 from tenacity import (
     AsyncRetrying,
     before_sleep_log,
@@ -18,6 +15,10 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+from news_collector.config.settings import get_runtime_config
+from news_collector.utils.logger import get_logger
+from news_collector.utils.security import validate_url_safety
 
 logger = get_logger().create_module_logger(__name__)
 
