@@ -82,12 +82,15 @@ select = [
     "F",  # pyflakes
     "W",  # pycodestyle warnings
     "B",  # flake8-bugbear
-    "I",  # isort
     "C4", # flake8-comprehensions
     "SIM",# flake8-simplify
     "S",  # flake8-bandit (security)
     "C90",# mccabe (complexity)
 ]
+# Note: isort is deliberately NOT selected — it is the repo's import-order
+# owner (first in the pre-commit hook, own config in pyproject). Enabling
+# ruff's I rules created a fix-loop: ruff I001 reordered intra-function
+# imports that isort accepts, so the two tools cycled forever (2026-08-12).
 ignore = [
     "E203",  # whitespace before ':' (black compatibility)
     "E402",  # allow runtime path adjustments before imports
