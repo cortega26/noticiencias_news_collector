@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 import git
 import requests
 import yaml
-
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.frontend_publication import (

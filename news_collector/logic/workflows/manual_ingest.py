@@ -10,7 +10,6 @@ from typing import Any, Iterable, Mapping
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
-
 from news_collector.config.sources import ALL_SOURCES, save_sources
 from news_collector.contracts.adapters import adapt_article_to_export
 from news_collector.contracts.collector import CollectorArticleModel

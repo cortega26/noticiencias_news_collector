@@ -507,6 +507,20 @@ class TestCriticPasses:
         result = agent._generate_headlines_with_critic("body")
         assert result == {"direct": "H"}
 
+    def test_generate_headlines_with_critic_honors_configured_retries(self):
+        """text_processing.max_headline_retries=0 disables the retry loop:
+        one generate + one critic, no regeneration (2026-08-12: a failing
+        article burned ~9 min across 3 attempts before publishing the
+        rejected headlines anyway)."""
+        agent = _bare_agent()
+        agent.max_headline_retries = 0
+        agent._generate_headlines = MagicMock(return_value={"direct": "H"})
+        agent._headline_critic_pass = MagicMock(return_value=(False, "regen now"))
+        result = agent._generate_headlines_with_critic("body")
+        assert result == {"direct": "H"}
+        assert agent._generate_headlines.call_count == 1
+        assert agent._headline_critic_pass.call_count == 1
+
 
 class TestHeadlineGeneration:
     def _headlines_agent(self):

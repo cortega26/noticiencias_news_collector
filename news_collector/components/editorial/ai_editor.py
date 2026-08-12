@@ -14,10 +14,9 @@ from news_collector.utils.logger import get_logger
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 import yaml
+from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
-
-from news_collector.editorial.category_resolver import EditorialCategoryResolver
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
@@ -458,6 +457,9 @@ class EditorAgent:
         try:
             cfg = config or load_config()
             self.min_content_length = cfg.text_processing.min_content_length
+            self.max_headline_retries = int(
+                getattr(cfg.text_processing, "max_headline_retries", 2)
+            )
             # Resolve persistent data directory for stable checkpointing across runs
             paths = getattr(cfg, "paths", None) or {}
             if isinstance(paths, dict):
@@ -467,6 +469,7 @@ class EditorAgent:
         except Exception:
             # Fallbacks if config is unavailable early in boot
             self.min_content_length = 750
+            self.max_headline_retries = 2
             data_dir = "./data"
 
         # Anchor cache to an absolute path so it is stable regardless of CWD.
@@ -1305,9 +1308,13 @@ class EditorAgent:
 
         On exhaustion, returns the last generated headlines and logs a
         warning — the editor_critic already gates the body, and the
-        deterministic repair layer will still run.
+        deterministic repair layer will still run. The retry count comes
+        from config (`text_processing.max_headline_retries`, default 2);
+        each attempt costs two LLM calls, and the verdict is advisory at
+        exhaustion, so operators can trade headline quality for
+        latency/cost (2026-08-12: a failing article burned ~9 min here).
         """
-        max_headline_retries = 2
+        max_headline_retries = getattr(self, "max_headline_retries", 2)
         headlines = self._generate_headlines(final_content)
         for attempt in range(max_headline_retries + 1):
             approved, regen_instruction = self._headline_critic_pass(

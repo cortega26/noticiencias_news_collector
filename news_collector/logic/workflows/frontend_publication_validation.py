@@ -337,3 +337,66 @@ def run_frontend_publication_validation(
         )
 
     return summary
+
+
+def validate_post_frontmatter_fast(
+    post_path: Path,
+) -> tuple[bool, str | None, str | None]:
+    """Fast, dependency-free frontmatter validation of a generated post.
+
+    Parses the post's YAML frontmatter and validates it against the backend
+    mirror of the frontend contract (AstroPost) — catching shape violations
+    (e.g. ``sources[].date: null``, which the frontend Zod schema rejects)
+    in milliseconds, without npm ci / prettier / build.
+
+    Returns (ok, failure_class, error_message). failure_class is
+    'taxonomy_contract_violation' for schema violations (the class the
+    frontend validation would report), None when the post is valid.
+    """
+    try:
+        text = post_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return False, "sidecar_missing_or_malformed", f"cannot read post: {exc}"
+
+    if not text.startswith("---"):
+        return (
+            False,
+            "taxonomy_contract_violation",
+            "post does not start with YAML frontmatter",
+        )
+
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return (
+            False,
+            "taxonomy_contract_violation",
+            "frontmatter block not closed",
+        )
+
+    import yaml
+
+    try:
+        data = yaml.safe_load(parts[1])
+    except yaml.YAMLError as exc:
+        return False, "taxonomy_contract_violation", f"invalid YAML: {exc}"
+
+    if not isinstance(data, dict):
+        return False, "taxonomy_contract_violation", "frontmatter is not a mapping"
+
+    # sources[].date must be a string or absent — never null (the frontend
+    # Zod schema is z.string().optional(), which rejects explicit null).
+    for idx, src in enumerate(data.get("sources") or []):
+        if isinstance(src, dict) and src.get("date") is None and "date" in src:
+            return (
+                False,
+                "taxonomy_contract_violation",
+                f"sources[{idx}].date is null; omit the key instead (frontend "
+                "schema rejects explicit null)",
+            )
+
+    try:
+        AstroPost.model_validate(data)
+    except Exception as exc:  # pydantic ValidationError
+        return False, "taxonomy_contract_violation", f"schema violation: {exc}"
+
+    return True, None, None

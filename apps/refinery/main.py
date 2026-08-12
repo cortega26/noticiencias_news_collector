@@ -15,8 +15,6 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from noticiencias.config_manager import load_config
-
 from apps.refinery.published_content import (
     append_deleted_route_smoke_check,
     find_published_article_by_file_name,
@@ -37,6 +35,7 @@ from news_collector.storage.database import DatabaseManager
 from news_collector.system import create_system
 from news_collector.system.bootstrap import preflight_llm_provider
 from news_collector.utils.logger import get_logger
+from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger("Orchestrator")
 

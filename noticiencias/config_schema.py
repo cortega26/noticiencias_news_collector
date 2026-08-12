@@ -555,6 +555,15 @@ class TextProcessingConfig(StrictModel):
         default=750,
         description="Minimum number of characters required for an article.",
     )
+    max_headline_retries: NonNegativeInt = Field(
+        default=2,
+        description=(
+            "Headline-critic regeneration attempts (0 disables the critic "
+            "retry loop). Each attempt costs two LLM calls (generate + "
+            "critic); the critic verdict is advisory at exhaustion, so "
+            "lowering this trades headline quality for latency/cost."
+        ),
+    )
     boost_keywords: List[str] = Field(
         default_factory=lambda: [
             "breakthrough",

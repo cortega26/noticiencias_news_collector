@@ -48,7 +48,31 @@ def _make_engine(tmp_path: Path) -> RefineryEngine:
 
     editor = MagicMock()
     editor.process_article.return_value = (
-        "---\ntitle: Test\nslug: test-article\ndate: 2024-01-25\n---\nContent"
+        "---\n"
+        "title: Test Article Title\n"
+        "schema_version: 2\n"
+        "date: 2024-01-25\n"
+        "author: Noticiencias AI\n"
+        "categories:\n"
+        "  - Ciencia\n"
+        "tags:\n"
+        "  - ciencia\n"
+        "excerpt: Un resumen suficientemente largo para pasar el schema\n"
+        "image: ~/assets/images/test-article.webp\n"
+        "image_alt: Imagen de prueba\n"
+        "sources:\n"
+        "  - title: Fuente\n"
+        "    url: https://example.com/fuente\n"
+        "summary_points:\n"
+        "  - Punto uno\n"
+        "fact_check:\n"
+        "  - label: Afirmación\n"
+        "    status: confirmed\n"
+        "why_it_matters:\n"
+        "  - Importa\n"
+        "confidence: Alta\n"
+        "---\n"
+        "Content"
     )
 
     config = SimpleNamespace(

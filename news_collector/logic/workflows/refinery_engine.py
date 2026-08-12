@@ -46,6 +46,7 @@ from news_collector.contracts import (
 )
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
+    validate_post_frontmatter_fast,
 )
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.image_handler import (
@@ -553,6 +554,34 @@ class RefineryEngine:
                 self.publication_attempts_dir
                 / f"{self._safe_publication_artifact_name(article_id)}.frontend_validation.json"
             )
+
+            # Fast, dependency-free frontmatter check first (plan 057): the
+            # full frontend build below is slow and duplicates the frontend
+            # CI. Catching schema violations (e.g. sources[].date: null)
+            # here aborts in milliseconds instead of after a full npm
+            # ci + prettier + lint + build cycle.
+            fast_ok, fast_class, fast_error = validate_post_frontmatter_fast(
+                posts_dir / output_filename
+            )
+            if not fast_ok:
+                logger.error(
+                    "Fast frontmatter validation failed for {}: {}",
+                    article_id,
+                    fast_error,
+                )
+                record_stage(
+                    "frontend_publication_validation",
+                    False,
+                    failure_class=fast_class or "taxonomy_contract_violation",
+                    fast=True,
+                    error=fast_error,
+                )
+                persist_attempt(
+                    False,
+                    failure_class=fast_class or "taxonomy_contract_violation",
+                )
+                return False
+
             validation_summary = run_frontend_publication_validation(
                 target_dir,
                 summary_output_path=Path(validation_summary_path),

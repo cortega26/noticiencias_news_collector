@@ -168,3 +168,100 @@ def test_run_current_state_without_post_path(tmp_path: Path) -> None:
         "test_dist",
         "test_audit",
     ]
+
+
+def test_validate_post_frontmatter_fast_rejects_null_source_date(
+    tmp_path: Path,
+) -> None:
+    """2026-08-12 regression: sources[].date: null passed the backend but the
+    frontend Zod schema (z.string().optional()) rejects it, aborting
+    publication after the full build. The fast check must catch it."""
+    from news_collector.logic.workflows.frontend_publication_validation import (
+        validate_post_frontmatter_fast,
+    )
+
+    post = tmp_path / "post.md"
+    post.write_text(
+        "---\n"
+        "title: Un modelo de IA realizó más de 17 500 acciones\n"
+        "schema_version: 2\n"
+        "date: 2026-08-12\n"
+        "author: Noticiencias AI\n"
+        "categories:\n"
+        "  - Tecnología\n"
+        "tags:\n"
+        "  - ia\n"
+        "excerpt: Un resumen suficientemente largo para el schema\n"
+        "image: ~/assets/images/example.webp\n"
+        "image_alt: Ilustración de ejemplo\n"
+        "sources:\n"
+        "  - title: Fuente original\n"
+        "    url: https://example.com/fuente\n"
+        "    publisher: Ejemplo\n"
+        "    date: null\n"
+        "summary_points:\n"
+        "  - Punto uno\n"
+        "fact_check:\n"
+        "  - label: Afirmación\n"
+        "    status: confirmed\n"
+        "why_it_matters:\n"
+        "  - Importa porque sí\n"
+        "confidence: Alta\n"
+        "---\n",
+        encoding="utf-8",
+    )
+
+    ok, failure_class, error = validate_post_frontmatter_fast(post)
+    assert ok is False
+    assert failure_class == "taxonomy_contract_violation"
+    assert "sources[0].date is null" in error
+
+
+def test_validate_post_frontmatter_fast_accepts_omitted_date(tmp_path: Path) -> None:
+    from news_collector.logic.workflows.frontend_publication_validation import (
+        validate_post_frontmatter_fast,
+    )
+
+    post = tmp_path / "post.md"
+    post.write_text(
+        "---\n"
+        "title: Un modelo de IA realizó más de 17 500 acciones\n"
+        "schema_version: 2\n"
+        "date: 2026-08-12\n"
+        "author: Noticiencias AI\n"
+        "categories:\n"
+        "  - Tecnología\n"
+        "tags:\n"
+        "  - ia\n"
+        "excerpt: Un resumen suficientemente largo para el schema\n"
+        "image: ~/assets/images/example.webp\n"
+        "image_alt: Ilustración de ejemplo\n"
+        "sources:\n"
+        "  - title: Fuente original\n"
+        "    url: https://example.com/fuente\n"
+        "    publisher: Ejemplo\n"
+        "summary_points:\n"
+        "  - Punto uno\n"
+        "fact_check:\n"
+        "  - label: Afirmación\n"
+        "    status: confirmed\n"
+        "why_it_matters:\n"
+        "  - Importa porque sí\n"
+        "confidence: Alta\n"
+        "---\n",
+        encoding="utf-8",
+    )
+
+    ok, failure_class, error = validate_post_frontmatter_fast(post)
+    assert ok is True, error
+    assert failure_class is None
+
+
+def test_validate_post_frontmatter_fast_missing_file(tmp_path: Path) -> None:
+    from news_collector.logic.workflows.frontend_publication_validation import (
+        validate_post_frontmatter_fast,
+    )
+
+    ok, failure_class, _ = validate_post_frontmatter_fast(tmp_path / "missing.md")
+    assert ok is False
+    assert failure_class == "sidecar_missing_or_malformed"

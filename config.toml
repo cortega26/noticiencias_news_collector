@@ -126,6 +126,10 @@ supported_languages = [
     "fr",
 ]
 min_content_length = 500
+# Headline-critic regeneration attempts. Each attempt costs two LLM calls
+# (generate + critic) and the verdict is advisory at exhaustion — lower to
+# trade headline quality for latency/cost, 0 disables the retry loop.
+max_headline_retries = 2
 boost_keywords = [
     "breakthrough",
     "discovery",
