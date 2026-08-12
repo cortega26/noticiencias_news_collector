@@ -180,6 +180,13 @@ def looks_like_file_path(s: str) -> bool:
         return False
     if s.startswith("#"):
         return False
+    # Runtime artifacts under data/ (SQLite files, logs, generated JSON) are
+    # not versioned — they exist locally but not in a clean CI checkout.
+    # Docs reference them conceptually; don't require them to exist
+    # (2026-08-12: docs/database_deployment.md `data/news.db` broke the
+    # drift gate on clean checkouts).
+    if s.startswith("data/"):
+        return False
     if "*" in s or "?" in s:
         return False
     if _PLACEHOLDER_RE.search(s):

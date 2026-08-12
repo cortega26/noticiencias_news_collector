@@ -78,6 +78,9 @@ ipython_config.py
 
 # pyenv
 .python-version
+# ...except the doc-drift test fixture that needs one to exercise the
+# stale-Python-claim check in CI (clean checkout, no pyenv file).
+!tests/fixtures/doc-drift/stale-python/.python-version
 
 # celery beat schedule file
 celerybeat-schedule
