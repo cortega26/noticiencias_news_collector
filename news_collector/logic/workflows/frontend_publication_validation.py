@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import subprocess
+import subprocess  # nosec B404 - deliberate: runs frontend validation commands (no user input in argv)
 import time
 from datetime import date, datetime, timezone
 from pathlib import Path
