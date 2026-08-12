@@ -795,3 +795,47 @@ def reset_one_article(
                 article.refinery_id,
                 exc_info=True,
             )
+
+
+def resolve_published_refinery_ids(
+    *,
+    target_repo_url: str,
+    collector_repo_root: Path,
+    temp_target_dir: Path,
+    github_token: str = "",
+) -> set[str]:
+    """Return the set of refinery_ids currently published in the target repo.
+
+    Uses the published-content snapshot (manifest + frontmatter scan of the
+    target checkout/clone). This covers articles published from exports whose
+    refinery_id is the title (non-numeric), which a DB-only
+    is_article_in_flight_or_done() check cannot see (2026-08-12 regression:
+    re-selecting an already-published export article re-ran the pipeline and
+    created a duplicate PR).
+
+    Best-effort: any failure (no checkout, no token, clone error) returns an
+    empty set so callers fall back to the DB-only check.
+    """
+    if not target_repo_url:
+        return set()
+    try:
+        snapshot = resolve_published_content_snapshot(
+            target_repo_url=target_repo_url,
+            collector_repo_root=collector_repo_root,
+            temp_target_dir=temp_target_dir,
+            github_token=github_token,
+            refresh_clone=False,
+            prefer_remote_checkout=True,
+        )
+    except Exception:  # defensive UI path
+        logger.warning(
+            "Could not resolve published refinery_ids for %s",
+            target_repo_url,
+            exc_info=True,
+        )
+        return set()
+    return {
+        str(a.refinery_id).strip()
+        for a in snapshot.articles
+        if a.refinery_id
+    }

@@ -53,6 +53,7 @@ from apps.refinery.published_content import (
     get_repo_head_sha,
     reset_one_article,
     resolve_published_content_snapshot,
+    resolve_published_refinery_ids,
     truncate_refinery_id,
 )
 from news_collector.config import settings as config_settings
@@ -628,41 +629,6 @@ def render_fetch_attempts(fetch_attempts: list[dict[str, Any]] | None) -> None:
             )
 
 
-def _resolve_published_refinery_ids(
-    *,
-    target_repo_url: str,
-    github_token: str,
-    temp_target_dir: Path,
-) -> set[str]:
-    """Return the set of refinery_ids currently published in the target repo.
-
-    Uses the published-content snapshot (manifest + frontmatter scan of the
-    target checkout/clone). This covers articles published from exports whose
-    refinery_id is the title (non-numeric), which the DB-only
-    is_article_in_flight_or_done() check cannot see (2026-08-12 regression:
-    re-selecting an already-published export article re-ran the pipeline and
-    created a duplicate PR).
-
-    Best-effort: any failure (no checkout, no token, clone error) returns an
-    empty set — the UI then falls back to the DB-only check.
-    """
-    if not target_repo_url:
-        return set()
-    try:
-        snapshot = resolve_published_content_snapshot(
-            target_repo_url=target_repo_url,
-            collector_repo_root=BASE_DIR.parents[1],
-            temp_target_dir=temp_target_dir,
-            github_token=github_token,
-            refresh_clone=False,
-            prefer_remote_checkout=True,
-        )
-    except Exception as exc:  # pragma: no cover - defensive UI path
-        logger.warning(f"Could not resolve published snapshot: {exc}")
-        return set()
-    return {str(a.refinery_id).strip() for a in snapshot.articles if a.refinery_id}
-
-
 def render_article_processing_panel(  # noqa: C901
     selected_art: dict[str, Any] | None,
     *,
@@ -829,10 +795,11 @@ def render_article_processing_panel(  # noqa: C901
     # instead of silently re-running the pipeline (2026-08-12 regression).
     published_article = None
     if not is_pub:
-        published_ids = _resolve_published_refinery_ids(
+        published_ids = resolve_published_refinery_ids(
             target_repo_url=env_vars.get("TARGET_REPO_URL", ""),
-            github_token=env_vars.get("GITHUB_TOKEN", ""),
+            collector_repo_root=BASE_DIR.parents[1],
             temp_target_dir=BASE_DIR / "temp" / "target",
+            github_token=env_vars.get("GITHUB_TOKEN", ""),
         )
         if selected_id.strip() in published_ids:
             is_pub = True
@@ -2603,10 +2570,11 @@ with tab3:
                 # article was offered as publishable).
                 published_refinery_ids: set[str] = set()
                 if not show_processed:
-                    published_refinery_ids = _resolve_published_refinery_ids(
+                    published_refinery_ids = resolve_published_refinery_ids(
                         target_repo_url=env_vars.get("TARGET_REPO_URL", ""),
-                        github_token=env_vars.get("GITHUB_TOKEN", ""),
+                        collector_repo_root=BASE_DIR.parents[1],
                         temp_target_dir=BASE_DIR / "temp" / "target",
+                        github_token=env_vars.get("GITHUB_TOKEN", ""),
                     )
 
                 filtered_count = 0

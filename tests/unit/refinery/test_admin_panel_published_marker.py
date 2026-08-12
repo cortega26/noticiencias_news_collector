@@ -1,19 +1,19 @@
-"""Tests for the Refinery UI 'already published' detection (2026-08-12).
+"""Tests for the 'already published' refinery_id resolution (2026-08-12).
 
-The DB-only check (is_article_in_flight_or_done) cannot see articles
-published from exports whose refinery_id is the title (non-numeric). The
-UI now also resolves the target repo's published content snapshot and
-flags/hides those articles so re-selecting them cannot silently re-run
-the pipeline and create a duplicate PR.
+The DB-only published check (is_article_in_flight_or_done) cannot see
+articles published from exports whose refinery_id is the title
+(non-numeric). resolve_published_refinery_ids() resolves the target repo's
+published-content snapshot (manifest + frontmatter) so the Refinery UI can
+flag/hide those articles instead of silently re-running the pipeline and
+creating a duplicate PR.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
-from apps.refinery import admin_panel
+from apps.refinery import published_content
 
 
 class _FakeArticle:
@@ -38,13 +38,14 @@ def test_resolve_published_refinery_ids_returns_manifest_ids(tmp_path: Path):
     )
 
     with patch(
-        "apps.refinery.admin_panel.resolve_published_content_snapshot",
+        "apps.refinery.published_content.resolve_published_content_snapshot",
         return_value=snapshot,
     ):
-        result = admin_panel._resolve_published_refinery_ids(
+        result = published_content.resolve_published_refinery_ids(
             target_repo_url="https://github.com/org/repo.git",
-            github_token="token",
+            collector_repo_root=tmp_path,
             temp_target_dir=tmp_path,
+            github_token="token",
         )
 
     assert "123" in result
@@ -52,23 +53,25 @@ def test_resolve_published_refinery_ids_returns_manifest_ids(tmp_path: Path):
     assert len(result) == 2  # None refinery_id excluded
 
 
-def test_resolve_published_refinery_ids_empty_without_target_url():
-    result = admin_panel._resolve_published_refinery_ids(
+def test_resolve_published_refinery_ids_empty_without_target_url(tmp_path: Path):
+    result = published_content.resolve_published_refinery_ids(
         target_repo_url="",
+        collector_repo_root=tmp_path,
+        temp_target_dir=tmp_path,
         github_token="token",
-        temp_target_dir=Path("/nonexistent"),
     )
     assert result == set()
 
 
 def test_resolve_published_refinery_ids_best_effort_on_error(tmp_path: Path):
     with patch(
-        "apps.refinery.admin_panel.resolve_published_content_snapshot",
+        "apps.refinery.published_content.resolve_published_content_snapshot",
         side_effect=RuntimeError("clone failed"),
     ):
-        result = admin_panel._resolve_published_refinery_ids(
+        result = published_content.resolve_published_refinery_ids(
             target_repo_url="https://github.com/org/repo.git",
-            github_token="token",
+            collector_repo_root=tmp_path,
             temp_target_dir=tmp_path,
+            github_token="token",
         )
     assert result == set()
