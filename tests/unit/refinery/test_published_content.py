@@ -115,6 +115,10 @@ def test_resolve_published_content_snapshot_prefers_verified_local_checkout(
         collector_repo_root=collector_repo_root,
         temp_target_dir=clone_repo,
         refresh_clone=False,
+        # Prefer the verified local checkout deterministically — the
+        # sibling scan (parent_dir.iterdir()) order is filesystem-dependent
+        # and CI may surface the temp clone first (2026-08-12).
+        extra_candidates=[frontend_repo],
     )
 
     assert snapshot.source_label == "Checkout local verificado del frontend"

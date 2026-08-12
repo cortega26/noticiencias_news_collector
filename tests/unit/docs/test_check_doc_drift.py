@@ -151,7 +151,14 @@ def test_cross_repo_ref_skipped_without_sibling():
 
 
 def test_live_repo_docs_pass():
-    combined, exit_code = run_check(str(REPO_ROOT), [])
+    # Force the sibling to be absent so the live check is deterministic in
+    # any environment (CI workspace layout differs from local: the sibling
+    # path may or may not exist; the check must pass on the backend alone).
+    combined, exit_code = run_check(
+        str(REPO_ROOT),
+        [],
+        sibling_root=str(REPO_ROOT / "no-such-sibling"),
+    )
     assert exit_code == 0, combined
     assert "[check:doc-drift] OK" in combined
 
