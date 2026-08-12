@@ -933,6 +933,19 @@ class RefineryEngine:
         decision = "allowed"
         reason = "Non-blocking check passed (Fail-Open) or Score Sufficient"
 
+        # The auditor is configured non-blocking ([editorial_auditor]
+        # blocking = false, the repo default): its score is advisory and
+        # must never gate publication. The policy threshold/caveats only
+        # become gates when the auditor is explicitly configured blocking
+        # (2026-08-12 regression: standard-mode threshold 8.0 blocked a
+        # re-selected article with a cached 6.5 advisory score, even though
+        # the auditor had already been allowed to publish it).
+        if not self.auditor.blocking:
+            decision = "allowed"
+            reason = "Auditor is non-blocking (config editorial_auditor.blocking=false); score advisory only"
+            self._log_enforcement_decision(article_id, cached_score, decision, reason)
+            return True
+
         try:
             # Fail-Open if no score available (Non-Blocking Auditor)
             # Using strict usage of 'is None'

@@ -29,6 +29,11 @@ class TestEditorialPolicyEnforcement:
         ) as MockAuditorClass:
             # Setup the instance returned by the class
             mock_auditor_instance = MockAuditorClass.return_value
+            # Repo default: the auditor is non-blocking ([editorial_auditor]
+            # blocking = false in config.toml). Its score is advisory only
+            # and must never gate publication — the 2026-08-12 regression
+            # where a cached advisory 6.5 blocked a re-selected article.
+            mock_auditor_instance.blocking = False
 
             # Patch Integrity Check for these tests
             with patch.object(EditorialPolicy, "verify_integrity", return_value=None):
@@ -58,8 +63,21 @@ class TestEditorialPolicyEnforcement:
         allowed = engine._enforce_editorial_policy("test_id", None)
         assert allowed is True
 
-    def test_enforcement_blocked_low_score(self, engine):
-        """Test 2: cached_score below threshold -> blocked"""
+    def test_enforcement_non_blocking_auditor_never_blocks(self, engine):
+        """Test 6 (2026-08-12 regression): a non-blocking auditor's cached
+        score must NOT gate publication, regardless of threshold/caveats."""
+        engine.auditor.blocking = False
+        # Even a very low advisory score and missing caveats must not block
+        # when the auditor is configured non-blocking (the repo default).
+        low_score = {"epistemic_rigor_score": 3.0, "has_proper_caveats": False}
+
+        allowed = engine._enforce_editorial_policy("test_id", low_score)
+        assert allowed is True
+
+    def test_enforcement_blocked_low_score_only_when_blocking(self, engine):
+        """Test 2: cached_score below threshold blocks ONLY when the auditor
+        is configured blocking."""
+        engine.auditor.blocking = True
         # Standard mode threshold is 8.0
         score = {"epistemic_rigor_score": 7.9, "has_proper_caveats": True}
 
@@ -67,14 +85,16 @@ class TestEditorialPolicyEnforcement:
         assert allowed is False
 
     def test_enforcement_allowed_high_score(self, engine):
-        """Test 3: cached_score above threshold -> allowed"""
+        """Test 3: cached_score above threshold -> allowed (even blocking)."""
+        engine.auditor.blocking = True
         score = {"epistemic_rigor_score": 8.0, "has_proper_caveats": True}
 
         allowed = engine._enforce_editorial_policy("test_id", score)
         assert allowed is True
 
     def test_enforcement_blocked_missing_caveats(self, engine):
-        """Test 4: missing caveats when required -> blocked"""
+        """Test 4: missing caveats when required -> blocked (blocking mode)."""
+        engine.auditor.blocking = True
         # Standard mode requires caveats
         engine.policy.require_caveats = True
 
@@ -88,7 +108,9 @@ class TestEditorialPolicyEnforcement:
 
     def test_persistence_prevention(self, engine, tmp_path):
         """Test 5: manifest and file not created when blocked"""
-        # Setup Blocked State
+        # Setup Blocked State — only meaningful with a blocking auditor
+        # (the repo default is non-blocking; see Test 6)
+        engine.auditor.blocking = True
         score = {"epistemic_rigor_score": 5.0}  # Low score
         engine.auditor.get_cached_score.return_value = score
 
