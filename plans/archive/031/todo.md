@@ -71,22 +71,20 @@
 - [x] `accessibility.test.ts`: fixed its `getFirstArticleUrl` helper,
       which was appending a trailing slash to article URLs and 404ing;
       removed its "no article" skip too.
-- [x] Found and surfaced (did not silently resolve) a genuine
-      trailing-slash mismatch between the local build (`trailingSlash:
-      false`) and observed production behavior
-      (`/buscar/` = 200, `/buscar` = 301) — asked the operator directly
-      via `AskUserQuestion` rather than guessing. They chose to hold this
-      specific question for further investigation and confirmed
-      `astro preview` as the local server. The 5 affected tests across 3
-      files are marked `test.fixme(...)` with an inline explanation, not
-      silently skipped or force-fixed either direction.
-      `src/navigation.ts`'s own hardcoded `/buscar/` href was
-      deliberately left untouched — out of this plan's scope, and
-      plausibly correct for production as observed.
-- [x] Verify: `npx playwright test --project=chromium` → 23 passed, 7
-      explicit `fixme`, 0 unexplained failures; `npm run test:audit`
-      still 35/35, 200/200 (Step 1 untouched); `npx astro check` same
-      single pre-existing unrelated error; `prettier` clean.
+- [x] Trailing-slash investigation CONCLUDED 2026-08-11: production
+      serves the slash form as canonical (200 on `/buscar/`, `/blog/`,
+      `/reportar-problema/`, `/newsletter/`, `/categorias/*/`,
+      `/temas/*/`; 301 from no-slash), the site's own nav links are
+      authored in slash form, but `config.yaml` `trailingSlash: false`
+      made the local build 404 on every slash route and emit no-slash
+      canonicals — stale config. Fixed: `trailingSlash: true`,
+      `navigation.ts` `reportar-problema` link normalized to slash form,
+      all 5 `test.fixme(...)` route assertions un-fixme'd with the
+      resolution noted.
+- [x] Verify (post-fix): `npx playwright test --project=mobile-375
+      --project=desktop-1280` → 39 passed, 0 failures (was 23 passed +
+      7 fixme); `npm run test:audit` 43/43 files, 284/284 tests;
+      `prettier` clean.
 
 ## Step 3: Worker fetch-boundary tests — DONE (2026-08-11)
 - [x] Historical STOP resolved on its own: Dependabot commit `8be5e11`
@@ -143,10 +141,11 @@
       `actionlint` unavailable in this sandbox — noted honestly, not
       silently skipped.
 
-## Plan 031 final status: PARTIAL (only the operator's trailing-slash call remains)
-- [x] Step 1: DONE. Step 2: DONE except 5 tests `fixme` pending the
-      operator's trailing-slash investigation. Step 3: DONE (pool
-      installed, boundary tests in workerd, typecheck + coverage green).
-      Step 4: DONE — coverage, Playwright, and Worker gates all wired.
+## Plan 031 final status: DONE
+- [x] Step 1: DONE. Step 2: DONE including the trailing-slash
+      investigation (stale config fixed, 5 fixme tests green). Step 3:
+      DONE (pool installed, boundary tests in workerd, typecheck +
+      coverage green). Step 4: DONE — coverage, Playwright, and Worker
+      gates all wired.
 - [x] Update `plans/README.md`, root `spec.md`/`todo.md` to reflect this
       status.

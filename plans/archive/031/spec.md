@@ -263,34 +263,37 @@ exactly where the plan says it belongs: the pre-existing, separate
   `article-rendering.test.ts`'s already-correct pattern. Removed its
   "no article found" skip for the same reason as above.
 
-### An unresolved, genuinely load-bearing finding: trailing-slash mismatch
+### RESOLVED (2026-08-11): trailing-slash mismatch — stale config, fixed
 
-`/blog/`, `/buscar/`, `/reportar-problema/`, `/newsletter/` all 404
-locally under `astro preview` (`trailingSlash: false` in
-`src/config.yaml`), while the no-slash form (`/blog`, `/buscar`, etc.)
-returns 200. **Production does the opposite**: confirmed by curling
-`https://noticiencias.com/buscar/` (200) and `https://noticiencias.com/buscar`
-(301, redirecting to the slash form). This is either (a) `config.yaml`'s
-`trailingSlash: false` is stale relative to how the site is actually
-hosted (Cloudflare Pages likely applies its own default trailing-slash
-normalization independent of the Astro build config), or (b) production
-is doing something unexpected that should itself be treated as a bug.
+The investigation concluded with hard evidence on both sides:
 
-**Asked the operator directly rather than guessing** (this is a real
-infra/deployment question no amount of reading this repo's code can
-answer) — they asked to hold this specific question for further
-investigation rather than pick one now, and confirmed `astro preview`
-(not `wrangler pages dev ./dist`) as the local server for this plan.
-Every route-load assertion that depends on this (5 tests across 3 files)
-is marked `test.fixme(...)` with a comment explaining exactly why and
-pointing back to this finding — not silently skipped, not guessed at.
-`src/navigation.ts`'s own hardcoded `href: '/buscar/'` was **left
-untouched**: given production's observed behavior, that hardcoded
-trailing slash is actually the form that works directly (200) in
-production today, so "fixing" it to match the local build's `never`
-config would plausibly make it *worse* in production (add a redirect
-hop) to fix a local-only symptom — exactly the kind of change plan 031's
-own scope excludes ("changing article/product behavior").
+- **Production serves the slash form as canonical**: `/buscar/`, `/blog/`,
+  `/reportar-problema/`, `/newsletter/`, `/categorias/ciencia/`,
+  `/temas/agujero-negro/` all return 200; the no-slash forms 301-redirect
+  to them.
+- **The site's own navigation is authored in slash form**:
+  `src/navigation.ts` hardcodes `/buscar/` and `/newsletter/` (only
+  `/reportar-problema` was no-slash — inconsistent within the same file).
+- **The canonical tags disagreed with the nav**: `permalinks.ts` with
+  `trailingSlash: false` emitted `rel="canonical"` URLs without the
+  slash, contradicting both the nav links and the deployed reality.
+- **Root cause**: `src/config.yaml` `trailingSlash: false` (via
+  `configBuilder.ts` default and `src/integration/index.ts:37` mapping to
+  Astro's `'never'`) made the local build 404 on every slash-form route
+  and emit no-slash canonicals — the config was stale relative to how the
+  site is actually hosted.
+
+**Fix** (the evidence pointed one way — not a guess):
+- `src/config.yaml`: `trailingSlash: true` — local build now matches
+  production exactly (slash form 200, no-slash 404, canonical tags emit
+  the trailing slash).
+- `src/navigation.ts`: `reportar-problema` link normalized to the slash
+  form (the only nav link inconsistent with production).
+- All 5 `test.fixme(...)` route assertions un-fixme'd; the FIXME comments
+  replaced with the resolution note.
+
+Verified: `npx playwright test --project=mobile-375 --project=desktop-1280`
+→ 39 passed, 0 failures (previously 23 passed + 7 fixme).
 
 ### Verify
 
@@ -381,18 +384,16 @@ own `if: github.event_name == 'pull_request'`):
   sandbox (no Go toolchain/binary) — flagging honestly rather than
   claiming a check that didn't run.
 
-## Overall plan 031 status: PARTIAL (only the operator's trailing-slash call remains)
+## Overall plan 031 status: DONE
 
 - Step 1: DONE, verified.
-- Step 2: DONE for everything not gated on the trailing-slash question;
-  5 tests `fixme` pending the operator's own further investigation.
+- Step 2: DONE — including the trailing-slash investigation, concluded
+  2026-08-11 (stale config fixed; all 5 fixme tests un-fixme'd and green).
 - Step 3: DONE (2026-08-11) — pool installed, fetch-boundary tests run
   inside workerd, typecheck + coverage green.
 - Step 4: DONE — coverage, Playwright, and Worker gates all wired.
 
-The only remaining item is the operator's own trailing-slash
-investigation (Step 2's 5 `fixme` tests); no engineering work is
-outstanding in this plan.
+No engineering work remains outstanding in this plan.
 
 Real, load-bearing findings from doing this work rather than assuming:
 the Vitest `~` alias was never wired (masked a real coverage gap), the
