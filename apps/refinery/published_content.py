@@ -834,8 +834,4 @@ def resolve_published_refinery_ids(
             exc_info=True,
         )
         return set()
-    return {
-        str(a.refinery_id).strip()
-        for a in snapshot.articles
-        if a.refinery_id
-    }
+    return {str(a.refinery_id).strip() for a in snapshot.articles if a.refinery_id}
