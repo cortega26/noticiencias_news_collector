@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping
 from unittest.mock import patch
 
 import git
+
 from news_collector.config import ALL_SOURCES
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import (

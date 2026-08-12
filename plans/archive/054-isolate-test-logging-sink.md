@@ -105,7 +105,7 @@ Place this after the `LOG_LEVEL` block and before `logger.remove()`, so it parti
 
 `Path` is already imported at the top of the file (`from pathlib import Path`); `tempfile` is not — add the import at the top of the method (or top of file, matching the existing style where `import os` is a local import inside the method — follow that same local-import convention for `tempfile`).
 
-**Verify**: 
+**Verify**:
 ```
 python -m pytest tests/unit/infrastructure/llm/test_nvidia_provider_degradation.py -q
 ls -la /tmp/news_collector_test_logs/collector.log

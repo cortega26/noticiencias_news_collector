@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 import yaml
+
 from news_collector.taxonomy.normalizer import TagNormalizer
 
 

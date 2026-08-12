@@ -20,9 +20,10 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
-from news_collector.config import settings as config_settings
 from noticiencias.config_manager import Config, ConfigError, load_config, save_config
 from pydantic import ValidationError
+
+from news_collector.config import settings as config_settings
 
 ADMIN_PANEL = (
     Path(__file__).resolve().parents[3] / "apps" / "refinery" / "admin_panel.py"

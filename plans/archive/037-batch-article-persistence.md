@@ -101,4 +101,3 @@ Construct ORM rows, flush at the configured batch size, and commit once. Preserv
 ## Maintenance notes
 
 Keep query-count tests based on statement classes, not elapsed time. Revisit chunk bounds for each supported database driver.
-

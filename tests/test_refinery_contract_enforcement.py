@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
 from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 

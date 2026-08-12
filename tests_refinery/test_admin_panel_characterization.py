@@ -23,8 +23,9 @@ from contextlib import contextmanager
 from unittest.mock import patch
 
 import streamlit as st
-from news_collector.storage.database import DatabaseManager
 from streamlit.testing.v1 import AppTest
+
+from news_collector.storage.database import DatabaseManager
 
 ADMIN_PANEL = "apps/refinery/admin_panel.py"
 

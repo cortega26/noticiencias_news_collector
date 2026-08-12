@@ -22,8 +22,9 @@ from typing import Any, Dict, Optional
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy import inspect as sqla_inspect
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 

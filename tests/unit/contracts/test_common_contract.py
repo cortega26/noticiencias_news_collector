@@ -1,8 +1,9 @@
 """Tests for Common Contracts."""
 
 import pytest
-from news_collector.contracts.common import ArticleMetadataModel
 from pydantic import ValidationError
+
+from news_collector.contracts.common import ArticleMetadataModel
 
 
 def test_article_metadata_valid():

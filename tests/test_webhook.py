@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
 from news_collector.serving import create_app
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
@@ -342,8 +343,9 @@ def test_publication_ids_empty_list_accepted() -> None:
 
 def test_publication_ids_rejects_non_strings() -> None:
     """Non-string entries in publication_ids are rejected."""
-    from news_collector.contracts.webhook import ValidationResultEvent
     from pydantic import ValidationError
+
+    from news_collector.contracts.webhook import ValidationResultEvent
 
     payload = _make_validation_payload("pass")
     payload["publication_ids"] = [42]
@@ -353,8 +355,9 @@ def test_publication_ids_rejects_non_strings() -> None:
 
 def test_publication_ids_rejects_empty_strings() -> None:
     """Empty strings in publication_ids are rejected."""
-    from news_collector.contracts.webhook import ValidationResultEvent
     from pydantic import ValidationError
+
+    from news_collector.contracts.webhook import ValidationResultEvent
 
     payload = _make_validation_payload("pass")
     payload["publication_ids"] = ["  "]
@@ -364,8 +367,9 @@ def test_publication_ids_rejects_empty_strings() -> None:
 
 def test_publication_ids_rejects_oversized_list() -> None:
     """Lists exceeding MAX_PUBLICATION_IDS are rejected."""
-    from news_collector.contracts.webhook import ValidationResultEvent
     from pydantic import ValidationError
+
+    from news_collector.contracts.webhook import ValidationResultEvent
 
     payload = _make_validation_payload("pass")
     payload["publication_ids"] = [f"id-{i}" for i in range(201)]

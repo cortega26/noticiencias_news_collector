@@ -93,4 +93,3 @@ Return applied version, applied-live fields, and restart-required fields after s
 ## Maintenance notes
 
 New mutable settings must declare lifecycle semantics and have a live-refresh or restart-required test. Ban new direct imports of mutable config via lint/test.
-

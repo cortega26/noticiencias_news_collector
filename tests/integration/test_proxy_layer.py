@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+
 from news_collector.infrastructure.proxy_manager import ProxyManager
 from news_collector.infrastructure.requests_client import RobustRequestsClient
 

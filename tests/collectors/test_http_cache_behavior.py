@@ -2,6 +2,7 @@ import hashlib
 from typing import Type
 
 import pytest
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore
 

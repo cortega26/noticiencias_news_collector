@@ -1,4 +1,5 @@
 import requests
+
 from news_collector.infrastructure.proxy_manager import proxy_manager
 
 

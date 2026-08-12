@@ -13,10 +13,8 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-from news_collector.collectors.admission import (
-    AdmissionReason,
-    evaluate_admission,
-)
+
+from news_collector.collectors.admission import AdmissionReason, evaluate_admission
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 

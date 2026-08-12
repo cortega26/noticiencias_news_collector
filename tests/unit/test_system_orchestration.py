@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from news_collector.storage.models import Article
 from news_collector.system import NewsCollectorSystem
 

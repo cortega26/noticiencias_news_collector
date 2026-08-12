@@ -86,4 +86,3 @@ Create a Playwright test that navigates among home, listing, article, and search
 ## Maintenance notes
 
 Every transition-aware script must document whether its state is global or page-scoped and pair resource creation with cleanup. Reuse Header/Search binding patterns.
-

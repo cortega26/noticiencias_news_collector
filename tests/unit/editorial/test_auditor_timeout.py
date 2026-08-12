@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import requests
+
 from news_collector.components.editorial.auditor import EditorialAuditor
 
 

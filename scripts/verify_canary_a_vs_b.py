@@ -21,8 +21,8 @@ def check_runs():
 
     print("--- CELL Articles Today ---")
     cursor.execute("""
-        SELECT id, title, collected_date, length(content) 
-        FROM articles 
+        SELECT id, title, collected_date, length(content)
+        FROM articles
         WHERE source_id = 'cell' AND collected_date > '2026-02-16 00:00:00'
         ORDER BY collected_date ASC
     """)

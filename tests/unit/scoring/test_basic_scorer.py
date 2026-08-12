@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+
 from news_collector.scoring.basic_scorer import BasicScorer
 from news_collector.storage.models import Article
 

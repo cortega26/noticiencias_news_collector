@@ -1,5 +1,6 @@
 import pytest
 import yaml
+
 from news_collector.config.settings import BASE_DIR
 
 

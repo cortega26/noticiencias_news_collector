@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from news_collector.storage.article_repository import ArticlePage
 from news_collector.storage.models import Article
 from news_collector.system import NewsCollectorSystem

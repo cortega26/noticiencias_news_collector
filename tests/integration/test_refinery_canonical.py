@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 

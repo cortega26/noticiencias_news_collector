@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Any, Dict, Mapping
 
 import requests
+
 from news_collector.infrastructure.llm.ollama_errors import build_ollama_http_error
 from news_collector.utils.logger import get_logger
 

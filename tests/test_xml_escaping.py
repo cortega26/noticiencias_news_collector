@@ -1,4 +1,5 @@
 import pytest
+
 from news_collector.perf.load_replay import escape
 
 

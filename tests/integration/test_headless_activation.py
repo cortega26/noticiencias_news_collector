@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from news_collector.enrichment.headless_enricher import (
     HeadlessBudgetManager,
     HeadlessEnricher,

@@ -95,4 +95,3 @@ Validate unique canonical refs, no draft/private fields, deterministic serializa
 ## Maintenance notes
 
 Update the query corpus when fields/boosts change. Budget increases require an archive-size explanation and measured startup evidence.
-

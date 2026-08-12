@@ -4,18 +4,19 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import ValidationError
+from sqlalchemy.orm import load_only
+
+from news_collector.config.sources import ALL_SOURCES
 from news_collector.contracts.adapters import (
     adapt_article_to_export,
     adapt_to_scoring_input,
     adapt_to_validation_payload,
 )
-from news_collector.config.sources import ALL_SOURCES
 from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.contracts.scoring import ScoringInputModel
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
-from pydantic import ValidationError
-from sqlalchemy.orm import load_only
 
 
 def test_export_contract_v2_valid():

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
+
 from news_collector.reranker import rerank_articles
 from news_collector.utils.text_cleaner import normalize_text
 

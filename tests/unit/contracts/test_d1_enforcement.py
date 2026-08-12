@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
+from pydantic import ValidationError
+
 from news_collector.contracts.adapters import (
     adapt_article_to_export,
     adapt_to_scoring_input,
@@ -14,7 +16,6 @@ from news_collector.contracts.adapters import (
 )
 from news_collector.contracts.scoring import ArticleScoringData, ScoringInputModel
 from news_collector.contracts.validation import ArticleValidationPayload
-from pydantic import ValidationError
 
 
 class MockArticle:

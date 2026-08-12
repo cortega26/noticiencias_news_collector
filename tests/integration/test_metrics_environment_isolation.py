@@ -6,9 +6,7 @@ from unittest.mock import patch
 
 from news_collector.enrichment.strategy_optimizer import StrategyOptimizer
 from news_collector.infrastructure.run_context import run_context
-from news_collector.observability.enrichment_metrics_store import (
-    EnrichmentMetricsStore,
-)
+from news_collector.observability.enrichment_metrics_store import EnrichmentMetricsStore
 
 
 class TestMetricsEnvironmentIsolation(unittest.TestCase):

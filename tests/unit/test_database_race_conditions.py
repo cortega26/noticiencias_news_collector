@@ -8,10 +8,12 @@ These tests prove:
 """
 
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
-from sqlalchemy.exc import IntegrityError
 import sqlalchemy
+from sqlalchemy.exc import IntegrityError
+
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, Base
 

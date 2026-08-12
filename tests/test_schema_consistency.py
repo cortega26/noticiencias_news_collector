@@ -14,9 +14,10 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from sqlalchemy import create_engine, pool
+
 from news_collector import config as app_config
 from news_collector.storage.models import Base
-from sqlalchemy import create_engine, pool
 
 ROOT = Path(__file__).resolve().parents[1]
 

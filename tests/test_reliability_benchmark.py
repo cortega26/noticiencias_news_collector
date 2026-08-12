@@ -5,6 +5,7 @@ from collections import Counter
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from news_collector.collectors.html_collector import HtmlCollector
 
 # Benchmark Parameters

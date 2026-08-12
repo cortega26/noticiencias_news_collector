@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from news_collector.diagnostics import SourceHealth, SourceHealthTracker
 from news_collector.contracts.source_health import SourceHealthRecord
+from news_collector.diagnostics import SourceHealth, SourceHealthTracker
 
 
 def test_source_health_update():

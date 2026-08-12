@@ -85,4 +85,3 @@ Parameterize the test or CI environment so an expected sparse checkout missing i
 ## Maintenance notes
 
 Any future frontend schema move must update the sparse checkout, test resolver, contract docs, and snapshot path in the same change.
-

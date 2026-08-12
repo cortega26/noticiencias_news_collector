@@ -35,10 +35,10 @@ def reset_sources():
                 # Reset all state columns to force immediate retry
                 cursor.execute(
                     """
-                    UPDATE sources 
-                    SET last_checked = NULL, 
-                        next_retry_at = NULL, 
-                        status = 'ACTIVE', 
+                    UPDATE sources
+                    SET last_checked = NULL,
+                        next_retry_at = NULL,
+                        status = 'ACTIVE',
                         consecutive_failures = 0,
                         error_message = NULL
                     WHERE id = ?

@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 
 import pytest
-from news_collector.contracts.collector import CollectorArticleModel
 from pydantic import ValidationError
+
+from news_collector.contracts.collector import CollectorArticleModel
 
 
 def test_collector_article_valid():

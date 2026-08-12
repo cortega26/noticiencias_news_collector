@@ -2,9 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from news_collector.enrichment.router import EnrichmentStrategyRouter
-from news_collector.observability.enrichment_metrics_store import (
-    enrichment_metrics,
-)
+from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 
 
 class TestAdaptiveOptimizerIntegration(unittest.TestCase):

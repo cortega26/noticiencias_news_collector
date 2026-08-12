@@ -1,9 +1,10 @@
 import dataclasses
-from datetime import datetime, timedelta, timezone
 import time
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from news_collector.collectors.base_collector import BaseCollector
 from news_collector.collectors.html_collector import HtmlCollector
 from news_collector.config.settings import get_runtime_config

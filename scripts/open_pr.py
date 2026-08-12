@@ -10,6 +10,7 @@ BASE_DIR = Path(
 sys.path.insert(0, str(BASE_DIR))
 
 from dotenv import load_dotenv
+
 from news_collector.components.publishing.github_publisher import GitHubPublisher
 
 

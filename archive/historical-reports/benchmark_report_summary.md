@@ -14,4 +14,3 @@
 - Total: 27.01s
 - Phases (T/E/H): [0, 0, 0]
 - Output Length: 2725
-

@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
+
 import pytest
 from pydantic import ValidationError
 
+from news_collector.contracts import ArticleMetadataModel
 from news_collector.scoring.basic_scorer import BasicScorer
 from news_collector.scoring.feature_scorer import FeatureBasedScorer
-from news_collector.contracts import ArticleMetadataModel
 
 
 class MockArticle:

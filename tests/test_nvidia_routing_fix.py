@@ -22,9 +22,7 @@ import pytest
 def _clear_degradation_registry():
     """Prevent plan-053's process-wide degradation registry (keyed by
     base_url|model) from leaking state between tests in this module."""
-    from news_collector.infrastructure.llm.nvidia_provider import (
-        _DEGRADATION_REGISTRY,
-    )
+    from news_collector.infrastructure.llm.nvidia_provider import _DEGRADATION_REGISTRY
 
     _DEGRADATION_REGISTRY.clear()
     yield

@@ -1,7 +1,7 @@
 # Spec: Fix NVIDIA Provider Routing — Model Display and Stage Routing
 
-Status: Active  
-Scope: `apps/refinery/admin_panel.py`, `news_collector/components/editorial/ai_editor.py`  
+Status: Active
+Scope: `apps/refinery/admin_panel.py`, `news_collector/components/editorial/ai_editor.py`
 Authority: `docs/AGENTS.md`, `docs/ARCHITECTURE.md`
 
 ---

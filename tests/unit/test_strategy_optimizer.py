@@ -1,9 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from news_collector.enrichment.strategy_optimizer import (
-    StrategyOptimizer,
-)
+from news_collector.enrichment.strategy_optimizer import StrategyOptimizer
 
 
 class TestStrategyOptimizer(unittest.TestCase):

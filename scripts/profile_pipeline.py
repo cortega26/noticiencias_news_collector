@@ -2,10 +2,10 @@ import asyncio
 import time
 from unittest.mock import patch
 
-from news_collector.system import NewsCollectorSystem
-
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+
+from news_collector.system import NewsCollectorSystem
 
 query_count = 0
 

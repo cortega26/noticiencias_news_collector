@@ -104,4 +104,3 @@ Update audit allowlists only by removing resolved exceptions. Add a CI peer-vali
 ## Maintenance notes
 
 Keep the official migration guide linked in the PR. Future framework majors require `npm ls`, rendered-content comparisons, and mobile/desktop evidence, not only a successful build.
-

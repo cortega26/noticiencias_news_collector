@@ -28,7 +28,7 @@ def _make_article(
     """Create a temporary article file and return a record."""
     file_path = tmp_path / file_name
     file_path.write_text("# Test\n")
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     return PublishedArticleRecord(
         file_path=file_path,

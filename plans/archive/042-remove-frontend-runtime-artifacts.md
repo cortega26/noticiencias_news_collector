@@ -93,4 +93,3 @@ Run full frontend validation and CodeGraph/tool startup if locally available to 
 ## Maintenance notes
 
 Generated operational evidence belongs in ignored directories or CI artifacts. Version only deterministic, minimal fixtures with an owning test.
-

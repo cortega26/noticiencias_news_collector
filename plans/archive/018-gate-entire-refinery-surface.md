@@ -94,4 +94,3 @@ Keep Streamlit listening inside the container as required, but bind the publishe
 ## Maintenance notes
 
 Every new Refinery tab inherits the page gate; reviewers should reject action-local auth as the sole boundary. If stronger identity or multiple users become necessary, replace this page gate deliberately rather than layering another partial gate over it.
-

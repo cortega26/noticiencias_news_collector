@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import feedparser
+
 from news_collector.utils.datetime_utils import parse_to_utc_with_tzinfo
 from news_collector.utils.text_cleaner import clean_html
 from news_collector.utils.url_canonicalizer import canonicalize_url

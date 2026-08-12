@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+
 from news_collector.infrastructure.http_client import SmartHttpClient
 
 

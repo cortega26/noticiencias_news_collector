@@ -1,6 +1,5 @@
-from datetime import datetime, timezone
-
 import os
+from datetime import datetime, timezone
 
 # Set test mode BEFORE importing any news_collector package module:
 # get_logger() configures the loguru file sink on first import, and that
@@ -13,6 +12,7 @@ os.environ.setdefault("NEWS_COLLECTOR_TEST_MODE", "1")
 import sqlite3
 
 import pytest
+
 from news_collector.storage import database as database_module
 
 

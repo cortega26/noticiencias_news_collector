@@ -1,16 +1,18 @@
-import pytest
 import socket
+
 import httpx
-from news_collector.infrastructure.requests_client import RobustRequestsClient
+import pytest
+
 from news_collector.infrastructure.http_client import SmartHttpClient
+from news_collector.infrastructure.requests_client import RobustRequestsClient
 
 
 def test_robust_requests_client_blocks_redirects(monkeypatch):
     """
     Shows that SSRFSafeSession correctly intercepts 3xx redirects pointing to private IPs.
     """
-    from requests.adapters import HTTPAdapter
     from requests import Response
+    from requests.adapters import HTTPAdapter
 
     original_getaddrinfo = socket.getaddrinfo
 
@@ -32,8 +34,9 @@ def test_robust_requests_client_blocks_redirects(monkeypatch):
             resp.headers["Location"] = "http://169.254.169.254/metadata"
             resp.url = request.url
             resp.request = request
-            from urllib3.response import HTTPResponse
             from io import BytesIO
+
+            from urllib3.response import HTTPResponse
 
             resp.raw = HTTPResponse(body=BytesIO(b""), preload_content=False)
             return resp

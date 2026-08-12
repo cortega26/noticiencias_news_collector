@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from news_collector.editorial.policy import EditorialPolicy
 
 

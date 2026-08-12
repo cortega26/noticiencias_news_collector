@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from apps.refinery.bulk_helper import run_bulk, BulkResult, BulkFailure
+from apps.refinery.bulk_helper import BulkFailure, BulkResult, run_bulk
 
 
 class TestRunBulk:

@@ -18,9 +18,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from news_collector.system import create_system
 from news_collector.config import ALL_SOURCES
 from news_collector.perf import CollectorReplaySession, ReplayEvent, load_replay_fixture
+from news_collector.system import create_system
 
 SMOKE_SOURCE_ID = "smoke_replay_source"
 SMOKE_FIXTURE_PATH = (

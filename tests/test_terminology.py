@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from news_collector.components.editorial.ai_editor import EditorAgent
 
 

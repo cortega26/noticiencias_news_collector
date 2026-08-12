@@ -103,4 +103,3 @@ Show analytics `as_of`, environment, and manual refresh; surface stale/failure s
 ## Maintenance notes
 
 Metric schema changes need batching equivalence tests. Every cached read model needs named invalidation sources and a visible freshness timestamp.
-

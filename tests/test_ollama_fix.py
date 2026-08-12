@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from news_collector.infrastructure.llm.model_registry import NonCanonicalModelIdError
 from news_collector.infrastructure.llm.provider import OllamaProvider
 

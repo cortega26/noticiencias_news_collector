@@ -4,12 +4,9 @@ import unittest
 from unittest.mock import patch
 
 import yaml
-from news_collector.enrichment.strategy_lock_manager import (
-    strategy_lock_manager,
-)
-from news_collector.enrichment.strategy_optimizer import (
-    strategy_optimizer,
-)
+
+from news_collector.enrichment.strategy_lock_manager import strategy_lock_manager
+from news_collector.enrichment.strategy_optimizer import strategy_optimizer
 
 
 class TestContinuousOperation(unittest.TestCase):

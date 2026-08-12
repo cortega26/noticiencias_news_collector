@@ -24,7 +24,6 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import evaluate_enrichment_registry as evaluator  # noqa: E402
 import validate_enrichment_corpus as validator  # noqa: E402
-
 from news_collector.enrichment.pipeline import EnrichmentPipeline  # noqa: E402
 
 CORPUS_PATH = REPO_ROOT / "tests" / "data" / "enrichment_eval.jsonl"

@@ -105,4 +105,3 @@ Define durable job names for branch protection, migration order, failure artifac
 ## Maintenance notes
 
 Add new checks to the repo-level canonical command first, then CI. The workspace gate should validate contracts/artifacts, not duplicate every unit test again.
-

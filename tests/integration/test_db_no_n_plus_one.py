@@ -1,7 +1,9 @@
-import pytest
 from datetime import datetime, timezone
+
+import pytest
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+
 from news_collector.storage.database import DatabaseManager
 
 

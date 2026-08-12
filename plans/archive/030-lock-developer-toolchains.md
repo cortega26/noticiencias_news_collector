@@ -97,4 +97,3 @@ Add early checks for Python lock freshness, Node/npm versions, manifest/lock syn
 ## Maintenance notes
 
 Renovation updates must change tool inputs and generated locks together. Reviewers should reject workflow-local installs that bypass the shared action.
-

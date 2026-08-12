@@ -1,6 +1,6 @@
 # INVARIANTS.md — Backend Derived Invariants
 
-Status: Derived summary  
+Status: Derived summary
 Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`, `docs/AGENTS.md`, and `docs/ARCHITECTURE.md`
 
 ## Purpose

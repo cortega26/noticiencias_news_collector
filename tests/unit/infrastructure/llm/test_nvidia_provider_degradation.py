@@ -21,10 +21,10 @@ import requests
 
 from news_collector.config import settings
 from news_collector.infrastructure.llm.nvidia_provider import (
+    _DEGRADATION_REGISTRY,
     LLMRateLimiter,
     NvidiaProvider,
     ProviderDegradedError,
-    _DEGRADATION_REGISTRY,
 )
 
 

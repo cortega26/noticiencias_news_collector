@@ -1,10 +1,11 @@
 import re
 
 import pytest
-from news_collector.components.editorial.ai_editor import EditorAgent
-from news_collector.infrastructure.llm.model_registry import InvalidModelIdError
 from noticiencias.config_schema import OllamaConfig
 from pydantic import ValidationError
+
+from news_collector.components.editorial.ai_editor import EditorAgent
+from news_collector.infrastructure.llm.model_registry import InvalidModelIdError
 
 
 class MockProvider:

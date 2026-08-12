@@ -95,4 +95,3 @@ Report group/source failures to the injected health tracker/metrics interface th
 ## Maintenance notes
 
 New collector types need a dispatcher matrix case. Partial success is acceptable only when failed sources remain visible and counted.
-

@@ -1,5 +1,5 @@
 [32m20:34:49[0m | [1mINFO    [0m | 🎯 Sistema de logging configurado exitosamente
-2026-02-14 20:34:50,056 - 
+2026-02-14 20:34:50,056 -
 === TEST 1: NON-BLOCKING & CLEAN TEARDOWN (Event Control) ===
 [32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
 2026-02-14 20:34:50,057 - Refinery Engine initialized with Editorial Mode: STANDARD
@@ -103,7 +103,7 @@
 2026-02-14 20:34:50,197 - [MockProvider] Released!
 [32m20:34:50[0m | [1mINFO    [0m | Audit Complete for id_0. Epistemic Score: 5.0
 2026-02-14 20:34:50,199 - ✅ Teardown complete (No hang).
-2026-02-14 20:34:50,199 - 
+2026-02-14 20:34:50,199 -
 === TEST 2: BURST SUBMISSION & BACKPRESSURE ===
 [32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
 2026-02-14 20:34:50,200 - Refinery Engine initialized with Editorial Mode: STANDARD
@@ -515,9 +515,9 @@
 2026-02-14 20:34:50,298 - ✅ Bound constraints met (<=2 actual submissions for 50 requests).
 [32m20:34:50[0m | [33m[1mWARNING [0m | Auditor received invalid provider output type (<class 'bool'>). Using defaults.
 [32m20:34:50[0m | [1mINFO    [0m | Audit Complete for burst_0. Epistemic Score: 0.0
-2026-02-14 20:34:50,300 - 
+2026-02-14 20:34:50,300 -
 === TEST 3: DUAL TIMEOUT PROOF (Production & Fast) ===
-2026-02-14 20:34:50,301 - 
+2026-02-14 20:34:50,301 -
 --- Subtest: Fast Timeout Smoke Test (Timeout=0.5s, Stall=2.0s) ---
 [32m20:34:50[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
 2026-02-14 20:34:50,302 - Refinery Engine initialized with Editorial Mode: STANDARD
@@ -544,7 +544,7 @@
 2026-02-14 20:34:50,828 -    Configured: 0.5s
 2026-02-14 20:34:50,828 -    Measured:   0.51s
 2026-02-14 20:34:50,828 -    Retries:    0 (1 attempt)
-2026-02-14 20:34:52,327 - 
+2026-02-14 20:34:52,327 -
 --- Subtest: Production Timeout Proof (Critical) (Timeout=15.0s, Stall=17.0s) ---
 [32m20:34:52[0m | [1mINFO    [0m | ✅ Policy Integrity Verified: b6e90727...
 2026-02-14 20:34:52,327 - Refinery Engine initialized with Editorial Mode: STANDARD
@@ -572,5 +572,5 @@
 2026-02-14 20:35:07,950 -    Configured: 15.0s
 2026-02-14 20:35:07,950 -    Measured:   15.60s
 2026-02-14 20:35:07,950 -    Retries:    0 (1 attempt)
-2026-02-14 20:35:09,934 - 
+2026-02-14 20:35:09,934 -
 ✨ HARDENED PROOF SUITE PASSED ✨

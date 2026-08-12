@@ -12,8 +12,8 @@ def verify_canary_b():
 
     cursor.execute(
         """
-        SELECT id, title, source_id, collected_date, processing_status, final_score, length(content) 
-        FROM articles 
+        SELECT id, title, source_id, collected_date, processing_status, final_score, length(content)
+        FROM articles
         WHERE collected_date > ?
     """,
         (cutoff,),

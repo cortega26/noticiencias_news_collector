@@ -95,4 +95,3 @@ Make `BasicScorer` consume the canonical penalty keyword source if it still need
 ## Maintenance notes
 
 New collectors must normalize to `CollectorArticleModel` and rely on the shared boundary. New rejection rules require a reason code, fixture, and rollout impact estimate.
-

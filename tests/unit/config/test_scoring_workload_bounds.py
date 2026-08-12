@@ -1,9 +1,8 @@
 """Plan 036 Step 1: validated scoring workload bounds on ScoringConfig."""
 
 import pytest
-from pydantic import ValidationError
-
 from noticiencias.config_schema import ScoringConfig
+from pydantic import ValidationError
 
 
 class TestDefaults:

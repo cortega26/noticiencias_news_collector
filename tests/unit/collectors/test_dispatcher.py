@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from news_collector.collectors.base_collector import create_collector
 from news_collector.collectors.dispatcher import CollectorDispatcher
 

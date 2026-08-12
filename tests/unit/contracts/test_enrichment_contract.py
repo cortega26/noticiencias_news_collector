@@ -1,11 +1,12 @@
 """Tests for Enrichment Contracts."""
 
 import pytest
+from pydantic import ValidationError
+
 from news_collector.contracts.enrichment import (
     ArticleEnrichmentModel,
     ArticleForEnrichmentModel,
 )
-from pydantic import ValidationError
 
 
 def test_article_for_enrichment_valid():

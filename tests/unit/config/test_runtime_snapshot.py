@@ -15,9 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from news_collector.config.settings import (
-    RuntimeConfigSnapshot,
-)
+from news_collector.config.settings import RuntimeConfigSnapshot
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

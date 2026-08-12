@@ -4,6 +4,7 @@ from unittest.mock import ANY, MagicMock, patch
 
 import git
 import pytest
+
 from news_collector.components.publishing.github_publisher import GitHubPublisher
 
 

@@ -1,4 +1,5 @@
 import pytest
+
 from news_collector.utils.slug import slugify
 
 

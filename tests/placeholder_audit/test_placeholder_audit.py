@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 
 import pytest
+
 from tools.placeholder_audit import (
     AgeThresholds,
     AuditConfig,

@@ -16,10 +16,7 @@ warning rather than silently guessed at via branch matching.
 
 from __future__ import annotations
 
-from news_collector.contracts.webhook import (
-    PublishCompleteEvent,
-    ValidationResultEvent,
-)
+from news_collector.contracts.webhook import PublishCompleteEvent, ValidationResultEvent
 from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
 

@@ -1,9 +1,10 @@
-import pytest
 from datetime import datetime
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, Base
 

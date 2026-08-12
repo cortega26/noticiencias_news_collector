@@ -88,4 +88,3 @@ Keep the CI cache keyed by Python version and all lock inputs. Make the mypy hoo
 ## Maintenance notes
 
 Never cache generated environments through Git. When Python or lock inputs change, cache identity and bootstrap validation must change together.
-

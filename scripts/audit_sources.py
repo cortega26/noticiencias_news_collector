@@ -41,8 +41,9 @@ def cmd_list_failing(args: argparse.Namespace) -> int:
     """Show sources with DB failures."""
     db = _get_db()
     with db.get_session() as session:
-        from news_collector.storage.models import Source
         from sqlalchemy import or_
+
+        from news_collector.storage.models import Source
 
         failing = (
             session.query(Source)
@@ -74,8 +75,9 @@ def cmd_suggest_blacklist(args: argparse.Namespace) -> int:
     min_failures = getattr(args, "min_failures", 3)
 
     with db.get_session() as session:
-        from news_collector.storage.models import Source
         from sqlalchemy import and_
+
+        from news_collector.storage.models import Source
 
         candidates = (
             session.query(Source)
@@ -129,7 +131,8 @@ def cmd_blacklist(args: argparse.Namespace) -> int:
     )
 
     # Persist to YAML
-    from news_collector.config.sources import ALL_SOURCES as sources_dict, save_sources
+    from news_collector.config.sources import ALL_SOURCES as sources_dict
+    from news_collector.config.sources import save_sources
 
     sources_dict[source_id]["blacklisted"] = True
     sources_dict[source_id]["blacklist_reason"] = reason
@@ -210,8 +213,9 @@ def cmd_report(args: argparse.Namespace) -> int:
     db = _get_db()
 
     with db.get_session() as session:
-        from news_collector.storage.models import Source
         from sqlalchemy import func
+
+        from news_collector.storage.models import Source
 
         total = session.query(Source).count()
         active = session.query(Source).filter(Source.status == "ACTIVE").count()

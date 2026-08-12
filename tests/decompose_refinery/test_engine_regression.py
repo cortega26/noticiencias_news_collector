@@ -21,9 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from news_collector.contracts.publication_validation import (
-    PublicationValidationSummary,
-)
+from news_collector.contracts.publication_validation import PublicationValidationSummary
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 # ---------------------------------------------------------------------------
@@ -242,7 +240,7 @@ class TestE2EIdempotency:
 class TestE2ERecovery:
     def test_e2e_03_stuck_in_publishing_recovery_returns_true(self, tmp_path):
         """E2E-03: Article stuck in publishing → recovery path returns True."""
-        from datetime import timezone, timedelta
+        from datetime import timedelta, timezone
 
         engine = _make_engine(tmp_path)
         recent_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()

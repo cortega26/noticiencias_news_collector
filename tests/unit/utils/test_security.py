@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from news_collector.utils.security import validate_url_safety
 
 

@@ -3,9 +3,9 @@ Tests for LLM rate limiter, circuit breaker, secret redaction, and provider 429 
 """
 
 import asyncio
-import time
 import threading
-from unittest.mock import MagicMock, patch, PropertyMock
+import time
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -405,6 +405,7 @@ class TestGeminiProviderSecretRedaction:
     def test_check_health_does_not_leak_key(self):
         """check_health error messages should not contain the API key."""
         import requests as req_mod
+
         from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
 
         provider = GeminiProvider(api_key="AIzaSyTOPSECRET", model="gemini-2.5-flash")

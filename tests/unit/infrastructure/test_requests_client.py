@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import requests
+
 from news_collector.infrastructure.requests_client import RobustRequestsClient
 
 

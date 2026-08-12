@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
+
 from news_collector.storage.database import DatabaseManager
 
 

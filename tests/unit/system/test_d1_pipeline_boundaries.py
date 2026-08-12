@@ -6,6 +6,7 @@ Ensures that system boundaries construct payloads using Contracts/Adapters.
 from unittest.mock import MagicMock
 
 import pytest
+
 from news_collector.system import NewsCollectorSystem
 
 

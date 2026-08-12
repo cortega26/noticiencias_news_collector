@@ -4,12 +4,14 @@ import os
 from pathlib import Path
 
 import pytest
+from noticiencias.config_manager import load_config
+
 from news_collector.infrastructure.llm.model_registry import (
     InvalidModelIdError,
     MissingModelConfigurationError,
     ModelSource,
-    NoWarnPolicyViolationError,
     NonCanonicalModelIdError,
+    NoWarnPolicyViolationError,
     UnknownModelStageError,
     canonicalize_model_id,
     get_all_stages,
@@ -17,7 +19,6 @@ from news_collector.infrastructure.llm.model_registry import (
     get_resolved_model_map_data,
     resolve_ollama_model_map,
 )
-from noticiencias.config_manager import load_config
 
 
 def _load_tmp_config(

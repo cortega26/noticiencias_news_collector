@@ -6,6 +6,7 @@ import re
 from unittest.mock import MagicMock
 
 import yaml
+
 from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
 
 _VALID_ENRICHMENT_FIELDS: dict[str, object] = {

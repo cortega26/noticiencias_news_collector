@@ -2,11 +2,7 @@
 
 from datetime import datetime, timezone
 
-from news_collector.contracts.frontend_schema import (
-    AstroPost,
-    ImageObject,
-    SourceItem,
-)
+from news_collector.contracts.frontend_schema import AstroPost, ImageObject, SourceItem
 
 
 def test_frontend_schema_instantiation():

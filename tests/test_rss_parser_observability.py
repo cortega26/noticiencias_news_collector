@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from loguru import logger
+
 from news_collector.logic.parsers.rss_parser import RssParser
 
 

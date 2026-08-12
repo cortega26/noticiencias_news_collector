@@ -12,16 +12,13 @@ Import path after implementation:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
 
 import pytest
 
-from news_collector.logic.workflows.pr_orchestrator import (
-    PROrchestrator,
-    PRResult,
-)
+from news_collector.logic.workflows.pr_orchestrator import PROrchestrator, PRResult
 
 # ---------------------------------------------------------------------------
 # Fixtures

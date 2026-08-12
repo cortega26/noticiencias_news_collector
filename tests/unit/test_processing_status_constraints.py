@@ -7,10 +7,12 @@ These tests prove that:
 """
 
 from datetime import datetime, timezone
+
 import pytest
 from sqlalchemy.exc import IntegrityError
+
 from news_collector.storage.database import DatabaseManager
-from news_collector.storage.models import Article, Base, PROCESSING_STATUS_VALUES
+from news_collector.storage.models import PROCESSING_STATUS_VALUES, Article, Base
 
 
 @pytest.fixture

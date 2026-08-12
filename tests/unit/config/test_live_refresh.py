@@ -21,9 +21,9 @@ import pytest
 from noticiencias.config_manager import ConfigError, load_config, save_config
 
 from news_collector.config.settings import (
+    RuntimeConfigSnapshot,
     get_runtime_config,
     refresh_runtime_config,
-    RuntimeConfigSnapshot,
 )
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -32,6 +32,7 @@ from news_collector.config.settings import (
 def _reload_settings():
     """Return freshly reloaded settings module."""
     import importlib
+
     import news_collector.config.settings as mod
 
     return importlib.reload(mod)

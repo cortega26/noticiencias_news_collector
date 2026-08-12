@@ -102,4 +102,3 @@ Report pages, chunks, cache hits, prompt estimate, max in-flight calls, duration
 ## Maintenance notes
 
 Review configured bounds when models change. Preserve stable ordering and per-chunk commit semantics in future parallelism work.
-

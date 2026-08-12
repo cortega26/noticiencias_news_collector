@@ -1,8 +1,9 @@
 import unittest
 from datetime import datetime
 
-from news_collector.contracts.scoring import ScoringComponentsModel, ScoringRequestModel
 from pydantic import ValidationError
+
+from news_collector.contracts.scoring import ScoringComponentsModel, ScoringRequestModel
 
 
 class TestScoringContracts(unittest.TestCase):

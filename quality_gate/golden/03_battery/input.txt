@@ -1,9 +1,9 @@
-Abstract: We report on a novel lithium-metal solid-state battery architecture utilizing a sulfide-based electrolyte (Li10GeP2S12) doped with zirconium. 
+Abstract: We report on a novel lithium-metal solid-state battery architecture utilizing a sulfide-based electrolyte (Li10GeP2S12) doped with zirconium.
 
 Experimental Results:
 The prototype cells demonstrated a Coulombic efficiency of 99.8% over 500 cycles at room temperature (25°C). Remarkably, at -20°C, the cells retained 91.5% capacity, a significant improvement over standard Li-ion counterparts which typically drop to <60%.
 
-Specific energy density was measured at 450 Wh/kg, while power density reached 1.2 kW/kg. 
+Specific energy density was measured at 450 Wh/kg, while power density reached 1.2 kW/kg.
 Impedance spectroscopy reveals that the Zr-doping significantly reduces the interfacial resistance at the cathode-electrolyte boundary (R_ct dropped from 120 Ω cm² to 35 Ω cm²).
 
 X-ray diffraction (XRD) patterns confirm the stability of the crystal structure after deep cycling. No dendritic growth was observed via Scanning Electron Microscopy (SEM) up to a current density of 2.5 mA/cm².

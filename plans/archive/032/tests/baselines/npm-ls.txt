@@ -52,4 +52,3 @@ noticiencias-astro@0.1.0 /home/carlos/VS_Code_Projects/products/noticiencias/not
 ├── typescript@5.9.3
 ├── unpic@4.2.2
 └── vitest@4.0.18
-

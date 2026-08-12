@@ -2,9 +2,10 @@ import json
 from datetime import datetime, timezone
 
 import pytest
+
 from apps.refinery.main import _load_export_articles
-from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.config.sources import ALL_SOURCES
+from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
 from news_collector.contracts.collector import CollectorArticleModel
 
 

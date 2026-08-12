@@ -1,8 +1,9 @@
 from datetime import date, datetime, timezone
 
 import pytest
-from news_collector.contracts import ArticleMetadataModel, CollectorArticleModel
 from pydantic import ValidationError
+
+from news_collector.contracts import ArticleMetadataModel, CollectorArticleModel
 
 
 def test_article_metadata_model_validation():

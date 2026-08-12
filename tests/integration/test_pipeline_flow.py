@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from news_collector.collectors.base_collector import BaseCollector
 
 # We need to simulate the pipeline: Main -> Dispatcher -> Collector -> DB -> Scorer -> DB
