@@ -1,11 +1,10 @@
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-
-import json
 
 # Import moved to test/setup to allow patching
 # from news_collector.logic.workflows.refinery_engine import RefineryEngine
@@ -701,9 +700,7 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_download_image_extension_heuristics(self):
-        from news_collector.infrastructure.requests_client import (
-            RobustRequestsClient,
-        )
+        from news_collector.infrastructure.requests_client import RobustRequestsClient
         from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
         with tempfile.TemporaryDirectory() as tmpdir:
