@@ -387,6 +387,29 @@ class RefineryEngine:
             output_filename=output_filename,
         )
 
+        # Already-published guard (2026-08-12 regression): an article whose
+        # identity resolved to an existing published post (manifest hit or
+        # FS scan, is_new=False) was re-processed end to end, burning ~15 min
+        # of LLM calls and creating a duplicate PR. If the post already
+        # exists on the target branch/main, publication is a no-op — report
+        # it explicitly instead of re-running the pipeline.
+        if not identity.is_new and output_filename:
+            existing = posts_dir / output_filename
+            if existing.exists():
+                logger.warning(
+                    "Article {} already published as {} — skipping re-publication.",
+                    article_id,
+                    output_filename,
+                )
+                record_stage(
+                    "already_published",
+                    True,
+                    output_filename=output_filename,
+                    skipped=True,
+                )
+                persist_attempt(True)
+                return False
+
         # 2. AI Processing
         # We pass canonical_date to ensure the frontmatter matches our filename expectation
         logger.info(f"Processing with intended date: {canonical_date}")

@@ -448,6 +448,45 @@ class TestRefineryEngine(unittest.TestCase):
             synced_allowlist = json.loads(allowlist_path.read_text(encoding="utf-8"))
             self.assertEqual(synced_allowlist["allowedPlaceholders"], {})
 
+    def test_already_published_article_skips_republication(self):
+        """2026-08-12 regression: re-selecting an already-published article
+        (identity resolves to an existing post via manifest/FS, is_new=False)
+        must NOT re-run the pipeline — it previously burned ~15 min of LLM
+        calls and created a duplicate PR."""
+        article = {
+            "id": "already-published-1",
+            "title": "Already Published Title",
+            "url": "http://x",
+            "summary": "This article already exists on the target.",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            posts_dir = target_dir / "src/content/posts"
+            posts_dir.mkdir(parents=True)
+            # The post already exists on the target (published previously)
+            (posts_dir / "2026-01-01-already-published-title.md").write_text(
+                "---\nrefinery_id: already-published-1\n---\nExisting content",
+                encoding="utf-8",
+            )
+            # Manifest hit: identity resolves is_new=False + existing file
+            self.mock_db.get_canonical_slug.return_value = None
+
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+            self.assertFalse(result)
+            # The editor must NOT have been called (no LLM work burned)
+            self.mock_editor.process_article.assert_not_called()
+            self.mock_git.create_branch.assert_not_called()
+            self.mock_git.commit_and_push.assert_not_called()
+            self.mock_git.create_pull_request.assert_not_called()
+
 
 class TestRefineryEngineCoverage(unittest.TestCase):
     """Coverage-focused tests for editorial/workflow paths not exercised elsewhere."""
