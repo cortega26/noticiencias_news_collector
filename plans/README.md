@@ -35,7 +35,7 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 | 058 | [Deterministic canonical publication date](archive/058-deterministic-publication-date/spec.md) | P1 | S | — | DONE — `7c7b180` (2026-08-13): LAW-B5 fix — `_derive_date` no longer uses the runtime clock (published_date → collected_date → quarantine `UndatedArticleError`); ai_editor refuses missing override_date; IDENT-03/04/05 rewritten + determinism tests; `make lint && make type && make test` green |
 
 > Plans 018–030, 021, 023, 031, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 047,
-> 049, 050, 051, 053, 054, 055, 056, and 057 are DONE and archived. Plan **046** is
+> 049, 050, 051, 053, 054, 055, 056, 057, and 058 are DONE and archived. Plan **046** is
 > REJECTED (operator decision 2026-08-11: SQLite-only, no PostgreSQL) and archived.
 
 Status values: TODO | IN PROGRESS | PARTIAL | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale).
