@@ -13,6 +13,11 @@ class TestStrategyLocking(unittest.TestCase):
         )
 
         production_metrics_view.db_path = enrichment_metrics.db_path
+        # Close before dropping the reference: an open connection orphaned
+        # here survives until arbitrary GC, surfacing as a ResourceWarning
+        # attributed to a random later test.
+        if production_metrics_view.conn is not None:
+            production_metrics_view.conn.close()
         production_metrics_view.conn = None
 
         with enrichment_metrics._lock:

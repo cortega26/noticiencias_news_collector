@@ -14,6 +14,11 @@ class TestContinuousInvariants(unittest.TestCase):
     def setUp(self):
         # Reset Singletons
         RunContextManager._instance = None
+        # Close before dropping the reference: an open connection orphaned
+        # here survives until arbitrary GC, surfacing as a ResourceWarning
+        # attributed to a random later test.
+        if EnrichmentMetricsStore._instance is not None:
+            EnrichmentMetricsStore._instance.close()
         EnrichmentMetricsStore._instance = None
         StrategyLockManager._instance = None
 
@@ -45,6 +50,8 @@ class TestContinuousInvariants(unittest.TestCase):
     def test_metrics_path_production(self):
         """Invariant: ENV=production forces metrics to data/metrics/production/"""
         # Reset Store singleton
+        if EnrichmentMetricsStore._instance is not None:
+            EnrichmentMetricsStore._instance.close()
         EnrichmentMetricsStore._instance = None
 
         # Override Environment on the existing singleton
@@ -54,6 +61,7 @@ class TestContinuousInvariants(unittest.TestCase):
         old_env = run_context.environment
         run_context.set_environment("production")
 
+        store = None
         try:
             # Init Store (which inits DB)
             store = EnrichmentMetricsStore()
@@ -66,6 +74,8 @@ class TestContinuousInvariants(unittest.TestCase):
             )
         finally:
             run_context.set_environment(old_env)
+            if store is not None:
+                store.close()
 
     @patch("news_collector.enrichment.router.strategy_lock_manager")
     @patch("news_collector.enrichment.router.strategy_optimizer")
