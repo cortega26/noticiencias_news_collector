@@ -188,8 +188,11 @@ class TestIdentityFromFilesystem:
 
 
 class TestIdentityCreationMode:
-    def test_ident_03_ignores_published_date_uses_today(self, tmp_path):
-        """IDENT-03: New article, published_date present → ignores it, uses today."""
+    def test_ident_03_uses_published_date(self, tmp_path):
+        """IDENT-03: New article, published_date present → its date is canonical.
+
+        LAW-B5: runtime time must never enter canonical identity — the date
+        comes from the article payload, deterministically."""
         db = MagicMock()
         db.get_canonical_slug.return_value = None
 
@@ -205,13 +208,43 @@ class TestIdentityCreationMode:
             posts_dir=posts_dir,
         )
 
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        assert identity.canonical_date == today
+        assert identity.canonical_date == "2025-12-25"
         assert identity.is_new is True
-        assert identity.final_slug.startswith(f"{today}-")
+        assert identity.final_slug.startswith("2025-12-25-")
 
-    def test_ident_04_ignores_collected_date_uses_today(self, tmp_path):
-        """IDENT-04: No published_date, collected_date present → ignores it, uses today."""
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "2025-12-25",
+            "2025-12-25T10:30:00",
+            "2025-12-25T10:30:00+02:00",
+            "2025-12-25T10:30:00Z",
+            "2025-12-25 10:30:00",
+            "2025-12-25 00:00:00.123456",
+            datetime(2025, 12, 25, 10, 30, tzinfo=timezone.utc),
+        ],
+    )
+    def test_ident_03_string_and_aware_datetime_published_date(self, tmp_path, raw):
+        """IDENT-03b: published_date in every shape the payload can carry
+        (ISO strings, the str(datetime) space-separated form produced by
+        _normalize_article_payload, naive and tz-aware datetimes)."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        identity = PublicationIdentityResolver(
+            db=db, manifest=_make_manifest_stub()
+        ).resolve(
+            article_id="1b",
+            article={"published_date": raw},
+            posts_dir=posts_dir,
+        )
+
+        assert identity.canonical_date == "2025-12-25"
+
+    def test_ident_04_uses_collected_date(self, tmp_path):
+        """IDENT-04: No published_date, collected_date present → its date is canonical."""
         db = MagicMock()
         db.get_canonical_slug.return_value = None
         manifest = _make_manifest_stub()
@@ -226,33 +259,118 @@ class TestIdentityCreationMode:
             posts_dir=posts_dir,
         )
 
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        assert identity.canonical_date == today
+        assert identity.canonical_date == "2025-11-10"
         assert identity.is_new is True
-        assert identity.final_slug.startswith(f"{today}-")
+        assert identity.final_slug.startswith("2025-11-10-")
 
-    def test_ident_05_date_fallback_to_today(self, tmp_path):
-        """IDENT-05: No dates → falls back to today."""
-        import re
-
+    def test_ident_04_published_date_wins_over_collected(self, tmp_path):
+        """IDENT-04b: both dates present → source date (published) wins."""
         db = MagicMock()
         db.get_canonical_slug.return_value = None
-        manifest = _make_manifest_stub()
-        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
-
         posts_dir = tmp_path / "src/content/posts"
         posts_dir.mkdir(parents=True)
 
-        identity = resolver.resolve(
-            article_id="3",
-            article={},
+        identity = PublicationIdentityResolver(
+            db=db, manifest=_make_manifest_stub()
+        ).resolve(
+            article_id="2b",
+            article={
+                "published_date": datetime(2025, 12, 25),
+                "collected_date": datetime(2025, 11, 10),
+            },
             posts_dir=posts_dir,
         )
 
-        # Date must be valid YYYY-MM-DD
-        assert re.match(r"^\d{4}-\d{2}-\d{2}$", identity.canonical_date)
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        assert identity.canonical_date == today
+        assert identity.canonical_date == "2025-12-25"
+
+    def test_ident_05_no_dates_quarantines(self, tmp_path):
+        """IDENT-05: No dates at all → typed quarantine error, never today.
+
+        LAW-B5 forbids inventing a non-deterministic date (same philosophy as
+        Priority 2's existing refusal). The engine surfaces public_message
+        and error_code per-article."""
+        from news_collector.logic.workflows.publication_identity import (
+            UndatedArticleError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        with pytest.raises(UndatedArticleError) as exc_info:
+            PublicationIdentityResolver(db=db, manifest=_make_manifest_stub()).resolve(
+                article_id="3",
+                article={},
+                posts_dir=posts_dir,
+            )
+
+        assert exc_info.value.error_code == "E_IDENTITY_NO_DATE"
+        assert exc_info.value.public_message  # user-facing Spanish text
+        assert "published_date" in str(exc_info.value)
+
+    def test_ident_05_unparseable_published_date_quarantines(self, tmp_path):
+        """IDENT-05b: published_date present but garbage → quarantine, do not
+        silently skip to collected_date or today."""
+        from news_collector.logic.workflows.publication_identity import (
+            UndatedArticleError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        with pytest.raises(UndatedArticleError):
+            PublicationIdentityResolver(db=db, manifest=_make_manifest_stub()).resolve(
+                article_id="3b",
+                article={"published_date": "not-a-date"},
+                posts_dir=posts_dir,
+            )
+
+    def test_ident_05_identity_is_clock_independent(self, tmp_path):
+        """IDENT-05c: same article resolved twice yields the identical
+        identity — no runtime clock input anywhere in the derivation."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        resolver = PublicationIdentityResolver(db=db, manifest=_make_manifest_stub())
+        article = {"published_date": datetime(2025, 12, 25)}
+        first = resolver.resolve(article_id="3c", article=article, posts_dir=posts_dir)
+        second = resolver.resolve(article_id="3c", article=article, posts_dir=posts_dir)
+
+        assert first == second
+
+    @pytest.mark.parametrize(
+        "raw",
+        ["", None, "2025-12-25T10:00:00z", "2025-12-25t10:30:00+02:00"],
+    )
+    def test_ident_05_empty_or_lowercase_z_dates(self, tmp_path, raw):
+        """IDENT-05d: empty/None published_date falls through to
+        collected_date; lowercase 'z' (RFC-3339-legal) and lowercase 't'
+        must parse rather than false-quarantine."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        article = {"published_date": raw, "collected_date": datetime(2025, 11, 10)}
+        if raw in ("", None):
+            identity = PublicationIdentityResolver(
+                db=db, manifest=_make_manifest_stub()
+            ).resolve(article_id="3d", article=article, posts_dir=posts_dir)
+            assert identity.canonical_date == "2025-11-10"
+        else:
+            identity = PublicationIdentityResolver(
+                db=db, manifest=_make_manifest_stub()
+            ).resolve(
+                article_id="3d",
+                article={"published_date": raw},
+                posts_dir=posts_dir,
+            )
+            assert identity.canonical_date == "2025-12-25"
 
     def test_ident_06_collision_avoidance(self, tmp_path):
         """IDENT-06: When target file already exists, suffix counter is appended."""
@@ -264,8 +382,8 @@ class TestIdentityCreationMode:
         posts_dir = tmp_path / "src/content/posts"
         posts_dir.mkdir(parents=True)
 
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        expected_colliding_name = f"{today}-test-article-title.md"
+        canonical = "2024-01-01"
+        expected_colliding_name = f"{canonical}-test-article-title.md"
         # Pre-create the file that would be the first choice
         (posts_dir / expected_colliding_name).write_text("existing")
 
@@ -280,8 +398,8 @@ class TestIdentityCreationMode:
 
         # The resolver must NOT use the colliding filename
         assert identity.output_filename != expected_colliding_name
-        # But must still start with today's date
-        assert identity.final_slug.startswith(f"{today}-")
+        # But must still start with the deterministic canonical date
+        assert identity.final_slug.startswith(f"{canonical}-")
         # And must not overwrite the existing file
         assert not (posts_dir / expected_colliding_name).read_text().startswith("---")
 

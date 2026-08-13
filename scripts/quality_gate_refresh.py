@@ -77,7 +77,10 @@ def main():
             content_text = f.read()
 
         try:
-            full_output = agent.process_article(content_text)
+            full_output = agent.process_article(
+                content_text,
+                override_date="2026-01-01",
+            )
         except Exception as e:
             print(f"   ❌ Generation failed: {e}")
             sys.exit(1)

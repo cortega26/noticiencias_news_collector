@@ -84,7 +84,8 @@ class TestRefineryCanonical:
     def test_creates_deterministic_filename_new(self, engine, tmp_path):
         """
         Scenario: New article 102. published_date in payload is 2025-12-25.
-        Filename should use today's date (when we publish it), NOT the original date from the English article.
+        Filename uses the deterministic payload date (LAW-B5) — never the
+        runtime clock.
         """
         target_dir = tmp_path / "target"
         posts_dir = target_dir / "src/content/posts"
@@ -105,13 +106,14 @@ class TestRefineryCanonical:
         # Execute
         engine.process_single_article(article_payload, MagicMock(), target_dir)
 
-        # Check expected filename using today's date
-        from datetime import datetime, timezone
-
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        expected_file = posts_dir / f"{today}-test.md"
+        # Check expected filename using the payload published_date (LAW-B5:
+        # deterministic, no runtime clock)
+        expected_file = posts_dir / "2025-12-25-test.md"
         assert expected_file.exists()
 
         # Verify date passed to editor
         # Instead of matching the full dictionary which went through pydantic validation, just check kwargs
-        assert engine.editor.process_article.call_args.kwargs["override_date"] == today
+        assert (
+            engine.editor.process_article.call_args.kwargs["override_date"]
+            == "2025-12-25"
+        )

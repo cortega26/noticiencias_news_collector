@@ -77,9 +77,10 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
 
         # Verify
         # 1. Check if image file exists
-        # Slug logic now uses today's date
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        expected_image_path = target_dir / f"src/assets/images/{today}-test-article.jpg"
+        # Slug logic uses the payload published_date (LAW-B5: deterministic)
+        expected_image_path = (
+            target_dir / "src/assets/images/2024-01-01-test-article.jpg"
+        )
         assert expected_image_path.exists()
         assert expected_image_path.read_bytes() == b"fake-image-data"
 
@@ -88,7 +89,7 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
         call_args = mock_refinery_engine.editor.process_article.call_args
         passed_article = call_args[0][0]
         assert (
-            passed_article["image_url"] == f"~/assets/images/{today}-test-article.jpg"
+            passed_article["image_url"] == "~/assets/images/2024-01-01-test-article.jpg"
         )
 
 
@@ -117,11 +118,10 @@ def test_missing_image_creates_editorial_brief_and_stops_publish(
     assert result is False
     mock_refinery_engine.editor.process_article.assert_not_called()
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     brief_path = (
         Path(mock_refinery_engine.data_dir)
         / "image-briefs"
-        / f"{today}-test-article-without-image.json"
+        / "2024-01-02-test-article-without-image.json"
     )
     assert brief_path.exists()
     brief_text = brief_path.read_text(encoding="utf-8")
@@ -148,8 +148,7 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
         "published_date": datetime(2024, 1, 3),
     }
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    slug = f"{today}-test-article-ready-for-editorial-image"
+    slug = "2024-01-03-test-article-ready-for-editorial-image"
     brief = mock_refinery_engine.image_briefs.build_brief(
         article=article,
         slug=slug,
@@ -173,7 +172,7 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     assert result is True
     expected_image_path = (
         target_dir
-        / f"src/assets/images/{today}-test-article-ready-for-editorial-image.png"
+        / "src/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
     )
     assert expected_image_path.exists()
     assert expected_image_path.read_bytes() == b"manual-image-data"
@@ -182,6 +181,6 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     passed_article = call_args[0][0]
     assert (
         passed_article["image_url"]
-        == f"~/assets/images/{today}-test-article-ready-for-editorial-image.png"
+        == "~/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
     )
     assert passed_article["image_alt"] == ready_brief.draft_alt_text

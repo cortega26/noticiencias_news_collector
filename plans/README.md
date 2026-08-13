@@ -32,6 +32,7 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Steps 1-5 done, Step 6 = **iterate**. Operator gold-labeled all 44 corpus records; baseline (topics F1 0.767) and paired candidate comparison (`scripts/enrichment_candidate.py`, `2026.08-curated-candidate`: topics F1 0.911, entities F1 0.750, general 0.318→0.204, +0.06 ms) executed; the one critical-slice regression (satellite keyword → space FP on climate) was found and fixed. Production `pattern_v1` untouched (Done criterion). Decision: keep candidate isolated, re-evaluate identically at ≥200 reviewed records against pre-set thresholds. See `plans/048/spec.md` + `docs/adr/0004-curated-enrichment-registry-spike.md` |
+| 058 | [Deterministic canonical publication date](058-deterministic-publication-date/) | P1 | S | — | IN PROGRESS — LAW-B5 fix: `_derive_date` no longer uses the runtime clock (published_date → collected_date → quarantine `UndatedArticleError`); ai_editor refuses missing override_date. Full validation green. See `plans/058-deterministic-publication-date/spec.md` |
 
 > Plans 018–030, 021, 023, 031, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 047,
 > 049, 050, 051, 053, 054, 055, 056, and 057 are DONE and archived. Plan **046** is

@@ -655,13 +655,14 @@ class TestProcessArticlePaths:
                 "summary": "Contenido " * 200,
                 "content": "",
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         assert "Direct Headline" in result
 
     def test_string_input_uses_hash_id(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
-        result = agent.process_article("Contenido " * 200)
+        result = agent.process_article("Contenido " * 200, override_date="2026-03-02")
         assert "Direct Headline" in result
 
     def test_content_too_short_raises(self, tmp_path):
@@ -673,7 +674,8 @@ class TestProcessArticlePaths:
                     "summary": "x",
                     "content": "tiny",
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
 
     def test_cached_stage2_not_critic_ready_re_adapts(self, tmp_path):
@@ -684,10 +686,10 @@ class TestProcessArticlePaths:
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
         }
-        agent.process_article(article)
+        agent.process_article(article, override_date="2026-03-02")
         cache_s2 = agent.cache_dir / "unknown_stage2_editorial.txt"
         cache_s2.write_text("---\ntitle: x\n---\n", encoding="utf-8")
-        result = agent.process_article(article)
+        result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
 
     def test_critic_checkpoint_write_failure(self, tmp_path):
@@ -713,7 +715,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
         assert "Direct Headline" in result
 
@@ -727,7 +730,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
 
     def test_critic_rejected_exhausted_retries(self, tmp_path):
@@ -740,7 +744,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
 
     def test_editorial_critic_cache_skips_gate(self, tmp_path):
@@ -751,7 +756,7 @@ class TestProcessArticlePaths:
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
         }
-        agent.process_article(article)
+        agent.process_article(article, override_date="2026-03-02")
         cache = agent.cache_dir / "unknown" / "stage2_6_editorial_critic_ok"
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text("ok", encoding="utf-8")
@@ -761,7 +766,7 @@ class TestProcessArticlePaths:
             None,
             True,
         )
-        result = agent.process_article(article)
+        result = agent.process_article(article, override_date="2026-03-02")
         assert calls == []
         assert "Direct Headline" in result
 
@@ -774,7 +779,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         assert "Direct Headline" in result
 
@@ -786,10 +792,10 @@ class TestProcessArticlePaths:
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
         }
-        agent.process_article(article)
+        agent.process_article(article, override_date="2026-03-02")
         cache = agent.cache_dir / "unknown_stage4_enrichment.txt"
         cache.write_text("{not json", encoding="utf-8")
-        result = agent.process_article(article)
+        result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
 
     def test_headline_list_title_and_excerpt(self, tmp_path):
@@ -806,7 +812,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         assert "List Direct" in result
         assert "List Excerpt" in result
@@ -828,7 +835,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         assert "El resultado aún es preliminar" in result
 
@@ -859,7 +867,8 @@ class TestProcessArticlePaths:
                 "featured_rank": 1,
                 "investigation": False,
                 "uncertainty_note": "nota",
-            }
+            },
+            override_date="2026-03-02",
         )
         assert "Una imagen" in result
         assert "featured: true" in result
@@ -876,7 +885,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
         assert "Direct Headline" in result
 

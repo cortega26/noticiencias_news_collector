@@ -109,7 +109,7 @@ Any change to the publication frontmatter contract is a cross-repo change.
 
 This repo currently records `PR_CREATED` after pull-request creation. Final public website publication happens outside this repo after the frontend merge/deploy path completes.
 
-### Identity reuse is real, absolute determinism is not yet universal
+### Identity reuse is real, absolute determinism is now universal
 
 Current publication identity reuse order is:
 
@@ -117,9 +117,10 @@ Current publication identity reuse order is:
 2. existing frontend file or `refinery_manifest.json` recovery
 3. new slug derived from source `published_date`
 4. fallback to `collected_date`
-5. last-resort fallback to current date
 
-The current-date fallback is compatibility debt, not a desired long-term invariant.
+No runtime-clock fallback exists (LAW-B5): an article with neither date is
+quarantined with `UndatedArticleError` (`E_IDENTITY_NO_DATE`) instead of
+receiving today's date. See `plans/058-deterministic-publication-date/`.
 
 ## Fact Ownership
 

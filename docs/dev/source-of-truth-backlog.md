@@ -13,13 +13,14 @@ publication-touching paths. Both repos are gated on the same contract in CI.
 
 ## High
 
-### Remove current-date fallback from canonical publication identity
+### ~~Remove current-date fallback from canonical publication identity~~ **CLOSED**
 
-Problem: `RefineryEngine` still falls back to current date when `published_date` and `collected_date` are unavailable.  
-Impact: Canonical identity is weaker than the docs ideally want it to be, and retries can become harder to reason about in edge cases.  
-Recommendation: Make source date or explicit editorial date mandatory before publication, or quarantine articles that cannot provide one.  
-Affected repo(s): backend  
-Suggested priority: high
+Implemented in plan 058 (2026-08-13): `_derive_date` now derives
+deterministically from `published_date` → `collected_date`, and quarantines
+dateless articles with `UndatedArticleError` (`E_IDENTITY_NO_DATE`) instead
+of using the runtime clock. `ai_editor` also refuses a missing
+`override_date` (no clock in frontmatter). See
+`plans/058-deterministic-publication-date/spec.md`.
 
 ### Decompose `RefineryEngine`
 

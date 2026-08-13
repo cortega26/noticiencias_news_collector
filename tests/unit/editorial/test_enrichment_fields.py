@@ -276,7 +276,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
 
         fm = parse_frontmatter(result)
@@ -325,7 +326,8 @@ class TestEnrichmentInProcessArticle:
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
                 "summary_points": upstream_summary,
-            }
+            },
+            override_date="2026-03-02",
         )
 
         fm = parse_frontmatter(result)
@@ -368,7 +370,8 @@ class TestEnrichmentInProcessArticle:
                     "summary": "Resumen " * 20,
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
-                }
+                },
+                override_date="2026-03-02",
             )
         assert excinfo.value.error_code == "editorial_v2_incomplete"
         assert "summary_points" in str(excinfo.value)
@@ -400,7 +403,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen " * 20,
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         result = agent.process_article(
             {
@@ -408,7 +412,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen " * 20,
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
-            }
+            },
+            override_date="2026-03-02",
         )
         fm = parse_frontmatter(result)
         assert fm.get("schema_version") == 2
@@ -482,7 +487,8 @@ class TestPoisonedStage4Cache:
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
                 "source_name": "Example Feed",
-            }
+            },
+            override_date="2026-03-02",
         )
         fm = parse_frontmatter(result)
         assert fm != {}

@@ -369,6 +369,22 @@ this file now tracks the current pass over the 18 remaining plans.
 - [ ] Formal adopt/do-not-adopt at ≥200 reviewed records (cadence:
       every 50 new reviewed records).
 
+
+## Plan 058 — Deterministic canonical publication date (LAW-B5)
+
+- [x] `_derive_date` deterministic: published_date → collected_date →
+      quarantine (`UndatedArticleError`, E_IDENTITY_NO_DATE).
+- [x] `_parse_date_like` handles datetime/date/ISO/str(datetime)/lowercase-z.
+- [x] ai_editor refuses missing override_date (no clock in frontmatter).
+- [x] Tests rewritten (IDENT-03/04/05 previously asserted the violation) +
+      new cases (strings, precedence, quarantine, clock-independence);
+      engine/image/slug tests updated to payload dates.
+- [x] Fresh subagent review: 0 blockers/majors; minors fixed (lowercase z,
+      ai_editor clock fallback); nits fixed (empty-string test, docstrings).
+- [x] Validation green: make lint, make type, make test (1844 passed),
+      make test-boundaries.
+- [x] Docs updated: SOURCE_OF_TRUTH.md, source-of-truth-backlog.md (item
+      CLOSED), plans/README.md, spec.md.
 ## Plan 040 — Account for every collector-dispatch outcome (DONE)
 
 - [x] **Correction to the prior "natural stopping point" conclusion

@@ -86,7 +86,8 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
                 "summary": "Resumen científico",
                 "content": "Contenido base " * 100,
                 "url": "https://example.com/article",
-            }
+            },
+            override_date="2026-03-02",
         )
 
     assert "Hallazgo con impacto regional" in result

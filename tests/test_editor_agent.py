@@ -85,7 +85,8 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
             "content": "Contenido " * 200,
             "image_url": None,
             "url": "https://example.com/source",
-        }
+        },
+        override_date="2026-03-02",
     )
 
     assert "TL;DR Visual" not in result
@@ -141,7 +142,8 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
             "content": "Contenido " * 200,
             "image_url": "https://example.com/image.jpg",
             "url": "https://example.com/source",
-        }
+        },
+        override_date="2026-03-02",
     )
 
     assert "TL;DR Visual" in result

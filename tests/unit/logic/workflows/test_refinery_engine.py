@@ -63,13 +63,10 @@ class TestRefineryEngine(unittest.TestCase):
             self.engine._extract_slug(content_no_slug, "123"), "article-123"
         )
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_process_single_article_success(self, mock_dt_refinery, mock_dt_identity):
+    def test_process_single_article_success(self, mock_dt_refinery):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         # Setup Inputs
         article = {
@@ -105,11 +102,12 @@ class TestRefineryEngine(unittest.TestCase):
             # Run
             result = self.engine.process_single_article(article, mock_repo, target_dir)
 
-            # Assertions
+            # Assertions — override_date is the deterministic payload date (LAW-B5),
+            # not the mocked system clock
             self.assertTrue(result)
             self.assertEqual(
                 self.mock_editor.process_article.call_args.kwargs["override_date"],
-                "2026-01-01",
+                "2024-01-01",
             )
             self.mock_git.create_branch.assert_called()
             self.mock_git.commit_and_push.assert_called()
@@ -140,13 +138,9 @@ class TestRefineryEngine(unittest.TestCase):
         summary = self.engine.process_articles([{"id": "3"}], MagicMock(), MagicMock())
         self.assertEqual(len(summary["errors"]), 1)
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_no_file_write_if_branch_setup_fails(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_no_file_write_if_branch_setup_fails(self, mock_dt_refinery):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
         article = {
             "id": "123",
             "title": "Test valid title",
@@ -177,13 +171,9 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertFalse(expected_file.exists())
             self.mock_git.commit_and_push.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_no_file_write_if_branch_sync_rebase_fails(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_no_file_write_if_branch_sync_rebase_fails(self, mock_dt_refinery):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
         article = {
             "id": "124",
             "title": "Test Title 2",
@@ -216,16 +206,12 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertFalse(expected_file.exists())
             self.mock_git.commit_and_push.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_override_date_ignores_payload_published_date_uses_system_time(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
-        # We mock system time to 2050 to prove it is USED instead of payload
+    def test_override_date_uses_payload_published_date(self, mock_dt_refinery):
+        # System time is mocked to 2050 to prove it is NOT used — the payload
+        # published_date (1999-12-31) must win (LAW-B5).
         mock_dt_refinery.now.return_value.strftime.return_value = "2050-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2050-01-01T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2050-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2050-01-01T12:00:00"
 
         article = {
             "id": "1999-id",
@@ -255,18 +241,15 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertTrue(result)
             self.assertEqual(
                 self.mock_editor.process_article.call_args.kwargs["override_date"],
-                "2050-01-01",
+                "1999-12-31",
             )
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_uses_image_url_from_article_metadata(
-        self, mock_dt_refinery, mock_dt_identity
+        self, mock_dt_refinery
     ):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
         article = {
             "id": "125",
             "title": "Test Title With Metadata Image",
@@ -298,7 +281,7 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertTrue(result)
             self.engine._download_image.assert_called_once_with(
                 "https://example.com/test.png",
-                "2026-01-01-test-title-with-metadata-image",
+                "2024-01-01-test-title-with-metadata-image",
                 target_dir,
             )
             editor_payload = self.mock_editor.process_article.call_args.args[0]
@@ -307,15 +290,10 @@ class TestRefineryEngine(unittest.TestCase):
                 "~/assets/images/image-test.png",
             )
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_blocks_quoted_date_only_frontmatter_before_git(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_blocks_quoted_date_only_frontmatter_before_git(self, mock_dt_refinery):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         article = {
             "id": "125",
@@ -341,15 +319,12 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.commit_and_push.assert_not_called()
         self.mock_git.create_pull_request.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_returns_false_for_placeholder_block(
-        self, mock_dt_refinery, mock_dt_identity
+        self, mock_dt_refinery
     ):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         from news_collector.components.editorial.ai_editor import (
             GeneratedArticleValidationError,
@@ -388,15 +363,12 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.commit_and_push.assert_not_called()
         self.mock_git.create_pull_request.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_prunes_stale_hero_placeholder_allowlist(
-        self, mock_dt_refinery, mock_dt_identity
+        self, mock_dt_refinery
     ):
         mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
         mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-        mock_dt_identity.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_identity.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
 
         article = {
             "id": "126",
@@ -421,7 +393,7 @@ class TestRefineryEngine(unittest.TestCase):
             allowlist_path.write_text(
                 "{\n"
                 '  "allowedPlaceholders": {\n'
-                '    "src/content/posts/2026-01-01-real-hero.md": "Old placeholder."\n'
+                '    "src/content/posts/2024-01-01-real-hero.md": "Old placeholder."\n'
                 "  }\n"
                 "}\n",
                 encoding="utf-8",
@@ -557,13 +529,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
             article["image_url"] = f"https://example.com/{aid}.png"
         return article
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_blocks_quoted_date_only_frontmatter_reaching_guard(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_blocks_quoted_date_only_frontmatter_reaching_guard(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("501")
         self.mock_db.get_canonical_slug.return_value = None
@@ -579,11 +547,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         self.assertFalse(result)
         self.mock_git.create_branch.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_blocks_translation_guardrail(self, mock_dt_refinery, mock_dt_identity):
+    def test_blocks_translation_guardrail(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("502")
         self.mock_db.get_canonical_slug.return_value = None
@@ -598,13 +564,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_blocks_when_output_filename_missing(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_blocks_when_output_filename_missing(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("503")
         self.mock_db.get_canonical_slug.return_value = None
@@ -624,13 +586,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_continues_when_mark_publishing_fails(
-        self, mock_dt_refinery, mock_dt_identity
-    ):
+    def test_continues_when_mark_publishing_fails(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("504")
         self.mock_db.get_canonical_slug.return_value = None
@@ -647,11 +605,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         self.mock_git.create_branch.assert_called()
         self.assertTrue(result)
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_s0_guard_value_error_on_write(self, mock_dt_refinery, mock_dt_identity):
+    def test_s0_guard_value_error_on_write(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("505")
         self.mock_db.get_canonical_slug.return_value = None
@@ -669,11 +625,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         self.assertFalse(result)
         self.mock_git.commit_and_push.assert_not_called()
 
-    @patch("news_collector.logic.workflows.publication_identity.datetime")
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_pr_failure_returns_false(self, mock_dt_refinery, mock_dt_identity):
+    def test_pr_failure_returns_false(self, mock_dt_refinery):
         self._mock_now(mock_dt_refinery)
-        self._mock_now(mock_dt_identity)
 
         article = self._article("506")
         self.mock_db.get_canonical_slug.return_value = None

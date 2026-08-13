@@ -54,7 +54,7 @@ def test_prompt_generation():
     agent._send_prompt = mock_send
 
     try:
-        agent.process_article(article)
+        agent.process_article(article, override_date="2026-01-01")
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback

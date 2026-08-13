@@ -174,6 +174,18 @@ unblocked.
   same-batch rows. See `plans/archive/037/spec.md` for the full empirical
   investigation and design.
 - **048 — Spike a curated multilingual topic and entity registry**: PARTIAL.
+- **058 — Deterministic canonical publication date (LAW-B5)**: DONE
+  (2026-08-13). Priority-3 identity in `PublicationIdentityResolver` no
+  longer uses the runtime clock: `_derive_date` derives from
+  `published_date` → `collected_date` and quarantines dateless articles
+  (`UndatedArticleError`, `E_IDENTITY_NO_DATE`); `ai_editor` refuses a
+  missing `override_date` (no clock in frontmatter). Previous tests that
+  asserted the violation were rewritten (IDENT-03/04/05, engine/image/slug
+  today-date assertions). Fresh subagent review: no blockers/majors; the
+  two minors (lowercase-z false quarantine, ai_editor clock fallback) were
+  fixed in-session. `make lint`/`make type`/`make test`/`make test-boundaries`
+  green. Closes the "current-date fallback" High item in
+  `docs/dev/source-of-truth-backlog.md`. See `plans/058-deterministic-publication-date/spec.md`.
   Step 1 done: `docs/spikes/curated-enrichment-registry.md` maps every real
   consumer (feature scoring, topic-diversity reranking, serving API,
   image briefs — with monitoring/observability and `CognitiveScorer`

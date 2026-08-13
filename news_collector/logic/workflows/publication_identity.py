@@ -5,7 +5,9 @@ filename — before any I/O is performed.
 Owns:
 - Priority 1: DB canonical slug (immutable identity lock)
 - Priority 2: FS scan via TargetRepoWriter manifest (legacy recovery + self-heal)
-- Priority 3: Creation mode — derive from published_date / collected_date / datetime.now()
+- Priority 3: Creation mode — derive deterministically from published_date,
+  else collected_date; quarantine (UndatedArticleError) when neither exists.
+  Never uses runtime clock (LAW-B5).
 - Collision avoidance (Priority 3 only)
 - extract_slug — pure static helper
 
@@ -20,7 +22,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -31,6 +33,34 @@ if TYPE_CHECKING:
     pass
 
 logger = get_logger().create_module_logger("PublicationIdentityResolver")
+
+
+class UndatedArticleError(ValueError):
+    """Quarantine error: an article has no usable date for canonical identity.
+
+    LAW-B5 forbids inventing a non-deterministic date (e.g. ``now()``) at
+    identity-resolution time. The engine's ``process_articles`` error
+    handler surfaces ``public_message`` and ``error_code`` per article, so
+    this article fails publication with a clear reason and the batch
+    continues.
+    """
+
+    error_code = "E_IDENTITY_NO_DATE"
+
+    def __init__(self, article_id: str, field: str, detail: str = "") -> None:
+        self.article_id = article_id
+        self.field = field
+        message = (
+            f"Article {article_id!r} has no usable {field} for canonical "
+            "publication identity — refusing to invent a non-deterministic "
+            f"date.{(' ' + detail) if detail else ''}"
+        )
+        super().__init__(message)
+        self.public_message = (
+            "El artículo no tiene una fecha válida para publicar y el "
+            "sistema no inventa fechas (identidad no determinista). "
+            "Añade una fecha editorial o revisa los datos de origen."
+        )
 
 
 @dataclass
@@ -69,7 +99,9 @@ class PublicationIdentityResolver:
 
         Priority 1: DB canonical slug (immutable identity).
         Priority 2: FS scan via manifest (legacy recovery + self-heal backfill).
-        Priority 3: Creation mode — source date, collected date, then now().
+        Priority 3: Creation mode — published_date, else collected_date,
+        else quarantine (UndatedArticleError). Runtime clock never enters
+        canonical identity (LAW-B5).
 
         Collision avoidance runs only in Priority 3 (slug is already stable in P1/P2).
         """
@@ -261,10 +293,60 @@ class PublicationIdentityResolver:
         return match.group(1) if match else None
 
     @staticmethod
+    def _parse_date_like(value: Any) -> date | None:
+        """Parse a date from any shape the payload can carry.
+
+        Accepts ``datetime``/``date`` objects (naive or aware), ISO-8601
+        strings (with or without time/tz), and the space-separated
+        ``str(datetime)`` form produced by ``_normalize_article_payload``.
+        Returns ``None`` only when the value is ``None``/empty. A
+        present-but-unparseable value raises ``UndatedArticleError`` (data
+        problem — do not silently skip to the next field).
+        """
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if not isinstance(value, str):
+            value = str(value)
+
+        text = value.strip()
+        if not text:
+            return None
+        # ISO-8601 (T separator, optional tz) and str(datetime) space form.
+        for candidate in (text.replace("T", " ", 1), text):
+            normalized = candidate
+            if normalized.endswith(("Z", "z")):
+                normalized = normalized[:-1] + "+00:00"
+            try:
+                return datetime.fromisoformat(normalized).date()
+            except ValueError:
+                continue
+        return None
+
+    @staticmethod
     def _derive_date(article: Dict[str, Any]) -> str:
         """Derive canonical date from article payload (Priority 3).
 
-        Always returns the current publication date (the date when we publish the article).
+        Deterministic per LAW-B5: source date (``published_date``) wins,
+        else collection date (``collected_date``), else quarantine with
+        ``UndatedArticleError``. The runtime clock never enters canonical
+        identity — retrying the same article always yields the same date.
         """
-        # Always return the current date in YYYY-MM-DD format
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        for field in ("published_date", "collected_date"):
+            raw = article.get(field)
+            parsed = PublicationIdentityResolver._parse_date_like(raw)
+            if parsed is not None:
+                return parsed.strftime("%Y-%m-%d")
+            if raw not in (None, ""):
+                raise UndatedArticleError(
+                    article.get("id", "unknown"),
+                    field,
+                    detail=f"unparseable value {raw!r}",
+                )
+        raise UndatedArticleError(
+            article.get("id", "unknown"),
+            "published_date/collected_date",
+        )

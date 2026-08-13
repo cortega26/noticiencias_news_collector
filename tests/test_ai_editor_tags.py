@@ -76,7 +76,7 @@ class TestEditorAgentTags(unittest.TestCase):
         self.agent._get_cache_path.return_value.exists.return_value = False
         self.agent._get_cache_path.return_value.write_text = MagicMock()
 
-        result = self.agent.process_article(raw_text)
+        result = self.agent.process_article(raw_text, override_date="2026-03-02")
 
         # Parse YAML
         import re
@@ -101,7 +101,7 @@ class TestEditorAgentTags(unittest.TestCase):
         self.agent._get_cache_path = MagicMock()
         self.agent._get_cache_path.return_value.exists.return_value = False
 
-        result = self.agent.process_article(raw_text)
+        result = self.agent.process_article(raw_text, override_date="2026-03-02")
 
         # Parse YAML
         import re

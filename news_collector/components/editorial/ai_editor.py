@@ -2081,8 +2081,17 @@ class EditorAgent:
             # Schema expects list[str].
             categories_list = [final_category] if final_category else []
 
-            # Date parsing for PyYAML type coercion
-            date_str = override_date or time.strftime("%Y-%m-%d")
+            # Date parsing for PyYAML type coercion. LAW-B5: the canonical
+            # publication date must never fall back to the runtime clock —
+            # the caller (RefineryEngine) always passes the deterministically
+            # derived canonical_date; a missing date is a wiring bug.
+            if not override_date:
+                raise ValueError(
+                    "process_article requires override_date (canonical "
+                    "publication date); refusing to use the runtime clock "
+                    "in frontmatter (LAW-B5)."
+                )
+            date_str = override_date
             parsed_date_val: Any = date_str
             if isinstance(date_str, str):
                 from datetime import datetime
