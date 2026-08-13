@@ -407,8 +407,21 @@ def get_config() -> Any:
 def validate_config(config: Config | None = None) -> None:
     """Execute domain specific consistency checks."""
     cfg = config or get_config()
-    weights = cfg.scoring.weights
-    feature_weights = cfg.scoring.feature_weights
+    # get_config() may return a RuntimeConfigSnapshot (which exposes
+    # scoring_config, not scoring) when called during bootstrap paths that
+    # never set _CONFIG_STATE. Resolve the underlying Config so the
+    # consistency checks operate on the real sections (2026-08-12, surfaced
+    # by pytest-randomly in the smoke test).
+    scoring_section = getattr(cfg, "scoring", None)
+    if scoring_section is None:
+        scoring_section = getattr(cfg, "scoring_config", None)
+    if scoring_section is None:
+        raise ConfigError(
+            "Runtime config is missing the 'scoring' section; "
+            "re-run refresh_runtime_config() with a complete config.toml"
+        )
+    weights = scoring_section.weights
+    feature_weights = scoring_section.feature_weights
     if (
         abs(
             weights.source_credibility

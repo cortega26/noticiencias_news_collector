@@ -32,10 +32,9 @@ items #246/#247/#248 all resolved (closed in code by commit `644e07f`).
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Step 1 done (ontology/consumer map). Operator confirmed they'll self-review the corpus, so Steps 2-3 tooling is now built: `tests/data/enrichment_eval.jsonl` (44-record stratified seed, draft labels kept separate from gold), `scripts/validate_enrichment_corpus.py`, `scripts/evaluate_enrichment_registry.py` (only scores reviewed records; `sufficient_evidence` stays false below 200), plus `docs/spikes/enrichment-corpus-labeling-guide.md`. Single-reviewer limitation vs. the plan's own two-reviewer ask documented honestly, not silently downgraded. Steps 4-6 still not attempted — depend on the reviewer actually labeling a meaningful sample. See `plans/048/spec.md` and `docs/adr/0004-curated-enrichment-registry-spike.md` |
-| 057 | [Stop rebuilding wheels](057-stop-rebuilding-wheels.md) | P2 | L | none | TODO — audit of bespoke plumbing vs existing solutions: (1) 144 files of isort drift that never pass the pre-push hook, (2) backend re-runs full frontend validation that the frontend CI already owns, (3) webhook transport (keep, document), (4) refinery_manifest.json parallel to git history, (5) ranked-query/health (keep). Triggered by the 2026-08-12 "published but no PR" incident — two custom bugs (frontmatter null serialization + swallowed failure reporting). See `plans/057-stop-rebuilding-wheels.md` |
 
 > Plans 018–030, 021, 023, 031, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 047,
-> 049, 050, 051, 053, 054, 055, and 056 are DONE and archived. Plan **046** is
+> 049, 050, 051, 053, 054, 055, 056, and 057 are DONE and archived. Plan **046** is
 > REJECTED (operator decision 2026-08-11: SQLite-only, no PostgreSQL) and archived.
 
 Status values: TODO | IN PROGRESS | PARTIAL | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale).

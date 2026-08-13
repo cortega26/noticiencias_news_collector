@@ -38,6 +38,31 @@ def _reload_settings():
     return importlib.reload(mod)
 
 
+@pytest.fixture(autouse=True)
+def _restore_settings_module():
+    """Restore the settings module after each test.
+
+    _reload_settings() replaces news_collector.config.settings in
+    sys.modules; without restoration, any later test that imported the
+    original module keeps a stale reference while new importers get the
+    reloaded one — breaking global state (e.g. the collector smoke test's
+    system initialization). pytest-randomly surfaced this by shuffling
+    order (2026-08-12). Also resets the snapshot globals so a later test's
+    lazy rebuild returns the repo's real config.
+    """
+    import sys
+
+    import news_collector.config.settings as mod
+
+    yield
+    sys.modules["news_collector.config.settings"] = mod
+    mod._CURRENT_SNAPSHOT = None
+    mod._CONFIG_STATE = None
+    # Rebuild the mutable runtime holder so a later lazy refresh starts
+    # from a clean RuntimeSettings (reloads mutate RUNTIME in place).
+    mod.RUNTIME = type(mod.RUNTIME)()
+
+
 def _write_toml(tmp_path: Path, content: str) -> Path:
     """Write a config.toml and return its path."""
     config_file = tmp_path / "config.toml"
@@ -78,14 +103,22 @@ class TestBasicRefresh:
 
     def test_returns_snapshot_not_none(self):
         """get_runtime_config returns a valid snapshot."""
-        snap = get_runtime_config()
+        # Reload so the snapshot global belongs to THIS module instance —
+        # mixing the top-level import with a reloaded module's state is
+        # order-dependent (pytest-randomly surfaced it, 2026-08-12).
+        mod = _reload_settings()
+        snap = mod.get_runtime_config()
         assert snap is not None
-        assert isinstance(snap, RuntimeConfigSnapshot)
+        # isinstance against the RELOADED module's class — the reload
+        # creates a distinct RuntimeConfigSnapshot class, so the top-level
+        # import's class never matches it.
+        assert isinstance(snap, mod.RuntimeConfigSnapshot)
 
     def test_same_version_between_refreshes(self):
         """Consecutive calls without refresh return the same snapshot."""
-        snap1 = get_runtime_config()
-        snap2 = get_runtime_config()
+        mod = _reload_settings()
+        snap1 = mod.get_runtime_config()
+        snap2 = mod.get_runtime_config()
         assert snap1.version == snap2.version
         assert snap1 == snap2
 

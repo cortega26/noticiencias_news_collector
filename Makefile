@@ -97,6 +97,7 @@ $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@$(PYTHON_BIN) -c "import pytest_timeout" >/dev/null 2>&1 || $(PYTHON_BIN) -m pip install "pytest-timeout>=2.3.0"
+	@$(PYTHON_BIN) -c "import pytest_randomly" >/dev/null 2>&1 || $(PYTHON_BIN) -m pip install "pytest-randomly>=3.15.0"
 	@echo "Environment ready at $(VENV)"
 
 run-local: bootstrap ## Run the collector locally
@@ -214,10 +215,17 @@ test: bootstrap ## Run unit tests (fast feedback, excludes slow e2e pipeline)
 	@$(PYTEST) tests --ignore=tests/e2e_pipeline
 
 test-all: bootstrap ## Run all tests including slow e2e pipeline
-	@$(PYTEST) tests
+	# Unit suite first (randomized), then e2e in fixed order — mixing them
+	# lets unit-test global state leak into the order-sensitive e2e
+	# scenarios (2026-08-12, surfaced by pytest-randomly).
+	@$(PYTEST) tests --ignore=tests/e2e_pipeline
+	@$(PYTEST) tests/e2e_pipeline --randomly-dont-reorganize
 
 test-e2e: bootstrap ## Run the full e2e pipeline tests (~4 min)
-	@$(PYTEST) tests/e2e_pipeline
+	# e2e scenarios assume a clean environment and are order-sensitive;
+	# pytest-randomly reorganizes the suite by default, so disable it for
+	# this directory (the unit suite stays randomized, 2026-08-12).
+	@$(PYTEST) tests/e2e_pipeline --randomly-dont-reorganize
 
 check-coverage: bootstrap ## Check if coverage meets the required threshold (fails under 80%)
 	@echo "[coverage] Checking coverage threshold..."

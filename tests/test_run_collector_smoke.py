@@ -77,30 +77,45 @@ def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> 
     assert MODULE.main() == 1
 
 
-def test_run_collector_smoke_network_tripwire(capfd, monkeypatch) -> None:
+def test_run_collector_smoke_network_tripwire() -> None:
     _clean_smoke_article()
 
-    def _deny_network(*args, **kwargs):  # noqa: ARG001
-        msg = f"External network call attempted in smoke mode: {args} {kwargs}"
-        import traceback
-
-        traceback.print_stack()
-        print(msg)
-        raise AssertionError(msg)
-
-    monkeypatch.setenv("NOTICIENCIAS_SMOKE", "1")
-    monkeypatch.setattr(requests, "get", _deny_network)
-    monkeypatch.setattr(requests, "post", _deny_network)
-    monkeypatch.setattr(requests.sessions.Session, "get", _deny_network)
-    monkeypatch.setattr(requests.sessions.Session, "post", _deny_network)
-    monkeypatch.setattr(httpx, "get", _deny_network)
-    monkeypatch.setattr(httpx, "post", _deny_network)
-    monkeypatch.setattr(httpx.Client, "get", _deny_network)
-    monkeypatch.setattr(httpx.Client, "post", _deny_network)
-
-    result = MODULE.main()
-    if result != 0:
-        out, err = capfd.readouterr()
-        print("\n=== STDOUT ==\n", out)
-        print("\n=== STDERR ==\n", err)
-        assert result == 0, f"Smoke main failed with exit code {result}"
+    # Run the smoke script in a SUBPROCESS with a prelude that patches
+    # requests/httpx to deny ALL network calls BEFORE the script imports
+    # the collector. Running in-process lets any earlier test's global
+    # state (runtime config, RUNTIME, reloaded modules) leak into the
+    # smoke's system initialization — pytest-randomly surfaced it by
+    # shuffling order (2026-08-12). A clean process makes the tripwire
+    # hermetic AND more faithful (it exercises the real CLI entry point).
+    prelude = (
+        "import requests, httpx, os, sys\n"
+        "def _deny(*a, **k):\n"
+        "    raise AssertionError('network call blocked in smoke')\n"
+        "requests.get = requests.post = _deny\n"
+        "httpx.get = httpx.post = _deny\n"
+        "requests.sessions.Session.get = requests.sessions.Session.post = _deny\n"
+        "httpx.Client.get = httpx.Client.post = _deny\n"
+        f"__file__ = os.path.abspath({str(SCRIPT_PATH)!r})\n"
+    )
+    env = dict(os.environ)
+    env["NOTICIENCIAS_SMOKE"] = "1"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            prelude
+            + "exec(open(__file__).read())\nimport run_collector_smoke as m\nsys.exit(m.main())",
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    out = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        print("\n=== STDOUT ===\n", proc.stdout)
+        print("\n=== STDERR ===\n", proc.stderr)
+    assert proc.returncode == 0, f"Smoke main failed with exit code {proc.returncode}"
+    assert "network call blocked" not in out, f"Unexpected network call: {out}"
+    assert '"mode": "smoke"' in out, f"Smoke payload missing: {out}"

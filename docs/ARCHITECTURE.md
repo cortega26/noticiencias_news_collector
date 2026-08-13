@@ -105,6 +105,33 @@ Specific rules:
 - frontend publication mirror: `news_collector/contracts/frontend_schema.py`
 - raw/export-to-contract mapping: `news_collector/contracts/adapters.py`
 
+## Deliberately Custom Surfaces (plan 057 — keep decisions)
+
+These are bespoke by design, with a documented reason. Do not re-flag them
+as "reinvented wheels" in future audits.
+
+- **Webhook callback transport** (`contracts/webhook.py`, `serving/api.py`,
+  `serving/webhook_handler.py`): the frontend deploy has no native "notify
+  my backend" hook, so the envelope + bearer auth + `refinery_id` matching
+  is a deliberate cross-repo API (plan 021). The envelope is versioned; the
+  auth is constant-time HMAC-style comparison; the frontend secret never
+  appears in code/logs/docs.
+- **Ranked API query + health tracking** (`serving/api.py`, `diagnostics.py`):
+  plan 045 measured and rejected an index (the `coalesce()` ORDER BY is
+  un-indexable and a DESC index measured 2.3x slower at 100k rows); the
+  health-table semantics were fixed in plan 021. No standard library
+  replaces these domain-specific reads.
+- **`refinery_manifest.json`** (`target_repo_writer.py`): an index mapping
+  `refinery_id -> filename`, answering a question git history cannot
+  (git gives filenames, not the id->file correlation without scanning every
+  post's frontmatter). It is O(1) with a self-healing O(n) slow-scan
+  fallback — losing it degrades to a rebuild, never a failure (plan 057
+  Step 3).
+- **`isort` is the sole import-order authority**: ruff's I rules are
+  deliberately NOT enabled (pyproject `select`); the two tools cycled
+  forever on intra-function imports (2026-08-12). This is a config
+  decision, not an accident.
+
 ## Current Technical Debt That The Docs Must Not Hide
 
 ### `RefineryEngine` is still too broad

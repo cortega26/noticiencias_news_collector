@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -75,6 +76,17 @@ async def test_refinery_integration_stub():
         mock_editor = MagicMock()
         mock_config = MagicMock()
         mock_config.app.policy_integrity_mode = "disabled"
+        # RefineryEngine builds an LLMRateLimiter from config; a bare
+        # MagicMock leaks into threading.Semaphore and crashes
+        # ('<' not supported between MagicMock and int). Give the rate
+        # limiter real numeric bounds (2026-08-12, surfaced by CI once the
+        # repo went public and pytest-randomly shuffled order).
+        mock_config.llm_rate_limiting = SimpleNamespace(
+            max_concurrent_requests=2,
+            min_delay_between_requests=0.0,
+            circuit_breaker_threshold=3,
+            circuit_breaker_cooldown=60.0,
+        )
 
         engine = RefineryEngine(
             db_manager=mock_db_instance,

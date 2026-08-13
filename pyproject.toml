@@ -140,7 +140,7 @@ ignore_errors = true
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --timeout=10 --cov=news_collector --cov=apps --cov-branch --cov-report=term-missing"
+addopts = "-ra --timeout=10 --cov=news_collector --cov=apps --cov-branch --cov-report=term-missing -p randomly"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",

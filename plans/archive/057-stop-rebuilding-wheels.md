@@ -161,3 +161,57 @@ don't re-flag them.
 - Stop if narrowing backend validation lets a schema-invalid post reach the
   frontend — the fast check must be proven equivalent on the known failure
   classes first.
+
+## Execution record (2026-08-12)
+
+### Step 1 — drift cleanup: DONE (de facto, committed earlier today)
+Full `pre-commit run --all-files` (217 files) + a real fix: ruff's I
+rules were removed from pyproject select — ruff I001 and isort cycled
+forever on intra-function imports, causing every push to fail the hook.
+isort is now the sole import-order authority. `git push` passes without
+`--no-verify` (verified).
+
+### Step 2 — narrow backend frontend validation: DONE (fail-fast)
+`validate_post_frontmatter_fast()` validates the generated post's
+frontmatter against the backend AstroPost mirror (milliseconds, no
+node_modules) and runs fail-fast before the full npm ci + prettier +
+lint + build cycle in `refinery_engine`. Catches the `sources[].date:
+null` class (the 2026-08-12 incident) before any LLM/build waste. The
+full frontend build still runs for valid posts (frontend CI remains the
+complete gate); removing it entirely is documented as future work.
+
+### Step 3 — manifest vs git history: KEEP (evidence)
+`refinery_manifest.json` is an index mapping `refinery_id -> filename`.
+Git history cannot answer that correlation without scanning every post's
+frontmatter (O(n)); the manifest answers it O(1) with a self-healing
+O(n) slow-scan fallback that rebuilds it on miss. Losing it degrades to
+a rebuild, never a failure. Not a SPOF; kept and documented.
+
+### Step 4 — keep decisions documented: DONE
+`docs/ARCHITECTURE.md` gained "Deliberately Custom Surfaces (plan 057 —
+keep decisions)" covering: webhook transport (no native frontend hook),
+ranked query + health tracking (index rejected by measurement, plan
+045), the manifest (Step 3), and the isort-only import-order decision.
+
+### Plus — pytest-randomly: DONE (hermetic suite)
+- Installed as unpinned dev tooling (no lockfile churn), enabled by
+  default in pyproject addopts.
+- Fixed three real order-dependent state leaks it exposed:
+  1. `test_live_refresh` reloaded the settings module without restoring
+     it — added an autouse fixture that restores sys.modules AND resets
+     `_CURRENT_SNAPSHOT`/`_CONFIG_STATE`/`RUNTIME`.
+  2. `test_save_toml_config` refreshed with a postgres driver, leaving
+     the global snapshot pointing at postgres — same restore fixture.
+  3. `validate_config()` crashed on a snapshot (scoring_config vs
+     scoring) — production fix: resolve the section from either shape.
+  4. `test_run_collector_smoke_network_tripwire` was inherently
+     in-process-fragile — now runs the smoke script as a hermetic
+     SUBPROCESS with a network-deny prelude (also more faithful: it
+     exercises the real CLI entry point).
+  5. `test_refinery_integration_stub` crashed on a bare MagicMock
+     config leaking into threading.Semaphore — test now provides real
+     rate-limiter bounds.
+- e2e scenarios are order-sensitive by nature: `make test-e2e` and the
+  e2e half of `make test-all` run with `--randomly-dont-reorganize`.
+- Verified: 1834 unit tests pass under 5 different random seeds;
+  `make test-all` (unit randomized + e2e fixed) fully green.

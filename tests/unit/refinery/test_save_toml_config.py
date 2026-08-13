@@ -29,6 +29,30 @@ ADMIN_PANEL = (
     Path(__file__).resolve().parents[3] / "apps" / "refinery" / "admin_panel.py"
 )
 
+
+@pytest.fixture(autouse=True)
+def _restore_runtime_config_snapshot():
+    """Restore the runtime config snapshot after each test.
+
+    refresh_runtime_config() mutates module-global state (_CONFIG_STATE /
+    _CURRENT_SNAPSHOT). Tests that refresh with a postgres driver leave the
+    global pointing at that state; any later test that initializes the DB
+    from get_runtime_config() then tries to connect to PostgreSQL and fails
+    (pytest-randomly surfaced this by shuffling order, 2026-08-12).
+    Resetting _CURRENT_SNAPSHOT to None forces a lazy rebuild on the next
+    get_runtime_config() call, returning the repo's real config.
+    """
+    import news_collector.config.settings as mod
+
+    yield
+    mod._CURRENT_SNAPSHOT = None
+    mod._CONFIG_STATE = None
+    # Rebuild the mutable runtime holder so a later lazy refresh starts
+    # from a clean RuntimeSettings (the old RUNTIME may carry a partial
+    # config from this file's postgres-driver refresh).
+    mod.RUNTIME = type(mod.RUNTIME)()
+
+
 VALID_TOML = """
 [app]
 environment = "development"
