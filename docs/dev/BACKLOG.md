@@ -10,6 +10,6 @@
 
 ## Wishlist
 
-- [ ] **Mutation Testing**: Re-enable `mutmut` (present in pyproject.toml) to find weak tests.
+- [x] **Mutation Testing**: Re-enable `mutmut` (present in pyproject.toml) to find weak tests. **DONE** — already enabled and running: `[tool.mutmut]` mutates `utils/text_cleaner.py` + `utils/url_canonicalizer.py`, CI job `.github/workflows/mutation.yml` (weekly + manual dispatch) installs mutmut fresh and runs the smoke suite then `mutmut run`. Verified locally 2026-08-13: 402 mutations, 283 killed, 118 survived — the surviving mutants are the weak-test signal; new-test coverage for those two utils is the follow-up if they ever gate.
 - [ ] **Contract Tests**: Add schema generation for the scraping output to ensure downstream consumers (Refinery) don't break.
 - [ ] **FastAPI Migration**: `serving/` module is barebones. Migrate to a proper `routers/` structure.
