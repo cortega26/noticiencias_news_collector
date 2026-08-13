@@ -30,6 +30,11 @@ class TestMetricsEnvironmentIsolation(unittest.TestCase):
         production_metrics_view.db_path = (
             "data/metrics/production/enrichment_metrics.db"
         )
+        # Close before dropping the reference: an open connection orphaned
+        # here survives until arbitrary GC, surfacing as a ResourceWarning
+        # attributed to a random later test.
+        if production_metrics_view.conn is not None:
+            production_metrics_view.conn.close()
         production_metrics_view.conn = None
 
         # A genuinely separate instance for the "test" environment — never

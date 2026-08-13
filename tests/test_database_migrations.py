@@ -277,10 +277,13 @@ def test_every_legacy_revision_reaches_head(tmp_path: Path, revision: str) -> No
         directory = alembic_script.ScriptDirectory.from_config(alembic_cfg)
         head = directory.get_heads()[0]
 
-        with sqlite3.connect(db_path) as conn:
+        conn = sqlite3.connect(db_path)
+        try:
             current = conn.execute(
                 "SELECT version_num FROM alembic_version"
             ).fetchone()[0]
+        finally:
+            conn.close()
     assert current == head
 
 
@@ -313,10 +316,13 @@ def test_downgrade_upgrade_roundtrip(tmp_path: Path, revision: str) -> None:
         command.upgrade(alembic_cfg, "head")
 
         head = directory.get_heads()[0]
-        with sqlite3.connect(db_path) as conn:
+        conn = sqlite3.connect(db_path)
+        try:
             current = conn.execute(
                 "SELECT version_num FROM alembic_version"
             ).fetchone()[0]
+        finally:
+            conn.close()
     assert current == head
 
 

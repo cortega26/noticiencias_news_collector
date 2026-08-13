@@ -114,6 +114,14 @@ def run_migrations_online() -> None:
         with context.begin_transaction():
             context.run_migrations()
 
+    # Alembic's EnvironmentContext keeps `connection` alive in the executed
+    # env namespace after the run — without an explicit close it survives
+    # until GC, tripping ResourceWarning ("unclosed database") in every
+    # test that drives alembic. Close it and dispose the engine here.
+    if getattr(context, "connection", None) is not None:
+        context.connection.close()
+    connectable.dispose()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

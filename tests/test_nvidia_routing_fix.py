@@ -466,7 +466,7 @@ class TestRetryFailFast:
             async def acquire_async(self):
                 return True
 
-            async def release_async(self):
+            def release_async(self):
                 return None
 
         return _FakeLimiter()

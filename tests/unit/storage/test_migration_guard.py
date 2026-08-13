@@ -49,8 +49,13 @@ def test_missing_version_table_on_fresh_empty_file(tmp_path: Path) -> None:
     assert not status.is_ready
 
     # No schema mutation: the guard must not have created any table.
-    with engine.connect() as conn:
-        assert sqla_inspect(conn).get_table_names() == []
+    # NOTE: engine.connect() after dispose() re-creates a pooled connection —
+    # dispose again so it does not leak until GC (ResourceWarning).
+    try:
+        with engine.connect() as conn:
+            assert sqla_inspect(conn).get_table_names() == []
+    finally:
+        engine.dispose()
 
 
 def test_up_to_date_at_head(tmp_path: Path) -> None:
@@ -94,10 +99,14 @@ def test_behind_head(tmp_path: Path) -> None:
     assert status.head_revision != BEHIND_REVISION
 
     # Read-only: still stamped at the old revision, no upgrade happened.
-    with engine.connect() as conn:
-        current = conn.exec_driver_sql(
-            "SELECT version_num FROM alembic_version"
-        ).scalar()
+    # (dispose again — see test_missing_version_table post-dispose note)
+    try:
+        with engine.connect() as conn:
+            current = conn.exec_driver_sql(
+                "SELECT version_num FROM alembic_version"
+            ).scalar()
+    finally:
+        engine.dispose()
     assert current == BEHIND_REVISION
 
 

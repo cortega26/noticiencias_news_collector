@@ -156,6 +156,12 @@ filterwarnings = [
     "ignore::ResourceWarning:sqlalchemy",
     # unittest.mock teardown GC of patched DB objects triggers the same pattern.
     "ignore::ResourceWarning:unittest.mock",
+    # Third-party: fastapi's testclient flags its own httpx dependency ("install
+    # httpx2") on every TestClient import — no action available in this repo
+    # until fastapi/starlette ship the new client (tracked, not silence-and-forget).
+    # Message-regex form: the warning class isn't resolvable by name and the
+    # warning can fire from importlib frames with no module attribute.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]
 
 [tool.coverage.run]

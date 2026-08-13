@@ -542,7 +542,7 @@ def create_app(  # noqa: C901
         except Exception as exc:
             logger.warning("Invalid webhook payload: {}", exc)
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Invalid payload: {exc}",
             ) from exc
 

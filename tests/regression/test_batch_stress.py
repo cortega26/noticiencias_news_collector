@@ -56,6 +56,7 @@ def test_internal_duplicates_handling():
 
     count = manager.save_articles_bulk(batch)
     assert count == 2, f"Expected 2 unique saves, got {count}"
+    manager.close()
 
 
 @pytest.mark.regression
@@ -86,4 +87,5 @@ def test_concurrent_batches_race_condition():
             # We mostly want to ensure NO CRASH and NO >10 (duplicates).
             assert total == 10, f"Expected 10 unique articles, got {total}"
     finally:
+        manager.close()
         shutil.rmtree(temp_dir)
