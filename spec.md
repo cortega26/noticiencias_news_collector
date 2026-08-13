@@ -86,8 +86,11 @@ unblocked.
   any lockfile, dead env vars in `docker-compose.yml`'s app services, and
   host-absolute paths hardcoded in the committed `config.toml`) — fixing
   those is a dedicated follow-up outside this plan's scope, not a one-line
-  patch to force a test green. See `plans/046/spec.md` and
-  `docs/database_deployment.md`.
+  patch to force a test green. **Update (2026-08-13)**: the host-absolute
+  paths part of that STOP is resolved — `config.toml`'s `[paths]` are now
+  relative to the working directory (CI-safe); the remaining blockers are
+  the missing PostgreSQL driver in lockfiles and the docker-compose env
+  wiring. See `plans/046/spec.md` and `docs/database_deployment.md`.
 - **034 — Centralize article admission**: DONE. One shared, typed,
   structural admission policy (`news_collector/collectors/admission.py`)
   now runs exactly once, in `BaseCollector._filter_and_save_articles`,

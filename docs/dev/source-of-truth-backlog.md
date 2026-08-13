@@ -2,13 +2,14 @@
 
 ## Critical
 
-### Cross-repo publication contract gate
+### ~~Cross-repo publication contract gate~~ **CLOSED**
 
-Problem: The backend mirrors the frontend publication schema, but both repos can still drift independently without a single shared CI gate.  
-Impact: Publication failures and schema mismatches can be discovered late, after changes land in only one repo.  
-Recommendation: Add a coordinated contract-validation step spanning `news_collector/contracts/frontend_schema.py` and `../noticiencias/src/content.config.ts`.  
-Affected repo(s): backend, frontend  
-Suggested priority: critical
+Implemented in CI (2026-08-13 verification): `.github/workflows/ci.yml` runs a
+`contract-parity` job that sparsely checks out `../noticiencias/src/content.config.ts`
+and runs the same `scripts/check-contract-sync.js` the frontend's Content Guard
+uses, and `.github/workflows/publication-smoke.yml` runs
+`scripts/validate_frontend_publication.py` against the front-end schema on
+publication-touching paths. Both repos are gated on the same contract in CI.
 
 ## High
 

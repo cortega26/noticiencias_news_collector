@@ -84,13 +84,13 @@ def _resolve_article_identity(article: Dict[str, Any]) -> str:
     title, same as the historical behavior, but log so the gap is visible
     instead of silent.
 
-    Plan 021 (rebuild the publication callback contract) intends to persist
-    this exact string into the DB row's
-    ``article_metadata["publication"]["refinery_id"]`` and match frontend
-    callbacks' ``publication_ids`` against it — that persistence/matching
-    is NOT built yet (see plans/021/spec.md for the remaining work). This
-    function only fixes the identity *source* (id-first, title as a logged
-    fallback) so that future wiring has a stable value to build on.
+    Plan 021 (rebuild the publication callback contract) persists this
+    exact string into the DB row's
+    ``article_metadata["publication"]["refinery_id"]`` (see
+    ``ArticleRepository.mark_article_published`` / ``database.py``) and the
+    frontend webhook handler matches callbacks' ``publication_ids`` against
+    it — a title fallback row therefore won't correlate reliably with
+    frontend publication callbacks, which is why it logs loudly.
     """
     article_pk = article.get("id")
     if article_pk not in (None, ""):

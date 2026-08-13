@@ -2,10 +2,10 @@
 
 ## Tech Debt
 
-- [ ] **Config Consolidation**: `apps/refinery` uses its own `.env`. Merge into central `config.toml`.
+- [x] **Config Consolidation**: `apps/refinery` uses its own `.env`. Merge into central `config.toml`. **DONE** — `apps/refinery/admin_panel.py` now loads the root `.env`; a detected `apps/refinery/.env` only triggers a migration warning ("ya no se usa como fuente de configuración").
 - [ ] **Model Deduplication**: `CollectorArticleModel` (Pydantic) and `Article` (SQLAlchemy) share 90% fields but drift. Use `sqlmodel` or automated mapping.
 - [ ] **Scorer Redundancy**: `PreScorer` (used in collectors) overlaps with `BasicScorer` (used in system). Unify into `ScoringService`.
-- [ ] **Logging Standardization**: Some modules use `logging.getLogger`, others use `NewsCollectorLogger` wrapper. Unify.
+- [x] **Logging Standardization**: Some modules use `logging.getLogger`, others use `NewsCollectorLogger` wrapper. Unify. **DONE** — all 50 modules using the logger go through `NewsCollectorLogger` (`utils/logger.py`); zero direct `logging.getLogger` call sites remain.
 - [x] **Dependency Audit**: `requirements.txt` lists `pandas` and `streamlit` but they are only for auxiliary tools. Move to `dev` dependencies.
 
 ## Wishlist
