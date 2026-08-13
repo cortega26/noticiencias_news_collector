@@ -167,19 +167,29 @@ supports — and does not support.
   | topics F1 | 0.767 | **0.911** | +0.144 |
   | topics P | 0.818 | 0.943 | +0.125 |
   | topics R | 0.752 | 0.910 | +0.158 |
-  | entities F1 | 0.546 | **0.750** | +0.204 |
-  | entities P | 0.773 | 0.773 | 0.000 |
-  | entities R | 0.705 | 0.795 | +0.091 |
+  | entities F1 | 0.546→0.773* | **0.750→0.924*** | +0.151* |
+  | entities P | 0.773→0.886* | 0.773→0.955* | — |
+  | entities R | 0.705→0.886* | 0.795→0.966* | — |
   | `general` rate | 0.318 | 0.204 | −0.114 |
+
+  *Methodology refinement (2026-08-13, QW1): the evaluator now passes the
+  record's `language` (per-record language scoping, previously default-en)
+  and compares entities accent-folded (plan 048's own "missing accents"
+  adversarial case: canonical accented aliases vs accent-free gold labels
+  were being counted as FN+FP simultaneously — an evaluation artifact).
+  Baseline topics F1 is 0.866 under the refined methodology.
   | latency mean/p95 | 0.98/1.16 ms | 1.04/1.41 ms | +0.06/+0.25 ms |
 
   17/44 records change topics/entities. Raw paired counts, no bootstrap
-  (sample too small for meaningful CIs). Entity FN/FP clusters are
-  accent-normalization artifacts of the literal matcher, not registry
-  errors: gold uses canonical accented forms while article text is
-  accent-free ("Universidade de Sao Paulo" vs gold "Universidade de São
-  Paulo") — a matcher-level (config-time accent folding) improvement
-  candidate, not a pattern-data problem.
+  (sample too small for meaningful CIs). The accent-normalization artifact
+  noted in the original write-up was resolved in-session (2026-08-13,
+  QW1): the literal matcher now accent-folds case-insensitive patterns
+  (`_fold_accents` in `nlp_stack.py`), so canonical accented patterns match
+  accent-free article text; the evaluator folds accents on both sides of
+  the entity comparison so gold/canonical accent variants count as one
+  entity. Remaining measured signals are small and real: FN `ESA` (1,
+  language-scoping), FN `Amazonia` (1, no pattern), FP `Ministère de la
+  Santé` (1) and `NASA` (1).
 - **Critical-slice review (plan's STOP trigger)**: one genuine
   regression was found and fixed — the candidate's added
   `satellite`/`satélite` space keywords made `pt-climate-pos-019` (Amazon

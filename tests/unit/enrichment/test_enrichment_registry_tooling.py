@@ -108,6 +108,31 @@ class TestCorpusValidator:
         assert any("email" in e for e in errors)
 
 
+class TestEntityAccentFoldedScoring:
+    """Entity scoring must treat accent variants as identical (plan 048's
+    "missing accents" adversarial case): canonical alias "Universidade de
+    São Paulo" == gold "Universidade de Sao Paulo"."""
+
+    def test_accent_variants_are_tp_not_fp_fn(self):
+        score = evaluator._entity_prf(
+            predicted=["Universidade de São Paulo"],
+            gold=["Universidade de Sao Paulo"],
+        )
+        assert score["tp"] == 1
+        assert score["fp"] == 0
+        assert score["fn"] == 0
+        assert score["f1"] == 1.0
+
+    def test_exact_exact_comparison_unchanged(self):
+        score = evaluator._entity_prf(predicted=["NASA"], gold=["NASA", "Orion"])
+        assert score["tp"] == 1
+        assert score["fn"] == 1
+        assert score["f1"] == pytest.approx(2 / 3)
+
+    def test_fold_key_normalizes_for_clusters(self):
+        assert evaluator._fold_key("Ministère de la Santé") == ("Ministere de la Sante")
+
+
 class TestEvaluatorDeterminism:
     """The 6 golden_articles.json entries are already-established gold
     labels (used as exact-match assertions in test_enrichment_pipeline.py),

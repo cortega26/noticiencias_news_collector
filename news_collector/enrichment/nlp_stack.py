@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import (
@@ -203,6 +204,7 @@ class ConfigurableNLPStack:
             return ()
         combined = " ".join(texts)
         lowered = combined.lower()
+        folded = _fold_accents(lowered)
         matches: list[tuple[int, str]] = []
         for pattern in patterns:
             term = str(pattern.get("pattern", "")).strip()
@@ -214,8 +216,13 @@ class ConfigurableNLPStack:
             alias = str(raw_alias if raw_alias else term).strip()
 
             case_sensitive = bool(pattern.get("case_sensitive", False))
-            haystack = combined if case_sensitive else lowered
-            needle = term if case_sensitive else term.lower()
+            if case_sensitive:
+                # Exact-match semantics: no case folding, no accent folding.
+                haystack = combined
+                needle = term
+            else:
+                haystack = folded
+                needle = _fold_accents(term.lower())
             index = haystack.find(needle)
             if index >= 0:
                 matches.append((index, alias))
@@ -328,6 +335,20 @@ class ConfigurableNLPStack:
         if " " in keyword:
             return keyword in text_lower
         return re.search(rf"\b{re.escape(keyword)}\b", text_lower) is not None
+
+
+def _fold_accents(text: str) -> str:
+    """Fold accented characters to their ASCII base form (deterministic).
+
+    NFKD-decomposes then strips combining marks, so "São Paulo" and
+    "Sao Paulo" compare equal. Used by the literal entity matcher for
+    case-insensitive patterns — the gold registry carries canonical
+    accented spellings while article text is frequently accent-free
+    (plan 048 entity FN/FP clusters). Exact-match patterns
+    (case_sensitive=True) never pass through this.
+    """
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
 __all__ = [
