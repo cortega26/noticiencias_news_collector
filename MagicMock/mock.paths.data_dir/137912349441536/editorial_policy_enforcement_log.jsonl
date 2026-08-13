@@ -1,2 +1,0 @@
-{"timestamp": "2026-03-02T10:37:20.160671", "article_id": "101", "mode": "standard", "thresholds": {"critic": 80.0, "auditor": 8.0}, "score": null, "result": "allowed", "reason": "No Auditor score available (Non-blocking default)", "policy_sha256": ""}
-{"timestamp": "2026-03-02T10:37:25.270719", "article_id": "test_id", "mode": "standard", "thresholds": {"critic": 80.0, "auditor": 8.0}, "score": {"epistemic_rigor_score": 8.0, "has_proper_caveats": true}, "result": "allowed", "reason": "Non-blocking check passed (Fail-Open) or Score Sufficient", "policy_sha256": ""}
