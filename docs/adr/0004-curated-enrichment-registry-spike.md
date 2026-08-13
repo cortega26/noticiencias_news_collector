@@ -140,3 +140,88 @@ fabricated, only tooling and a to-be-reviewed seed corpus were built.
 Steps 4-6 (candidate registry, paired comparison, adoption decision)
 remain un-started; they depend on a real reviewed corpus of meaningful
 size, which is now in progress but not complete.
+
+## Update (2026-08-13): corpus reviewed (44), Steps 3-5 executed, Step 6 = iterate
+
+The operator reviewed and gold-labeled the 44-record seed corpus
+(`tests/data/enrichment_eval.jsonl`, `review_status="reviewed"`), which
+unblocked the plan's evidence chain at small-but-real scale. This update
+records what the evidence shows and the honest Step 6 decision it
+supports — and does not support.
+
+### What was done
+
+- **Step 3 baseline** (production `pattern_v1` / `2025.02-pattern-v1`,
+  corpus sha `cb54f4efca79`): topics P 0.818 / R 0.752 / F1 **0.767**;
+  entities P 0.773 / R 0.705 / F1 0.546; `general`-fallback rate 0.318.
+  `sufficient_evidence` is structurally `false` (44 < 200 reviewed).
+- **Step 4 candidate**: `scripts/enrichment_candidate.py` (model version
+  `2026.08-curated-candidate`) — an evaluated pattern-set update, kept
+  outside `config.toml` per the plan's isolation rule. `--compare` was
+  wired into `scripts/evaluate_enrichment_registry.py` (previously an
+  honest error stub).
+- **Step 5 paired comparison** (same corpus, both models, deterministic):
+
+  | Metric | baseline | candidate | delta |
+  |---|---|---|---|
+  | topics F1 | 0.767 | **0.911** | +0.144 |
+  | topics P | 0.818 | 0.943 | +0.125 |
+  | topics R | 0.752 | 0.910 | +0.158 |
+  | entities F1 | 0.546 | **0.750** | +0.204 |
+  | entities P | 0.773 | 0.773 | 0.000 |
+  | entities R | 0.705 | 0.795 | +0.091 |
+  | `general` rate | 0.318 | 0.204 | −0.114 |
+  | latency mean/p95 | 0.98/1.16 ms | 1.04/1.41 ms | +0.06/+0.25 ms |
+
+  17/44 records change topics/entities. Raw paired counts, no bootstrap
+  (sample too small for meaningful CIs). Entity FN/FP clusters are
+  accent-normalization artifacts of the literal matcher, not registry
+  errors: gold uses canonical accented forms while article text is
+  accent-free ("Universidade de Sao Paulo" vs gold "Universidade de São
+  Paulo") — a matcher-level (config-time accent folding) improvement
+  candidate, not a pattern-data problem.
+- **Critical-slice review (plan's STOP trigger)**: one genuine
+  regression was found and fixed — the candidate's added
+  `satellite`/`satélite` space keywords made `pt-climate-pos-019` (Amazon
+  climate monitoring via satellite data) gain a spurious `space` label.
+  Keywords removed; re-run confirms the FP is gone (F1 0.911 after fix)
+  and no other sensitive slice regresses. One unresolved pre-existing FN
+  documented: `en-science-pos-005` ("cell regeneration" study) misses
+  `health` in both baseline and candidate — a keyword-coverage gap, not
+  a candidate regression.
+- **Downstream consumers** (from Step 1's map): feature scoring
+  (`feature_scorer.py` entity-richness), topic-diversity reranking
+  (`reranker.py`), serving API filters (`api.py`), and image briefs
+  (`image_briefs.py` uses `topics[0]` as the brief's scientific domain).
+  Impact direction: multi-label rate rises (fewer `general` fallbacks),
+  entity richness rises slightly (higher entity recall), `topics[0]`
+  changes for ~4 records. All additive (more correct labels), none
+  structural.
+
+### Step 6 decision: **iterate** (do not adopt yet)
+
+- **Why not adopt**: the plan's own Step 2/3 Verify lines set ≥200
+  reviewed records as the evidence bar for an adoption decision; 44 is a
+  sanity check, not a baseline. Adopting on 44 would repeat the
+  fabricate-evidence mistake this ADR exists to prevent — in the other
+  direction (overclaiming).
+- **Why not discard**: direction is consistent across every metric
+  (topics +0.144 F1, entities +0.204 F1, `general` −0.114, no remaining
+  critical-slice regression, +0.06 ms mean latency) and the candidate is
+  pure static config — zero runtime/rollback risk to trial at scale.
+- **Therefore**: keep `scripts/enrichment_candidate.py` as the candidate
+  registry, keep production default `pattern_v1` untouched (Done
+  criterion satisfied), and treat the next milestone as ≥200 reviewed
+  records → re-run the identical evaluator → adopt/do-not-adopt on that
+  evidence, with this ADR's thresholds (no critical-slice regression;
+  precision floor 0.90 topics on the 200+ corpus).
+- **Owner/cadence**: operator (single reviewer — two-reviewer
+  adjudication remains documented as a limitation, not silently
+  downgraded). Re-evaluation cadence: every 50 newly reviewed records,
+  formal decision at ≥200.
+- **Rollback safety**: candidate is not wired into runtime config; if it
+  were, rollback is one config revert (plan 033 versioning applies). No
+  cache-mixing risk while it stays out of production.
+
+The original STOP decision and its rationale stand; this update is the
+operator-review milestone that plan's "Next steps" anticipated.

@@ -103,3 +103,46 @@
       `sufficient_evidence` will read `false` until then).
 - [ ] Steps 4-6 (candidate registry, paired comparison, adoption ADR)
       remain not attempted — depend on a real reviewed corpus existing.
+
+## Follow-up (2026-08-13): corpus reviewed, Steps 3-5 executed, Step 6 = iterate
+
+- [x] Operator gold-labeled all 44 seed records (`review_status="reviewed"`).
+- [x] Step 3 baseline on the reviewed corpus (production `pattern_v1`):
+      topics F1 0.767 (P 0.818 / R 0.752), entities F1 0.546
+      (P 0.773 / R 0.705), `general` rate 0.318; corpus sha `cb54f4efca79`;
+      `sufficient_evidence` structurally `false` (44 < 200).
+- [x] Step 4: built `scripts/enrichment_candidate.py` (`2026.08-curated-
+      candidate`) — candidate pattern-set (entity patterns with
+      canonical aliases, cross-language ministry/agency/university
+      coverage, ESA scoped to en/fr to avoid 'esa' substring collisions,
+      topic keyword additions incl. science "pesquisadores/study" family).
+      Kept outside `config.toml` per the plan's isolation rule. Wired
+      `--compare` into `scripts/evaluate_enrichment_registry.py`.
+- [x] Step 5 paired comparison (deterministic, same corpus): topics
+      F1 0.911 (+0.144), entities F1 0.750 (+0.204), `general` rate
+      0.204 (−0.114), latency +0.06 ms mean / +0.25 ms p95; 17/44 records
+      change output.
+- [x] Critical-slice review: found + fixed the one real regression — the
+      candidate's added `satellite`/`satélite` space keywords caused a
+      spurious `space` on `pt-climate-pos-019` (Amazon climate monitoring).
+      Removed; FP gone, F1 0.911 after fix, no other slice regresses.
+      Pre-existing FN documented (not candidate-caused):
+      `en-science-pos-005` "cell regeneration" misses `health` in both
+      models. Entity FN/FP clusters are accent-normalization artifacts of
+      the literal matcher (gold accented vs text accent-free), not
+      registry data errors.
+- [x] Downstream impact sampled: 17/44 change topics/entities; consumers
+      are feature scoring (entity richness), reranker (topic diversity),
+      serving API filters, image briefs (`topics[0]` → scientific
+      domain). Direction additive, no structural change.
+- [x] Step 6 ADR decision recorded in `docs/adr/0004-...md` (in-place
+      update): **iterate** — keep candidate registry isolated, production
+      default stays `pattern_v1` (Done criterion intact), re-evaluate
+      with the identical evaluator at ≥200 reviewed records against
+      pre-set thresholds (topics precision floor 0.90, no critical-slice
+      regression). Owner: operator (single-reviewer limitation stands).
+- [ ] Formal adopt/do-not-adopt decision at ≥200 reviewed records
+      (cadence: every 50 new reviewed records).
+- [ ] Optional follow-up improvement: matcher accent folding
+      (config-time), which would clear the entity FN/FP accent cluster.
+

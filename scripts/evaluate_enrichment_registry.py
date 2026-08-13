@@ -202,22 +202,12 @@ def main() -> int:
     parser.add_argument(
         "--compare",
         default=None,
-        help="Candidate model name to compare against (not implemented — "
-        "plan 048 Step 4's candidate registry was never built; this flag "
-        "is accepted for the CLI shape the plan specifies, but using it "
-        "today raises an error rather than silently ignoring it).",
+        help="Candidate model name to compare against (plan 048 Step 4): "
+        "evaluates the same corpus with the candidate config from "
+        "scripts/enrichment_candidate.py and reports per-metric deltas. "
+        "The candidate is NOT wired into production config.toml.",
     )
     args = parser.parse_args()
-
-    if args.compare:
-        print(
-            f"error: --compare {args.compare!r} requested, but no candidate "
-            "registry exists (plan 048 Step 4 was never attempted — see "
-            "docs/adr/0004-curated-enrichment-registry-spike.md). Refusing "
-            "to fabricate a comparison.",
-            file=sys.stderr,
-        )
-        return 2
 
     records = _load_reviewed_records(args.corpus)
     pipeline = EnrichmentPipeline()
@@ -231,6 +221,39 @@ def main() -> int:
         **evaluate(records, pipeline),
     }
 
+    # Optional paired comparison against a curated candidate (plan 048
+    # Step 4): evaluate the same corpus with the candidate config and
+    # attach the delta. The candidate lives in scripts/enrichment_candidate.py
+    # and is NOT wired into production config.
+    if args.compare:
+        try:
+            from scripts.enrichment_candidate import CANDIDATE_CONFIG
+        except ImportError as exc:  # pragma: no cover - defensive
+            print(
+                f"error: --compare {args.compare!r} requested but "
+                f"scripts/enrichment_candidate.py is unavailable: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+        candidate_pipeline = EnrichmentPipeline(config=CANDIDATE_CONFIG)
+        candidate_report = evaluate(records, candidate_pipeline)
+        baseline = {k: report[k] for k in ("topics", "entities") if k in report}
+        report["candidate"] = {
+            "model": args.compare,
+            "model_version": candidate_pipeline.model_version,
+            **candidate_report,
+            "delta_topics_f1": round(
+                candidate_report["topics"]["f1"] - report["topics"]["f1"], 4
+            ),
+            "delta_topics_precision": round(
+                candidate_report["topics"]["precision"] - report["topics"]["precision"],
+                4,
+            ),
+            "delta_topics_recall": round(
+                candidate_report["topics"]["recall"] - report["topics"]["recall"], 4
+            ),
+        }
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -240,6 +263,14 @@ def main() -> int:
         f"Evaluated {report['record_count']} reviewed record(s) against model_version={report['model_version']}"
     )
     print(report["evidence_note"])
+    if args.compare:
+        cand = report["candidate"]
+        print(
+            f"Candidate {cand['model_version']}: topics F1 {cand['topics']['f1']:.3f} "
+            f"(delta {cand['delta_topics_f1']:+.3f}), precision {cand['topics']['precision']:.3f} "
+            f"(delta {cand['delta_topics_precision']:+.3f}), recall {cand['topics']['recall']:.3f} "
+            f"(delta {cand['delta_topics_recall']:+.3f})"
+        )
     print(f"Report written to {args.output}")
     return 0
 

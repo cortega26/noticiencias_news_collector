@@ -26,6 +26,22 @@ meaningful once Step 2's corpus exists (the plan itself disqualifies the
 2-3's outputs. See `docs/adr/0004-curated-enrichment-registry-spike.md`
 for the full decision record.
 
+## Update (2026-08-13): operator reviewed the corpus; Steps 3-5 done, Step 6 = iterate
+
+The operator gold-labeled all 44 seed records, unblocking the evidence
+chain at small-but-real scale (the two-reviewer bar remains a documented
+limitation, not silently downgraded). Results, slice review, downstream
+impact, and the Step 6 **iterate** decision are recorded in the ADR's
+in-place "Update (2026-08-13)" section. Headlines: baseline topics
+F1 0.767 → candidate (`2026.08-curated-candidate`,
+`scripts/enrichment_candidate.py`) 0.911, entities F1 0.546 → 0.750,
+`general` 0.318 → 0.204; the one critical-slice regression (satellite
+keyword → spurious `space` on a climate record) was found and fixed;
+production `pattern_v1` remains untouched (plan's Done criterion).
+Adoption is deferred — `sufficient_evidence` stays structurally `false`
+below 200 reviewed records — with pre-set thresholds (topics precision
+floor 0.90, no critical-slice regression) for the ≥200-record decision.
+
 ## Implementation details (what was actually done)
 
 1. Recon: read `config.toml`'s `pattern_v1` block, `config_schema.py`'s

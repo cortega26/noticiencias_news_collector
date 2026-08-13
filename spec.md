@@ -192,9 +192,15 @@ unblocked.
   all confirmed byte-identical via `git diff --stat`). **Update
   (2026-07-22)**: the operator confirmed they will personally review/
   label the corpus, so Steps 2-3 tooling is now built — see "Session
-  resumption" below. Still PARTIAL: Steps 4-6 depend on the reviewer
-  actually labeling a meaningful sample first. See `plans/048/spec.md`
-  and `docs/adr/0004-curated-enrichment-registry-spike.md`.
+  resumption" below. **Update (2026-08-13)**: operator gold-labeled all
+  44 records; Steps 3-5 executed (baseline topics F1 0.767; candidate
+  `2026.08-curated-candidate` topics F1 0.911 / entities F1 0.750;
+  the one critical-slice regression — satellite keyword → space FP on a
+  climate record — was found and fixed); Step 6 ADR decision = **iterate**
+  (production `pattern_v1` untouched, candidate stays isolated in
+  `scripts/enrichment_candidate.py`, re-evaluate identically at ≥200
+  reviewed records). See `plans/048/spec.md` and
+  `docs/adr/0004-curated-enrichment-registry-spike.md`.
 - **040 — Account for every collector-dispatch outcome**: DONE. An
   earlier part of this session had already committed real Step 1/2 work
   (`f64466c`) without updating `plans/README.md` or writing `plans/040/*`

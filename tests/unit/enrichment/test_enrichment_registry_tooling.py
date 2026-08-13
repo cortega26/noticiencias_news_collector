@@ -87,7 +87,11 @@ class TestCorpusValidator:
         broken = [dict(r) for r in records]
         broken[0] = dict(broken[0])
         broken[0]["review_status"] = "reviewed"
-        # gold_topics/gold_entities left null — this must be caught.
+        # gold_topics/gold_entities must be explicitly nulled — the first
+        # seed record is now genuinely reviewed with gold labels, so the
+        # invalid state has to be manufactured.
+        broken[0]["gold_topics"] = None
+        broken[0]["gold_entities"] = None
         errors = validator.validate(broken)
         assert any(
             "review_status=reviewed but gold_topics is null" in e for e in errors
@@ -186,6 +190,25 @@ class TestEvaluatorDeterminism:
     def test_unreviewed_seed_corpus_records_are_excluded_from_evaluation(self):
         """The evaluator must only ever score reviewed (gold-labeled)
         records — an unreviewed draft's null gold labels must never be
-        silently treated as ground truth."""
-        loaded = evaluator._load_reviewed_records(CORPUS_PATH)
-        assert loaded == []  # seed corpus has zero reviewed records today
+        silently treated as ground truth. Uses explicit fixture records
+        rather than asserting the live seed corpus's review state (all 44
+        seed records are now reviewed)."""
+        fixture = [dict(r) for r in _load_corpus_records()[:2]]
+        fixture[0] = dict(fixture[0])
+        fixture[1] = dict(fixture[1])
+        fixture[1]["review_status"] = "draft"
+        fixture[1]["gold_topics"] = None
+        fixture[1]["gold_entities"] = None
+        with open(REPO_ROOT / ".hypothesis" / "tmp_eval_fixture.jsonl", "w") as fh:
+            for rec in fixture:
+                fh.write(json.dumps(rec) + "\n")
+        try:
+            loaded = evaluator._load_reviewed_records(
+                REPO_ROOT / ".hypothesis" / "tmp_eval_fixture.jsonl"
+            )
+        finally:
+            (REPO_ROOT / ".hypothesis" / "tmp_eval_fixture.jsonl").unlink(
+                missing_ok=True
+            )
+        assert len(loaded) == 1
+        assert loaded[0]["id"] == fixture[0]["id"]

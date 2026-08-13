@@ -342,8 +342,32 @@ this file now tracks the current pass over the 18 remaining plans.
       `docs/adr/0004-curated-enrichment-registry-spike.md` (in-place
       update, not a new ADR number — same decision record, updated
       status), `plans/README.md`.
-- [ ] Reviewer labels records over time; Steps 4-6 remain not attempted,
-      gated on a real reviewed corpus of meaningful size.
+- [x] Reviewer labeled all 44 records (2026-08-13); Steps 3-5 executed
+      and Step 6 ADR decision = **iterate** — see the 048 section's
+      "Follow-up (2026-08-13)" block below.
+
+## Plan 048 (2026-08-13) — Steps 3-5 executed, Step 6 = iterate
+
+- [x] Operator gold-labeled all 44 seed records.
+- [x] Step 3 baseline (production `pattern_v1`): topics F1 0.767
+      (P 0.818 / R 0.752), entities F1 0.546, `general` 0.318;
+      `sufficient_evidence` false (44 < 200).
+- [x] Step 4 candidate: `scripts/enrichment_candidate.py`
+      (`2026.08-curated-candidate`), isolated from `config.toml`;
+      `--compare` wired into the evaluator.
+- [x] Step 5 paired comparison: topics F1 0.911 (+0.144), entities F1
+      0.750 (+0.204), `general` 0.204 (−0.114), +0.06 ms mean latency;
+      17/44 records change. Critical-slice review found + fixed the one
+      regression (satellite keyword → space FP on `pt-climate-pos-019`);
+      pre-existing health FN documented (`en-science-pos-005`); entity
+      FN/FP clusters are literal-matcher accent artifacts.
+- [x] Step 6 decision (ADR-0004 in-place update): **iterate** —
+      production `pattern_v1` untouched, candidate stays isolated,
+      re-evaluate identically at ≥200 reviewed records against
+      pre-set thresholds (topics precision floor 0.90, no critical-slice
+      regression).
+- [ ] Formal adopt/do-not-adopt at ≥200 reviewed records (cadence:
+      every 50 new reviewed records).
 
 ## Plan 040 — Account for every collector-dispatch outcome (DONE)
 
