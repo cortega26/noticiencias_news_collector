@@ -90,7 +90,14 @@ unblocked.
   paths part of that STOP is resolved — `config.toml`'s `[paths]` are now
   relative to the working directory (CI-safe); the remaining blockers are
   the missing PostgreSQL driver in lockfiles and the docker-compose env
-  wiring. See `plans/046/spec.md` and `docs/database_deployment.md`.
+  wiring. **Update (2026-08-13, QW4)**: the driver blocker is resolved —
+  `psycopg[binary]>=3.2` is now a runtime dependency (pyproject.toml +
+  regenerated hash-pinned lockfiles; smoke-tested: `postgresql+psycopg://`
+  engine + dialect work, suite green). The docker-compose `DATABASE_URL`
+  env vars are wired to the app services but nothing in Python reads them
+  (config.toml `[database]` is authoritative) — the remaining 046 work is
+  connecting engine configuration to that env surface. See
+  `plans/046/spec.md` and `docs/database_deployment.md`.
 - **034 — Centralize article admission**: DONE. One shared, typed,
   structural admission policy (`news_collector/collectors/admission.py`)
   now runs exactly once, in `BaseCollector._filter_and_save_articles`,
