@@ -116,6 +116,15 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" REFINERY_UI_UNSAFE_ALLOW=1 PYTHONPATH=$(CURDIR) $(PYTHON_REFINERY) -m pytest -c tools/ci/pytest_refinery.toml --rootdir=.
 
 
+enrichment-eval: bootstrap ## Plan 048: evaluate production pattern_v1 + curated candidate against the reviewed corpus (reports/evaluation/)
+	@mkdir -p reports/evaluation
+	@$(PYTHON_BIN) scripts/evaluate_enrichment_registry.py \
+		--model pattern_v1 \
+		--compare curated_candidate \
+		--corpus tests/data/enrichment_eval.jsonl \
+		--output reports/evaluation/enrichment-pattern-v1.json
+
+
 debug: bootstrap ## Run the collector in debug mode (verbose)
 	@$(PYTHON) scripts/run_collector.py --verbose
 
