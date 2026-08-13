@@ -145,4 +145,3 @@
       (cadence: every 50 new reviewed records).
 - [ ] Optional follow-up improvement: matcher accent folding
       (config-time), which would clear the entity FN/FP accent cluster.
-
