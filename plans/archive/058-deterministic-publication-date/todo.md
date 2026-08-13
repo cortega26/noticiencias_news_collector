@@ -45,4 +45,4 @@
 - [x] Harden `ai_editor` missing override_date → raise (review minor).
 - [x] Add plan 058 row to `plans/README.md`.
 - [x] Update root `spec.md` / `todo.md` sequencing.
-- [ ] Commit + push.
+- [x] Commit + push (`7c7b180`, 2026-08-13).
