@@ -249,8 +249,104 @@ def test_admin_dev_mode_allows_without_key(api_client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# CORS (Phase 2: separate static GUI calling the admin surface)
+# ---------------------------------------------------------------------------
+
+
+def test_admin_cors_allowslisted_origin_gets_headers(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/analytics",
+            headers={**_admin_headers(), "Origin": "http://localhost:4322"},
+        )
+        assert response.status_code == 200
+        assert (
+            response.headers.get("access-control-allow-origin")
+            == "http://localhost:4322"
+        )
+
+        preflight = api_client.options(
+            "/v1/admin/articles",
+            headers={
+                "Origin": "http://localhost:4322",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "authorization",
+            },
+        )
+        assert preflight.status_code == 200
+        assert (
+            preflight.headers.get("access-control-allow-origin")
+            == "http://localhost:4322"
+        )
+        assert (
+            "authorization"
+            in preflight.headers.get("access-control-allow-headers", "").lower()
+        )
+
+
+def test_admin_cors_nonallowlisted_origin_no_header(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/analytics",
+            headers={**_admin_headers(), "Origin": "http://evil.example"},
+        )
+        assert response.status_code == 200
+        assert "access-control-allow-origin" not in response.headers
+
+
+def test_admin_cors_env_override(db_manager: DatabaseManager, tmp_path) -> None:
+    from fastapi.testclient import TestClient as _TestClient
+
+    from news_collector.serving import create_app as _create_app
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "ADMIN_API_KEY": "dev-admin-token",
+                "ADMIN_CORS_ORIGINS": "http://gui.local",
+            },
+        ),
+    ):
+        app = _create_app(database_manager=db_manager)
+        client = _TestClient(app)
+        response = client.get(
+            "/v1/admin/analytics",
+            headers={**_admin_headers(), "Origin": "http://gui.local"},
+        )
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "http://gui.local"
+
+
+# ---------------------------------------------------------------------------
 # Triage list
 # ---------------------------------------------------------------------------
+
+
+def test_admin_articles_tolerates_null_score_components(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Regression: production data carries null component values (e.g.
+    "engagement": null). The admin payload must not 500 on them — the
+    contract allows Optional[float] component values."""
+    with db_manager.get_session() as session:
+        article = (
+            session.query(Article)
+            .filter(Article.processing_status == "pending")
+            .first()
+        )
+        components = dict(article.score_components or {})
+        components["engagement"] = None
+        article.score_components = components
+        session.add(article)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/articles", params={"status": "pending"}, headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"][0]["score_components"]["engagement"] is None
 
 
 def test_admin_articles_status_filter(api_client: TestClient) -> None:

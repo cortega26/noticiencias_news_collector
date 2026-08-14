@@ -27,7 +27,7 @@ class AdminArticleListItem(BaseModel):
     published_at: Optional[datetime] = None
     collected_at: Optional[datetime] = None
     final_score: Optional[float] = None
-    score_components: Optional[Dict[str, float]] = None
+    score_components: Optional[Dict[str, Optional[float]]] = None
     why_ranked: List[str] = Field(default_factory=list)
     processing_status: Optional[str] = None
     error_message: Optional[str] = None
@@ -64,7 +64,7 @@ class AdminArticleDetail(BaseModel):
     published_at: Optional[datetime] = None
     collected_at: Optional[datetime] = None
     final_score: Optional[float] = None
-    score_components: Optional[Dict[str, float]] = None
+    score_components: Optional[Dict[str, Optional[float]]] = None
     why_ranked: List[str] = Field(default_factory=list)
     processing_status: Optional[str] = None
     error_message: Optional[str] = None

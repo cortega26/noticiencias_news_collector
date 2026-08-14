@@ -1,0 +1,102 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Article" current="/triage">
+  <AuthGate>
+    <a href="/triage" class="btn-ghost mb-6">← Back to triage</a>
+    <div id="detail" class="card min-h-[60vh] p-8">
+      <div class="py-16 text-center font-mono text-sm text-ink-400">
+        Loading article…
+      </div>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getArticle, showAuthGate } from "../lib/api";
+  import type { AdminArticleDetail } from "../lib/types";
+
+  const root = document.getElementById("detail");
+
+  function esc(s: string | null | undefined): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  async function load() {
+    if (!root) return;
+    const id = Number(new URLSearchParams(window.location.search).get("id"));
+    if (!Number.isFinite(id) || id <= 0) {
+      root.innerHTML = `<div class="py-16 text-center text-ink-400">Missing article id (?id=N).</div>`;
+      return;
+    }
+    try {
+      const article: AdminArticleDetail = await getArticle(id);
+      const publication = article.publication as Record<string, unknown> | undefined;
+      const audit = article.audit as Record<string, unknown> | undefined;
+      const comps: Array<[string, number]> = Object.entries(
+        article.score_components ?? {},
+      ).reduce<Array<[string, number]>>((acc, [k, v]) => {
+        if (v != null && Number.isFinite(v)) acc.push([k, Number(v)]);
+        return acc;
+      }, []);
+      comps.sort((a, b) => b[1] - a[1]);
+
+      root.innerHTML = `
+        <div class="mb-4 flex flex-wrap items-center gap-2">
+          <span class="status-pill status-${esc(article.processing_status ?? "new")}">${esc(article.processing_status ?? "new")}</span>
+          <span class="font-mono text-xs text-ink-400">#${article.id} · ${esc(article.refinery_id ?? "no refinery id")}</span>
+          <a class="btn-ghost ml-auto" href="${esc(article.url)}" target="_blank" rel="noopener">Open original ↗</a>
+        </div>
+        <h1 class="display-title text-4xl leading-tight text-paper-100">${esc(article.title)}</h1>
+        <div class="mt-2 font-mono text-xs text-ink-400">${esc(article.source.name)} · ${esc(article.category ?? "—")} · collected ${esc(article.collected_at ?? "—")}</div>
+        ${article.summary ? `<p class="mt-4 max-w-3xl text-[15px] leading-relaxed text-ink-200">${esc(article.summary)}</p>` : ""}
+
+        <div class="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div class="card p-5">
+            <div class="data-label mb-3">SCORE COMPONENTS</div>
+            <div class="mb-3 font-mono text-3xl font-bold text-amber-400">${article.final_score?.toFixed(3) ?? "—"}</div>
+            ${comps.length ? comps.map(([k, v]) => `
+              <div class="mb-2">
+                <div class="mb-1 flex justify-between font-mono text-[11px] text-ink-400"><span>${esc(k)}</span><span>${v.toFixed(3)}</span></div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-ink-800"><div class="h-full rounded-full bg-amber-500/80" style="width:${Math.min(100, v * 100)}%"></div></div>
+              </div>
+            `).join("") : `<p class="text-sm text-ink-400">No score components.</p>`}
+          </div>
+          <div class="space-y-4">
+            <div class="card p-5">
+              <div class="data-label mb-2">STATE</div>
+              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
+                <dt class="text-ink-400">publication</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? "—")}</dd>
+                <dt class="text-ink-400">audit</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? "—")}</dd>
+                <dt class="text-ink-400">cluster</dt><dd class="text-ink-200">${esc(article.cluster_id ?? "—")}</dd>
+                <dt class="text-ink-400">topics</dt><dd class="text-ink-200">${esc(article.topics.join(", ") || "—")}</dd>
+                ${article.published_url ? `<dt class="text-ink-400">published</dt><dd class="text-ink-200">${esc(article.published_url)}</dd>` : ""}
+              </dl>
+            </div>
+            <div class="card p-5">
+              <div class="data-label mb-2">WHY RANKED</div>
+              <ul class="space-y-1.5 text-sm text-ink-200">${(article.why_ranked ?? []).map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join("") || `<li class="text-ink-400">No ranking notes.</li>`}</ul>
+            </div>
+          </div>
+        </div>
+
+        ${article.content ? `<div class="card mt-4 p-6"><div class="data-label mb-3">CONTENT</div><div class="max-h-[70vh] overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-ink-200">${esc(article.content)}</div></div>` : ""}
+      `;
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      root.innerHTML = `<div class="py-16 text-center text-rose-400">Failed to load article: ${esc((e as Error).message)}</div>`;
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>

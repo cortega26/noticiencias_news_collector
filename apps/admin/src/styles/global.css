@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/jetbrains-mono";
+
+@theme {
+  --font-display: "Fraunces Variable", serif;
+  --font-sans: "Manrope Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", monospace;
+
+  --color-ink-950: #0c0e10;
+  --color-ink-900: #121417;
+  --color-ink-850: #171a1e;
+  --color-ink-800: #1d2126;
+  --color-ink-700: #2a2f36;
+  --color-ink-600: #3d444d;
+  --color-ink-400: #7d8794;
+  --color-ink-300: #a4adba;
+  --color-ink-200: #c9d0da;
+  --color-ink-100: #e8ebf0;
+
+  --color-paper-100: #f4efe6;
+  --color-paper-300: #e4dccb;
+
+  --color-amber-400: #f2b64b;
+  --color-amber-500: #e8a232;
+
+  --color-verdigris-400: #4fd1c5;
+  --color-verdigris-500: #2fb6a9;
+
+  --color-rose-400: #f87171;
+  --color-rose-500: #ef4444;
+
+  --color-indigo-400: #8ea2ff;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-950 text-ink-200 font-sans antialiased;
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 20% -10%,
+      color-mix(in srgb, var(--color-amber-500) 6%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 90% 110%,
+      color-mix(in srgb, var(--color-verdigris-500) 5%, transparent),
+      transparent
+    );
+}
+
+/* ---------- typography ---------- */
+
+.display-title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 72, "wght" 560;
+  letter-spacing: -0.01em;
+}
+
+.data-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-ink-400);
+}
+
+/* ---------- components ---------- */
+
+.card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-ink-700);
+  background-color: color-mix(in srgb, var(--color-ink-850) 70%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-ink-100) 4%, transparent) inset,
+    0 12px 32px -18px rgb(0 0 0 / 0.55);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-primary {
+  background-color: var(--color-amber-500);
+  color: var(--color-ink-950);
+}
+.btn-primary:hover {
+  background-color: var(--color-amber-400);
+}
+
+.btn-ghost {
+  border: 1px solid var(--color-ink-700);
+  background: transparent;
+  color: var(--color-ink-200);
+}
+.btn-ghost:hover {
+  border-color: var(--color-ink-600);
+  background-color: var(--color-ink-800);
+}
+
+.btn-danger {
+  background-color: color-mix(in srgb, var(--color-rose-500) 90%, transparent);
+  color: white;
+}
+.btn-danger:hover {
+  background-color: var(--color-rose-400);
+}
+
+.btn-success {
+  background-color: color-mix(in srgb, var(--color-verdigris-500) 90%, transparent);
+  color: var(--color-ink-950);
+}
+.btn-success:hover {
+  background-color: var(--color-verdigris-400);
+}
+
+.kbd {
+  display: inline-flex;
+  min-width: 1.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  border: 1px solid var(--color-ink-600);
+  background-color: var(--color-ink-800);
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-200);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink-950) 60%, transparent);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-pending {
+  color: var(--color-indigo-400);
+  border: 1px solid color-mix(in srgb, var(--color-indigo-400) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-indigo-400) 15%, transparent);
+}
+
+.status-publishing {
+  color: var(--color-amber-400);
+  border: 1px solid color-mix(in srgb, var(--color-amber-400) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-amber-400) 15%, transparent);
+}
+
+.status-rejected {
+  color: var(--color-rose-400);
+  border: 1px solid color-mix(in srgb, var(--color-rose-400) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-rose-400) 15%, transparent);
+}
+
+.status-completed {
+  color: var(--color-verdigris-400);
+  border: 1px solid color-mix(in srgb, var(--color-verdigris-400) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-verdigris-400) 15%, transparent);
+}
+
+.status-new {
+  color: var(--color-ink-300);
+  border: 1px solid color-mix(in srgb, var(--color-ink-600) 40%, transparent);
+  background-color: color-mix(in srgb, var(--color-ink-400) 15%, transparent);
+}
+
+/* subtle noise overlay for depth */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  z-index: 50;
+}

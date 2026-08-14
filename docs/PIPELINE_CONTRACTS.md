@@ -19,6 +19,7 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
 | Admin API (Phase 1) | `news_collector/serving/api.py` | Refinery GUI (future client) | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing idempotent storage transitions only |
+| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py` | token in sessionStorage, Bearer header, CORS allowlist via `ADMIN_CORS_ORIGINS` |
 
 ## Export To Refinery
 
@@ -89,6 +90,9 @@ The serving layer currently exposes a read-oriented API:
   audit-status/reject mutations that dispatch to existing idempotent
   storage transitions — authenticated with a distinct `ADMIN_API_KEY`
   (constant-time Bearer, fail-closed outside `development`)
+- admin GUI (`apps/admin/`, Phase 2): Astro 7 + Tailwind 4 client of the
+  admin surface; cross-origin access allowed only for origins listed in
+  `ADMIN_CORS_ORIGINS` (default localhost:4321/4322)
 
 The serving layer is not the owner of editorial mutation workflows.
 

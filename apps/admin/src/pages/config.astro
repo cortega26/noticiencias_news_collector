@@ -1,0 +1,84 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Config" current="/config">
+  <AuthGate>
+    <header class="mb-8">
+      <h1 class="display-title text-4xl text-paper-100">Configuration</h1>
+      <p class="data-label mt-2">SANITIZED READ · SECRETS NEVER SENT</p>
+    </header>
+
+    <div id="config" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div class="py-16 text-center font-mono text-sm text-ink-400 lg:col-span-2">
+        Loading…
+      </div>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getConfig, showAuthGate } from "../lib/api";
+
+  const root = document.getElementById("config");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  function kvList(obj: Record<string, unknown> | undefined): string {
+    if (!obj || !Object.keys(obj).length) {
+      return '<p class="text-sm text-ink-400">—</p>';
+    }
+    return Object.entries(obj)
+      .map(
+        ([k, v]) => `
+        <div class="flex justify-between gap-4 border-b border-ink-800/60 py-1.5 last:border-0">
+          <span class="font-mono text-xs text-ink-400">${esc(k)}</span>
+          <span class="text-right font-mono text-xs text-ink-200">${esc(typeof v === "object" ? JSON.stringify(v) : v)}</span>
+        </div>`,
+      )
+      .join("");
+  }
+
+  async function load() {
+    try {
+      const cfg = await getConfig();
+      if (!root) return;
+      root.innerHTML = `
+        <div class="card p-5">
+          <div class="data-label mb-3">ENVIRONMENT</div>
+          ${kvList({ environment: cfg.environment, debug: cfg.debug, timezone: cfg.timezone })}
+        </div>
+        <div class="card p-5">
+          <div class="data-label mb-3">GITHUB</div>
+          ${kvList(cfg.github as Record<string, unknown>)}
+        </div>
+        <div class="card p-5">
+          <div class="data-label mb-3">OLLAMA MODELS</div>
+          ${kvList(cfg.ollama as Record<string, unknown>)}
+        </div>
+        <div class="card p-5">
+          <div class="data-label mb-3">SCORING</div>
+          ${kvList(cfg.scoring as Record<string, unknown>)}
+        </div>
+      `;
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (root) {
+        root.innerHTML = `<div class="card col-span-full px-5 py-10 text-center text-rose-400 lg:col-span-2">Failed: ${esc((e as Error).message)}</div>`;
+      }
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>

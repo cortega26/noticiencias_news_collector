@@ -1,0 +1,418 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Triage" current="/triage">
+  <AuthGate>
+    <header class="mb-8 flex items-end justify-between">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Curation desk</h1>
+        <p class="data-label mt-2">KEYBOARD-FIRST TRIAGE · J/K NAVIGATE · R REJECT · A/F AUDIT · O OPEN</p>
+      </div>
+      <button id="logout-btn" class="btn-ghost" type="button">Sign out</button>
+    </header>
+
+    <div id="status-filter" class="mb-6 flex flex-wrap gap-2"></div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <!-- queue -->
+      <section class="card p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <div class="data-label">QUEUE</div>
+          <div id="queue-count" class="font-mono text-xs text-ink-400">—</div>
+        </div>
+        <div id="queue" class="max-h-[68vh] space-y-2 overflow-y-auto pr-1"></div>
+        <button id="load-more" class="btn-ghost mt-4 hidden w-full justify-center" type="button">
+          Load more
+        </button>
+        <div id="queue-empty" class="hidden py-10 text-center text-sm text-ink-400">
+          No articles in this queue.
+        </div>
+      </section>
+
+      <!-- detail -->
+      <section class="card min-h-[68vh] p-6">
+        <div id="detail-empty" class="flex h-full flex-col items-center justify-center py-16 text-center">
+          <div class="display-title text-2xl text-ink-400">No article selected</div>
+          <p class="mt-2 max-w-sm text-sm text-ink-400">
+            Navigate the queue with <span class="kbd">j</span> /
+            <span class="kbd">k</span> or click a card to inspect it.
+          </p>
+        </div>
+        <div id="detail" class="hidden"></div>
+        <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+      </section>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<style>
+  @reference "../styles/global.css";
+
+  .queue-card {
+    @apply w-full cursor-pointer rounded-lg border border-ink-700 bg-ink-900/60 p-3.5 text-left transition-all;
+  }
+  .queue-card:hover {
+    @apply border-ink-600 bg-ink-800/70;
+  }
+  .queue-card.active {
+    @apply border-amber-500/70 bg-ink-800;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-amber-500) 40%, transparent);
+  }
+  .score-chip {
+    @apply font-mono text-xs font-semibold text-amber-400;
+  }
+</style>
+
+<script>
+  import {
+    clearToken,
+    getArticle,
+    listArticles,
+    rejectArticle,
+    showAuthGate,
+    updateAuditStatus,
+  } from "../lib/api";
+  import type {
+    AdminArticleDetail,
+    AdminArticleListItem,
+    ArticleStatus,
+  } from "../lib/types";
+
+  const STATUSES: ArticleStatus[] = ["pending", "publishing", "rejected", "completed"];
+
+  let status: ArticleStatus = "pending";
+  let items: AdminArticleListItem[] = [];
+  let selectedId: number | null = null;
+  let detail: AdminArticleDetail | null = null;
+  let cursor: string | null = null;
+  let loading = false;
+
+  const queueEl = document.getElementById("queue");
+  const detailEl = document.getElementById("detail");
+  const detailEmptyEl = document.getElementById("detail-empty");
+  const queueEmptyEl = document.getElementById("queue-empty");
+  const loadMoreBtn = document.getElementById("load-more");
+  const countEl = document.getElementById("queue-count");
+  const filterEl = document.getElementById("status-filter");
+  const toastEl = document.getElementById("toast");
+
+  function esc(s: string | null | undefined): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  function statusPillClass(s: string | null | undefined): string {
+    return `status-pill status-${esc(s ?? "new")}`;
+  }
+
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.clearTimeout((toastEl as HTMLElement & { _t?: number })._t);
+    (toastEl as HTMLElement & { _t?: number })._t = window.setTimeout(
+      () => toastEl?.classList.add("hidden"),
+      2600,
+    );
+  }
+
+  function renderFilters() {
+    if (!filterEl) return;
+    filterEl.innerHTML = "";
+    for (const s of STATUSES) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = s;
+      btn.className =
+        "rounded-full border px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors " +
+        (s === status
+          ? "border-amber-500/70 bg-amber-500/10 text-amber-400"
+          : "border-ink-700 text-ink-300 hover:border-ink-600 hover:text-ink-100");
+      btn.addEventListener("click", () => {
+        status = s;
+        cursor = null;
+        items = [];
+        selectedId = null;
+        detail = null;
+        renderFilters();
+        void loadQueue();
+  window.addEventListener("auth:ready", () => void loadQueue());
+      });
+      filterEl.appendChild(btn);
+    }
+  }
+
+  async function loadQueue() {
+    if (loading) return;
+    loading = true;
+    try {
+      const envelope = await listArticles(status, cursor, 20);
+      items = [...items, ...envelope.data];
+      cursor = envelope.pagination.next_cursor;
+      renderQueue();
+      loadMoreBtn?.classList.toggle("hidden", !envelope.pagination.has_more);
+      if (items.length > 0 && selectedId == null) {
+        select(items[0].id);
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+      } else {
+        showToast("Failed to load queue: " + (e as Error).message, "err");
+      }
+    } finally {
+      loading = false;
+    }
+  }
+
+  function renderQueue() {
+    if (!queueEl || !countEl || !queueEmptyEl) return;
+    queueEmptyEl.classList.toggle("hidden", items.length > 0);
+    countEl.textContent = `${items.length}${cursor ? "+" : ""} · ${status}`;
+    queueEl.innerHTML = "";
+    items.forEach((item, index) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "queue-card" + (item.id === selectedId ? " active" : "");
+      card.innerHTML = `
+        <div class="mb-1.5 flex items-center justify-between gap-2">
+          <span class="${statusPillClass(item.processing_status)}">${esc(item.processing_status ?? "new")}</span>
+          <span class="score-chip">${item.final_score != null ? item.final_score.toFixed(3) : "—"}</span>
+        </div>
+        <div class="font-display text-[15px] leading-snug text-ink-100">${esc(item.title)}</div>
+        <div class="mt-1.5 flex items-center gap-2 font-mono text-[11px] text-ink-400">
+          <span>${esc(item.source.name)}</span>
+          <span>·</span>
+          <span>${esc(item.category ?? "uncategorized")}</span>
+          ${item.refinery_id ? `<span>·</span><span>${esc(item.refinery_id)}</span>` : ""}
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1">
+          ${(item.why_ranked ?? []).slice(0, 2).map((w) => `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`).join("")}
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        select(item.id);
+        const el = queueEl.querySelector(`[data-id="${item.id}"]`);
+        void el;
+      });
+      card.setAttribute("data-id", String(item.id));
+      card.setAttribute("data-index", String(index));
+      queueEl.appendChild(card);
+    });
+    queueEl.querySelector(`[data-id="${selectedId}"]`)?.classList.add("active");
+    scrollSelectedIntoView();
+  }
+
+  function scrollSelectedIntoView() {
+    if (!queueEl) return;
+    const el = queueEl.querySelector(`[data-id="${selectedId}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }
+
+  async function select(id: number) {
+    selectedId = id;
+    renderQueue();
+    try {
+      detail = await getArticle(id);
+      renderDetail();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Failed to load article: " + (e as Error).message, "err");
+    }
+  }
+
+  function componentBreakdown(): Array<[string, number]> {
+    const comps = detail?.score_components;
+    if (!comps) return [];
+    return Object.entries(comps)
+      .filter(([, v]) => v != null && Number.isFinite(v))
+      .map(([k, v]) => [k, Number(v)] as [string, number])
+      .sort((a, b) => b[1] - a[1]);
+  }
+
+  function renderDetail() {
+    if (!detailEl || !detailEmptyEl || !detail) return;
+    detailEmptyEl.classList.add("hidden");
+    detailEl.classList.remove("hidden");
+    const comps = componentBreakdown();
+    const audit = detail.audit as Record<string, unknown> | undefined;
+    const publication = detail.publication as Record<string, unknown> | undefined;
+
+    detailEl.innerHTML = `
+      <div class="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <span class="${statusPillClass(detail.processing_status)}">${esc(detail.processing_status ?? "new")}</span>
+          <span class="ml-2 font-mono text-xs text-ink-400">#${detail.id}</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-ghost" data-action="open" type="button">Open original</button>
+          <button class="btn-ghost" data-action="full" type="button">Full view</button>
+          <button class="btn-danger" data-action="reject" type="button">Reject <span class="kbd">R</span></button>
+          <button class="btn-success" data-action="audit-pass" type="button">Audit pass <span class="kbd">A</span></button>
+          <button class="btn-ghost" data-action="audit-fail" type="button">Audit fail <span class="kbd">F</span></button>
+        </div>
+      </div>
+
+      <h2 class="display-title text-3xl leading-tight text-paper-100">${esc(detail.title)}</h2>
+      <div class="mt-2 font-mono text-xs text-ink-400">
+        ${esc(detail.source.name)} · ${esc(detail.category ?? "—")} · collected ${esc(detail.collected_at ?? "—")}
+      </div>
+
+      ${detail.summary ? `<p class="mt-4 text-[15px] leading-relaxed text-ink-200">${esc(detail.summary)}</p>` : ""}
+
+      <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="card p-4">
+          <div class="data-label mb-3">SCORE</div>
+          <div class="mb-3 flex items-baseline gap-2">
+            <span class="font-mono text-4xl font-bold text-amber-400">${detail.final_score != null ? detail.final_score.toFixed(3) : "—"}</span>
+            <span class="text-xs text-ink-400">/ 1.0</span>
+          </div>
+          <div class="space-y-2">
+            ${comps.map(([k, v]) => `
+              <div>
+                <div class="mb-1 flex justify-between font-mono text-[11px] text-ink-400">
+                  <span>${esc(k)}</span><span>${v.toFixed(3)}</span>
+                </div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-ink-800">
+                  <div class="h-full rounded-full bg-amber-500/80" style="width:${Math.min(100, v * 100)}%"></div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+          ${detail.latest_score != null ? `<div class="mt-3 font-mono text-[11px] text-ink-400">latest ScoreLog: ${detail.latest_score.toFixed(3)}</div>` : ""}
+        </div>
+
+        <div class="space-y-4">
+          <div class="card p-4">
+            <div class="data-label mb-2">WHY RANKED</div>
+            ${(detail.why_ranked ?? []).length ? `<ul class="space-y-1.5 text-sm text-ink-200">${detail.why_ranked.map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join("")}</ul>` : `<p class="text-sm text-ink-400">No ranking notes.</p>`}
+          </div>
+          <div class="card p-4">
+            <div class="data-label mb-2">STATE</div>
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
+              <dt class="text-ink-400">publication</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? "—")}</dd>
+              <dt class="text-ink-400">refinery id</dt><dd class="text-ink-200">${esc(detail.refinery_id ?? "—")}</dd>
+              <dt class="text-ink-400">audit</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? "—")}</dd>
+              <dt class="text-ink-400">topics</dt><dd class="text-ink-200">${esc(detail.topics.join(", ") || "—")}</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      ${detail.content ? `
+        <div class="card mt-4 p-5">
+          <div class="data-label mb-3">CONTENT</div>
+          <div class="max-h-96 overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-ink-200">${esc(detail.content)}</div>
+        </div>
+      ` : ""}
+    `;
+
+    detailEl.querySelector('[data-action="open"]')?.addEventListener("click", () => {
+      window.open(detail?.url, "_blank", "noopener");
+    });
+    detailEl.querySelector('[data-action="full"]')?.addEventListener("click", () => {
+      if (detail) window.location.href = `/article?id=${detail.id}`;
+    });
+    detailEl.querySelector('[data-action="reject"]')?.addEventListener("click", () => {
+      void doReject();
+    });
+    detailEl.querySelector('[data-action="audit-pass"]')?.addEventListener("click", () => {
+      void doAudit("passed");
+    });
+    detailEl.querySelector('[data-action="audit-fail"]')?.addEventListener("click", () => {
+      void doAudit("failed");
+    });
+  }
+
+  async function doReject() {
+    if (detail == null) return;
+    try {
+      const result = await rejectArticle(detail.id);
+      showToast(result.detail);
+      if (result.status === "ok") {
+        detail.processing_status = "rejected";
+        renderDetail();
+      }
+    } catch (e) {
+      showToast("Reject failed: " + (e as Error).message, "err");
+    }
+  }
+
+  async function doAudit(state: string) {
+    if (detail == null) return;
+    try {
+      const result = await updateAuditStatus(detail.id, state);
+      showToast(result.detail);
+      if (result.status === "ok") {
+        detail.audit = { ...(detail.audit as object), state };
+        renderDetail();
+      }
+    } catch (e) {
+      showToast("Audit failed: " + (e as Error).message, "err");
+    }
+  }
+
+  function selectedIndex(): number {
+    return items.findIndex((i) => i.id === selectedId);
+  }
+
+  function move(delta: number) {
+    const idx = selectedIndex();
+    const next = items[idx + delta];
+    if (next) void select(next.id);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    switch (event.key.toLowerCase()) {
+      case "j":
+        move(1);
+        break;
+      case "k":
+        move(-1);
+        break;
+      case "r":
+        event.preventDefault();
+        void doReject();
+        break;
+      case "a":
+        event.preventDefault();
+        void doAudit("passed");
+        break;
+      case "f":
+        event.preventDefault();
+        void doAudit("failed");
+        break;
+      case "o":
+        event.preventDefault();
+        if (detail?.url) window.open(detail.url, "_blank", "noopener");
+        break;
+    }
+  });
+
+  loadMoreBtn?.addEventListener("click", () => void loadQueue());
+  document.getElementById("logout-btn")?.addEventListener("click", () => {
+    clearToken();
+    window.location.href = "/triage";
+  });
+
+  renderFilters();
+  void loadQueue();
+  window.addEventListener("auth:ready", () => void loadQueue());
+</script>

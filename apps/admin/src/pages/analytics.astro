@@ -1,0 +1,119 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Analytics" current="/analytics">
+  <AuthGate>
+    <header class="mb-8 flex items-end justify-between">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Analytics</h1>
+        <p class="data-label mt-2">FROM /V1/ADMIN/ANALYTICS · READ MODEL</p>
+      </div>
+      <div id="as-of" class="font-mono text-xs text-ink-400"></div>
+    </header>
+
+    <div id="kpis" class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4"></div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div class="card p-5">
+        <div class="data-label mb-4">TOP SOURCES BY AVG SCORE</div>
+        <div id="top-sources"></div>
+      </div>
+      <div class="card p-5">
+        <div class="data-label mb-4">SCORE DISTRIBUTION</div>
+        <div id="dist"></div>
+      </div>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getAnalytics, showAuthGate } from "../lib/api";
+
+  const kpisEl = document.getElementById("kpis");
+  const topEl = document.getElementById("top-sources");
+  const distEl = document.getElementById("dist");
+  const asOfEl = document.getElementById("as-of");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  async function load() {
+    try {
+      const data = await getAnalytics();
+      if (asOfEl) asOfEl.textContent = `as of ${data.as_of}`;
+      const maxScore = Math.max(
+        0,
+        ...(data.source_perf as Array<Record<string, unknown>>).map(
+          (s) => Number(s.avg_score) || 0,
+        ),
+      );
+
+      if (kpisEl) {
+        kpisEl.innerHTML = [
+          ["ARTICLES", String(data.total_articles)],
+          ["AVG SCORE", data.avg_score_overall.toFixed(3)],
+          ["SOURCES", String(data.source_perf.length)],
+          ["TOP CATS", String(data.cats.length)],
+        ]
+          .map(
+            ([label, value]) => `
+          <div class="card px-5 py-4">
+            <div class="data-label">${label}</div>
+            <div class="mt-1.5 font-mono text-2xl font-bold text-amber-400">${esc(value)}</div>
+          </div>`,
+          )
+          .join("");
+      }
+
+      if (topEl) {
+        const top = data.top_sources as Array<Record<string, unknown>>;
+        topEl.innerHTML = top.length
+          ? top.map((s, i) => `
+            <div class="mb-3">
+              <div class="mb-1 flex justify-between font-mono text-xs">
+                <span class="text-ink-200">${i + 1}. ${esc(s.source_name ?? s.source_id)}</span>
+                <span class="text-amber-400">${(Number(s.avg_score) || 0).toFixed(3)}</span>
+              </div>
+              <div class="h-1.5 overflow-hidden rounded-full bg-ink-800">
+                <div class="h-full rounded-full bg-verdigris-500/80" style="width:${maxScore ? (Number(s.avg_score) / maxScore) * 100 : 0}%"></div>
+              </div>
+            </div>
+          `).join("")
+          : '<p class="text-sm text-ink-400">No data.</p>';
+      }
+
+      if (distEl) {
+        const dist = data.dist as Record<string, number>;
+        const entries = Object.entries(dist).sort((a, b) => a[0].localeCompare(b[0]));
+        const max = Math.max(1, ...entries.map(([, v]) => v));
+        distEl.innerHTML = entries.length
+          ? entries.map(([bucket, count]) => `
+            <div class="mb-2 flex items-center gap-3">
+              <span class="w-10 shrink-0 font-mono text-[11px] text-ink-400">${esc(bucket)}</span>
+              <div class="h-4 flex-1 overflow-hidden rounded bg-ink-800">
+                <div class="h-full rounded bg-indigo-400/80" style="width:${(count / max) * 100}%"></div>
+              </div>
+              <span class="w-8 shrink-0 text-right font-mono text-[11px] text-ink-300">${count}</span>
+            </div>
+          `).join("")
+          : '<p class="text-sm text-ink-400">No data.</p>';
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (kpisEl) kpisEl.innerHTML = `<div class="card col-span-full px-5 py-8 text-center text-rose-400">Failed: ${esc((e as Error).message)}</div>`;
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>

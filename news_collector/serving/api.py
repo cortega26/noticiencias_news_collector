@@ -408,6 +408,27 @@ def create_app(  # noqa: C901
     db_manager = database_manager or get_database_manager()
     app = FastAPI(title="Noticiencias API", version="1.0.0")
 
+    # Phase 2: the Refinery admin GUI is a separate static app; allow its
+    # origin(s) to call the admin surface cross-origin. Explicit allowlist
+    # only — never "*" (Bearer auth in headers, no cookies). Defaults cover
+    # `astro dev` (4321) and `astro preview` (4322).
+    from fastapi.middleware.cors import CORSMiddleware
+
+    cors_origins = [
+        origin.strip()
+        for origin in os.environ.get(
+            "ADMIN_CORS_ORIGINS", "http://localhost:4321,http://localhost:4322"
+        ).split(",")
+        if origin.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
     def get_params(
         source: Optional[List[str]] = Query(None, alias="source"),
         topic: Optional[List[str]] = Query(None, alias="topic"),

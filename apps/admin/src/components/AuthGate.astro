@@ -1,0 +1,94 @@
+---
+/**
+ * Token gate: if no ADMIN_API_KEY is in sessionStorage, show a full-screen
+ * entry form and hide the page content; otherwise reveal the content.
+ *
+ * Redirect-on-valid is intentionally avoided on load (it would loop on the
+ * page itself). Instead, page scripts run normally: with no token their
+ * first API call 401s, clears the token and reloads → the gate shows. With
+ * a valid token they succeed. The only real navigation happens after the
+ * operator submits the key.
+ */
+---
+
+<div id="auth-gate" class="fixed inset-0 z-50 hidden overflow-y-auto bg-ink-950">
+  <div class="flex min-h-full items-center justify-center px-6 py-12">
+    <div class="w-full max-w-md">
+      <div class="mb-8 text-center">
+        <div class="display-title text-3xl text-paper-100">
+          Noticiencias Refinery
+        </div>
+        <p class="data-label mt-3 text-amber-400/90">ADMIN CONSOLE</p>
+      </div>
+
+      <form id="auth-form" class="card space-y-4 p-8">
+        <div>
+          <label for="token" class="data-label block">API key</label>
+          <input
+            id="token"
+            type="password"
+            autocomplete="off"
+            required
+            placeholder="ADMIN_API_KEY"
+            class="mt-2 w-full rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 font-mono text-sm text-ink-100 outline-none transition-colors placeholder:text-ink-600 focus:border-amber-500"
+          />
+        </div>
+
+        <p id="auth-error" class="hidden text-sm text-rose-400">
+          The key was rejected. Check ADMIN_API_KEY and try again.
+        </p>
+
+        <button type="submit" class="btn-primary w-full justify-center">
+          Enter console
+        </button>
+
+        <p class="pt-1 text-center text-xs text-ink-400">
+          The key is kept in this tab's session only.
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="auth-content"><slot /></div>
+
+<script>
+  import { getToken, setToken, clearToken, listArticles } from "../lib/api";
+
+  const gate = document.getElementById("auth-gate");
+  const form = document.getElementById("auth-form");
+  const errorEl = document.getElementById("auth-error");
+
+  function showGate() {
+    gate?.classList.remove("hidden");
+  }
+
+  // No token → gate now; with a token, let the page scripts run (their
+  // first call 401s and reloads if the key is wrong).
+  if (!getToken()) {
+    showGate();
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = document.getElementById("token") as HTMLInputElement | null;
+    if (!input?.value.trim()) return;
+    setToken(input.value.trim());
+    errorEl?.classList.add("hidden");
+
+    try {
+      await listArticles("pending", null, 1);
+      gate?.classList.add("hidden");
+      window.dispatchEvent(new CustomEvent("auth:ready"));
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        errorEl?.classList.remove("hidden");
+      } else {
+        // Network error: enter anyway; the UI surfaces fetch errors.
+        gate?.classList.add("hidden");
+        window.dispatchEvent(new CustomEvent("auth:ready"));
+      }
+    }
+  });
+</script>

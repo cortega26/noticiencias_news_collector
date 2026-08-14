@@ -1,0 +1,98 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Sources" current="/sources">
+  <AuthGate>
+    <header class="mb-8">
+      <h1 class="display-title text-4xl text-paper-100">Source health</h1>
+      <p class="data-label mt-2">FROM /V1/ADMIN/SOURCES/HEALTH · COLLECTOR EXPORT</p>
+    </header>
+    <div id="summary" class="mb-6 flex flex-wrap gap-3"></div>
+    <div class="card overflow-x-auto">
+      <table class="w-full min-w-[720px] text-left">
+        <thead>
+          <tr class="border-b border-ink-700">
+            <th class="data-label px-5 py-3">SOURCE</th>
+            <th class="data-label px-5 py-3">FEED</th>
+            <th class="data-label px-5 py-3">PIPELINE</th>
+            <th class="data-label px-5 py-3">CONTENT</th>
+            <th class="data-label px-5 py-3">SAVE RATIO</th>
+            <th class="data-label px-5 py-3">STATE</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
+        No source health data. Run the collector to produce the export.
+      </div>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getSourceHealth, showAuthGate } from "../lib/api";
+
+  const rowsEl = document.getElementById("rows");
+  const emptyEl = document.getElementById("empty");
+  const summaryEl = document.getElementById("summary");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  function okBadge(ok: unknown): string {
+    return ok
+      ? '<span class="font-mono text-xs text-verdigris-400">● OK</span>'
+      : '<span class="font-mono text-xs text-rose-400">● FAIL</span>';
+  }
+
+  async function load() {
+    try {
+      const { sources } = await getSourceHealth();
+      if (!sources.length) {
+        emptyEl?.classList.remove("hidden");
+        return;
+      }
+      const healthy = sources.filter((s) => s.content_ok).length;
+      const total = sources.length;
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">total <span class="text-amber-400">${total}</span></div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">content-ok ${healthy}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-rose-400">failing ${total - healthy}</div>
+        `;
+      }
+      if (!rowsEl) return;
+      rowsEl.innerHTML = sources.map((s) => `
+        <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
+          <td class="px-5 py-3">
+            <div class="text-sm font-medium text-ink-100">${esc(s.source_name ?? s.source_id)}</div>
+            <div class="font-mono text-[11px] text-ink-400">${esc(s.source_id)}</div>
+          </td>
+          <td class="px-5 py-3">${okBadge(s.feed_ok)}</td>
+          <td class="px-5 py-3">${okBadge(s.pipeline_ok)}</td>
+          <td class="px-5 py-3">${okBadge(s.content_ok)}</td>
+          <td class="px-5 py-3 font-mono text-xs text-ink-200">${typeof s.save_ratio === "number" ? (s.save_ratio * 100).toFixed(1) + "%" : "—"}</td>
+          <td class="px-5 py-3"><span class="font-mono text-[11px] text-ink-300">${esc(s.operational_state ?? "unknown")}</span></td>
+        </tr>
+      `).join("");
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (rowsEl) {
+        rowsEl.innerHTML = `<tr><td colspan="6" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
+      }
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>
