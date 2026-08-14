@@ -351,3 +351,69 @@ class TestBackwardCompatibility:
         mod.refresh_runtime_config(cfg)
 
         assert mod.COLLECTION_CONFIG["request_timeout"] == 88
+
+
+class TestGetConfigReturnsConfigNotSnapshot:
+
+    def test_get_config_after_partial_refresh_returns_real_config(self, tmp_path):
+        """Regression: get_config() must return the Config, not the snapshot.
+
+        refresh_runtime_config() *sets* _CONFIG_STATE to the Config but
+        *returns* the RuntimeConfigSnapshot (whose scoring_config is a plain
+        dict). After a partial-config refresh plus the global reset that
+        test_live_refresh's fixture performs, any caller that lazily
+        refreshes through get_config() (e.g. the e2e harness's
+        validate_config) received the snapshot and crashed with
+        "'dict' object has no attribute 'weights'" (pytest-randomly
+        surfaced it by running test_live_refresh before the e2e suite).
+        """
+        mod = _reload_settings()
+
+        config_file = _write_toml(tmp_path, BASE_TOML)
+        cfg = load_config(config_file)
+        mod.refresh_runtime_config(cfg)
+
+        # Simulate the fixture cleanup a later test sees.
+        mod._CURRENT_SNAPSHOT = None
+        mod._CONFIG_STATE = None
+        mod.RUNTIME = type(mod.RUNTIME)()
+
+        resolved = mod.get_config()
+
+        # The Config has a real `scoring.weights` object; the snapshot only
+        # has scoring_config as a dict. validate_config() walks .weights.
+        assert hasattr(resolved, "scoring")
+        assert hasattr(resolved.scoring, "weights")
+        assert not isinstance(resolved, mod.RuntimeConfigSnapshot)
+
+    def test_simplenamespace_refresh_does_not_overwrite_config_state(self, tmp_path):
+        """Regression: a non-Config passed to refresh_runtime_config() must
+        not overwrite _CONFIG_STATE.
+
+        The Refinery's main() passes whatever load_config() returned; test
+        doubles pass SimpleNamespace stand-ins. refresh_runtime_config()
+        previously stored *any* object into _CONFIG_STATE, so a test that
+        called main() with a SimpleNamespace config left _CONFIG_STATE
+        pointing at an object without .scoring — the next e2e harness
+        initialize() crashed in validate_config() (pytest-randomly
+        surfaced it: test_main_fails_fast_when_llm_preflight_fails ran
+        right before the e2e suite).
+        """
+        from types import SimpleNamespace
+
+        mod = _reload_settings()
+        # Prime _CONFIG_STATE with the real Config first.
+        real_cfg = mod.get_config()
+        assert hasattr(real_cfg, "scoring")
+
+        fake = SimpleNamespace(
+            github=SimpleNamespace(token="x"),
+            ollama=SimpleNamespace(api_url="http://ollama.local"),
+        )
+        mod.refresh_runtime_config(fake)
+
+        # _CONFIG_STATE must still be the real Config, not the stand-in.
+        assert mod._CONFIG_STATE is real_cfg
+        assert hasattr(mod._CONFIG_STATE, "scoring")
+        # And the snapshot still refreshes (RUNTIME was updated).
+        assert mod.get_runtime_config() is not None

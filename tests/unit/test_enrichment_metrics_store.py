@@ -309,6 +309,37 @@ class TestBufferedFlushEquivalence(unittest.TestCase):
         finally:
             store.close()
 
+    def test_reads_reopen_after_close(self):
+        """Regression: get_metrics/get_all_metrics must reopen a closed conn.
+
+        flush() returns early on an empty buffer without calling
+        _ensure_open(), so a read after close() crashed with
+        "'NoneType' object has no attribute 'cursor'". Tests that close the
+        singleton (continuous invariants/adaptive optimizer/strategy
+        locking) surfaced this in random orderings (pytest-randomly).
+        """
+        tmpdir = tempfile.mkdtemp()
+        db_file = Path(tmpdir) / "read_reopen.db"
+        store = EnrichmentMetricsStore.create_isolated(
+            environment="test",
+            db_path=str(db_file),
+            flush_batch_size=100,
+        )
+        try:
+            store.record_attempt("source_reopen", strategy="http")
+            store.flush()
+
+            store.close()  # conn -> None
+            self.assertIsNone(store.conn)
+
+            self.assertEqual(
+                store.get_metrics("source_reopen")["total_enrichment_attempted"], 1
+            )
+            all_metrics = store.get_all_metrics()
+            self.assertIn("source_reopen", all_metrics)
+        finally:
+            store.close()
+
 
 if __name__ == "__main__":
     unittest.main()

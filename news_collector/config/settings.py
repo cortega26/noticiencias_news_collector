@@ -372,7 +372,14 @@ def refresh_runtime_config(config: Any | None = None) -> RuntimeConfigSnapshot:
     if isinstance(cfg, Config):
         _resolve_builders(cfg)
 
-    _CONFIG_STATE = cfg
+    # Only a real Config may become _CONFIG_STATE: get_config() callers
+    # (validate_config, bootstrap) walk .scoring/.github/etc. attributes.
+    # Test doubles and partial stand-ins passed as `config` must not
+    # overwrite the canonical state (pytest-randomly surfaced this when a
+    # SimpleNamespace leaked into _CONFIG_STATE and broke the e2e harness's
+    # next initialize()).
+    if isinstance(cfg, Config):
+        _CONFIG_STATE = cfg
 
     old_snapshot = _CURRENT_SNAPSHOT
     new_snapshot = _build_snapshot_from_runtime()
@@ -400,7 +407,7 @@ def get_runtime_config() -> RuntimeConfigSnapshot:
 
 def get_config() -> Any:
     if _CONFIG_STATE is None:
-        return refresh_runtime_config()
+        refresh_runtime_config()
     return _CONFIG_STATE
 
 

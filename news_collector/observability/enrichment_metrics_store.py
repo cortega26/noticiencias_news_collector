@@ -701,6 +701,10 @@ class EnrichmentMetricsStore:
     def get_metrics(self, source_id: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             self.flush()
+            # flush() returns early on an empty buffer without reopening a
+            # closed connection — reads must re-open explicitly (a close()
+            # on this store must not make later reads crash).
+            self._ensure_open()
             cur = self.conn.cursor()
             try:
                 cur.execute(
@@ -717,6 +721,8 @@ class EnrichmentMetricsStore:
     def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
         with self._lock:
             self.flush()
+            # See get_metrics: reads must tolerate a closed connection.
+            self._ensure_open()
             cur = self.conn.cursor()
             try:
                 cur.execute("SELECT * FROM enrichment_metrics")
