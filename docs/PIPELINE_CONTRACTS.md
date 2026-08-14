@@ -101,6 +101,10 @@ The serving layer currently exposes a read-oriented API:
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)
+- source editor (Phase 4 addendum): add/update sources via
+  POST /v1/admin/sources (merge preserves blacklist/etag keys; create
+  seeds the old GUI defaults); CORS now allows PUT/DELETE for the
+  unpublish/upload/delete flows
 
 The serving layer is not the owner of editorial mutation workflows.
 

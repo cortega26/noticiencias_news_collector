@@ -132,6 +132,49 @@ class SourceRepository:
             logger.info("Source {} deleted from DB.", source_id)
             return True
 
+    def upsert_source(
+        self,
+        source_id: str,
+        source_config: Dict[str, Any],
+    ) -> bool:
+        """Create or update a source row from a config dict.
+
+        Idempotent: an existing row is updated in place (fields that are
+        present in the config are applied; the circuit state fields are
+        never reset by this path).
+        """
+        with self._session() as session:
+            existing = session.query(Source).filter_by(id=source_id).first()
+            if existing:
+                for field in (
+                    "name",
+                    "url",
+                    "credibility_score",
+                    "category",
+                    "update_frequency",
+                ):
+                    if field in source_config:
+                        setattr(existing, field, source_config[field])
+                session.add(existing)
+                logger.info("Source {} upserted (updated).", source_id)
+                return True
+
+            session.add(
+                Source(
+                    id=source_id,
+                    name=str(source_config.get("name", source_id)),
+                    url=str(source_config.get("url", "")),
+                    credibility_score=float(
+                        source_config.get("credibility_score", 0.8)
+                    ),
+                    category=str(source_config.get("category", "science")),
+                    update_frequency=source_config.get("update_frequency"),
+                    is_active=True,
+                )
+            )
+            logger.info("Source {} upserted (created).", source_id)
+            return True
+
     def set_source_active(self, source_id: str, active: bool) -> bool:
         """Enable/disable a source for collection (is_active flag).
 

@@ -1356,3 +1356,181 @@ def _make_brief(slug: str):
         generated_prompt="Genera una imagen de un laboratorio moderno con un hallazgo medico.",
         updated_at=datetime.now(timezone.utc),
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 addendum: source editor (add / update)
+# ---------------------------------------------------------------------------
+
+
+def test_admin_upsert_source_creates(
+    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
+) -> None:
+    from news_collector.config import sources as sources_mod
+    from news_collector.serving import api as serving_api
+
+    fake_sources: dict = {}
+    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
+    yaml_path = tmp_path / "sources.yaml"
+    monkeypatch.setattr(
+        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
+    )
+    # The endpoint imports from news_collector.config.sources at call time.
+    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
+    monkeypatch.setattr(
+        "news_collector.config.sources.save_sources", sources_mod.save_sources
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/sources",
+            json={
+                "source_id": "new_source",
+                "name": "New Source",
+                "url": "https://example.com/feed",
+                "credibility_score": 0.7,
+                "category": "science",
+                "update_frequency": "daily",
+                "group": "CUSTOM",
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert "created" in response.json()["detail"]
+
+    entry = fake_sources["new_source"]
+    assert entry["name"] == "New Source"
+    assert entry["language"] == "en"  # create defaults
+    assert entry["_group"] == "CUSTOM"
+
+    with db_manager.get_session() as session:
+        row = session.query(Source).filter(Source.id == "new_source").first()
+        assert row is not None
+        assert row.url == "https://example.com/feed"
+
+
+def test_admin_upsert_source_update_preserves_existing_keys(
+    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
+) -> None:
+    from news_collector.config import sources as sources_mod
+    from news_collector.serving import api as serving_api
+
+    fake_sources = {
+        "existing": {
+            "name": "Old Name",
+            "url": "https://old.example.com/feed",
+            "credibility_score": 0.5,
+            "category": "technology",
+            "blacklisted": True,
+            "blacklist_reason": "spam",
+            "etag": "abc123",
+        }
+    }
+    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
+    yaml_path = tmp_path / "sources.yaml"
+    monkeypatch.setattr(
+        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
+    )
+    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
+    monkeypatch.setattr(
+        "news_collector.config.sources.save_sources", sources_mod.save_sources
+    )
+
+    with db_manager.get_session() as session:
+        session.add(
+            Source(
+                id="existing",
+                name="Old Name",
+                url="https://old.example.com/feed",
+                credibility_score=0.5,
+                category="technology",
+            )
+        )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/sources",
+            json={
+                "source_id": "existing",
+                "name": "New Name",
+                "url": "https://new.example.com/feed",
+                "category": "science",
+                "update_frequency": "hourly",
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert "updated" in response.json()["detail"]
+
+    entry = fake_sources["existing"]
+    assert entry["name"] == "New Name"
+    assert entry["url"] == "https://new.example.com/feed"
+    assert entry["blacklisted"] is True  # preserved
+    assert entry["etag"] == "abc123"  # preserved
+
+    with db_manager.get_session() as session:
+        row = session.query(Source).filter(Source.id == "existing").first()
+        assert row.name == "New Name"
+
+
+def test_admin_upsert_source_validation_422(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from news_collector.config import sources as sources_mod
+
+    monkeypatch.setattr(sources_mod, "ALL_SOURCES", {})
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        # Missing name
+        response = api_client.post(
+            "/v1/admin/sources",
+            json={"source_id": "bad", "url": "https://x.com"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+        # Bad category
+        response = api_client.post(
+            "/v1/admin/sources",
+            json={
+                "source_id": "bad2",
+                "name": "x",
+                "url": "https://x.com",
+                "category": "nope",
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+        # Credibility out of range
+        response = api_client.post(
+            "/v1/admin/sources",
+            json={
+                "source_id": "bad3",
+                "name": "x",
+                "url": "https://x.com",
+                "credibility_score": 1.5,
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+
+def test_admin_cors_allows_put_delete_preflight(
+    api_client: TestClient,
+) -> None:
+    """Phase 4 regression: PUT (image brief) and DELETE (unpublish/source)
+    preflights must be allowed, not just GET/POST."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        for method in ("PUT", "DELETE"):
+            preflight = api_client.options(
+                "/v1/admin/images/slug/upload",
+                headers={
+                    "Origin": "http://localhost:4322",
+                    "Access-Control-Request-Method": method,
+                },
+            )
+            assert preflight.status_code == 200
+            allow = preflight.headers.get("access-control-allow-methods", "")
+            assert method in allow, f"{method} missing from {allow}"

@@ -8,10 +8,64 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     <header class="mb-8 flex items-end justify-between">
       <div>
         <h1 class="display-title text-4xl text-paper-100">Source manager</h1>
-        <p class="data-label mt-2">CIRCUIT STATE + ACTIVE FLAG · FROM /V1/ADMIN/SOURCES</p>
+        <p class="data-label mt-2">CIRCUIT STATE + ACTIVE FLAG · ADD/EDIT/DELETE</p>
       </div>
-      <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+      <div class="flex items-center gap-3">
+        <button id="add-source" class="btn-primary" type="button">+ Add source</button>
+        <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+      </div>
     </header>
+
+    <div id="editor" class="card mb-6 hidden p-5">
+      <div class="mb-4 flex items-center justify-between">
+        <div class="data-label" id="editor-title">ADD SOURCE</div>
+        <button id="editor-close" class="btn-ghost !px-2 !py-0.5 text-xs" type="button">✕</button>
+      </div>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <label class="block">
+          <span class="data-label block mb-1">ID (snake_case)</span>
+          <input id="f-id" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">NAME *</span>
+          <input id="f-name" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">URL *</span>
+          <input id="f-url" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">CREDIBILITY (0-1)</span>
+          <input id="f-cred" type="number" step="0.05" min="0" max="1" value="0.8" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">CATEGORY</span>
+          <select id="f-cat" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
+            <option>technology</option><option selected>science</option><option>medicine</option>
+            <option>space</option><option>biology</option><option>multidisciplinary</option>
+            <option>popular_science</option><option>artificial_intelligence</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">FREQUENCY</span>
+          <select id="f-freq" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
+            <option selected>daily</option><option>weekly</option><option>hourly</option><option>multiple_daily</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">GROUP</span>
+          <select id="f-group" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
+            <option>ELITE_JOURNALS</option><option>SCIENCE_MEDIA</option>
+            <option>INSTITUTIONAL_SOURCES</option><option>AI_LABS</option><option selected>CUSTOM</option>
+          </select>
+        </label>
+      </div>
+      <p id="editor-error" class="mt-3 hidden text-sm text-rose-400"></p>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="editor-save" class="btn-primary" type="button">Save source</button>
+      </div>
+    </div>
+
     <div id="summary" class="mb-6 flex flex-wrap gap-3"></div>
     <div class="card overflow-x-auto">
       <table class="w-full min-w-[760px] text-left">
@@ -42,13 +96,17 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     resetSourceCircuit,
     showAuthGate,
     toggleSource,
+    upsertSource,
   } from "../lib/api";
-
+  import type { AdminSourceListItem } from "../lib/types";
 
   const rowsEl = document.getElementById("rows");
   const emptyEl = document.getElementById("empty");
   const summaryEl = document.getElementById("summary");
   const toastEl = document.getElementById("toast");
+  const editorEl = document.getElementById("editor");
+  const editorTitleEl = document.getElementById("editor-title");
+  const editorErrorEl = document.getElementById("editor-error");
 
   function esc(s: unknown): string {
     if (s == null) return "";
@@ -79,9 +137,80 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return `${status}${failures > 0 ? ` (${failures} fail)` : ""}`;
   }
 
+  let sources: AdminSourceListItem[] = [];
+
+  function openEditor(source?: AdminSourceListItem) {
+    if (!editorEl) return;
+    editorEl.classList.remove("hidden");
+    const id = document.getElementById("f-id") as HTMLInputElement;
+    const name = document.getElementById("f-name") as HTMLInputElement;
+    const url = document.getElementById("f-url") as HTMLInputElement;
+    const cred = document.getElementById("f-cred") as HTMLInputElement;
+    const cat = document.getElementById("f-cat") as HTMLSelectElement;
+    const freq = document.getElementById("f-freq") as HTMLSelectElement;
+    const group = document.getElementById("f-group") as HTMLSelectElement;
+    if (editorTitleEl) editorTitleEl.textContent = source ? `EDIT SOURCE · ${source.source_id}` : "ADD SOURCE";
+    if (editorErrorEl) editorErrorEl.classList.add("hidden");
+    id.value = source?.source_id ?? "";
+    id.disabled = !!source;
+    name.value = source?.name ?? "";
+    url.value = source?.url ?? "";
+    cred.value = source?.circuit?.credibility_score != null ? String(source.circuit.credibility_score) : "0.8";
+    cat.value = source?.category ?? "science";
+    freq.value = "daily";
+    group.value = "CUSTOM";
+    (document.getElementById("f-id") as HTMLInputElement).focus();
+  }
+
+  function closeEditor() {
+    editorEl?.classList.add("hidden");
+  }
+
+  async function saveEditor() {
+    const id = (document.getElementById("f-id") as HTMLInputElement).value.trim();
+    const name = (document.getElementById("f-name") as HTMLInputElement).value.trim();
+    const url = (document.getElementById("f-url") as HTMLInputElement).value.trim();
+    const cred = Number((document.getElementById("f-cred") as HTMLInputElement).value);
+    const cat = (document.getElementById("f-cat") as HTMLSelectElement).value;
+    const freq = (document.getElementById("f-freq") as HTMLSelectElement).value;
+    const group = (document.getElementById("f-group") as HTMLSelectElement).value;
+    if (!id || !name || !url) {
+      if (editorErrorEl) {
+        editorErrorEl.textContent = "ID, name and URL are required.";
+        editorErrorEl.classList.remove("hidden");
+      }
+      return;
+    }
+    try {
+      const result = await upsertSource({
+        source_id: id,
+        name,
+        url,
+        credibility_score: Number.isFinite(cred) ? cred : 0.8,
+        category: cat,
+        update_frequency: freq,
+        group,
+      });
+      showToast(result.detail);
+      closeEditor();
+      await load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (editorErrorEl) {
+        editorErrorEl.textContent = "Save failed: " + (e as Error).message;
+        editorErrorEl.classList.remove("hidden");
+      }
+    }
+  }
+
   async function load() {
     try {
-      const { sources } = await listSources();
+      const { sources: list } = await listSources();
+      sources = list;
       if (emptyEl) emptyEl.classList.toggle("hidden", sources.length > 0);
       const active = sources.filter((s) => s.is_active).length;
       const cooldown = sources.filter(
@@ -113,6 +242,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             </td>
             <td class="px-5 py-3">
               <div class="flex justify-end gap-2">
+                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-edit="${esc(s.source_id)}" type="button">Edit</button>
                 <button class="btn-ghost !px-2.5 !py-1 text-xs" data-toggle="${esc(s.source_id)}" data-active="${s.is_active ? "1" : "0"}" type="button">
                   ${s.is_active ? "Deactivate" : "Activate"}
                 </button>
@@ -136,8 +266,13 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   rowsEl?.addEventListener("click", async (event) => {
     const target = (event.target as HTMLElement).closest("button");
     if (!target) return;
-    const sourceId = target.dataset.toggle ?? target.dataset.reset ?? target.dataset.delete;
+    const sourceId = target.dataset.edit ?? target.dataset.toggle ?? target.dataset.reset ?? target.dataset.delete;
     if (!sourceId) return;
+    if (target.dataset.edit) {
+      const src = sources.find((s) => s.source_id === sourceId);
+      openEditor(src);
+      return;
+    }
     try {
       if (target.dataset.toggle) {
         const active = target.dataset.active === "1" ? false : true;
@@ -164,6 +299,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }
   });
 
+  document.getElementById("add-source")?.addEventListener("click", () => openEditor());
+  document.getElementById("editor-close")?.addEventListener("click", closeEditor);
+  document.getElementById("editor-save")?.addEventListener("click", () => void saveEditor());
   document.getElementById("refresh")?.addEventListener("click", () => void load());
   void load();
   window.addEventListener("auth:ready", () => void load());

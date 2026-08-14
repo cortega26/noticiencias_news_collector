@@ -80,6 +80,7 @@ from news_collector.contracts.admin import (
     AdminSourceListEnvelope,
     AdminSourceListItem,
     AdminSourceToggleRequest,
+    AdminSourceUpsert,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.storage.database import DatabaseManager, get_database_manager
@@ -464,7 +465,7 @@ def create_app(  # noqa: C901
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
@@ -1649,6 +1650,54 @@ def create_app(  # noqa: C901
         return AdminMutationResult(
             status="ok",
             detail=f"Source {source_id} deleted",
+            updated=1,
+        )
+
+    @app.post("/v1/admin/sources", response_model=AdminMutationResult)
+    def admin_upsert_source(
+        payload: AdminSourceUpsert,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        """Add or update a source (mirrors the old GUI's source editor).
+
+        Merge semantics on update: start from the existing entry and overlay
+        only the provided fields, so blacklist/etag/etag-metadata survive.
+        On create, seed the old GUI's defaults. Writes sources.yaml, then
+        upserts the DB row for circuit state.
+        """
+        from news_collector.config.sources import ALL_SOURCES, save_sources
+
+        was_present = payload.source_id in ALL_SOURCES
+        existing = dict(ALL_SOURCES.get(payload.source_id, {}))
+        new_entry = dict(existing)
+        new_entry.update(
+            {
+                "name": payload.name,
+                "url": payload.url,
+                "credibility_score": payload.credibility_score,
+                "category": payload.category,
+                "update_frequency": payload.update_frequency,
+                "_group": payload.group,
+            }
+        )
+        if not was_present:
+            new_entry.setdefault("language", "en")
+            new_entry.setdefault("description", "Added via UI")
+            new_entry.setdefault("typical_delay", 0)
+
+        ALL_SOURCES[payload.source_id] = new_entry
+        save_sources(ALL_SOURCES)
+        manager.upsert_source(payload.source_id, new_entry)
+
+        created = not was_present
+        return AdminMutationResult(
+            status="ok",
+            detail=(
+                f"Source {payload.source_id} created"
+                if created
+                else f"Source {payload.source_id} updated"
+            ),
             updated=1,
         )
 

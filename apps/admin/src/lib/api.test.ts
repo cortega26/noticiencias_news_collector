@@ -32,6 +32,7 @@ import {
   startCollect,
   toggleSource,
   unpublishArticle,
+  upsertSource,
   updateAuditStatus,
   updateImageBrief,
   uploadImageBriefAsset,
@@ -389,5 +390,33 @@ describe("phase 4 parity client", () => {
     await deleteSource("source-1");
     const fetchMock = vi.mocked(fetch);
     expect(String(fetchMock.mock.calls[0][0])).toBe("/v1/admin/sources/source-1");
+  });
+});
+
+describe("phase 4 addendum: source editor client", () => {
+  it("upsertSource POSTs the source payload", async () => {
+    setToken("admin-key");
+    mockFetchResponse(200, { status: "ok", detail: "Source new_source created", updated: 1 });
+
+    const result = await upsertSource({
+      source_id: "new_source",
+      name: "New Source",
+      url: "https://example.com/feed",
+      credibility_score: 0.7,
+      category: "science",
+      update_frequency: "daily",
+      group: "CUSTOM",
+    });
+
+    expect(result.status).toBe("ok");
+    const fetchMock = vi.mocked(fetch);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/admin/sources");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      source_id: "new_source",
+      name: "New Source",
+      credibility_score: 0.7,
+    });
   });
 });

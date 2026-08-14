@@ -21,6 +21,7 @@ import type {
   AdminPromptsEnvelope,
   AdminSourceHealthEnvelope,
   AdminSourceListItem,
+  AdminSourceUpsertPayload,
   ArticleStatus,
 } from "./types";
 
@@ -288,4 +289,13 @@ export function deleteSource(sourceId: string): Promise<AdminMutationResult> {
     `/v1/admin/sources/${encodeURIComponent(sourceId)}`,
     { method: "DELETE" },
   );
+}
+
+export function upsertSource(
+  payload: AdminSourceUpsertPayload,
+): Promise<AdminMutationResult> {
+  return apiFetch<AdminMutationResult>("/v1/admin/sources", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

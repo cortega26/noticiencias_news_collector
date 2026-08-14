@@ -475,6 +475,9 @@ class DatabaseManager:
     def delete_source(self, source_id: str) -> bool:
         return self.sources.delete_source(source_id)
 
+    def upsert_source(self, source_id: str, source_config: Dict[str, Any]) -> bool:
+        return self.sources.upsert_source(source_id, source_config)
+
     def update_source_circuit_state(
         self,
         source_id: str,

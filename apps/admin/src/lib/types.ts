@@ -165,3 +165,13 @@ export interface AdminImageBriefUploadResult {
   brief: Record<string, unknown>;
   asset_path: string;
 }
+
+export interface AdminSourceUpsertPayload {
+  source_id: string;
+  name: string;
+  url: string;
+  credibility_score: number;
+  category: string;
+  update_frequency: string;
+  group: string;
+}

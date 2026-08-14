@@ -258,3 +258,41 @@ class AdminImageBriefUpdate(BaseModel):
 class AdminImageBriefUploadResult(BaseModel):
     brief: Dict[str, Any]
     asset_path: str
+
+
+_SOURCE_CATEGORIES = Literal[
+    "technology",
+    "science",
+    "medicine",
+    "space",
+    "biology",
+    "multidisciplinary",
+    "popular_science",
+    "artificial_intelligence",
+]
+
+_SOURCE_FREQUENCIES = Literal["daily", "weekly", "hourly", "multiple_daily"]
+
+_SOURCE_GROUPS = Literal[
+    "ELITE_JOURNALS",
+    "SCIENCE_MEDIA",
+    "INSTITUTIONAL_SOURCES",
+    "AI_LABS",
+    "CUSTOM",
+]
+
+
+class AdminSourceUpsert(BaseModel):
+    """Add or update a source (mirrors the old GUI's source editor form).
+
+    On update, only provided fields are applied; existing keys (blacklist,
+    etag, last_modified, content_mode, ...) are preserved.
+    """
+
+    source_id: str = Field(min_length=2, pattern=r"^[a-z0-9_]+$")
+    name: str = Field(min_length=2)
+    url: str = Field(min_length=5)
+    credibility_score: float = Field(default=0.8, ge=0.0, le=1.0)
+    category: _SOURCE_CATEGORIES = "science"
+    update_frequency: _SOURCE_FREQUENCIES = "daily"
+    group: _SOURCE_GROUPS = "CUSTOM"
