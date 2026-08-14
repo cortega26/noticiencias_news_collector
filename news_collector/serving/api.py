@@ -1333,7 +1333,7 @@ def create_app(  # noqa: C901
                 target_repo_url=cfg.github.target_repo_url,
                 collector_repo_root=Path(".").resolve(),
                 temp_target_dir=Path("temp/refinery_target"),
-                github_token="",
+                github_token=str(cfg.github.token or ""),
                 refresh_clone=False,
             )
         except Exception as exc:
