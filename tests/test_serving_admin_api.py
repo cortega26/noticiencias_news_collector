@@ -9,10 +9,10 @@ fail-closed outside development) with a distinct `ADMIN_API_KEY`.
 from __future__ import annotations
 
 import json
-from itertools import count as itertools_count
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from itertools import count as itertools_count
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
