@@ -350,6 +350,40 @@ def _build_admin_list_item(row: RowType) -> AdminArticleListItem:
     )
 
 
+def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize a config-save payload into the full Config shape.
+
+    Accepts both a PARTIAL patch (any section dicts) and the sanitized
+    snapshot returned by GET /v1/admin/config: top-level
+    environment/debug/timezone move under app.*, `sources`/`meta` (read-only
+    extras) are dropped, and empty-string optional model names become None
+    (the form renders None optionals as ""). Secrets (github.token,
+    nvidia/gemini api_key) are never accepted.
+    """
+    for section in ("github", "nvidia", "gemini"):
+        if isinstance(payload.get(section), dict):
+            for key in ("token", "api_key"):
+                payload[section].pop(key, None)
+
+    normalized: Dict[str, Any] = {}
+    for key, value in payload.items():
+        if key in ("sources", "meta"):
+            continue
+        if key in ("environment", "debug", "timezone"):
+            app_section = dict(normalized.get("app", {}))
+            app_section[key] = value
+            normalized["app"] = app_section
+            continue
+        normalized[key] = value
+
+    for section in ("ollama", "gemini", "nvidia"):
+        if isinstance(normalized.get(section), dict):
+            normalized[section] = {
+                k: (None if v == "" else v) for k, v in normalized[section].items()
+            }
+    return normalized
+
+
 def verify_webhook_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
@@ -1261,29 +1295,25 @@ def create_app(  # noqa: C901
         _: None = Depends(verify_admin_token),
     ) -> AdminConfigSnapshot:
         """Validate and persist config.toml — same contract as the Streamlit
-        app's save_toml_config (plan 033), but accepts a PARTIAL patch:
-        the payload is merged over the current full config at the dict
-        level, then the merged result is validated through the schema
-        (Config.model_validate) plus the cross-field business rules. Both
-        validation layers run before anything touches disk.
+        app's save_toml_config (plan 033).
 
-        Secrets are not accepted: any github.token / nvidia.api_key /
-        gemini.api_key value in the payload is dropped before validation.
+        The payload may be either (a) a PARTIAL patch (any section dicts)
+        or (b) the sanitized snapshot returned by GET /v1/admin/config
+        (top-level environment/debug/timezone, plus section dicts that may
+        carry None values for optional fields). Both shapes are normalized
+        into the full Config shape before schema + business-rule
+        validation, then written atomically. Secrets are never accepted.
         """
         from noticiencias.config_manager import Config as _Config
         from noticiencias.config_manager import save_config as _save_config
 
-        # Never let the API write credentials through this surface.
-        for section in ("github", "nvidia", "gemini"):
-            if isinstance(payload.get(section), dict):
-                for key in ("token", "api_key"):
-                    payload[section].pop(key, None)
+        normalized = _normalize_config_payload(payload)
 
         # Merge over the current full config (deep) so partial patches
         # validate against the complete shape.
         current = load_config()
         merged = current.model_dump(mode="python")
-        for section, values in payload.items():
+        for section, values in normalized.items():
             if isinstance(values, dict) and isinstance(merged.get(section), dict):
                 merged[section] = {**merged[section], **values}
             else:

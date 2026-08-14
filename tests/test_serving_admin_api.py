@@ -1534,3 +1534,55 @@ def test_admin_cors_allows_put_delete_preflight(
             assert preflight.status_code == 200
             allow = preflight.headers.get("access-control-allow-methods", "")
             assert method in allow, f"{method} missing from {allow}"
+
+
+def test_admin_config_save_accepts_snapshot_shape(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Regression: the GUI submits the sanitized snapshot returned by GET
+    /v1/admin/config (top-level environment/debug/timezone, sources/meta
+    extras, empty-string optionals). The save endpoint must normalize it
+    into the Config shape instead of 422ing."""
+    from noticiencias.config_manager import load_config as _load
+    from news_collector.serving import api as serving_api
+
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        Path("config.toml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(serving_api, "load_config", lambda: _load(cfg_file))
+
+    import noticiencias.config_manager as _cm
+
+    real_save = _cm.save_config
+
+    def _save_to_tmp(validated, path=None):
+        return real_save(validated, cfg_file)
+
+    monkeypatch.setattr("noticiencias.config_manager.save_config", _save_to_tmp)
+
+    # Round-trip: GET the snapshot, tweak a scoring weight, POST it back.
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        got = api_client.get("/v1/admin/config", headers=_admin_headers())
+        assert got.status_code == 200
+        snapshot = got.json()
+
+    snapshot["scoring"]["weights"]["recency"] = 0.30
+    # Re-normalize weights sum back to 1.0 so business validation passes.
+    weights = snapshot["scoring"]["weights"]
+    weights["source_credibility"] = 0.1
+    weights["content_quality"] = 0.3
+    weights["engagement_potential"] = 0.3
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config", json=snapshot, headers=_admin_headers()
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["scoring"]["weights"]["recency"] == 0.30
+
+    saved = cfg_file.read_text(encoding="utf-8")
+    assert "recency = 0.3" in saved
+    assert "[paths]" in saved
