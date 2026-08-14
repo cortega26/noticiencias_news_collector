@@ -37,12 +37,36 @@ from sqlalchemy.engine import Row as RowType
 from sqlalchemy.orm import aliased
 
 from news_collector.config.settings import get_runtime_config
+from news_collector.contracts.admin import (
+    AdminAnalyticsEnvelope,
+    AdminArticleDetail,
+    AdminArticleListItem,
+    AdminArticleListEnvelope,
+    AdminArticlePagination,
+    AdminAuditStatusUpdate,
+    AdminConfigSnapshot,
+    AdminMutationResult,
+    AdminRejectRequest,
+    AdminSourceHealthEnvelope,
+)
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
+from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger("serving.api")
+
+# Collector export artifact consumed by the admin source-health endpoint.
+# Overridable in tests via monkeypatch.
+ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
+
+# processing_status values the admin triage queue can filter by. Mirrors the
+# statuses the storage layer transitions between (pending/new → publishing →
+# rejected/completed).
+_ADMIN_VALID_STATUSES = frozenset(
+    {"new", "pending", "publishing", "rejected", "completed"}
+)
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator
@@ -256,6 +280,36 @@ def _build_article_payload(row: RowType) -> Dict[str, Any]:
     }
 
 
+def _build_admin_list_item(row: RowType) -> AdminArticleListItem:
+    """Build an admin triage-row payload from an explicit-projection row.
+
+    Same projection discipline as ``_build_article_payload`` (plan 045):
+    the query selects exactly the columns used here, so no full ORM
+    hydration happens for the list.
+    """
+    topics = _extract_topics_from_metadata(row.article_metadata, row.keywords)
+    metadata = row.article_metadata or {}
+    refinery_id = (metadata.get("publication") or {}).get("refinery_id")
+    return AdminArticleListItem(
+        id=row.article_id,
+        title=row.title,
+        summary=row.summary,
+        url=row.url,
+        source={"id": row.source_id, "name": row.source_name},
+        category=row.category,
+        topics=topics,
+        published_at=row.published_date,
+        collected_at=row.collected_date,
+        final_score=row.final_score,
+        score_components=row.score_components,
+        why_ranked=_summarize_why_ranked(row),
+        processing_status=row.processing_status,
+        error_message=row.error_message,
+        published_url=row.published_url,
+        refinery_id=refinery_id,
+    )
+
+
 def verify_webhook_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
@@ -299,6 +353,50 @@ def verify_webhook_token(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid webhook API key",
+        )
+
+
+def verify_admin_token(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> None:
+    """Verify Bearer token against ADMIN_API_KEY env var (constant-time).
+
+    Same fail-closed semantics as ``verify_webhook_token`` (plan 021), with a
+    distinct credential so the admin surface is never reachable with the
+    frontend CI webhook key. Outside the explicit "development" environment
+    tier an unset key refuses all admin access (503).
+    """
+    admin_api_key = os.environ.get("ADMIN_API_KEY", "")
+    if not admin_api_key:
+        runtime = get_runtime_config()
+        if runtime.environment != "development":
+            logger.error(
+                "ADMIN_API_KEY is not set outside the 'development' "
+                "environment (environment={}) — refusing unauthenticated "
+                "admin access.",
+                runtime.environment,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Admin authentication is not configured for this environment",
+            )
+        return  # explicit development-only fail-open
+
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header",
+        )
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format. Use: Bearer <token>",
+        )
+    if not hmac.compare_digest(token, admin_api_key):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid admin API key",
         )
 
 
@@ -564,6 +662,321 @@ def create_app(  # noqa: C901
             "accepted": True,
             "event": event.event,
         }
+
+    # ------------------------------------------------------------------
+    # Admin surface (/v1/admin/*) — Phase 1 of the Refinery GUI decoupling.
+    #
+    # Read-oriented per LAW-B4 (serving may compose read-only queries against
+    # storage). The two mutation endpoints only dispatch to existing,
+    # idempotent storage transitions (mirroring the webhook handler pattern);
+    # no editorial write workflow lives here (§3.6).
+    # ------------------------------------------------------------------
+
+    @app.get("/v1/admin/articles", response_model=AdminArticleListEnvelope)
+    def admin_list_articles(
+        status_filter: str = Query("pending", alias="status"),
+        source: Optional[List[str]] = Query(None, alias="source"),
+        page_size: int = Query(20, ge=1, le=50, alias="page_size"),
+        cursor: Optional[str] = Query(None, alias="cursor"),
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminArticleListEnvelope:
+        if status_filter not in _ADMIN_VALID_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    f"Invalid status '{status_filter}'. "
+                    f"Valid: {sorted(_ADMIN_VALID_STATUSES)}"
+                ),
+            )
+
+        score_column = func.coalesce(Article.final_score, 0.0)
+        with manager.get_session() as session:
+            latest_log_subquery = (
+                session.query(
+                    ScoreLog.article_id.label("article_id"),
+                    func.max(ScoreLog.calculated_at).label("latest_calculated"),
+                )
+                .group_by(ScoreLog.article_id)
+                .subquery()
+            )
+            score_log_alias = aliased(ScoreLog)
+
+            query = (
+                session.query(
+                    Article.id.label("article_id"),
+                    Article.title,
+                    Article.summary,
+                    Article.url,
+                    Article.source_id,
+                    Article.source_name,
+                    Article.category,
+                    Article.published_date,
+                    Article.collected_date,
+                    Article.final_score,
+                    Article.score_components,
+                    Article.article_metadata,
+                    Article.keywords,
+                    Article.processing_status,
+                    Article.error_message,
+                    Article.published_url,
+                    score_log_alias.score_explanation,
+                )
+                .outerjoin(
+                    latest_log_subquery,
+                    latest_log_subquery.c.article_id == Article.id,
+                )
+                .outerjoin(
+                    score_log_alias,
+                    and_(
+                        score_log_alias.article_id == Article.id,
+                        score_log_alias.calculated_at
+                        == latest_log_subquery.c.latest_calculated,
+                    ),
+                )
+                .filter(Article.processing_status == status_filter)
+            )
+
+            if source:
+                query = query.filter(Article.source_id.in_(source))
+
+            if cursor:
+                cursor_score, cursor_collected, cursor_id = _decode_cursor(cursor)
+                query = query.filter(
+                    or_(
+                        score_column < cursor_score,
+                        and_(
+                            score_column == cursor_score,
+                            Article.collected_date < cursor_collected,
+                        ),
+                        and_(
+                            score_column == cursor_score,
+                            Article.collected_date == cursor_collected,
+                            Article.id < cursor_id,
+                        ),
+                    )
+                )
+
+            query = query.order_by(
+                score_column.desc(),
+                Article.collected_date.desc(),
+                Article.id.desc(),
+            )
+
+            records: List[RowType] = query.limit(page_size + 1).all()
+            has_more = len(records) > page_size
+            if has_more:
+                records = records[:page_size]
+
+            items = [_build_admin_list_item(row) for row in records]
+            next_cursor = _encode_cursor(records[-1]) if has_more else None
+
+            return AdminArticleListEnvelope(
+                data=items,
+                pagination=AdminArticlePagination(
+                    next_cursor=next_cursor,
+                    has_more=has_more,
+                    page_size=page_size,
+                    returned=len(items),
+                ),
+                filters={"status": status_filter, "source": source or []},
+                meta={"generated_at": datetime.now(timezone.utc).isoformat()},
+            )
+
+    @app.get(
+        "/v1/admin/articles/{article_id}",
+        response_model=AdminArticleDetail,
+    )
+    def admin_article_detail(
+        article_id: int,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminArticleDetail:
+        with manager.get_session() as session:
+            latest_log_subquery = (
+                session.query(
+                    ScoreLog.article_id.label("article_id"),
+                    func.max(ScoreLog.calculated_at).label("latest_calculated"),
+                )
+                .group_by(ScoreLog.article_id)
+                .subquery()
+            )
+            score_log_alias = aliased(ScoreLog)
+
+            row = (
+                session.query(
+                    Article.id.label("article_id"),
+                    Article.title,
+                    Article.summary,
+                    Article.url,
+                    Article.source_id,
+                    Article.source_name,
+                    Article.category,
+                    Article.published_date,
+                    Article.collected_date,
+                    Article.final_score,
+                    Article.score_components,
+                    Article.article_metadata,
+                    Article.keywords,
+                    Article.processing_status,
+                    Article.error_message,
+                    Article.published_url,
+                    Article.content,
+                    Article.cluster_id,
+                    score_log_alias.final_score.label("latest_score"),
+                    score_log_alias.score_explanation.label("score_explanation"),
+                )
+                .outerjoin(
+                    latest_log_subquery,
+                    latest_log_subquery.c.article_id == Article.id,
+                )
+                .outerjoin(
+                    score_log_alias,
+                    and_(
+                        score_log_alias.article_id == Article.id,
+                        score_log_alias.calculated_at
+                        == latest_log_subquery.c.latest_calculated,
+                    ),
+                )
+                .filter(Article.id == article_id)
+                .first()
+            )
+            if row is None:
+                raise HTTPException(status_code=404, detail="Article not found")
+
+            list_item = _build_admin_list_item(row)
+            metadata = dict(row.article_metadata or {})
+            detail = list_item.model_dump()
+            detail.update(
+                {
+                    "content": row.content,
+                    "cluster_id": row.cluster_id,
+                    "article_metadata": metadata,
+                    "publication": metadata.get("publication") or {},
+                    "audit": metadata.get("audit") or {},
+                    "latest_score": row.latest_score,
+                    "latest_score_explanation": row.score_explanation,
+                }
+            )
+            return AdminArticleDetail(**detail)
+
+    @app.get("/v1/admin/sources/health", response_model=AdminSourceHealthEnvelope)
+    def admin_source_health(
+        _: None = Depends(verify_admin_token),
+    ) -> AdminSourceHealthEnvelope:
+        import json as _json
+
+        if not os.path.exists(ADMIN_SOURCE_HEALTH_PATH):
+            return AdminSourceHealthEnvelope(sources=[])
+        try:
+            with open(ADMIN_SOURCE_HEALTH_PATH, "r", encoding="utf-8") as f:
+                data = _json.load(f)
+        except (OSError, ValueError) as exc:
+            logger.warning("Failed to read source health export: {}", exc)
+            return AdminSourceHealthEnvelope(sources=[])
+        records = data.values() if isinstance(data, dict) else data
+        return AdminSourceHealthEnvelope(sources=list(records))
+
+    @app.get("/v1/admin/analytics", response_model=AdminAnalyticsEnvelope)
+    def admin_analytics(
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminAnalyticsEnvelope:
+        from apps.refinery.analytics_read_model import build_analytics_read_model
+
+        model = build_analytics_read_model(manager)
+        return AdminAnalyticsEnvelope(
+            **model,
+            as_of=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        )
+
+    @app.get("/v1/admin/config", response_model=AdminConfigSnapshot)
+    def admin_config(
+        _: None = Depends(verify_admin_token),
+    ) -> AdminConfigSnapshot:
+        cfg = load_config()
+        github = {
+            "user_name": cfg.github.user_name,
+            "source_repo_url": cfg.github.source_repo_url,
+            "target_repo_url": cfg.github.target_repo_url,
+        }
+        ollama = {
+            "model": cfg.ollama.model,
+            "translator_model": cfg.ollama.translator_model,
+            "editor_model": cfg.ollama.editor_model,
+            "headlines_model": cfg.ollama.headlines_model,
+            "enrichment_model": cfg.ollama.enrichment_model,
+        }
+        weights_value: Any = cfg.scoring.weights
+        if hasattr(weights_value, "model_dump"):
+            weights_value = weights_value.model_dump(mode="python")
+        scoring = {
+            "weights": weights_value,
+        }
+        return AdminConfigSnapshot(
+            environment=cfg.app.environment,
+            debug=cfg.app.debug,
+            timezone=cfg.app.timezone,
+            github=github,
+            ollama=ollama,
+            scoring=scoring,
+        )
+
+    @app.post(
+        "/v1/admin/articles/{article_id}/audit-status",
+        response_model=AdminMutationResult,
+    )
+    def admin_audit_status(
+        article_id: int,
+        payload: AdminAuditStatusUpdate,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        ok = manager.update_article_audit_status(
+            article_id, payload.audit_status, payload.reason
+        )
+        if not ok:
+            raise HTTPException(status_code=404, detail="Article not found")
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Audit status '{payload.audit_status}' recorded",
+            updated=1,
+        )
+
+    @app.post(
+        "/v1/admin/articles/{article_id}/reject",
+        response_model=AdminMutationResult,
+    )
+    def admin_reject_article(
+        article_id: int,
+        payload: AdminRejectRequest,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        with manager.get_session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is None:
+                raise HTTPException(status_code=404, detail="Article not found")
+            metadata = article.article_metadata or {}
+            refinery_id = (metadata.get("publication") or {}).get("refinery_id")
+            if not refinery_id:
+                return AdminMutationResult(
+                    status="noop",
+                    detail="Article has no named publication attempt to reject",
+                )
+        updated = manager.reject_publication_attempts(
+            [str(refinery_id)], payload.reason
+        )
+        if updated == 0:
+            return AdminMutationResult(
+                status="noop",
+                detail="Publication attempt already rejected or not in flight",
+            )
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Rejected publication attempt {refinery_id}",
+            updated=updated,
+        )
 
     return app
 

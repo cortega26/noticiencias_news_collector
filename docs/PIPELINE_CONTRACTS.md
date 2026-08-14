@@ -18,6 +18,7 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Validation boundary | workflow/system code | validation modules | `ArticleValidationPayload` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
+| Admin API (Phase 1) | `news_collector/serving/api.py` | Refinery GUI (future client) | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing idempotent storage transitions only |
 
 ## Export To Refinery
 
@@ -83,6 +84,11 @@ The serving layer currently exposes a read-oriented API:
 - validated request parameters via `ArticleListParams`
 - deterministic cursor encoding using score, collected timestamp, and article ID
 - envelope response shape via `ArticlesEnvelope`
+- admin surface (`/v1/admin/*`, plan 059 Phase 1): triage queue, article
+  detail, source health, analytics, sanitized config read, plus
+  audit-status/reject mutations that dispatch to existing idempotent
+  storage transitions — authenticated with a distinct `ADMIN_API_KEY`
+  (constant-time Bearer, fail-closed outside `development`)
 
 The serving layer is not the owner of editorial mutation workflows.
 
