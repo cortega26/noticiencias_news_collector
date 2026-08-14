@@ -888,6 +888,7 @@ def test_admin_config_save_roundtrip_and_secret_drop(
     import copy
 
     from noticiencias.config_manager import load_config as _load
+
     from news_collector.config import settings as _settings
     from news_collector.serving import api as serving_api
 

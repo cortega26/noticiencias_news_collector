@@ -46,8 +46,8 @@ from news_collector.config.settings import get_runtime_config
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
-    AdminArticleListItem,
     AdminArticleListEnvelope,
+    AdminArticleListItem,
     AdminArticlePagination,
     AdminAuditStatusUpdate,
     AdminCollectRequest,
@@ -1325,9 +1325,7 @@ def create_app(  # noqa: C901
     def admin_published_content(
         _: None = Depends(verify_admin_token),
     ) -> AdminContentEnvelope:
-        from apps.refinery.published_content import (
-            resolve_published_content_snapshot,
-        )
+        from apps.refinery.published_content import resolve_published_content_snapshot
 
         cfg = load_config()
         try:
