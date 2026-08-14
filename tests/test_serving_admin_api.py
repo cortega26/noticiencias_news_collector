@@ -1544,6 +1544,7 @@ def test_admin_config_save_accepts_snapshot_shape(
     extras, empty-string optionals). The save endpoint must normalize it
     into the Config shape instead of 422ing."""
     from noticiencias.config_manager import load_config as _load
+
     from news_collector.serving import api as serving_api
 
     cfg_file = tmp_path / "config.toml"
