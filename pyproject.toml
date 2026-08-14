@@ -22,6 +22,7 @@ dependencies = [
     "PyYAML>=6.0.1",
     "tomli-w>=1.0.0",
     "fastapi>=0.128.0",
+    "python-multipart>=0.0.20",  # Form/File uploads (admin image brief staging)
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.11.9",
     "loguru>=0.7.3",

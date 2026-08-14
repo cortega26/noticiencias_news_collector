@@ -16,8 +16,8 @@ eggs/
 .eggs/
 node_modules/
 apps/admin/dist/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/

@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from itertools import count as itertools_count
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1088,3 +1089,270 @@ def test_admin_prompts_save_is_atomic(
     leftovers = list(tmp_path.glob(".prompts-*"))
     assert leftovers == [], f"temp files left behind: {leftovers}"
     assert "editor" in prompts_file.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: parity gaps (unpublish, image brief edit/upload, source delete)
+# ---------------------------------------------------------------------------
+
+
+def test_admin_unpublish_article(
+    api_client: TestClient, db_manager: DatabaseManager, monkeypatch
+) -> None:
+    """DELETE /v1/admin/content/{id} dispatches to reset_one_article."""
+    import apps.refinery.published_content as pc_mod
+    from news_collector.serving import api as serving_api
+
+    reset_calls: list[str] = []
+    snapshot = SimpleNamespace(
+        repo_root=Path("/tmp/fake-target"),
+        posts_dir=Path("/tmp/fake-target/posts"),
+        source_label="fake",
+        freshness_label="fake",
+    )
+
+    monkeypatch.setattr(
+        "apps.refinery.published_content.resolve_published_content_snapshot",
+        lambda **k: snapshot,
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.find_published_article_by_refinery_id",
+        lambda posts_dir, refinery_id: SimpleNamespace(
+            file_path=Path("/tmp/fake-target/posts/2026-01-01-x.md"),
+            file_name="2026-01-01-x.md",
+            refinery_id=refinery_id,
+        ),
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.reset_one_article",
+        lambda repo_root, article, db: reset_calls.append(article.refinery_id),
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.delete(
+            "/v1/admin/content/2026-01-01-x", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+    assert reset_calls == ["2026-01-01-x"]
+
+
+def test_admin_unpublish_unknown_404(api_client: TestClient, monkeypatch) -> None:
+    from news_collector.serving import api as serving_api
+
+    snapshot = SimpleNamespace(
+        repo_root=Path("/tmp/fake-target"),
+        posts_dir=Path("/tmp/fake-target/posts"),
+        source_label="fake",
+        freshness_label="fake",
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.resolve_published_content_snapshot",
+        lambda **k: snapshot,
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.find_published_article_by_refinery_id",
+        lambda *a, **k: None,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.delete("/v1/admin/content/nope", headers=_admin_headers())
+        assert response.status_code == 404
+
+
+def test_admin_bulk_reset_reports_per_item(api_client: TestClient, monkeypatch) -> None:
+    from news_collector.serving import api as serving_api
+
+    snapshot = SimpleNamespace(
+        repo_root=Path("/tmp/fake-target"),
+        posts_dir=Path("/tmp/fake-target/posts"),
+        source_label="fake",
+        freshness_label="fake",
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.resolve_published_content_snapshot",
+        lambda **k: snapshot,
+    )
+
+    def _fake_find(posts_dir, refinery_id):
+        if refinery_id == "missing":
+            return None
+        return SimpleNamespace(
+            file_path=Path(f"/tmp/fake-target/posts/{refinery_id}.md"),
+            file_name=f"{refinery_id}.md",
+            refinery_id=refinery_id,
+        )
+
+    monkeypatch.setattr(
+        "apps.refinery.published_content.find_published_article_by_refinery_id",
+        _fake_find,
+    )
+    reset_calls: list[str] = []
+    monkeypatch.setattr(
+        "apps.refinery.published_content.reset_one_article",
+        lambda repo_root, article, db: reset_calls.append(article.refinery_id),
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/content/bulk-reset",
+            json={"refinery_ids": ["a", "missing", "b"]},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert sorted(body["succeeded"]) == ["a", "b"]
+        assert body["failed"][0]["refinery_id"] == "missing"
+        assert "No published article" in body["failed"][0]["error"]
+        assert "succeeded" in body["summary"]
+
+
+def test_admin_image_brief_update_roundtrip(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.contracts.image_brief import ImageBriefModel
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.serving import api as serving_api
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-update"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.put(
+            "/v1/admin/images/brief-update",
+            json={"topic": "nuevo tema"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert response.json()["brief"]["topic"] == "nuevo tema"
+
+    reloaded = store.load_brief("brief-update")
+    assert reloaded.topic == "nuevo tema"
+
+
+def test_admin_image_brief_update_unknown_404(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.serving import api as serving_api
+
+    store = ImageBriefStore(tmp_path)
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.put(
+            "/v1/admin/images/nope", json={"topic": "x"}, headers=_admin_headers()
+        )
+        assert response.status_code == 404
+
+
+def test_admin_image_brief_upload_stages_asset(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.serving import api as serving_api
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-upload"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/images/brief-upload/upload",
+            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            data={"draft_alt_text": "Imagen de laboratorio"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["brief"]["status"] == "editorial_image_ready"
+        assert body["asset_path"].endswith(".png")
+
+    staged = store.load_brief("brief-upload")
+    assert staged.status == "editorial_image_ready"
+    assert staged.uploaded_asset_path
+
+
+def test_admin_delete_source_removes_yaml_and_db(
+    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
+) -> None:
+    from news_collector.config import sources as sources_mod
+    from news_collector.serving import api as serving_api
+
+    # Point ALL_SOURCES at a tmp yaml so we don't touch the real config.
+    fake_sources = {
+        "delete_me": {
+            "name": "Delete Me",
+            "url": "https://example.com/feed",
+            "category": "science",
+        }
+    }
+    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
+    yaml_path = tmp_path / "sources.yaml"
+    monkeypatch.setattr(
+        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
+    )
+    # The endpoint imports ALL_SOURCES/save_sources from
+    # news_collector.config.sources at call time — patch there.
+    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
+    monkeypatch.setattr(
+        "news_collector.config.sources.save_sources", sources_mod.save_sources
+    )
+
+    with db_manager.get_session() as session:
+        session.add(
+            Source(
+                id="delete_me",
+                name="Delete Me",
+                url="https://example.com/feed",
+                credibility_score=0.5,
+                category="science",
+            )
+        )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.delete(
+            "/v1/admin/sources/delete_me", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+
+    assert "delete_me" not in sources_mod.ALL_SOURCES
+    with db_manager.get_session() as session:
+        assert session.query(Source).filter(Source.id == "delete_me").first() is None
+
+
+def test_admin_delete_source_unknown_404(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.delete(
+            "/v1/admin/sources/definitely_not_real", headers=_admin_headers()
+        )
+        assert response.status_code == 404
+
+
+def _make_brief(slug: str):
+    from news_collector.contracts.image_brief import ImageBriefModel
+
+    return ImageBriefModel(
+        slug=slug,
+        article_id="123",
+        reason="missing_source_image",
+        topic="salud",
+        news_angle="nuevo hallazgo",
+        scientific_domain="medicina",
+        subject_scene="laboratorio",
+        tone="informativo",
+        draft_alt_text="Imagen de laboratorio",
+        generated_prompt="Genera una imagen de un laboratorio moderno con un hallazgo medico.",
+        updated_at=datetime.now(timezone.utc),
+    )

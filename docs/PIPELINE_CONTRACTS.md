@@ -98,6 +98,9 @@ The serving layer currently exposes a read-oriented API:
   config save (full-schema validation, secrets dropped), prompt lab
   (config/prompts.yaml round-trip), published-content snapshot, image
   queue — all dispatching to existing storage/workflow modules
+- admin parity surface (Phase 4): unpublish + bulk reset of published
+  content (git-backed, plan-017 semantics), image brief edit + asset
+  upload (multipart), source delete (sources.yaml + DB)
 
 The serving layer is not the owner of editorial mutation workflows.
 

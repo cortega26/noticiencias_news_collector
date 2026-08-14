@@ -472,6 +472,9 @@ class DatabaseManager:
     def set_source_active(self, source_id: str, active: bool) -> bool:
         return self.sources.set_source_active(source_id, active)
 
+    def delete_source(self, source_id: str) -> bool:
+        return self.sources.delete_source(source_id)
+
     def update_source_circuit_state(
         self,
         source_id: str,

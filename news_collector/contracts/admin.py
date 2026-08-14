@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AdminArticleListItem(BaseModel):
@@ -207,8 +207,54 @@ class AdminImageBriefItem(BaseModel):
     status: str
     reason: str
     topic: str
+    news_angle: Optional[str] = None
+    scientific_domain: Optional[str] = None
+    subject_scene: Optional[str] = None
+    draft_alt_text: Optional[str] = None
+    tone: Optional[str] = None
     updated_at: Optional[str] = None
 
 
 class AdminImageQueueEnvelope(BaseModel):
     briefs: List[AdminImageBriefItem] = Field(default_factory=list)
+
+
+class AdminBulkResetRequest(BaseModel):
+    """Body for bulk-unpublishing published articles."""
+
+    refinery_ids: List[str] = Field(min_length=1, max_length=50)
+
+    @field_validator("refinery_ids")
+    @classmethod
+    def _ids_non_empty(cls, v: List[str]) -> List[str]:
+        cleaned = [item.strip() for item in v if item and item.strip()]
+        if not cleaned:
+            raise ValueError("refinery_ids must contain at least one id")
+        return cleaned
+
+
+class AdminBulkResetFailure(BaseModel):
+    refinery_id: str
+    error: str
+
+
+class AdminBulkResetResult(BaseModel):
+    succeeded: List[str] = Field(default_factory=list)
+    failed: List[AdminBulkResetFailure] = Field(default_factory=list)
+    summary: str
+
+
+class AdminImageBriefUpdate(BaseModel):
+    """Editable fields of an image brief (all optional)."""
+
+    topic: Optional[str] = None
+    news_angle: Optional[str] = None
+    scientific_domain: Optional[str] = None
+    subject_scene: Optional[str] = None
+    draft_alt_text: Optional[str] = None
+    tone: Optional[str] = None
+
+
+class AdminImageBriefUploadResult(BaseModel):
+    brief: Dict[str, Any]
+    asset_path: str

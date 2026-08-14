@@ -117,6 +117,21 @@ class SourceRepository:
     # Initialization
     # ------------------------------------------------------------------
 
+    def delete_source(self, source_id: str) -> bool:
+        """Remove a source row from the sources table.
+
+        Returns False when the row does not exist. The collector config
+        (sources.yaml) is managed separately — callers decide whether to
+        also remove the source from the yaml.
+        """
+        with self._session() as session:
+            source = session.query(Source).filter(Source.id == source_id).first()
+            if source is None:
+                return False
+            session.delete(source)
+            logger.info("Source {} deleted from DB.", source_id)
+            return True
+
     def set_source_active(self, source_id: str, active: bool) -> bool:
         """Enable/disable a source for collection (is_active flag).
 

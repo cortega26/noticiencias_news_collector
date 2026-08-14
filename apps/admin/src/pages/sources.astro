@@ -35,7 +35,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 </AdminLayout>
 
 <script>
-  import { clearToken, listSources, resetSourceCircuit, showAuthGate, toggleSource } from "../lib/api";
+  import {
+    clearToken,
+    deleteSource,
+    listSources,
+    resetSourceCircuit,
+    showAuthGate,
+    toggleSource,
+  } from "../lib/api";
 
 
   const rowsEl = document.getElementById("rows");
@@ -110,6 +117,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
                   ${s.is_active ? "Deactivate" : "Activate"}
                 </button>
                 ${inCooldown ? `<button class="btn-ghost !px-2.5 !py-1 text-xs" data-reset="${esc(s.source_id)}" type="button">Reset circuit</button>` : ""}
+                <button class="btn-danger !px-2.5 !py-1 text-xs" data-delete="${esc(s.source_id)}" type="button">Delete</button>
               </div>
             </td>
           </tr>`;
@@ -128,12 +136,18 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   rowsEl?.addEventListener("click", async (event) => {
     const target = (event.target as HTMLElement).closest("button");
     if (!target) return;
-    const sourceId = target.dataset.toggle ?? target.dataset.reset;
+    const sourceId = target.dataset.toggle ?? target.dataset.reset ?? target.dataset.delete;
     if (!sourceId) return;
     try {
       if (target.dataset.toggle) {
         const active = target.dataset.active === "1" ? false : true;
         const result = await toggleSource(sourceId, active);
+        showToast(result.detail);
+      } else if (target.dataset.delete) {
+        if (!window.confirm(`Delete source "${sourceId}"? This removes it from sources.yaml and the DB.`)) {
+          return;
+        }
+        const result = await deleteSource(sourceId);
         showToast(result.detail);
       } else {
         const result = await resetSourceCircuit(sourceId);

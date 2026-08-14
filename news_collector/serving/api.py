@@ -36,7 +36,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from dateutil import parser as date_parser
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from noticiencias.config_manager import load_config
 from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
@@ -51,12 +61,17 @@ from news_collector.contracts.admin import (
     AdminArticleListItem,
     AdminArticlePagination,
     AdminAuditStatusUpdate,
+    AdminBulkResetFailure,
+    AdminBulkResetRequest,
+    AdminBulkResetResult,
     AdminCollectRequest,
     AdminCollectStarted,
     AdminCollectStatus,
     AdminConfigSnapshot,
     AdminContentEnvelope,
     AdminImageBriefItem,
+    AdminImageBriefUpdate,
+    AdminImageBriefUploadResult,
     AdminImageQueueEnvelope,
     AdminMutationResult,
     AdminPromptsEnvelope,
@@ -67,6 +82,7 @@ from news_collector.contracts.admin import (
     AdminSourceToggleRequest,
 )
 from news_collector.storage.database import DatabaseManager, get_database_manager
+from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
@@ -1413,6 +1429,11 @@ def create_app(  # noqa: C901
                     status=brief.status,
                     reason=brief.reason,
                     topic=brief.topic,
+                    news_angle=brief.news_angle,
+                    scientific_domain=brief.scientific_domain,
+                    subject_scene=brief.subject_scene,
+                    draft_alt_text=brief.draft_alt_text,
+                    tone=brief.tone,
                     updated_at=(
                         brief.updated_at.isoformat()
                         if getattr(brief, "updated_at", None)
@@ -1421,6 +1442,214 @@ def create_app(  # noqa: C901
                 )
                 for brief in briefs
             ]
+        )
+
+    @app.put(
+        "/v1/admin/images/{slug}",
+        response_model=AdminImageBriefUploadResult,
+    )
+    def admin_update_image_brief(
+        slug: str,
+        payload: AdminImageBriefUpdate,
+        _: None = Depends(verify_admin_token),
+    ) -> AdminImageBriefUploadResult:
+        """Edit an image brief's editable fields (no asset upload)."""
+        from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+        store = ImageBriefStore(Path("data"))
+        brief = store.load_brief(slug)
+        if brief is None:
+            raise HTTPException(status_code=404, detail="Brief not found")
+
+        updates = payload.model_dump(exclude_none=True)
+        if not updates:
+            raise HTTPException(status_code=422, detail="No editable fields provided")
+        updated = brief.model_copy(
+            update={**updates, "updated_at": datetime.now(timezone.utc)}
+        )
+        try:
+            updated = ImageBriefModel.model_validate(updated.model_dump())
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        store.save_brief(updated)
+        return AdminImageBriefUploadResult(
+            brief=updated.model_dump(mode="json"),
+            asset_path=updated.uploaded_asset_path or "",
+        )
+
+    @app.post(
+        "/v1/admin/images/{slug}/upload",
+        response_model=AdminImageBriefUploadResult,
+    )
+    def admin_upload_image_brief(
+        slug: str,
+        file: UploadFile = File(...),
+        topic: Optional[str] = Form(None),
+        news_angle: Optional[str] = Form(None),
+        scientific_domain: Optional[str] = Form(None),
+        subject_scene: Optional[str] = Form(None),
+        draft_alt_text: Optional[str] = Form(None),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminImageBriefUploadResult:
+        """Stage an image asset for a brief (multipart)."""
+        from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+        store = ImageBriefStore(Path("data"))
+        brief = store.load_brief(slug)
+        if brief is None:
+            raise HTTPException(status_code=404, detail="Brief not found")
+
+        content = file.file.read()
+        if not content:
+            raise HTTPException(status_code=422, detail="Empty file upload")
+        updated = store.stage_upload(
+            brief=brief,
+            filename=file.filename or f"{slug}.png",
+            content=content,
+            draft_alt_text=draft_alt_text or brief.draft_alt_text,
+            topic=topic or brief.topic,
+            news_angle=news_angle or brief.news_angle,
+            scientific_domain=scientific_domain or brief.scientific_domain,
+            subject_scene=subject_scene or brief.subject_scene,
+        )
+        return AdminImageBriefUploadResult(
+            brief=updated.model_dump(mode="json"),
+            asset_path=updated.uploaded_asset_path or "",
+        )
+
+    @app.delete(
+        "/v1/admin/content/{refinery_id}",
+        response_model=AdminMutationResult,
+    )
+    def admin_unpublish_article(
+        refinery_id: str,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        """Unpublish one article: git rm + commit + push + DB delete.
+
+        Dispatches to reset_one_article (plan 017 semantics: DB rows are
+        deleted only after the git push succeeds).
+        """
+        from apps.refinery.published_content import (
+            find_published_article_by_refinery_id,
+            resolve_published_content_snapshot,
+            reset_one_article,
+        )
+
+        cfg = load_config()
+        try:
+            snapshot = resolve_published_content_snapshot(
+                target_repo_url=cfg.github.target_repo_url,
+                collector_repo_root=Path(".").resolve(),
+                temp_target_dir=Path("temp/refinery_target"),
+                github_token=str(cfg.github.token or ""),
+                refresh_clone=True,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Content snapshot failed: {exc}"
+            ) from exc
+
+        article = find_published_article_by_refinery_id(snapshot.posts_dir, refinery_id)
+        if article is None:
+            raise HTTPException(status_code=404, detail="Published article not found")
+
+        try:
+            reset_one_article(snapshot.repo_root, article, manager)
+        except Exception as exc:
+            logger.error("Unpublish failed for {}: {}", refinery_id, exc)
+            raise HTTPException(
+                status_code=500, detail=f"Unpublish failed: {exc}"
+            ) from exc
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Unpublished {refinery_id}",
+            updated=1,
+        )
+
+    @app.post(
+        "/v1/admin/content/bulk-reset",
+        response_model=AdminBulkResetResult,
+    )
+    def admin_bulk_reset_content(
+        payload: AdminBulkResetRequest,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminBulkResetResult:
+        """Bulk unpublish (batch_cap 5, continue-on-error, per-item report)."""
+        from apps.refinery.bulk_helper import run_bulk
+        from apps.refinery.published_content import (
+            find_published_article_by_refinery_id,
+            resolve_published_content_snapshot,
+            reset_one_article,
+        )
+
+        cfg = load_config()
+        try:
+            snapshot = resolve_published_content_snapshot(
+                target_repo_url=cfg.github.target_repo_url,
+                collector_repo_root=Path(".").resolve(),
+                temp_target_dir=Path("temp/refinery_target"),
+                github_token=str(cfg.github.token or ""),
+                refresh_clone=True,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Content snapshot failed: {exc}"
+            ) from exc
+
+        def _reset_one(refinery_id: str) -> None:
+            article = find_published_article_by_refinery_id(
+                snapshot.posts_dir, refinery_id
+            )
+            if article is None:
+                raise FileNotFoundError(f"No published article for {refinery_id}")
+            reset_one_article(snapshot.repo_root, article, manager)
+
+        result = run_bulk(
+            items=payload.refinery_ids,
+            action=_reset_one,
+            batch_cap=5,
+        )
+        return AdminBulkResetResult(
+            succeeded=[str(item) for item in result.succeeded],
+            failed=[
+                AdminBulkResetFailure(
+                    refinery_id=str(item) if item else "",
+                    error=error,
+                )
+                for item, error in [
+                    (f.item, f.error) for f in result.failed if f.item is not None
+                ]
+            ],
+            summary=result.summary,
+        )
+
+    @app.delete(
+        "/v1/admin/sources/{source_id}",
+        response_model=AdminMutationResult,
+    )
+    def admin_delete_source(
+        source_id: str,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        """Delete a source: remove from sources.yaml AND drop the DB row."""
+        from news_collector.config.sources import ALL_SOURCES, save_sources
+
+        if source_id not in ALL_SOURCES:
+            raise HTTPException(status_code=404, detail="Source not found")
+
+        del ALL_SOURCES[source_id]
+        save_sources(ALL_SOURCES)
+        ok = manager.delete_source(source_id)
+        if not ok:
+            logger.warning("Source {} removed from yaml but had no DB row.", source_id)
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Source {source_id} deleted",
+            updated=1,
         )
 
     return app

@@ -5,18 +5,28 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
 <AdminLayout title="Content" current="/content">
   <AuthGate>
-    <header class="mb-8">
-      <h1 class="display-title text-4xl text-paper-100">Published content</h1>
-      <p class="data-label mt-2">LIVE CMS SNAPSHOT · FROM /V1/ADMIN/CONTENT</p>
+    <header class="mb-8 flex items-end justify-between gap-4">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Published content</h1>
+        <p class="data-label mt-2">LIVE CMS · UNPUBLISH IS GIT-BACKED (COMMIT + PUSH)</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="bulk-reset" class="btn-danger hidden" type="button">
+          Bulk unpublish (<span id="bulk-count">0</span>)
+        </button>
+        <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+      </div>
     </header>
     <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
     <div class="card overflow-x-auto">
-      <table class="w-full min-w-[640px] text-left">
+      <table class="w-full min-w-[720px] text-left">
         <thead>
           <tr class="border-b border-ink-700">
+            <th class="px-5 py-3"><input id="select-all" type="checkbox" class="accent-amber-500" /></th>
             <th class="data-label px-5 py-3">TITLE</th>
             <th class="data-label px-5 py-3">REFINERY ID</th>
             <th class="data-label px-5 py-3">MODIFIED</th>
+            <th class="data-label px-5 py-3 text-right">ACTIONS</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -25,15 +35,30 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         No published articles found.
       </div>
     </div>
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getContent, showAuthGate } from "../lib/api";
+  import {
+    bulkResetContent,
+    clearToken,
+    getContent,
+    showAuthGate,
+    unpublishArticle,
+  } from "../lib/api";
+  import type { AdminContentEnvelope } from "../lib/types";
 
   const rowsEl = document.getElementById("rows");
   const emptyEl = document.getElementById("empty");
   const metaEl = document.getElementById("meta");
+  const toastEl = document.getElementById("toast");
+  const bulkBtn = document.getElementById("bulk-reset");
+  const bulkCountEl = document.getElementById("bulk-count");
+  const selectAllEl = document.getElementById("select-all") as HTMLInputElement | null;
+
+  let content: AdminContentEnvelope = { source_label: "", freshness_label: "", articles: [] };
+  const selected = new Set<string>();
 
   function esc(s: unknown): string {
     if (s == null) return "";
@@ -42,9 +67,27 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return div.innerHTML;
   }
 
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 max-w-md rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.setTimeout(() => toastEl?.classList.add("hidden"), 4000);
+  }
+
+  function updateBulkUi() {
+    const count = selected.size;
+    if (bulkCountEl) bulkCountEl.textContent = String(count);
+    bulkBtn?.classList.toggle("hidden", count === 0);
+  }
+
   async function load() {
     try {
-      const content = await getContent();
+      content = await getContent();
       if (emptyEl) emptyEl.classList.toggle("hidden", content.articles.length > 0);
       if (metaEl) {
         metaEl.innerHTML = `
@@ -55,17 +98,25 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       }
       if (!rowsEl) return;
       rowsEl.innerHTML = content.articles
-        .map(
-          (a) => `
+        .map((a) => {
+          const id = a.refinery_id ?? a.file_name;
+          const checked = selected.has(id) ? "checked" : "";
+          return `
           <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
+            <td class="px-5 py-3">
+              <input type="checkbox" class="row-check accent-amber-500" data-id="${esc(id)}" ${checked} />
+            </td>
             <td class="px-5 py-3">
               <div class="text-sm font-medium text-ink-100">${esc(a.title)}</div>
               <div class="font-mono text-[11px] text-ink-400">${esc(a.file_name)}</div>
             </td>
             <td class="px-5 py-3 font-mono text-xs text-ink-300">${esc(a.refinery_id ?? "—")}</td>
             <td class="px-5 py-3 font-mono text-xs text-ink-400">${esc(a.modified_at)}</td>
-          </tr>`,
-        )
+            <td class="px-5 py-3 text-right">
+              <button class="btn-danger !px-2.5 !py-1 text-xs" data-unpublish="${esc(id)}" type="button">Unpublish</button>
+            </td>
+          </tr>`;
+        })
         .join("");
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -74,11 +125,72 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         return;
       }
       if (rowsEl) {
-        rowsEl.innerHTML = `<tr><td colspan="3" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
+        rowsEl.innerHTML = `<tr><td colspan="5" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
       }
     }
   }
 
+  rowsEl?.addEventListener("change", (event) => {
+    const target = event.target as HTMLInputElement;
+    if (!target.classList.contains("row-check")) return;
+    const id = target.dataset.id ?? "";
+    if (target.checked) selected.add(id);
+    else selected.delete(id);
+    updateBulkUi();
+  });
+
+  rowsEl?.addEventListener("click", async (event) => {
+    const target = (event.target as HTMLElement).closest("button");
+    if (!target?.dataset.unpublish) return;
+    const id = target.dataset.unpublish;
+    if (!window.confirm(`Unpublish "${id}"? This commits and pushes the removal.`)) return;
+    try {
+      const result = await unpublishArticle(id);
+      showToast(result.detail);
+      await load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Unpublish failed: " + (e as Error).message, "err");
+    }
+  });
+
+  bulkBtn?.addEventListener("click", async () => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    if (!window.confirm(`Bulk unpublish ${ids.length} article(s)? This commits and pushes.`)) return;
+    try {
+      const result = await bulkResetContent(ids);
+      showToast(result.summary);
+      selected.clear();
+      updateBulkUi();
+      await load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Bulk unpublish failed: " + (e as Error).message, "err");
+    }
+  });
+
+  selectAllEl?.addEventListener("change", (event) => {
+    const checked = (event.target as HTMLInputElement).checked;
+    selected.clear();
+    if (checked) {
+      content.articles.forEach((a) => selected.add(a.refinery_id ?? a.file_name));
+    }
+    document.querySelectorAll<HTMLInputElement>(".row-check").forEach((cb) => {
+      cb.checked = checked;
+    });
+    updateBulkUi();
+  });
+
+  document.getElementById("refresh")?.addEventListener("click", () => void load());
   void load();
   window.addEventListener("auth:ready", () => void load());
 </script>

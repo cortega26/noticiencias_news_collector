@@ -7,28 +7,49 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   <AuthGate>
     <header class="mb-8">
       <h1 class="display-title text-4xl text-paper-100">Image queue</h1>
-      <p class="data-label mt-2">EDITORIAL IMAGE BRIEFS · FROM /V1/ADMIN/IMAGES</p>
+      <p class="data-label mt-2">EDIT BRIEFS · STAGE ASSETS · FROM /V1/ADMIN/IMAGES</p>
     </header>
     <div id="summary" class="mb-6 flex flex-wrap gap-3"></div>
     <div id="cards" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
     <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
       No image briefs queued.
     </div>
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getImageQueue, showAuthGate } from "../lib/api";
+  import {
+    clearToken,
+    getImageQueue,
+    showAuthGate,
+    updateImageBrief,
+    uploadImageBriefAsset,
+  } from "../lib/api";
+
 
   const cardsEl = document.getElementById("cards");
   const emptyEl = document.getElementById("empty");
   const summaryEl = document.getElementById("summary");
+  const toastEl = document.getElementById("toast");
 
   function esc(s: unknown): string {
     if (s == null) return "";
     const div = document.createElement("div");
     div.textContent = String(s);
     return div.innerHTML;
+  }
+
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 max-w-md rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.setTimeout(() => toastEl?.classList.add("hidden"), 4000);
   }
 
   async function load() {
@@ -44,14 +65,36 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       cardsEl.innerHTML = briefs
         .map(
           (b) => `
-          <div class="card p-4">
+          <div class="card p-4" data-slug="${esc(b.slug)}">
             <div class="mb-2 flex items-center justify-between">
-              <span class="status-pill status-new">${esc(b.status)}</span>
+              <span class="status-pill status-${b.status === "editorial_image_ready" ? "completed" : "new"}">${esc(b.status)}</span>
               <span class="font-mono text-[11px] text-ink-400">${esc(b.updated_at ?? "—")}</span>
             </div>
             <div class="font-mono text-xs text-amber-400">${esc(b.slug)}</div>
             <div class="mt-1 text-sm font-medium text-ink-100">${esc(b.topic)}</div>
             <div class="mt-2 font-mono text-[11px] text-ink-400">article ${esc(b.article_id)} · ${esc(b.reason)}</div>
+
+            <div class="mt-3 space-y-2">
+              <label class="block">
+                <span class="data-label block mb-1">TOPIC</span>
+                <input data-field="topic" value="${esc(b.topic)}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+              </label>
+              <label class="block">
+                <span class="data-label block mb-1">NEWS ANGLE</span>
+                <input data-field="news_angle" value="${esc(b.news_angle ?? "")}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+              </label>
+              <label class="block">
+                <span class="data-label block mb-1">ALT TEXT</span>
+                <input data-field="draft_alt_text" value="${esc(b.draft_alt_text ?? "")}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+              </label>
+              <div class="flex gap-2">
+                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-save="${esc(b.slug)}" type="button">Save edits</button>
+                <label class="btn-ghost !px-2.5 !py-1 text-xs cursor-pointer">
+                  Stage asset
+                  <input type="file" accept="image/*" class="hidden" data-upload="${esc(b.slug)}" />
+                </label>
+              </div>
+            </div>
           </div>`,
         )
         .join("");
@@ -66,6 +109,54 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       }
     }
   }
+
+  function collectFields(card: HTMLElement): Record<string, string> {
+    const fields: Record<string, string> = {};
+    card.querySelectorAll<HTMLInputElement>("input[data-field]").forEach((input) => {
+      const key = input.dataset.field ?? "";
+      if (key) fields[key] = input.value;
+    });
+    return fields;
+  }
+
+  cardsEl?.addEventListener("click", async (event) => {
+    const target = (event.target as HTMLElement).closest("button");
+    if (!target?.dataset.save) return;
+    const slug = target.dataset.save;
+    const card = target.closest<HTMLElement>("[data-slug]");
+    if (!card) return;
+    try {
+      await updateImageBrief(slug, collectFields(card));
+      showToast(`Brief ${slug} updated`);
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Save failed: " + (e as Error).message, "err");
+    }
+  });
+
+  cardsEl?.addEventListener("change", async (event) => {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const slug = input.dataset.upload ?? "";
+    const card = input.closest<HTMLElement>("[data-slug]");
+    if (!card) return;
+    try {
+      await uploadImageBriefAsset(slug, input.files[0], collectFields(card));
+      showToast(`Asset staged for ${slug}`);
+      await load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Upload failed: " + (e as Error).message, "err");
+    }
+  });
 
   void load();
   window.addEventListener("auth:ready", () => void load());
