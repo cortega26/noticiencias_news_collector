@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import hmac
 import itertools
 import os
@@ -88,6 +89,7 @@ _ADMIN_VALID_STATUSES = frozenset(
 _admin_run_lock = threading.Lock()
 _admin_runs: Dict[str, Dict[str, Any]] = {}
 _admin_run_counter = itertools.count(1)
+_latest_run_id: Optional[str] = None
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator
@@ -1024,11 +1026,29 @@ def create_app(  # noqa: C901
     # Phase 3: operational surface (fetch/reprocess/manage)
     # ------------------------------------------------------------------
 
-    def _start_collect_run(dry_run: bool) -> str:
-        """Run a collection cycle in a daemon thread; returns the run id."""
-        global _admin_run_counter
+    def _prune_collect_runs() -> None:
+        """Keep only the two most recent runs in the registry (bounded
+        memory for a long-lived server). Caller must hold the lock."""
+        if len(_admin_runs) <= 2:
+            return
+        for stale_id in sorted(_admin_runs, key=lambda rid: int(rid.split("-")[1]))[
+            : len(_admin_runs) - 2
+        ]:
+            _admin_runs.pop(stale_id, None)
+
+    def _start_collect_run(
+        dry_run: bool,
+    ) -> str:
+        """Run a collection cycle in a daemon thread; returns the run id.
+
+        Recency is tracked explicitly — never ``max()`` over the dict,
+        because run ids are strings and lexicographic max breaks past
+        ``collect-9``.
+        """
+        global _admin_run_counter, _latest_run_id
         with _admin_run_lock:
-            run_id = f"collect-{next(_admin_run_counter)}"
+            run_number = next(_admin_run_counter)
+            run_id = f"collect-{run_number}"
             _admin_runs[run_id] = {
                 "run_id": run_id,
                 "status": "queued",
@@ -1038,9 +1058,13 @@ def create_app(  # noqa: C901
                 "summary": {},
                 "dry_run": dry_run,
             }
+            _latest_run_id = run_id
+            _prune_collect_runs()
 
         def _run() -> None:
             with _admin_run_lock:
+                if run_id not in _admin_runs:
+                    return  # pruned while queued — nothing to report
                 _admin_runs[run_id]["status"] = "running"
                 _admin_runs[run_id]["started_at"] = datetime.now(
                     timezone.utc
@@ -1067,18 +1091,24 @@ def create_app(  # noqa: C901
 
                 summary = asyncio.run(_cycle())
                 with _admin_run_lock:
-                    _admin_runs[run_id]["status"] = "succeeded"
-                    _admin_runs[run_id]["summary"] = summary or {}
+                    # The record may have been pruned while this run was
+                    # executing (registry is bounded) — that's fine, the
+                    # status is no longer queryable.
+                    if run_id in _admin_runs:
+                        _admin_runs[run_id]["status"] = "succeeded"
+                        _admin_runs[run_id]["summary"] = summary or {}
             except Exception as exc:  # pragma: no cover - failure path
                 logger.error("Collection run {} failed: {}", run_id, exc)
                 with _admin_run_lock:
-                    _admin_runs[run_id]["status"] = "failed"
-                    _admin_runs[run_id]["error"] = str(exc)
+                    if run_id in _admin_runs:
+                        _admin_runs[run_id]["status"] = "failed"
+                        _admin_runs[run_id]["error"] = str(exc)
             finally:
                 with _admin_run_lock:
-                    _admin_runs[run_id]["finished_at"] = datetime.now(
-                        timezone.utc
-                    ).isoformat()
+                    if run_id in _admin_runs:
+                        _admin_runs[run_id]["finished_at"] = datetime.now(
+                            timezone.utc
+                        ).isoformat()
 
         threading.Thread(target=_run, daemon=True, name=run_id).start()
         return run_id
@@ -1108,10 +1138,11 @@ def create_app(  # noqa: C901
         _: None = Depends(verify_admin_token),
     ) -> AdminCollectStatus:
         """Return the most recent run (or the named one via ?run_id=)."""
+        global _latest_run_id
         with _admin_run_lock:
             target = run_id if run_id and run_id in _admin_runs else None
             if target is None:
-                target = max(_admin_runs, default=None) if _admin_runs else None
+                target = _latest_run_id if _latest_run_id in _admin_runs else None
             if target is None:
                 return AdminCollectStatus()
             run = _admin_runs[target]
@@ -1302,19 +1333,31 @@ def create_app(  # noqa: C901
         payload: AdminPromptsEnvelope,
         _: None = Depends(verify_admin_token),
     ) -> AdminPromptsEnvelope:
+        import tempfile
+
         import yaml
 
         prompts_path = Path("config/prompts.yaml")
         prompts_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with open(prompts_path, "w", encoding="utf-8") as f:
-                yaml.safe_dump(
-                    payload.prompts,
-                    f,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                    sort_keys=False,
-                )
+            # Atomic write: never leave a truncated prompts.yaml on crash.
+            serialized = yaml.safe_dump(
+                payload.prompts,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+            fd, tmp_name = tempfile.mkstemp(
+                prefix=".prompts-", dir=str(prompts_path.parent)
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(serialized)
+                os.replace(tmp_name, prompts_path)
+            except BaseException:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_name)
+                raise
         except (OSError, yaml.YAMLError) as exc:
             raise HTTPException(
                 status_code=500, detail=f"Failed to write prompts: {exc}"

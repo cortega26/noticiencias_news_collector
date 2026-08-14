@@ -9,6 +9,7 @@ fail-closed outside development) with a distinct `ADMIN_API_KEY`.
 from __future__ import annotations
 
 import json
+from itertools import count as itertools_count
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -994,3 +995,96 @@ def test_admin_config_partial_patch_merges(
     assert "[paths]" in saved
     assert "[scoring]" in saved
     assert "[database]" in saved
+
+
+def test_admin_collect_latest_run_past_nine_and_registry_bounded(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """Regression: run-id recency must not use lexicographic max (breaks at
+    collect-10 < collect-9), and the registry must stay bounded."""
+    import threading as _threading
+
+    import news_collector.serving.api as serving_api
+
+    release = _threading.Event()
+
+    class _FakeSystem:
+        def initialize(self) -> bool:
+            return True
+
+        async def run_collection_cycle(self, dry_run: bool = False):
+            release.wait(timeout=10)
+            return {"status": "ok"}
+
+        async def shutdown(self):
+            return None
+
+        def export_latest_articles(self, file_path=None, limit=50):
+            return {}
+
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: _FakeSystem()
+    )
+    # Start counter at 8 so the 11th run id would be collect-11.
+    monkeypatch.setattr(serving_api, "_admin_run_counter", itertools_count(8))
+    monkeypatch.setattr(serving_api, "_admin_runs", {})
+    monkeypatch.setattr(serving_api, "_latest_run_id", None)
+
+    started_ids = []
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        for _ in range(11):
+            resp = api_client.post(
+                "/v1/admin/collect",
+                json={"dry_run": True},
+                headers=_admin_headers(),
+            )
+            assert resp.status_code == 200
+            started_ids.append(resp.json()["run_id"])
+
+    assert started_ids[-1] == "collect-18"  # counter(8) + 11 runs
+
+    # Latest run is the one just started (numeric recency, not lexical).
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        status = api_client.get(
+            "/v1/admin/collect/status", headers=_admin_headers()
+        ).json()
+    assert status["run_id"] == "collect-18"
+
+    # Registry is bounded to the 2 most recent runs.
+    assert set(serving_api._admin_runs.keys()) == {"collect-17", "collect-18"}
+
+    release.set()
+
+
+def test_admin_prompts_save_is_atomic(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Regression: prompts.yaml must be written atomically (no truncated
+    file on crash) — save to a temp file then os.replace."""
+    from news_collector.serving import api as serving_api
+
+    prompts_file = tmp_path / "prompts.yaml"
+    prompts_file.write_text("auditor:\n  system: original\n", encoding="utf-8")
+
+    real_path = serving_api.Path
+
+    def _fake_path(*a, **k):
+        if a and "prompts.yaml" in str(a[0]):
+            return prompts_file
+        return real_path(*a, **k)
+
+    monkeypatch.setattr(serving_api, "Path", _fake_path)
+    monkeypatch.setattr(serving_api, "os", __import__("os"))
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/prompts",
+            json={"prompts": {"editor": {"system": "nuevo"}}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+
+    # The temp file must not remain behind; the target must be complete.
+    leftovers = list(tmp_path.glob(".prompts-*"))
+    assert leftovers == [], f"temp files left behind: {leftovers}"
+    assert "editor" in prompts_file.read_text(encoding="utf-8")
