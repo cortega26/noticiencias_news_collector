@@ -1387,6 +1387,28 @@ class ArticleRepository:
     # Delete / clear
     # ------------------------------------------------------------------
 
+    def reset_article_for_reprocess(self, article_id: int) -> bool:
+        """Reset an article to 'pending' so the next cycle re-processes it.
+
+        Clears the error message and the editorial-stage metadata (audit,
+        publication state) that a prior run may have left, keeping the
+        collected content and score history intact. Idempotent: an already
+        pending article is left untouched and still reports success.
+        """
+        with self._session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is None:
+                return False
+            article.processing_status = PENDING_STATUS
+            article.error_message = None
+            metadata = dict(article.article_metadata or {})
+            metadata.pop("audit", None)
+            metadata.pop("publication", None)
+            article.article_metadata = metadata
+            session.add(article)
+            logger.info("Article {} reset for reprocessing.", article_id)
+            return True
+
     def delete_article(self, article_id: Union[int, str]) -> bool:
         """Delete a single article by ID."""
         try:

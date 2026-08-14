@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -645,3 +646,350 @@ def test_admin_reject_already_rejected_is_noop(
         )
         assert response.status_code == 200
         assert response.json()["status"] == "noop"
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: operational surface
+# ---------------------------------------------------------------------------
+
+
+def test_admin_reprocess_resets_to_pending(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    with db_manager.get_session() as session:
+        article = (
+            session.query(Article)
+            .filter(Article.processing_status == "completed")
+            .first()
+        )
+        article_id = article.id
+        article.error_message = "boom"
+        article.article_metadata = {
+            "audit": {"state": "failed"},
+            "publication": {"state": "REJECTED"},
+        }
+        session.add(article)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            f"/v1/admin/articles/{article_id}/reprocess",
+            json={},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+
+    with db_manager.get_session() as session:
+        article = session.query(Article).filter(Article.id == article_id).first()
+        assert article.processing_status == "pending"
+        assert article.error_message is None
+        assert "audit" not in article.article_metadata
+        assert "publication" not in article.article_metadata
+
+
+def test_admin_reprocess_unknown_id_404(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/articles/9999/reprocess", json={}, headers=_admin_headers()
+        )
+        assert response.status_code == 404
+
+
+def test_admin_collect_starts_and_status_lifecycle(
+    api_client: TestClient, monkeypatch
+) -> None:
+    import threading
+
+    from news_collector.serving import api as serving_api
+
+    started = threading.Event()
+    release = threading.Event()
+
+    class _FakeSystem:
+        def initialize(self) -> bool:
+            started.set()
+            return True
+
+        async def run_collection_cycle(self, dry_run: bool = False):
+            release.wait(timeout=10)
+            return {"status": "ok", "sources_processed": 3}
+
+        async def shutdown(self):
+            return None
+
+        def export_latest_articles(self, file_path=None, limit=50):
+            return {}
+
+    def _fake_create_system(*args, **kwargs):
+        return _FakeSystem()
+
+    monkeypatch.setattr(
+        "news_collector.system.create_system", _fake_create_system, raising=False
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/collect", json={"dry_run": True}, headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["run_id"].startswith("collect-")
+        assert body["status"] == "queued"
+
+        assert started.wait(timeout=10), "collection thread never started"
+
+        status = api_client.get(
+            "/v1/admin/collect/status", headers=_admin_headers()
+        ).json()
+        assert status["status"] == "running"
+
+        release.set()
+        # The thread finishes async; poll until done.
+        for _ in range(50):
+            status = api_client.get(
+                "/v1/admin/collect/status", headers=_admin_headers()
+            ).json()
+            if status["status"] == "succeeded":
+                break
+            time.sleep(0.1)
+        assert status["status"] == "succeeded"
+        assert status["summary"].get("sources_processed") == 3
+
+
+def test_admin_sources_list_toggle_reset(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    # ALL_SOURCES comes from config/sources.yaml; pick a real id and seed
+    # its circuit row so toggle/reset have something to act on.
+    from news_collector.config.sources import ALL_SOURCES
+
+    source_id = next(iter(sorted(ALL_SOURCES)))
+    with db_manager.get_session() as session:
+        src = session.query(Source).filter(Source.id == source_id).first()
+        if src is None:
+            session.add(
+                Source(
+                    id=source_id,
+                    name=str(ALL_SOURCES[source_id].get("name", source_id)),
+                    url=str(ALL_SOURCES[source_id].get("url", "https://example.com")),
+                    credibility_score=0.5,
+                    category="science",
+                )
+            )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/sources", headers=_admin_headers())
+        assert response.status_code == 200
+        body = response.json()
+        ids = [s["source_id"] for s in body["sources"]]
+        assert source_id in ids
+
+        response = api_client.post(
+            f"/v1/admin/sources/{source_id}/toggle",
+            json={"active": False},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+
+        with db_manager.get_session() as session:
+            src = session.query(Source).filter(Source.id == source_id).first()
+            assert src.is_active is False
+
+        response = api_client.post(
+            f"/v1/admin/sources/{source_id}/reset", json={}, headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+
+        response = api_client.post(
+            "/v1/admin/sources/nope/toggle",
+            json={"active": True},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 404
+
+
+def test_admin_prompts_roundtrip(api_client: TestClient, tmp_path, monkeypatch) -> None:
+    import yaml
+
+    from news_collector.serving import api as serving_api
+
+    prompts_file = tmp_path / "prompts.yaml"
+    prompts_file.write_text(
+        yaml.safe_dump({"auditor": {"system": "Eres un auditor."}}, allow_unicode=True),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        serving_api,
+        "Path",
+        lambda *a, **k: prompts_file if "prompts" in str(a[0]) else Path(*a),
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/prompts", headers=_admin_headers())
+        assert response.status_code == 200
+        assert response.json()["prompts"]["auditor"]["system"] == "Eres un auditor."
+
+        response = api_client.post(
+            "/v1/admin/prompts",
+            json={"prompts": {"editor": {"system": "Nuevo prompt."}}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+
+        reloaded = yaml.safe_load(prompts_file.read_text(encoding="utf-8"))
+        assert reloaded["editor"]["system"] == "Nuevo prompt."
+
+
+def test_admin_images_queue_reads_briefs(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from pathlib import Path as _Path
+
+    from news_collector.contracts.image_brief import ImageBriefModel
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.serving import api as serving_api
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(
+        ImageBriefModel(
+            slug="test-brief",
+            article_id="123",
+            reason="missing_source_image",
+            topic="salud",
+            news_angle="nuevo hallazgo",
+            scientific_domain="medicina",
+            subject_scene="laboratorio",
+            tone="informativo",
+            draft_alt_text="Imagen de laboratorio",
+            generated_prompt="Genera una imagen de un laboratorio moderno con un hallazgo medico.",
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/images", headers=_admin_headers())
+        assert response.status_code == 200
+        briefs = response.json()["briefs"]
+        assert any(b["slug"] == "test-brief" for b in briefs)
+
+
+def test_admin_config_save_roundtrip_and_secret_drop(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Regression: POST /v1/admin/config must accept the full config dict,
+    validate it through the schema (not a partial model_copy that mangles
+    nested sections), never persist secrets, and report the snapshot meta."""
+    import copy
+
+    from noticiencias.config_manager import load_config as _load
+    from news_collector.config import settings as _settings
+    from news_collector.serving import api as serving_api
+
+    # Point the serving endpoint's config IO at a tmp file.
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        Path("config.toml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    real_load = serving_api.load_config
+    real_save = _settings.refresh_runtime_config
+
+    monkeypatch.setattr(serving_api, "load_config", lambda: _load(cfg_file))
+
+    def _fake_save(validated):
+        _save_config_to(cfg_file, validated)
+
+    # save_config writes to metadata.config_path; wire it to the tmp file.
+    def _save_config_to(path, validated):
+        from noticiencias.config_manager import save_config
+
+        save_config(validated, path)
+
+    monkeypatch.setattr(
+        _settings, "refresh_runtime_config", lambda cfg=None: real_save(real_load())
+    )
+
+    full = _load(cfg_file).model_dump(mode="python")
+    # A real client sends JSON: paths become strings, Path objects drop out.
+    full = json.loads(json.dumps(full, default=str))
+    full["github"]["token"] = "SHOULD-NOT-PERSIST"
+    full["app"]["environment"] = "development"
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config", json=full, headers=_admin_headers()
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["environment"] == "development"
+
+    saved = cfg_file.read_text(encoding="utf-8")
+    assert "SHOULD-NOT-PERSIST" not in saved
+    assert "[paths]" in saved  # full sections preserved, not mangled
+
+    # Invalid full config → 422 and no file write.
+    bad = copy.deepcopy(full)
+    bad["scoring"]["weights"]["source_credibility"] = 1.5  # sum > 1
+    before = cfg_file.read_text(encoding="utf-8")
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config", json=bad, headers=_admin_headers()
+        )
+        assert response.status_code == 422
+    assert cfg_file.read_text(encoding="utf-8") == before
+
+
+def test_admin_config_partial_patch_merges(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """A partial payload (only github) must merge over the current full
+    config and save without mangling other sections."""
+    from noticiencias.config_manager import load_config as _load
+
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        Path("config.toml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    from news_collector.serving import api as serving_api
+
+    monkeypatch.setattr(serving_api, "load_config", lambda: _load(cfg_file))
+
+    from noticiencias.config_manager import save_config as _save_config
+
+    real_save = _save_config
+    real_refresh = __import__(
+        "news_collector.config.settings", fromlist=["refresh_runtime_config"]
+    ).refresh_runtime_config
+
+    def _save_to_tmp(validated, path=None):
+        return real_save(validated, cfg_file)
+
+    monkeypatch.setattr("noticiencias.config_manager.save_config", _save_to_tmp)
+    monkeypatch.setattr(
+        "news_collector.config.settings.refresh_runtime_config",
+        lambda cfg=None: real_refresh(_load()),
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config",
+            json={
+                "github": {
+                    "target_repo_url": "https://github.com/cortega26/noticiencias.git"
+                }
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200, response.text
+
+    saved = cfg_file.read_text(encoding="utf-8")
+    assert "[paths]" in saved
+    assert "[scoring]" in saved
+    assert "[database]" in saved

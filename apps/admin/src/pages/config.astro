@@ -5,9 +5,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
 <AdminLayout title="Config" current="/config">
   <AuthGate>
-    <header class="mb-8">
-      <h1 class="display-title text-4xl text-paper-100">Configuration</h1>
-      <p class="data-label mt-2">SANITIZED READ · SECRETS NEVER SENT</p>
+    <header class="mb-8 flex items-end justify-between">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Configuration</h1>
+        <p class="data-label mt-2">SANITIZED READ · SECRETS NEVER SENT · SAVE VALIDATED</p>
+      </div>
+      <button id="save" class="btn-primary" type="button">Save config</button>
     </header>
 
     <div id="config" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -15,13 +18,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         Loading…
       </div>
     </div>
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getConfig, showAuthGate } from "../lib/api";
+  import { clearToken, getConfig, saveConfig, showAuthGate } from "../lib/api";
 
   const root = document.getElementById("config");
+  const toastEl = document.getElementById("toast");
+  const saveBtn = document.getElementById("save");
 
   function esc(s: unknown): string {
     if (s == null) return "";
@@ -30,43 +36,64 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return div.innerHTML;
   }
 
-  function kvList(obj: Record<string, unknown> | undefined): string {
-    if (!obj || !Object.keys(obj).length) {
-      return '<p class="text-sm text-ink-400">—</p>';
-    }
-    return Object.entries(obj)
-      .map(
-        ([k, v]) => `
-        <div class="flex justify-between gap-4 border-b border-ink-800/60 py-1.5 last:border-0">
-          <span class="font-mono text-xs text-ink-400">${esc(k)}</span>
-          <span class="text-right font-mono text-xs text-ink-200">${esc(typeof v === "object" ? JSON.stringify(v) : v)}</span>
-        </div>`,
-      )
-      .join("");
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.setTimeout(() => toastEl?.classList.add("hidden"), 3200);
   }
+
+  function editorSection(
+    id: string,
+    label: string,
+    entries: Array<[string, unknown]>,
+  ): string {
+    if (!entries.length) {
+      return `<div class="card p-5"><div class="data-label mb-3">${esc(label)}</div><p class="text-sm text-ink-400">—</p></div>`;
+    }
+    return `
+      <div class="card p-5" data-section="${esc(id)}">
+        <div class="data-label mb-3">${esc(label)}</div>
+        ${entries
+          .map(
+            ([k, v]) => `
+            <label class="mb-3 block">
+              <span class="mb-1.5 block font-mono text-[11px] text-ink-400">${esc(k)}</span>
+              <input data-key="${esc(k)}" value="${esc(v)}" data-type="${typeof v === "number" ? "number" : "string"}"
+                class="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-xs text-ink-100 outline-none transition-colors focus:border-amber-500" />
+            </label>`,
+          )
+          .join("")}
+      </div>`;
+  }
+
+  let fullConfig: Record<string, unknown> = {};
 
   async function load() {
     try {
       const cfg = await getConfig();
+      fullConfig = { ...cfg };
       if (!root) return;
-      root.innerHTML = `
-        <div class="card p-5">
-          <div class="data-label mb-3">ENVIRONMENT</div>
-          ${kvList({ environment: cfg.environment, debug: cfg.debug, timezone: cfg.timezone })}
-        </div>
-        <div class="card p-5">
-          <div class="data-label mb-3">GITHUB</div>
-          ${kvList(cfg.github as Record<string, unknown>)}
-        </div>
-        <div class="card p-5">
-          <div class="data-label mb-3">OLLAMA MODELS</div>
-          ${kvList(cfg.ollama as Record<string, unknown>)}
-        </div>
-        <div class="card p-5">
-          <div class="data-label mb-3">SCORING</div>
-          ${kvList(cfg.scoring as Record<string, unknown>)}
-        </div>
-      `;
+      const github = Object.entries(cfg.github as Record<string, unknown>);
+      const ollama = Object.entries(cfg.ollama as Record<string, unknown>);
+      root.innerHTML =
+        editorSection("app", "ENVIRONMENT", [
+          ["environment", cfg.environment],
+          ["debug", cfg.debug],
+          ["timezone", cfg.timezone],
+        ]) +
+        editorSection("github", "GITHUB", github) +
+        editorSection("ollama", "OLLAMA MODELS", ollama) +
+        editorSection(
+          "scoring",
+          "SCORING",
+          Object.entries((cfg.scoring as Record<string, unknown>) ?? {}),
+        );
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
         clearToken();
@@ -78,6 +105,48 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       }
     }
   }
+
+  saveBtn?.addEventListener("click", async () => {
+    // The API validates the FULL config dict (same contract as the
+    // Streamlit save_toml_config); rebuild it from the loaded snapshot
+    // plus the edited fields.
+    const patch: Record<string, unknown> = {};
+    document.querySelectorAll<HTMLInputElement>("#config input[data-key]").forEach((input) => {
+      const section = input.closest("[data-section]")?.getAttribute("data-section") ?? "";
+      const key = input.dataset.key ?? "";
+      if (!section || !key) return;
+      const type = input.dataset.type;
+      let value: unknown = input.value;
+      if (type === "number") value = Number(input.value);
+      if (key === "debug") value = input.value === "true";
+      patch[section] = { ...(patch[section] as Record<string, unknown> ?? {}), [key]: value };
+    });
+
+    const submit = {
+      ...fullConfig,
+      ...patch,
+    };
+    // The snapshot's nested objects are already plain dicts; ensure the
+    // app section carries environment/debug/timezone.
+    submit.app = {
+      ...(submit.app as Record<string, unknown> ?? {}),
+      ...((patch.app as Record<string, unknown>) ?? {}),
+      environment: (patch.app as Record<string, unknown> | undefined)?.environment ?? fullConfig.environment,
+    };
+    try {
+      const saved = await saveConfig(submit);
+      showToast(
+        `Config saved (v${(saved.meta as Record<string, unknown>)?.version ?? "?"})`,
+      );
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Save failed: " + (e as Error).message, "err");
+    }
+  });
 
   void load();
   window.addEventListener("auth:ready", () => void load());

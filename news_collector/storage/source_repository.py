@@ -117,6 +117,22 @@ class SourceRepository:
     # Initialization
     # ------------------------------------------------------------------
 
+    def set_source_active(self, source_id: str, active: bool) -> bool:
+        """Enable/disable a source for collection (is_active flag).
+
+        Circuit state (status/cooldown) is left untouched — this only
+        gates whether the collector picks the source up in future cycles.
+        Returns False when the source row does not exist.
+        """
+        with self._session() as session:
+            source = session.query(Source).filter(Source.id == source_id).first()
+            if source is None:
+                return False
+            source.is_active = active
+            session.add(source)
+            logger.info("Source {} is_active -> {}", source_id, active)
+            return True
+
     def initialize_sources(self, sources_config: Dict[str, Dict]) -> None:
         """Create or update source records from a config dictionary."""
         with self._session() as session:

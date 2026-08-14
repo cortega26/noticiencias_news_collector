@@ -5,38 +5,43 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
 <AdminLayout title="Sources" current="/sources">
   <AuthGate>
-    <header class="mb-8">
-      <h1 class="display-title text-4xl text-paper-100">Source health</h1>
-      <p class="data-label mt-2">FROM /V1/ADMIN/SOURCES/HEALTH · COLLECTOR EXPORT</p>
+    <header class="mb-8 flex items-end justify-between">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Source manager</h1>
+        <p class="data-label mt-2">CIRCUIT STATE + ACTIVE FLAG · FROM /V1/ADMIN/SOURCES</p>
+      </div>
+      <button id="refresh" class="btn-ghost" type="button">Refresh</button>
     </header>
     <div id="summary" class="mb-6 flex flex-wrap gap-3"></div>
     <div class="card overflow-x-auto">
-      <table class="w-full min-w-[720px] text-left">
+      <table class="w-full min-w-[760px] text-left">
         <thead>
           <tr class="border-b border-ink-700">
             <th class="data-label px-5 py-3">SOURCE</th>
-            <th class="data-label px-5 py-3">FEED</th>
-            <th class="data-label px-5 py-3">PIPELINE</th>
-            <th class="data-label px-5 py-3">CONTENT</th>
-            <th class="data-label px-5 py-3">SAVE RATIO</th>
-            <th class="data-label px-5 py-3">STATE</th>
+            <th class="data-label px-5 py-3">MODE</th>
+            <th class="data-label px-5 py-3">CIRCUIT</th>
+            <th class="data-label px-5 py-3">ACTIVE</th>
+            <th class="data-label px-5 py-3 text-right">ACTIONS</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
-        No source health data. Run the collector to produce the export.
+        No sources loaded.
       </div>
     </div>
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getSourceHealth, showAuthGate } from "../lib/api";
+  import { clearToken, listSources, resetSourceCircuit, showAuthGate, toggleSource } from "../lib/api";
+
 
   const rowsEl = document.getElementById("rows");
   const emptyEl = document.getElementById("empty");
   const summaryEl = document.getElementById("summary");
+  const toastEl = document.getElementById("toast");
 
   function esc(s: unknown): string {
     if (s == null) return "";
@@ -45,54 +50,107 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return div.innerHTML;
   }
 
-  function okBadge(ok: unknown): string {
-    return ok
-      ? '<span class="font-mono text-xs text-verdigris-400">● OK</span>'
-      : '<span class="font-mono text-xs text-rose-400">● FAIL</span>';
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.setTimeout(() => toastEl?.classList.add("hidden"), 2600);
+  }
+
+  function circuitLabel(circuit: Record<string, unknown> | null): string {
+    if (!circuit) return "no row";
+    const status = String(circuit.status ?? "ACTIVE");
+    const failures = Number(circuit.consecutive_failures ?? 0);
+    if (status === "COOLDOWN") {
+      return `COOLDOWN (${failures} fail)`;
+    }
+    return `${status}${failures > 0 ? ` (${failures} fail)` : ""}`;
   }
 
   async function load() {
     try {
-      const { sources } = await getSourceHealth();
-      if (!sources.length) {
-        emptyEl?.classList.remove("hidden");
-        return;
-      }
-      const healthy = sources.filter((s) => s.content_ok).length;
-      const total = sources.length;
+      const { sources } = await listSources();
+      if (emptyEl) emptyEl.classList.toggle("hidden", sources.length > 0);
+      const active = sources.filter((s) => s.is_active).length;
+      const cooldown = sources.filter(
+        (s) => (s.circuit?.status as string) === "COOLDOWN",
+      ).length;
       if (summaryEl) {
         summaryEl.innerHTML = `
-          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">total <span class="text-amber-400">${total}</span></div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">content-ok ${healthy}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-rose-400">failing ${total - healthy}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">total <span class="text-amber-400">${sources.length}</span></div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">active ${active}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-rose-400">cooldown ${cooldown}</div>
         `;
       }
       if (!rowsEl) return;
-      rowsEl.innerHTML = sources.map((s) => `
-        <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
-          <td class="px-5 py-3">
-            <div class="text-sm font-medium text-ink-100">${esc(s.source_name ?? s.source_id)}</div>
-            <div class="font-mono text-[11px] text-ink-400">${esc(s.source_id)}</div>
-          </td>
-          <td class="px-5 py-3">${okBadge(s.feed_ok)}</td>
-          <td class="px-5 py-3">${okBadge(s.pipeline_ok)}</td>
-          <td class="px-5 py-3">${okBadge(s.content_ok)}</td>
-          <td class="px-5 py-3 font-mono text-xs text-ink-200">${typeof s.save_ratio === "number" ? (s.save_ratio * 100).toFixed(1) + "%" : "—"}</td>
-          <td class="px-5 py-3"><span class="font-mono text-[11px] text-ink-300">${esc(s.operational_state ?? "unknown")}</span></td>
-        </tr>
-      `).join("");
+      rowsEl.innerHTML = sources
+        .map((s) => {
+          const inCooldown = (s.circuit?.status as string) === "COOLDOWN";
+          return `
+          <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
+            <td class="px-5 py-3">
+              <div class="text-sm font-medium text-ink-100">${esc(s.name ?? s.source_id)}</div>
+              <div class="font-mono text-[11px] text-ink-400">${esc(s.source_id)}</div>
+            </td>
+            <td class="px-5 py-3 font-mono text-[11px] text-ink-300">${esc(s.content_mode ?? "—")}</td>
+            <td class="px-5 py-3">
+              <span class="font-mono text-[11px] ${inCooldown ? "text-rose-400" : "text-verdigris-400"}">${esc(circuitLabel(s.circuit))}</span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="font-mono text-[11px] ${s.is_active ? "text-verdigris-400" : "text-ink-400"}">${s.is_active ? "ON" : "OFF"}</span>
+            </td>
+            <td class="px-5 py-3">
+              <div class="flex justify-end gap-2">
+                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-toggle="${esc(s.source_id)}" data-active="${s.is_active ? "1" : "0"}" type="button">
+                  ${s.is_active ? "Deactivate" : "Activate"}
+                </button>
+                ${inCooldown ? `<button class="btn-ghost !px-2.5 !py-1 text-xs" data-reset="${esc(s.source_id)}" type="button">Reset circuit</button>` : ""}
+              </div>
+            </td>
+          </tr>`;
+        })
+        .join("");
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
         clearToken();
         showAuthGate();
         return;
       }
-      if (rowsEl) {
-        rowsEl.innerHTML = `<tr><td colspan="6" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
-      }
+      showToast("Failed to load sources: " + (e as Error).message, "err");
     }
   }
 
+  rowsEl?.addEventListener("click", async (event) => {
+    const target = (event.target as HTMLElement).closest("button");
+    if (!target) return;
+    const sourceId = target.dataset.toggle ?? target.dataset.reset;
+    if (!sourceId) return;
+    try {
+      if (target.dataset.toggle) {
+        const active = target.dataset.active === "1" ? false : true;
+        const result = await toggleSource(sourceId, active);
+        showToast(result.detail);
+      } else {
+        const result = await resetSourceCircuit(sourceId);
+        showToast(result.detail);
+      }
+      await load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Action failed: " + (e as Error).message, "err");
+    }
+  });
+
+  document.getElementById("refresh")?.addEventListener("click", () => void load());
   void load();
   window.addEventListener("auth:ready", () => void load());
 </script>

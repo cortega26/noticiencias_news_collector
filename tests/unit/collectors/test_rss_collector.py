@@ -177,6 +177,14 @@ def test_parse_success_records_article_count_as_found(rss_collector):
             return_value={"success": True, "parsed_feed": object()},
         ),
         patch.object(rss_collector.parser, "extract_items", return_value=candidates),
+        # The router must not reach the network: this test only asserts the
+        # FOUND/parse count, not enrichment behavior (real HTTP to feed.com
+        # made this order-dependent under pytest-randomly).
+        patch.object(
+            rss_collector,
+            "router",
+            MagicMock(route_enrichment=lambda *a, **k: {}),
+        ),
     ):
         rss_collector.health_tracker = tracker
         rss_collector.db_manager.article_exists.return_value = False

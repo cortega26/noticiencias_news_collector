@@ -1,0 +1,72 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Images" current="/images">
+  <AuthGate>
+    <header class="mb-8">
+      <h1 class="display-title text-4xl text-paper-100">Image queue</h1>
+      <p class="data-label mt-2">EDITORIAL IMAGE BRIEFS · FROM /V1/ADMIN/IMAGES</p>
+    </header>
+    <div id="summary" class="mb-6 flex flex-wrap gap-3"></div>
+    <div id="cards" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+    <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
+      No image briefs queued.
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getImageQueue, showAuthGate } from "../lib/api";
+
+  const cardsEl = document.getElementById("cards");
+  const emptyEl = document.getElementById("empty");
+  const summaryEl = document.getElementById("summary");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  async function load() {
+    try {
+      const { briefs } = await getImageQueue();
+      if (emptyEl) emptyEl.classList.toggle("hidden", briefs.length > 0);
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">briefs <span class="text-amber-400">${briefs.length}</span></div>
+        `;
+      }
+      if (!cardsEl) return;
+      cardsEl.innerHTML = briefs
+        .map(
+          (b) => `
+          <div class="card p-4">
+            <div class="mb-2 flex items-center justify-between">
+              <span class="status-pill status-new">${esc(b.status)}</span>
+              <span class="font-mono text-[11px] text-ink-400">${esc(b.updated_at ?? "—")}</span>
+            </div>
+            <div class="font-mono text-xs text-amber-400">${esc(b.slug)}</div>
+            <div class="mt-1 text-sm font-medium text-ink-100">${esc(b.topic)}</div>
+            <div class="mt-2 font-mono text-[11px] text-ink-400">article ${esc(b.article_id)} · ${esc(b.reason)}</div>
+          </div>`,
+        )
+        .join("");
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (cardsEl) {
+        cardsEl.innerHTML = `<div class="card col-span-full px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</div>`;
+      }
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>

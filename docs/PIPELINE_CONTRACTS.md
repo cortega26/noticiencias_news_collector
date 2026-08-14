@@ -93,6 +93,11 @@ The serving layer currently exposes a read-oriented API:
 - admin GUI (`apps/admin/`, Phase 2): Astro 7 + Tailwind 4 client of the
   admin surface; cross-origin access allowed only for origins listed in
   `ADMIN_CORS_ORIGINS` (default localhost:4321/4322)
+- admin operational surface (Phase 3): collect trigger (async run + status
+  poll), article reprocess, source manager (list/toggle/reset circuit),
+  config save (full-schema validation, secrets dropped), prompt lab
+  (config/prompts.yaml round-trip), published-content snapshot, image
+  queue — all dispatching to existing storage/workflow modules
 
 The serving layer is not the owner of editorial mutation workflows.
 

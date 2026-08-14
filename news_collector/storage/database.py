@@ -458,6 +458,9 @@ class DatabaseManager:
     def delete_article(self, article_id: Union[int, str]) -> bool:
         return self.articles.delete_article(article_id)
 
+    def reset_article_for_reprocess(self, article_id: int) -> bool:
+        return self.articles.reset_article_for_reprocess(article_id)
+
     def clear_all_articles(self) -> int:
         return self.articles.clear_all_articles()
 
@@ -465,6 +468,9 @@ class DatabaseManager:
 
     def get_source_circuit_state(self, source_id: str) -> Optional[Dict[str, Any]]:
         return self.sources.get_source_circuit_state(source_id)
+
+    def set_source_active(self, source_id: str, active: bool) -> bool:
+        return self.sources.set_source_active(source_id, active)
 
     def update_source_circuit_state(
         self,

@@ -108,6 +108,7 @@ class AdminConfigSnapshot(BaseModel):
     ollama: Dict[str, Any] = Field(default_factory=dict)
     scoring: Dict[str, Any] = Field(default_factory=dict)
     sources: List[Dict[str, Any]] = Field(default_factory=list)
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AdminAuditStatusUpdate(BaseModel):
@@ -130,3 +131,84 @@ class AdminMutationResult(BaseModel):
     status: AdminMutationStatus
     detail: str
     updated: int = 0
+
+
+class AdminCollectRequest(BaseModel):
+    """Body for triggering a collection cycle."""
+
+    dry_run: bool = False
+
+
+AdminRunStatus = Literal["queued", "running", "succeeded", "failed"]
+
+
+class AdminCollectStatus(BaseModel):
+    """Status of the most recent (or a named) collection run."""
+
+    run_id: Optional[str] = None
+    status: AdminRunStatus = "queued"
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    error: Optional[str] = None
+    summary: Dict[str, Any] = Field(default_factory=dict)
+    active: bool = False
+
+
+class AdminCollectStarted(BaseModel):
+    """Response to POST /v1/admin/collect."""
+
+    run_id: str
+    status: AdminRunStatus = "queued"
+    detail: str
+
+
+class AdminSourceListItem(BaseModel):
+    """One row of the source manager (config metadata + circuit state)."""
+
+    source_id: str
+    name: Optional[str] = None
+    url: Optional[str] = None
+    category: Optional[str] = None
+    content_mode: Optional[str] = None
+    enrichment_strategy: Optional[str] = None
+    is_active: bool = True
+    circuit: Optional[Dict[str, Any]] = None
+
+
+class AdminSourceListEnvelope(BaseModel):
+    sources: List[AdminSourceListItem] = Field(default_factory=list)
+
+
+class AdminSourceToggleRequest(BaseModel):
+    """Body for activating/deactivating a source."""
+
+    active: bool
+
+
+class AdminPromptsEnvelope(BaseModel):
+    """Prompt lab: top-level agent keys with their prompt bodies."""
+
+    prompts: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AdminContentEnvelope(BaseModel):
+    """Published content snapshot (Live CMS read view)."""
+
+    source_label: str = ""
+    freshness_label: str = ""
+    articles: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class AdminImageBriefItem(BaseModel):
+    """One row of the image queue."""
+
+    slug: str
+    article_id: str
+    status: str
+    reason: str
+    topic: str
+    updated_at: Optional[str] = None
+
+
+class AdminImageQueueEnvelope(BaseModel):
+    briefs: List[AdminImageBriefItem] = Field(default_factory=list)

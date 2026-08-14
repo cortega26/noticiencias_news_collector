@@ -24,10 +24,14 @@ Failure modes:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hmac
+import itertools
 import os
+import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from dateutil import parser as date_parser
@@ -37,18 +41,29 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
 from sqlalchemy.orm import aliased
 
+from news_collector.config import settings as config_settings
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
-    AdminArticleListEnvelope,
     AdminArticleListItem,
+    AdminArticleListEnvelope,
     AdminArticlePagination,
     AdminAuditStatusUpdate,
+    AdminCollectRequest,
+    AdminCollectStarted,
+    AdminCollectStatus,
     AdminConfigSnapshot,
+    AdminContentEnvelope,
+    AdminImageBriefItem,
+    AdminImageQueueEnvelope,
     AdminMutationResult,
+    AdminPromptsEnvelope,
     AdminRejectRequest,
     AdminSourceHealthEnvelope,
+    AdminSourceListEnvelope,
+    AdminSourceListItem,
+    AdminSourceToggleRequest,
 )
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
@@ -67,6 +82,12 @@ ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
 _ADMIN_VALID_STATUSES = frozenset(
     {"new", "pending", "publishing", "rejected", "completed"}
 )
+
+# In-memory registry of collection runs (Phase 3). Module-level dict guarded
+# by a lock — same pattern the plan-038 metrics store uses; no new class.
+_admin_run_lock = threading.Lock()
+_admin_runs: Dict[str, Dict[str, Any]] = {}
+_admin_run_counter = itertools.count(1)
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator
@@ -997,6 +1018,368 @@ def create_app(  # noqa: C901
             status="ok",
             detail=f"Rejected publication attempt {refinery_id}",
             updated=updated,
+        )
+
+    # ------------------------------------------------------------------
+    # Phase 3: operational surface (fetch/reprocess/manage)
+    # ------------------------------------------------------------------
+
+    def _start_collect_run(dry_run: bool) -> str:
+        """Run a collection cycle in a daemon thread; returns the run id."""
+        global _admin_run_counter
+        with _admin_run_lock:
+            run_id = f"collect-{next(_admin_run_counter)}"
+            _admin_runs[run_id] = {
+                "run_id": run_id,
+                "status": "queued",
+                "started_at": None,
+                "finished_at": None,
+                "error": None,
+                "summary": {},
+                "dry_run": dry_run,
+            }
+
+        def _run() -> None:
+            with _admin_run_lock:
+                _admin_runs[run_id]["status"] = "running"
+                _admin_runs[run_id]["started_at"] = datetime.now(
+                    timezone.utc
+                ).isoformat()
+            try:
+                from news_collector.system import create_system
+
+                system = create_system()
+                if not system.initialize():
+                    raise RuntimeError("System initialization failed")
+
+                async def _cycle():
+                    try:
+                        summary = await system.run_collection_cycle(dry_run=dry_run)
+                        if not dry_run:
+                            await asyncio.to_thread(
+                                system.export_latest_articles,
+                                file_path="data/exports/latest_articles.json",
+                                limit=50,
+                            )
+                        return summary
+                    finally:
+                        await system.shutdown()
+
+                summary = asyncio.run(_cycle())
+                with _admin_run_lock:
+                    _admin_runs[run_id]["status"] = "succeeded"
+                    _admin_runs[run_id]["summary"] = summary or {}
+            except Exception as exc:  # pragma: no cover - failure path
+                logger.error("Collection run {} failed: {}", run_id, exc)
+                with _admin_run_lock:
+                    _admin_runs[run_id]["status"] = "failed"
+                    _admin_runs[run_id]["error"] = str(exc)
+            finally:
+                with _admin_run_lock:
+                    _admin_runs[run_id]["finished_at"] = datetime.now(
+                        timezone.utc
+                    ).isoformat()
+
+        threading.Thread(target=_run, daemon=True, name=run_id).start()
+        return run_id
+
+    @app.post("/v1/admin/collect", response_model=AdminCollectStarted)
+    def admin_collect(
+        payload: AdminCollectRequest,
+        _: None = Depends(verify_admin_token),
+    ) -> AdminCollectStarted:
+        """Start a collection cycle (async). Dry-run simulates without
+        persisting — used by the GUI's fetch-news action and its dry-run
+        toggle."""
+        run_id = _start_collect_run(dry_run=payload.dry_run)
+        return AdminCollectStarted(
+            run_id=run_id,
+            status="queued",
+            detail=(
+                "Collection started (dry-run)"
+                if payload.dry_run
+                else "Collection started"
+            ),
+        )
+
+    @app.get("/v1/admin/collect/status", response_model=AdminCollectStatus)
+    def admin_collect_status(
+        run_id: Optional[str] = Query(None, alias="run_id"),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminCollectStatus:
+        """Return the most recent run (or the named one via ?run_id=)."""
+        with _admin_run_lock:
+            target = run_id if run_id and run_id in _admin_runs else None
+            if target is None:
+                target = max(_admin_runs, default=None) if _admin_runs else None
+            if target is None:
+                return AdminCollectStatus()
+            run = _admin_runs[target]
+            active = run["status"] in ("queued", "running")
+            return AdminCollectStatus(
+                run_id=run["run_id"],
+                status=run["status"],
+                started_at=run["started_at"],
+                finished_at=run["finished_at"],
+                error=run["error"],
+                summary=run["summary"],
+                active=active,
+            )
+
+    @app.post(
+        "/v1/admin/articles/{article_id}/reprocess",
+        response_model=AdminMutationResult,
+    )
+    def admin_reprocess_article(
+        article_id: int,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        ok = manager.reset_article_for_reprocess(article_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Article not found")
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Article {article_id} reset to pending",
+            updated=1,
+        )
+
+    @app.get("/v1/admin/sources", response_model=AdminSourceListEnvelope)
+    def admin_list_sources(
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminSourceListEnvelope:
+        from news_collector.config.sources import ALL_SOURCES
+
+        items: List[AdminSourceListItem] = []
+        for source_id in sorted(ALL_SOURCES):
+            config = ALL_SOURCES[source_id] or {}
+            circuit = manager.get_source_circuit_state(source_id)
+            items.append(
+                AdminSourceListItem(
+                    source_id=source_id,
+                    name=config.get("name"),
+                    url=config.get("url"),
+                    category=config.get("category"),
+                    content_mode=config.get("content_mode"),
+                    enrichment_strategy=config.get("enrichment_strategy"),
+                    is_active=bool(circuit is None or circuit.get("is_active", True)),
+                    circuit=circuit,
+                )
+            )
+        return AdminSourceListEnvelope(sources=items)
+
+    @app.post(
+        "/v1/admin/sources/{source_id}/toggle",
+        response_model=AdminMutationResult,
+    )
+    def admin_toggle_source(
+        source_id: str,
+        payload: AdminSourceToggleRequest,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        ok = manager.set_source_active(source_id, payload.active)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Source not found")
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Source {source_id} {'activated' if payload.active else 'deactivated'}",
+            updated=1,
+        )
+
+    @app.post(
+        "/v1/admin/sources/{source_id}/reset",
+        response_model=AdminMutationResult,
+    )
+    def admin_reset_source_circuit(
+        source_id: str,
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminMutationResult:
+        state = manager.get_source_circuit_state(source_id)
+        if state is None:
+            raise HTTPException(status_code=404, detail="Source not found")
+        manager.update_source_circuit_state(source_id, success=True)
+        return AdminMutationResult(
+            status="ok",
+            detail=f"Source {source_id} circuit reset to ACTIVE",
+            updated=1,
+        )
+
+    @app.post("/v1/admin/config", response_model=AdminConfigSnapshot)
+    def admin_save_config(
+        payload: Dict[str, Any],
+        _: None = Depends(verify_admin_token),
+    ) -> AdminConfigSnapshot:
+        """Validate and persist config.toml — same contract as the Streamlit
+        app's save_toml_config (plan 033), but accepts a PARTIAL patch:
+        the payload is merged over the current full config at the dict
+        level, then the merged result is validated through the schema
+        (Config.model_validate) plus the cross-field business rules. Both
+        validation layers run before anything touches disk.
+
+        Secrets are not accepted: any github.token / nvidia.api_key /
+        gemini.api_key value in the payload is dropped before validation.
+        """
+        from noticiencias.config_manager import Config as _Config
+        from noticiencias.config_manager import save_config as _save_config
+
+        # Never let the API write credentials through this surface.
+        for section in ("github", "nvidia", "gemini"):
+            if isinstance(payload.get(section), dict):
+                for key in ("token", "api_key"):
+                    payload[section].pop(key, None)
+
+        # Merge over the current full config (deep) so partial patches
+        # validate against the complete shape.
+        current = load_config()
+        merged = current.model_dump(mode="python")
+        for section, values in payload.items():
+            if isinstance(values, dict) and isinstance(merged.get(section), dict):
+                merged[section] = {**merged[section], **values}
+            else:
+                merged[section] = values
+
+        try:
+            validated = _Config.model_validate(merged)
+            config_settings.validate_config(validated)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422, detail=f"Config rejected: {exc}"
+            ) from exc
+
+        validated._metadata = current._metadata
+        _save_config(validated)
+        snapshot = config_settings.refresh_runtime_config(validated)
+
+        return AdminConfigSnapshot(
+            environment=validated.app.environment,
+            debug=validated.app.debug,
+            timezone=validated.app.timezone,
+            github={
+                "user_name": validated.github.user_name,
+                "source_repo_url": validated.github.source_repo_url,
+                "target_repo_url": validated.github.target_repo_url,
+            },
+            ollama={
+                "model": validated.ollama.model,
+                "translator_model": validated.ollama.translator_model,
+                "editor_model": validated.ollama.editor_model,
+                "headlines_model": validated.ollama.headlines_model,
+                "enrichment_model": validated.ollama.enrichment_model,
+            },
+            scoring={"weights": validated.scoring.weights.model_dump(mode="python")},
+            meta={
+                "version": snapshot.version,
+                "changed_keys": sorted(snapshot.changed_keys),
+                "restart_required_keys": sorted(snapshot.restart_required_keys),
+            },
+        )
+
+    @app.get("/v1/admin/prompts", response_model=AdminPromptsEnvelope)
+    def admin_get_prompts(
+        _: None = Depends(verify_admin_token),
+    ) -> AdminPromptsEnvelope:
+        import yaml
+
+        prompts_path = Path("config/prompts.yaml")
+        if not prompts_path.exists():
+            return AdminPromptsEnvelope(prompts={})
+        try:
+            with open(prompts_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to read prompts: {exc}"
+            ) from exc
+        return AdminPromptsEnvelope(
+            prompts={k: v for k, v in data.items() if isinstance(v, dict)}
+        )
+
+    @app.post("/v1/admin/prompts", response_model=AdminPromptsEnvelope)
+    def admin_save_prompts(
+        payload: AdminPromptsEnvelope,
+        _: None = Depends(verify_admin_token),
+    ) -> AdminPromptsEnvelope:
+        import yaml
+
+        prompts_path = Path("config/prompts.yaml")
+        prompts_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(prompts_path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(
+                    payload.prompts,
+                    f,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+        except (OSError, yaml.YAMLError) as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to write prompts: {exc}"
+            ) from exc
+        return payload
+
+    @app.get("/v1/admin/content", response_model=AdminContentEnvelope)
+    def admin_published_content(
+        _: None = Depends(verify_admin_token),
+    ) -> AdminContentEnvelope:
+        from apps.refinery.published_content import (
+            resolve_published_content_snapshot,
+        )
+
+        cfg = load_config()
+        try:
+            snapshot = resolve_published_content_snapshot(
+                target_repo_url=cfg.github.target_repo_url,
+                collector_repo_root=Path(".").resolve(),
+                temp_target_dir=Path("temp/refinery_target"),
+                github_token="",
+                refresh_clone=False,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Content snapshot failed: {exc}"
+            ) from exc
+        return AdminContentEnvelope(
+            source_label=snapshot.source_label,
+            freshness_label=snapshot.freshness_label,
+            articles=[
+                {
+                    "file_name": article.file_name,
+                    "title": article.title,
+                    "refinery_id": article.refinery_id,
+                    "modified_at": article.modified_at.isoformat(),
+                }
+                for article in snapshot.articles
+            ],
+        )
+
+    @app.get("/v1/admin/images", response_model=AdminImageQueueEnvelope)
+    def admin_image_queue(
+        _: None = Depends(verify_admin_token),
+    ) -> AdminImageQueueEnvelope:
+        from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+        store = ImageBriefStore(Path("data"))
+        briefs = store.list_briefs()
+        return AdminImageQueueEnvelope(
+            briefs=[
+                AdminImageBriefItem(
+                    slug=brief.slug,
+                    article_id=brief.article_id,
+                    status=brief.status,
+                    reason=brief.reason,
+                    topic=brief.topic,
+                    updated_at=(
+                        brief.updated_at.isoformat()
+                        if getattr(brief, "updated_at", None)
+                        else None
+                    ),
+                )
+                for brief in briefs
+            ]
         )
 
     return app

@@ -1,0 +1,84 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Content" current="/content">
+  <AuthGate>
+    <header class="mb-8">
+      <h1 class="display-title text-4xl text-paper-100">Published content</h1>
+      <p class="data-label mt-2">LIVE CMS SNAPSHOT · FROM /V1/ADMIN/CONTENT</p>
+    </header>
+    <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
+    <div class="card overflow-x-auto">
+      <table class="w-full min-w-[640px] text-left">
+        <thead>
+          <tr class="border-b border-ink-700">
+            <th class="data-label px-5 py-3">TITLE</th>
+            <th class="data-label px-5 py-3">REFINERY ID</th>
+            <th class="data-label px-5 py-3">MODIFIED</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
+        No published articles found.
+      </div>
+    </div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getContent, showAuthGate } from "../lib/api";
+
+  const rowsEl = document.getElementById("rows");
+  const emptyEl = document.getElementById("empty");
+  const metaEl = document.getElementById("meta");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  async function load() {
+    try {
+      const content = await getContent();
+      if (emptyEl) emptyEl.classList.toggle("hidden", content.articles.length > 0);
+      if (metaEl) {
+        metaEl.innerHTML = `
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">${esc(content.source_label)}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">${esc(content.freshness_label)}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">articles ${content.articles.length}</div>
+        `;
+      }
+      if (!rowsEl) return;
+      rowsEl.innerHTML = content.articles
+        .map(
+          (a) => `
+          <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
+            <td class="px-5 py-3">
+              <div class="text-sm font-medium text-ink-100">${esc(a.title)}</div>
+              <div class="font-mono text-[11px] text-ink-400">${esc(a.file_name)}</div>
+            </td>
+            <td class="px-5 py-3 font-mono text-xs text-ink-300">${esc(a.refinery_id ?? "—")}</td>
+            <td class="px-5 py-3 font-mono text-xs text-ink-400">${esc(a.modified_at)}</td>
+          </tr>`,
+        )
+        .join("");
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (rowsEl) {
+        rowsEl.innerHTML = `<tr><td colspan="3" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
+      }
+    }
+  }
+
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>
