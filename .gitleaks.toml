@@ -27,6 +27,9 @@ paths = [
   '''^audit/03_config_matrix\.md$''',
   # Placeholder/fixture values in test and documentation files.
   '''^tests/integration/test_publication_callback_contract\.py$''',
+  # GUI source: 'refinery_admin_token' is a sessionStorage KEY NAME, not a
+  # credential value (matched by generic-api-key's 16+ char rule).
+  '''^apps/admin/src/lib/api\.ts$''',
   '''^tests_refinery/test_admin_panel_weights\.py$''',
   '''^docs/RUNBOOK_LOCAL_DEV\.md$''',
   '''^fly-tunnel\.toml$''',

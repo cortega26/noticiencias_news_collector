@@ -81,8 +81,8 @@ from news_collector.contracts.admin import (
     AdminSourceListItem,
     AdminSourceToggleRequest,
 )
-from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.contracts.image_brief import ImageBriefModel
+from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
@@ -1533,8 +1533,8 @@ def create_app(  # noqa: C901
         """
         from apps.refinery.published_content import (
             find_published_article_by_refinery_id,
-            resolve_published_content_snapshot,
             reset_one_article,
+            resolve_published_content_snapshot,
         )
 
         cfg = load_config()
@@ -1581,8 +1581,8 @@ def create_app(  # noqa: C901
         from apps.refinery.bulk_helper import run_bulk
         from apps.refinery.published_content import (
             find_published_article_by_refinery_id,
-            resolve_published_content_snapshot,
             reset_one_article,
+            resolve_published_content_snapshot,
         )
 
         cfg = load_config()
