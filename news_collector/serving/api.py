@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence,
 
 from dateutil import parser as date_parser
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from noticiencias.config_manager import load_config
 from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
 from sqlalchemy.orm import aliased
@@ -40,8 +41,8 @@ from news_collector.config.settings import get_runtime_config
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
-    AdminArticleListItem,
     AdminArticleListEnvelope,
+    AdminArticleListItem,
     AdminArticlePagination,
     AdminAuditStatusUpdate,
     AdminConfigSnapshot,
@@ -53,7 +54,6 @@ from news_collector.storage.database import DatabaseManager, get_database_manage
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
-from noticiencias.config_manager import load_config
 
 logger = get_logger().create_module_logger("serving.api")
 
