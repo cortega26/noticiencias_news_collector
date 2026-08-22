@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "Description": "Generic API or secret token",
+    "StartLine": 254,
+    "EndLine": 254,
+    "StartColumn": 10,
+    "EndColumn": 29,
+    "Match": "API characterization",
+    "Secret": "API",
+    "File": "plans/060/spec.md",
+    "Commit": "0726127a733939babf3f738b820ef2af14a069ac",
+    "RuleID": "generic-api-key",
+    "Fingerprint": "0726127a733939babf3f738b820ef2af14a069ac:plans/060/spec.md:generic-api-key:254"
+  },
+  {
+    "Description": "Generic API or secret token",
+    "StartLine": 254,
+    "EndLine": 254,
+    "StartColumn": 10,
+    "EndColumn": 29,
+    "Match": "API characterization",
+    "Secret": "API",
+    "File": "plans/060/spec.md",
+    "Commit": "fba72d7645c578c2f7a6c2f7e496c67d07e69037",
+    "RuleID": "generic-api-key",
+    "Fingerprint": "fba72d7645c578c2f7a6c2f7e496c67d07e69037:plans/060/spec.md:generic-api-key:254"
+  }
+]
