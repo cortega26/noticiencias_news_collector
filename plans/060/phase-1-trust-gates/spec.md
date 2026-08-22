@@ -306,8 +306,11 @@ content, not a refactor of the script into an importable function): write
   path) before building this fixture: there are **two separate size checks**,
   the 150KB gzip ceiling *and* a second heuristic
   (`raw.length > 500 * 1024 && urls.length < 10`) that flags a "bloated
-  fixture" shape (huge raw size, suspiciously few entries) *before* the gzip
-  check even runs. A fixture built by inflating one entry's text to a huge
+  fixture" shape (huge raw size, suspiciously few entries). **Correction**:
+  the gzip-ceiling check actually runs first in the live file, the bloat
+  heuristic second — the opposite of what an earlier draft of this plan
+  claimed. Either way, do not rely on check order: a fixture built by
+  inflating one entry's text to a huge
   size will trip the second guard, not the first — and the test would then
   be passing for the wrong reason (a coincidentally-different failure
   message). Build the oversized fixture with **many entries** (at least
