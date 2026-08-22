@@ -19,12 +19,12 @@ do not implement from this checklist alone.
 
 ### Phase 0 — baseline and decisions
 
-- [ ] Add matching ADRs for durable state, generated contracts, and the
+- [x] Add matching ADRs for durable state, generated contracts, and the
       harden-before-consolidating repository decision.
 - [ ] Add the versioned shared publication valid/invalid fixture corpus.
-- [ ] Add deterministic OpenAPI/publication schema snapshot commands.
+- [x] Add deterministic OpenAPI/publication schema snapshot commands.
 - [ ] Preserve the strict editorial failure inventory as migration input.
-- [ ] Verify snapshot generation twice with byte-identical output.
+- [x] Verify snapshot generation twice with byte-identical output.
 
 ### Phase 1 — small security, CI, dashboard, and docs gaps
 
