@@ -148,7 +148,7 @@ That is the current reality. Contributors should avoid making it broader and sho
 
 ### Publication identity is strong but not perfect
 
-The workflow reuses database or file-based identity when available, but it still falls back to `collected_date` and then current date when source dates are missing. Documentation should treat that as bounded compatibility debt, not as perfect determinism.
+The workflow reuses database or file-based identity when available, but it still falls back to `collected_date` when `published_date` is missing, and quarantines the article (`UndatedArticleError`) rather than inventing a date when neither exists (plan 058). Documentation should treat the `published_date`/`collected_date` fallback as bounded compatibility debt, not as perfect determinism — but there is no remaining non-deterministic path.
 
 ### Legacy entrypoints still exist
 

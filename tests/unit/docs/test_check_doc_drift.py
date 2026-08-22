@@ -96,6 +96,16 @@ def test_flags_stale_schema_path():
     assert "src/content.config.ts" in combined
 
 
+def test_flags_stale_publication_date_fallback():
+    combined, exit_code = run_check(
+        str(FIXTURES / "stale"),
+        ["README.md"],
+    )
+    assert exit_code == 1, combined
+    assert "stale declared claim" in combined
+    assert "current date as last resort" in combined
+
+
 def test_flags_stale_site_host_with_sibling():
     combined, exit_code = run_check(
         str(FIXTURES / "stale"),
