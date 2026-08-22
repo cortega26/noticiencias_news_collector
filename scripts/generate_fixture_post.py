@@ -1,8 +1,9 @@
 """
-generate_fixture_post.py — writes a minimal valid AstroPost MDX fixture file.
+generate_fixture_post.py — writes a production-path v2 AstroPost MDX fixture file.
 
 Used by the publication smoke-test CI workflow to verify that the current
-AstroPost contract produces a file that passes the front-end `validate:content`
+publication contract (EditorAgent.process_article, including the schema v2
+fail-closed gate) produces a file that passes the front-end `validate:content`
 check.  The fixture is written to a path supplied via --output; the caller is
 responsible for cleaning it up afterwards.
 
@@ -20,7 +21,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from news_collector.logic.workflows.frontend_publication_validation import (  # noqa: E402
-    build_fixture_post,
     render_fixture_markdown,
 )
 
@@ -37,7 +37,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    content = render_fixture_markdown(build_fixture_post())
+    content = render_fixture_markdown()
 
     output_path: Path = args.output.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
