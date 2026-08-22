@@ -392,6 +392,26 @@ def check_invariants(
                         "message": f"expected {expected} (from .python-version)",
                     }
                 )
+    if "current date as last resort" in line:
+        found.append(
+            {
+                "doc": doc,
+                "type": "stale_publication_date_fallback",
+                "ref": "current date as last resort",
+                "line": line_no,
+                "message": "plan 058 removed the runtime-clock fallback — publication identity now quarantines (UndatedArticleError) instead of falling back to the current date",
+            }
+        )
+    if "current date when source dates are missing" in line:
+        found.append(
+            {
+                "doc": doc,
+                "type": "stale_publication_date_fallback",
+                "ref": "current date when source dates are missing",
+                "line": line_no,
+                "message": "plan 058 removed the runtime-clock fallback — publication identity now quarantines (UndatedArticleError) instead of falling back to the current date",
+            }
+        )
     return found
 
 
@@ -506,7 +526,12 @@ def main(argv: list[str] | None = None) -> int:
                 b
                 for b in unique
                 if b["type"]
-                in {"stale_schema_path", "stale_site_host", "stale_runtime_major"}
+                in {
+                    "stale_schema_path",
+                    "stale_site_host",
+                    "stale_runtime_major",
+                    "stale_publication_date_fallback",
+                }
             ],
         }
         for kind, label in (

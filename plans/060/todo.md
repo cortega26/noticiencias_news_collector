@@ -28,8 +28,8 @@ do not implement from this checklist alone.
 
 ### Phase 1 — small security, CI, dashboard, and docs gaps
 
-- [ ] Pin and checksum-verify the Gitleaks download in backend CI.
-- [ ] Correct backend active publication-date docs and drift assertions.
+- [x] Pin and checksum-verify the Gitleaks download in backend CI.
+- [x] Correct backend active publication-date docs and drift assertions.
 - [ ] Wire the frontend search budget into a fresh-build CI path and add pass/fail
       fixtures.
 - [ ] Make live and snapshot contract-sync commands strict.

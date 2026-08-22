@@ -68,9 +68,14 @@ The render authority is:
 2. existing frontend file or sidecar manifest
 3. `published_date`
 4. `collected_date`
-5. current date as last resort
+5. quarantine (`UndatedArticleError`) when neither date exists
 
-The final two fallback steps are compatibility debt. They are not the desired end state for immutable identity.
+Plan 058 (2026-08-13) removed the runtime-clock fallback: an article with
+neither `published_date` nor `collected_date` is no longer silently dated
+with the current date — it fails deterministically and is quarantined for
+human review. The two remaining fallback steps (`published_date` →
+`collected_date`) are compatibility debt, not the desired end state for
+immutable identity, but they no longer include a non-deterministic path.
 
 ### Publication State Semantics
 

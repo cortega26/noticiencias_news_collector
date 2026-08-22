@@ -6,7 +6,7 @@ binding; do not implement from this checklist alone.
 
 ## Step 0 — baseline
 
-- [ ] Backend `make docs-check`, `make plans-ledger-check`,
+- [x] Backend `make docs-check`, `make plans-ledger-check`,
       `pytest tests/unit/docs/test_check_doc_drift.py -v` pass on an
       unmodified checkout.
 - [ ] Frontend `npm run lint`, `npm run check:doc-drift`, strict
@@ -14,29 +14,29 @@ binding; do not implement from this checklist alone.
 
 ## Step 1 — backend: Gitleaks checksum verification
 
-- [ ] `.github/workflows/quality.yml` Install-Gitleaks step rewritten:
+- [x] `.github/workflows/quality.yml` Install-Gitleaks step rewritten:
       download to temp dir, verify against `checksums.txt` via
       `sha256sum -c`, extract only after verification, install to
       `$RUNNER_TEMP/bin` + `$GITHUB_PATH`.
-- [ ] `scripts/verify_gitleaks_checksum_test.sh` added, proves tamper
+- [x] `scripts/verify_gitleaks_checksum_test.sh` added, proves tamper
       detection works, exits 0 and prints `PASS`.
-- [ ] Workflow YAML re-parses cleanly (`yaml.safe_load`).
+- [x] Workflow YAML re-parses cleanly (`yaml.safe_load`).
 
 ## Step 2 — backend: stale publication-date docs + invariant (one commit)
 
-- [ ] `docs/PIPELINE_CONTRACTS.md` "Current Identity Reuse Order" section
+- [x] `docs/PIPELINE_CONTRACTS.md` "Current Identity Reuse Order" section
       replaced with the exact text in spec.md.
-- [ ] `docs/ARCHITECTURE.md` line 151 replaced with the exact text in
+- [x] `docs/ARCHITECTURE.md` line 151 replaced with the exact text in
       spec.md.
-- [ ] Two new `stale_publication_date_fallback` checks added to
+- [x] Two new `stale_publication_date_fallback` checks added to
       `check_invariants()` in `scripts/check_doc_drift.py`.
-- [ ] `tests/fixtures/doc-drift/stale/README.md` has a new line with
+- [x] `tests/fixtures/doc-drift/stale/README.md` has a new line with
       `current date as last resort`.
-- [ ] `test_flags_stale_publication_date_fallback` added to
+- [x] `test_flags_stale_publication_date_fallback` added to
       `tests/unit/docs/test_check_doc_drift.py`.
-- [ ] All of the above landed in a single commit (not split across the
+- [x] All of the above landed in a single commit (not split across the
       invariant-add and the doc-fix).
-- [ ] `pytest tests/unit/docs/test_check_doc_drift.py -v` fully green,
+- [x] `pytest tests/unit/docs/test_check_doc_drift.py -v` fully green,
       including `test_live_repo_docs_pass`.
 
 ## Step 3 — frontend: wire `check:search-budget`
@@ -85,6 +85,6 @@ binding; do not implement from this checklist alone.
 
 - [ ] `plans/060/todo.md` Phase-1 checkboxes (Wave A) checked off.
 - [ ] This file fully checked off.
-- [ ] No other wave's checkboxes touched; plan 060 not marked DONE anywhere.
+- [x] No other wave's checkboxes touched; plan 060 not marked DONE anywhere.
 - [ ] `git diff --stat` in each repo shows only in-scope files (see spec.md
       "Scope").

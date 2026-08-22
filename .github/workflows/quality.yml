@@ -43,9 +43,18 @@ jobs:
 
       - name: Install Gitleaks
         run: |
+          set -euo pipefail
           GITLEAKS_VERSION="8.18.1"
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
+          WORKDIR="$(mktemp -d)"
+          curl -sSL -o "$WORKDIR/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL -o "$WORKDIR/checksums.txt" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" "$WORKDIR/checksums.txt" > "$WORKDIR/expected.sha256"
+          (cd "$WORKDIR" && sha256sum -c expected.sha256)
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xz -C "$RUNNER_TEMP/bin" -f "$WORKDIR/gitleaks.tar.gz" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Run Quality Checks (CI Strict Mode)
         run: |
