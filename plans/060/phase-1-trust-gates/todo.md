@@ -41,37 +41,37 @@ binding; do not implement from this checklist alone.
 
 ## Step 3 — frontend: wire `check:search-budget`
 
-- [ ] `package.json`: `check:search-budget` script added.
-- [ ] `content-guard.yml`: new "📏 Search Budget" step after "🧪 Dist Sanity".
-- [ ] `package.json`: `verify:ci` gains `check:search-budget` after
+- [x] `package.json`: `check:search-budget` script added.
+- [x] `content-guard.yml`: new "📏 Search Budget" step after "🧪 Dist Sanity".
+- [x] `package.json`: `verify:ci` gains `check:search-budget` after
       `test:dist`.
-- [ ] `tests/check-search-budget.test.ts` added: passing-fixture case and
+- [x] `tests/check-search-budget.test.ts` added: passing-fixture case and
       oversized-fixture case (built with many entries to trip the gzip
       ceiling specifically, not the bloat heuristic); oversized case
       asserts on the specific `exceeds ... ceiling` message.
-- [ ] `npm run build && npm run check:search-budget` passes end-to-end.
+- [x] `npm run build && npm run check:search-budget` passes end-to-end.
 
 ## Step 4 — frontend: `check:contract-sync` strict everywhere
 
-- [ ] `package.json`: `--strict` added to `check:contract-sync`.
-- [ ] `content-guard.yml`: `--strict` added to the snapshot-mode fallback
+- [x] `package.json`: `--strict` added to `check:contract-sync`.
+- [x] `content-guard.yml`: `--strict` added to the snapshot-mode fallback
       invocation.
-- [ ] `.github/workflows/sync-contract-snapshot.yml` checked — confirmed
+- [x] `.github/workflows/sync-contract-snapshot.yml` checked — confirmed
       no non-strict `--strict`-eligible invocation needs fixing (or fixed,
       if one was found).
-- [ ] Both live and snapshot strict checks verified passing.
+- [x] Both live and snapshot strict checks verified passing.
 
 ## Step 5 — frontend: dashboard + `CONTRIBUTING.md`
 
-- [ ] `src/pages/admin/dashboard.astro:106` ("Imágenes hero") →
+- [x] `src/pages/admin/dashboard.astro:106` ("Imágenes hero") →
       `'unknown' as const`, detail string updated.
-- [ ] `src/pages/admin/dashboard.astro:118` ("Linting") →
+- [x] `src/pages/admin/dashboard.astro:118` ("Linting") →
       `'unknown' as const`, detail string updated.
-- [ ] `CONTRIBUTING.md:22` build-command comment corrected.
-- [ ] `CONTRIBUTING.md:29-33` `verify:ci`/CI-parity claim corrected to an
+- [x] `CONTRIBUTING.md:22` build-command comment corrected.
+- [x] `CONTRIBUTING.md:29-33` `verify:ci`/CI-parity claim corrected to an
       honest, bounded description (applied after Step 3's `verify:ci`
       change).
-- [ ] `npm run lint` passes (confirms the status-literal change type-checks).
+- [x] `npm run lint` passes (confirms the status-literal change type-checks).
 
 ## Verified current — no fix needed (do not re-search)
 
@@ -83,8 +83,9 @@ binding; do not implement from this checklist alone.
 
 ## Step 6 — close out
 
-- [ ] `plans/060/todo.md` Phase-1 checkboxes (Wave A) checked off.
-- [ ] This file fully checked off.
+- [x] `plans/060/todo.md` Phase-1 checkboxes (Wave A) checked off.
+- [x] This file fully checked off.
 - [x] No other wave's checkboxes touched; plan 060 not marked DONE anywhere.
-- [ ] `git diff --stat` in each repo shows only in-scope files (see spec.md
-      "Scope").
+- [x] `git diff --stat` in each repo shows only in-scope files (see spec.md
+      "Scope") — confirmed post-merge: backend 9 files, frontend 5 files,
+      all within declared scope.

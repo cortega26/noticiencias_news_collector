@@ -30,12 +30,14 @@ do not implement from this checklist alone.
 
 - [x] Pin and checksum-verify the Gitleaks download in backend CI.
 - [x] Correct backend active publication-date docs and drift assertions.
-- [ ] Wire the frontend search budget into a fresh-build CI path and add pass/fail
+- [x] Wire the frontend search budget into a fresh-build CI path and add pass/fail
       fixtures.
-- [ ] Make live and snapshot contract-sync commands strict.
-- [ ] Replace dashboard hard-coded passes with measured values or `unknown`.
-- [ ] Correct frontend Node/schema/image/build/CI/legacy-fallback active docs.
-- [ ] Run each repository's applicable doc and CI gates.
+- [x] Make live and snapshot contract-sync commands strict.
+- [x] Replace dashboard hard-coded passes with measured values or `unknown`.
+- [x] Correct frontend Node/schema/image/build/CI/legacy-fallback active docs
+      (build-command and CI-parity claims corrected; Node/schema/image/legacy-fallback
+      were already current, verified not fixed).
+- [x] Run each repository's applicable doc and CI gates.
 
 ## Wave B — correctness and durable orchestration
 
