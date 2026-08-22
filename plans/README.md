@@ -33,7 +33,7 @@ archived plans, and plan ledger; see `scripts/validate_plans_ledger.py`.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 048 | [Spike a curated enrichment registry](048-spike-curated-enrichment-registry.md) | P2 | M | 027, 033 | PARTIAL — Steps 1-5 done, Step 6 = **iterate**. Operator gold-labeled all 44 corpus records; baseline (topics F1 0.767) and paired candidate comparison (`scripts/enrichment_candidate.py`, `2026.08-curated-candidate`: topics F1 0.911, entities F1 0.750, general 0.318→0.204, +0.06 ms) executed; the one critical-slice regression (satellite keyword → space FP on climate) was found and fixed. Production `pattern_v1` untouched (Done criterion). Decision: keep candidate isolated, re-evaluate identically at ≥200 reviewed records against pre-set thresholds. See `plans/048/spec.md` + `docs/adr/0004-curated-enrichment-registry-spike.md` |
-| 060 | [Cross-repository publication reliability and architecture hardening](060/spec.md) | P1 | L | 021, 028, 041, 043, 047, 049, 057, 058, admin Phases 1-4 | TODO |
+| 060 | [Cross-repository publication reliability and architecture hardening](060/spec.md) | P1 | L | 021, 028, 041, 043, 047, 049, 057, 058, admin Phases 1-4 | IN_PROGRESS — Phase 0 done (merged, backend `4153db2`; frontend SHA in 060/phase-0-baseline/spec.md, not cited here as it does not resolve in this repo); Phase 1 planned, not yet executed (see 060/phase-1-trust-gates/) |
 
 > Plans 018–030, 021, 023, 031, 032, 033, 034, 035, 036, 037, 038, 039, 040, 041, 042, 043, 044, 045, 047,
 > 049, 050, 051, 053, 054, 055, 056, 057, and 058 are DONE and archived. Plan **046** is

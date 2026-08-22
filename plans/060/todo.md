@@ -21,9 +21,9 @@ do not implement from this checklist alone.
 
 - [x] Add matching ADRs for durable state, generated contracts, and the
       harden-before-consolidating repository decision.
-- [ ] Add the versioned shared publication valid/invalid fixture corpus.
+- [x] Add the versioned shared publication valid/invalid fixture corpus.
 - [x] Add deterministic OpenAPI/publication schema snapshot commands.
-- [ ] Preserve the strict editorial failure inventory as migration input.
+- [x] Preserve the strict editorial failure inventory as migration input.
 - [x] Verify snapshot generation twice with byte-identical output.
 
 ### Phase 1 — small security, CI, dashboard, and docs gaps
