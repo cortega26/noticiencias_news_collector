@@ -15,7 +15,13 @@ work, per `plans/060/spec.md`, "Phase 6: Generate admin and publication
 contracts").
 
 Usage:
-  .venv/bin/python scripts/generate_admin_openapi_snapshot.py
+  PYTHONPATH=$(pwd) .venv/bin/python scripts/generate_admin_openapi_snapshot.py
+
+(PYTHONPATH must include the repo root — mirrors the convention used by
+other script invocations in this Makefile, e.g. `PYTHONPATH=$(CURDIR)` at
+Makefile:216. Running the bare `python scripts/...py` form without it fails
+with `ModuleNotFoundError: No module named 'news_collector'`, since Python
+adds the script's own directory to `sys.path`, not the repo root.)
 """
 
 from __future__ import annotations
