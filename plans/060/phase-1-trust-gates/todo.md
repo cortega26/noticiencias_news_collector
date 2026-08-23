@@ -9,8 +9,12 @@ binding; do not implement from this checklist alone.
 - [x] Backend `make docs-check`, `make plans-ledger-check`,
       `pytest tests/unit/docs/test_check_doc_drift.py -v` pass on an
       unmodified checkout.
-- [ ] Frontend `npm run lint`, `npm run check:doc-drift`, strict
-      snapshot contract-sync pass on an unmodified checkout.
+- [x] Frontend `npm run lint`, `npm run check:doc-drift`, strict
+      snapshot contract-sync pass on an unmodified checkout. (Re-verified
+      2026-08-23 during a ledger audit — this box was missed in the
+      original manual closeout pass, not the underlying check: `npm run
+      lint` 0 errors, `check:doc-drift` OK, `check-contract-sync.js
+      --strict` full parity confirmed.)
 
 ## Step 1 — backend: Gitleaks checksum verification
 
