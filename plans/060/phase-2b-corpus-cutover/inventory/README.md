@@ -29,13 +29,29 @@ the full per-post records.
 of these three failed because of a missing source (the condition the
 original task description named as one trigger for `draft_available:
 false`). All three failed because the NVIDIA response did not pass
-`EnrichmentSchema` Pydantic validation (see `failure_reason` on each
-record, and `Enrichment Schema Validation Failed` entries in the run log).
-This is a schema-validation failure per post, not evidence that the
-source itself is unusable — a reviewer or a retry may still be able to
-produce a draft for these three. They should **not** be read as
-automatic "downgrade to v1" candidates without checking why validation
-failed.
+`EnrichmentSchema` Pydantic validation. The exact validation error for
+each is recorded on its record (`validation_error` field) and reproduced
+here since the run log itself lives in a session-scoped scratchpad and
+will not persist:
+
+- `2026-01-27-conoce-a-los-misteriosos-electridos.md` — 1 validation
+  error: `fact_check.1.label` field required. The model emitted a
+  `fact_check` entry shaped like a glossary item (`term`/`status`) instead
+  of the required (`label`/`status`) keys.
+- `2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md`
+  — 2 validation errors: `sources.1.url` and `sources.2.url` — string too
+  short (empty string). The model returned two `sources` entries with
+  empty `url` values.
+- `2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md`
+  — 1 validation error: `sources.1.url` field required. The model
+  returned a `sources` entry with `title`/`date` but omitted `url`
+  entirely.
+
+**All three are shallow, retryable JSON-shape mistakes by the model — not
+evidence that the underlying source is unusable.** A retry (or a reviewer
+fixing the shape by hand) may well produce a full draft for these three.
+They should **not** be read as automatic "downgrade to v1" candidates
+without first attempting a retry or manual fix.
 
 ## LLM provider / model actually used
 

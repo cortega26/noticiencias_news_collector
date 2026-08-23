@@ -581,7 +581,8 @@
       "draft_available": false,
       "note": "no draft available — needs downgrade or manual authoring",
       "reviewed": false,
-      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case)"
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "1 validation error for EnrichmentSchema: fact_check.1.label — Field required [type=missing, input_value={'term': 'Un electrido es...', 'status': 'confirmed'}]. The model emitted a fact_check entry shaped like a glossary item (term/status) instead of the required (label/status) keys. Retryable prompt-shape issue, not a source-availability problem."
     },
     {
       "file": "2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md",
@@ -597,7 +598,8 @@
       "draft_available": false,
       "note": "no draft available — needs downgrade or manual authoring",
       "reviewed": false,
-      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case)"
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "2 validation errors for EnrichmentSchema: sources.1.url and sources.2.url — String should have at least 1 character [type=string_too_short, input_value='']. The model returned two sources entries with empty url strings. Retryable prompt-shape issue, not a source-availability problem."
     },
     {
       "file": "2026-01-27-herramientas-empunadas-de-piedra-sofisticadas-descubiertas-en-china-datan-de-hace-160-000-anos.md",
@@ -1742,7 +1744,8 @@
       "draft_available": false,
       "note": "no draft available — needs downgrade or manual authoring",
       "reviewed": false,
-      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case)"
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "1 validation error for EnrichmentSchema: sources.1.url — Field required [type=missing, input_value={'title': 'Artículo en P...', 'date': '2025-09-17'}]. The model returned a sources entry with title/date but omitted the url key entirely. Retryable prompt-shape issue, not a source-availability problem."
     },
     {
       "file": "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md",
