@@ -2,8 +2,9 @@
 
 import json
 import subprocess
-from datetime import date
 from pathlib import Path
+
+import yaml
 
 from news_collector.logic.workflows.frontend_publication_validation import (
     _classify_failure,
@@ -11,19 +12,23 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     _load_manifest,
     _record_check,
     _stage_fixture,
-    build_fixture_post,
     render_fixture_markdown,
     run_frontend_publication_validation,
 )
 
 
-def test_render_fixture_markdown_omits_optional_fields() -> None:
-    post = build_fixture_post()
-    post.permalink = None
-    post.source_url = None
-    rendered = render_fixture_markdown(post)
-    assert "permalink:" not in rendered
-    assert "source_url:" not in rendered
+def test_render_fixture_markdown_omits_source_url_when_metadata_absent() -> None:
+    """include_source_metadata=False (used by the sources missing-field
+    regression test) must not leave a stale/fabricated source_url behind.
+    The article's own Stage 4 ``sources`` entry still comes from the
+    enrichment payload itself here (not the backfill), so this variant does
+    not raise — only omitting the enrichment ``sources`` key too (see
+    test_frontend_publication_validation.py) triggers the V2 gate."""
+    rendered = render_fixture_markdown(include_source_metadata=False)
+    frontmatter = rendered.split("---", 2)[1]
+    data = yaml.safe_load(frontmatter)
+    assert "source_url" not in data
+    assert data.get("sources")
 
 
 def test_classify_failure_permalink_collision() -> None:
@@ -108,9 +113,10 @@ def test_stage_fixture_writes_post_and_manifest(tmp_path: Path) -> None:
     post_path = Path(staged["post_path"])
     manifest_path = Path(staged["manifest_path"])
     assert post_path.exists()
-    assert "title: 'Publication Smoke Test Article'" in post_path.read_text(
-        encoding="utf-8"
-    )
+    frontmatter = post_path.read_text(encoding="utf-8").split("---", 2)[1]
+    data = yaml.safe_load(frontmatter)
+    assert data["title"] == "Publication Smoke Test Article"
+    assert data["schema_version"] == 2
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["smoke-test-ci-fixture"] == "_smoke-test.md"
 

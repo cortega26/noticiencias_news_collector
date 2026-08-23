@@ -6,7 +6,6 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     FIXTURE_ARTICLE_ID,
     FIXTURE_POST_FILENAME,
     MANIFEST_FILENAME,
-    build_fixture_post,
     render_fixture_markdown,
     run_frontend_publication_validation,
 )
@@ -27,11 +26,22 @@ def _prepare_frontend_root(tmp_path: Path) -> Path:
 def test_fixture_post_renders_absolute_source_url() -> None:
     """The frontend content-quality gate requires an absolute http(s) source_url
     on every post; the smoke fixture must satisfy it or the CI gate fails."""
-    post = build_fixture_post()
-    assert post.source_url is not None
-    assert post.source_url.scheme in ("http", "https")
-    rendered = render_fixture_markdown(post)
-    assert "source_url: 'https://" in rendered
+    import yaml
+
+    rendered = render_fixture_markdown()
+    frontmatter = rendered.split("---", 2)[1]
+    data = yaml.safe_load(frontmatter)
+    assert data["source_url"].startswith(("http://", "https://"))
+    assert data["schema_version"] == 2
+    for field in (
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources",
+    ):
+        assert data.get(field), f"Missing required v2 field: {field}"
 
 
 def test_frontend_publication_validation_success_restores_workspace(tmp_path: Path):

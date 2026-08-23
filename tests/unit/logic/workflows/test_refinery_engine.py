@@ -364,6 +364,99 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_git.create_pull_request.assert_not_called()
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_returns_false_for_v2_incomplete_block(
+        self, mock_dt_refinery
+    ):
+        """Integration-boundary regression for the v2 fail-closed gate
+        (news_collector/components/editorial/ai_editor.py:2177-2190, added
+        in 65e934a). Every existing test exercises process_article directly;
+        nothing pinned that RefineryEngine.process_single_article itself
+        stops BEFORE any writer/Git side effect when process_article raises
+        editorial_v2_incomplete. This test closes that gap."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+
+        from news_collector.components.editorial.ai_editor import (
+            GeneratedArticleValidationError,
+        )
+
+        article = {
+            "id": "128",
+            "title": "V2 incomplete enrichment article",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for v2 gate testing.",
+            "image_url": "https://example.com/test-image-5.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.side_effect = GeneratedArticleValidationError(
+            "V2 article missing required enrichment fields: ['sources']. "
+            "Stage 4 output is incomplete; retry or supply fields manually.",
+            error_code="editorial_v2_incomplete",
+        )
+        self.engine.writer.write_article = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            result = self.engine.process_single_article(
+                article, MagicMock(), target_dir
+            )
+
+        self.assertFalse(result)
+        self.assertEqual(
+            self.engine._last_blocked_error["error_code"],
+            "editorial_v2_incomplete",
+        )
+        self.mock_git.create_branch.assert_not_called()
+        self.mock_git.commit_and_push.assert_not_called()
+        self.mock_git.create_pull_request.assert_not_called()
+        self.engine.writer.write_article.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_proceeds_past_editor_refinement_on_v2_success(
+        self, mock_dt_refinery
+    ):
+        """Control case for the v2-incomplete boundary test above: a
+        successful process_article() output (the common case — schema v2
+        with all enrichment fields present) must NOT be blocked, and the
+        pipeline must proceed past editor_refinement into branch creation."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+
+        article = {
+            "id": "129",
+            "title": "V2 complete enrichment article",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for v2 gate testing.",
+            "image_url": "https://example.com/test-image-6.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+
+        self.mock_db.get_canonical_slug.return_value = None
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: v2-complete\n---\nContent"
+        )
+        self.mock_git.create_branch.return_value = "content/update/v2-complete"
+        self.mock_git.create_pull_request.return_value = "http://pr.url/v2-complete"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = Path(tmpdir)
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+        self.assertTrue(result)
+        self.mock_git.create_branch.assert_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_prunes_stale_hero_placeholder_allowlist(
         self, mock_dt_refinery
     ):
