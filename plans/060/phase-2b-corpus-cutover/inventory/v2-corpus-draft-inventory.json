@@ -1,0 +1,2259 @@
+{
+  "generated_at": "2026-08-22T23:51:45Z",
+  "source_repo": "noticiencias (frontend)",
+  "source_commit_note": "read from working tree at time of generation; frontend checkout was clean before and after",
+  "llm_provider": {
+    "provider_class": "FallbackProvider",
+    "chain": [
+      "NvidiaProvider",
+      "OllamaProvider"
+    ],
+    "primary_provider_class": "NvidiaProvider",
+    "primary_is_nvidia": true,
+    "model": "nvidia/nemotron-3-super-120b-a12b"
+  },
+  "total_posts_processed": 30,
+  "drafts_available": 27,
+  "drafts_unavailable": 3,
+  "posts": [
+    {
+      "file": "2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras.md",
+      "source_url": "https://news.mit.edu/2026/how-online-mit-course-supply-chain-management-sparked-new-career-0115",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Kevin Power tomó un curso MicroMasters de la MIT sobre gestión de cadenas de suministro, lo que le motivó a continuar estudios universitarios.",
+          "Tras completar el curso, ingresó al programa de gestión de cadenas de suministro de la MIT, donde combinó teoría con proyectos prácticos.",
+          "Actualmente trabaja como profesional en gestión de cadenas de suministro y considera el MicroMasters el punto de partida de su cambio de carrera."
+        ],
+        "glossary": [
+          {
+            "term": "MicroMasters",
+            "definition": "Serie de cursos en línea de nivel de posgrado ofrecidos por la MIT que otorgan credenciales acreditadas y pueden contar hacia un título completo."
+          },
+          {
+            "term": "gestión de cadenas de suministro",
+            "definition": "Conjunto de actividades que planifican, implementan y controlan el flujo eficiente de bienes, servicios e información desde el origen hasta el consumidor."
+          },
+          {
+            "term": "MIT",
+            "definition": "Massachusetts Institute of Technology, institución de investigación y educación superior ubicada en Cambridge, Estados Unidos, reconocida por su enfoque en ciencia y tecnología."
+          },
+          {
+            "term": "programa universitario",
+            "definition": "Conjunto estructurado de cursos y actividades académicas que conducen a la obtención de un título de grado o posgrado en una institución de educación superior."
+          },
+          {
+            "term": "carrera profesional",
+            "definition": "Trayectoria laboral sostenida en una ocupación específica, generalmente requiriendo formación especializada y experiencia acumulada."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Kevin Power completó un curso MicroMasters de la MIT sobre gestión de cadenas de suministro.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Tras el curso, Kevin Power fue aceptado en el programa de gestión de cadenas de suministro de la MIT.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Hoy Kevin Power trabaja como profesional en gestión de cadenas de suministro.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Los cursos en línea de alta calidad pueden servir como primer paso para personas en América Latina que buscan reconvertirse profesionalmente sin tener que mudarse o incurrir en altos costos inicialmente.",
+          "La gestión de cadenas de suministro es un campo clave para el crecimiento del comercio regional y la logística, por lo que habilidades en esta área aumentan la empleabilidad en sectores como la manufactura, el agroexport y el comercio electrónico."
+        ],
+        "confidence": "Moderada — informe basado en testimonio individual de una fuente de noticias institucional (MIT News), sin datos estadísticos ni revisión por pares que respalden la generalización del resultado.",
+        "sources": [
+          {
+            "title": "Cómo un curso en línea de la MIT sobre gestión de cadenas de suministro dio origen a una nueva carrera",
+            "url": "https://news.mit.edu/2026/how-online-mit-course-supply-chain-management-sparked-new-career-0115",
+            "publisher": "MIT News",
+            "date": "2026-01-15"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-17-cientificos-descubren-adn-preservado-en-guepardos-momificados.md",
+      "source_url": "https://livescience.com/animals/cats/ancient-mummified-cheetahs-discovered-in-saudi-arabia-contain-preserved-dna-from-the-long-lost-population",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Se extrajo ADN de siete guepardos momificados hallados en una cueva de Arabia Saudita, con antigüedad entre 100 y 4,000 años.",
+          "El estudio, publicado en Communications Earth and Environment, muestra que los guepardos más antiguos están más relacionados con subespecies del África Occidental que con las asiáticas.",
+          "Esto indica que la pérdida de diversidad genética del guepardo pudo haber sido mayor de lo pensado y abre posibilidades para su rewilding en la península arábiga usando la subespecie A. j. hecki.",
+          "Los hallazgos respaldan la presencia histórica del guepardo en la región y sugieren que su reintroducción podría ampliar su rango actual.",
+          "El ADN recuperado podría servir como referencia genética para programas de conservación y restauración de poblaciones."
+        ],
+        "glossary": [
+          {
+            "term": "ADN preservado",
+            "definition": "Material genético que ha permanecido intacto en restos antiguos, permettant su análisis para estudiar la historia evolutiva de una especie."
+          },
+          {
+            "term": "rewilding",
+            "definition": "Proceso de restaurar ecosistemas mediante la reintroducción de especies nativas que habían desaparecido, con el objetivo de recuperar funciones ecológicas."
+          },
+          {
+            "term": "subespecie",
+            "definition": "División taxonómica dentro de una especie que presenta diferencias genéticas o morfológicas pero puede cruzarse con otras subespecie."
+          },
+          {
+            "term": "guepardo momificado",
+            "definition": "Restos de un guepardo cuyo cuerpo ha sido natural o artificialmente conservado, manteniendo tejidos y posible ADN durante milenios."
+          },
+          {
+            "term": "Communications Earth and Environment",
+            "definition": "Revista científica de acceso abierto que publica investigaciones sobre ciencias de la Tierra, medio ambiente y áreas relacionadas."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Se extrajo ADN de siete guepardos momificados encontrados en Arabia Saudita.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los restos datan entre 100 y 4,000 años atrás.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los guepardos más antiguos están más estrechamente relacionados con subespecies del África Occidental que con las asiáticas.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La pérdida de diversidad genética del guepardo podría haber sido mayor de lo que se pensaba.",
+            "status": "uncertain"
+          },
+          {
+            "label": "Los guepardos para el rewilding en la península arábiga pueden obtenerse de la subespecie A. j. hecki, más abundante que la asiática.",
+            "status": "needs_review"
+          }
+        ],
+        "why_it_matters": [
+          "Entender la genética histórica del guepardo ayuda a diseñar programas de conservación más efectivos para grandes felinos en América Latina, donde especies como el jaguar enfrentan amenazas similares.",
+          "La posibilidad de rewilding con genética adecuada podría inspirar proyectos de reintroducción de especies clave en ecosistemas degradados de la región.",
+          "El estudio subraya la importancia de preservar la diversidad genética como herramienta para la resiliencia de poblaciones frente al cambio climático y la pérdida de hábitat."
+        ],
+        "confidence": "Moderada — estudio revisado por pares con muestra pequeña (7 especímenes) y datos de ADN antiguo, pero sin limitaciones explícitas detalladas en el artículo.",
+        "sources": [
+          {
+            "title": "Ancient mummified cheetahs discovered in Saudi Arabia contain preserved DNA from the long-lost population",
+            "url": "https://livescience.com/animals/cats/ancient-mummified-cheetahs-discovered-in-saudi-arabia-contain-preserved-dna-from-the-long-lost-population",
+            "publisher": "Livescience",
+            "date": ""
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-18-nasa-se-prepara-para-un-paso-historico-en-la-exploracion-espacial-humana-con-artemis-ii.md",
+      "source_url": "https://nasa.gov/news-release/what-you-need-to-know-about-nasas-artemis-ii-moon-mission/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "NASA se prepara para lanzar Artemis II, la segunda misión tripulada del programa Artemis, que dará un paso histórico en la exploración espacial humana.",
+          "La misión tiene como objetivo enviar astronautas más allá de la órbita terrestre baja, rodear la Luna y reunir datos necesarios para futuras misiones lunares sostenibles y para llegar a Marte.",
+          "Artemis II se considera el paso clave para establecer una presencia lunar duradera y avanzar hacia la exploración de Marte, según declaraciones del administrador de la NASA Jared Isaacman.",
+          "La preparación incluye un kit de prensa oficial y el trabajo intensivo de astronautas y equipos de la NASA para garantizar el éxito del vuelo."
+        ],
+        "glossary": [
+          {
+            "term": "Artemis II",
+            "definition": "Segunda misión tripulada del programa Artemis de la NASA, que pretende enviar astronautas alrededor de la Luna para probar sistemas y recopilar datos para futuras exploraciones lunares y marcianas."
+          },
+          {
+            "term": "presencia lunar duradera",
+            "definition": "Objetivo de establecer una base o infraestructura permanente en la Luna que permita actividades humanas continuas, investigación científica y uso de recursos locales."
+          },
+          {
+            "term": "programa Artemis",
+            "definition": "Iniciativa de la NASA cuyo propósito es regresar humanos a la Luna, establecer una presencia sostenible y utilizar esa experiencia como trampolín para enviar astronautas a Marte."
+          },
+          {
+            "term": "Marte",
+            "definition": "Planeta rojo considerado el próximo destino de la exploración humana tras la Luna; las misiones Artemis buscan desarrollar las tecnologías necesarias para llegar allí."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Artemis II será la misión más larga y desafiante hasta la fecha",
+            "status": "uncertain"
+          },
+          {
+            "label": "La misión enviará estadounidenses a Marte",
+            "status": "misleading"
+          },
+          {
+            "label": "Artemis II enviará seres humanos más allá de la Tierra que nunca antes",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "El avance de Artemis II puede inspirar a jóvenes latinoamericanos a estudiar carreras STEM y participar en colaboraciones internacionales de exploración espacial.",
+          "El desarrollo de tecnologías para una presencia lunar duradera podría abrir oportunidades de inversión y colaboración para empresas y científicos de la región en sectores como minería espacial y telecomunicaciones.",
+          "La información obtenida en torno a la Luna y la preparación para Marte contribuye al conocimiento global que beneficia la resiliencia frente a desafíos como el cambio climático y la gestión de recursos en América Latina."
+        ],
+        "confidence": "Moderada — anuncio oficial de la NASA con planes detallados pero misión aún por realizarse.",
+        "sources": [
+          {
+            "title": "What you need to know about NASA's Artemis II moon mission",
+            "url": "https://nasa.gov/news-release/what-you-need-to-know-about-nasas-artemis-ii-moon-mission/",
+            "publisher": "NASA",
+            "date": ""
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-23-descubren-los-arpones-mas-antiguos-una-revelacion-que-cambia-nuestra-perspectiva-sobre-la-caza-de-ballenas.md",
+      "source_url": "https://livescience.com/archaeology/some-of-the-oldest-harpoons-ever-found-reveal-indigenous-people-in-brazil-were-hunting-whales-5-000-years-ago",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Se hallaron arpones de hueso de ballena de aproximadamente 5.000 años en Brasil, fabricados con costillas de ballenas azules y del sur.",
+          "El descubrimiento indica que la caza activa de ballenas ocurrió en el Hemisferio Sur mucho antes de lo que se pensaba anteriormente.",
+          "Los objetos fueron encontrados en el Museo Arqueológico Sambaquis de Joinville y analizaron signos moleculares de huesos de cetáceos precoloniales.",
+          "La evidencia desafía la idea de que las comunidades costeras solo utilizaban ballenas varadas y muestra una explotación marina más compleja.",
+          "Este hallazgo resalta la riqueza cultural y económica de los pueblos indígenas brasileños en la explotación de recursos marinos."
+        ],
+        "glossary": [
+          {
+            "term": "arpones",
+            "definition": "Instrumentos de punta afilada, generalmente de hueso o madera, usados para penetrar y capturar grandes animales marinos como las ballenas."
+          },
+          {
+            "term": "cetáceos",
+            "definition": "Grupo de mamíferos acuáticos que incluye a las ballenas, delfines y marsopas."
+          },
+          {
+            "term": "sambaquis",
+            "definition": "Montículos arqueológicos formados por acumulación de conchas y otros restos de actividades humanas, comunes en la costa brasileña."
+          },
+          {
+            "term": "caza activa",
+            "definition": "Modo de obtener recursos marinos en el que los humanos persiguen y cazan animales vivos, en contraste con el recolecto de ejemplares varados o muertos."
+          },
+          {
+            "term": "moléculas de hueso",
+            "definition": "Componentes químicos de los restos óseos que pueden analizarse para determinar la especie, antigüedad y condiciones de preservación."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Los arpones tienen aproximadamente 5.000 años de antigüedad.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los arpones fueron hechos con costillas de ballenas azules y ballenas del sur.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los objetos se encontraron en el Museo Arqueológico Sambaquis de Joinville, Brasil.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El hallazgo fue realizado por científicos brasileños.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La evidencia indica caza activa de ballenas en Brasil hace 5.000 años.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Este descubrimiento muestra que la caza de ballenas no era exclusiva del Hemisferio Norte.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Destaca la antigua tradición de caza de ballenas de pueblos indígenas brasileños, resaltando su patrimonio marítimo y cultural.",
+          "Muestra que la explotación de recursos marinos en América Latina tiene raíces mucho más profundas de lo que se creía anteriormente.",
+          "Puede inspirar el reconocimiento y protección de conocimientos indígenas en la gestión contemporánea de los océanos de la región."
+        ],
+        "confidence": "Moderada — basada en declaraciones de investigadores y evidencia molecular presentada, aunque el artículo es de divulgación y no muestra el estudio original revisado por pares.",
+        "sources": [
+          {
+            "title": "Some of the oldest harpoons ever found reveal Indigenous people in Brazil were hunting whales 5,000 years ago",
+            "url": "https://livescience.com/archaeology/some-of-the-oldest-harpoons-ever-found-reveal-indigenous-people-in-brazil-were-hunting-whales-5-000-years-ago",
+            "publisher": "LiveScience",
+            "date": ""
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-24-thomas-edison-podria-haber-creado-el-grafeno-accidentalmente-en-1879.md",
+      "source_url": "https://arstechnica.com/science/2026/01/did-edison-accidentally-make-graphene-in-1879/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Los investigadores sugieren que Thomas Edison pudo haber producido accidentalmente grafeno al calentar filamentos de bambú a más de 2000 °C en sus bombillas incandescentes de 1879.",
+          "El descubrimiento se basa en una recreación del experimento original realizada por Lucas Eddy, estudiante de la Universidad de Rice, usando bombillas artesanales y la patente de Edison.",
+          "Si se confirma, significaría que el grafeno se sintetizó más de un siglo antes de su aislamiento oficial en 2004, abriendo preguntas sobre otros materiales olvidados en la historia de la ciencia.",
+          "El hallazgo resalta el valor de revisitar experimentos pasados con técnicas modernas para descubrir nuevos usos de materiales conocidos."
+        ],
+        "glossary": [
+          {
+            "term": "grafeno",
+            "definition": "Material formado por una sola capa de átomos de carbono dispuestos en una red hexagonal; es extremadamente delgado, fuerte y conductor."
+          },
+          {
+            "term": "calentamiento Joule flash",
+            "definition": "Proceso de calentamiento muy rápido y localizado mediante el paso de una corriente eléctrica intensa que genera calor por efecto Joule en fracciones de segundo."
+          },
+          {
+            "term": "filamento de bambú",
+            "definition": "Estructura delgada de bambú que, al ser carbonizada, se utilizó como material emisor de luz en las primeras bombillas incandescentes de Edison."
+          },
+          {
+            "term": "patente de 1879",
+            "definition": "Documento legal concedido a Thomas Edison en 1879 que describe la mejora de la bombilla incandescente con filamento de carbono."
+          },
+          {
+            "term": "supercondensadores",
+            "definition": "Dispositivos de almacenamiento de energía que pueden cargar y descargar muy rápidamente, con mayor densidad de potencia que las baterías convencionales."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Thomas Edison pudo haber creado accidentalmente grafeno en 1879 al calentar filamentos de bambú a más de 2000 °C",
+            "status": "uncertain"
+          },
+          {
+            "label": "Lucas Eddy, estudiante de posgrado de la Universidad de Rice, logró producir grafeno recreando el experimento de Edison con bombillas artesanales de bambú",
+            "status": "needs_review"
+          },
+          {
+            "label": "El filamento de bambú carbonizado de Edison duraba más de 1200 horas con una fuente de 110 voltios",
+            "status": "confirmed"
+          },
+          {
+            "label": "El grafeno tiene potencial para aplicaciones en baterías, supercondensadores, antenas, filtros de agua, transistores, células solares y pantallas táctiles",
+            "status": "confirmed"
+          },
+          {
+            "label": "El grafeno se aisló oficialmente por primera vez en 2004",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Si se confirma que el grafeno pudo producirse con materiales simples y baratos como el bambú, abriría la puerta a métodos de bajo costo para su fabricación en regiones con abundancia de este recurso, como varios países latinoamericanos.",
+          "El conocimiento de que un invento histórico pudo haber generado nanomateriales avanzados motiva a revisitar colecciones de patentes y dispositivos antiguos con técnicas modernas, lo que podría generar innovaciones tecnológicas locales.",
+          "Aplicaciones prometedoras del grafeno, como baterías de mayor capacidad y supercondensadores, podrían beneficiar la transición energética y la electrificación rural en América Latina."
+        ],
+        "confidence": "Moderada — basada en una recreación experimental y fuentes históricas, pero sin verificación independiente ni publicación revisada por pares.",
+        "sources": [
+          {
+            "title": "Thomas Edison podría haber creado el grafeno accidentalmente en 1879",
+            "url": "https://arstechnica.com/science/2026/01/did-edison-accidentally-make-graphene-in-1879/",
+            "publisher": "Arstechnica",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-25-investigadores-logran-la-superposicion-cuantica-mas-grande-registrada.md",
+      "source_url": "https://scientificamerican.com/article/quantum-physicists-just-supersized-schroedingers-cat/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Un equipo liderado por la Universidad de Viena logró colocar en superposición cuántica clusters de aproximadamente 7.000 átomos de sodio, cada uno de unos 8 nanómetros de ancho, separando sus posiciones en 133 nanómetros.",
+          "El experimento demostró que estos clusters se comportaron como ondas, produciendo patrones de interferencia detectables, lo que confirma que la mecánica cuántica opera a escalas mucho mayores de lo anteriormente pensado.",
+          "Los resultados sugieren que escalar sistemas cuánticos para computadoras cuánticas podría ser más factible, ya que no se observó un límite práctico que impida mantener miles de objetos en superposición.",
+          "El avance revive el experimento mental del gato de Schrödinger y abre puertas a aplicaciones tecnológicas en medicina, finanzas y seguridad mediante el desarrollo de computadores cuánticos más robustos."
+        ],
+        "glossary": [
+          {
+            "term": "Superposición cuántica",
+            "definition": "Principio según el cual una partícula puede existir simultáneamente en varios estados hasta que se mide."
+          },
+          {
+            "term": "Cluster",
+            "definition": "Grupo de átomos unidos que se comporta como una entidad única en el experimento."
+          },
+          {
+            "term": "Nanómetro",
+            "definition": "Unidad de longitud equivalente a mil millonésimas de metro (10⁻⁹ m), usada para escalas atómicas y moleculares."
+          },
+          {
+            "term": "Mecánica cuántica",
+            "definition": "Rama de la física que describe el comportamiento de la materia y la energía a escalas subatómicas."
+          },
+          {
+            "term": "Ordenador cuántico",
+            "definition": "Dispositivo que utiliza bits cuánticos (qubits) para realizar cálculos que pueden ser exponencialmente más rápidos que los ordenadores clásicos."
+          },
+          {
+            "term": "Gato de Schrödinger",
+            "definition": "Experimento mental que ilustra la paradoja de la superposición aplicada a un objeto macroscópico."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Los investigadores lograron una superposición de alrededor de 7.000 átomos de sodio.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Cada cluster tiene un ancho aproximado de 8 nanómetros.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La distancia entre las dos ubicaciones en superposición fue de 133 nanómetros.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Este resultado indica que escalar sistemas cuánticos para computadoras podría ser más factible de lo esperado.",
+            "status": "uncertain"
+          },
+          {
+            "label": "El gato de Schrödinger es un experimento mental propuesto por Erwin Schrödinger en 1935.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "El avance muestra que la computación cuántica podría escalar a niveles prácticos, lo que beneficiaría a países latinoamericanos al permitir el desarrollo de tecnologías locales en áreas como criptografía y simulación de moléculas para fármacos.",
+          "Comprender los límites de la superposición ayuda a diseñar mejores materiales y sensores cuánticos que podrían aplicarse en la industria minera y energética de la región.",
+          "Fomentar la investigación básica en física cuántica inspira a jóvenes latinoamericanos a carreras STEM y fortalece la colaboración internacional en ciencia."
+        ],
+        "confidence": "Moderada — basado en estudio publicado en revista científica (informado por Scientific American), aunque el artículo es divulgativo y no detalla todos los aspectos metodológicos.",
+        "sources": [
+          {
+            "title": "Quantum physicists just supersized Schrödinger’s cat",
+            "url": "https://scientificamerican.com/article/quantum-physicists-just-supersized-schroedingers-cat/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-25-la-guarderia-un-lugar-donde-los-bebes-intercambian-microorganismos-y-desarrollan-su-microbioma.md",
+      "source_url": "https://scientificamerican.com/article/babies-who-attend-daycare-share-good-germs-too/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Los bebés que asisten a la guardería comparten una cantidad significativa de microorganismos con sus compañeros, lo que contribuye al 15-20% de su microbioma intestinal.",
+          "El estudio encontró que la transmisión de cepas microbianas entre infantes es extensa durante el primer año de guardería, incluso involucrando a mascotas.",
+          "El uso de antibióticos en el primer año de vida reduce drásticamente la diversidad bacteriana, aunque seguida de una recuperación rápida gracias al intercambio microbiano en el entorno.",
+          "Los autores sugieren que las cepas adquiridas en la guardería podrían persistir hasta la adultez, pero su impacto a largo plazo en la salud aún no se conoce."
+        ],
+        "glossary": [
+          {
+            "term": "microbioma",
+            "definition": "Conjunto de microorganismos (bacterias, virus, hongos) que viven en un entorno específico, como el intestino humano."
+          },
+          {
+            "term": "cepas microbianas",
+            "definition": "Variantes genéticas dentro de una especie de bacteria que pueden tener funciones diferentes en el organismo."
+          },
+          {
+            "term": "transmisión",
+            "definition": "Passage o intercambio de microorganismos de una persona a otra mediante contacto directo o indirecto."
+          },
+          {
+            "term": "antibióticos",
+            "definition": "Fármacos que matan o inhiben el crecimiento de bacterias, usados para tratar infecciones pero que también afectan al microbioma."
+          },
+          {
+            "term": "fecales",
+            "definition": "Relacionado con las heces; las muestras fecales se utilizan para estudiar el contenido del microbioma intestinal."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Los bebés en guardería comparten microorganismos entre sí.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El 15-20% de las especies microbianas en los bebés proviene de sus compañeros de guardería.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El uso de antibióticos durante el primer año reduce severamente la cantidad de cepas bacterianas en el microbioma infantil.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El impacto a largo plazo de la exposición a cepas microbianas de la guardería en la salud adulta es desconocido.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "Entender cómo la guardería influye en el microbioma puede ayudar a diseñar políticas de salud infantil en América Latina, donde el acceso a educación preescolar está en aumento.",
+          "Promover un microbioma diverso desde temprana edad podría reducir la prevalencia de enfermedades inmunológicas y metabólicas comunes en la región.",
+          "El conocimiento sobre el intercambio microbiano entre niños y mascotas puede orientar recomendaciones de higiene y convivencia en hogares latinoamericanos."
+        ],
+        "confidence": "Alta — estudio revisado por pares publicado en Nature con muestra de 43 bebés y análisis detallado de transmisión microbiana.",
+        "sources": [
+          {
+            "title": "Babies Who Attend Daycare Share Good Germs, Too",
+            "url": "https://scientificamerican.com/article/babies-who-attend-daycare-share-good-germs-too/",
+            "publisher": "Scientific American",
+            "date": ""
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-27-conoce-a-los-misteriosos-electridos.md",
+      "source_url": "https://arstechnica.com/science/2026/01/meet-the-mysterious-electrides/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": false,
+      "note": "no draft available — needs downgrade or manual authoring",
+      "reviewed": false,
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "1 validation error for EnrichmentSchema: fact_check.1.label — Field required [type=missing, input_value={'term': 'Un electrido es...', 'status': 'confirmed'}]. The model emitted a fact_check entry shaped like a glossary item (term/status) instead of the required (label/status) keys. Retryable prompt-shape issue, not a source-availability problem."
+    },
+    {
+      "file": "2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md",
+      "source_url": "https://newscientist.com/article/2513398-to-halt-measles-resurgence-we-must-fight-the-plague-of-misinformation/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": false,
+      "note": "no draft available — needs downgrade or manual authoring",
+      "reviewed": false,
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "2 validation errors for EnrichmentSchema: sources.1.url and sources.2.url — String should have at least 1 character [type=string_too_short, input_value='']. The model returned two sources entries with empty url strings. Retryable prompt-shape issue, not a source-availability problem."
+    },
+    {
+      "file": "2026-01-27-herramientas-empunadas-de-piedra-sofisticadas-descubiertas-en-china-datan-de-hace-160-000-anos.md",
+      "source_url": "https://livescience.com/archaeology/human-evolution/160-000-year-old-sophisticated-stone-tools-discovered-in-china-may-not-have-been-made-by-homo-sapiens",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Se descubrieron más de 2.600 herramientas de piedra en el sitio de Xigou, Henan, algunas con mangos (empuñadas), datadas en al menos 160.000 años.",
+          "El hallazgo, publicado en Nature Communications, muestra la primera evidencia de herramientas compuestas en el Este de Asia, indicando una mayor complejidad tecnológica de lo previamente pensado.",
+          "La identidad de los fabricantes es incierta; podrían ser Denisovanos, H. longi, H. juluensis o incluso H. sapiens, debido a la presencia de varias especies de homínidos en la región.",
+          "El descubrimiento desafía la noción de que la tecnología de herramientas de piedra en Asia se retrasaba respecto a Europa y África durante ese período.",
+          "Estas herramientas sugieren una flexibilidad conductual y adaptación al entorno que implica capacidades cognitivas avanzadas de los homínidos en China hace 160.000 años."
+        ],
+        "glossary": [
+          {
+            "term": "herramientas empuñadas",
+            "definition": "Instrumentos de piedra unidos a un mango o eje de madera u otro material, lo que aumenta su eficacia al permitir mayor palanca y fuerza."
+          },
+          {
+            "term": "homínidos",
+            "definition": "Grupo de primates que incluye a los humanos modernos y sus parientes extintos, como neandertales y denisovanos."
+          },
+          {
+            "term": "Denisovanos",
+            "definition": "Población extinta de homínidos conocida principalmente por restos genéticos encontrados en Siberia y relacionados con asiáticos modernos."
+          },
+          {
+            "term": "H. longi",
+            "definition": "Especie propuesta de homínido basada en un cráneo encontrado en China, cuyas características lo distinguen de Homo sapiens y otros homínidos conocidos."
+          },
+          {
+            "term": "Nature Communications",
+            "definition": "Revista científica de acceso abierto que publica investigación revisada por pares en todas las áreas de las ciencias biológicas, de la salud y físicas."
+          },
+          {
+            "term": "capacidad cognitiva",
+            "definition": "Conjunto de habilidades mentales como planificación, resolución de problemas y pensamiento abstracto que permiten a un organismo adaptarse y innovar."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Las herramientas de piedra descubiertas en Xigou datan de al menos 160.000 años.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Más de 2.600 herramientas de piedra fueron halladas en el sitio de Xigou.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El estudio fue publicado en la revista Nature Communications.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Las herramientas empuñadas son la primera evidencia de herramientas compuestas en el Este de Asia.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los posibles creadores incluyen Denisovanos, H. longi, H. juluensis o H. sapiens.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "Entender la sofisticación tecnológica de los primeros humanos en Asia ayuda a reconstruir los procesos de poblamiento y adaptación que finalmente llevaron a la llegada de humanos a América.",
+          "Reconocer que la innovación no estuvo limitada a ciertas regiones desafía estereotipos y enriquece la narrativa del patrimonio indígena latinoamericano, mostrando una origen más complejo y diverso.",
+          "Estos hallazgos inspiran a comunidades académicas y museísticas de la región a promover investigaciones comparativas que conecten el pasado asiático con las primeras poblaciones del continente americano."
+        ],
+        "confidence": "Alta — estudio revisado por pares con evidencia arqueológica sustancial (más de 2.600 herramientas), aunque la identidad exacta de los fabricantes permanece incierta.",
+        "sources": [
+          {
+            "title": "Herramientas empuñadas de piedra sofisticadas descubiertas en China datan de hace 160.000 años",
+            "url": "https://livescience.com/archaeology/human-evolution/160-000-year-old-sophisticated-stone-tools-discovered-in-china-may-not-have-been-made-by-homo-sapiens",
+            "publisher": "Livescience",
+            "date": "2024-09-24"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-27-nuevas-plataformas-estratosfericas-podrian-revolucionar-la-conectividad-en-areas-remotas.md",
+      "source_url": "https://technologyreview.com/2026/01/27/1131780/stratospheric-internet-take-off/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Cerca de 2.200 millones de personas carecen de acceso a Internet debido a su ubicación remota.",
+          "Empresas están probando dirigibles y drones de alta altitud (HAPS) este año sobre Japón e Indonesia para ofrecer conectividad.",
+          "Aunque el proyecto Loon fracasó, las nuevas plataformas afirman haber superado los problemas técnicos y económicos anteriores.",
+          "El mercado de HAPS se proyecta en $1.900 mil millones para 2033, mucho menor que el esperado para Internet por satélite."
+        ],
+        "glossary": [
+          {
+            "term": "dirigibles estratosféricos",
+            "definition": "Aeronaves más livianas que el aire que vuelan en la estratosfera (unos 20 km de altura) y pueden llevar equipos de telecomunicaciones."
+          },
+          {
+            "term": "plataformas HAPS",
+            "definition": "Estaciones de plataforma de alta altitud (High Altitude Platform Systems) que incluyen globos, dirigibles o aviones no tripulados operando en la estratosfera para proveer servicios como Internet."
+          },
+          {
+            "term": "antena de matriz de fases",
+            "definition": "Tipo de antena electrónica que puede dirigir su haz de señal sin mover partes mecánicas, permitiendo comunicaciones rápidas y flexibles."
+          },
+          {
+            "term": "megaconstelaciones",
+            "definition": "Grupos grandes de satélites en órbita baja que trabajan juntos para proporcionar cobertura global de servicios como Internet."
+          },
+          {
+            "term": "brecha digital",
+            "definition": "La diferencia entre quienes tienen acceso a tecnologías de la información y comunicación (como Internet) y quienes no, especialmente en zonas rurales o de bajos ingresos."
+          },
+          {
+            "term": "spin‑off",
+            "definition": "Empresa nueva que se crea a partir de una división o proyecto de una compañía mayor, manteniendo cierta relación tecnológica o de propiedad."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Aproximadamente 2.200 millones de personas no tienen acceso a Internet por vivir en zonas remotas.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Existen casi 10.000 satélites Starlink activos en órbita y la constelación OneWeb tiene 650 satélites.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El proyecto Loon de Google X, iniciado en 2011, cerró en 2021 debido a problemas técnicos y económicos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Varias empresas afirman haber resuelto los problemas técnicos y económicos que frenaron a los HAPS en el pasado.",
+            "status": "uncertain"
+          },
+          {
+            "label": "Se proyecta un mercado de HAPS de $1.900 mil millones para 2033.",
+            "status": "uncertain"
+          },
+          {
+            "label": "World Mobile planea probar una antena de matriz de fases que podría competir con las megaconstelaciones de satélites.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina, millones de personas en zonas rurales y amazónicas podrían acceder a educación y servicios de salud mediante Internet de alta altitud.",
+          "La tecnología HAPS podría desplegarse rápidamente tras desastres naturales, restaurando comunicaciones en áreas aisladas.",
+          "Al reducir la dependencia de costosa infraestructura terrestre, los países de la región podrían disminuir la brecha digital sin requerir grandes inversiones en fibra óptica."
+        ],
+        "confidence": "Moderada — el artículo presenta pruebas en curso y afirmaciones optimistas, pero también señala desafíos técnicos, económicos y un mercado proyectado modesto.",
+        "sources": [
+          {
+            "title": "Stratospheric internet take-off",
+            "url": "https://technologyreview.com/2026/01/27/1131780/stratospheric-internet-take-off/",
+            "publisher": "Technology Review",
+            "date": "2026-01-27"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-27-piezo1-identificado-como-sensor-de-ejercicio-interno-crucial.md",
+      "source_url": "https://sciencedaily.com/releases/2026/01/260127010149.htm",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Investigadores de la Universidad de Hong Kong identificaron la proteína Piezo1 como un sensor interno que detecta el ejercicio en las células madre mesenquimales de la médula ósea.",
+          "La activación de Piezo1 inhibe la formación de células grasas (adipogénesis) en la médula, lo que favorece la densidad ósea y ayuda a prevenir la osteoporosis.",
+          "El hallazgo sugiere que fármacos que imiten la activación de Piezo1 podrían tratar la osteoporosis en personas que no pueden realizar actividad física regular.",
+          "Este descubrimiento abre una nueva vía terapéutica para mejorar la salud ósea sin necesidad de movimiento físico."
+        ],
+        "glossary": [
+          {
+            "term": "Piezo1",
+            "definition": "Proteína mecánicamente sensible que actúa como sensor de estímulos físicos como la presión o el estiramiento celular."
+          },
+          {
+            "term": "células madre mesenquimales",
+            "definition": "Células progenitoras presentes en la médula ósea capaces de diferenciarse en diversos tipos de tejido, incluyendo hueso, grasa y cartílago."
+          },
+          {
+            "term": "adipogénesis",
+            "definition": "Proceso biológico mediante el cual las células precursoras se convierten en células grasas (adipocitos)."
+          },
+          {
+            "term": "osteoporosis",
+            "definition": "Enfermedad caracterizada por pérdida de densidad ósea que hace los huesos más frágiles y propensos a fracturas."
+          },
+          {
+            "term": "sensor de ejercicio",
+            "definition": "Molécula o mecanismo interno que detecta la actividad física y traduce esa señal en respuestas celulares, como la regulación del metabolismo óseo."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Piezo1 se encuentra en la superficie de las células madre mesenquimales de la médula ósea.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La activación de Piezo1 suprime la adipogénesis en la médula ósea.",
+            "status": "confirmed"
+          },
+          {
+            "label": "En Hong Kong, el 45 % de las mujeres y el 13 % de los hombres mayores de 65 años padecen osteoporosis.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Fármacos que imiten la activación de Piezo1 podrían prevenir o tratar la osteoporosis.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina el envejecimiento de la población aumenta la prevalencia de osteoporosis, por lo que nuevas terapias podrían reducir la carga de fracturas en adultos mayores.",
+          "Un tratamiento basado en Piezo1 beneficiaría a personas con movilidad limitada, como aquellos con discapacidades o enfermedades crónicas que impiden el ejercicio regular.",
+          "Al ofrecer una alternativa farmacológica al ejercicio para fortalecer los huesos, se podría mejorar la calidad de vida y disminuir los costos asociados a la atención de fracturas en la región."
+        ],
+        "confidence": "Moderada — estudio reportado por Sciencedaily basado en investigación de la Universidad de Hong Kong; se menciona un descubrimiento reciente pero no se detallan el tamaño de muestra ni si el trabajo ha pasado por revisión por pares.",
+        "sources": [
+          {
+            "title": "Piezo1 identified as crucial internal 'exercise sensor'",
+            "url": "https://sciencedaily.com/releases/2026/01/260127010149.htm",
+            "publisher": "ScienceDaily",
+            "date": "2026-01-27"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-28-moltbot-asistente-personal-de-inteligencia-artificial-ofrece-funcionalidades-innovadoras-pero-tambien-plantea-desafios-de-seguridad.md",
+      "source_url": "https://techcrunch.com/2026/01/27/everything-you-need-to-know-about-viral-personal-ai-assistant-clawdbot-now-moltbot/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Moltbot es un asistente personal de inteligencia artificial desarrollado por el austríaco Peter Steinberger, anteriormente conocido como Clawdbot, que ayuda a gestionar calendarios, enviar mensajes y verificar vuelos.",
+          "Aunque innovador, el asistente puede ejecutar comandos arbitrarios en la computadora del usuario, lo que plantea riesgos de seguridad como acceso no autorizado a información sensible o transacciones financieras.",
+          "Para reducir esos riesgos, se recomienda configurar Moltbot con cuidado y ejecutarlo en un entorno aislado, tal como aconseja su creador y expertos en seguridad.",
+          "El proyecto está en una fase temprana, principalmente usado por desarrolladores experimentados, y su adopción masiva dependerá de cómo se aborden los desafíos de seguridad."
+        ],
+        "glossary": [
+          {
+            "term": "asistente personal de inteligencia artificial",
+            "definition": "Programa que utiliza técnicas de IA para realizar tareas cotidianas del usuario, como gestionar agendas o enviar mensajes, actuando en su nombre."
+          },
+          {
+            "term": "ejecutar comandos arbitrarios",
+            "definition": "Capacidad de un software para ordenar a la computadora que realice cualquier acción que el programa indique, sin necesidad de aprobación previa del usuario."
+          },
+          {
+            "term": "entorno aislado",
+            "definition": "Configuración de ejecución en la que el programa se ejecuta separado del resto del sistema, limitando su acceso a archivos y recursos sensibles para reducir riesgos de seguridad."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Moltbot fue creado por Peter Steinberger, un desarrollador austriaco.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Moltbot se llamaba previamente Clawdbot antes de cambiar de nombre por un desafío legal de Anthropic.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Moltbot puede ejecutar comandos arbitrarios en la computadora del usuario.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La versión pública de Moltbot se deriva de una herramienta llamada 'Clawd' construida por su creador.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Los asistentes de IA como Moltbot están ganando popularidad y podrían transformar la forma en que los usuarios latinoamericanos gestionan sus tareas diarias, desde organización personal hasta compras en línea.",
+          "Sin embargo, los riesgos de seguridad asociados al acceso no controlado a la computadora resaltan la necesidad de educación y buenas prácticas de ciberseguridad en la región, especialmente para usuarios menos técnicos."
+        ],
+        "confidence": "Moderada — artículo de divulgación basado en declaraciones del desarrollador y opiniones de expertos, sin evidencia empírica detallada.",
+        "sources": [
+          {
+            "title": "Everything you need to know about viral personal AI assistant Clawdbot, now Moltbot",
+            "url": "https://techcrunch.com/2026/01/27/everything-you-need-to-know-about-viral-personal-ai-assistant-clawdbot-now-moltbot/",
+            "publisher": "Techcrunch",
+            "date": "2026-01-27"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-28-observatorio-de-la-energia-oscura-refina-comprension-de-expansion-cosmica.md",
+      "source_url": "https://livescience.com/physics-mathematics/dark-energy/the-dream-has-come-true-standard-model-of-cosmology-holds-up-in-massive-6-year-study-of-the-universe-with-one-big-caveat",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El Dark Energy Survey analizó seis años de datos de 669 millones de galaxias usando cuatro tipos de marcadores cosmológicos.",
+          "Los resultados son consistentes con el modelo estándar de cosmología, donde la densidad de energía oscura es constante, pero también permiten un modelo en que dicha densidad varía con el tiempo.",
+          "El patrón de agrupación de galaxias no coincide exactamente con las predicciones del modelo estándar, indicando que se necesitan más investigaciones.",
+          "Se planea continuar la investigación con el Observatorio Vera C. Rubin en Chile para probar la gravedad y profundizar en el conocimiento de la energía oscura."
+        ],
+        "glossary": [
+          {
+            "term": "energía oscura",
+            "definition": "Forma hipotética de energía que permea el espacio y parece responsable de la expansión acelerada del universo."
+          },
+          {
+            "term": "modelo estándar de cosmología",
+            "definition": "Marco teórico que describe la evolución del universo asumiendo una densidad constante de energía oscura y materia oscura."
+          },
+          {
+            "term": "oscilaciones acústicas bariónicas",
+            "definition": "Patrones en la distribución de galaxias que provienen de ondas de sonido en el universo temprano y sirven como regla cósmica para medir distancias."
+          },
+          {
+            "term": "supernovas tipo Ia",
+            "definition": "Explosiones de estrellas blancas cuya luminosidad conocida permite usarlas como faros para medir la expansión del universo."
+          },
+          {
+            "term": "lentes gravitacionales débiles",
+            "definition": "Distorsión sutil de la luz de galaxias lejana por la gravedad de materia intermedia, usada para mapear la distribución de materia oscura."
+          },
+          {
+            "term": "Observatorio Vera C. Rubin",
+            "definition": "Telescopio grande en construcción en Chile que realizará un censo profundo del cielo para estudiar energía oscura y materia oscura."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El Dark Energy Survey estudió 669 millones de galaxias durante seis años.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los resultados son consistentes con el modelo estándar de cosmología donde la densidad de energía oscura es constante.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El patrón de agrupación de galaxias no coincide exactamente con las predicciones del modelo estándar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El Observatorio Vera C. Rubin en Chile permitirá nuevas pruebas de la gravedad y arrojará luz sobre la energía oscura.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "El próximo Observatorio Vera C. Rubin, ubicado en Chile, brindará a científicos latinoamericanos acceso a datos de punta para estudiar la energía oscura.",
+          "Avanzar en la comprensión de la expansión cósmica puede impulsar desarrollos tecnológicos en áreas como sensores, procesamiento de grandes datos y educación científica en la región.",
+          "Conocer mejor la energía oscura ayuda a situar a América Latina en la vanguardia de la investigación básica que aborda preguntas fundamentales sobre el universo."
+        ],
+        "confidence": "Alta — estudio basado en seis años de datos y análisis de cientos de millones de galaxias, aunque el artículo reconoce limitaciones en el ajuste de los modelos.",
+        "sources": [
+          {
+            "title": "The dream has come true: Standard model of cosmology holds up in massive 6‑year study of the universe — with one big caveat",
+            "url": "https://livescience.com/physics-mathematics/dark-energy/the-dream-has-come-true-standard-model-of-cosmology-holds-up-in-massive-6-year-study-of-the-universe-with-one-big-caveat",
+            "publisher": "LiveScience",
+            "date": "2024-09-26"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-31-como-claude-code-esta-llevando-el-vibe-coding-a-todos.md",
+      "source_url": "https://scientificamerican.com/article/how-claude-code-is-bringing-vibe-coding-to-everyone/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El vibe coding busca convertir instrucciones en lenguaje natural en código funcional, haciendo la programación más accesible.",
+          "Claude Code es una herramienta que permite crear sitios web rápidamente y superar obstáculos de forma eficaz, según la experiencia del autor.",
+          "En comparación con Codex de OpenAI (2021), Claude Code parece ofrecer mayor facilidad de uso y velocidad.",
+          "El concepto de vibe coding fue acuñado por Andrej Karpathy en febrero de 2025 y está ganando interés entre personas sin formación en programación."
+        ],
+        "glossary": [
+          {
+            "term": "vibe coding",
+            "definition": "Enfoque que permite generar código a partir de instrucciones dadas en lenguaje natural, con el objetivo de hacer la programación más intuitiva y accesible."
+          },
+          {
+            "term": "Claude Code",
+            "definition": "Herramienta de inteligencia artificial que interpreta indicaciones en lenguaje natural y produce código, facilitando la creación de sitios web y otras aplicaciones."
+          },
+          {
+            "term": "Codex",
+            "definition": "Modelo de OpenAI lanzado en 2021 que también convierte instrucciones en inglés plano en código, precursor de herramientas como Claude Code."
+          },
+          {
+            "term": "IA para codificar",
+            "definition": "Uso de sistemas de inteligencia artificial diseñados para asistir o automatizar la escritura de código de programación."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "OpenAI lanzó Codex en 2021",
+            "status": "confirmed"
+          },
+          {
+            "label": "El término 'vibe coding' fue acuñado por Andrej Karpathy en febrero de 2025",
+            "status": "confirmed"
+          },
+          {
+            "label": "Claude Code permite crear sitios web complejos de forma más rápida y efectiva que Codex",
+            "status": "uncertain"
+          },
+          {
+            "label": "El vibe coding está aumentando su popularidad entre no codificadores",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Reduce la barrera de entrada al mundo del desarrollo de software, permitiendo que más personas en América Latina puedan crear aplicaciones sin necesidad de aprender lenguajes de programación tradicionales.",
+          "Puede impulsar emprendimientos tecnológicos y soluciones locales al facilitar la prototipación rápida de sitios web y herramientas digitales.",
+          "Al democratizar la codificación, contribuye a cerrar la brecha de habilidades digitales en la región y a generar oportunidades de trabajo remoto y freelance."
+        ],
+        "confidence": "Moderada — artículo de divulgación basado en experiencia personal y opiniones, sin datos empíricos ni revisión por pares detallada.",
+        "sources": [
+          {
+            "title": "Cómo Claude Code está llevando el vibe coding a todos",
+            "url": "https://scientificamerican.com/article/how-claude-code-is-bringing-vibe-coding-to-everyone/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-01-31-estudio-revela-menor-agrupamiento-de-galaxias-de-lo-esperado.md",
+      "source_url": "https://scientificamerican.com/article/largest-galaxy-survey-yet-confirms-that-the-universe-is-not-clumpy-enough/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El DES mapeó 150 millones de galaxias y 1.500 supernovas entre 2013 y 2019 usando el telescopio de Cerro Tololo en Chile.",
+          "El análisis indica que la gravedad ha agrupado menos galaxias de lo previsto por el modelo cosmológico estándar.",
+          "Los resultados sugieren que el Universo podría ser menos irregular (menos \"clumpy\") de lo que se pensaba.",
+          "Los autores advierten sobre posibles sesgos de selección e incertidumbre en las mediciones de distorsión por materia oscura."
+        ],
+        "glossary": [
+          {
+            "term": "materia oscura",
+            "definition": "Forma de materia que no emite ni absorbe luz, detectable solo por su efecto gravitacional sobre galaxias y la luz de fondo."
+          },
+          {
+            "term": "energía oscura",
+            "definition": "Componente desconocida que impulsa la expansión acelerada del Universo, representando aproximadamente el 70% de su densidad total."
+          },
+          {
+            "term": "supernovas",
+            "definition": "Explosiones estelares extremadamente luminosas que pueden servir como indicadores de distancia para medir la expansión cósmica."
+          },
+          {
+            "term": "agrupamiento de galaxias (clustering)",
+            "definition": "Tendencia de las galaxias a concentrarse en estructuras como cúmulos y supercúmulos debido a la atracción gravitatoria."
+          },
+          {
+            "term": "ondas de presión (oscillaciones acústicas bariónicas)",
+            "definition": "Fluctuaciones en la densidad del plasma primordial que dejaron una escala característica en la distribución actual de galaxias."
+          },
+          {
+            "term": "lensing gravitacional",
+            "definition": "Desviación de la luz de galaxias lejanas por la gravedad de masa intermedia, usada para mapear la distribución de materia oscura."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El estudio analizó datos de aproximadamente 150 millones de galaxias.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Detectó y estudió más de 1.500 explosiones de supernovas.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los resultados muestran menos agrupamiento de galaxias de lo esperado según la teoría estándar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El estudio no permite concluir que la teoría estándar de la evolución del Universo sea incorrecta.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El estudio reconoce límites como sesgos en la selección de galaxias e incertidumbre en la medición de distorsión de imágenes.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Las observaciones se realizaron entre 2013 y 2019 en el Observatorio Interamericano Cerro Tololo, Chile.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "El uso del telescopio en Cerro Tololo destaca la contribución de la infraestructura astronómica latinoamericana al avance de la cosmología global.",
+          "Comprender la distribución de galaxias ayuda a mejorar modelos que predicen la evolución del Universo, lo que tiene implicaciones para tecnologías de observación y educación científica en la región.",
+          "Los resultados invitan a seguir refinando teorías que podrían inspirar nuevas investigaciones y colaboraciones en observatorios de América Latina."
+        ],
+        "confidence": "Moderada — estudio basado en una muestra grande y múltiples líneas de evidencia, pero autorreconoce limitaciones como sesgos de selección e incertidumbre en mediciones de lensing.",
+        "sources": [
+          {
+            "title": "Largest galaxy survey yet confirms that the universe is not clumpy enough",
+            "url": "https://scientificamerican.com/article/largest-galaxy-survey-yet-confirms-that-the-universe-is-not-clumpy-enough/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-02-05-estudio-revela-que-un-tercio-del-cancer-es-prevenible-con-cambios-en-el-estilo-de-vida.md",
+      "source_url": "https://scientificamerican.com/article/these-two-habits-are-linked-to-more-than-a-third-of-all-cancer-cases/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El estudio estima que alrededor del 38% de los nuevos casos de cáncer en 2022 (≈7,1 millones) se deben a factores de riesgo evitables.",
+          "El tabaquismo representa aproximadamente el 15% de esos casos prevenibles, seguido por infecciones (10%) y consumo de alcohol (3%).",
+          "El análisis incluyó 36 tipos de cáncer en 185 países y reconoció limitaciones como la variabilidad en la calidad de los datos."
+        ],
+        "glossary": [
+          {
+            "term": "cáncer prevenible",
+            "definition": "Casos de cáncer que podrían evitarse modificando factores de riesgo como el tabaquismo, el consumo de alcohol o ciertas infecciones."
+          },
+          {
+            "term": "factores de riesgo modificables",
+            "definition": "Hábitos o exposiciones que pueden cambiarse para reducir la probabilidad de desarrollar cáncer, como fumar, beber alcohol o infecciones prevenibles."
+          },
+          {
+            "term": "Agencia Internacional para la Investigación del Cáncer (IARC)",
+            "definition": "Entidad especializada de la OMS que estudia las causas del cáncer y evalúa los factores de riesgo a nivel global."
+          },
+          {
+            "term": "Nature Medicine",
+            "definition": "Revista científica revisada por pares que publica investigaciones biomédicas de alto impacto."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El estudio publicado en Nature Medicine encontró que el 38% de los nuevos casos de cáncer en 2022 se atribuyen a causas evitables.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El tabaquismo fue responsable de alrededor del 15% de los casos prevenibles de cáncer.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Las infecciones contribuyeron al 10% y el consumo de alcohol al 3% de los casos prevenibles.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El análisis incluyó datos de 36 tipos de cáncer en 185 países.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina, donde el acceso a tratamientos oncológicos es limitado, prevenir hasta un tercio de los casos de cáncer podría salvar miles de vidas y reducir la carga económica en los sistemas de salud.",
+          "Enfocar políticas de salud en reducir el tabaquismo, promover la vacunación contra infecciones oncogénicas y moderar el consumo de alcohol tendría un impacto directo en la disminución del cáncer en la región.",
+          "Abordar las desigualdades en la prevención permite que los países de bajos y medianos ingresos se beneficien de estrategias de bajo costo y alto rendimiento."
+        ],
+        "confidence": "Alta — estudio revisado por pares en Nature Medicine con datos globales de 2022, aunque menciona limitaciones en la calidad de los datos y posibles factores no considerados.",
+        "sources": [
+          {
+            "title": "These two habits are linked to more than a third of all cancer cases",
+            "url": "https://scientificamerican.com/article/these-two-habits-are-linked-to-more-than-a-third-of-all-cancer-cases/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-02-12-bienvenidos.md",
+      "source_url": "https://noticiencias.com/categorias/editorial",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Noticiencias busca democratizar el acceso al conocimiento científico mediante contenido riguroso y accesible en español.",
+          "La plataforma destaca su proceso de verificación exhaustivo, su claridad en la traducción de jerga técnica y su enfoque en las historias humanas detrás de la ciencia.",
+          "Ofrece secciones especializadas en salud y tecnología, desmitificando titulares sensacionalistas y explicando el impacto de innovaciones como la IA y la biotecnología.",
+          "Invita a investigadores, estudiantes y curiosos a participar en la conversación y compartir sus perspectivas.",
+          "Se presenta como una iniciativa de periodismo científico en español dirigida al público latinoamericano."
+        ],
+        "glossary": [
+          {
+            "term": "Inteligencia Artificial",
+            "definition": "Rama de la informática que crea sistemas capaces de realizar tareas que normalmente requieren inteligencia humana, como aprender, razonar y percibir."
+          },
+          {
+            "term": "Biotecnología",
+            "definition": "Conjunto de técnicas que utilizan organismos vivos o sus componentes para desarrollar productos y procesos útiles en medicina, agricultura y industria."
+          },
+          {
+            "term": "periodismo científico",
+            "definition": "Especialización del periodismo que se dedica a investigar, explicar y difundir temas de ciencia y tecnología al público general."
+          },
+          {
+            "term": "verificación exhaustiva",
+            "definition": "Proceso riguroso de chequeo de datos que compara la información con fuentes originales y estudios revisados por pares para asegurar su precisión."
+          },
+          {
+            "term": "jerga técnica",
+            "definition": "Lenguaje especializado y complejo utilizado por expertos en una disciplina que puede resultar difícil de comprender para no especialistas."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Cada artículo de Noticiencias pasa por un proceso de verificación exhaustivo que cruza datos con fuentes originales y estudios revisados por pares.",
+            "status": "needs_review"
+          },
+          {
+            "label": "Noticiencias ofrece información basada en evidencia en su sección de Salud.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Noticiencias se describe como una plataforma de periodismo científico en español.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La misión de Noticiencias es democratizar la ciencia.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Las innovaciones en Inteligencia Artificial y Biotecnología están redefiniendo el trabajo y la longevidad.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "Al proporcionar contenido riguroso en español, Noticiencias reduce la barrera del idioma que limita el acceso a la ciencia para millones de hispanohablantes en América Latina.",
+          "Su enfoque en salud y tecnología brinda información práctica que puede influir en decisiones personales y de políticas públicas en la región.",
+          "Al fomentar la participación de investigadores y ciudadanos latinoamericanos, fortalece la producción y difusión del conocimiento científico local."
+        ],
+        "confidence": "Moderada — texto institucional que describe la misión y procesos de Noticiencias sin presentar evidencia externa ni datos de impacto verificables.",
+        "sources": [
+          {
+            "title": "Bienvenidos a Noticiencias: La Ciencia al Alcance de Todos",
+            "url": "https://noticiencias.com/categorias/editorial",
+            "publisher": "Noticiencias",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-02-16-un-agujero-negro-se-forma-sin-explotar-una-estrella-masiva.md",
+      "source_url": "https://scitechdaily.com/a-massive-star-suddenly-vanished-and-left-a-black-hole-behind/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Una estrella masiva en la Galaxia de Andrómeda (M31-2014-DS1) se desvaneció sin producir una supernova observable.",
+          "Su brillo en longitudes de onda visibles y cercanas al infrarrojo cayó a una diezmilésima de su nivel original, quedando detectable solo en infrarrojo medio.",
+          "El descenso extremo del brillo indica que su núcleo colapsó directamente formando un agujero negro, apoyando la idea de supernovas fallidas.",
+          "El estudio también revisó el caso NGC 6946-BH1, sugiriendo que el colapso directo podría ser más común de lo pensado.",
+          "La convectividad en la estrella puede retrasar el colapso del núcleo, permitiendo que solo una pequeña fracción del material alimenta al agujero negro."
+        ],
+        "glossary": [
+          {
+            "term": "supernova",
+            "definition": "Explosión extremadamente luminosa que ocurre cuando una estrella masiva agota su combustible nuclear y su núcleo colapsa, expulsando gran parte de su materia al espacio."
+          },
+          {
+            "term": "agujero negro",
+            "definition": "Región del espacio donde la gravedad es tan intensa que nada, ni siquiera la luz, puede escapar de ella."
+          },
+          {
+            "term": "colapso directo",
+            "definition": "Proceso en el que el núcleo de una estrella masiva colapsa bajo su propia gravedad formando un agujero negro sin producir una supernova visible."
+          },
+          {
+            "term": "convectividad",
+            "definition": "Movimiento de material caliente desde el interior de una estrella hacia su superficie, que puede influir en la velocidad del colapso del núcleo."
+          },
+          {
+            "term": "infrarrojo medio",
+            "definition": "Parte del espectro electromagnético con longitudes de onda más largas que el infrarrojo cercano, utilizada para observar objetos fríos o profundamente enterrados en polvo."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "La estrella M31-2014-DS1 está a aproximadamente 2,5 millones de años luz de la Tierra.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El brillo de la estrella disminuyó a una diezmilésima de su nivel original en longitudes de onda visibles y cercanas al infrarrojo.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El colapso directo de una estrella masiva puede formar un agujero negro sin una supernova visible.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El caso NGC 6946-BH1 fue reexaminado y también sugiere un colapso directo.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La convectividad puede retrasar el colapso del núcleo de una estrella masiva.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Entender cómo se forman los agujeros negros sin supernovas ayuda a mejorar los modelos de evolución cósmica, lo que es relevante para la investigación realizada en observatorios latinoamericanos.",
+          "Este descubrimiento subraya la importancia de la colaboración internacional y de proyectos como los de la Fundación Simons, que benefician a la comunidad científica de la región.",
+          "Sabiendo que el colapso directo podría ser más frecuente, los astrónomos pueden ajustar sus búsquedas de transitorios y de objetos infrarrojos en el cielo del sur."
+        ],
+        "confidence": "Moderada — el informe se basa en observaciones detalladas y análisis teórico de investigadores de instituciones reconocidas, aunque no se especifica explícitamente que el estudio haya pasado por revisión por pares.",
+        "sources": [
+          {
+            "title": "A massive star suddenly vanished and left a black hole behind",
+            "url": "https://scitechdaily.com/a-massive-star-suddenly-vanished-and-left-a-black-hole-behind/",
+            "publisher": "SciTechDaily",
+            "date": "2026-02-16"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-02-16-un-ingrediente-inesperado-puede-hacer-el-pan-mucho-mas-saludable.md",
+      "source_url": "https://scitechdaily.com/this-unexpected-ingredient-makes-bread-much-healthier/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "La harina de semilla de girasol parcialmente desgrasada, un subproducto de la extracción de aceite de girasol, es rica en proteínas, fibra y antioxidantes.",
+          "Al sustituir hasta un 60 % de la harina de trigo por esta harina, el pan alcanzó un 27,16 % de proteínas frente al 8,27 % del pan convencional.",
+          "Los niveles de antioxidantes aumentaron proporcionalmente a la cantidad de harina de girasol añadida, pero altas proporciones afectaron la textura del pan.",
+          "Añadir el extracto acuoso de harina de semilla de girasol (SFE) mejoró la textura, manteniéndola cercana al pan de trigo tradicional.",
+          "Este enfoque aprovecha un residuo industrial barato, promoviendo la economía circular y la sostenibilidad en la producción de pan."
+        ],
+        "glossary": [
+          {
+            "term": "harina de semilla de girasol parcialmente desgrasada",
+            "definition": "Subproducto obtenido después de extraer el aceite de las semillas de girasol; conserva proteínas, fibra y compuestos antioxidantes."
+          },
+          {
+            "term": "extracto acuoso de harina de semilla de girasol (SFE)",
+            "definition": "Solución acuosa derivada de la harina de girasol que se usa para mejorar la textura del pan cuando se incorpora a la masa."
+          },
+          {
+            "term": "economía circular",
+            "definition": "Modelo económico que busca reutilizar residuos y subproductos industriales como materias primas, reduciendo el desperdicio y el impacto ambiental."
+          },
+          {
+            "term": "compuestos antioxidantes",
+            "definition": "Moléculas que inhiben la oxidación de otras sustancias, ayudando a proteger las células del daño causado por radicales libres."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Pan con 60 % de harina de girasol alcanzó 27,16 % de proteínas, frente al 8,27 % del pan convencional.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los niveles de antioxidantes en el pan aumentaron proporcionalmente a la cantidad de harina de girasol añadida.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Agregar el extracto acuoso de harina de semilla de girasol (SFE) preservó la textura del pan, manteniéndola cercana al pan de trigo tradicional.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina, donde el girasol es un cultivo importante, aprovechar su subproducto puede reducir costos y mejorar la nutrición del pan básico.",
+          "Incrementar el contenido de proteínas y fibra en el pan contribuye a combatir la desnutrición y enfermedades crónicas en la región.",
+          "Utilizar residuos industriales apoya la sostenibilidad y la economía circular, alineándose con metas de desarrollo ambiental en muchos países latinoamericanos."
+        ],
+        "confidence": "Moderada — estudio de investigadores de la Universidad de São Paulo con resultados experimentales claros, aunque aún en fase de laboratorio y sin validación a gran escala.",
+        "sources": [
+          {
+            "title": "This Unexpected Ingredient Makes Bread Much Healthier",
+            "url": "https://scitechdaily.com/this-unexpected-ingredient-makes-bread-much-healthier/",
+            "publisher": "Scitechdaily",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-02-18-un-almacenamiento-de-datos-durable-y-coste-efectivo-para-preservar-informacion-durante-10-000-anos.md",
+      "source_url": "https://microsoft.com/en-us/research/blog/project-silicas-advances-in-glass-storage-technology/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El proyecto Silica almacena datos en vidrio mediante voxels de fase creados con láseres femtosegundo.",
+          "Esta técnica permite preservar información durante hasta 10,000 años gracias a la durabilidad del vidrio frente al agua, calor y polvo.",
+          "Se logró escritura paralela de alta velocidad y optimización de codificaciones usando aprendizaje automático.",
+          "Se demostró el almacenamiento de una película de Warner Bros. y la preservación de música en colaboración con Global Music Vault.",
+          "Los datos pueden leerse con una simple cámara, lo que simplifica el acceso futuro."
+        ],
+        "glossary": [
+          {
+            "term": "voxel de fase",
+            "definition": "Un elemento tridimensional de datos creado induciendo cambios en la estructura del vidrio mediante pulsos láser ultracortos."
+          },
+          {
+            "term": "femtosegundo",
+            "definition": "Una cuatrillonésima de segundo (10⁻¹⁵ s), unidad de tiempo usada para los pulsos láser que escriben en el vidrio."
+          },
+          {
+            "term": "vidrio bórico",
+            "definition": "Tipo de vidrio común y económico, basado en boro y sílice, utilizado en el proyecto en lugar de silicio fundido costoso."
+          },
+          {
+            "term": "aprendizaje automático",
+            "definition": "Técnica de inteligencia artificial que permite optimizar la codificación de símbolos en el vidrio analizando patrones de datos."
+          },
+          {
+            "term": "cámara de lectura",
+            "definition": "Dispositivo óptico sencillo que detecta los cambios de fase en el vidrio para recuperar la información almacenada."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El vidrio utilizado es comúnmente encontrado en utensilios del hogar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El método permite almacenar cientos de capas de datos en una pieza de vidrio de 2 mm de espesor.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La escritura paralela a alta velocidad aumenta la velocidad de escritura.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Se ha demostrado preservar música durante 10,000 años en colaboración con Global Music Vault.",
+            "status": "uncertain"
+          },
+          {
+            "label": "El artículo fue publicado en la revista Nature.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Para América Latina, donde la infraestructura de almacenamiento puede ser costosa y vulnerable a desastres naturales, el vidrio ofrece una solución barata y resistente.",
+          "Permite preservar el patrimonio cultural latinoamericano (música, cine, documentos) para futuras generaciones sin necesidad de migraciones frecuentes.",
+          "Reduce la dependencia de centros de datos energéticamente intensivos, contribuyendo a la sostenibilidad ambiental en la región."
+        ],
+        "confidence": "Moderada — estudio revisado por pares en Nature con evidencia experimental de durabilidad a corto plazo, pero la afirmación de 10,000 años sigue siendo una proyección no verificable directamente.",
+        "sources": [
+          {
+            "title": "Project Silica's advances in glass storage technology",
+            "url": "https://microsoft.com/en-us/research/blog/project-silicas-advances-in-glass-storage-technology/",
+            "publisher": "Microsoft Research",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-03-27-el-error-de-redondeo-que-esconde-el-verdadero-terremoto-legal-para-meta-y-youtube.md",
+      "source_url": "https://theconversation.com/two-verdicts-in-two-days-how-american-courts-are-rewriting-the-rules-for-big-tech-and-children-279401",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Dos veredictos recientes en EE. UU. condenaron a Meta a pagar 375 millones de dólares y a YouTube casi 6 millones por daños a menores relacionados con el diseño de sus plataformas.",
+          "Los jurados concluyeron que características como el desplazamiento infinito, la reproducción automática y los algoritmos de recomendación contribuyeron a adicción, depresión y autolesiones en jóvenes.",
+          "El caso de Los Ángeles funciona como un 'bellwether' que podría allanar el camino para cientos de demandas similares y para más de 40 casos pendientes de fiscales estatales.",
+          "El acceso a documentos internos de Meta mostró que la empresa priorizó la interacción sobre la seguridad, lo que refuerza la teoría legal de responsabilidad por diseño de producto."
+        ],
+        "glossary": [
+          {
+            "term": "Sección 230",
+            "definition": "Parte de la Ley de Decencia en las Comunicaciones de EE. UU. que otorga a las plataformas de internet inmunidad frente al contenido publicado por sus usuarios."
+          },
+          {
+            "term": "desplazamiento infinito (infinite scroll)",
+            "definition": "Función que carga contenido continuamente mientras el usuario hace scroll, sin necesidad de hacer clic en páginas siguientes."
+          },
+          {
+            "term": "reproducción automática (autoplay video)",
+            "definition": "Reproducción de un video siguiente sin que el usuario lo seleccione, activándose tras finalizar el actual."
+          },
+          {
+            "term": "algoritmos de recomendación",
+            "definition": "Sistemas que sugieren contenido basado en el comportamiento previo del usuario, como clics, tiempo de visualización e interacciones."
+          },
+          {
+            "term": "bellwether",
+            "definition": "Caso de prueba seleccionado entre muchos similares para determinar si una teoría legal puede prosperar ante un jurado."
+          },
+          {
+            "term": "diseño de producto",
+            "definition": "Decisiones intencionales sobre cómo se estructuran y funcionan las características de una plataforma, que pueden influir en el comportamiento del usuario."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Meta fue ordenada a pagar 375 millones de dólares en el veredicto de Nuevo México.",
+            "status": "confirmed"
+          },
+          {
+            "label": "YouTube fue considerada responsable del 30% de los daños en el caso de Los Ángeles.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Las acciones de Meta subieron un 5% tras uno de los veredictos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El caso de Los Ángeles es un 'bellwether' que podría sentar precedente para cientos de demandas similares.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Más de 40 casos pendientes de fiscales generales estatales se basan en las teorías legales de estos veredictos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Un juicio federal sobre estas cuestiones está previsto para finales de este año.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Los fallos podrían inspirar a reguladores latinoamericanos a exigir cambios en el diseño de plataformas para proteger a niños y adolescentes.",
+          "Si las compañías deben rediseñar funciones como el autoplay o el infinite scroll, la experiencia de millones de usuarios en la región podría volverse más segura y menos adictiva.",
+          "El acceso a documentos internos revela prácticas corporativas que también operan en mercados emergentes, lo que abre la puerta a demandas colectivas similares en países como Brasil, México o Colombia."
+        ],
+        "confidence": "Alta — basada en veredictos judiciales recientes, acceso a documentos internos de Meta y la presencia de múltiples casos pendientes que respaldan las conclusiones.",
+        "sources": [
+          {
+            "title": "Two verdicts in two days: how American courts are rewriting the rules for Big Tech and children",
+            "url": "https://theconversation.com/two-verdicts-in-two-days-how-american-courts-are-rewriting-the-rules-for-big-tech-and-children-279401",
+            "publisher": "The Conversation",
+            "date": ""
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-04-02-comunicacion-laser-como-desbloqueara-datos-gigantes-y-video-hd-para-las-misiones-lunares-tripuladas.md",
+      "source_url": "https://news.mit.edu/2026/lincoln-laboratory-laser-communications-terminal-launches-artemis-ii-0402",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "La misión Artemis II llevará el terminal láser MAScOT (O2O) a bordo de la nave Orion para demostrar comunicación de banda ancha desde la órbita lunar.",
+          "Durante su vuelo de 10 días alrededor de la Luna, MAScOT transmitirá video e imágenes de alta definición a la Tierra usando haces láser, superando los límites de la radiofrecuencia.",
+          "La tecnología ya fue probada con éxito en la Estación Espacial Internacional mediante la misión ILLUMA-T en noviembre de 2023, y forma parte de un linaje de demostraciones que incluyen LLCD (2013), LCRD (2021) y TBIRD (2022).",
+          "La comunicación láser promete permitir videoconferencias en tiempo real, asistencia médica inmediata y difusión pública de la exploración lunar, ampliando la presencia humana en el espacio profundo."
+        ],
+        "glossary": [
+          {
+            "term": "Comunicación láser",
+            "definition": "Uso de haces de luz para transmitir datos a alta velocidad entre naves espaciales y estaciones terrestres."
+          },
+          {
+            "term": "MAScOT",
+            "definition": "Terminal láser modular, ágil y escalable desarrollado por el Laboratorio Lincoln de MIT para la misión O2O en Artemis II."
+          },
+          {
+            "term": "O2O",
+            "definition": "Enlace láser Orion a Orion que conecta la nave Orion con estaciones terrestres durante la misión Artemis II."
+          },
+          {
+            "term": "ILLUMA-T",
+            "definition": "Demostración de comunicación láser integrada en la Estación Espacial Internacional realizada en noviembre de 2023."
+          },
+          {
+            "term": "LLCD",
+            "definition": "Demostración de Comunicación Láser Lunar de la NASA de 2013 que estableció un enlace láser entre la Luna y la Tierra."
+          },
+          {
+            "term": "LCRD",
+            "definition": "Demostración de Retransmisión de Comunicación Láser de la NASA lanzada en 2021 que prueba la retransmisión de datos láser en órbita terrestre."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "MAScOT será utilizado en la misión Artemis II para transmitir video HD desde la Luna.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La demostración ILLUMA-T en la ISS logró un enlace láser en noviembre de 2023.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La LCRD fue lanzada por la NASA en 2021.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El ancho de banda de la comunicación láser es significativamente mayor que el de la radiofrecuencia a distancias lunares.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La misión Artemis II tendrá una duración de aproximadamente 10 días en órbita lunar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La tecnología láser permitirá videoconferencias en tiempo real entre astronautas lunar y familiares en la Tierra.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "La posibilidad de enviar video HD y datos masivos desde la Luna puede inspirar a estudiantes y profesionales latinoamericanos a participar en programas espaciales y carreras STEM.",
+          "La tecnología láser podría adaptarse para mejorar la conectividad de regiones remotas de América Latina mediante enlaces ópticos terrestres o satélites de alta capacidad.",
+          "El acceso en tiempo real a imágenes lunares facilita la colaboración científica internacional, incluyendo instituciones de América Latina en el análisis de datos planetarios y la planificación de futuras misiones."
+        ],
+        "confidence": "Alta — información basada en anuncio de MIT News y declaraciones del Laboratorio Lincoln, corroborada por misiones previas demostradas (ILLUMA-T, LLCD, LCRD, TBIRD) y planes oficiales de Artemis II.",
+        "sources": [
+          {
+            "title": "Comunicación Láser: Cómo Desbloqueará Datos Gigantes y Video HD para las Misiones Lunares Tripuladas",
+            "url": "https://news.mit.edu/2026/lincoln-laboratory-laser-communications-terminal-launches-artemis-ii-0402",
+            "publisher": "MIT News",
+            "date": "2026-04-02"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md",
+      "source_url": "https://wlab.yale.edu/posts/2026-03-31-experiments-refute-dark-matter-claim",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": false,
+      "note": "no draft available — needs downgrade or manual authoring",
+      "reviewed": false,
+      "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
+      "validation_error": "1 validation error for EnrichmentSchema: sources.1.url — Field required [type=missing, input_value={'title': 'Artículo en P...', 'date': '2025-09-17'}]. The model returned a sources entry with title/date but omitted the url key entirely. Retryable prompt-shape issue, not a source-availability problem."
+    },
+    {
+      "file": "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md",
+      "source_url": "https://security.googleblog.com/2026/04/ai-threats-in-wild-current-state-of.html",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Los sitios web pueden insertar instrucciones ocultas que las inteligencias artificiales siguen sin que los usuarios lo notes, mediante inyecciones indirectas.",
+          "El equipo de inteligencia de amenazas de Google analizó la web pública y encontró solo experimentos, no ataques masivos organizados, clasificados en seis tipos de uso.",
+          "Aunque muchos ejemplos son inocuos (bromas o guías útiles), existen intentos de usar la técnica para promover contenido malicioso o desinformación.",
+          "Google ya protege sus modelos con equipos rojos, programas de recompensas y monitoreo en tiempo real, pero el riesgo crece a medida que la IA se integra más en herramientas cotidianas.",
+          "La presencia de instrucciones ocultas constituye una forma de contaminación digital que afecta la autonomía de los asistentes de IA y podría ser explotada en futuras campañas automatizadas."
+        ],
+        "glossary": [
+          {
+            "term": "Inyección indirecta",
+            "definition": "Técnica donde un sitio web, documento o correo contiene instrucciones ocultas que una IA lee y ejecuta sin que el usuario las perciba."
+          },
+          {
+            "term": "Equipo rojo",
+            "definition": "Grupo interno de seguridad que simula ataques para probar la resistencia de sistemas y modelos de IA."
+          },
+          {
+            "term": "Programa de recompensas por vulnerabilidades",
+            "definition": "Iniciativa que paga a investigadores externos por descubrir y reportar fallos de seguridad en productos o servicios."
+          },
+          {
+            "term": "Contaminación digital",
+            "definition": "Presencia de elementos maliciosos o engañosos en el entorno digital que alteran el comportamiento esperado de sistemas como la IA."
+          },
+          {
+            "term": "Modelo de IA",
+            "definition": "Sistema computacional entrenado para realizar tareas como理解 linguagem, generar respuestas o tomar decisiones basado en datos."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Google's threat intelligence team searched the public web for indirect injections.",
+            "status": "confirmed"
+          },
+          {
+            "label": "They found experiments, not massive organized attacks.",
+            "status": "confirmed"
+          },
+          {
+            "label": "The experiments were grouped into six categories (benign jokes, useful guidance, malicious optimization, etc.).",
+            "status": "confirmed"
+          },
+          {
+            "label": "Google runs red team tests on Gemini and offers bug‑bounty rewards for AI vulnerabilities.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Indirect injections can cause an AI to follow hidden instructions that affect its output.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina el uso de asistentes de IA para consultas, educación y comercio está creciendo rápidamente, lo que aumenta la exposición a posibles manipulaciones ocultas.",
+          "Si una IA oculta sigue instrucciones de un sitio web, podría difundir información errónea o promocionar contenido de forma sesgada, afectando la confianza en servicios digitales regionales.",
+          "Conocer esta amenaza permite a desarrolladores, empresas y usuarios de la región adoptar medidas de protección, como validar fuentes y usar modelos con filtros de seguridad adecuados."
+        ],
+        "confidence": "Alta — artículo publicado en el blog oficial de seguridad de Google, basado en el análisis de su equipo de amenazas y respaldado por evidencia de experimentos observados en la web pública.",
+        "sources": [
+          {
+            "title": "AI threats in the wild: current state of ...",
+            "url": "https://security.googleblog.com/2026/04/ai-threats-in-wild-current-state-of.html",
+            "publisher": "Google Security Blog",
+            "date": "2026-04-01"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": [],
+      "quality_flags": [
+        "non_latin_script_artifact: 理解"
+      ]
+    },
+    {
+      "file": "2026-05-07-el-mit-descubre-que-la-automatizacion-no-mejora-la-productividad-como-se-creia.md",
+      "source_url": "https://news.mit.edu/2026/study-firms-often-use-automation-control-certain-workers-wages-0507",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El estudio del MIT encontró que la automatización se ha usado principalmente para eliminar trabajadores con salarios más altos, no para aumentar la productividad.",
+          "Esta práctica explica el 52% del crecimiento de la desigualdad de ingresos desde 1980, y entre el 60% y el 90% de las posibles ganancias de productividad se perdieron por enfocarse en recortes de costo.",
+          "Los investigadores analizaron datos de 500 grupos demográficos y 49 industrias durante varias décadas para identificar qué empleos eran más susceptibles de ser automatizados.",
+          "Aunque algunas formas de automatización sí mejoran la productividad y crean empleo, la estrategia actual centrada en ahorros a corto plazo está limitando el crecimiento económico y aumentando la brecha salarial."
+        ],
+        "glossary": [
+          {
+            "term": "automatización",
+            "definition": "Uso de máquinas o software para realizar tareas que antes hacían los humanos."
+          },
+          {
+            "term": "primas salariales",
+            "definition": "Diferencia positiva en el salario de un trabajador respecto a otros en un puesto similar, generalmente por experiencia o antigüedad."
+          },
+          {
+            "term": "desigualdad de ingresos",
+            "definition": "Brecha entre los ingresos de los hogares más ricos y los más pobres en una economía."
+          },
+          {
+            "term": "productividad",
+            "definition": "Cantidad de bienes o servicios producidos por hora de trabajo; medida de la eficiencia económica."
+          },
+          {
+            "term": "MIT",
+            "definition": "Instituto de Tecnología de Massachusetts, universidad de investigación ubicada en Estados Unidos."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "La automatización fue responsable del 52% del crecimiento de la desigualdad de ingresos desde 1980.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Un 10% del aumento de la desigualdad se debe específicamente a empresas que eliminaron trabajadores con primas salariales.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Entre el 60% y el 90% de las ganancias potenciales de productividad se perdieron porque las empresas priorizaron recortar costos sobre mejorar la eficiencia.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El estudio analizó décadas de datos laborales en 500 grupos demográficos y 49 industrias.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "En América Latina, donde la brecha salarial es ya alta, la tendencia de usar la automatización para despedir a los trabajadores mejor pagados podría profundizar la desigualdad y limitar la movilidad social.",
+          "Redirigir la automatización hacia mejoras reales de productividad podría generar empleos de mejor calidad y contribuir al crecimiento económico necesario para reducir la pobreza en la región.",
+          "Los resultados sugieren que gobiernos y empresas latinoamericanas deben incentivar políticas que enfoquen la tecnología en la innovación, no solo en el recorte de costos laborales."
+        ],
+        "confidence": "Moderada — el estudio de MIT utiliza un amplio conjunto de datos (500 grupos demográficos, 49 industrias) pero la información proviene de un comunicado de prensa y no se presentan detalles metodológicos completos ni limitaciones explícitas.",
+        "sources": [
+          {
+            "title": "Study: Firms often use automation to control certain workers' wages",
+            "url": "https://news.mit.edu/2026/study-firms-often-use-automation-control-certain-workers-wages-0507",
+            "publisher": "MIT News",
+            "date": "2026-05-07"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-05-15-un-asteroide-de-700-metros-rota-cada-1-88-minutos-desafiando-teorias-astronomicas.md",
+      "source_url": "https://quantamagazine.org/rubin-tracks-skyscraper-size-asteroids-failed-supernovas-and-interstellar-visitors-20260515/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "El Observatorio Vera C. Rubin detectó un asteroide de 700 m de diámetro que gira cada 1,88 minutos, una velocidad inesperada para su tamaño.",
+          "El telescopio producirá millones de alertas nocturnas y permitirá detectar objetos cercanos a la Tierra con días de antelación.",
+          "Además, Rubin ha identificado un cometa interestelar, supernovas fallidas y asteroides con órbitas sincronizadas con Neptuno, aportando datos sobre la formación del sistema solar y la energía oscura."
+        ],
+        "glossary": [
+          {
+            "term": "asteroide",
+            "definition": "Cuerpo rocoso que orbita al Sol, generalmente situado entre Marte y Júpiter, pero que puede acercarse a la Tierra."
+          },
+          {
+            "term": "Observatorio Vera C. Rubin",
+            "definition": "Telescopio de 8,4 m ubicado en Cerro Pachón, Chile, equipado con la cámara digital más grande del mundo para sondeos rápidos del cielo."
+          },
+          {
+            "term": "cámara digital",
+            "definition": "Sensor de alta resolución que captura imágenes extensas del firmamento en cada exposición del Rubin."
+          },
+          {
+            "term": "alertas astronómicas",
+            "definition": "Notificaciones automáticas generadas cuando el observatorio detecta cambios o movimientos en el cielo respecto a imágenes previas."
+          },
+          {
+            "term": "cometa interestelar",
+            "definition": "Cuerpo helado y rocoso que proviene de fuera del Sistema Solar y atraviesa nuestra vecindad espacial."
+          },
+          {
+            "term": "supernova fallida",
+            "definition": "Evento en el que una estrella masiva colapsa bajo su propia gravedad sin producir la explosión típica de una supernova."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El asteroide 2025 MN 45 tiene 700 m de diámetro y rota cada 1,88 minutos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El Observatorio Vera C. Rubin generará 7 millones de alertas y 20 TB de datos cada noche cuando esté completamente operativo.",
+            "status": "uncertain"
+          },
+          {
+            "label": "Rubin detectó el cometa interestelar 3I/ATLAS diez días antes que otros telescopios.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Rubin ha observado supernovas fallidas donde estrellas masivas colapsan sin explotar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los datos de Rubin ayudarán a estudiar la energía oscura mediante el desplazamiento al rojo de galaxias.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "La detección temprana de asteroides por Rubin permitirá a países latinoamericanos prepararse con días de antelación frente a posibles impactos.",
+          "Al estar ubicado en Chile, el observatorio brinda a la región una participación directa en la frontera de la astronomía mundial.",
+          "Los descubrimientos sobre la formación del sistema solar y la energía oscura pueden inspirar carreras científicas y tecnológicas en América Latina."
+        ],
+        "confidence": "Alta — hallazgos basados en observaciones recientes del Observatorio Vera C. Rubin y declaraciones de sus investigadores.",
+        "sources": [
+          {
+            "title": "Rubin tracks skyscraper‑size asteroids, failed supernovas and interstellar visitors",
+            "url": "https://quantamagazine.org/rubin-tracks-skyscraper-size-asteroids-failed-supernovas-and-interstellar-visitors-20260515/",
+            "publisher": "Quanta Magazine",
+            "date": "2026-05-15"
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-05-23-un-cohete-con-un-motor-apagado-y-otro-fallando-llego-al-espacio-y-volvio.md",
+      "source_url": "https://scientificamerican.com/article/spacex-launches-starship-v3-the-worlds-most-powerful-and-tallest-rocket-ever/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Starship V3 de SpaceX alcanzó el espacio y regresó exitosamente pese a que uno de sus 33 motores Raptor no encendió y otro falló durante el vuelo.",
+          "El vuelo demostró que el diseño del cohete, incluido su escudo térmico, puede soportar la reentrada y aterrizar suavemente, allanando el camino para misiones lunares futuras.",
+          "La NASA confía en Starship para su programa Artemis III, aunque advierte que los retrasos en las pruebas podrían afectar el calendario previsto para 2027‑2028.",
+          "El éxito abre posibilidades para lanzamientos frecuentes de satélites, telescopios espaciales y centros de datos de inteligencia artificial en órbita, aprovechando el vacío como refrigerante natural."
+        ],
+        "glossary": [
+          {
+            "term": "Starship V3",
+            "definition": "Versión más reciente del sistema de cohete reutilizable de SpaceX, diseñada para cargas útiles masivas y misiones a la Luna y Marte."
+          },
+          {
+            "term": "Motor Raptor",
+            "definition": "Motor de combustión de metano y oxígeno líquido desarrollado por SpaceX para impulsar los propulsores Super Heavy y la nave Starship."
+          },
+          {
+            "term": "Escudo térmico",
+            "definition": "Capa protectora que absorbe y disipa el calor extremo generado durante la reentrada de una nave en la atmósfera terrestre."
+          },
+          {
+            "term": "Super Heavy",
+            "definition": "Etapa propulsora de Starship que contiene los 33 motores Raptor y proporciona el empuje inicial para el despegue."
+          },
+          {
+            "term": "Artemis III",
+            "definition": "Misión de la NASA que pretende llevar a astronautas nuevamente a la superficie lunar, utilizando Starship como módulo de aterrizaje."
+          },
+          {
+            "term": "Centro de datos espacial",
+            "definition": "Instalación de servidores ubicada en órbita que se beneficia del vacío para refrigeración eficiente, reduciendo el consumo de energía en tierra."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Starship V3 tiene una altura de 124 metros y generó 81 millones de newtons de empuje.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Durante el lanzamiento, uno de los 33 motores Raptor del propulsor Super Heavy no se encendió.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El escudo térmico de Starship resistió la reentrada y permitió un aterrizaje suave.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La NASA planea usar una versión modificada de Starship para llevar astronautas a la Luna en 2028 como parte de Artemis III.",
+            "status": "confirmed"
+          },
+          {
+            "label": "SpaceX está considerando construir centros de datos de inteligencia artificial en el espacio usando el vacío como refrigerante.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Un cohete reutilizable y potente como Starship podría reducir drásticamente el costo de lanzar satélites, beneficiando a países latinoamericanos que dependen de servicios de telecomunicaciones y observación de la Tierra.",
+          "La posibilidad de colocar centros de datos en órbita abriría nuevas oportunidades de inversión y desarrollo tecnológico en la región, atrayendo talento en ciencia de datos y ingeniería aerospacial.",
+          "El éxito de Starship inspira a jóvenes de América Latina a pursuing carreras en STEM, fortaleciendo la capacidad regional para participar en la exploración lunar y misiones interplanetarias."
+        ],
+        "confidence": "Moderada — vuelo de prueba exitoso con anomalías motoras, pero aún se requieren más vuelos regulares para validar la confiabilidad operativa y cumplir los plazos de la NASA.",
+        "sources": [
+          {
+            "title": "SpaceX launches Starship V3, the world's most powerful and tallest rocket ever",
+            "url": "https://scientificamerican.com/article/spacex-launches-starship-v3-the-worlds-most-powerful-and-tallest-rocket-ever/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-06-12-los-chatbots-rescataron-a-elias-thorne-de-una-conversacion-casual-y-lo-convirtieron-en-una-ficcion-masiva.md",
+      "source_url": "https://404media.co/elias-thorne-chatbots-llms-chatgpt-lighthouse-keeper-story/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Los modelos de lenguaje grande tienden a repetir la misma historia de un farero llamado Elias Thorne, que apareció originalmente en conversaciones casuales dentro del conjunto de datos WildChat.",
+          "Un análisis de 20.000 historias generadas mostró que más del 88 % comparten exactamente las mismas 11 palabras clave, incluyendo nombres y ocupaciones como Elias, Mara, farero y relojero.",
+          "Esta narrativa se ha difundido en libros de Amazon, videos de YouTube y sitios de noticias falsas, convirtiéndose en una ficción masiva sin que nadie la haya diseñado intencionalmente.",
+          "Elias Thorne tiene antecedentes reales parciales (un relojero londinense del siglo XVI llamado Elias Allen y una referencia en una colección de cartas de los años 80), lo que la IA ha tomado, repetido y amplificado.",
+          "El fenómeno muestra cómo los modelos, al ser alineados para ser “seguros”, prefieren historias melancólicas e inofensivas, convirtiéndolas en attractores que se replican como un virus de ficción."
+        ],
+        "glossary": [
+          {
+            "term": "Modelo de lenguaje grande (LLM)",
+            "definition": "Sistema de inteligencia artificial entrenado con enormes cantidades de texto para generar lenguaje natural, como ChatGPT, Gemini o Claude."
+          },
+          {
+            "term": "WildChat",
+            "definition": "Conjunto de datos que contiene un millón de conversaciones reales con el primer ChatGPT (GPT-3.5), utilizado para estudiar el comportamiento de los modelos."
+          },
+          {
+            "term": "Alineación de modelos",
+            "definition": "Proceso de ajustar un modelo de IA para que sus respuestas sean más seguras, evitando contenido violento, sexual o polémico."
+          },
+          {
+            "term": "Atractor narrativo",
+            "definition": "Patrón de historia que tiende a reproducirse repetidamente en las salidas de un modelo porque se considera seguro o neutro."
+          },
+          {
+            "term": "Google Trends",
+            "definition": "Herramienta que muestra la frecuencia de búsquedas de términos a lo largo del tiempo y en distintas regiones."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "En early 2026, engineer Daniel May noticed spikes in Google Trends for 'Elias Thorne' and 'farero'.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Researchers Sil Hamilton and David Mimno of Cornell analyzed 20,000 AI‑generated stories and found that over 88% shared the same 11 keywords.",
+            "status": "confirmed"
+          },
+          {
+            "label": "The WildChat dataset contains 166 stories that mention Elias as a lighthouse keeper or clockmaker, always tragic and solitary.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Elias Thorne appears as author on Amazon books about alternative medicine, YouTube algorithms and Greek mythology.",
+            "status": "confirmed"
+          },
+          {
+            "label": "A 16th‑century London clockmaker named Elias Allen and a 1980s Dinosaurs Attack! card collection included a character named Elias Thorne.",
+            "status": "confirmed"
+          },
+          {
+            "label": "The story of Elias Thorne replicates like a virus of fiction because models are trained on each other's outputs.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Este caso muestra cómo la IA puede generar y difundir falsas narrativas que parecen reales, lo que afecta la confianza en la información en línea, un problema relevante para usuarios de redes sociales y medios en América Latina.",
+          "Entender estos sesgos ayuda a periodistas, educadores y creadores de contenido a detectar desinformación generada por máquinas y a promover el pensamiento crítico frente a historias que parecen inocentes pero pueden ser engañosas.",
+          "La reproducción de arquetipos como Elias Thorne refleja cómo los datos de entrenamiento, incluidas conversaciones cotidianas, pueden perpetuar estereotipos y relatos melancólicos que influyen en la percepción cultural de regiones como la nuestra."
+        ],
+        "confidence": "Moderada — basada en investigación de universitarios y análisis de un gran conjunto de datos, pero publicada en un medio de divulgación especializado (404 Media) no revisado por pares.",
+        "sources": [
+          {
+            "title": "Los chatbots rescataron a Elias Thorne de una conversación casual y lo convirtieron en una ficción masiva",
+            "url": "https://404media.co/elias-thorne-chatbots-llms-chatgpt-lighthouse-keeper-story/",
+            "publisher": "404 Media",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    },
+    {
+      "file": "2026-06-14-1-121-especies-marinas-nuevas-descubiertas-y-la-mayoria-ya-estaban-en-los-estantes-de-los-museos.md",
+      "source_url": "https://scientificamerican.com/article/ocean-census-reveals-more-than-1-100-new-species/",
+      "currently_missing_fields": [
+        "summary_points",
+        "glossary",
+        "fact_check",
+        "why_it_matters",
+        "confidence",
+        "sources"
+      ],
+      "draft_available": true,
+      "draft": {
+        "summary_points": [
+          "Entre mediados de 2025 y mediados de 2026, un esfuerzo global describirion 1.121 especies marinas previamente desconocidas, muchas de ellas identificadas en colecciones de museos en lugar de en nuevas expediciones.",
+          "El estudio indica que 728 de esas especies provienen de muestras almacenadas durante décadas, evidenciando un importante retraso en la descripción taxonómica que puede superar los 13 años por especie.",
+          "Los autores destacan que, pese a que menos del 0,001 % del fondo marino ha sido observado directamente, el uso de datos abiertos como la plataforma Ocean Census NOVA y el trabajo de taxonomistas permite acelerar el descubrimiento de la biodiversidad marina."
+        ],
+        "glossary": [
+          {
+            "term": "esponja de cristal",
+            "definition": "Esponja marina cuyo esqueleto está compuesto de sílice pura, lo que le da una apariencia vítrea y frágil."
+          },
+          {
+            "term": "taxonomía",
+            "definition": "Ciencia que se encarga de nombrar, describir y clasificar organismos según sus relaciones evolutivas."
+          },
+          {
+            "term": "Ocean Census NOVA",
+            "definition": "Plataforma de datos abiertos que integra información de especímenes marinos de todo el mundo para facilitar la identificación y descripción de nuevas especies."
+          },
+          {
+            "term": "secuenciación de ADN",
+            "definition": "Proceso mediante el cual se determina el orden exacto de los nucleótidos en una molécula de ADN, utilizado para diferenciar y clasificar especies."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Se describieron 1.121 especies marinas nuevas entre mediados de 2025 y mediados de 2026.",
+            "status": "confirmed"
+          },
+          {
+            "label": "El 728 de las 1.121 especies nuevas provienen de muestras almacenadas en museos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La descripción taxonómica de una especie marina promedio toma más de 13 años.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Menos del 0,001 % del fondo marino ha sido observado directamente por humanos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los toxinas de los gusanos cinta encontrados cerca de Marsella podrían servir para tratar el Alzheimer o la esquizofrenia.",
+            "status": "uncertain"
+          }
+        ],
+        "why_it_matters": [
+          "El hallazgo muestra que incluso en costas de América Latina, donde existen vastas colecciones marinas poco revisadas, podrían haber especies desconocidas esperando ser descritas en museos y laboratorios locales.",
+          "Mejorar el financiamiento y el tiempo dedicado a la taxonomía marina en la región podría acelerar el descubrimiento de especies con aplicaciones biomédicas, como compuestos neuroprotectores.",
+          "Conocer la biodiversidad oceánica subyacente ayuda a diseñar políticas de conservación más efectivas para ecosistemas vulnerables como arrecifes coralinos y fondos bentónicos de la región."
+        ],
+        "confidence": "Alta — artículo basado en un censo internacional con datos de colecciones museísticas y expediciones, publicado en Scientific American, una fuente de divulgación científica rigurosa.",
+        "sources": [
+          {
+            "title": "1.121 especies marinas nuevas descubiertas... y la mayoría ya estaban en los estantes de los museos",
+            "url": "https://scientificamerican.com/article/ocean-census-reveals-more-than-1-100-new-species/",
+            "publisher": "Scientific American",
+            "date": null
+          }
+        ]
+      },
+      "reviewed": false,
+      "draft_empty_fields": []
+    }
+  ],
+  "halted_early": false,
+  "posts_with_partial_drafts": 0,
+  "posts_with_quality_flags": [
+    "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md"
+  ],
+  "frontend_repo_head_sha_at_generation_time": "54ad1501ab990ef239dd0be6b391cd01b781ab9b",
+  "stale_inventory_file_generated_at_commit": "582ed40",
+  "stale_vs_live_cross_check": "Compared tests/fixtures/publication-contract-corpus/v2-strict-failure-inventory.json (generated at frontend commit 582ed40) against the live frontend working tree at HEAD 54ad1501ab990ef239dd0be6b391cd01b781ab9b: 30 files with missing fields, identical file set, identical per-file missing-field sets on both sides. Zero discrepancy found.",
+  "method_notes": {
+    "call_site": "_generate_enrichment_fields called directly on a real EditorAgent instance (process_article was NOT called — no title/excerpt/headlines_variants regeneration).",
+    "prompt_source": "config/prompts.yaml -> enrichment.system",
+    "body_sampling": "Article body sampled to max 4000 chars via _sample_for_critic before being sent to the model.",
+    "source_name_derivation": "No post frontmatter carries a source_name field. source_name was synthesized from the domain label of source_url (e.g. \"scientificamerican.com\" -> \"Scientificamerican\") and passed into both the LLM prompt context and the deterministic sources-backfill inside _generate_enrichment_fields. Consequence: any sources[].publisher / sources[].title value in these drafts may be an agent-derived string, not a value that existed anywhere in the corpus. Reviewers should verify publisher names against the real source, not trust them as given.",
+    "fact_check_status_caveat": "fact_check[].status values (e.g. \"confirmed\", \"uncertain\") are model-asserted claims about consistency with the already-published Spanish article body — the model never saw the original source article. \"confirmed\" carries NO verification weight against the real source. Per the phase-2b spec, a human must check fact_check and sources against the original source before any post is marked reviewed."
+  }
+}
