@@ -303,6 +303,26 @@ def test_delete_article(db_manager):
     assert db_manager.articles.delete_article(99999) is False
 
 
+def test_delete_article_with_lifecycle_history_returns_false_not_raise(db_manager):
+    """Plan 060 / Phase 3b: an article with a recorded publication_attempts
+    row (backfilled or freshly written) must not raise IntegrityError on
+    delete — it must return False and leave the article intact."""
+    saved = db_manager.articles.save_article(_payload("https://x.com/del-lifecycle"))
+    article_id = int(saved.id)
+
+    db_manager.lifecycle.record_publication_attempt(
+        article_id,
+        refinery_id="ref-delete-guard",
+        state="PR_CREATED",
+        started_at=datetime.now(timezone.utc),
+    )
+
+    result = db_manager.articles.delete_article(article_id)
+
+    assert result is False
+    assert db_manager.articles.get_article_by_id(article_id) is not None
+
+
 def test_clear_all_articles(db_manager):
     db_manager.articles.save_article(_payload("https://x.com/cl1"))
     db_manager.articles.save_article(_payload("https://x.com/cl2"))

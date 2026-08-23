@@ -1410,7 +1410,20 @@ class ArticleRepository:
             return True
 
     def delete_article(self, article_id: Union[int, str]) -> bool:
-        """Delete a single article by ID."""
+        """Delete a single article by ID.
+
+        Plan 060 / Phase 3b: an article can now have durable lifecycle rows
+        (``publication_attempts``, ``editorial_decisions``, and pre-existing
+        ``score_logs``) pointing at it via a ``RESTRICT``/default-``NO
+        ACTION`` foreign key. With ``PRAGMA foreign_keys=ON`` (see
+        ``database.py:set_sqlite_pragma``), deleting such an article raises
+        ``IntegrityError`` — but only once the *commit* is attempted, not on
+        ``session.delete()`` itself. The commit must therefore happen inside
+        this method's own try block (not the implicit one in
+        ``_session()``'s ``__exit__``) so that violation can be caught here
+        and turned into a documented ``False`` return rather than an
+        unhandled exception, preserving this method's ``bool`` contract.
+        """
         try:
             num_id = int(article_id)
         except ValueError:
@@ -1421,7 +1434,16 @@ class ArticleRepository:
                 article = session.query(Article).filter(Article.id == num_id).first()
                 if article:
                     session.delete(article)
+                    session.commit()
                     return True
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(
+                    "cannot delete article {}: has recorded lifecycle history ({})",
+                    article_id,
+                    e,
+                )
+                return False
             except Exception as e:
                 logger.error("Error deleting article {}: {}", article_id, e)
                 session.rollback()
