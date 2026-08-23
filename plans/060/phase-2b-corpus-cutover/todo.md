@@ -12,18 +12,30 @@ are dispatchable once Step 2 is complete and Phase 2a is merged.
       source isn't verifiable, human-authored only as a rare exception —
       see spec.md "Operator decision (made 2026-08-22)".
 
-## Step 1 — inventory with drafts (dispatchable, independent of Phase 2a)
+## Step 1 — inventory with drafts (DONE, merged to main)
 
-- [ ] Per-post inventory built from `v2-strict-failure-inventory.json`:
+- [x] Per-post inventory built from `v2-strict-failure-inventory.json`:
       one record per post with current frontmatter, missing fields, source
       link (`source_url`), draft field values from `_generate_enrichment_fields`
       (called directly per spec.md's implementation note — not via
-      `process_article`), and `reviewed: false`.
-- [ ] Posts where `_generate_enrichment_fields` returns empty/fails marked
+      `process_article`), and `reviewed: false`. Live corpus cross-checked
+      against the stale fixture: zero discrepancy. Real NVIDIA provider
+      confirmed used (`nvidia/nemotron-3-super-120b-a12b`, 30/30 attempt
+      log lines, 0 Ollama fallback). 27/30 posts drafted; 3 flagged with
+      exact Pydantic validation errors (shallow JSON-shape issues, not bad
+      sources — worth a retry, not an automatic v1 downgrade).
+- [x] Posts where `_generate_enrichment_fields` returns empty/fails marked
       plainly as "no draft available — needs downgrade or manual
       authoring", not silently omitted.
-- [ ] No file under `src/content/posts/` modified; no post marked
-      `reviewed: true`; nothing committed to the frontend repo.
+- [x] No file under `src/content/posts/` modified; no post marked
+      `reviewed: true`; nothing committed to the frontend repo. Frontend
+      checkout verified clean before and after.
+
+See `inventory/README.md` and `inventory/v2-corpus-draft-inventory.json`
+for the full output, including caveats: `source_name`/`publisher` values
+are synthesized from URL domains (not real corpus data — verify against
+the real source), and `fact_check` status is model-asserted against the
+already-published body only, not against the original source.
 
 ## Step 2 — review and commit (human gate — not dispatchable)
 

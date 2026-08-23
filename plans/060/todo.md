@@ -43,16 +43,30 @@ do not implement from this checklist alone.
 
 ### Phase 2 — truthful schema v2
 
-- [ ] Characterize complete/empty/partial/invalid/cached/provider-failure v2
-      assembly.
-- [ ] Fail incomplete new v2 output before writer/Git side effects with a stable
-      retryable error code.
-- [ ] Replace the backend v1 smoke fixture with deterministic production-path v2.
+- [x] Characterize complete/empty/partial/invalid/cached/provider-failure v2
+      assembly. (Phase 2a — orchestration-boundary and fixture-level
+      characterization; assembly-level behavior itself was already
+      characterized by pre-existing tests, see phase-2a-v2-failclosed/spec.md
+      "Baseline correction".)
+- [x] Fail incomplete new v2 output before writer/Git side effects with a stable
+      retryable error code. (Phase 2a — this behavior already existed in
+      production since commit `65e934a`, predating this plan's own baseline;
+      Phase 2a added regression coverage, not the behavior itself.)
+- [x] Replace the backend v1 smoke fixture with deterministic production-path v2.
+      (Phase 2a.)
 - [ ] Inventory and human-review the 30 incomplete posts; invent no facts.
-- [ ] Reach zero strict editorial errors.
+      **Partial**: Phase 2b Step 1 produced a machine-drafted inventory
+      (27/30 posts drafted, 3 flagged for retry) at
+      `phase-2b-corpus-cutover/inventory/`. Human review against real
+      sources — the actual gate — has not happened yet; do not check this
+      box until Phase 2b Step 2 is done.
+- [ ] Reach zero strict editorial errors. (Phase 2b, blocked on the human
+      review above.)
 - [ ] Make frontend v2 semantics/checker unconditional and remove CI/deploy
-      bypass.
-- [ ] Prove producer and consumer reject every partial-v2 fixture.
+      bypass. (Phase 2b item 5, blocked on the line above.)
+- [ ] Prove producer and consumer reject every partial-v2 fixture. Producer
+      (backend) side proven by Phase 2a; consumer (frontend) side still
+      gated behind `STRICT_EDITORIAL` pending Phase 2b.
 
 ### Phase 3 — durable lifecycle schema
 
