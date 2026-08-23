@@ -28,14 +28,16 @@ This repository is the system of record for collection, enrichment, scoring, sto
 - `news_collector/logic/workflows/`: workflow composition, publication, manual ingest, image briefs
 - `news_collector/components/editorial/` and `components/publishing/`: editorial and publishing collaborators
 - `news_collector/serving/`: FastAPI read surface
-- `apps/refinery/`: Streamlit Refinery application
+- `apps/admin/`: Astro Refinery admin panel (current — use this)
+- `apps/refinery/`: Streamlit Refinery application (legacy fallback, kept until `apps/admin/` is confirmed flawless in daily use)
 
 ## Preferred Entry Points
 
 ```bash
 make bootstrap
 python scripts/run_collector.py --dry-run
-make refinery
+make admin-dev     # current Refinery admin (Astro; expects the serving API on :8000)
+make refinery      # legacy Refinery admin (Streamlit) — fallback only
 make lint
 make type
 make test

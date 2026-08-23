@@ -49,13 +49,15 @@ Additional gates by change type:
 | First-time setup | `make bootstrap` (Python 3.13; hash-pinned installs from `requirements.lock`) |
 | Validate config | `make config-validate` |
 | Run collector (no side effects) | `python scripts/run_collector.py --dry-run` |
-| Launch Refinery UI | `make refinery` (isolated `.venv-refinery`; runs migrations first) |
+| Launch Refinery admin (current, Astro) | `make admin-dev` (`apps/admin/`; expects the serving API on `:8000`, run `make dev`/`uvicorn` for that separately) |
+| Launch Refinery admin (legacy, Streamlit) | `make refinery` (isolated `.venv-refinery`; runs migrations first) |
 | Run full quality gate | `make quality` |
 
 Notes:
 
 - `make quality-gate` is snapshot-first and needs no LLM; `make quality-gate-refresh` regenerates snapshots using a local LLM (overwrites committed snapshots — use deliberately).
-- Refinery has its own venv (`bootstrap-refinery`); test it with `make test-refinery`.
+- Refinery (Streamlit) has its own venv (`bootstrap-refinery`); test it with `make test-refinery`.
+- `apps/admin/` (Astro, `make admin-install`/`admin-dev`/`admin-build`/`admin-test`) reached feature parity with the Streamlit panel and is the app to use going forward. The Streamlit panel (`apps/refinery/`) is being kept as a fallback until the Astro app is confirmed flawless in daily use — don't remove it without asking.
 
 ### Key files
 
@@ -94,7 +96,8 @@ noticiencias_news_collector/
 │   ├── monitoring/      # health checks, detection, canary, reporting
 │   ├── components/      # editorial (AI editor) + publishing (GitHub publisher)
 │   └── utils/           # narrow helpers only (no mixed concerns)
-├── apps/refinery/       # Streamlit editorial admin panel
+├── apps/admin/          # Astro editorial admin panel (current — use this)
+├── apps/refinery/       # Streamlit editorial admin panel (legacy fallback, kept until apps/admin/ is confirmed flawless)
 ├── scripts/             # CLI entrypoints
 ├── tests/               # contract, unit, integration, e2e, regression, security
 ├── docs/                # ADRs, runbooks, audits, architecture docs
