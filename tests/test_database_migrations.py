@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 from sqlalchemy import inspect as sqla_inspect
+from sqlalchemy.exc import IntegrityError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,6 +16,21 @@ from unittest.mock import patch
 
 from news_collector import config as app_config
 from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import (
+    WORKFLOW_RUN_ACTIVE_STATUS,
+    WorkflowRun,
+    WorkflowStageAttempt,
+)
+
+# The five Phase 3a lineage tables (Plan 060) — used by the schema-parity
+# and constraint tests below.
+NEW_LIFECYCLE_TABLES = [
+    "workflow_runs",
+    "workflow_stage_attempts",
+    "editorial_decisions",
+    "publication_attempts",
+    "publication_events",
+]
 
 
 def _create_legacy_sources_table(db_path: Path) -> None:
@@ -232,7 +249,8 @@ ALL_REVISIONS = [
     "2447e261ecf4",  # consolidate_refinery_schema
     "a3f1b2c4d5e6",  # add_content_mode_to_articles
     "a54ba7f7dabb",  # add_blacklist_columns
-    "b61c2d3e4f50",  # add_score_logs_latest_index (head)
+    "b61c2d3e4f50",  # add_score_logs_latest_index
+    "effe4ec70d6d",  # add_durable_lifecycle_tables (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -244,6 +262,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "a3f1b2c4d5e6",
     "a54ba7f7dabb",
     "b61c2d3e4f50",
+    "effe4ec70d6d",
 ]
 
 
@@ -404,7 +423,7 @@ def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
         mgr = DatabaseManager(database_config=test_db_config)
         mgr.close()
         # Stamp as one revision behind head
-        command.stamp(alembic_cfg, "a54ba7f7dabb")
+        command.stamp(alembic_cfg, "b61c2d3e4f50")
 
     # Read-only check: alembic_version != head
     from news_collector.storage.database import DatabaseManager as DM
@@ -415,8 +434,221 @@ def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
             result = conn.exec_driver_sql(
                 "SELECT version_num FROM alembic_version"
             ).scalar()
-        assert result == "a54ba7f7dabb"
-        # Head is b61c2d3e4f50 — DB is behind
-        assert result != "b61c2d3e4f50"
+        assert result == "b61c2d3e4f50"
+        # Head is effe4ec70d6d — DB is behind
+        assert result != "effe4ec70d6d"
     finally:
         db_mgr.close()
+
+
+def test_migration_vocabulary_constants_match_models() -> None:
+    """effe4ec70d6d duplicates its CHECK-constraint vocabularies by hand
+    from news_collector/storage/models.py (Alembic revisions can't import
+    application models — they must keep working after models.py evolves).
+    This is the only thing that would catch one side being edited without
+    the other; test_new_lifecycle_tables_schema_parity only compares
+    constraint *names*, not the allowed values each constraint enforces.
+    """
+    import importlib.util
+
+    from news_collector.storage import models
+
+    module_path = (
+        ROOT / "alembic" / "versions" / "effe4ec70d6d_add_durable_lifecycle_tables.py"
+    )
+    spec = importlib.util.spec_from_file_location("effe4ec70d6d_migration", module_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    pairs = [
+        ("WORKFLOW_RUN_STATUS_VALUES",),
+        ("WORKFLOW_RUN_ACTIVE_STATUS",),
+        ("WORKFLOW_STAGE_ATTEMPT_STATUS_VALUES",),
+        ("EDITORIAL_DECISION_TYPE_VALUES",),
+        ("EDITORIAL_DECISION_OUTCOME_VALUES",),
+        ("PUBLICATION_ATTEMPT_STATE_VALUES",),
+        ("PUBLICATION_EVENT_TYPE_VALUES",),
+    ]
+    for (name,) in pairs:
+        assert getattr(models, name) == getattr(
+            migration, name
+        ), f"{name} diverged between models.py and the migration"
+
+
+def test_lifecycle_tables_upgrade_body_is_reentrant_within_one_connection() -> None:
+    """effe4ec70d6d's upgrade() must be safe to call twice in a row against
+    the same connection without raising "already exists" — this is the
+    actual idempotency guarantee the create_table/create_index guards are
+    for (DatabaseManager's create_all may have already built these tables
+    before Alembic runs). Exercises upgrade() directly via a raw
+    Operations context rather than through `alembic upgrade head` twice,
+    to prove the guard logic itself, not just that Alembic's version-guard
+    short-circuits a same-revision re-run.
+    """
+    import importlib.util
+
+    from alembic.operations import Operations
+    from alembic.runtime.migration import MigrationContext
+    from sqlalchemy import create_engine
+
+    module_path = (
+        ROOT / "alembic" / "versions" / "effe4ec70d6d_add_durable_lifecycle_tables.py"
+    )
+    spec = importlib.util.spec_from_file_location("effe4ec70d6d_migration", module_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    engine = create_engine("sqlite:///:memory:")
+    try:
+        with engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            with Operations.context(ctx):
+                migration.upgrade()
+                migration.upgrade()  # must not raise
+
+            inspector = sqla_inspect(conn)
+            for table in NEW_LIFECYCLE_TABLES:
+                assert table in inspector.get_table_names()
+    finally:
+        engine.dispose()
+
+
+def _table_schema_snapshot(inspector, table_name: str) -> dict:
+    """Column/index/constraint/FK shape for one table, order-independent."""
+    return {
+        "columns": {col["name"] for col in inspector.get_columns(table_name)},
+        "indexes": {idx["name"] for idx in inspector.get_indexes(table_name)},
+        "check_constraints": {
+            c["name"] for c in inspector.get_check_constraints(table_name)
+        },
+        "unique_constraints": {
+            (uq["name"], tuple(uq["column_names"]))
+            for uq in inspector.get_unique_constraints(table_name)
+        },
+        "foreign_keys": {
+            (
+                tuple(fk["constrained_columns"]),
+                fk["referred_table"],
+                tuple(sorted((fk.get("options") or {}).items())),
+            )
+            for fk in inspector.get_foreign_keys(table_name)
+        },
+    }
+
+
+def test_new_lifecycle_tables_schema_parity(tmp_path: Path) -> None:
+    """A fresh create_all DB and a legacy-stamp-then-upgrade-head DB must
+    produce byte-identical schema for the five Phase 3a lineage tables:
+    same columns, same index names, same check-constraint names, same
+    unique constraints, same FK targets/ondelete. This is what keeps
+    news_collector/storage/models.py and the effe4ec70d6d migration from
+    silently drifting apart (Step 1's rationale for adding the models at
+    all, not just the migration).
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    # DB A: fresh create_all only, no Alembic involved.
+    fresh_db_path = tmp_path / "fresh_create_all.db"
+    fresh_mgr = DatabaseManager(
+        database_config={"type": "sqlite", "path": fresh_db_path}
+    )
+    fresh_mgr.close()
+
+    # DB B: legacy stamp, then `alembic upgrade head` (mirrors
+    # test_every_legacy_revision_reaches_head's own bootstrap pattern).
+    migrated_db_path = tmp_path / "migrated_to_head.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config = {"type": "sqlite", "path": migrated_db_path}
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        migrated_mgr = DatabaseManager(database_config=test_db_config)
+        migrated_mgr.close()
+        command.stamp(alembic_cfg, "cb486d1d980d")
+        command.upgrade(alembic_cfg, "head")
+
+    from sqlalchemy import create_engine
+
+    fresh_engine = create_engine(f"sqlite:///{fresh_db_path}")
+    migrated_engine = create_engine(f"sqlite:///{migrated_db_path}")
+    try:
+        fresh_inspector = sqla_inspect(fresh_engine)
+        migrated_inspector = sqla_inspect(migrated_engine)
+        for table in NEW_LIFECYCLE_TABLES:
+            fresh_snapshot = _table_schema_snapshot(fresh_inspector, table)
+            migrated_snapshot = _table_schema_snapshot(migrated_inspector, table)
+            assert fresh_snapshot == migrated_snapshot, (
+                f"Schema drift on '{table}' between create_all and "
+                f"alembic upgrade head: {fresh_snapshot} != {migrated_snapshot}"
+            )
+    finally:
+        fresh_engine.dispose()
+        migrated_engine.dispose()
+
+
+def test_workflow_runs_one_active_collection_partial_unique_index_raises(
+    tmp_path: Path,
+) -> None:
+    """The partial unique index actually constrains, not just exists."""
+    db_path = tmp_path / "one_active_collection.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            session.add(
+                WorkflowRun(
+                    run_type="collection",
+                    status=WORKFLOW_RUN_ACTIVE_STATUS,
+                    started_at=now,
+                )
+            )
+            session.commit()
+
+            session.add(
+                WorkflowRun(
+                    run_type="collection",
+                    status=WORKFLOW_RUN_ACTIVE_STATUS,
+                    started_at=now,
+                )
+            )
+            with pytest.raises(IntegrityError):
+                session.commit()
+    finally:
+        mgr.close()
+
+
+def test_workflow_stage_attempts_duplicate_attempt_raises(tmp_path: Path) -> None:
+    """Duplicate (workflow_run_id, stage_name, attempt_number) must raise."""
+    db_path = tmp_path / "duplicate_stage_attempt.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            run = WorkflowRun(run_type="refinery", status="running", started_at=now)
+            session.add(run)
+            session.commit()
+
+            session.add(
+                WorkflowStageAttempt(
+                    workflow_run_id=run.id,
+                    stage_name="draft",
+                    attempt_number=1,
+                    status="running",
+                    started_at=now,
+                )
+            )
+            session.commit()
+
+            session.add(
+                WorkflowStageAttempt(
+                    workflow_run_id=run.id,
+                    stage_name="draft",
+                    attempt_number=1,
+                    status="running",
+                    started_at=now,
+                )
+            )
+            with pytest.raises(IntegrityError):
+                session.commit()
+    finally:
+        mgr.close()
