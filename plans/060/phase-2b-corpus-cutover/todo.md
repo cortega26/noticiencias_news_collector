@@ -21,9 +21,10 @@ are dispatchable once Step 2 is complete and Phase 2a is merged.
       `process_article`), and `reviewed: false`. Live corpus cross-checked
       against the stale fixture: zero discrepancy. Real NVIDIA provider
       confirmed used (`nvidia/nemotron-3-super-120b-a12b`, 30/30 attempt
-      log lines, 0 Ollama fallback). 27/30 posts drafted; 3 flagged with
-      exact Pydantic validation errors (shallow JSON-shape issues, not bad
-      sources — worth a retry, not an automatic v1 downgrade).
+      log lines, 0 Ollama fallback). 27/30 posts drafted on the first pass;
+      3 flagged with shallow Pydantic validation errors (not bad sources)
+      were retried on 2026-08-23 with the same method and no code changes
+      — all 3 succeeded. **30/30 posts now have drafts.**
 - [x] Posts where `_generate_enrichment_fields` returns empty/fails marked
       plainly as "no draft available — needs downgrade or manual
       authoring", not silently omitted.
