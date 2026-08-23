@@ -70,14 +70,35 @@ do not implement from this checklist alone.
 
 ### Phase 3 — durable lifecycle schema
 
-- [ ] Add additive Alembic migrations for workflow runs, stage attempts,
+- [x] Add additive Alembic migrations for workflow runs, stage attempts,
       editorial decisions, publication attempts, and publication events.
-- [ ] Add constraints, indexes, delivery idempotency, and collection active-key
-      uniqueness.
+      (Phase 3a, revision `effe4ec70d6d`. Pure additive schema, no
+      repository code, nothing reads/writes these tables yet.)
+- [x] Add constraints, indexes, delivery idempotency, and collection active-key
+      uniqueness. (Phase 3a — RESTRICT FKs, named CheckConstraints matching
+      the existing `ck_article_status` convention, unique
+      `(workflow_run_id, stage_name, attempt_number)` triple, SQLite
+      partial unique index for one active collection. Also enabled
+      `PRAGMA foreign_keys=ON` globally as a prerequisite for RESTRICT to
+      mean anything — tested safe against the full suite first. One
+      latent effect flagged for 3b: `delete_article()` can now raise
+      `IntegrityError` instead of returning `False` when RESTRICT-
+      protected history exists; nothing hits this path yet since nothing
+      writes to the new tables.)
 - [ ] Add typed repositories and compare-and-set/append-only transitions.
+      (Phase 3b, not yet planned — depends on 3a's tables, which now
+      exist.)
 - [ ] Deterministically backfill known legacy publication/audit state.
-- [ ] Dual-write legacy projections and new records.
+      (Phase 3b. Recon note: the file-based `data/runtime/publication_attempts/`
+      directory is NOT a rich history source — only ~10 articles' worth of
+      files, overwritten per-attempt. The real legacy state is each
+      `Article` row's `article_metadata["publication"]`/`["audit"]` JSON,
+      itself single-current-state, not history. 3b's backfill plan should
+      say this plainly rather than implying more can be reconstructed
+      than was ever recorded.)
+- [ ] Dual-write legacy projections and new records. (Phase 3b.)
 - [ ] Add and run the consistency report plus the full migration proof.
+      (Phase 3b.)
 
 ### Phase 4 — collection and source workflows
 
