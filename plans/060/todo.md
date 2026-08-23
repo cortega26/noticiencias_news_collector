@@ -85,20 +85,31 @@ do not implement from this checklist alone.
       `IntegrityError` instead of returning `False` when RESTRICT-
       protected history exists; nothing hits this path yet since nothing
       writes to the new tables.)
-- [ ] Add typed repositories and compare-and-set/append-only transitions.
-      (Phase 3b, not yet planned — depends on 3a's tables, which now
-      exist.)
-- [ ] Deterministically backfill known legacy publication/audit state.
-      (Phase 3b. Recon note: the file-based `data/runtime/publication_attempts/`
-      directory is NOT a rich history source — only ~10 articles' worth of
-      files, overwritten per-attempt. The real legacy state is each
-      `Article` row's `article_metadata["publication"]`/`["audit"]` JSON,
-      itself single-current-state, not history. 3b's backfill plan should
-      say this plainly rather than implying more can be reconstructed
-      than was ever recorded.)
-- [ ] Dual-write legacy projections and new records. (Phase 3b.)
+- [x] Add typed repositories and compare-and-set/append-only transitions.
+      (Phase 3b — `LifecycleRepository`, exposed as `db.lifecycle`. CAS
+      via `UPDATE ... WHERE state = <expected>` with a rowcount check,
+      not a version column — no such precedent existed in this codebase
+      before this phase.)
+- [x] Deterministically backfill known legacy publication/audit state.
+      (Phase 3b — `scripts/backfill_lifecycle_tables.py`, fixture-tested
+      per the recon finding that the local dev DB has zero rows with
+      legacy publication/audit metadata despite real published content
+      existing, so it can't validate the backfill itself. Honest scope
+      note: only `publication_attempts`/`editorial_decisions` are
+      backfillable from real legacy data — `workflow_runs`,
+      `workflow_stage_attempts`, and `publication_events` have no legacy
+      data to backfill from and start empty by design.)
+- [ ] Dual-write legacy projections and new records. (Phase 3c, not yet
+      planned — depends on 3b's repositories, which now exist. This is
+      the risky, behavior-changing half: everything landed so far in
+      Phase 3 has been additive/inert.)
 - [ ] Add and run the consistency report plus the full migration proof.
-      (Phase 3b.)
+      **Partial**: Phase 3b delivered the read-only reconciliation report
+      (`scripts/lifecycle_reconciliation_report.py`,
+      clean/drift/missing/not_applicable) — the "consistency report" half
+      is done. "The full migration proof" implies dual-write exists and
+      can be verified end-to-end, which is Phase 3c's job; do not check
+      this box until that half lands too.
 
 ### Phase 4 — collection and source workflows
 
