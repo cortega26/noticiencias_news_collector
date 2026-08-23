@@ -12,46 +12,34 @@ the full per-post records.
   fields, cross-checked against the live working tree — not just the
   stale inventory fixture).
 - Drafts produced (`draft_available: true`, all six fields non-empty):
-  **27**.
-- No draft available (`draft_available: false`): **3**.
-- Of the 27 available drafts, **0** came back with any of the six fields
-  still empty (`draft_empty_fields` is empty on every available record).
-- Run was **not** halted early (`halted_early: false`); the >10-failure
-  stop condition was not triggered (3 failures total).
+  **30/30**, after a retry pass (see below).
+- No draft available: **0**.
 
-### The 3 posts with no draft available
+### Retry pass (2026-08-23)
 
-- `2026-01-27-conoce-a-los-misteriosos-electridos.md`
+The first pass (2026-08-22) produced 27 drafts and 3 `draft_available:
+false` records — all three were shallow `EnrichmentSchema` Pydantic
+validation failures (wrong JSON shape from the model), not missing-source
+cases; every one of the 30 posts carries a `source_url`. Per that pass's
+own recommendation, the 3 were retried with the exact same method
+(`_generate_enrichment_fields` called directly, real NVIDIA provider,
+`nvidia/nemotron-3-super-120b-a12b`) — no code changes, no prompt changes.
+All 3 succeeded on retry with complete, schema-valid drafts. Each
+retried record carries a `note` field in the JSON documenting this; the
+original first-pass validation errors (now superseded) were:
+
+- `2026-01-27-conoce-a-los-misteriosos-electridos.md` — `fact_check.1.label`
+  field required (model emitted a glossary-shaped entry instead).
 - `2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md`
+  — two `sources[].url` entries were empty strings.
 - `2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md`
+  — a `sources` entry omitted `url` entirely.
 
-**Important:** all 30 posts carry a `source_url` in frontmatter, so none
-of these three failed because of a missing source (the condition the
-original task description named as one trigger for `draft_available:
-false`). All three failed because the NVIDIA response did not pass
-`EnrichmentSchema` Pydantic validation. The exact validation error for
-each is recorded on its record (`validation_error` field) and reproduced
-here since the run log itself lives in a session-scoped scratchpad and
-will not persist:
-
-- `2026-01-27-conoce-a-los-misteriosos-electridos.md` — 1 validation
-  error: `fact_check.1.label` field required. The model emitted a
-  `fact_check` entry shaped like a glossary item (`term`/`status`) instead
-  of the required (`label`/`status`) keys.
-- `2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md`
-  — 2 validation errors: `sources.1.url` and `sources.2.url` — string too
-  short (empty string). The model returned two `sources` entries with
-  empty `url` values.
-- `2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md`
-  — 1 validation error: `sources.1.url` field required. The model
-  returned a `sources` entry with `title`/`date` but omitted `url`
-  entirely.
-
-**All three are shallow, retryable JSON-shape mistakes by the model — not
-evidence that the underlying source is unusable.** A retry (or a reviewer
-fixing the shape by hand) may well produce a full draft for these three.
-They should **not** be read as automatic "downgrade to v1" candidates
-without first attempting a retry or manual fix.
+**One quality flag from the retry pass, left as-is for the reviewer (not
+silently cleaned up):** the dark-matter post's `summary_points[3]` has a
+leading-space typo (`" Estos resultados descartan..."`) — a raw LLM
+formatting artifact, consistent with the mixed-script artifact already
+flagged elsewhere in this inventory from the first pass.
 
 ## LLM provider / model actually used
 

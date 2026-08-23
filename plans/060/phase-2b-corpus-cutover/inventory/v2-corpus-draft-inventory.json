@@ -13,8 +13,8 @@
     "model": "nvidia/nemotron-3-super-120b-a12b"
   },
   "total_posts_processed": 30,
-  "drafts_available": 27,
-  "drafts_unavailable": 3,
+  "drafts_available": 30,
+  "drafts_unavailable": 0,
   "posts": [
     {
       "file": "2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras.md",
@@ -578,11 +578,77 @@
         "confidence",
         "sources"
       ],
-      "draft_available": false,
-      "note": "no draft available — needs downgrade or manual authoring",
+      "draft_available": true,
+      "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
       "reviewed": false,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
-      "validation_error": "1 validation error for EnrichmentSchema: fact_check.1.label — Field required [type=missing, input_value={'term': 'Un electrido es...', 'status': 'confirmed'}]. The model emitted a fact_check entry shaped like a glossary item (term/status) instead of the required (label/status) keys. Retryable prompt-shape issue, not a source-availability problem."
+      "draft": {
+        "summary_points": [
+          "Los electridos son materiales donde los electrones quedan atrapados en sitios no nucleares, lo que les confiere propiedades únicas.",
+          "Se han identificado electridos estables a temperatura ambiente y materiales como la mayenita que actúan como catalizadores en reacciones industriales, como la síntesis de amoníaco.",
+          "Una hipótesis sugiere que los electridos podrían existir bajo las altas presiones del núcleo terrestre y explicar su menor densidad esperada.",
+          "La investigación aún requiere más estudios para confirmar estas ideas y desarrollar modelos predictivos de su formación.",
+          "Si se validates, los electridos podrían revolucionar la catálisis en farmacéutica y producción de energía, reduciendo consumo energético y emisiones."
+        ],
+        "glossary": [
+          {
+            "term": "electrido",
+            "definition": "Material en el que los electrones están localizados en cavidades entre átomos, en lugar de moverse libremente como en los metales."
+          },
+          {
+            "term": "catalizador",
+            "definition": "Sustancia que acelera una reacción química sin consumirse en el proceso."
+          },
+          {
+            "term": "mayenita",
+            "definition": "Tipo de electrido basado en calcio y aluminio que se ha estudiado como catalizador para la producción de amoníaco."
+          },
+          {
+            "term": "síntesis de amoníaco",
+            "definition": "Proceso industrial que combina nitrógeno e hidrógeno para producir amoníaco, usado principalmente en fertilizantes."
+          },
+          {
+            "term": "núcleo terrestre",
+            "definition": "La parte más interna de la Tierra, compuesta principalmente de hierro y cuya densidad observada es menor de lo esperado."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Los electridos se forman cuando los electrones quedan atrapados en sitios atractores no nucleares entre átomos.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Un electrido estable a temperatura ambiente hecho de iones de calcio rodeado de moléculas orgánicas grandes facilita reacciones difíciles de iniciar.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La mayenita, un tipo de electrido, se usa como catalizador para producir amoníaco a temperaturas y presiones más bajas.",
+            "status": "confirmed"
+          },
+          {
+            "label": "La densidad más baja de lo esperado del núcleo terrestre podría explicarse por la presencia de electridos bajo alta presión.",
+            "status": "uncertain"
+          },
+          {
+            "label": "Los investigadores utilizan algoritmos de aprendizaje automático para buscar nuevos materiales con propiedades similares a los electridos.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "Si los electridoslogran mejorar la eficiencia de la síntesis de amoníaco, los países latinoamericanos con grandes sectores agrícolas podrían reducir costos de fertilizantes y su huella de carbono.",
+          "El uso de estos materiales como catalizadores en la industria farmacéutica podría acelerar la producción de medicamentos esenciales, beneficiando el acceso a la salud en la región.",
+          "Entender mejor el núcleo terrestre mediante estudios de electridos aporta a la geofísica y a la exploración de recursos minerales, relevantes para economías dependientes de la minería en América Latina."
+        ],
+        "confidence": "Moderada — artículo de divulgación basado en estudios preliminares y hipótesis, sin evidencia concluyente; señala que se necesitan más investigaciones para confirmar las propuestas.",
+        "sources": [
+          {
+            "title": "Conoce a los misteriosos electridos",
+            "url": "https://arstechnica.com/science/2026/01/meet-the-mysterious-electrides/",
+            "publisher": "Arstechnica",
+            "date": ""
+          }
+        ]
+      }
     },
     {
       "file": "2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md",
@@ -595,11 +661,77 @@
         "confidence",
         "sources"
       ],
-      "draft_available": false,
-      "note": "no draft available — needs downgrade or manual authoring",
+      "draft_available": true,
+      "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
       "reviewed": false,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
-      "validation_error": "2 validation errors for EnrichmentSchema: sources.1.url and sources.2.url — String should have at least 1 character [type=string_too_short, input_value='']. The model returned two sources entries with empty url strings. Retryable prompt-shape issue, not a source-availability problem."
+      "draft": {
+        "summary_points": [
+          "El sarampión ha resurgido en varios países debido a la disminución de la vacunación impulsada por la desinformación y la falta de confianza en las vacunas.",
+          "El estudio fraudulento de 1998 que vinculó la vacuna MMR con el autismo ha sido retractado, pero su efecto persiste al alimentar la desconfianza vacunal.",
+          "La OMS señala que seis países, entre ellos Reino Unido, España y Austria, han perdido su estatus de libres de sarampión y EE.UU. enfrenta un brote importante.",
+          "Para prevenir la transmisión se requiere que al menos el 95 % de los niños reciban la primera dosis de la vacuna MMR.",
+          "Combatir la desinformación necesita acciones coordinadas de gobiernos, plataformas digitales, profesionales de la salud y la sociedad."
+        ],
+        "glossary": [
+          {
+            "term": "sarampión",
+            "definition": "Enfermedad viral altamente contagiosa que causa fiebre, erupción cutánea y puede provocar complicaciones graves como neumonía, encefalitis o muerte."
+          },
+          {
+            "term": "vacuna MMR",
+            "definition": "Vacuna combinada que protege contra el sarampión, las paperas y la rubeola; se administra en dos dosis durante la infancia."
+          },
+          {
+            "term": "desinformación",
+            "definition": "Información falsa o engañosa que se difunde intencionalmente o por error, afectando percepciones y decisiones de salud."
+          },
+          {
+            "term": "cobertura vacunal",
+            "definition": "Porcentaje de la población objetivo que ha recibido una determinada vacuna; indica el nivel de protección colectiva."
+          },
+          {
+            "term": "brote",
+            "definition": "Aumento repentino y localizado de casos de una enfermedad infecciosa dentro de una comunidad o región."
+          },
+          {
+            "term": "inmunidad de rebaño",
+            "definition": "Protección indirecta que ocurre cuando un suficiente porcentaje de la población es inmune, dificultando la propagación del patógeno."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "Un estudio fraudulento de 1998 sugirió una relación entre la vacuna MMR y el autismo.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Seis países han perdido su estatus libre de sarampión según la OMS, incluyendo Reino Unido, España y Austria.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Estados Unidos está enfrentando un brote importante de sarampión.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Se necesita al menos 95 % de cobertura vacunal con la primera dosis de MMR para evitar la propagación del sarampión.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "El sarampión puede propagarse rápidamente en comunidades con baja vacunación, poniendo en riesgo a niños latinoamericanos, especialmente en zonas fronterizas y de difícil acceso.",
+          "Aumentar la confianza en las vacunas reduce la carga hospitalaria y protege a poblaciones vulnerables como Inmunodeprimidos y recién nacidos.",
+          "Combatir la desinformación en redes sociales es esencial para que las decisiones de vacunación en la región se basen en evidencia científica y no en rumores."
+        ],
+        "confidence": "Alta — el artículo se basa en datos de la OMS, menciona estudios científicos revisados por pares y proviene de una fuente de noticias reconocida (New Scientist), aunque no detalla las metodologías de las encuestas de cobertura vacunal citadas.",
+        "sources": [
+          {
+            "title": "Desafío global contra el sarampión por falta de confianza en las vacunas",
+            "url": "https://newscientist.com/article/2513398-to-halt-measles-resurgence-we-must-fight-the-plague-of-misinformation/",
+            "publisher": "New Scientist",
+            "date": ""
+          }
+        ]
+      }
     },
     {
       "file": "2026-01-27-herramientas-empunadas-de-piedra-sofisticadas-descubiertas-en-china-datan-de-hace-160-000-anos.md",
@@ -1741,11 +1873,71 @@
         "confidence",
         "sources"
       ],
-      "draft_available": false,
-      "note": "no draft available — needs downgrade or manual authoring",
+      "draft_available": true,
+      "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
       "reviewed": false,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
-      "validation_error": "1 validation error for EnrichmentSchema: sources.1.url — Field required [type=missing, input_value={'title': 'Artículo en P...', 'date': '2025-09-17'}]. The model returned a sources entry with title/date but omitted the url key entirely. Retryable prompt-shape issue, not a source-availability problem."
+      "draft": {
+        "summary_points": [
+          "El experimento DAMA/NaI observó en 1997 una señal de modulación anual que se interpretó como posible detección directa de materia oscura.",
+          "Los nuevos experimentos hermanos ANAIS-112 (España) y COSINE-100 (Corea del Sur) repitieron el diseño de DAMA/NaI pero no encontraron evidencia significativa de dicha modulación.",
+          "El análisis combinado de los datos de ambos experimentos, realizado por Sophia Hollick, confirmó la ausencia de la señal de modulación atribuida previamente a la materia oscura.",
+          " Estos resultados descartan, con mayor confianza, la hipótesis de que la materia oscura sea responsable de la señal observada en DAMA/LIBRA, permitiendo redirigir los esfuerzos de búsqueda."
+        ],
+        "glossary": [
+          {
+            "term": "materia oscura",
+            "definition": "forma de materia que no emite, absorbe ni refleja luz, detectable solo por sus efectos gravitatorios."
+          },
+          {
+            "term": "modulación anual",
+            "definition": "variación periódica de una señal esperada debido al movimiento de la Tierra alrededor del Sol, que cambiaría la velocidad relativa respecto a un flujo de partículas de materia oscura."
+          },
+          {
+            "term": "DAMA/NaI",
+            "definition": "experimento que utiliza cristales de yoduro de sodio (NaI) para buscar señales de interacción de materia oscura, ubicado en el Laboratorio Nacional del Gran Sasso (Italia)."
+          },
+          {
+            "term": "ANAIS-112",
+            "definition": "experimento español que emplea 112 kg de cristales de NaI para buscar modulación anual de señales de materia oscura."
+          },
+          {
+            "term": "COSINE-100",
+            "definition": "experimento surcoreano que usa 100 kg de NaI con el mismo objetivo que DAMA/NaI y ANAIS-112."
+          }
+        ],
+        "fact_check": [
+          {
+            "label": "El experimento DAMA/NaI observó una señal de modulación anual en 1997.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Los experimentos ANAIS-112 y COSINE-100 no encontraron evidencia significativa de modulación anual en las regiones de energía relevantes.",
+            "status": "confirmed"
+          },
+          {
+            "label": "Sophia Hollick combinó los datos de ANAIS-112 y COSINE-100 y encontró evidencia de la modulación observada por DAMA/LIBRA.",
+            "status": "disputed"
+          },
+          {
+            "label": "Maruyama, investigadora principal de COSINE-100, afirma que los resultados permiten usar detectores de yoduro de sodio para explorar materia oscura de baja masa.",
+            "status": "confirmed"
+          }
+        ],
+        "why_it_matters": [
+          "La participación del experimento español ANAIS-112 muestra cómo la colaboración internacional, incluida la experiencia latinoamericana, puede contribuir a resolver grandes misterios de la física.",
+          "Descartar una señal falsa de materia oscura permite que los recursos y esfuerzos de investigación se concentren en búsquedas más prometedoras, beneficiando a la comunidad científica global, incluidos los grupos de América Latina que trabajan en detección de partículas."
+        ],
+        "confidence": "Alta — basada en el análisis conjunto de dos experimentos independientes con metodología idéntica a DAMA/NaI y un tamaño de muestra suficiente, aunque los autores reconocen que no explican el origen de la modulación observada en DAMA/LIBRA.",
+        "sources": [
+          {
+            "title": "Experimentos Refutan la Afirmación sobre la Materia Oscura | Laboratorio Wright de Yale",
+            "url": "https://wlab.yale.edu/posts/2026-03-31-experiments-refute-dark-matter-claim",
+            "publisher": "Yale Wright Lab",
+            "date": "2026-03-31"
+          }
+        ]
+      }
     },
     {
       "file": "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md",
@@ -2244,7 +2436,8 @@
   "halted_early": false,
   "posts_with_partial_drafts": 0,
   "posts_with_quality_flags": [
-    "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md"
+    "2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md",
+    "2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md"
   ],
   "frontend_repo_head_sha_at_generation_time": "54ad1501ab990ef239dd0be6b391cd01b781ab9b",
   "stale_inventory_file_generated_at_commit": "582ed40",
@@ -2255,5 +2448,6 @@
     "body_sampling": "Article body sampled to max 4000 chars via _sample_for_critic before being sent to the model.",
     "source_name_derivation": "No post frontmatter carries a source_name field. source_name was synthesized from the domain label of source_url (e.g. \"scientificamerican.com\" -> \"Scientificamerican\") and passed into both the LLM prompt context and the deterministic sources-backfill inside _generate_enrichment_fields. Consequence: any sources[].publisher / sources[].title value in these drafts may be an agent-derived string, not a value that existed anywhere in the corpus. Reviewers should verify publisher names against the real source, not trust them as given.",
     "fact_check_status_caveat": "fact_check[].status values (e.g. \"confirmed\", \"uncertain\") are model-asserted claims about consistency with the already-published Spanish article body — the model never saw the original source article. \"confirmed\" carries NO verification weight against the real source. Per the phase-2b spec, a human must check fact_check and sources against the original source before any post is marked reviewed."
-  }
+  },
+  "retry_note": "3 posts that failed EnrichmentSchema validation on the first pass (2026-08-22) were retried on 2026-08-23 with the same method (_generate_enrichment_fields, real NVIDIA provider, nvidia/nemotron-3-super-120b-a12b) and succeeded on the retry with no code changes. See individual records' 'note' field."
 }
