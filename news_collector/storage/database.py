@@ -55,6 +55,7 @@ from news_collector.utils.logger import get_logger
 
 from .analytics_repository import AnalyticsRepository
 from .article_repository import ArticleCursor, ArticlePage, ArticleRepository
+from .lifecycle_repository import LifecycleRepository
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
 
@@ -134,6 +135,19 @@ class DatabaseManager:
        :type: AnalyticsRepository
 
        Analytics queries, daily stats, maintenance, and health checks.
+
+    .. attribute:: lifecycle
+       :type: LifecycleRepository
+
+       Typed read/write access to the Plan 060 / Phase 3a durable lineage
+       tables (``publication_attempts``, ``editorial_decisions``, and
+       read-only access to the not-yet-populated ``workflow_runs`` /
+       ``workflow_stage_attempts`` / ``publication_events``). New code
+       reading or writing these tables should call ``db.lifecycle`` directly
+       — no ``DatabaseManager``-delegate mirror is added for it (see the
+       "New code should call the repositories directly" note below; that
+       legacy delegate-mirroring pattern is exactly what is being phased
+       out, not extended to new tables).
     """
 
     def __init__(self, database_config: Optional[Dict[str, Any]] = None):
@@ -158,6 +172,9 @@ class DatabaseManager:
         self.articles = ArticleRepository(self)
         self.sources = SourceRepository(self)
         self.analytics = AnalyticsRepository(self)
+        # Plan 060 / Phase 3b: no delegate-mirror on DatabaseManager (see the
+        # attribute docstring above) — call db.lifecycle.* directly.
+        self.lifecycle = LifecycleRepository(self)
 
     def _setup_database(self):
         """
