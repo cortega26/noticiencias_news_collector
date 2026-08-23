@@ -74,6 +74,13 @@ _FIXTURE_HEADLINES = {
         "Artículo sintético generado por el smoke test de publicación para "
         "verificar el contrato de esquema v2 de extremo a extremo."
     ),
+    # Explicit, specific tags — without these, process_article falls back to
+    # the raw category ("ciencia"), which is on the frontend's stop-tags
+    # denylist (scripts/check-tags.js). A stop-tag only produces a lint
+    # warning (not a build failure), but a real article's tags always come
+    # from the headline stage, never the category fallback, so specific
+    # tags here keep the fixture faithful to production shape.
+    "tags": ["prueba de publicación", "fixture de integración continua"],
 }
 
 # Schema-valid EnrichmentSchema payload (news_collector/components/editorial/

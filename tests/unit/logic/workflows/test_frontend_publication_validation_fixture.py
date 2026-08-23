@@ -45,6 +45,14 @@ def test_complete_fixture_succeeds_with_all_v2_fields() -> None:
         assert data.get(field), f"Missing required v2 field: {field}"
 
 
+def test_complete_fixture_is_deterministic_across_runs() -> None:
+    """The whole point of stubbing the LLM provider (no network calls) is a
+    reproducible CI fixture — two independent renders must be byte-identical
+    so the smoke test's outcome depends only on the real gates it exercises,
+    never on incidental LLM/provider nondeterminism."""
+    assert render_fixture_markdown() == render_fixture_markdown()
+
+
 @pytest.mark.parametrize(
     "field",
     [f for f in _V2_REQUIRED_ENRICHMENT_FIELDS if f != "sources"],
