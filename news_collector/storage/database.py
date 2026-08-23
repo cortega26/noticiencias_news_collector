@@ -193,6 +193,21 @@ class DatabaseManager:
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA journal_mode=WAL")
                     cursor.execute("PRAGMA synchronous=NORMAL")
+                    # Plan 060 / Fase 3a: sin este pragma SQLite ignora
+                    # silenciosamente toda acción de FK, incluido el
+                    # ondelete="RESTRICT" de las nuevas tablas de linaje
+                    # (workflow_runs, workflow_stage_attempts,
+                    # editorial_decisions, publication_attempts,
+                    # publication_events) — sin el pragma esas
+                    # restricciones no protegerían nada. Es un cambio
+                    # global (afecta también los FKs preexistentes, p.ej.
+                    # ArticleMetrics.article_id), pero la suite completa
+                    # se corrió con esto activado antes de habilitarlo y
+                    # nada dependía de que las violaciones de FK se
+                    # ignoraran en silencio. No afecta a Alembic: env.py
+                    # construye su propio engine (engine_from_config) y
+                    # nunca pasa por este listener.
+                    cursor.execute("PRAGMA foreign_keys=ON")
                     cursor.close()
 
             elif self.config["type"] == "postgresql":

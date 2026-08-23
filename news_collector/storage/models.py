@@ -27,6 +27,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -515,6 +516,319 @@ class SystemConfig(Base):
         return f"<SystemConfig(key='{self.key}', category='{self.category}')>"
 
 
+# Tablas de linaje durable (Plan 060 / Fase 3a)
+# ==============================================
+# Cinco tablas nuevas, puramente aditivas: registran la historia de
+# ejecuciones de workflow, decisiones editoriales e intentos de
+# publicación. Nada en el código actual las lee ni las escribe todavía
+# (eso es la Fase 3b) — esta fase solo define el esquema.
+
+WORKFLOW_RUN_STATUS_VALUES = ("running", "completed", "failed", "cancelled")
+_WORKFLOW_RUN_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{v}'" for v in WORKFLOW_RUN_STATUS_VALUES)
+)
+# Valor "en curso" usado también por el índice único parcial de
+# "una sola colección activa" — debe ser el mismo valor en ambos lugares.
+WORKFLOW_RUN_ACTIVE_STATUS = "running"
+
+
+class WorkflowRun(Base):
+    """Una fila por ejecución de pipeline (recolección, refinería, etc.).
+
+    Registro de linaje durable: nada en el código actual escribe aquí
+    todavía (eso llega en la Fase 3b, junto con el consumidor real del
+    índice único parcial "una sola colección activa" definido abajo).
+    """
+
+    __tablename__ = "workflow_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    run_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Nombre no-reservado: "metadata" está reservado por Declarative
+    # (ver el mismo patrón en Article.article_metadata más arriba).
+    run_metadata: Mapped[Any | None] = mapped_column(JSON)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(_WORKFLOW_RUN_STATUS_CHECK, name="ck_workflow_runs_status"),
+        Index("ix_workflow_runs_run_type", "run_type"),
+        # "Una sola colección activa": único entre las filas que cumplen el
+        # predicado (run_type='collection' AND status=WORKFLOW_RUN_ACTIVE_STATUS).
+        # Entre esas filas run_type es siempre 'collection' (constante), así
+        # que el único sobre esa columna limita el conjunto filtrado a lo
+        # sumo 1 fila. Mismo patrón que uq_articles_content_hash en
+        # 2447e261ecf4_consolidate_refinery_schema.py.
+        Index(
+            "uq_workflow_runs_one_active_collection",
+            "run_type",
+            unique=True,
+            sqlite_where=text(
+                f"run_type = 'collection' AND status = '{WORKFLOW_RUN_ACTIVE_STATUS}'"
+            ),
+        ),
+    )
+
+    def __repr__(self):
+        return f"<WorkflowRun(id={self.id}, run_type='{self.run_type}', status='{self.status}')>"
+
+
+WORKFLOW_STAGE_ATTEMPT_STATUS_VALUES = ("running", "completed", "failed", "skipped")
+_WORKFLOW_STAGE_ATTEMPT_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{v}'" for v in WORKFLOW_STAGE_ATTEMPT_STATUS_VALUES)
+)
+
+
+class WorkflowStageAttempt(Base):
+    """Append-only: una fila por ejecución de una etapa dentro de un run."""
+
+    __tablename__ = "workflow_stage_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    workflow_run_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("workflow_runs.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    stage_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Código de error estable (p.ej. "editorial_v2_incomplete"), no una
+    # descripción libre — misma convención que GeneratedArticleValidationError.
+    error_code: Mapped[str | None] = mapped_column(String(100))
+    details: Mapped[Any | None] = mapped_column(JSON)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            _WORKFLOW_STAGE_ATTEMPT_STATUS_CHECK,
+            name="ck_workflow_stage_attempts_status",
+        ),
+        Index(
+            "ix_workflow_stage_attempts_workflow_run_id",
+            "workflow_run_id",
+        ),
+        Index("ix_workflow_stage_attempts_stage_name", "stage_name"),
+        UniqueConstraint(
+            "workflow_run_id",
+            "stage_name",
+            "attempt_number",
+            name="uq_workflow_stage_attempts_run_stage_attempt",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<WorkflowStageAttempt(id={self.id}, "
+            f"workflow_run_id={self.workflow_run_id}, stage_name='{self.stage_name}')>"
+        )
+
+
+EDITORIAL_DECISION_TYPE_VALUES = ("auditor", "critic")
+_EDITORIAL_DECISION_TYPE_CHECK = "decision_type IN ({})".format(
+    ", ".join(f"'{v}'" for v in EDITORIAL_DECISION_TYPE_VALUES)
+)
+EDITORIAL_DECISION_OUTCOME_VALUES = ("pass", "fail", "accept", "reject")
+_EDITORIAL_DECISION_OUTCOME_CHECK = "outcome IN ({})".format(
+    ", ".join(f"'{v}'" for v in EDITORIAL_DECISION_OUTCOME_VALUES)
+)
+
+
+class EditorialDecision(Base):
+    """Append-only: una fila por decisión de política editorial.
+
+    ``article_id`` es nullable a propósito: EditorialAuditor puede auditar
+    (y por lo tanto producir una decisión) antes de que exista una fila
+    numérica de Article — ver refinery_engine.py's
+    ``_schedule_optional_audit``/``_record_audit_status``, donde
+    ``article_numeric_id: int | None`` se deja en ``None`` cuando
+    ``int(article_id)`` falla y el registro se omite silenciosamente en
+    ese caso (líneas ~640, ~711, ~719).
+    """
+
+    __tablename__ = "editorial_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    article_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("articles.id", ondelete="RESTRICT")
+    )
+    decision_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    details: Mapped[Any | None] = mapped_column(JSON)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            _EDITORIAL_DECISION_TYPE_CHECK, name="ck_editorial_decisions_decision_type"
+        ),
+        CheckConstraint(
+            _EDITORIAL_DECISION_OUTCOME_CHECK, name="ck_editorial_decisions_outcome"
+        ),
+        Index("ix_editorial_decisions_article_id", "article_id"),
+        Index("ix_editorial_decisions_decision_type", "decision_type"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<EditorialDecision(id={self.id}, article_id={self.article_id}, "
+            f"decision_type='{self.decision_type}', outcome='{self.outcome}')>"
+        )
+
+
+PUBLICATION_ATTEMPT_STATE_VALUES = ("PR_CREATED", "REJECTED", "COMPLETED")
+_PUBLICATION_ATTEMPT_STATE_CHECK = "state IN ({})".format(
+    ", ".join(f"'{v}'" for v in PUBLICATION_ATTEMPT_STATE_VALUES)
+)
+
+
+class PublicationAttemptRecord(Base):
+    """Una fila por intento de publicación.
+
+    Nombrado ``PublicationAttemptRecord`` (no ``PublicationAttempt`` ni
+    ``PublicationAttemptSummary``) a propósito, para no colisionar con
+    ``news_collector.contracts.publication_validation.PublicationAttemptSummary``
+    (el contrato Pydantic de serialización a archivo de un intento) ni con
+    ``RefineryEngine.publication_attempts_dir`` (el directorio de archivos
+    JSON de snapshot actual). Esta tabla es un concepto distinto — el
+    registro durable de historial en base de datos — que una fase futura
+    (3b o posterior) podrá unificar con esos dos, no esta.
+
+    ``state`` refleja el vocabulario ya en uso en
+    ``article_metadata["publication"]["state"]`` (ver
+    ``article_repository.py:mark_article_published`` y sus vecinos
+    ``reject_publication_attempts``/``complete_publication_attempts``).
+    """
+
+    __tablename__ = "publication_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    article_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("articles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    refinery_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    state: Mapped[str] = mapped_column(String(20), nullable=False)
+    pr_url: Mapped[str | None] = mapped_column(String(500))
+    branch_name: Mapped[str | None] = mapped_column(String(255))
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    details: Mapped[Any | None] = mapped_column(JSON)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            _PUBLICATION_ATTEMPT_STATE_CHECK, name="ck_publication_attempts_state"
+        ),
+        Index("ix_publication_attempts_article_id", "article_id"),
+        Index("ix_publication_attempts_refinery_id", "refinery_id"),
+        Index("ix_publication_attempts_state", "state"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<PublicationAttemptRecord(id={self.id}, article_id={self.article_id}, "
+            f"state='{self.state}')>"
+        )
+
+
+PUBLICATION_EVENT_TYPE_VALUES = ("pr_created", "check_passed", "deployed", "rejected")
+_PUBLICATION_EVENT_TYPE_CHECK = "event_type IN ({})".format(
+    ", ".join(f"'{v}'" for v in PUBLICATION_EVENT_TYPE_VALUES)
+)
+
+
+class PublicationEvent(Base):
+    """Append-only: log de eventos de transición de estado de un intento
+    de publicación. Hoy el sistema solo conserva el estado *actual* (en
+    ``article_metadata["publication"]``) — esta tabla es el primer log
+    real de eventos que existe para este dominio.
+    """
+
+    __tablename__ = "publication_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    publication_attempt_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("publication_attempts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    details: Mapped[Any | None] = mapped_column(JSON)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            _PUBLICATION_EVENT_TYPE_CHECK, name="ck_publication_events_event_type"
+        ),
+        Index(
+            "ix_publication_events_publication_attempt_id",
+            "publication_attempt_id",
+        ),
+        Index("ix_publication_events_event_type", "event_type"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<PublicationEvent(id={self.id}, "
+            f"publication_attempt_id={self.publication_attempt_id}, "
+            f"event_type='{self.event_type}')>"
+        )
+
+
 # Funciones de utilidad para trabajar con los modelos
 # ===================================================
 
@@ -540,6 +854,11 @@ def get_model_info():
         "Source": Source,
         "ScoreLog": ScoreLog,
         "SystemConfig": SystemConfig,
+        "WorkflowRun": WorkflowRun,
+        "WorkflowStageAttempt": WorkflowStageAttempt,
+        "EditorialDecision": EditorialDecision,
+        "PublicationAttemptRecord": PublicationAttemptRecord,
+        "PublicationEvent": PublicationEvent,
     }
 
     info = {}
