@@ -709,7 +709,7 @@ class EditorialDecision(Base):
         )
 
 
-PUBLICATION_ATTEMPT_STATE_VALUES = ("PR_CREATED", "REJECTED", "COMPLETED")
+PUBLICATION_ATTEMPT_STATE_VALUES = ("PUBLISHING", "PR_CREATED", "REJECTED", "COMPLETED")
 _PUBLICATION_ATTEMPT_STATE_CHECK = "state IN ({})".format(
     ", ".join(f"'{v}'" for v in PUBLICATION_ATTEMPT_STATE_VALUES)
 )
@@ -730,7 +730,13 @@ class PublicationAttemptRecord(Base):
     ``state`` refleja el vocabulario ya en uso en
     ``article_metadata["publication"]["state"]`` (ver
     ``article_repository.py:mark_article_published`` y sus vecinos
-    ``reject_publication_attempts``/``complete_publication_attempts``).
+    ``reject_publication_attempts``/``complete_publication_attempts``) para
+    los valores ``PR_CREATED``/``REJECTED``/``COMPLETED``. ``PUBLISHING``
+    (Plan 060 / Fase 3c) es vocabulario nuevo sin equivalente legado: cubre
+    la ventana entre "publicación iniciada" y "PR creado" que
+    ``mark_article_publishing``/``PROrchestrator.attempt_recovery`` ya
+    manejan sobre ``article_metadata`` directamente, no bajo la clave
+    ``publication``.
     """
 
     __tablename__ = "publication_attempts"
@@ -862,7 +868,7 @@ def get_model_info():
     }
 
     info = {}
-    for name, model in models.items():
+    for name, model in models.items():  # pragma: no branch (fixed non-empty dict)
         info[name] = {
             "table_name": model.__tablename__,
             "columns": [col.name for col in model.__table__.columns],

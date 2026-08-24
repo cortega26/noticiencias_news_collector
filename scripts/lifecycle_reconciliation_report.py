@@ -32,6 +32,7 @@ import json
 import os
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +51,9 @@ from news_collector.storage.models import Article  # noqa: E402
 class ReconciliationCheck:
     article_id: int
     kind: str  # "publication" | "audit"
-    status: str  # "clean" | "drift" | "missing" | "not_applicable"
+    # "clean" | "drift" | "not_applicable" | "missing" (no --dual-write-since)
+    # | "missing_pre_dualwrite" | "missing_post_dualwrite" (with the flag)
+    status: str
     detail: str | None = None
 
 
@@ -59,14 +62,22 @@ class ReconciliationSummary:
     checks: list[ReconciliationCheck] = field(default_factory=list)
 
     def counts(self) -> dict[str, int]:
+        # Base keys always present (backward-compatible shape when
+        # --dual-write-since is omitted); any additional status
+        # (missing_pre_dualwrite/missing_post_dualwrite) is added
+        # dynamically only if it actually occurs, per Plan 060 / Phase 3c.
         counts = {"clean": 0, "drift": 0, "missing": 0, "not_applicable": 0}
         for check in self.checks:
-            counts[check.status] += 1
+            counts[check.status] = counts.get(check.status, 0) + 1
         return counts
 
     def ok(self) -> bool:
         counts = self.counts()
-        return counts["drift"] == 0 and counts["missing"] == 0
+        return (
+            counts["drift"] == 0
+            and counts["missing"] == 0
+            and counts.get("missing_post_dualwrite", 0) == 0
+        )
 
 
 def _check_publication(
@@ -125,7 +136,17 @@ def _check_audit(
             "no editorial_decisions row for decision_type='auditor'",
         )
 
-    match = rows[0]
+    # Plan 060 / Phase 3c: dual-write's update_article_audit_status has no
+    # idempotency guard (unlike the backfill's editorial_decision_exists
+    # check) — a second terminal audit call for the same article correctly
+    # appends a second row (genuinely append-only history), so more than
+    # one "auditor" row can now exist. Legacy article_metadata["audit"]
+    # only ever reflects the *current* (i.e. most recent) decision, so
+    # comparison must target the newest row, not rows[0] (which, ordered
+    # ascending by decided_at, would be the oldest and could report
+    # spurious "drift" once history accumulates). Tie-broken by id for the
+    # same determinism reason as the (attempt_number, id) publication tie-break.
+    match = max(rows, key=lambda d: (d.decided_at, d.id))
     mismatches = []
     if match.outcome != expected_outcome:
         mismatches.append(
@@ -139,9 +160,47 @@ def _check_audit(
     return ReconciliationCheck(article.id, "audit", "clean")
 
 
-def reconcile(db: DatabaseManager) -> ReconciliationSummary:
+def _split_missing_status(
+    check: ReconciliationCheck,
+    article: Article,
+    dual_write_since: datetime | None,
+) -> ReconciliationCheck:
+    """Plan 060 / Phase 3c: once dual-write ships, a "missing" result means
+    something different depending on when the article was collected —
+    before the cutover, the backfill simply hasn't (or can't retroactively)
+    run; on/after it, dual-write should have created the row live, so
+    "missing" is now an actionable dual-write failure. No-ops (returns
+    ``check`` unchanged) when ``dual_write_since`` is ``None`` or the
+    check isn't "missing" — this is what keeps the flag-omitted case
+    byte-identical to pre-Phase-3c output.
+    """
+    if dual_write_since is None or check.status != "missing":
+        return check
+
+    collected = article.collected_date
+    # DateTime(timezone=True) columns can still come back naive from
+    # SQLite (it has no native tz storage) — normalize to UTC before
+    # comparing rather than letting a naive/aware comparison raise.
+    if collected.tzinfo is None:
+        collected = collected.replace(tzinfo=timezone.utc)
+
+    is_post = collected >= dual_write_since
+    new_status = "missing_post_dualwrite" if is_post else "missing_pre_dualwrite"
+    return ReconciliationCheck(check.article_id, check.kind, new_status, check.detail)
+
+
+def reconcile(
+    db: DatabaseManager, dual_write_since: datetime | None = None
+) -> ReconciliationSummary:
     """Compare every article's legacy publication/audit metadata against the
-    backfilled lifecycle tables. Read-only: never modifies any row."""
+    backfilled lifecycle tables. Read-only: never modifies any row.
+
+    ``dual_write_since``: optional cutover marker (Plan 060 / Phase 3c). When
+    given, every "missing" check is reclassified as "missing_pre_dualwrite"
+    or "missing_post_dualwrite" based on the article's ``collected_date``.
+    Omitting it (the default) reproduces this function's exact pre-Phase-3c
+    output shape.
+    """
     summary = ReconciliationSummary()
     with db.get_session() as session:
         articles = session.query(Article).all()
@@ -150,11 +209,15 @@ def reconcile(db: DatabaseManager) -> ReconciliationSummary:
             publication = metadata.get("publication")
             audit = metadata.get("audit")
             if publication:
+                check = _check_publication(db.lifecycle, article, publication)
                 summary.checks.append(
-                    _check_publication(db.lifecycle, article, publication)
+                    _split_missing_status(check, article, dual_write_since)
                 )
             if audit:
-                summary.checks.append(_check_audit(db.lifecycle, article, audit))
+                check = _check_audit(db.lifecycle, article, audit)
+                summary.checks.append(
+                    _split_missing_status(check, article, dual_write_since)
+                )
     return summary
 
 
@@ -170,11 +233,31 @@ def main() -> int:
         action="store_true",
         help="Include every check in the JSON output, not just non-clean ones.",
     )
+    parser.add_argument(
+        "--dual-write-since",
+        default=None,
+        metavar="ISO_DATE",
+        help=(
+            "Plan 060 / Phase 3c cutover marker (e.g. this phase's merge "
+            "date, ISO 8601). When given, 'missing' splits into "
+            "'missing_pre_dualwrite' (article collected before this date — "
+            "the known, routine pre-dual-write backfill gap) and "
+            "'missing_post_dualwrite' (collected on/after — dual-write "
+            "should have created the row live; a real failure). Omit to "
+            "keep today's single 'missing' bucket."
+        ),
+    )
     args = parser.parse_args()
+
+    dual_write_since: datetime | None = None
+    if args.dual_write_since:
+        dual_write_since = datetime.fromisoformat(args.dual_write_since)
+        if dual_write_since.tzinfo is None:
+            dual_write_since = dual_write_since.replace(tzinfo=timezone.utc)
 
     db = DatabaseManager()
     try:
-        summary = reconcile(db)
+        summary = reconcile(db, dual_write_since=dual_write_since)
     finally:
         db.close()
 

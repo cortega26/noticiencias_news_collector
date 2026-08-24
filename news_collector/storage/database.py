@@ -41,7 +41,7 @@ Failure modes:
 
 import contextlib
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from sqlalchemy import create_engine
@@ -55,7 +55,7 @@ from news_collector.utils.logger import get_logger
 
 from .analytics_repository import AnalyticsRepository
 from .article_repository import ArticleCursor, ArticlePage, ArticleRepository
-from .lifecycle_repository import LifecycleRepository
+from .lifecycle_repository import LifecycleRepository, map_legacy_audit_outcome
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
 
@@ -355,17 +355,149 @@ class DatabaseManager:
     def mark_article_published(
         self, article_id: int, pr_url: str, refinery_id: str | None = None
     ) -> bool:
-        return self.articles.mark_article_published(article_id, pr_url, refinery_id)
+        result = self.articles.mark_article_published(article_id, pr_url, refinery_id)
+        # Plan 060 / Phase 3c: dual-write into publication_attempts. Gated on
+        # the legacy write's own return value — a False result means the
+        # article row doesn't exist, and publication_attempts.article_id is
+        # an FK (ondelete="RESTRICT") that would reject an orphan row anyway;
+        # skipping avoids both the pointless IntegrityError and a lifecycle
+        # row for an article the legacy path deliberately skipped.
+        if result:
+            self._dual_write_pr_created(article_id, pr_url, refinery_id)
+        return result
+
+    def _dual_write_pr_created(
+        self, article_id: int, pr_url: str, refinery_id: str | None
+    ) -> None:
+        """Best-effort: CAS the latest PUBLISHING row to PR_CREATED, or
+        insert a fresh PR_CREATED row if none is found / the CAS misses.
+
+        Never raises — a LifecycleRepository failure is logged and
+        swallowed so the (already-committed) legacy write remains the
+        source of truth.
+        """
+        resolved_refinery_id = refinery_id or str(article_id)
+        try:
+            attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
+            publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
+            transitioned = False
+            if publishing_attempts:
+                # Tie-break by (attempt_number, id): record_publication_attempt's
+                # default numbering is COUNT(*) + 1, not MAX(attempt_number) + 1,
+                # and there is no unique constraint on (article_id,
+                # attempt_number) — id (autoincrement) makes "latest" deterministic.
+                latest = max(
+                    publishing_attempts, key=lambda a: (a.attempt_number, a.id)
+                )
+                transitioned = self.lifecycle.transition_publication_attempt(
+                    latest.id,
+                    from_state="PUBLISHING",
+                    to_state="PR_CREATED",
+                    pr_url=pr_url,
+                    # Defensive self-correction, not required by today's
+                    # traced refinery_id invariant — see spec.md recon.
+                    refinery_id=resolved_refinery_id,
+                )
+            if not transitioned:
+                # No PUBLISHING row (defensive hasattr callers can skip
+                # mark_article_publishing) or a CAS miss (race, or already
+                # transitioned) — a PR-created event must still be
+                # represented by some row.
+                self.lifecycle.record_publication_attempt(
+                    article_id,
+                    refinery_id=resolved_refinery_id,
+                    state="PR_CREATED",
+                    pr_url=pr_url,
+                    started_at=datetime.now(timezone.utc),
+                )
+        except Exception:
+            logger.exception(
+                "Dual-write to publication_attempts failed for article {} "
+                "(state=PR_CREATED); legacy write already succeeded and is "
+                "unaffected.",
+                article_id,
+            )
 
     def reject_publication_attempts(
         self, refinery_ids: list[str], reason: str = ""
     ) -> int:
-        return self.articles.reject_publication_attempts(refinery_ids, reason)
+        transitioned: list[tuple[int, str]] = []
+        updated = self.articles.reject_publication_attempts(
+            refinery_ids,
+            reason,
+            on_transition=lambda article_id, refinery_id: transitioned.append(
+                (article_id, refinery_id)
+            ),
+        )
+        # Dual-write happens after reject_publication_attempts' own session
+        # has committed (on_transition only collected pairs above, it never
+        # touched the DB) — never opens a second session against the same
+        # SQLite file while the legacy transaction is still in flight.
+        for article_id, refinery_id in transitioned:
+            self._dual_write_transition(article_id, refinery_id, "REJECTED")
+        return updated
 
     def complete_publication_attempts(
         self, refinery_ids: list[str], deploy_url: str | None
     ) -> int:
-        return self.articles.complete_publication_attempts(refinery_ids, deploy_url)
+        transitioned: list[tuple[int, str]] = []
+        updated = self.articles.complete_publication_attempts(
+            refinery_ids,
+            deploy_url,
+            on_transition=lambda article_id, refinery_id: transitioned.append(
+                (article_id, refinery_id)
+            ),
+        )
+        for article_id, refinery_id in transitioned:
+            self._dual_write_transition(article_id, refinery_id, "COMPLETED")
+        return updated
+
+    def _dual_write_transition(
+        self, article_id: int, refinery_id: str, to_state: str
+    ) -> None:
+        """Best-effort: look up the article's latest publication_attempts
+        row for ``refinery_id``, read its actual current state (never
+        assume ``PR_CREATED`` — a webhook can race ahead of
+        ``mark_article_published``'s own fallback insert), and CAS it to
+        ``to_state``. Never raises.
+        """
+        try:
+            attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
+            matches = [a for a in attempts if a.refinery_id == refinery_id]
+            if not matches:
+                logger.warning(
+                    "Dual-write skipped for article {} (refinery_id={}, "
+                    "to_state={}): no publication_attempts row found.",
+                    article_id,
+                    refinery_id,
+                    to_state,
+                )
+                return
+            latest = max(matches, key=lambda a: (a.attempt_number, a.id))
+            transitioned = self.lifecycle.transition_publication_attempt(
+                latest.id,
+                from_state=latest.state,
+                to_state=to_state,
+            )
+            if not transitioned:
+                logger.warning(
+                    "Dual-write CAS miss for article {} (refinery_id={}, "
+                    "attempt_id={}, from_state={}, to_state={}).",
+                    article_id,
+                    refinery_id,
+                    latest.id,
+                    latest.state,
+                    to_state,
+                )
+        except Exception:
+            logger.exception(
+                "Dual-write transition failed for article {} (refinery_id={}, "
+                "to_state={}); legacy transition already succeeded and is "
+                "unaffected.",
+                article_id,
+                refinery_id,
+                to_state,
+            )
 
     def update_article_audit_status(
         self,
@@ -378,7 +510,7 @@ class DatabaseManager:
         model: str | None = None,
         endpoint: str | None = None,
     ) -> bool:
-        return self.articles.update_article_audit_status(
+        result = self.articles.update_article_audit_status(
             article_id,
             audit_status,
             reason,
@@ -387,6 +519,63 @@ class DatabaseManager:
             model=model,
             endpoint=endpoint,
         )
+        if result:
+            self._dual_write_audit_decision(
+                article_id,
+                audit_status,
+                reason,
+                attempts=attempts,
+                timeout_seconds=timeout_seconds,
+                model=model,
+                endpoint=endpoint,
+            )
+        return result
+
+    def _dual_write_audit_decision(
+        self,
+        article_id: int,
+        audit_status: str,
+        reason: str,
+        *,
+        attempts: int | None,
+        timeout_seconds: int | None,
+        model: str | None,
+        endpoint: str | None,
+    ) -> None:
+        """Best-effort: record an editorial_decisions row for a terminal
+        audit outcome. No-ops for non-terminal states (audit_pending,
+        audit_skipped*, unrecognized), matching the Phase 3b backfill's
+        rule exactly. Never raises.
+        """
+        mapped = map_legacy_audit_outcome(audit_status)
+        if mapped is None:
+            return
+        details: Dict[str, Any] = {"legacy_state": audit_status}
+        if attempts is not None:
+            details["attempts"] = attempts
+        if timeout_seconds is not None:
+            details["timeout_seconds"] = timeout_seconds
+        if model:
+            details["model"] = model
+        if endpoint:
+            details["endpoint"] = endpoint
+        try:
+            self.lifecycle.record_editorial_decision(
+                article_id=article_id,
+                decision_type="auditor",
+                outcome=mapped,
+                reason=reason or None,
+                decided_at=datetime.now(timezone.utc),
+                details=details,
+            )
+        except Exception:
+            logger.exception(
+                "Dual-write to editorial_decisions failed for article {} "
+                "(audit_status={}); legacy write already succeeded and is "
+                "unaffected.",
+                article_id,
+                audit_status,
+            )
 
     def is_article_published(self, article_id: int) -> bool:
         return self.articles.is_article_published(article_id)
@@ -401,7 +590,28 @@ class DatabaseManager:
         return self.articles.published_ids_in(article_ids)
 
     def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
-        return self.articles.mark_article_publishing(article_id, branch_name)
+        result = self.articles.mark_article_publishing(article_id, branch_name)
+        # Plan 060 / Phase 3c: dual-write into publication_attempts. Gated
+        # on the legacy write's own return value — see mark_article_published
+        # above for why (FK ondelete="RESTRICT" on an article row that
+        # doesn't exist).
+        if result:
+            try:
+                self.lifecycle.record_publication_attempt(
+                    article_id,
+                    refinery_id=str(article_id),
+                    state="PUBLISHING",
+                    started_at=datetime.now(timezone.utc),
+                    branch_name=branch_name,
+                )
+            except Exception:
+                logger.exception(
+                    "Dual-write to publication_attempts failed for article "
+                    "{} (state=PUBLISHING); legacy write already succeeded "
+                    "and is unaffected.",
+                    article_id,
+                )
+        return result
 
     def get_publishing_state(self, article_id: int) -> dict | None:
         return self.articles.get_publishing_state(article_id)
