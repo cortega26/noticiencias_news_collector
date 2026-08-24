@@ -868,7 +868,7 @@ def get_model_info():
     }
 
     info = {}
-    for name, model in models.items():
+    for name, model in models.items():  # pragma: no branch (fixed non-empty dict)
         info[name] = {
             "table_name": model.__tablename__,
             "columns": [col.name for col in model.__table__.columns],
