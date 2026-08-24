@@ -340,7 +340,7 @@
         "summary_points": [
           "Los investigadores sugieren que Thomas Edison pudo haber producido accidentalmente grafeno al calentar filamentos de bambú a más de 2000 °C en sus bombillas incandescentes de 1879.",
           "El descubrimiento se basa en una recreación del experimento original realizada por Lucas Eddy, estudiante de la Universidad de Rice, usando bombillas artesanales y la patente de Edison.",
-          "Si se confirma, significaría que el grafeno se sintetizó más de un siglo antes de su aislamiento oficial en 2004, abriendo preguntas sobre otros materiales olvidados en la historia de la ciencia.",
+          "Si se confirma, el hallazgo abriría preguntas sobre otros materiales avanzados que pudieron sintetizarse mucho antes de ser identificados formalmente por la ciencia moderna.",
           "El hallazgo resalta el valor de revisitar experimentos pasados con técnicas modernas para descubrir nuevos usos de materiales conocidos."
         ],
         "glossary": [
@@ -357,8 +357,8 @@
             "definition": "Estructura delgada de bambú que, al ser carbonizada, se utilizó como material emisor de luz en las primeras bombillas incandescentes de Edison."
           },
           {
-            "term": "patente de 1879",
-            "definition": "Documento legal concedido a Thomas Edison en 1879 que describe la mejora de la bombilla incandescente con filamento de carbono."
+            "term": "patente de Edison (1880)",
+            "definition": "Documento legal concedido a Thomas Edison en 1880 que describe la mejora de la bombilla incandescente con filamento de carbono, resultado de experimentos realizados en 1879."
           },
           {
             "term": "supercondensadores",
@@ -372,7 +372,7 @@
           },
           {
             "label": "Lucas Eddy, estudiante de posgrado de la Universidad de Rice, logró producir grafeno recreando el experimento de Edison con bombillas artesanales de bambú",
-            "status": "needs_review"
+            "status": "confirmed"
           },
           {
             "label": "El filamento de bambú carbonizado de Edison duraba más de 1200 horas con una fuente de 110 voltios",
@@ -384,7 +384,7 @@
           },
           {
             "label": "El grafeno se aisló oficialmente por primera vez en 2004",
-            "status": "confirmed"
+            "status": "unsupported"
           }
         ],
         "why_it_matters": [
@@ -392,13 +392,13 @@
           "El conocimiento de que un invento histórico pudo haber generado nanomateriales avanzados motiva a revisitar colecciones de patentes y dispositivos antiguos con técnicas modernas, lo que podría generar innovaciones tecnológicas locales.",
           "Aplicaciones prometedoras del grafeno, como baterías de mayor capacidad y supercondensadores, podrían beneficiar la transición energética y la electrificación rural en América Latina."
         ],
-        "confidence": "Moderada — basada en una recreación experimental y fuentes históricas, pero sin verificación independiente ni publicación revisada por pares.",
+        "confidence": "Moderada — basada en una recreación experimental publicada en ACS Nano y fuentes históricas, aunque la atribución histórica a Edison sigue sin poder confirmarse de forma definitiva.",
         "sources": [
           {
-            "title": "Thomas Edison podría haber creado el grafeno accidentalmente en 1879",
+            "title": "Did Edison accidentally make graphene in 1879?",
             "url": "https://arstechnica.com/science/2026/01/did-edison-accidentally-make-graphene-in-1879/",
-            "publisher": "Arstechnica",
-            "date": null
+            "publisher": "Ars Technica",
+            "date": "2026-01-24"
           }
         ]
       },
@@ -421,8 +421,8 @@
         "summary_points": [
           "Un equipo liderado por la Universidad de Viena logró colocar en superposición cuántica clusters de aproximadamente 7.000 átomos de sodio, cada uno de unos 8 nanómetros de ancho, separando sus posiciones en 133 nanómetros.",
           "El experimento demostró que estos clusters se comportaron como ondas, produciendo patrones de interferencia detectables, lo que confirma que la mecánica cuántica opera a escalas mucho mayores de lo anteriormente pensado.",
-          "Los resultados sugieren que escalar sistemas cuánticos para computadoras cuánticas podría ser más factible, ya que no se observó un límite práctico que impida mantener miles de objetos en superposición.",
-          "El avance revive el experimento mental del gato de Schrödinger y abre puertas a aplicaciones tecnológicas en medicina, finanzas y seguridad mediante el desarrollo de computadores cuánticos más robustos."
+          "Los resultados son relevantes para la escalabilidad de sistemas cuánticos, aunque el estudio no concluye que la computación cuántica práctica sea ahora más viable de lo esperado.",
+          "El avance revive el experimento mental del gato de Schrödinger e ilustra cómo la mecánica cuántica puede manifestarse en sistemas cada vez más grandes, aunque las aplicaciones prácticas en computación cuántica siguen siendo un objetivo a largo plazo."
         ],
         "glossary": [
           {
@@ -443,7 +443,7 @@
           },
           {
             "term": "Ordenador cuántico",
-            "definition": "Dispositivo que utiliza bits cuánticos (qubits) para realizar cálculos que pueden ser exponencialmente más rápidos que los ordenadores clásicos."
+            "definition": "Dispositivo que utiliza bits cuánticos (qubits) para realizar cálculos que, en ciertos problemas específicos, pueden superar significativamente a los ordenadores clásicos."
           },
           {
             "term": "Gato de Schrödinger",
@@ -480,10 +480,10 @@
         "confidence": "Moderada — basado en estudio publicado en revista científica (informado por Scientific American), aunque el artículo es divulgativo y no detalla todos los aspectos metodológicos.",
         "sources": [
           {
-            "title": "Quantum physicists just supersized Schrödinger’s cat",
+            "title": "Largest-ever 'superposition' supersizes Schrödinger's cat",
             "url": "https://scientificamerican.com/article/quantum-physicists-just-supersized-schroedingers-cat/",
             "publisher": "Scientific American",
-            "date": null
+            "date": "2026-01-25"
           }
         ]
       },
@@ -520,7 +520,7 @@
           },
           {
             "term": "transmisión",
-            "definition": "Passage o intercambio de microorganismos de una persona a otra mediante contacto directo o indirecto."
+            "definition": "Transmisión o intercambio de microorganismos de una persona a otra mediante contacto directo o indirecto."
           },
           {
             "term": "antibióticos",
@@ -537,7 +537,7 @@
             "status": "confirmed"
           },
           {
-            "label": "El 15-20% de las especies microbianas en los bebés proviene de sus compañeros de guardería.",
+            "label": "Tras cuatro meses en guardería, los bebés comparten aproximadamente el 15-20% de sus especies microbianas con sus compañeros.",
             "status": "confirmed"
           },
           {
@@ -551,16 +551,16 @@
         ],
         "why_it_matters": [
           "Entender cómo la guardería influye en el microbioma puede ayudar a diseñar políticas de salud infantil en América Latina, donde el acceso a educación preescolar está en aumento.",
-          "Promover un microbioma diverso desde temprana edad podría reducir la prevalencia de enfermedades inmunológicas y metabólicas comunes en la región.",
-          "El conocimiento sobre el intercambio microbiano entre niños y mascotas puede orientar recomendaciones de higiene y convivencia en hogares latinoamericanos."
+          "El microbioma temprano influye en el desarrollo inmunológico infantil, aunque este estudio no demuestra directamente una reducción de enfermedades específicas — el propio trabajo señala que el impacto sanitario a largo plazo aún se desconoce.",
+          "El hallazgo de intercambio microbiano con mascotas es un área de investigación emergente; el estudio no establece recomendaciones de higiene específicas al respecto."
         ],
         "confidence": "Alta — estudio revisado por pares publicado en Nature con muestra de 43 bebés y análisis detallado de transmisión microbiana.",
         "sources": [
           {
-            "title": "Babies Who Attend Daycare Share Good Germs, Too",
+            "title": "Babies who attend daycare share 'good' germs, too",
             "url": "https://scientificamerican.com/article/babies-who-attend-daycare-share-good-germs-too/",
             "publisher": "Scientific American",
-            "date": ""
+            "date": "2026-01-25"
           }
         ]
       },
@@ -781,7 +781,7 @@
         ],
         "fact_check": [
           {
-            "label": "Las herramientas de piedra descubiertas en Xigou datan de al menos 160.000 años.",
+            "label": "El conjunto arqueológico de Xigou cubre aproximadamente entre 160.000 y 72.000 años de antigüedad.",
             "status": "confirmed"
           },
           {
@@ -803,16 +803,16 @@
         ],
         "why_it_matters": [
           "Entender la sofisticación tecnológica de los primeros humanos en Asia ayuda a reconstruir los procesos de poblamiento y adaptación que finalmente llevaron a la llegada de humanos a América.",
-          "Reconocer que la innovación no estuvo limitada a ciertas regiones desafía estereotipos y enriquece la narrativa del patrimonio indígena latinoamericano, mostrando una origen más complejo y diverso.",
+          "Reconocer que la innovación tecnológica no estuvo limitada a ciertas regiones desafía estereotipos sobre la complejidad cognitiva de distintas poblaciones de homínidos en Asia.",
           "Estos hallazgos inspiran a comunidades académicas y museísticas de la región a promover investigaciones comparativas que conecten el pasado asiático con las primeras poblaciones del continente americano."
         ],
         "confidence": "Alta — estudio revisado por pares con evidencia arqueológica sustancial (más de 2.600 herramientas), aunque la identidad exacta de los fabricantes permanece incierta.",
         "sources": [
           {
-            "title": "Herramientas empuñadas de piedra sofisticadas descubiertas en China datan de hace 160.000 años",
+            "title": "160,000-year-old sophisticated stone tools discovered in China may not have been made by Homo sapiens",
             "url": "https://livescience.com/archaeology/human-evolution/160-000-year-old-sophisticated-stone-tools-discovered-in-china-may-not-have-been-made-by-homo-sapiens",
-            "publisher": "Livescience",
-            "date": "2024-09-24"
+            "publisher": "Live Science",
+            "date": "2026-01-27"
           }
         ]
       },
@@ -964,15 +964,15 @@
           },
           {
             "label": "Fármacos que imiten la activación de Piezo1 podrían prevenir o tratar la osteoporosis.",
-            "status": "uncertain"
+            "status": "confirmed"
           }
         ],
         "why_it_matters": [
           "En América Latina el envejecimiento de la población aumenta la prevalencia de osteoporosis, por lo que nuevas terapias podrían reducir la carga de fracturas en adultos mayores.",
           "Un tratamiento basado en Piezo1 beneficiaría a personas con movilidad limitada, como aquellos con discapacidades o enfermedades crónicas que impiden el ejercicio regular.",
-          "Al ofrecer una alternativa farmacológica al ejercicio para fortalecer los huesos, se podría mejorar la calidad de vida y disminuir los costos asociados a la atención de fracturas en la región."
+          "Al explorar una eventual alternativa farmacológica al ejercicio para fortalecer los huesos, se podría mejorar la calidad de vida y disminuir los costos asociados a la atención de fracturas en la región."
         ],
-        "confidence": "Moderada — estudio reportado por Sciencedaily basado en investigación de la Universidad de Hong Kong; se menciona un descubrimiento reciente pero no se detallan el tamaño de muestra ni si el trabajo ha pasado por revisión por pares.",
+        "confidence": "Moderada-alta — estudio publicado con revisión por pares en Signal Transduction and Targeted Therapy (con DOI), reportado por ScienceDaily; no se detalla el tamaño de muestra en la nota de divulgación.",
         "sources": [
           {
             "title": "Piezo1 identified as crucial internal 'exercise sensor'",
@@ -1001,7 +1001,7 @@
         "summary_points": [
           "Moltbot es un asistente personal de inteligencia artificial desarrollado por el austríaco Peter Steinberger, anteriormente conocido como Clawdbot, que ayuda a gestionar calendarios, enviar mensajes y verificar vuelos.",
           "Aunque innovador, el asistente puede ejecutar comandos arbitrarios en la computadora del usuario, lo que plantea riesgos de seguridad como acceso no autorizado a información sensible o transacciones financieras.",
-          "Para reducir esos riesgos, se recomienda configurar Moltbot con cuidado y ejecutarlo en un entorno aislado, tal como aconseja su creador y expertos en seguridad.",
+          "Para reducir esos riesgos, se recomienda configurar Moltbot con cuidado y ejecutarlo en un entorno aislado, siguiendo las recomendaciones de seguridad señaladas en la cobertura del lanzamiento.",
           "El proyecto está en una fase temprana, principalmente usado por desarrolladores experimentados, y su adopción masiva dependerá de cómo se aborden los desafíos de seguridad."
         ],
         "glossary": [
@@ -1037,15 +1037,15 @@
           }
         ],
         "why_it_matters": [
-          "Los asistentes de IA como Moltbot están ganando popularidad y podrían transformar la forma en que los usuarios latinoamericanos gestionan sus tareas diarias, desde organización personal hasta compras en línea.",
+          "Los asistentes de IA como Moltbot están ganando popularidad y podrían transformar la forma en que los usuarios latinoamericanos gestionan tareas cotidianas de organización personal.",
           "Sin embargo, los riesgos de seguridad asociados al acceso no controlado a la computadora resaltan la necesidad de educación y buenas prácticas de ciberseguridad en la región, especialmente para usuarios menos técnicos."
         ],
         "confidence": "Moderada — artículo de divulgación basado en declaraciones del desarrollador y opiniones de expertos, sin evidencia empírica detallada.",
         "sources": [
           {
-            "title": "Everything you need to know about viral personal AI assistant Clawdbot, now Moltbot",
+            "title": "Everything you need to know about viral personal AI assistant Clawdbot (now Moltbot)",
             "url": "https://techcrunch.com/2026/01/27/everything-you-need-to-know-about-viral-personal-ai-assistant-clawdbot-now-moltbot/",
-            "publisher": "Techcrunch",
+            "publisher": "TechCrunch",
             "date": "2026-01-27"
           }
         ]
@@ -1126,8 +1126,8 @@
           {
             "title": "The dream has come true: Standard model of cosmology holds up in massive 6‑year study of the universe — with one big caveat",
             "url": "https://livescience.com/physics-mathematics/dark-energy/the-dream-has-come-true-standard-model-of-cosmology-holds-up-in-massive-6-year-study-of-the-universe-with-one-big-caveat",
-            "publisher": "LiveScience",
-            "date": "2024-09-26"
+            "publisher": "Live Science",
+            "date": "2026-01-27"
           }
         ]
       },
@@ -1181,8 +1181,8 @@
             "status": "confirmed"
           },
           {
-            "label": "Claude Code permite crear sitios web complejos de forma más rápida y efectiva que Codex",
-            "status": "uncertain"
+            "label": "Según la experiencia personal del autor, Claude Code le permitió crear sitios web complejos de forma más rápida y efectiva que con Codex.",
+            "status": "confirmed"
           },
           {
             "label": "El vibe coding está aumentando su popularidad entre no codificadores",
@@ -1192,15 +1192,15 @@
         "why_it_matters": [
           "Reduce la barrera de entrada al mundo del desarrollo de software, permitiendo que más personas en América Latina puedan crear aplicaciones sin necesidad de aprender lenguajes de programación tradicionales.",
           "Puede impulsar emprendimientos tecnológicos y soluciones locales al facilitar la prototipación rápida de sitios web y herramientas digitales.",
-          "Al democratizar la codificación, contribuye a cerrar la brecha de habilidades digitales en la región y a generar oportunidades de trabajo remoto y freelance."
+          "Podría contribuir a cerrar la brecha de habilidades digitales en la región y ampliar oportunidades de trabajo remoto."
         ],
         "confidence": "Moderada — artículo de divulgación basado en experiencia personal y opiniones, sin datos empíricos ni revisión por pares detallada.",
         "sources": [
           {
-            "title": "Cómo Claude Code está llevando el vibe coding a todos",
+            "title": "Software is becoming something you speak into existence",
             "url": "https://scientificamerican.com/article/how-claude-code-is-bringing-vibe-coding-to-everyone/",
             "publisher": "Scientific American",
-            "date": null
+            "date": "2026-01-31"
           }
         ]
       },
@@ -1358,10 +1358,10 @@
         "confidence": "Alta — estudio revisado por pares en Nature Medicine con datos globales de 2022, aunque menciona limitaciones en la calidad de los datos y posibles factores no considerados.",
         "sources": [
           {
-            "title": "These two habits are linked to more than a third of all cancer cases",
+            "title": "These two habits are linked to many cancer cases",
             "url": "https://scientificamerican.com/article/these-two-habits-are-linked-to-more-than-a-third-of-all-cancer-cases/",
             "publisher": "Scientific American",
-            "date": null
+            "date": "2026-02-05"
           }
         ]
       },
@@ -1586,7 +1586,7 @@
         ],
         "why_it_matters": [
           "En América Latina, donde el girasol es un cultivo importante, aprovechar su subproducto puede reducir costos y mejorar la nutrición del pan básico.",
-          "Incrementar el contenido de proteínas y fibra en el pan contribuye a combatir la desnutrición y enfermedades crónicas en la región.",
+          "El mayor contenido de proteínas y fibra podría aportar valor nutricional al pan de consumo diario, aunque este estudio no demuestra beneficios clínicos directos contra la desnutrición o enfermedades crónicas.",
           "Utilizar residuos industriales apoya la sostenibilidad y la economía circular, alineándose con metas de desarrollo ambiental en muchos países latinoamericanos."
         ],
         "confidence": "Moderada — estudio de investigadores de la Universidad de São Paulo con resultados experimentales claros, aunque aún en fase de laboratorio y sin validación a gran escala.",
@@ -1594,8 +1594,8 @@
           {
             "title": "This Unexpected Ingredient Makes Bread Much Healthier",
             "url": "https://scitechdaily.com/this-unexpected-ingredient-makes-bread-much-healthier/",
-            "publisher": "Scitechdaily",
-            "date": null
+            "publisher": "SciTechDaily",
+            "date": "2026-02-16"
           }
         ]
       },
@@ -1617,7 +1617,7 @@
       "draft": {
         "summary_points": [
           "El proyecto Silica almacena datos en vidrio mediante voxels de fase creados con láseres femtosegundo.",
-          "Esta técnica permite preservar información durante hasta 10,000 años gracias a la durabilidad del vidrio frente al agua, calor y polvo.",
+          "Pruebas de envejecimiento acelerado proyectan que esta técnica podría preservar información durante hasta 10,000 años, gracias a la durabilidad del vidrio frente al agua, calor y polvo.",
           "Se logró escritura paralela de alta velocidad y optimización de codificaciones usando aprendizaje automático.",
           "Se demostró el almacenamiento de una película de Warner Bros. y la preservación de música en colaboración con Global Music Vault.",
           "Los datos pueden leerse con una simple cámara, lo que simplifica el acceso futuro."
@@ -1658,8 +1658,8 @@
             "status": "confirmed"
           },
           {
-            "label": "Se ha demostrado preservar música durante 10,000 años en colaboración con Global Music Vault.",
-            "status": "uncertain"
+            "label": "Las pruebas de envejecimiento acelerado proyectan una vida útil de al menos 10,000 años, demostrada en una prueba de concepto de preservación musical junto con Global Music Vault.",
+            "status": "confirmed"
           },
           {
             "label": "El artículo fue publicado en la revista Nature.",
@@ -1677,7 +1677,7 @@
             "title": "Project Silica's advances in glass storage technology",
             "url": "https://microsoft.com/en-us/research/blog/project-silicas-advances-in-glass-storage-technology/",
             "publisher": "Microsoft Research",
-            "date": null
+            "date": "2026-02-18"
           }
         ]
       },
@@ -1882,7 +1882,7 @@
           "El experimento DAMA/NaI observó en 1997 una señal de modulación anual que se interpretó como posible detección directa de materia oscura.",
           "Los nuevos experimentos hermanos ANAIS-112 (España) y COSINE-100 (Corea del Sur) repitieron el diseño de DAMA/NaI pero no encontraron evidencia significativa de dicha modulación.",
           "El análisis combinado de los datos de ambos experimentos, realizado por Sophia Hollick, confirmó la ausencia de la señal de modulación atribuida previamente a la materia oscura.",
-          " Estos resultados descartan, con mayor confianza, la hipótesis de que la materia oscura sea responsable de la señal observada en DAMA/LIBRA, permitiendo redirigir los esfuerzos de búsqueda."
+          "Estos resultados descartan, con mayor confianza, la hipótesis de que la materia oscura sea responsable de la señal observada en DAMA/LIBRA, permitiendo redirigir los esfuerzos de búsqueda."
         ],
         "glossary": [
           {
@@ -1916,8 +1916,8 @@
             "status": "confirmed"
           },
           {
-            "label": "Sophia Hollick combinó los datos de ANAIS-112 y COSINE-100 y encontró evidencia de la modulación observada por DAMA/LIBRA.",
-            "status": "disputed"
+            "label": "El análisis combinado de Sophia Hollick de los datos de ANAIS-112 y COSINE-100 no encontró evidencia significativa de la modulación anual observada por DAMA/LIBRA.",
+            "status": "confirmed"
           },
           {
             "label": "Maruyama, investigadora principal de COSINE-100, afirma que los resultados permiten usar detectores de yoduro de sodio para explorar materia oscura de baja masa.",
@@ -1931,9 +1931,9 @@
         "confidence": "Alta — basada en el análisis conjunto de dos experimentos independientes con metodología idéntica a DAMA/NaI y un tamaño de muestra suficiente, aunque los autores reconocen que no explican el origen de la modulación observada en DAMA/LIBRA.",
         "sources": [
           {
-            "title": "Experimentos Refutan la Afirmación sobre la Materia Oscura | Laboratorio Wright de Yale",
+            "title": "Experiments Refute Dark Matter Claim",
             "url": "https://wlab.yale.edu/posts/2026-03-31-experiments-refute-dark-matter-claim",
-            "publisher": "Yale Wright Lab",
+            "publisher": "Yale Wright Laboratory",
             "date": "2026-03-31"
           }
         ]
@@ -1953,7 +1953,7 @@
       "draft_available": true,
       "draft": {
         "summary_points": [
-          "Los sitios web pueden insertar instrucciones ocultas que las inteligencias artificiales siguen sin que los usuarios lo notes, mediante inyecciones indirectas.",
+          "Los sitios web pueden insertar instrucciones ocultas que las inteligencias artificiales siguen sin que los usuarios lo noten, mediante inyecciones indirectas.",
           "El equipo de inteligencia de amenazas de Google analizó la web pública y encontró solo experimentos, no ataques masivos organizados, clasificados en seis tipos de uso.",
           "Aunque muchos ejemplos son inocuos (bromas o guías útiles), existen intentos de usar la técnica para promover contenido malicioso o desinformación.",
           "Google ya protege sus modelos con equipos rojos, programas de recompensas y monitoreo en tiempo real, pero el riesgo crece a medida que la IA se integra más en herramientas cotidianas.",
@@ -1978,7 +1978,7 @@
           },
           {
             "term": "Modelo de IA",
-            "definition": "Sistema computacional entrenado para realizar tareas como理解 linguagem, generar respuestas o tomar decisiones basado en datos."
+            "definition": "Sistema computacional entrenado para realizar tareas como comprender lenguaje, generar respuestas o tomar decisiones basado en datos."
           }
         ],
         "fact_check": [
@@ -1991,8 +1991,8 @@
             "status": "confirmed"
           },
           {
-            "label": "The experiments were grouped into six categories (benign jokes, useful guidance, malicious optimization, etc.).",
-            "status": "confirmed"
+            "label": "Los casos observados se agruparon en varias categorías (incluyendo bromas benignas, guías útiles y optimización maliciosa), aunque la taxonomía real de Google incluye categorías adicionales como SEO y disuasión (deterrence).",
+            "status": "uncertain"
           },
           {
             "label": "Google runs red team tests on Gemini and offers bug‑bounty rewards for AI vulnerabilities.",
@@ -2011,10 +2011,10 @@
         "confidence": "Alta — artículo publicado en el blog oficial de seguridad de Google, basado en el análisis de su equipo de amenazas y respaldado por evidencia de experimentos observados en la web pública.",
         "sources": [
           {
-            "title": "AI threats in the wild: current state of ...",
+            "title": "AI threats in the wild: The current state of prompt injections on the web",
             "url": "https://security.googleblog.com/2026/04/ai-threats-in-wild-current-state-of.html",
             "publisher": "Google Security Blog",
-            "date": "2026-04-01"
+            "date": "2026-04-23"
           }
         ]
       },
@@ -2071,7 +2071,7 @@
             "status": "confirmed"
           },
           {
-            "label": "Un 10% del aumento de la desigualdad se debe específicamente a empresas que eliminaron trabajadores con primas salariales.",
+            "label": "Aproximadamente 10 puntos porcentuales del aumento de la desigualdad se deben específicamente a empresas que eliminaron trabajadores con primas salariales.",
             "status": "confirmed"
           },
           {
@@ -2398,7 +2398,7 @@
             "status": "confirmed"
           },
           {
-            "label": "El 728 de las 1.121 especies nuevas provienen de muestras almacenadas en museos.",
+            "label": "728 de las 1.121 especies nuevas provienen de muestras almacenadas en museos.",
             "status": "confirmed"
           },
           {
@@ -2410,8 +2410,8 @@
             "status": "confirmed"
           },
           {
-            "label": "Los toxinas de los gusanos cinta encontrados cerca de Marsella podrían servir para tratar el Alzheimer o la esquizofrenia.",
-            "status": "uncertain"
+            "label": "Las toxinas de los gusanos cinta encontrados en Timor Oriental podrían servir para tratar el Alzheimer o la esquizofrenia.",
+            "status": "confirmed"
           }
         ],
         "why_it_matters": [
@@ -2422,10 +2422,10 @@
         "confidence": "Alta — artículo basado en un censo internacional con datos de colecciones museísticas y expediciones, publicado en Scientific American, una fuente de divulgación científica rigurosa.",
         "sources": [
           {
-            "title": "1.121 especies marinas nuevas descubiertas... y la mayoría ya estaban en los estantes de los museos",
+            "title": "Ocean census reveals more than 1,100 new species",
             "url": "https://scientificamerican.com/article/ocean-census-reveals-more-than-1-100-new-species/",
             "publisher": "Scientific American",
-            "date": null
+            "date": "2026-05-24"
           }
         ]
       },
