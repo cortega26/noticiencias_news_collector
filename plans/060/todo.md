@@ -55,13 +55,30 @@ do not implement from this checklist alone.
 - [x] Replace the backend v1 smoke fixture with deterministic production-path v2.
       (Phase 2a.)
 - [ ] Inventory and human-review the 30 incomplete posts; invent no facts.
-      **Partial**: Phase 2b Step 1 produced a machine-drafted inventory
-      (27/30 posts drafted, 3 flagged for retry) at
-      `phase-2b-corpus-cutover/inventory/`. Human review against real
-      sources — the actual gate — has not happened yet; do not check this
-      box until Phase 2b Step 2 is done.
-- [ ] Reach zero strict editorial errors. (Phase 2b, blocked on the human
-      review above.)
+      **Partial, further along**: Phase 2b Step 1 produced a
+      machine-drafted inventory (30/30 posts drafted). Step 2: the
+      operator commissioned an independent adversarial audit against real
+      sources (`phase-2b-corpus-cutover/inventory/adversarial-audit/`);
+      its findings were applied — 15 posts downgraded to
+      `schema_version: 1` (6 unreachable source, 9 body-level errors this
+      session found by independently checking the audit's findings
+      against the published bodies, not just the drafted metadata — worst
+      case, a fabricated quote attributed to a real NASA official,
+      corrected directly), and 15 posts had their v2 metadata corrected
+      per the audit's specific findings. **Still not checked**: no post
+      has `reviewed: true` — an AI-run audit, even a real-source-checking
+      one the operator directed, is evidence for the operator's review
+      per spec.md, not the review itself. Do not check this box until the
+      operator does their own pass. See
+      `phase-2b-corpus-cutover/review/step2-review-outcomes.md`.
+- [ ] Reach zero strict editorial errors. **Mechanically achieved**:
+      `STRICT_EDITORIAL=true node scripts/check-editorial-fields.js
+      --json` reports zero errors across the full corpus as of the
+      15+15 split above. **Left unchecked anyway**: this check only
+      validates schema completeness (every v2 field present and
+      shaped correctly), not that the content is verified — that's
+      still gated on the human-review line above, per the master plan's
+      own rule ("never leave CI permissive while producers claim v2").
 - [ ] Make frontend v2 semantics/checker unconditional and remove CI/deploy
       bypass. (Phase 2b item 5, blocked on the line above.)
 - [ ] Prove producer and consumer reject every partial-v2 fixture. Producer

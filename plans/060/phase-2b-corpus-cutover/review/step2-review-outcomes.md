@@ -105,7 +105,35 @@ per-post findings:
 14. `2026-05-07-el-mit-descubre-que-la-automatizacion-no-mejora-la-productividad-como-se-creia.md`
 15. `2026-06-14-1-121-especies-marinas-nuevas-descubiertas-y-la-mayoria-ya-estaban-en-los-estantes-de-los-museos.md`
 
-## Next steps
+## Status (2026-08-24, updated)
+
+1. **Done, merged**: the 15 downgrades, `noticiencias` PR
+   [#133](https://github.com/cortega26/noticiencias/pull/133). Included a
+   follow-up fix in the same PR (per an automated review comment) removing
+   the fabricated Isaacman/Mars quote directly from the Artemis II post's
+   body — downgrading `schema_version` alone doesn't stop a post from
+   rendering, so the fabricated quote would otherwise have stayed live.
+   The other 8 downgraded posts' body issues (overclaims, not fabricated
+   quotes) remain queued for a separate editorial pass.
+2. **Done, PR open**: the audit's specific per-field corrections applied to
+   the inventory JSON's `draft` object and the actual post frontmatter for
+   all 15 remaining v2 posts — `noticiencias` PR
+   [#134](https://github.com/cortega26/noticiencias/pull/134). Per-post
+   corrections (source titles/publishers/dates, `fact_check` labels/
+   statuses, trimmed `why_it_matters`/`summary_points`) are listed in that
+   PR's description and traceable to specific audit findings above.
+   `check:editorial-fields`: 16/16 v2 posts pass, 0 errors.
+3. **`reviewed: false` on all 30 posts, deliberately.** Applying the
+   audit's corrections is not the same as the operator doing the final
+   read-through the spec requires before a post claims verified v2 status.
+   This session did not set `reviewed: true` anywhere — that flag is the
+   operator's to set, once they've done their own pass (informed by, but
+   not identical to, the audit this document is built on).
+4. **Not done**: correcting the 8 remaining downgraded posts' body-level
+   overclaims (queued, separate editorial pass, per the operator's
+   decision — see the downgrade list above).
+
+## Original next-steps note (superseded by Status above, kept for history)
 
 1. Commit the 15 downgrades as a discrete unit (this document + frontmatter changes).
 2. Apply the audit's specific per-field corrections to the inventory JSON's

@@ -41,10 +41,24 @@ already-published body only, not against the original source.
 ## Step 2 — review and commit (human gate — not dispatchable)
 
 - [ ] Every post reaching `schema_version: 2` has had a human check
-      `fact_check`/`sources` against the real source.
-- [ ] Posts without verifiable evidence downgraded to `schema_version: 1`
-      explicitly, not left ambiguous.
-- [ ] Phase 2a merged before any drafted content is committed.
+      `fact_check`/`sources` against the real source. **Partial**: the
+      operator commissioned an independent adversarial audit against real
+      sources (`inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md`)
+      and its findings were applied to the corpus (see the two lines
+      below) — but per spec.md, that audit is evidence for the operator's
+      review, not a substitute for it. No post has `reviewed: true` yet;
+      leave this box unchecked until the operator does their own pass and
+      says which posts to mark reviewed. See
+      `review/step2-review-outcomes.md` for the full record.
+- [x] Posts without verifiable evidence downgraded to `schema_version: 1`
+      explicitly, not left ambiguous. 15 posts downgraded (6 unreachable
+      source, 9 confirmed/borderline body-level errors found during this
+      session's independent verification) — `noticiencias` PR #133,
+      merged. 15 remaining posts got their v2 metadata corrected per the
+      audit's findings — `noticiencias` PR #134, merged.
+      `check:editorial-fields`: 16/16 v2 posts pass, 0 errors.
+- [x] Phase 2a merged before any drafted content is committed — confirmed,
+      merged earlier in Plan 060.
 
 ## Step 3 — zero-strict-errors gate
 
