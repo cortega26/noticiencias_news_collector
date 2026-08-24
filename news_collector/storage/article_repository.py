@@ -332,7 +332,11 @@ class ArticleRepository:
             return True
 
     def reject_publication_attempts(
-        self, refinery_ids: list[str], reason: str = ""
+        self,
+        refinery_ids: list[str],
+        reason: str = "",
+        *,
+        on_transition: Callable[[int, str], None] | None = None,
     ) -> int:
         """Transition named, still-in-flight publication attempts to 'rejected'.
 
@@ -341,11 +345,22 @@ class ArticleRepository:
         actually named. Idempotent: an attempt already 'rejected' or
         'completed' is left alone (a replayed callback is a no-op, not an
         error).
+
+        ``on_transition`` (Plan 060 / Phase 3c), when given, is called once
+        per article actually transitioned here, as ``on_transition(article.id,
+        refinery_id)`` — after this method's own session has committed (the
+        call happens outside the ``with self._session()`` block below), so a
+        callback that does its own DB work never overlaps this method's
+        still-open write transaction. Any exception the callback raises is
+        caught and logged here, never propagated — one bad callback must not
+        stop the loop from processing the remaining articles or affect the
+        legacy transition/return value in any way.
         """
         if not refinery_ids:
             return 0
         wanted = set(refinery_ids)
         updated = 0
+        transitioned: list[tuple[int, str]] = []
         with self._session() as session:
             candidates = (
                 session.query(Article)
@@ -355,7 +370,8 @@ class ArticleRepository:
             for article in candidates:
                 metadata = article.article_metadata or {}
                 publication = metadata.get("publication") or {}
-                if publication.get("refinery_id") not in wanted:
+                refinery_id = publication.get("refinery_id")
+                if refinery_id not in wanted:
                     continue
                 article.processing_status = "rejected"
                 new_metadata = dict(metadata)
@@ -371,10 +387,28 @@ class ArticleRepository:
                 article.article_metadata = new_metadata
                 session.add(article)
                 updated += 1
+                transitioned.append((article.id, refinery_id))
+
+        if on_transition is not None:
+            for article_id, refinery_id in transitioned:
+                try:
+                    on_transition(article_id, refinery_id)
+                except Exception:
+                    logger.exception(
+                        "on_transition callback failed for article {} "
+                        "(refinery_id={}) after reject_publication_attempts; "
+                        "legacy transition already committed and is unaffected.",
+                        article_id,
+                        refinery_id,
+                    )
         return updated
 
     def complete_publication_attempts(
-        self, refinery_ids: list[str], deploy_url: str | None
+        self,
+        refinery_ids: list[str],
+        deploy_url: str | None,
+        *,
+        on_transition: Callable[[int, str], None] | None = None,
     ) -> int:
         """Transition named, still-in-flight publication attempts to 'completed'.
 
@@ -382,12 +416,17 @@ class ArticleRepository:
         place they get set, now that a PR being opened no longer implies a
         live deploy. Matches by ``refinery_id``, same idempotency guarantee
         as :meth:`reject_publication_attempts`.
+
+        ``on_transition``: see :meth:`reject_publication_attempts` — same
+        contract (called after this method's session commits, exceptions
+        caught and logged here, never propagated).
         """
         if not refinery_ids:
             return 0
         wanted = set(refinery_ids)
         now = datetime.now(timezone.utc)
         updated = 0
+        transitioned: list[tuple[int, str]] = []
         with self._session() as session:
             candidates = (
                 session.query(Article)
@@ -397,7 +436,8 @@ class ArticleRepository:
             for article in candidates:
                 metadata = article.article_metadata or {}
                 publication = metadata.get("publication") or {}
-                if publication.get("refinery_id") not in wanted:
+                refinery_id = publication.get("refinery_id")
+                if refinery_id not in wanted:
                     continue
                 article.processing_status = "completed"
                 article.published_at = now
@@ -415,6 +455,20 @@ class ArticleRepository:
                 article.article_metadata = new_metadata
                 session.add(article)
                 updated += 1
+                transitioned.append((article.id, refinery_id))
+
+        if on_transition is not None:
+            for article_id, refinery_id in transitioned:
+                try:
+                    on_transition(article_id, refinery_id)
+                except Exception:
+                    logger.exception(
+                        "on_transition callback failed for article {} "
+                        "(refinery_id={}) after complete_publication_attempts; "
+                        "legacy transition already committed and is unaffected.",
+                        article_id,
+                        refinery_id,
+                    )
         return updated
 
     def update_article_audit_status(

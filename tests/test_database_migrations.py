@@ -250,7 +250,8 @@ ALL_REVISIONS = [
     "a3f1b2c4d5e6",  # add_content_mode_to_articles
     "a54ba7f7dabb",  # add_blacklist_columns
     "b61c2d3e4f50",  # add_score_logs_latest_index
-    "effe4ec70d6d",  # add_durable_lifecycle_tables (head)
+    "effe4ec70d6d",  # add_durable_lifecycle_tables
+    "a4d9a4ba00aa",  # extend_publication_attempts_state_check (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -263,6 +264,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "a54ba7f7dabb",
     "b61c2d3e4f50",
     "effe4ec70d6d",
+    "a4d9a4ba00aa",
 ]
 
 
@@ -412,6 +414,7 @@ def test_alembic_history_is_fully_linear() -> None:
 def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
     """A database behind head must be detected without mutating schema."""
     from alembic import command
+    from alembic import script as alembic_script
     from alembic.config import Config
 
     db_path = tmp_path / "behind.db"
@@ -425,7 +428,12 @@ def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
         # Stamp as one revision behind head
         command.stamp(alembic_cfg, "b61c2d3e4f50")
 
-    # Read-only check: alembic_version != head
+    # Read-only check: alembic_version != head. Head is fetched dynamically
+    # (not hardcoded) so this test doesn't go stale every time a new
+    # revision lands on top — it only cares that "behind" is detectable.
+    directory = alembic_script.ScriptDirectory.from_config(alembic_cfg)
+    head = directory.get_heads()[0]
+
     from news_collector.storage.database import DatabaseManager as DM
 
     db_mgr = DM(database_config={"type": "sqlite", "path": db_path})
@@ -435,8 +443,7 @@ def test_alembic_revision_guard_detects_behind(tmp_path: Path) -> None:
                 "SELECT version_num FROM alembic_version"
             ).scalar()
         assert result == "b61c2d3e4f50"
-        # Head is effe4ec70d6d — DB is behind
-        assert result != "effe4ec70d6d"
+        assert result != head
     finally:
         db_mgr.close()
 
@@ -448,6 +455,14 @@ def test_migration_vocabulary_constants_match_models() -> None:
     This is the only thing that would catch one side being edited without
     the other; test_new_lifecycle_tables_schema_parity only compares
     constraint *names*, not the allowed values each constraint enforces.
+
+    PUBLICATION_ATTEMPT_STATE_VALUES is intentionally excluded from this
+    comparison: effe4ec70d6d's copy is a frozen historical snapshot of
+    what the constraint looked like when that revision was written
+    (three values). a4d9a4ba00aa (Plan 060 / Phase 3c) is the migration
+    that now owns keeping this particular vocabulary in sync with
+    models.py (four values) — checked separately below by
+    test_publication_attempt_state_values_match_latest_migration.
     """
     import importlib.util
 
@@ -466,13 +481,38 @@ def test_migration_vocabulary_constants_match_models() -> None:
         ("WORKFLOW_STAGE_ATTEMPT_STATUS_VALUES",),
         ("EDITORIAL_DECISION_TYPE_VALUES",),
         ("EDITORIAL_DECISION_OUTCOME_VALUES",),
-        ("PUBLICATION_ATTEMPT_STATE_VALUES",),
         ("PUBLICATION_EVENT_TYPE_VALUES",),
     ]
     for (name,) in pairs:
         assert getattr(models, name) == getattr(
             migration, name
         ), f"{name} diverged between models.py and the migration"
+
+
+def test_publication_attempt_state_values_match_latest_migration() -> None:
+    """a4d9a4ba00aa is the latest migration to touch
+    ck_publication_attempts_state — its own hand-copied
+    PUBLICATION_ATTEMPT_STATE_VALUES must match models.py exactly, the same
+    "can't import application models" reasoning as
+    test_migration_vocabulary_constants_match_models above.
+    """
+    import importlib.util
+
+    from news_collector.storage import models
+
+    module_path = (
+        ROOT
+        / "alembic"
+        / "versions"
+        / "a4d9a4ba00aa_extend_publication_attempts_state_check.py"
+    )
+    spec = importlib.util.spec_from_file_location("a4d9a4ba00aa_migration", module_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    assert models.PUBLICATION_ATTEMPT_STATE_VALUES == (
+        migration.PUBLICATION_ATTEMPT_STATE_VALUES
+    ), "PUBLICATION_ATTEMPT_STATE_VALUES diverged between models.py and a4d9a4ba00aa"
 
 
 def test_lifecycle_tables_upgrade_body_is_reentrant_within_one_connection() -> None:

@@ -30,6 +30,25 @@ tests):
 | `complete_publication_attempts` | `serving/webhook_handler.py:104` | frontend CI/deploy succeeded |
 | `update_article_audit_status` | `serving/api.py:1030`, `refinery_engine.py:721` | auditor/critic decision recorded |
 
+**Re-grep at execution time (Step 0) found one additional call site the
+above table omits**: `mark_article_publishing` is also called at
+`news_collector/logic/workflows/pipeline_e2e.py:873`, inside the
+deterministic e2e harness, to seed a "stuck publishing" state for
+`PROrchestrator.attempt_recovery` tests. It predates this spec (git blame
+`fceec3f8`, 2026-05-09) — the recon's grep should have caught it (it lives
+under `news_collector/`, not `tests/`) but didn't. Verified this is
+non-blocking: `pipeline_e2e.py:840` constructs `publication_db =
+DatabaseManager(...)` and line 873 calls `publication_db.mark_article_publishing(...)`
+— the exact `DatabaseManager` facade this spec names as the dual-write seam,
+not a bypass to `self.articles.mark_article_publishing`. The load-bearing
+claim below ("all five are called exclusively through `DatabaseManager`
+facade methods") still holds; this call site confirms rather than breaks
+it, and inherits dual-write automatically with no special-case handling.
+Because it fires during e2e runs (which `make test` excludes), Step 4/5
+validation for this phase must also explicitly run
+`tests/e2e_pipeline/test_pipeline_e2e.py` and
+`tests/unit/logic/workflows/test_pipeline_e2e_seams.py`.
+
 All five are called exclusively through `DatabaseManager` facade methods in
 `storage/database.py` (`mark_article_publishing:403`, `mark_article_published:355`,
 `reject_publication_attempts:360`, `complete_publication_attempts:365`,
@@ -171,6 +190,20 @@ working even if the new tables have a problem. This mirrors the existing
 defensive pattern already at `refinery_engine.py:521-528` around the
 current `mark_article_publishing` call.
 
+**Amendment (execution time, before implementing, via `advisor`) — gate
+every single-article dual-write on the legacy write's own return value.**
+`ArticleRepository.mark_article_publishing`/`mark_article_published`/
+`update_article_audit_status` all return `False` when the article row
+doesn't exist. `publication_attempts.article_id` is an FK with
+`ondelete="RESTRICT"`, and `PRAGMA foreign_keys=ON` is live on
+`DatabaseManager`'s engine (`database.py:227`) — an unconditional
+lifecycle write after a `False` legacy write would raise `IntegrityError`
+(caught by the best-effort wrapper, but still wrong: it would attempt a
+lifecycle row for an article the legacy path deliberately skipped, and
+log spurious errors on every miss). Pattern for all three: `result =
+self.articles.X(...)`; only touch `self.lifecycle` `if result:`; return
+`result` either way.
+
 - **`mark_article_publishing(article_id, branch_name)`**: after the
   existing `self.articles.mark_article_publishing(...)` call, call
   `self.lifecycle.record_publication_attempt(article_id, refinery_id=str(article_id), state="PUBLISHING", started_at=<now>, branch_name=branch_name)`.
@@ -180,11 +213,18 @@ current `mark_article_publishing` call.
   program's own constraint).
 
 - **`mark_article_published(article_id, pr_url, refinery_id=None)`**:
-  after the existing legacy write, resolve `refinery_id` the same way the
+  after the existing legacy write (gated on its return value, per the
+  amendment above), resolve `refinery_id` the same way the
   legacy code already does (`refinery_id or str(article_id)`). Call
   `self.lifecycle.get_publication_attempts_for_article(article_id)`,
   find the latest row with `state == "PUBLISHING"` (if several — recovery
-  can produce more than one — take the highest `attempt_number`). If
+  can produce more than one — take the highest `(attempt_number, id)`
+  pair, not `attempt_number` alone: `publication_attempts` has no unique
+  constraint on `(article_id, attempt_number)`, unlike
+  `workflow_stage_attempts`'s `uq_workflow_stage_attempts_run_stage_attempt`,
+  and `record_publication_attempt`'s default numbering is `COUNT(*) + 1`
+  — not `MAX(attempt_number) + 1` — so a tie is reachable in principle;
+  `id` (autoincrement, always unique) breaks it deterministically). If
   found, `transition_publication_attempt(attempt.id, from_state="PUBLISHING", to_state="PR_CREATED", pr_url=pr_url, refinery_id=refinery_id)`
   — passing `refinery_id` again through `**fields` is defensive, not
   required by today's traced invariant (see the Recon finding above): if a
@@ -213,21 +253,63 @@ current `mark_article_publishing` call.
   already has `article.id` and `publication.get("refinery_id")` in hand.
   Default `None` — every existing caller (all three, untouched) gets
   identical behavior; this is an additive optional parameter, not a fully
-  unchanged signature. `DatabaseManager`'s facade passes a closure that
-  does the same "look up the article's latest row, read its actual current
-  state, CAS to `REJECTED`/`COMPLETED`" as `mark_article_published` above,
-  wrapped in the same best-effort try/except. A `False` CAS or no-row-found
-  inside the callback logs and returns — it must never raise back into the
-  repository's loop, or one bad lifecycle row would abort an otherwise-good
-  bulk legacy transition.
+  unchanged signature.
 
-- **`update_article_audit_status(...)`**: reuse Phase 3b's existing
-  `map_legacy_audit_outcome(audit_status)` — call
+  **Amendment (execution time, before implementing, via `advisor`) —
+  `on_transition` must only *collect*, never perform the lifecycle CAS
+  itself.** The original plan (closure does the look-up-and-CAS inline)
+  would open a second `SessionLocal` against the same SQLite file while
+  `ArticleRepository`'s own `with self._session()` transaction for the
+  bulk loop is still open/uncommitted (that session commits at context
+  exit, not per-iteration). If the outer legacy transaction later rolled
+  back for any reason, the lifecycle CAS would already be committed —
+  lifecycle says `REJECTED`/`COMPLETED`, legacy still says `publishing`,
+  which is exactly the divergence this phase exists to prevent, and it
+  would be unconditional whenever the callback ran, not just on error.
+  Corrected design: `DatabaseManager`'s facade passes a closure that only
+  appends `(article.id, refinery_id)` to a local list — no DB access.
+  After `self.articles.reject_publication_attempts(...)` /
+  `complete_publication_attempts(...)` returns (its own session already
+  committed), the facade method loops the collected pairs and, for each,
+  does the "look up the article's latest row, read its actual current
+  state, CAS to `REJECTED`/`COMPLETED`" step there — same logic as
+  `mark_article_published` above, same best-effort try/except per pair
+  (one bad lifecycle row must not stop the rest of the batch or affect
+  the already-returned legacy count). This still satisfies every
+  requirement the callback signature exists for: `on_transition:
+  Callable[[int, str], None] | None = None`, invoked once per article the
+  existing loop actually transitions, using `article.id`/
+  `publication.get("refinery_id")` already in scope there, and it can
+  never raise back into the repository's loop (a list append cannot
+  fail).
+
+- **`update_article_audit_status(...)`**: after the existing legacy write
+  (gated on its return value, per the amendment above), reuse Phase 3b's
+  existing `map_legacy_audit_outcome(audit_status)` — call
   `record_editorial_decision(article_id=..., decision_type="auditor", outcome=mapped, reason=reason, decided_at=<now>, details={...})`
   only when `mapped is not None` (mirrors exactly what the backfill script
   already does for terminal states; non-terminal states like
   `audit_pending`/`audit_skipped*` produce no row, per Phase 3b's own
-  documented rule).
+  documented rule). `details` mirrors `_backfill_audit`'s shape exactly for
+  parity: `{"legacy_state": audit_status}` plus `attempts`/
+  `timeout_seconds`/`model`/`endpoint` included only when not `None` (same
+  as the legacy write's own `if x is not None` guards immediately above
+  this call site in `article_repository.py`).
+
+  **Amendment (execution time, before implementing, via `advisor`) — this
+  call has no idempotency guard, unlike the backfill's**
+  `editorial_decision_exists` **check, and that's a deliberate,
+  documented choice, not an oversight.** `record_editorial_decision` is
+  genuinely append-only (`lifecycle_repository.py`'s own module docstring:
+  "no CAS: genuinely append-only, nothing transitions a decision in
+  place") — a second terminal audit call for the same article (a retry,
+  or a second admin action via `api.py:1030`) is a second real decision
+  event and correctly produces a second `editorial_decisions` row, unlike
+  legacy `article_metadata["audit"]`, which only ever holds the *current*
+  state. This is intentional richer history, not drift — but it changes
+  what "the corresponding row" means for reconciliation once more than
+  one `auditor` row can exist per article going forward; see the
+  Reconciliation report section below for the corresponding fix.
 
 ### Reconciliation report — distinguish stale-missing from dual-write-missing
 
@@ -245,6 +327,20 @@ tolerance for `"missing_pre_dualwrite"`). Omitting the flag keeps today's
 behavior exactly (single `"missing"` bucket) — this is additive, not a
 breaking change to the script's existing callers/tests.
 
+**Amendment (execution time, before implementing, via `advisor`) —
+`_check_audit` must compare against the newest `auditor` row, not the
+oldest.** Now that `update_article_audit_status`'s dual-write can append
+more than one `editorial_decisions` row per article (see the
+"no idempotency guard" amendment above — this is intentional), the
+existing `rows[0]` (from a query ordered ascending by `decided_at`) picks
+the *oldest* row. Comparing legacy `audit.reason`/state (which only ever
+reflects the article's *current*, i.e. most recent, audit outcome)
+against the oldest historical row would report spurious `"drift"` once a
+second decision exists — not a real mismatch. Fix: select the row with
+the max `(decided_at, id)` instead of `rows[0]`, mirroring the same
+`(attempt_number, id)` tie-break reasoning used for `PUBLISHING` rows
+above.
+
 ## Scope boundaries
 
 **In scope:**
@@ -256,6 +352,17 @@ breaking change to the script's existing callers/tests.
   path, bulk reject/complete look-up-then-CAS path), a migration test
   (upgrade/downgrade round-trip, existing 781-row-shaped fixture data
   survives), and a reconciliation-report test for the new flag.
+- `tests/test_database_migrations.py` and
+  `tests/unit/storage/test_migration_guard.py`: both hardcode the current
+  alembic head revision id (`ALL_REVISIONS`/`REVISIONS_WITH_SUPPORTED_DOWNGRADE`
+  in the former, `HEAD_REVISION` in the latter) and one test
+  (`test_migration_vocabulary_constants_match_models`) hardcodes a
+  comparison against `effe4ec70d6d`'s frozen copy of
+  `PUBLICATION_ATTEMPT_STATE_VALUES` specifically. Adding `a4d9a4ba00aa`
+  as the new head necessarily updates both files — this is a required
+  consequence of Step 1's migration, not scope creep; called out
+  explicitly here so `git diff --stat` at close-out isn't flagged as
+  drift beyond what this section names.
 
 **Out of scope (do not touch):**
 - `workflow_runs`/`workflow_stage_attempts`/`publication_events` — still

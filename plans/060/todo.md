@@ -99,17 +99,23 @@ do not implement from this checklist alone.
       backfillable from real legacy data — `workflow_runs`,
       `workflow_stage_attempts`, and `publication_events` have no legacy
       data to backfill from and start empty by design.)
-- [ ] Dual-write legacy projections and new records. (Phase 3c, not yet
-      planned — depends on 3b's repositories, which now exist. This is
-      the risky, behavior-changing half: everything landed so far in
-      Phase 3 has been additive/inert.)
-- [ ] Add and run the consistency report plus the full migration proof.
-      **Partial**: Phase 3b delivered the read-only reconciliation report
-      (`scripts/lifecycle_reconciliation_report.py`,
-      clean/drift/missing/not_applicable) — the "consistency report" half
-      is done. "The full migration proof" implies dual-write exists and
-      can be verified end-to-end, which is Phase 3c's job; do not check
-      this box until that half lands too.
+- [x] Dual-write legacy projections and new records. (Phase 3c —
+      `storage/database.py`'s five publication/audit facade methods
+      (`mark_article_publishing`, `mark_article_published`,
+      `reject_publication_attempts`, `complete_publication_attempts`,
+      `update_article_audit_status`) now write into
+      `publication_attempts`/`editorial_decisions` alongside their
+      unchanged legacy `article_metadata` writes — best-effort, gated on
+      the legacy write's own success, never raised into the caller.)
+- [x] Add and run the consistency report plus the full migration proof.
+      (Phase 3c — `scripts/lifecycle_reconciliation_report.py`'s
+      `--dual-write-since` flag splits `"missing"` into
+      `"missing_pre_dualwrite"`/`"missing_post_dualwrite"`, letting a
+      "missing" result on/after the dual-write cutover be told apart from
+      the known pre-existing backfill gap. Migration
+      (`a4d9a4ba00aa_extend_publication_attempts_state_check.py`) proven
+      via upgrade/downgrade round-trip against a scratch copy of the real
+      dev DB's schema (781 articles) plus the full unit/e2e suite.)
 
 ### Phase 4 — collection and source workflows
 
