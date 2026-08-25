@@ -68,6 +68,12 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
             ],
         }
     )  # type: ignore[method-assign]
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = MagicMock(  # type: ignore[method-assign]
+        return_value={"status": "confirmed"}
+    )
     agent._generate_headlines = lambda *args: {  # type: ignore[method-assign]
         "direct": "Hallazgo con impacto regional",
         "question": "¿Qué cambia con este hallazgo?",

@@ -85,6 +85,21 @@ do not implement from this checklist alone.
       (backend) side proven by Phase 2a; consumer (frontend) side still
       gated behind `STRICT_EDITORIAL` pending Phase 2b.
 
+**Phase 2c — real fact-checking against the original source.** Implemented:
+new articles get `fact_check` statuses from a genuine comparison against
+the article's own stored source `content` (not self-assessment against the
+model's own draft), verified on a dedicated Ollama model (`qwen3-next`,
+independent of the NVIDIA drafting model), with a `disputed` verdict
+blocking publication via `GeneratedArticleValidationError`
+(`error_code="editorial_fact_check_disputed"`) the same way Phase 2a's
+completeness gate does. See `phase-2c-real-fact-check/spec.md` and
+`phase-2c-real-fact-check/todo.md` (fully checked off). **Does not block,
+and is not blocked by**, Phase 2b's remaining items above (the operator's
+own `reviewed: true` pass, unconditional `STRICT_EDITORIAL` enforcement,
+the producer/consumer partial-v2 proof) — those items are about schema
+*completeness* and human sign-off; Phase 2c is an orthogonal *content*
+verification added on top, per spec.md's header.
+
 ### Phase 3 — durable lifecycle schema
 
 - [x] Add additive Alembic migrations for workflow runs, stage attempts,

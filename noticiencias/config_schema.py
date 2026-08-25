@@ -786,6 +786,15 @@ class OllamaConfig(StrictModel):
         default=None,
         description="Model override for enrichment phase (Stage 4).",
     )
+    fact_check_model: Optional[str] = Field(
+        default=None,
+        description=(
+            "Model override for the Stage 4.5 fact-check verification phase. "
+            "Deliberately intended to be a different model than editor_model "
+            "(independent verification). Defaults to editor_model's resolved "
+            "value when unset."
+        ),
+    )
 
     @field_validator(
         "model",
@@ -793,6 +802,7 @@ class OllamaConfig(StrictModel):
         "editor_model",
         "headlines_model",
         "enrichment_model",
+        "fact_check_model",
     )
     @classmethod
     def _validate_model_name(cls, v: str | None) -> str | None:

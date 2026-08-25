@@ -9,6 +9,7 @@ from typing import Any, cast
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
+from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
@@ -440,6 +441,7 @@ class EditorAgent:
         editor_model: str | None = None,
         headlines_model: str | None = None,
         enrichment_model: str | None = None,
+        fact_check_model: str | None = None,
         config: Any | None = None,
     ):
         self.api_url = api_url
@@ -448,6 +450,7 @@ class EditorAgent:
         self._editor_model_cfg = editor_model
         self._headlines_model_cfg = headlines_model
         self._enrichment_model_cfg = enrichment_model
+        self._fact_check_model_cfg = fact_check_model
 
         # Configure regex early; cache directory will be resolved after config
         self._emoji_re = re.compile(
@@ -514,6 +517,31 @@ class EditorAgent:
         self.headlines_model = resolved["headlines"].model_id
         self.enrichment_model = resolved["enrichment"].model_id
 
+        # Fact-check verification (Phase 2c) deliberately runs on a dedicated,
+        # always-Ollama model — independent of whichever provider (NVIDIA /
+        # Gemini / Ollama) drafts the article, so the verifier never shares
+        # the drafter's blind spots. Resolved from the Ollama-side "editor"
+        # stage BEFORE the cloud-provider override below, so a cloud-primary
+        # drafting setup (which overwrites self.editor_model with the cloud
+        # model id) never leaks into the verifier's default.
+        fact_check_model_raw = self._fact_check_model_cfg
+        if not fact_check_model_raw:
+            fact_check_model_raw = getattr(
+                getattr(cfg, "ollama", None), "fact_check_model", None
+            )
+        if not fact_check_model_raw:
+            fact_check_model_raw = resolved["editor"].model_id
+        self.fact_check_model = fact_check_model_raw
+
+        # Dedicated OllamaProvider instance for fact-check verification —
+        # never routed through self.provider (which may resolve to a cloud
+        # provider for drafting).
+        self.fact_check_provider = OllamaProvider(
+            api_url=self.api_url,
+            model=self.fact_check_model,
+            timeout=3600,
+        )
+
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (3600s) and max_tokens (32768)
         # than default because editorial articles require longer generation
@@ -551,7 +579,8 @@ class EditorAgent:
         logger.info(
             f"EditorAgent model routing resolved: default={self.model}, "
             f"translator={self.translator_model}, editor={self.editor_model}, "
-            f"headlines={self.headlines_model}, enrichment={self.enrichment_model}"
+            f"headlines={self.headlines_model}, enrichment={self.enrichment_model}, "
+            f"fact_check={self.fact_check_model}"
         )
 
     def _load_prompts(self) -> dict:
@@ -1428,6 +1457,128 @@ class EditorAgent:
                 )
             return self._empty_enrichment_fields()
 
+    def _send_fact_check_prompt(self, prompt: str, system: str) -> dict[str, Any]:
+        """Send one fact-check verification prompt to the dedicated
+        (non-drafting) Ollama provider and return the parsed JSON verdict.
+
+        Kept as a thin, single-purpose seam (distinct from ``_send_prompt``,
+        which talks to ``self.provider`` — the drafting provider, possibly
+        NVIDIA/Gemini) so callers/tests can stub exactly this network call
+        without disabling the surrounding verification loop, overwrite rule,
+        or gate logic.
+        """
+        response = self.fact_check_provider.generate_sync(
+            prompt,
+            system=system,
+            json_mode=True,
+            model=self.fact_check_model,
+        )
+        if isinstance(response, dict):
+            return response
+        return self.fact_check_provider._extract_json(str(response))
+
+    def _verify_fact_check_claims(
+        self,
+        claims: list[dict],
+        source_content: str,
+        article_title: str,
+        content_mode: str,
+    ) -> list[dict]:
+        """Stage 4.5: independent fact-check verification (Phase 2c).
+
+        Compares each Stage-4-drafted ``fact_check`` claim's ``label``
+        against the article's own original-language ``source_content``,
+        using a dedicated, non-drafting Ollama model
+        (``self.fact_check_provider`` / ``self.fact_check_model``).
+
+        Every claim's ``status`` is overwritten unconditionally with the
+        verifier's own three-value verdict (``confirmed`` / ``uncertain`` /
+        ``disputed``) — Stage 4's six-value self-assessment (including any
+        self-assessed ``disputed``) never survives this step, by design:
+        the verifier is the only thing allowed to produce a status that can
+        block publication.
+
+        Fails open on infrastructure errors (timeout, connection refused,
+        malformed response, missing prompt config) and on missing/empty
+        source content: the affected claim(s) become ``uncertain``, never
+        ``disputed`` and never a silent pass-through of the old value. Only
+        a verifier-returned ``disputed`` can block publication (enforced by
+        the caller in ``process_article``).
+        """
+        if not claims:
+            return []
+
+        system_prompt = self.prompts.get("fact_check_verification", {}).get(
+            "system", ""
+        )
+        if not system_prompt:
+            logger.warning(
+                "Fact-check verification skipped: 'fact_check_verification' "
+                "prompt not configured; marking all claims 'uncertain'."
+            )
+            return [
+                {**claim, "status": "uncertain"}
+                for claim in claims
+                if isinstance(claim, dict)
+            ]
+
+        if not (source_content or "").strip():
+            logger.warning(
+                "Fact-check verification unavailable: source content is "
+                "empty/null (content_mode={}). Marking {} claim(s) 'uncertain' "
+                "rather than guessing.",
+                content_mode,
+                len(claims),
+            )
+            return [
+                {**claim, "status": "uncertain"}
+                for claim in claims
+                if isinstance(claim, dict)
+            ]
+
+        is_summary = content_mode in ("summary_only", "summary_fallback")
+        source_sample = _sample_for_critic(source_content, max_chars=6000)
+
+        verified: list[dict] = []
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            label = str(claim.get("label", "")).strip()
+            if not label:
+                verified.append({**claim, "status": "uncertain"})
+                continue
+
+            context = (
+                "## Afirmación a verificar (en español)\n\n"
+                f"{label}\n\n"
+                "## Título del artículo\n\n"
+                f"{article_title}\n\n"
+                "## Contenido fuente original"
+                f"{' (ES UN RESUMEN, no el artículo completo)' if is_summary else ''}"
+                "\n\n"
+                f"{source_sample}"
+            )
+            try:
+                result = self._send_fact_check_prompt(context, system_prompt)
+                status = str(result.get("status", "")).strip().lower()
+                if status not in ("confirmed", "uncertain", "disputed"):
+                    logger.warning(
+                        "Fact-check verifier returned unrecognized status "
+                        "{!r} for claim {!r}; defaulting to 'uncertain'.",
+                        status,
+                        label,
+                    )
+                    status = "uncertain"
+            except Exception as e:
+                logger.error(
+                    "Fact-check verification failed for claim {!r}: {}", label, e
+                )
+                status = "uncertain"
+
+            verified.append({**claim, "status": status})
+
+        return verified
+
     def _editorial_output_repair_reason(self, markdown: str) -> str | None:
         body = _extract_publishable_body(markdown)
         if not body:
@@ -1696,12 +1847,19 @@ class EditorAgent:
         source_url = None
         source_id = None
         source_name = None
+        # content_mode drives Phase 2c fact-check verification honesty (a
+        # "summary_only"/"summary_fallback" source is not the full article,
+        # and the verification prompt must say so). Defaults to "full_text"
+        # to match CollectorArticleModel's own default when the upstream
+        # payload omits it (e.g. plain-string input, older export payloads).
+        content_mode = "full_text"
         article_id = explicit_article_id or "unknown"
 
         if isinstance(raw_text, dict):
             title = raw_text.get("title", "") or ""
             summary = raw_text.get("summary", "") or ""
             content = raw_text.get("content", "") or ""
+            content_mode = raw_text.get("content_mode") or "full_text"
 
             # Fallback for RSS feeds where "content" is often in "summary"
             if not content and summary:
@@ -2020,6 +2178,29 @@ class EditorAgent:
             except Exception as _e:
                 logger.warning(f"Failed to persist enrichment cache: {_e}")
 
+        # --- STAGE 4.5: Fact-Check Verification (Phase 2c) ---
+        # Runs unconditionally here, after BOTH the cache-hit and cache-miss
+        # branches above have produced `enrichment_fields` — never inside
+        # either branch. This is deliberate: a Stage 4 disk cache treats any
+        # non-empty `fact_check` (including an old self-assessed value) as
+        # "usable" and skips `_generate_enrichment_fields` entirely, so
+        # placing verification anywhere upstream of this convergence point
+        # would let cached articles keep stale, never-independently-checked
+        # statuses forever. Verification itself is not cached — it is cheap
+        # (one small local-Ollama call per claim) and re-running it on a
+        # cache hit is the correct tradeoff over risking silent staleness.
+        #
+        # This unconditionally overwrites every claim's `status`; Stage 4's
+        # six-value self-assessment (including any self-assessed "disputed")
+        # never reaches the gate below.
+        verified_fact_check = self._verify_fact_check_claims(
+            enrichment_fields.get("fact_check") or [],
+            content,
+            title,
+            content_mode,
+        )
+        enrichment_fields["fact_check"] = verified_fact_check
+
         # 3. Assemble Final Artifact
         # Choose the 'direct' headline by default or a combination
         final_title = headlines.get("direct", title)  # Fallback to original if fail
@@ -2188,6 +2369,32 @@ class EditorAgent:
                         "Stage 4 output is incomplete; retry or supply fields manually.",
                         error_code="editorial_v2_incomplete",
                     )
+
+            # Fact-check gate (Phase 2c): block publication only on a claim
+            # the independent verifier (Stage 4.5, above) actually returned
+            # as "disputed" — i.e. the verifier compared the claim against
+            # the article's own source content and found a contradiction.
+            # Deliberately reads `verified_fact_check` (the verifier's own
+            # output), not `model_dict["fact_check"]`: the latter can be
+            # replaced by an upstream `raw_text["fact_check"]` manual
+            # override (see the "Upstream raw_text overrides" loop above),
+            # which never goes through verification — gating on model_dict
+            # would let an un-verified self-assessed "disputed" (or an
+            # operator's manual override) trigger this block, exactly the
+            # false-positive Design §2's overwrite-all rule exists to
+            # prevent. "uncertain" is advisory only and never blocks.
+            disputed_labels = [
+                str(item.get("label", "")).strip() or "(sin descripción)"
+                for item in verified_fact_check
+                if isinstance(item, dict) and item.get("status") == "disputed"
+            ]
+            if disputed_labels:
+                raise GeneratedArticleValidationError(
+                    "Fact-check verification disputed the following claim(s) "
+                    f"against the article's own source content: {disputed_labels}. "
+                    "Publication blocked pending correction.",
+                    error_code="editorial_fact_check_disputed",
+                )
 
             # Dump to YAML
             # Use python mode to preserve native date types and emit
