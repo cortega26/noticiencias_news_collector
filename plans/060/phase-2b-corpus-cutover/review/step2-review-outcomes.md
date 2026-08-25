@@ -105,7 +105,7 @@ per-post findings:
 14. `2026-05-07-el-mit-descubre-que-la-automatizacion-no-mejora-la-productividad-como-se-creia.md`
 15. `2026-06-14-1-121-especies-marinas-nuevas-descubiertas-y-la-mayoria-ya-estaban-en-los-estantes-de-los-museos.md`
 
-## Status (2026-08-24, updated)
+## Status (2026-08-25, updated)
 
 1. **Done, merged**: the 15 downgrades, `noticiencias` PR
    [#133](https://github.com/cortega26/noticiencias/pull/133). Included a
@@ -113,25 +113,42 @@ per-post findings:
    the fabricated Isaacman/Mars quote directly from the Artemis II post's
    body — downgrading `schema_version` alone doesn't stop a post from
    rendering, so the fabricated quote would otherwise have stayed live.
-   The other 8 downgraded posts' body issues (overclaims, not fabricated
-   quotes) remain queued for a separate editorial pass.
-2. **Done, PR open**: the audit's specific per-field corrections applied to
+2. **Done, merged**: the audit's specific per-field corrections applied to
    the inventory JSON's `draft` object and the actual post frontmatter for
    all 15 remaining v2 posts — `noticiencias` PR
    [#134](https://github.com/cortega26/noticiencias/pull/134). Per-post
    corrections (source titles/publishers/dates, `fact_check` labels/
    statuses, trimmed `why_it_matters`/`summary_points`) are listed in that
    PR's description and traceable to specific audit findings above.
-   `check:editorial-fields`: 16/16 v2 posts pass, 0 errors.
-3. **`reviewed: false` on all 30 posts, deliberately.** Applying the
-   audit's corrections is not the same as the operator doing the final
-   read-through the spec requires before a post claims verified v2 status.
-   This session did not set `reviewed: true` anywhere — that flag is the
-   operator's to set, once they've done their own pass (informed by, but
-   not identical to, the audit this document is built on).
-4. **Not done**: correcting the 8 remaining downgraded posts' body-level
-   overclaims (queued, separate editorial pass, per the operator's
-   decision — see the downgrade list above).
+   `check:editorial-fields`: 16/16 v2 posts pass, 0 errors, even under
+   `STRICT_EDITORIAL=true`.
+3. **Done, merged**: the 8 remaining downgraded posts' body-level
+   overclaims corrected — `noticiencias` PR
+   [#136](https://github.com/cortega26/noticiencias/pull/136), one small
+   surgical edit per post (matching the Artemis II precedent's style, not
+   a rewrite), each independently re-verified against the audit's
+   findings before merge: Kevin Power's occupation corrected to reflect
+   he's a current graduate student, the cheetah-DNA claim scoped down to
+   "found seven, extracted ancient DNA from the remains" rather than
+   claiming DNA from all seven, the whale species corrected from blue
+   whales to humpback/southern right whales and the unsupported "Brazilian
+   scientists" attribution removed, the convection/core-collapse physics
+   corrected, the Rubin Observatory failed-supernova claim reframed from
+   accomplished fact to future capability, an unsupported specific
+   "limitations" sentence removed from the galaxy-clustering post, the
+   speculative real-time family-videoconferencing claim replaced with what
+   the source actually supports (medical assistance, control-team
+   coordination), and the Artemis III/Starship 2028 landing date hedged to
+   match the source's own tentative framing. **All 9 body-level-error
+   posts from the original downgrade batch are now corrected** — no known
+   published factual error remains outstanding in this corpus.
+4. **`reviewed: false` on all 30 posts, still deliberately.** Applying the
+   audit's corrections (and now the body-text corrections) is not the same
+   as the operator doing the final read-through the spec requires before a
+   post claims verified v2 status. This session did not set
+   `reviewed: true` anywhere — that flag is the operator's to set, once
+   they've done their own pass (informed by, but not identical to, the
+   audit this document is built on).
 
 ## Original next-steps note (superseded by Status above, kept for history)
 

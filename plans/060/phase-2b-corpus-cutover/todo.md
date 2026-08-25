@@ -45,11 +45,13 @@ already-published body only, not against the original source.
       operator commissioned an independent adversarial audit against real
       sources (`inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md`)
       and its findings were applied to the corpus (see the two lines
-      below) — but per spec.md, that audit is evidence for the operator's
-      review, not a substitute for it. No post has `reviewed: true` yet;
-      leave this box unchecked until the operator does their own pass and
-      says which posts to mark reviewed. See
-      `review/step2-review-outcomes.md` for the full record.
+      below), including correcting all 9 body-level factual errors the
+      audit's findings led to (worst case, a fabricated NASA-attributed
+      quote — `noticiencias` PRs #133/#136) — but per spec.md, that audit
+      is evidence for the operator's review, not a substitute for it. No
+      post has `reviewed: true` yet; leave this box unchecked until the
+      operator does their own pass and says which posts to mark reviewed.
+      See `review/step2-review-outcomes.md` for the full record.
 - [x] Posts without verifiable evidence downgraded to `schema_version: 1`
       explicitly, not left ambiguous. 15 posts downgraded (6 unreachable
       source, 9 confirmed/borderline body-level errors found during this
