@@ -269,6 +269,10 @@ class TestEnrichmentInProcessArticle:
         agent._generate_enrichment_fields = MagicMock(
             return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 
         result = agent.process_article(
             {
@@ -316,6 +320,10 @@ class TestEnrichmentInProcessArticle:
         agent._generate_enrichment_fields = MagicMock(
             return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 
         # Provide upstream summary_points that should override LLM output
         upstream_summary = ["Punto upstream manual"]
@@ -396,6 +404,10 @@ class TestEnrichmentInProcessArticle:
         agent._generate_enrichment_fields = MagicMock(
             return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 
         result = agent.process_article(
             {
@@ -478,6 +490,10 @@ class TestPoisonedStage4Cache:
         agent._generate_enrichment_fields = MagicMock(
             return_value=json.loads(VALID_ENRICHMENT_RESPONSE)
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 
         result = agent.process_article(
             {

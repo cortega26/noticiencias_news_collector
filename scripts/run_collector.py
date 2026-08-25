@@ -381,6 +381,7 @@ def _serialize_export_article(article):
         "url": str(url) if url is not None else None,
         "summary": _summary_or_content(article),
         "content": _article_value(article, "content"),
+        "content_mode": _article_value(article, "content_mode", "full_text"),
         "source_name": _article_value(article, "source_name"),
         "source_id": _article_value(article, "source_id"),
         "published_date": _isoformat_or_value(

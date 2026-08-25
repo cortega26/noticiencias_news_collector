@@ -222,6 +222,23 @@ class TestEditorAgentModelRouting:
         # headlines_model was passed as "llama3.2:latest"
         assert "llama3.2:latest" in agent.headlines_model
 
+    def test_fact_check_model_independent_of_nvidia_routing(self, tmp_path):
+        """Phase 2c regression: fact_check_model must stay on the Ollama-side
+        resolution even when NVIDIA is the active drafting provider. The
+        verifier is required to run on a different model than the drafter
+        (spec.md Design §2); if fact_check_model were derived from
+        self.editor_model *after* the cloud-provider override, it would
+        silently inherit the NVIDIA model id here, and OllamaProvider would
+        then swap it back to some default Ollama model with no error —
+        defeating the 'different model' guarantee with no visible failure.
+        """
+        nvidia = _make_nvidia_provider("nvidia/nemotron-3-super-120b-a12b")
+        agent = self._build_agent_with_provider(nvidia, tmp_path)
+
+        assert agent.editor_model == "nvidia/nemotron-3-super-120b-a12b"
+        assert agent.fact_check_model != "nvidia/nemotron-3-super-120b-a12b"
+        assert "qwen2.5:32b" in agent.fact_check_model
+
     def test_provider_generate_receives_nvidia_model_not_ollama_name(self, tmp_path):
         """G3 end-to-end: provider.generate is called with the NVIDIA model, not an Ollama name."""
         nvidia = _make_nvidia_provider("nvidia/nemotron-3-super-120b-a12b")

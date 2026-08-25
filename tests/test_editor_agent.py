@@ -71,6 +71,12 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
     agent._generate_enrichment_fields = (  # type: ignore[method-assign]
         lambda *args, **kwargs: _VALID_ENRICHMENT_FIELDS
     )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda *args, **kwargs: {"status": "confirmed"}
+    )
     agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -128,6 +134,12 @@ def test_process_article_keeps_sections_with_image(tmp_path) -> None:
     agent._generate_enrichment_fields = (  # type: ignore[method-assign]
         lambda *args, **kwargs: _VALID_ENRICHMENT_FIELDS
     )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda *args, **kwargs: {"status": "confirmed"}
+    )
     agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -178,6 +190,12 @@ def test_frontmatter_date_is_emitted_as_unquoted_yaml_date(tmp_path) -> None:
     agent._generate_enrichment_fields = (  # type: ignore[method-assign]
         lambda *args, **kwargs: _VALID_ENRICHMENT_FIELDS
     )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda *args, **kwargs: {"status": "confirmed"}
+    )
     agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -226,6 +244,12 @@ def test_frontmatter_datetime_remains_datetime_token(tmp_path) -> None:
     agent._generate_enrichment_fields = (  # type: ignore[method-assign]
         lambda *args, **kwargs: _VALID_ENRICHMENT_FIELDS
     )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda *args, **kwargs: {"status": "confirmed"}
+    )
     agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",
         "question": "Question Headline?",
@@ -273,6 +297,12 @@ def test_top_level_export_category_drives_frontmatter_category(
     agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._generate_enrichment_fields = (  # type: ignore[method-assign]
         lambda *args, **kwargs: _VALID_ENRICHMENT_FIELDS
+    )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda *args, **kwargs: {"status": "confirmed"}
     )
     agent._generate_headlines = lambda *args, **kwargs: {
         "direct": "Direct Headline",

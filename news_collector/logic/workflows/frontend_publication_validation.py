@@ -190,6 +190,13 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
     `_generate_enrichment_fields` (schema validation + sources backfill)
     runs for real. This is required for the sources-omission regression
     case to actually exercise the real gate (see _fixture_raw_text).
+
+    Stage 4.5 (Phase 2c fact-check verification) follows the same pattern:
+    only its network seam (`_send_fact_check_prompt`, which talks to the
+    dedicated `fact_check_provider`) is stubbed, so `_verify_fact_check_claims`
+    still runs for real — including the overwrite-all rule and the
+    "disputed" gate — against a deterministic "confirmed" verdict, instead
+    of making a real Ollama call from this CI fixture.
     """
     from news_collector.components.editorial.ai_editor import EditorAgent
 
@@ -216,6 +223,9 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
         return _FIXTURE_ARTICLE_BODY
 
     agent._send_prompt = _stub_send_prompt  # type: ignore[method-assign]
+    agent._send_fact_check_prompt = (  # type: ignore[method-assign]
+        lambda prompt, system: {"status": "confirmed"}
+    )
     return agent
 
 

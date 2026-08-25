@@ -133,6 +133,7 @@
 | ollama.editor_model | Optional |  | Model override for editorial phase. |  |  |
 | ollama.headlines_model | Optional |  | Model override for headlines phase. |  |  |
 | ollama.enrichment_model | Optional |  | Model override for enrichment phase (Stage 4). |  |  |
+| ollama.fact_check_model | Optional |  | Model override for the Stage 4.5 fact-check verification phase. Deliberately intended to be a different model than editor_model (independent verification). Defaults to editor_model's resolved value when unset. |  |  |
 | gemini | GeminiConfig |  |  |  |  |
 | gemini.api_key | Optional |  | Google AI Studio API Key. |  |  |
 | gemini.model | str | "gemini-2.5-flash" | Model identifier to use for generation. |  |  |

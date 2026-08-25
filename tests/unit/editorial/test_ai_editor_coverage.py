@@ -638,6 +638,10 @@ class TestProcessArticlePaths:
         agent._generate_enrichment_fields = lambda *a, **k: dict(
             _VALID_ENRICHMENT_FIELDS
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        agent._send_fact_check_prompt = lambda *a, **k: {"status": "confirmed"}
         agent._generate_headlines = lambda *a, **k: {
             "direct": "Direct Headline",
             "question": "Question Headline?",

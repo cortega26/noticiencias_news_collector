@@ -52,6 +52,12 @@ class TestEditorAgentTags(unittest.TestCase):
                 ],
             }
         )
+        # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+        # real _verify_fact_check_claims loop/overwrite/gate logic still
+        # runs, without hitting a real Ollama instance in this unit test.
+        self.agent._send_fact_check_prompt = MagicMock(
+            return_value={"status": "confirmed"}
+        )
         # Prevent real LLM calls from the category classifier (uses its own provider)
         self.agent.category_resolver._classifier = MagicMock(
             try_classify_article=MagicMock(return_value=None)

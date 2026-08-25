@@ -174,6 +174,14 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
             ],
         },
     )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    monkeypatch.setattr(
+        agent,
+        "_send_fact_check_prompt",
+        lambda *args, **kwargs: {"status": "confirmed"},
+    )
 
     article = {
         "id": "160",
@@ -272,6 +280,14 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
                 }
             ],
         },
+    )
+    # Stub only the Phase 2c network seam (dedicated Ollama call) so the
+    # real _verify_fact_check_claims loop/overwrite/gate logic still runs,
+    # without hitting a real Ollama instance in this unit test.
+    monkeypatch.setattr(
+        agent,
+        "_send_fact_check_prompt",
+        lambda *args, **kwargs: {"status": "confirmed"},
     )
 
     article = {
