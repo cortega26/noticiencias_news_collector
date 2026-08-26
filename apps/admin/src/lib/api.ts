@@ -77,6 +77,21 @@ export class NetworkError extends Error {
   }
 }
 
+/**
+ * Thrown on 409 (currently only `/v1/admin/collect`: a collection run is
+ * already queued/running). Carries the parsed response body — which is
+ * shaped like `AdminCollectStarted` and names the existing run's id — so
+ * callers can surface it instead of a bare "HTTP 409".
+ */
+export class ConflictError<T = unknown> extends Error {
+  readonly body: T;
+  constructor(body: T, message = "Conflict") {
+    super(message);
+    this.name = "ConflictError";
+    this.body = body;
+  }
+}
+
 const API_BASE: string = (import.meta.env.PUBLIC_ADMIN_API_BASE as string) ?? "";
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -109,6 +124,10 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       detail?: string;
     };
     throw new ValidationError(body.detail ?? "Invalid request");
+  }
+  if (response.status === 409) {
+    const body = await response.json().catch(() => ({}));
+    throw new ConflictError(body, "A conflicting operation is already in progress");
   }
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);

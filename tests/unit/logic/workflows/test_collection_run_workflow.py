@@ -419,11 +419,13 @@ def test_run_returns_early_when_queued_to_running_transition_fails(
 def test_heartbeat_loop_stops_promptly_when_heartbeat_returns_false(
     db_manager, monkeypatch
 ) -> None:
-    # A fresh, short-lease workflow: the loop's tick interval is
-    # max(1, lease_timeout_seconds // 3), so lease_timeout_seconds=1 gives
-    # the fastest achievable 1-second tick — fast enough for a test, and
-    # independent of the shared `workflow` fixture's 60s lease.
-    short_lease_workflow = CollectionRunWorkflow(db_manager, lease_timeout_seconds=1)
+    # A fresh workflow with a 1-second heartbeat interval (independent of
+    # lease_timeout_seconds since that decoupling — see
+    # DEFAULT_HEARTBEAT_INTERVAL_SECONDS's module-level comment) so the
+    # loop's first tick fires fast enough for a test.
+    short_lease_workflow = CollectionRunWorkflow(
+        db_manager, heartbeat_interval_seconds=1
+    )
     monkeypatch.setattr(short_lease_workflow, "heartbeat", lambda run_id: False)
     stop = threading.Event()
     thread = threading.Thread(

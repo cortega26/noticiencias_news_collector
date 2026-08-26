@@ -54,9 +54,15 @@ RUN_TYPE_COLLECTION = "collection"
 DEFAULT_LEASE_TIMEOUT_SECONDS = 3600  # 1 hour — a collection cycle's own
 # outer timeout is expected to be well under this; see
 # spec.md Design §2's recover_expired_leases() note.
-# Heartbeats are emitted at roughly a third of the lease timeout so a
-# healthy run always renews its lease well before it could expire.
-_HEARTBEAT_FRACTION = 3
+# Deliberately NOT derived from lease_timeout_seconds (e.g. a fraction of
+# it): a typical collection cycle finishes in well under an hour, so tying
+# the heartbeat cadence to the lease timeout left the timeout-based branch
+# of recover_expired_leases() essentially untested by any real run — only
+# the "never heartbeated at all" branch ever fired in practice. A short,
+# fixed interval keeps heartbeat_at genuinely current throughout a run
+# without changing how aggressively a stale lease gets reclaimed (still
+# governed by lease_timeout_seconds alone).
+DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -96,9 +102,11 @@ class CollectionRunWorkflow:
         db_manager: Any,
         *,
         lease_timeout_seconds: int = DEFAULT_LEASE_TIMEOUT_SECONDS,
+        heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
     ) -> None:
         self._db = db_manager
         self._lease_timeout_seconds = lease_timeout_seconds
+        self._heartbeat_interval_seconds = heartbeat_interval_seconds
 
     # ------------------------------------------------------------------
     # start / dispatch
@@ -234,7 +242,7 @@ class CollectionRunWorkflow:
             heartbeat_thread.join(timeout=5)
 
     def _heartbeat_loop(self, run_id: int, stop: threading.Event) -> None:
-        interval = max(1, self._lease_timeout_seconds // _HEARTBEAT_FRACTION)
+        interval = max(1, self._heartbeat_interval_seconds)
         while not stop.wait(interval):
             if not self.heartbeat(run_id):
                 # No longer ours to heartbeat (already transitioned away,
