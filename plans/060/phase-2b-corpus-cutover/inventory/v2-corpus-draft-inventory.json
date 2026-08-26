@@ -84,7 +84,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -166,7 +166,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -235,7 +235,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -321,7 +321,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -402,7 +402,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -487,7 +487,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -564,7 +564,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -580,7 +580,7 @@
       ],
       "draft_available": true,
       "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
-      "reviewed": false,
+      "reviewed": true,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
       "draft": {
         "summary_points": [
@@ -663,7 +663,7 @@
       ],
       "draft_available": true,
       "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
-      "reviewed": false,
+      "reviewed": true,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
       "draft": {
         "summary_points": [
@@ -816,7 +816,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -905,7 +905,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -982,7 +982,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1050,7 +1050,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1131,7 +1131,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1204,7 +1204,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1293,7 +1293,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1365,7 +1365,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1447,7 +1447,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1529,7 +1529,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1599,7 +1599,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1681,7 +1681,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1770,7 +1770,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1859,7 +1859,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -1875,7 +1875,7 @@
       ],
       "draft_available": true,
       "note": "Retried after initial Pydantic validation failure (Phase 2b Step 1 first pass); succeeded on retry, no code changes needed.",
-      "reviewed": false,
+      "reviewed": true,
       "failure_reason": "llm_call_or_schema_validation_failed (source_url IS present — this is NOT a missing-source downgrade case; see validation_error for the exact Pydantic failure — all three are retryable prompt-shape issues, not source-availability problems)",
       "draft": {
         "summary_points": [
@@ -2018,7 +2018,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": [],
       "quality_flags": [
         "non_latin_script_artifact: 理解"
@@ -2098,7 +2098,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -2182,7 +2182,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -2267,7 +2267,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -2353,7 +2353,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     },
     {
@@ -2429,7 +2429,7 @@
           }
         ]
       },
-      "reviewed": false,
+      "reviewed": true,
       "draft_empty_fields": []
     }
   ],
