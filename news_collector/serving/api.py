@@ -1190,7 +1190,6 @@ def create_app(  # noqa: C901
         # ck_workflow_runs_status constrains to exactly AdminRunStatus's
         # members — cast documents that DB-enforced invariant for the type
         # checker rather than widening AdminRunStatus's own literal type.
-        assert result.run_status is not None
         active = result.run_status in ("queued", "running")
         return AdminCollectStatus(
             run_id=str(result.run_id),
