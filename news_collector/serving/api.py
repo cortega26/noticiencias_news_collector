@@ -92,9 +92,7 @@ from news_collector.contracts.admin import (
     AdminSourceUpsert,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
-from news_collector.logic.workflows.collection_run_workflow import (
-    CollectionRunWorkflow,
-)
+from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger

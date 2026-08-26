@@ -19,9 +19,7 @@ from typing import Any
 
 import pytest
 
-from news_collector.logic.workflows.collection_run_workflow import (
-    CollectionRunWorkflow,
-)
+from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Base, WorkflowRun
 
