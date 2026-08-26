@@ -385,32 +385,56 @@ class CollectionRunWorkflow:
             seconds=self._lease_timeout_seconds
         )
         with self._db.get_session() as session:
-            stale_ids = (
+            # `running` rows: stale if the heartbeat is missing or too old.
+            # `queued` rows: a queued row only exists momentarily, between
+            # start()'s INSERT and _dispatch()'s thread flipping it to
+            # `running` — at process *startup* no such in-flight call can
+            # exist, so any `queued` row found here is definitionally an
+            # orphan from a process that crashed between those two steps
+            # (no heartbeat/cutoff check needed or possible: queued rows
+            # never get a heartbeat_at at all). Both statuses are covered
+            # here because the active-collection partial index treats
+            # queued the same as running — an orphaned queued row would
+            # otherwise permanently block every future collection request
+            # with 409, with no process left able to finish or recover it.
+            stale = (
                 session.execute(
-                    select(WorkflowRun.id).where(
+                    select(WorkflowRun.id, WorkflowRun.status).where(
                         WorkflowRun.run_type == RUN_TYPE_COLLECTION,
-                        WorkflowRun.status == "running",
-                        (WorkflowRun.heartbeat_at.is_(None))
-                        | (WorkflowRun.heartbeat_at < cutoff),
+                        (
+                            (WorkflowRun.status == "running")
+                            & (
+                                WorkflowRun.heartbeat_at.is_(None)
+                                | (WorkflowRun.heartbeat_at < cutoff)
+                            )
+                        )
+                        | (WorkflowRun.status == "queued"),
                     )
                 )
-                .scalars()
+                .tuples()
                 .all()
             )
 
         recovered: list[int] = []
-        for stale_id in stale_ids:
+        for stale_id, stale_status in stale:
+            detail = (
+                "Recovered at startup: heartbeat was stale or missing, "
+                "indicating the previous process exited without "
+                "completing this run."
+                if stale_status == "running"
+                else (
+                    "Recovered at startup: row was still queued, indicating "
+                    "the previous process exited between inserting this run "
+                    "and dispatching it."
+                )
+            )
             if self._transition(
                 int(stale_id),
-                from_status="running",
+                from_status=stale_status,
                 to_status="interrupted",
                 finished_at=datetime.now(timezone.utc),
                 error_code="process_restarted",
-                error_detail=(
-                    "Recovered at startup: heartbeat was stale or missing, "
-                    "indicating the previous process exited without "
-                    "completing this run."
-                ),
+                error_detail=detail,
             ):
                 recovered.append(int(stale_id))
 

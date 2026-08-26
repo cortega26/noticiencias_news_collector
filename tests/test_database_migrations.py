@@ -555,6 +555,104 @@ def test_workflow_run_status_values_match_latest_migration() -> None:
     ), "WORKFLOW_RUN_QUEUEABLE_STATUSES diverged between models.py and 84cf98a379c1"
 
 
+def test_84cf98a379c1_upgrade_and_downgrade_handle_a_real_legacy_row(
+    tmp_path: Path,
+) -> None:
+    """Regression test for two bugs an automated review caught in this
+    migration, neither visible against the real dev DB's 0-row
+    workflow_runs table (nor against this suite's other migration tests,
+    which build the DB via DatabaseManager's create_all() — meaning the
+    new columns already exist from *current* models.py before the
+    migration's own idempotent "if column not in columns" check even
+    runs, so an ADD-COLUMN bug can never surface there either). This test
+    builds workflow_runs in its genuine pre-Phase-4a shape via raw DDL
+    (mirroring the effe4ec70d6d/a4d9a4ba00aa schema exactly, not
+    create_all) with one real legacy 'completed' row, then exercises the
+    actual upgrade/downgrade/re-upgrade path against it:
+
+    1. Backfill ordering: 'completed' -> 'succeeded' was written before the
+       CHECK constraint was widened to permit 'succeeded' — violates the
+       still-narrow constraint and aborts the upgrade the moment a real
+       'completed' row exists to backfill.
+    2. `updated_at ADD COLUMN ... NOT NULL DEFAULT CURRENT_TIMESTAMP` via
+       plain (non-batch) op.add_column: SQLite rejects a NOT NULL column
+       with a non-constant default the moment the table has any existing
+       row needing a backfilled value ("Cannot add a column with
+       non-constant default").
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "legacy_row_migration.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("""
+            CREATE TABLE workflow_runs (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                run_type VARCHAR(50) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                started_at DATETIME NOT NULL,
+                finished_at DATETIME,
+                run_metadata JSON,
+                created_at DATETIME NOT NULL,
+                CONSTRAINT ck_workflow_runs_status CHECK (
+                    status IN ('running', 'completed', 'failed', 'cancelled')
+                )
+            )
+            """)
+        conn.execute(
+            "CREATE UNIQUE INDEX uq_workflow_runs_one_active_collection "
+            "ON workflow_runs (run_type) "
+            "WHERE run_type = 'collection' AND status = 'running'"
+        )
+        conn.execute(
+            "INSERT INTO workflow_runs "
+            "(run_type, status, started_at, finished_at, created_at) "
+            "VALUES ('collection', 'completed', datetime('now'), "
+            "datetime('now'), datetime('now'))"
+        )
+        conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(32))")
+        conn.execute("INSERT INTO alembic_version VALUES ('a4d9a4ba00aa')")
+        conn.commit()
+    finally:
+        conn.close()
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        # The upgrade itself must not raise — this is the actual regression
+        # check for both bugs above.
+        command.upgrade(alembic_cfg, "head")
+
+        conn = sqlite3.connect(db_path)
+        try:
+            row = conn.execute(
+                "SELECT status, updated_at FROM workflow_runs"
+            ).fetchone()
+            assert row is not None
+            assert row[0] == "succeeded", "backfill did not rename completed->succeeded"
+            assert (
+                row[1] is not None
+            ), "updated_at was not backfilled for the existing row"
+        finally:
+            conn.close()
+
+        # And the reverse direction must not raise either.
+        command.downgrade(alembic_cfg, "a4d9a4ba00aa")
+        conn = sqlite3.connect(db_path)
+        try:
+            status = conn.execute("SELECT status FROM workflow_runs").fetchone()[0]
+            assert (
+                status == "completed"
+            ), "downgrade did not un-rename succeeded->completed"
+        finally:
+            conn.close()
+
+        command.upgrade(alembic_cfg, "head")
+
+
 def test_lifecycle_tables_upgrade_body_is_reentrant_within_one_connection() -> None:
     """effe4ec70d6d's upgrade() must be safe to call twice in a row against
     the same connection without raising "already exists" — this is the

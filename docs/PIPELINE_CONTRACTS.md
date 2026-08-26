@@ -102,7 +102,18 @@ The serving layer currently exposes a read-oriented API:
   poll), article reprocess, source manager (list/toggle/reset circuit),
   config save (full-schema validation, secrets dropped), prompt lab
   (config/prompts.yaml round-trip), published-content snapshot, image
-  queue — all dispatching to existing storage/workflow modules
+  queue — all dispatching to existing storage/workflow modules. Collect
+  trigger/status is now durable (Plan 060 Phase 4a): the `workflow_runs`
+  table (not process memory) is the source of truth via
+  `CollectionRunWorkflow`
+  (`news_collector/logic/workflows/collection_run_workflow.py`) —
+  `POST /v1/admin/collect` returns 202 (started) or 409 (a collection is
+  already queued/running, existing run id in the body);
+  `GET /v1/admin/collect/status?run_id=` returns 404 for an unrecognized
+  id rather than substituting the latest run. `AdminRunStatus` now spans
+  `queued`/`running`/`succeeded`/`failed`/`cancelled`/`interrupted`. A
+  `lifespan` hook recovers any run left `queued`/`running` at process
+  startup to `interrupted`.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)

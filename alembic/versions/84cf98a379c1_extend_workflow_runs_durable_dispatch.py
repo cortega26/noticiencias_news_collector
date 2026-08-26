@@ -85,6 +85,18 @@ _IDEMPOTENCY_INDEX_NAME = "uq_workflow_runs_idempotency_key_active"
 # cannot represent — downgrade() refuses to run if any row holds one of
 # these, per this program's additive-only / no-data-loss rule.
 _STATUSES_UNREPRESENTABLE_BY_OLD_CONSTRAINT = ("queued", "interrupted")
+# Superset of old + new values, used as a *temporary* constraint while the
+# 'completed'<->'succeeded' backfill UPDATE runs in either direction. Fixes
+# a real bug an automated review caught: writing 'succeeded' while only the
+# narrow old constraint is active (or 'completed' while only the narrow new
+# one is active) violates that constraint and aborts the migration — this
+# was invisible against the real dev DB's 0-row workflow_runs table, which
+# is exactly why it needed a second pair of eyes, not just an empty-table
+# round-trip test. Widen to this union first, backfill, then narrow to the
+# real target — standard sequencing for a CHECK-constrained rename.
+_UNION_STATUS_VALUES = tuple(
+    dict.fromkeys(_OLD_STATUS_VALUES + WORKFLOW_RUN_STATUS_VALUES)
+)
 
 
 def _check(column: str, values: tuple) -> str:
@@ -114,7 +126,19 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = inspect(bind)
 
-    # --- 1. New columns (additive, safe as plain ADD COLUMN in SQLite) ---
+    # --- 1. New columns ---
+    # idempotency_key/heartbeat_at/error_code/error_detail are all nullable
+    # with no default — plain ADD COLUMN is safe for those in SQLite
+    # regardless of existing rows. updated_at is NOT NULL with a
+    # non-constant default (CURRENT_TIMESTAMP): SQLite's plain
+    # ALTER TABLE ... ADD COLUMN rejects that combination outright
+    # ("Cannot add a column with non-constant default") the moment the
+    # table has any existing row to backfill — invisible against the real
+    # dev DB's 0-row workflow_runs table (same blind spot the backfill-
+    # ordering fix above ran into), caught only by testing against a
+    # seeded row. batch_alter_table recreates the table instead, which
+    # SQLite evaluates CURRENT_TIMESTAMP against per existing row
+    # correctly.
     columns = _table_columns(inspector)
     if "idempotency_key" not in columns:
         op.add_column(
@@ -127,15 +151,15 @@ def upgrade() -> None:
             sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
         )
     if "updated_at" not in columns:
-        op.add_column(
-            "workflow_runs",
-            sa.Column(
-                "updated_at",
-                sa.DateTime(timezone=True),
-                nullable=False,
-                server_default=sa.text("CURRENT_TIMESTAMP"),
-            ),
-        )
+        with op.batch_alter_table("workflow_runs", schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    "updated_at",
+                    sa.DateTime(timezone=True),
+                    nullable=False,
+                    server_default=sa.text("CURRENT_TIMESTAMP"),
+                )
+            )
     if "error_code" not in columns:
         op.add_column(
             "workflow_runs",
@@ -147,12 +171,20 @@ def upgrade() -> None:
         )
 
     # --- 2. Backfill + widen the status CHECK constraint ---
+    # Order matters: widen to the old+new UNION *before* backfilling, so the
+    # backfill UPDATE's target value ('succeeded') is never rejected by a
+    # still-narrow constraint. A prior version of this migration ran the
+    # backfill first — safe only because the real dev DB it was tested
+    # against had zero workflow_runs rows, so the UPDATE was a no-op that
+    # never actually touched the constraint. Any environment with a real
+    # legacy 'completed' row would have failed the upgrade outright.
     current_sql = _current_constraint_sql(inspector)
     if current_sql is None or "succeeded" not in current_sql:
-        # Defensive rename backfill: a no-op today (recon + a scratch copy
-        # of the real dev DB both showed zero workflow_runs rows of any
-        # status — see module docstring), kept for any environment whose
-        # data differs from what was inspected here.
+        with op.batch_alter_table("workflow_runs", schema=None) as batch_op:
+            batch_op.drop_constraint(_STATUS_CONSTRAINT_NAME, type_="check")
+            batch_op.create_check_constraint(
+                _STATUS_CONSTRAINT_NAME, _check("status", _UNION_STATUS_VALUES)
+            )
         bind.execute(
             sa.text(
                 "UPDATE workflow_runs SET status = 'succeeded' "
@@ -239,8 +271,17 @@ def downgrade() -> None:
     )
 
     # --- Reverse step 2: narrow the status constraint, un-rename 'succeeded' ---
+    # Same widen-first ordering as upgrade()'s equivalent step, for the same
+    # reason: the still-active new constraint doesn't include 'completed',
+    # so writing it before widening to the union would violate the
+    # constraint and abort the downgrade.
     current_sql = _current_constraint_sql(inspector)
     if current_sql is None or "succeeded" in current_sql:
+        with op.batch_alter_table("workflow_runs", schema=None) as batch_op:
+            batch_op.drop_constraint(_STATUS_CONSTRAINT_NAME, type_="check")
+            batch_op.create_check_constraint(
+                _STATUS_CONSTRAINT_NAME, _check("status", _UNION_STATUS_VALUES)
+            )
         bind.execute(
             sa.text(
                 "UPDATE workflow_runs SET status = 'completed' "

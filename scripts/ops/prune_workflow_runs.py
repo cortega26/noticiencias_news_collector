@@ -43,7 +43,10 @@ if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
 from news_collector.storage.database import DatabaseManager  # noqa: E402
-from news_collector.storage.models import WorkflowRun  # noqa: E402
+from news_collector.storage.models import (  # noqa: E402
+    WorkflowRun,
+    WorkflowStageAttempt,
+)
 from news_collector.utils.logger import get_logger  # noqa: E402
 
 logger = get_logger().create_module_logger(__name__)
@@ -69,12 +72,22 @@ def prune_workflow_runs(
 ) -> PruneSummary:
     """Delete terminal ``workflow_runs`` rows whose ``finished_at`` is older
     than ``retention_days``. Returns a summary; deletes nothing when
-    ``dry_run`` is True."""
+    ``dry_run`` is True.
+
+    ``workflow_stage_attempts.workflow_run_id`` is ``ON DELETE RESTRICT``
+    (Phase 3a) — a run with any recorded stage attempt cannot be deleted
+    until its attempts are deleted first, or the whole batch's commit fails
+    and rolls back (an automated review caught this: it's currently inert
+    since nothing writes stage attempts yet, but would silently defeat the
+    advertised retention window the moment something does). Each
+    candidate's stage attempts are deleted first, in the same per-row unit
+    of work, so one row cannot take the rest of the batch down with it.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
     summary = PruneSummary()
     with db.get_session() as session:
-        candidates = (
-            session.query(WorkflowRun)
+        candidate_ids = (
+            session.query(WorkflowRun.id)
             .filter(
                 WorkflowRun.status.in_(_TERMINAL_STATUSES),
                 WorkflowRun.finished_at.isnot(None),
@@ -82,10 +95,19 @@ def prune_workflow_runs(
             )
             .all()
         )
-        summary.candidates_found = len(candidates)
-        if dry_run or not candidates:
-            return summary
-        for row in candidates:
+        summary.candidates_found = len(candidate_ids)
+
+    if dry_run or not candidate_ids:
+        return summary
+
+    for (run_id,) in candidate_ids:
+        with db.get_session() as session:
+            row = session.get(WorkflowRun, run_id)
+            if row is None:  # deleted by something else since the scan above
+                continue
+            session.query(WorkflowStageAttempt).filter(
+                WorkflowStageAttempt.workflow_run_id == run_id
+            ).delete(synchronize_session=False)
             logger.info(
                 "Pruning workflow_run {} (run_type={}, status={}, finished_at={})",
                 row.id,
@@ -94,7 +116,7 @@ def prune_workflow_runs(
                 row.finished_at,
             )
             session.delete(row)
-        summary.rows_deleted = len(candidates)
+        summary.rows_deleted += 1
     return summary
 
 

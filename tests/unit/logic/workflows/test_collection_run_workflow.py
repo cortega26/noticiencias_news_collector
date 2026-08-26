@@ -228,6 +228,46 @@ def test_recover_expired_leases_transitions_stale_running_collection_rows(
         assert session.get(WorkflowRun, stale_null_id).status == "interrupted"
 
 
+def test_recover_expired_leases_recovers_orphaned_queued_rows(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """A `queued` row can only exist momentarily between start()'s INSERT
+    and _dispatch()'s thread flipping it to `running` — at process startup
+    no such in-flight call exists, so any `queued` row found here is
+    definitionally an orphan (the process crashed between those two
+    steps). An automated review caught that the original implementation
+    only checked `status == "running"`, so an orphaned `queued` row would
+    permanently block every future collection request with 409 (the
+    active-collection index treats queued the same as running) with no
+    process left able to recover it. Freshness/age doesn't matter for a
+    queued row — even one just inserted a second ago at startup is
+    orphaned by definition — and queued rows never get a heartbeat_at at
+    all, so there's no staleness window to wait out."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        orphaned_queued = WorkflowRun(
+            run_type="collection",
+            status="queued",
+            started_at=now,
+        )
+        session.add(orphaned_queued)
+        session.flush()
+        orphaned_id = orphaned_queued.id
+
+    recovered = workflow.recover_expired_leases()
+
+    assert recovered == [orphaned_id]
+    with db_manager.get_session() as session:
+        row = session.get(WorkflowRun, orphaned_id)
+        assert row.status == "interrupted"
+        assert row.error_code == "process_restarted"
+
+    # And the active-collection index no longer blocks a fresh start().
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    result = workflow.start(dry_run=True)
+    assert result.status == "started"
+
+
 def test_recover_expired_leases_is_scoped_to_collection_run_type(
     db_manager, workflow
 ) -> None:
