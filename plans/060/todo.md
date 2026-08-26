@@ -55,26 +55,34 @@ do not implement from this checklist alone.
 - [x] Replace the backend v1 smoke fixture with deterministic production-path v2.
       (Phase 2a.)
 - [ ] Inventory and human-review the 30 incomplete posts; invent no facts.
-      **Partial, further along**: Phase 2b Step 1 produced a
-      machine-drafted inventory (30/30 posts drafted). Step 2: the
-      operator commissioned an independent adversarial audit against real
-      sources (`phase-2b-corpus-cutover/inventory/adversarial-audit/`);
-      its findings were applied — 15 posts downgraded to
-      `schema_version: 1` (6 unreachable source, 9 body-level errors this
-      session found by independently checking the audit's findings
-      against the published bodies, not just the drafted metadata — worst
-      case, a fabricated quote attributed to a real NASA official,
-      corrected directly), and 15 posts had their v2 metadata corrected
-      per the audit's specific findings. **Still not checked**: no post
-      has `reviewed: true` — an AI-run audit, even a real-source-checking
-      one the operator directed, is evidence for the operator's review
-      per spec.md, not the review itself. Do not check this box until the
-      operator does their own pass. See
+      **Partial, further along, now two audit rounds deep**: Phase 2b
+      Step 1 produced a machine-drafted inventory (30/30 posts drafted).
+      Round 1: the operator commissioned an independent adversarial audit
+      against real sources
+      (`phase-2b-corpus-cutover/inventory/adversarial-audit/`); its
+      findings were applied — 15 posts downgraded to `schema_version: 1`
+      (6 unreachable source, 9 body-level errors this session found by
+      independently checking the audit's findings against the published
+      bodies, not just the drafted metadata — worst case, a fabricated
+      quote attributed to a real NASA official, corrected directly), and
+      15 posts had their v2 metadata corrected per the audit's specific
+      findings. Round 2: a second independent audit re-checked all 30
+      posts' metadata and body against real sources again
+      (`noticiencias/docs/audits/phase2b-second-independent-audit.md`);
+      14 of the 15 v2 posts and 5 more downgraded posts' bodies were
+      corrected, and 3 posts whose sources became reachable again were
+      promoted back to `schema_version: 2` — all independently
+      re-verified against real sources before merge (`noticiencias` PRs
+      #137/#138). **Still not checked**: no post has `reviewed: true` —
+      an AI-run audit, even two real-source-checking rounds the operator
+      directed, is evidence for the operator's review per spec.md, not
+      the review itself. Do not check this box until the operator does
+      their own pass. See
       `phase-2b-corpus-cutover/review/step2-review-outcomes.md`.
 - [ ] Reach zero strict editorial errors. **Mechanically achieved**:
       `STRICT_EDITORIAL=true node scripts/check-editorial-fields.js
-      --json` reports zero errors across the full corpus as of the
-      15+15 split above. **Left unchecked anyway**: this check only
+      --json` reports zero errors across the full corpus, now 19 v2 posts
+      after round 2's 3 promotions. **Left unchecked anyway**: this check only
       validates schema completeness (every v2 field present and
       shaped correctly), not that the content is verified — that's
       still gated on the human-review line above, per the master plan's

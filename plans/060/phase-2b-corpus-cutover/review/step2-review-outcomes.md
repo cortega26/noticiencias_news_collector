@@ -150,6 +150,57 @@ per-post findings:
    they've done their own pass (informed by, but not identical to, the
    audit this document is built on).
 
+## Round 2 (2026-08-26) — second independent audit, all 30 posts re-checked
+
+The operator commissioned a **second** independent audit — this time
+against the corpus as it stood after round 1 (commit `51074f0`), checking
+both frontmatter metadata **and full body text** of all 30 posts against
+their real `source_url`, using the prompt this session wrote for the
+purpose. Full report:
+[`noticiencias/docs/audits/phase2b-second-independent-audit.md`](https://github.com/cortega26/noticiencias/blob/main/docs/audits/phase2b-second-independent-audit.md).
+
+Before acting on it, Claude independently spot-verified 4 of the audit's
+highest-stakes findings directly against the cited sources (Rubin
+Observatory/3I-ATLAS detection order, a misattributed safety
+recommendation in the Moltbot post, a marine-species
+symbiosis/bioluminescence overclaim, and an Artemis III/Starship-exclusive
+lander claim) — all 4 confirmed accurate.
+
+**Two operator decisions governed this round:**
+- `why_it_matters`'s regional/policy framing is a legitimate engagement
+  field, not something requiring `fact_check`-level sourcing — audit
+  findings there were resolved with a light-touch hedge (reframe
+  unsupported specifics as explicit interpretation), not deletion.
+- The 3 posts downgraded in round 1 for "source unreachable" (electrides,
+  stratospheric internet/HAPS, Meta/YouTube legal post) had their sources
+  re-verified as reachable and clean — promoted back to `schema_version: 2`
+  after independently re-verifying every `fact_check`/`sources` claim
+  against the real source (the pre-existing machine draft was never
+  checked against a real source and was not trusted blindly; two real
+  errors were found and fixed in that process — a market-size unit error
+  and a test-timeline discrepancy).
+
+**Outcome, merged in `noticiencias` PR
+[#137](https://github.com/cortega26/noticiencias/pull/137)** (corrections)
+**and [#138](https://github.com/cortega26/noticiencias/pull/138)** (audit
+doc preserved): 14 of the 15 v2 posts corrected (one, guardería, was
+independently confirmed already accurate and left untouched — a genuine
+per-post read caught that not every audit-flagged item still needed a fix,
+e.g. Edison's flagged claim was already corrected in round 1), 5 of the 15
+downgraded posts got further body-text corrections (misattributed quotes,
+an overclaimed rotation-survival claim, an overclaimed refutation of the
+standard cosmological model, an unsupported data-rate figure, several
+SpaceX/NASA overclaims — independently re-verified against the real
+sources), and the 3 reachability-restored posts promoted to v2 as above.
+Two residual metadata/body inconsistencies the correcting agent correctly
+flagged but was scoped not to touch (two v1 posts' excerpts still carrying
+pre-correction framing) were closed directly before merge.
+
+Every file in both PRs was independently reviewed line-by-line against the
+audit and, for the highest-stakes items, against the real cited sources —
+not merely the correcting agent's self-report. `reviewed: false` remains
+on all 30 posts; still the operator's flag to set.
+
 ## Original next-steps note (superseded by Status above, kept for history)
 
 1. Commit the 15 downgrades as a discrete unit (this document + frontmatter changes).
