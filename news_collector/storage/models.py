@@ -523,21 +523,46 @@ class SystemConfig(Base):
 # publicación. Nada en el código actual las lee ni las escribe todavía
 # (eso es la Fase 3b) — esta fase solo define el esquema.
 
-WORKFLOW_RUN_STATUS_VALUES = ("running", "completed", "failed", "cancelled")
+# Plan 060 / Fase 4a: 'completed' se renombró a 'succeeded' (cero filas de
+# producción tenían ese valor al momento del cambio — la Fase 3a nunca llegó
+# a escribir en esta tabla, confirmado consultando data/news_v3.db) y se
+# agregaron 'queued' e 'interrupted'. La nueva migración de esta fase
+# (alembic/versions/*_extend_workflow_runs_durable_dispatch.py) es la dueña
+# de mantener esta tupla en paridad con models.py, igual que a4d9a4ba00aa lo
+# es para PUBLICATION_ATTEMPT_STATE_VALUES. La copia congelada en
+# effe4ec70d6d queda como snapshot histórico y no se toca.
+WORKFLOW_RUN_STATUS_VALUES = (
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "interrupted",
+)
 _WORKFLOW_RUN_STATUS_CHECK = "status IN ({})".format(
     ", ".join(f"'{v}'" for v in WORKFLOW_RUN_STATUS_VALUES)
 )
-# Valor "en curso" usado también por el índice único parcial de
-# "una sola colección activa" — debe ser el mismo valor en ambos lugares.
+# Valor "en curso" — sigue siendo el mismo valor único que antes de la Fase
+# 4a, sin cambios (no confundir con WORKFLOW_RUN_QUEUEABLE_STATUSES abajo).
 WORKFLOW_RUN_ACTIVE_STATUS = "running"
+# Conjunto de estados que bloquean una segunda colección concurrente: una
+# fila 'queued' (encolada pero aún no arrancada) debe bloquear tanto como
+# una 'running' — Plan 060 / Fase 4a, spec.md Design §1. Usado solo por la
+# condición del índice único parcial de abajo.
+WORKFLOW_RUN_QUEUEABLE_STATUSES = ("queued", WORKFLOW_RUN_ACTIVE_STATUS)
+_WORKFLOW_RUN_QUEUEABLE_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{v}'" for v in WORKFLOW_RUN_QUEUEABLE_STATUSES)
+)
 
 
 class WorkflowRun(Base):
     """Una fila por ejecución de pipeline (recolección, refinería, etc.).
 
-    Registro de linaje durable: nada en el código actual escribe aquí
-    todavía (eso llega en la Fase 3b, junto con el consumidor real del
-    índice único parcial "una sola colección activa" definido abajo).
+    Registro de linaje durable. Desde la Fase 4a, `CollectionRunWorkflow`
+    (`news_collector/logic/workflows/collection_run_workflow.py`) es el
+    único escritor real de esta tabla para `run_type='collection'` — ver
+    ese módulo para el ciclo de vida completo (queued → running →
+    succeeded/failed/cancelled/interrupted).
     """
 
     __tablename__ = "workflow_runs"
@@ -547,18 +572,37 @@ class WorkflowRun(Base):
     run_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
 
+    # Clave de idempotencia opcional provista por el llamador (o generada
+    # por el servidor) para el chequeo de single-flight — única junto con
+    # run_type solo mientras la fila está queued/running (ver el índice
+    # parcial abajo); una vez terminada la fila, la clave puede reusarse.
+    idempotency_key: Mapped[str | None] = mapped_column(String(255))
+
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Actualizado periódicamente mientras la fila está 'running' — una fila
+    # 'running' cuyo heartbeat_at es más viejo que el lease timeout (o NULL,
+    # nunca latió) es candidata a recuperación de lease expirado.
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Nombre no-reservado: "metadata" está reservado por Declarative
     # (ver el mismo patrón en Article.article_metadata más arriba).
     run_metadata: Mapped[Any | None] = mapped_column(JSON)
 
+    error_code: Mapped[str | None] = mapped_column(String(100))
+    error_detail: Mapped[str | None] = mapped_column(Text)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
@@ -566,17 +610,33 @@ class WorkflowRun(Base):
         CheckConstraint(_WORKFLOW_RUN_STATUS_CHECK, name="ck_workflow_runs_status"),
         Index("ix_workflow_runs_run_type", "run_type"),
         # "Una sola colección activa": único entre las filas que cumplen el
-        # predicado (run_type='collection' AND status=WORKFLOW_RUN_ACTIVE_STATUS).
-        # Entre esas filas run_type es siempre 'collection' (constante), así
-        # que el único sobre esa columna limita el conjunto filtrado a lo
-        # sumo 1 fila. Mismo patrón que uq_articles_content_hash en
+        # predicado (run_type='collection' AND status IN queueable). Entre
+        # esas filas run_type es siempre 'collection' (constante), así que
+        # el único sobre esa columna limita el conjunto filtrado a lo sumo 1
+        # fila. Ampliado en la Fase 4a de solo 'running' a 'queued'/'running'
+        # (una solicitud encolada pero aún no arrancada también debe
+        # bloquear). Mismo patrón que uq_articles_content_hash en
         # 2447e261ecf4_consolidate_refinery_schema.py.
         Index(
             "uq_workflow_runs_one_active_collection",
             "run_type",
             unique=True,
             sqlite_where=text(
-                f"run_type = 'collection' AND status = '{WORKFLOW_RUN_ACTIVE_STATUS}'"
+                f"run_type = 'collection' AND {_WORKFLOW_RUN_QUEUEABLE_STATUS_CHECK}"
+            ),
+        ),
+        # Idempotencia: dentro de un mismo run_type, una idempotency_key no
+        # puede repetirse mientras haya una fila queued/running con esa
+        # clave — un reintento con la misma clave debe toparse con la
+        # colección ya en curso en vez de arrancar una segunda. Una vez que
+        # la fila termina, la clave queda libre para el próximo run.
+        Index(
+            "uq_workflow_runs_idempotency_key_active",
+            "run_type",
+            "idempotency_key",
+            unique=True,
+            sqlite_where=text(
+                f"idempotency_key IS NOT NULL AND {_WORKFLOW_RUN_QUEUEABLE_STATUS_CHECK}"
             ),
         ),
     )

@@ -24,16 +24,23 @@ Failure modes:
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import contextlib
 import hmac
-import itertools
 import os
-import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from dateutil import parser as date_parser
 from fastapi import (
@@ -44,6 +51,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Response,
     UploadFile,
     status,
 )
@@ -76,6 +84,7 @@ from news_collector.contracts.admin import (
     AdminMutationResult,
     AdminPromptsEnvelope,
     AdminRejectRequest,
+    AdminRunStatus,
     AdminSourceHealthEnvelope,
     AdminSourceListEnvelope,
     AdminSourceListItem,
@@ -83,6 +92,9 @@ from news_collector.contracts.admin import (
     AdminSourceUpsert,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
+from news_collector.logic.workflows.collection_run_workflow import (
+    CollectionRunWorkflow,
+)
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
@@ -100,13 +112,6 @@ ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
 _ADMIN_VALID_STATUSES = frozenset(
     {"new", "pending", "publishing", "rejected", "completed"}
 )
-
-# In-memory registry of collection runs (Phase 3). Module-level dict guarded
-# by a lock — same pattern the plan-038 metrics store uses; no new class.
-_admin_run_lock = threading.Lock()
-_admin_runs: Dict[str, Dict[str, Any]] = {}
-_admin_run_counter = itertools.count(1)
-_latest_run_id: Optional[str] = None
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator
@@ -480,7 +485,28 @@ def create_app(  # noqa: C901
     """Create a configured FastAPI application."""
 
     db_manager = database_manager or get_database_manager()
-    app = FastAPI(title="Noticiencias API", version="1.0.0")
+    collection_run_workflow = CollectionRunWorkflow(db_manager)
+
+    @contextlib.asynccontextmanager
+    async def _lifespan(_app: FastAPI):
+        # Plan 060 / Phase 4a: restart recovery is deterministic, not
+        # timer-dependent — the only process that could be holding a stale
+        # "running" lease is the one that just (re)started, so this runs
+        # once here rather than on a periodic schedule. This is the first
+        # process-startup hook this codebase has needed at all (checked:
+        # no `@app.on_event`/`lifespan` precedent exists anywhere in the
+        # repo) — `lifespan` is the current, non-deprecated FastAPI
+        # mechanism for it.
+        recovered = collection_run_workflow.recover_expired_leases()
+        if recovered:
+            logger.warning(
+                "Startup: recovered {} stale collection run(s): {}",
+                len(recovered),
+                recovered,
+            )
+        yield
+
+    app = FastAPI(title="Noticiencias API", version="1.0.0", lifespan=_lifespan)
 
     # Phase 2: the Refinery admin GUI is a separate static app; allow its
     # origin(s) to call the admin surface cross-origin. Explicit allowlist
@@ -1074,107 +1100,35 @@ def create_app(  # noqa: C901
         )
 
     # ------------------------------------------------------------------
-    # Phase 3: operational surface (fetch/reprocess/manage)
+    # Phase 3/4a: operational surface (fetch/reprocess/manage)
     # ------------------------------------------------------------------
-
-    def _prune_collect_runs() -> None:
-        """Keep only the two most recent runs in the registry (bounded
-        memory for a long-lived server). Caller must hold the lock."""
-        if len(_admin_runs) <= 2:
-            return
-        for stale_id in sorted(_admin_runs, key=lambda rid: int(rid.split("-")[1]))[
-            : len(_admin_runs) - 2
-        ]:
-            _admin_runs.pop(stale_id, None)
-
-    def _start_collect_run(
-        dry_run: bool,
-    ) -> str:
-        """Run a collection cycle in a daemon thread; returns the run id.
-
-        Recency is tracked explicitly — never ``max()`` over the dict,
-        because run ids are strings and lexicographic max breaks past
-        ``collect-9``.
-        """
-        global _admin_run_counter, _latest_run_id
-        with _admin_run_lock:
-            run_number = next(_admin_run_counter)
-            run_id = f"collect-{run_number}"
-            _admin_runs[run_id] = {
-                "run_id": run_id,
-                "status": "queued",
-                "started_at": None,
-                "finished_at": None,
-                "error": None,
-                "summary": {},
-                "dry_run": dry_run,
-            }
-            _latest_run_id = run_id
-            _prune_collect_runs()
-
-        def _run() -> None:
-            with _admin_run_lock:
-                if run_id not in _admin_runs:
-                    return  # pruned while queued — nothing to report
-                _admin_runs[run_id]["status"] = "running"
-                _admin_runs[run_id]["started_at"] = datetime.now(
-                    timezone.utc
-                ).isoformat()
-            try:
-                from news_collector.system import create_system
-
-                system = create_system()
-                if not system.initialize():
-                    raise RuntimeError("System initialization failed")
-
-                async def _cycle():
-                    try:
-                        summary = await system.run_collection_cycle(dry_run=dry_run)
-                        if not dry_run:
-                            await asyncio.to_thread(
-                                system.export_latest_articles,
-                                file_path="data/exports/latest_articles.json",
-                                limit=50,
-                            )
-                        return summary
-                    finally:
-                        await system.shutdown()
-
-                summary = asyncio.run(_cycle())
-                with _admin_run_lock:
-                    # The record may have been pruned while this run was
-                    # executing (registry is bounded) — that's fine, the
-                    # status is no longer queryable.
-                    if run_id in _admin_runs:
-                        _admin_runs[run_id]["status"] = "succeeded"
-                        _admin_runs[run_id]["summary"] = summary or {}
-            except Exception as exc:  # pragma: no cover - failure path
-                logger.error("Collection run {} failed: {}", run_id, exc)
-                with _admin_run_lock:
-                    if run_id in _admin_runs:
-                        _admin_runs[run_id]["status"] = "failed"
-                        _admin_runs[run_id]["error"] = str(exc)
-            finally:
-                with _admin_run_lock:
-                    if run_id in _admin_runs:
-                        _admin_runs[run_id]["finished_at"] = datetime.now(
-                            timezone.utc
-                        ).isoformat()
-
-        threading.Thread(target=_run, daemon=True, name=run_id).start()
-        return run_id
+    # Plan 060 / Phase 4a: these two routes are now thin wrappers around
+    # CollectionRunWorkflow (news_collector/logic/workflows/
+    # collection_run_workflow.py) — request parsing, typed-result-to-HTTP-
+    # status mapping, response mapping, nothing else. The `workflow_runs`
+    # DB row is the only source of truth; no module-global run state.
 
     @app.post("/v1/admin/collect", response_model=AdminCollectStarted)
     def admin_collect(
         payload: AdminCollectRequest,
+        response: Response,
         _: None = Depends(verify_admin_token),
     ) -> AdminCollectStarted:
         """Start a collection cycle (async). Dry-run simulates without
         persisting — used by the GUI's fetch-news action and its dry-run
-        toggle."""
-        run_id = _start_collect_run(dry_run=payload.dry_run)
+        toggle. Two concurrent calls yield exactly one 202 (started) and
+        one 409 (already_running, carrying the existing run's id)."""
+        result = collection_run_workflow.start(dry_run=payload.dry_run)
+        if result.status == "already_running":
+            response.status_code = status.HTTP_409_CONFLICT
+            return AdminCollectStarted(
+                run_id=str(result.run_id),
+                status="running",
+                detail=result.detail,
+            )
+        response.status_code = status.HTTP_202_ACCEPTED
         return AdminCollectStarted(
-            run_id=run_id,
+            run_id=str(result.run_id),
             status="queued",
             detail=(
                 "Collection started (dry-run)"
@@ -1185,28 +1139,49 @@ def create_app(  # noqa: C901
 
     @app.get("/v1/admin/collect/status", response_model=AdminCollectStatus)
     def admin_collect_status(
+        response: Response,
         run_id: Optional[str] = Query(None, alias="run_id"),
         _: None = Depends(verify_admin_token),
     ) -> AdminCollectStatus:
-        """Return the most recent run (or the named one via ?run_id=)."""
-        global _latest_run_id
-        with _admin_run_lock:
-            target = run_id if run_id and run_id in _admin_runs else None
-            if target is None:
-                target = _latest_run_id if _latest_run_id in _admin_runs else None
-            if target is None:
-                return AdminCollectStatus()
-            run = _admin_runs[target]
-            active = run["status"] in ("queued", "running")
-            return AdminCollectStatus(
-                run_id=run["run_id"],
-                status=run["status"],
-                started_at=run["started_at"],
-                finished_at=run["finished_at"],
-                error=run["error"],
-                summary=run["summary"],
-                active=active,
-            )
+        """Return the most recent collection run (or the named one via
+        ?run_id=). An unrecognized run_id returns 404 — it never falls
+        back to the latest run."""
+        parsed_run_id: Optional[int] = None
+        if run_id is not None:
+            try:
+                parsed_run_id = int(run_id)
+            except ValueError:
+                parsed_run_id = None
+                if run_id:
+                    # Non-numeric run_id can never match a workflow_runs.id
+                    # — same "unrecognized id" outcome as a numeric id that
+                    # doesn't exist, not a 422 (the caller just gets a 404).
+                    response.status_code = status.HTTP_404_NOT_FOUND
+                    return AdminCollectStatus()
+
+        result = collection_run_workflow.get_status(parsed_run_id)
+        if result.status == "not_found":
+            if parsed_run_id is not None:
+                response.status_code = status.HTTP_404_NOT_FOUND
+            return AdminCollectStatus()
+
+        # Invariant: get_status() only sets status="found" alongside a
+        # populated run_status (see CollectionRunStatusResult), and its
+        # value always comes from workflow_runs.status, which
+        # ck_workflow_runs_status constrains to exactly AdminRunStatus's
+        # members — cast documents that DB-enforced invariant for the type
+        # checker rather than widening AdminRunStatus's own literal type.
+        assert result.run_status is not None
+        active = result.run_status in ("queued", "running")
+        return AdminCollectStatus(
+            run_id=str(result.run_id),
+            status=cast(AdminRunStatus, result.run_status),
+            started_at=result.started_at.isoformat() if result.started_at else None,
+            finished_at=result.finished_at.isoformat() if result.finished_at else None,
+            error=result.error_detail,
+            summary=result.summary,
+            active=active,
+        )
 
     @app.post(
         "/v1/admin/articles/{article_id}/reprocess",

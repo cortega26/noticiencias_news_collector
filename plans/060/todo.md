@@ -159,15 +159,29 @@ verification added on top, per spec.md's header.
 
 ### Phase 4 — collection and source workflows
 
-- [ ] Add the durable `CollectionRunWorkflow` and lease/restart recovery.
-- [ ] Return typed 409 for a second active collection; named unknown status is
-      404.
-- [ ] Add terminal-only 90-day retention.
+Split into phase-4a (collection-run half, below) and phase-4b (source-catalog
+half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
+
+- [x] Add the durable `CollectionRunWorkflow` and lease/restart recovery.
+      (Phase 4a — `news_collector/logic/workflows/collection_run_workflow.py`;
+      `recover_expired_leases()` wired into a new FastAPI `lifespan` hook in
+      `serving/api.py`'s `create_app()`, the first process-startup hook this
+      codebase has needed at all.)
+- [x] Return typed 409 for a second active collection; named unknown status is
+      404. (Phase 4a — `admin_collect`/`admin_collect_status` are now thin
+      wrappers around `CollectionRunWorkflow`; the module-global
+      `_admin_runs`/`_admin_run_lock`/`_admin_run_counter`/`_latest_run_id`/
+      `_prune_collect_runs` state is deleted outright, no dual-write.)
+- [x] Add terminal-only 90-day retention. (Phase 4a —
+      `scripts/ops/prune_workflow_runs.py`, on-demand ops script following
+      `scripts/ops/purge_short_articles.py`'s shape; `queued`/`running` rows
+      are never eligible regardless of age.)
 - [ ] Add atomic/locked `SourceCatalogWorkflow` with compensation and visible
-      reconciliation failure.
-- [ ] Batch source circuit-state reads.
+      reconciliation failure. (Phase 4b — not started.)
+- [ ] Batch source circuit-state reads. (Phase 4b — not started.)
 - [ ] Move workflow coordination out of HTTP routes and add concurrency/failure
-      tests.
+      tests. (Collection-run half done in Phase 4a; the source-catalog half
+      of this bullet is Phase 4b — not started.)
 
 ### Phase 5 — callback reconciliation and truthful health
 

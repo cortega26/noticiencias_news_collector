@@ -139,7 +139,9 @@ class AdminCollectRequest(BaseModel):
     dry_run: bool = False
 
 
-AdminRunStatus = Literal["queued", "running", "succeeded", "failed"]
+AdminRunStatus = Literal[
+    "queued", "running", "succeeded", "failed", "cancelled", "interrupted"
+]
 
 
 class AdminCollectStatus(BaseModel):

@@ -12,7 +12,6 @@ import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from itertools import count as itertools_count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -22,7 +21,7 @@ from fastapi.testclient import TestClient
 
 from news_collector.serving import create_app
 from news_collector.storage.database import DatabaseManager
-from news_collector.storage.models import Article, ScoreLog, Source
+from news_collector.storage.models import Article, ScoreLog, Source, WorkflowRun
 
 pytestmark = pytest.mark.e2e
 
@@ -733,9 +732,12 @@ def test_admin_collect_starts_and_status_lifecycle(
         response = api_client.post(
             "/v1/admin/collect", json={"dry_run": True}, headers=_admin_headers()
         )
-        assert response.status_code == 200
+        # Plan 060 / Phase 4a: a started run is 202, not 200 — and run_id
+        # is now the workflow_runs row's own (stringified) integer id, not
+        # a "collect-N" in-memory counter.
+        assert response.status_code == 202
         body = response.json()
-        assert body["run_id"].startswith("collect-")
+        assert body["run_id"].isdigit()
         assert body["status"] == "queued"
 
         assert started.wait(timeout=10), "collection thread never started"
@@ -744,6 +746,7 @@ def test_admin_collect_starts_and_status_lifecycle(
             "/v1/admin/collect/status", headers=_admin_headers()
         ).json()
         assert status["status"] == "running"
+        assert status["run_id"] == body["run_id"]
 
         release.set()
         # The thread finishes async; poll until done.
@@ -756,6 +759,143 @@ def test_admin_collect_starts_and_status_lifecycle(
             time.sleep(0.1)
         assert status["status"] == "succeeded"
         assert status["summary"].get("sources_processed") == 3
+
+
+def test_admin_collect_concurrent_start_yields_one_202_one_409(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """Two collect requests while one is already queued/running must yield
+    exactly one 202 (started) and one 409 (already_running, carrying the
+    existing run's id in the body) — the master plan's acceptance
+    criterion this phase exists to satisfy. The two calls are issued
+    sequentially (not spawned as literal OS threads): the first call's
+    INSERT commits — durably, before its dispatch thread starts, which is
+    this phase's actual durability fix — before the second call's INSERT
+    is attempted, so the second call deterministically hits
+    `uq_workflow_runs_one_active_collection`. This exercises the identical
+    DB-level single-flight enforcement true concurrent requests would hit;
+    it does not depend on wall-clock thread interleaving."""
+    import threading as _threading
+
+    release = _threading.Event()
+
+    class _FakeSystem:
+        def initialize(self) -> bool:
+            return True
+
+        async def run_collection_cycle(self, dry_run: bool = False):
+            release.wait(timeout=10)
+            return {"status": "ok"}
+
+        async def shutdown(self):
+            return None
+
+        def export_latest_articles(self, file_path=None, limit=50):
+            return {}
+
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: _FakeSystem()
+    )
+
+    try:
+        with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+            first = api_client.post(
+                "/v1/admin/collect", json={"dry_run": True}, headers=_admin_headers()
+            )
+            second = api_client.post(
+                "/v1/admin/collect", json={"dry_run": True}, headers=_admin_headers()
+            )
+    finally:
+        release.set()
+
+    statuses = sorted([first.status_code, second.status_code])
+    assert statuses == [202, 409]
+    started = first if first.status_code == 202 else second
+    conflicted = second if first.status_code == 202 else first
+    assert conflicted.json()["status"] == "running"
+    assert conflicted.json()["run_id"] == started.json()["run_id"]
+
+
+def test_admin_collect_status_unknown_run_id_returns_404_not_latest(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """An unrecognized run_id must return 404 and must never fall back to
+    the latest run — the exact bug this phase fixes
+    (pre-Phase-4a: `target = run_id if run_id in _admin_runs else None`
+    fell through to `_latest_run_id` on any miss, returning 200 with the
+    wrong run's status)."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="collection",
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+            )
+        )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/collect/status",
+            params={"run_id": "999999"},
+            headers=_admin_headers(),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["run_id"] is None
+
+
+def test_admin_collect_status_non_numeric_run_id_returns_404(
+    api_client: TestClient,
+) -> None:
+    """A non-numeric run_id (e.g. the pre-Phase-4a "collect-N" format) can
+    never match a workflow_runs.id — also 404, not a validation error."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/collect/status",
+            params={"run_id": "collect-5"},
+            headers=_admin_headers(),
+        )
+    assert response.status_code == 404
+
+
+def test_admin_collect_restart_recovers_stale_running_row_to_interrupted(
+    db_manager: DatabaseManager,
+) -> None:
+    """A process restart (simulated by constructing a fresh app and
+    entering it as `with TestClient(app) as client:` — which actually
+    triggers FastAPI's `lifespan` startup hook, unlike the bare
+    `TestClient(app)` the shared `api_client` fixture uses, verified
+    empirically not to run lifespan at all) deterministically recovers a
+    stale `running` row to `interrupted` — not timer-dependent, exercised
+    through the real app-startup boundary rather than by calling
+    `CollectionRunWorkflow.recover_expired_leases()` directly."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        stale = WorkflowRun(
+            run_type="collection",
+            status="running",
+            started_at=now - timedelta(hours=3),
+            heartbeat_at=None,  # never heartbeat once — e.g. crashed immediately
+        )
+        session.add(stale)
+        session.flush()
+        stale_id = stale.id
+
+    app = create_app(database_manager=db_manager)
+    with TestClient(app) as client:
+        with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+            response = client.get(
+                "/v1/admin/collect/status",
+                params={"run_id": str(stale_id)},
+                headers=_admin_headers(),
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "interrupted"
+    assert body["active"] is False
 
 
 def test_admin_sources_list_toggle_reset(
@@ -998,63 +1138,51 @@ def test_admin_config_partial_patch_merges(
     assert "[database]" in saved
 
 
-def test_admin_collect_latest_run_past_nine_and_registry_bounded(
-    api_client: TestClient, monkeypatch
+def test_admin_collect_status_uses_true_recency_not_lexical_order(
+    api_client: TestClient, db_manager: DatabaseManager
 ) -> None:
-    """Regression: run-id recency must not use lexicographic max (breaks at
-    collect-10 < collect-9), and the registry must stay bounded."""
-    import threading as _threading
+    """Regression (Plan 060 / Phase 4a): recency must reflect true
+    chronological/id order, not a lexicographic string comparison — the
+    pre-Phase-4a bug this test used to guard against was "collect-10" <
+    "collect-9" under `str.split("-")` + lexicographic max. `run_id` is now
+    a DB autoincrement integer (see CollectionRunWorkflow.get_status),
+    so ordering by it (or started_at) is correct by construction — proven
+    here by actually crossing the two-digit id boundary, not just assumed.
 
-    import news_collector.serving.api as serving_api
-
-    release = _threading.Event()
-
-    class _FakeSystem:
-        def initialize(self) -> bool:
-            return True
-
-        async def run_collection_cycle(self, dry_run: bool = False):
-            release.wait(timeout=10)
-            return {"status": "ok"}
-
-        async def shutdown(self):
-            return None
-
-        def export_latest_articles(self, file_path=None, limit=50):
-            return {}
-
-    monkeypatch.setattr(
-        "news_collector.system.create_system", lambda *a, **k: _FakeSystem()
-    )
-    # Start counter at 8 so the 11th run id would be collect-11.
-    monkeypatch.setattr(serving_api, "_admin_run_counter", itertools_count(8))
-    monkeypatch.setattr(serving_api, "_admin_runs", {})
-    monkeypatch.setattr(serving_api, "_latest_run_id", None)
-
-    started_ids = []
-    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
-        for _ in range(11):
-            resp = api_client.post(
-                "/v1/admin/collect",
-                json={"dry_run": True},
-                headers=_admin_headers(),
+    The old "registry bounded to 2 most recent runs" concern this test used
+    to also cover no longer applies: the module-global bounded dict
+    (`_admin_runs`/`_prune_collect_runs`) is deleted outright. Retention is
+    now the terminal-only 90-day cleanup (Design §4) — unbounded by count,
+    and provably never touches active rows — see
+    tests/unit/storage/test_prune_workflow_runs.py.
+    """
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        for i in range(11):
+            session.add(
+                WorkflowRun(
+                    run_type="collection",
+                    status="succeeded",
+                    started_at=now + timedelta(seconds=i),
+                    finished_at=now + timedelta(seconds=i),
+                )
             )
-            assert resp.status_code == 200
-            started_ids.append(resp.json()["run_id"])
 
-    assert started_ids[-1] == "collect-18"  # counter(8) + 11 runs
+    with db_manager.get_session() as session:
+        latest_id = (
+            session.query(WorkflowRun.id)
+            .order_by(WorkflowRun.started_at.desc(), WorkflowRun.id.desc())
+            .first()[0]
+        )
+    # Crossed the two-digit boundary the old lexicographic bug tripped on.
+    assert latest_id >= 10
 
-    # Latest run is the one just started (numeric recency, not lexical).
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         status = api_client.get(
             "/v1/admin/collect/status", headers=_admin_headers()
         ).json()
-    assert status["run_id"] == "collect-18"
 
-    # Registry is bounded to the 2 most recent runs.
-    assert set(serving_api._admin_runs.keys()) == {"collect-17", "collect-18"}
-
-    release.set()
+    assert status["run_id"] == str(latest_id)
 
 
 def test_admin_prompts_save_is_atomic(
