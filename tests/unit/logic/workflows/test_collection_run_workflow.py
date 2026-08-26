@@ -13,7 +13,9 @@ tests the workflow class's own state machine, not the collection pipeline
 it dispatches.
 """
 
+import threading
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 
@@ -85,7 +87,7 @@ def test_complete_after_running_transition_records_summary(
     db_manager, workflow, monkeypatch
 ) -> None:
     monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
-    result = workflow.start(dry_run=False)
+    result = workflow.start(dry_run=True)
     assert workflow._transition(
         result.run_id, from_status="queued", to_status="running"
     )
@@ -96,6 +98,15 @@ def test_complete_after_running_transition_records_summary(
     assert status.run_status == "succeeded"
     assert status.summary == {"sources_processed": 3}
     assert status.finished_at is not None
+
+    # complete() must merge into run_metadata, not replace it — the
+    # request payload start() wrote (dry_run) must survive alongside the
+    # success summary (spec.md Design §1: run_metadata is the catch-all
+    # for "the run's request payload and success summary", both).
+    with db_manager.get_session() as session:
+        row = session.get(WorkflowRun, result.run_id)
+        assert row.run_metadata["dry_run"] is True
+        assert row.run_metadata["summary"] == {"sources_processed": 3}
 
 
 def test_fail_records_error_code_and_detail(db_manager, workflow, monkeypatch) -> None:
@@ -195,9 +206,11 @@ def test_get_status_ignores_non_collection_run_types_for_latest(
     assert result.run_status == "succeeded"
 
 
-def test_recover_expired_leases_transitions_stale_running_rows(
+def test_recover_expired_leases_transitions_stale_running_collection_rows(
     db_manager, workflow
 ) -> None:
+    """Stale 'collection' rows (NULL or expired heartbeat) are recovered
+    to 'interrupted'; a fresh 'collection' row is left alone."""
     now = datetime.now(timezone.utc)
     with db_manager.get_session() as session:
         stale_null = WorkflowRun(
@@ -206,33 +219,42 @@ def test_recover_expired_leases_transitions_stale_running_rows(
             started_at=now - timedelta(hours=2),
             heartbeat_at=None,
         )
-        stale_old = WorkflowRun(
-            run_type="refinery",
-            status="running",
-            started_at=now - timedelta(hours=2),
-            heartbeat_at=now - timedelta(hours=1),
-        )
-        # A different run_type: uq_workflow_runs_one_active_collection only
-        # scopes run_type='collection', so a second 'collection' row here
-        # would itself be rejected by that index — not what this test is
-        # about (it only cares whether recovery respects heartbeat
-        # freshness, across run_types).
-        fresh = WorkflowRun(
-            run_type="editorial", status="running", started_at=now, heartbeat_at=now
-        )
-        session.add_all([stale_null, stale_old, fresh])
+        session.add(stale_null)
         session.flush()
         stale_null_id = stale_null.id
-        stale_old_id = stale_old.id
-        fresh_id = fresh.id
 
     recovered = workflow.recover_expired_leases()
 
-    assert sorted(recovered) == sorted([stale_null_id, stale_old_id])
+    assert recovered == [stale_null_id]
     with db_manager.get_session() as session:
         assert session.get(WorkflowRun, stale_null_id).status == "interrupted"
-        assert session.get(WorkflowRun, stale_old_id).status == "interrupted"
-        assert session.get(WorkflowRun, fresh_id).status == "running"
+
+
+def test_recover_expired_leases_is_scoped_to_collection_run_type(
+    db_manager, workflow
+) -> None:
+    """A stale 'running' row belonging to a *different* run_type must be
+    left untouched — CollectionRunWorkflow.recover_expired_leases() must
+    not reach into another subsystem's workflow_runs rows just because
+    they share the table (deliberate, same scoping as get_status's
+    "latest run" lookup — see the method's own docstring)."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        other_stale = WorkflowRun(
+            run_type="refinery",
+            status="running",
+            started_at=now - timedelta(hours=2),
+            heartbeat_at=None,
+        )
+        session.add(other_stale)
+        session.flush()
+        other_stale_id = other_stale.id
+
+    recovered = workflow.recover_expired_leases()
+
+    assert recovered == []
+    with db_manager.get_session() as session:
+        assert session.get(WorkflowRun, other_stale_id).status == "running"
 
 
 def test_recover_expired_leases_is_idempotent(db_manager, workflow) -> None:
@@ -251,3 +273,164 @@ def test_recover_expired_leases_is_idempotent(db_manager, workflow) -> None:
     second = workflow.recover_expired_leases()
     assert len(first) == 1
     assert second == []
+
+
+def test_recover_expired_leases_excludes_a_row_that_loses_the_cas_race(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """A stale row selected as a recovery candidate but that loses the
+    CAS race before the UPDATE fires (running -> interrupted misses, e.g.
+    it transitioned away in between) must not appear in the returned
+    list — `_transition`'s False return is a real, exercised path here,
+    not just a theoretical one."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        stale = WorkflowRun(
+            run_type="collection",
+            status="running",
+            started_at=now - timedelta(hours=2),
+            heartbeat_at=None,
+        )
+        session.add(stale)
+        session.flush()
+        stale_id = stale.id
+
+    monkeypatch.setattr(workflow, "_transition", lambda *a, **k: False)
+
+    recovered = workflow.recover_expired_leases()
+
+    assert recovered == []
+    with db_manager.get_session() as session:
+        # _transition was faked out, so the row's real status is untouched.
+        assert session.get(WorkflowRun, stale_id).status == "running"
+
+
+# ---------------------------------------------------------------------------
+# _run / _heartbeat_loop — the background-thread execution path `start()`
+# dispatches to. Every other test in this file monkeypatches `_dispatch` to
+# a no-op; these call `_run`/`_heartbeat_loop` directly (synchronously, not
+# via `threading.Thread`) with a fake `news_collector.system.create_system`,
+# matching the pattern tests/test_serving_admin_api.py's collect tests use.
+# ---------------------------------------------------------------------------
+
+
+class _FakeSystem:
+    def __init__(self, *, initialize_ok=True, cycle_result=None, cycle_error=None):
+        self._initialize_ok = initialize_ok
+        self._cycle_result = cycle_result if cycle_result is not None else {}
+        self._cycle_error = cycle_error
+        self.export_called = False
+        self.shutdown_called = False
+
+    def initialize(self) -> bool:
+        return self._initialize_ok
+
+    async def run_collection_cycle(self, dry_run: bool = False):
+        if self._cycle_error is not None:
+            raise self._cycle_error
+        return self._cycle_result
+
+    async def shutdown(self):
+        self.shutdown_called = True
+
+    def export_latest_articles(self, file_path=None, limit=50):
+        self.export_called = True
+        return {}
+
+
+def test_run_completes_and_exports_when_not_dry_run(
+    db_manager, workflow, monkeypatch
+) -> None:
+    fake = _FakeSystem(cycle_result={"sources_processed": 5})
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: fake, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    result = workflow.start(dry_run=False)
+
+    workflow._run(result.run_id, False)
+
+    assert fake.export_called is True
+    assert fake.shutdown_called is True
+    status = workflow.get_status(result.run_id)
+    assert status.run_status == "succeeded"
+    assert status.summary == {"sources_processed": 5}
+
+
+def test_run_skips_export_when_dry_run(db_manager, workflow, monkeypatch) -> None:
+    fake = _FakeSystem(cycle_result={"ok": True})
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: fake, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    result = workflow.start(dry_run=True)
+
+    workflow._run(result.run_id, True)
+
+    assert fake.export_called is False
+    status = workflow.get_status(result.run_id)
+    assert status.run_status == "succeeded"
+
+
+def test_run_fails_when_system_initialize_returns_false(
+    db_manager, workflow, monkeypatch
+) -> None:
+    fake = _FakeSystem(initialize_ok=False)
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: fake, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    result = workflow.start(dry_run=False)
+
+    workflow._run(result.run_id, False)
+
+    status = workflow.get_status(result.run_id)
+    assert status.run_status == "failed"
+    assert status.error_code == "collection_failed"
+    assert "System initialization failed" in status.error_detail
+
+
+def test_run_returns_early_when_queued_to_running_transition_fails(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """If the row is no longer `queued` by the time `_run` fires (e.g. it
+    was already recovered/cancelled), `_run` must not call into the
+    collection system at all."""
+    create_system_calls: list[Any] = []
+    monkeypatch.setattr(
+        "news_collector.system.create_system",
+        lambda *a, **k: create_system_calls.append(1),
+        raising=False,
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    result = workflow.start(dry_run=False)
+    # Force the row out of 'queued' before _run gets to it.
+    assert workflow._transition(
+        result.run_id, from_status="queued", to_status="cancelled"
+    )
+
+    workflow._run(result.run_id, False)
+
+    assert create_system_calls == []
+    status = workflow.get_status(result.run_id)
+    assert status.run_status == "cancelled"  # untouched by _run
+
+
+def test_heartbeat_loop_stops_promptly_when_heartbeat_returns_false(
+    db_manager, monkeypatch
+) -> None:
+    # A fresh, short-lease workflow: the loop's tick interval is
+    # max(1, lease_timeout_seconds // 3), so lease_timeout_seconds=1 gives
+    # the fastest achievable 1-second tick — fast enough for a test, and
+    # independent of the shared `workflow` fixture's 60s lease.
+    short_lease_workflow = CollectionRunWorkflow(db_manager, lease_timeout_seconds=1)
+    monkeypatch.setattr(short_lease_workflow, "heartbeat", lambda run_id: False)
+    stop = threading.Event()
+    thread = threading.Thread(
+        target=short_lease_workflow._heartbeat_loop, args=(1, stop)
+    )
+
+    thread.start()
+    thread.join(timeout=5)
+
+    assert not thread.is_alive()  # returned on its own, stop was never set

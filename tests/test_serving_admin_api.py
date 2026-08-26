@@ -1335,6 +1335,21 @@ def test_admin_bulk_reset_reports_per_item(api_client: TestClient, monkeypatch) 
         assert "succeeded" in body["summary"]
 
 
+def test_admin_bulk_reset_all_whitespace_ids_returns_422(
+    api_client: TestClient,
+) -> None:
+    """AdminBulkResetRequest._ids_non_empty must reject a refinery_ids list
+    that strips down to nothing (all blank/whitespace entries) — the one
+    validation branch this contract has, otherwise never exercised."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/content/bulk-reset",
+            json={"refinery_ids": ["   ", ""]},
+            headers=_admin_headers(),
+        )
+    assert response.status_code == 422
+
+
 def test_admin_image_brief_update_roundtrip(
     api_client: TestClient, tmp_path, monkeypatch
 ) -> None:

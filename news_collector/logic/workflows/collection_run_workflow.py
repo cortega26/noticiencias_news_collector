@@ -298,14 +298,43 @@ class CollectionRunWorkflow:
             return bool(result.rowcount == 1)
 
     def complete(self, run_id: int, *, summary: dict[str, Any]) -> bool:
-        """CAS transition running -> succeeded."""
-        return self._transition(
-            run_id,
-            from_status="running",
-            to_status="succeeded",
-            finished_at=datetime.now(timezone.utc),
-            run_metadata={"summary": summary},
-        )
+        """CAS transition running -> succeeded.
+
+        Merges `summary` into the row's *existing* `run_metadata` (set by
+        `start()` to the request payload, e.g. `{"dry_run": ...}`) rather
+        than replacing it — spec.md Design §1 is explicit that
+        `run_metadata` "stays as the catch-all for the run's request
+        payload and success summary", both, not summary only. A plain
+        `_transition(..., run_metadata={"summary": summary})` would
+        silently drop `dry_run` on every successful run while `fail()`
+        (which never touches `run_metadata`) leaves it — an accidental,
+        confusing asymmetry this avoids.
+        """
+        with self._db.get_session() as session:
+            row = session.get(WorkflowRun, run_id)
+            existing_metadata = (
+                row.run_metadata
+                if row is not None and isinstance(row.run_metadata, dict)
+                else {}
+            )
+            result = session.execute(
+                update(WorkflowRun)
+                .where(WorkflowRun.id == run_id, WorkflowRun.status == "running")
+                .values(
+                    status="succeeded",
+                    updated_at=datetime.now(timezone.utc),
+                    finished_at=datetime.now(timezone.utc),
+                    run_metadata={**existing_metadata, "summary": summary},
+                )
+            )
+            updated = bool(result.rowcount == 1)
+            if not updated:
+                logger.info(
+                    "CAS miss transitioning workflow run {} (running -> "
+                    "succeeded): already transitioned or nonexistent.",
+                    run_id,
+                )
+            return updated
 
     def fail(self, run_id: int, *, error_code: str, error_detail: str) -> bool:
         """CAS transition running -> failed."""
@@ -323,9 +352,20 @@ class CollectionRunWorkflow:
     # ------------------------------------------------------------------
 
     def recover_expired_leases(self) -> list[int]:
-        """Find every `running` row whose `heartbeat_at` is older than the
-        lease timeout (or NULL — started but never heartbeat once, e.g.
-        crashed immediately) and CAS-transition each to `interrupted`.
+        """Find every `running` `run_type='collection'` row whose
+        `heartbeat_at` is older than the lease timeout (or NULL — started
+        but never heartbeat once, e.g. crashed immediately) and
+        CAS-transition each to `interrupted`.
+
+        Scoped to `run_type='collection'` deliberately, same as
+        `get_status`'s "latest run" lookup: this is a
+        `CollectionRunWorkflow`, and it must not reach into other
+        subsystems' `workflow_runs` rows (e.g. a future refinery-run
+        writer) just because they happen to share this table. Today that
+        scoping is inert — nothing else writes `workflow_runs` yet — but
+        it stops this class from silently interrupting another
+        subsystem's in-flight row the moment something else starts
+        writing here.
 
         Called once at process startup (this phase's answer to "restart
         recovery is deterministic") — not on a timer, since the only
@@ -340,6 +380,7 @@ class CollectionRunWorkflow:
             stale_ids = (
                 session.execute(
                     select(WorkflowRun.id).where(
+                        WorkflowRun.run_type == RUN_TYPE_COLLECTION,
                         WorkflowRun.status == "running",
                         (WorkflowRun.heartbeat_at.is_(None))
                         | (WorkflowRun.heartbeat_at < cutoff),

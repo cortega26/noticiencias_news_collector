@@ -1108,7 +1108,17 @@ def create_app(  # noqa: C901
     # status mapping, response mapping, nothing else. The `workflow_runs`
     # DB row is the only source of truth; no module-global run state.
 
-    @app.post("/v1/admin/collect", response_model=AdminCollectStarted)
+    @app.post(
+        "/v1/admin/collect",
+        response_model=AdminCollectStarted,
+        status_code=status.HTTP_202_ACCEPTED,
+        responses={
+            409: {
+                "model": AdminCollectStarted,
+                "description": "A collection run is already queued or running.",
+            }
+        },
+    )
     def admin_collect(
         payload: AdminCollectRequest,
         response: Response,
@@ -1137,7 +1147,16 @@ def create_app(  # noqa: C901
             ),
         )
 
-    @app.get("/v1/admin/collect/status", response_model=AdminCollectStatus)
+    @app.get(
+        "/v1/admin/collect/status",
+        response_model=AdminCollectStatus,
+        responses={
+            404: {
+                "model": AdminCollectStatus,
+                "description": "run_id was given but does not match any run.",
+            }
+        },
+    )
     def admin_collect_status(
         response: Response,
         run_id: Optional[str] = Query(None, alias="run_id"),
