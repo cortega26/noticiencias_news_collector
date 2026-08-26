@@ -101,13 +101,13 @@ export const ARTICLE_STATUSES: ArticleStatus[] = [
 
 export interface AdminCollectStarted {
   run_id: string;
-  status: "queued" | "running" | "succeeded" | "failed";
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
   detail: string;
 }
 
 export interface AdminCollectStatus {
   run_id: string | null;
-  status: "queued" | "running" | "succeeded" | "failed";
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
   started_at: string | null;
   finished_at: string | null;
   error: string | null;

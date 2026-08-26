@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AuthError,
+  ConflictError,
   NetworkError,
   NotFoundError,
   ValidationError,
@@ -269,6 +270,19 @@ describe("phase 3 operational client", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/v1/admin/collect");
     expect(JSON.parse(String(init.body))).toEqual({ dry_run: true });
+  });
+
+  it("startCollect throws ConflictError with the existing run's body on 409", async () => {
+    mockFetchResponse(409, {
+      run_id: "collect-1",
+      status: "running",
+      detail: "A collection run is already queued or running.",
+    });
+
+    const err = await startCollect(false).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).body).toMatchObject({ run_id: "collect-1" });
   });
 
   it("getCollectStatus hits the status path with run_id", async () => {

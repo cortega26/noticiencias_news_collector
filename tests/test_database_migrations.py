@@ -251,7 +251,8 @@ ALL_REVISIONS = [
     "a54ba7f7dabb",  # add_blacklist_columns
     "b61c2d3e4f50",  # add_score_logs_latest_index
     "effe4ec70d6d",  # add_durable_lifecycle_tables
-    "a4d9a4ba00aa",  # extend_publication_attempts_state_check (head)
+    "a4d9a4ba00aa",  # extend_publication_attempts_state_check
+    "84cf98a379c1",  # extend_workflow_runs_durable_dispatch (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -265,6 +266,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "b61c2d3e4f50",
     "effe4ec70d6d",
     "a4d9a4ba00aa",
+    "84cf98a379c1",
 ]
 
 
@@ -463,6 +465,15 @@ def test_migration_vocabulary_constants_match_models() -> None:
     that now owns keeping this particular vocabulary in sync with
     models.py (four values) — checked separately below by
     test_publication_attempt_state_values_match_latest_migration.
+
+    WORKFLOW_RUN_STATUS_VALUES is excluded for the same reason:
+    effe4ec70d6d's copy is frozen at its original four values
+    ("running", "completed", "failed", "cancelled"); 84cf98a379c1
+    (Plan 060 / Phase 4a) is the migration that now owns this vocabulary
+    (six values, "completed" renamed to "succeeded") — checked separately
+    below by test_workflow_run_status_values_match_latest_migration.
+    WORKFLOW_RUN_ACTIVE_STATUS is unchanged ("running") and stays in the
+    comparison below.
     """
     import importlib.util
 
@@ -476,7 +487,6 @@ def test_migration_vocabulary_constants_match_models() -> None:
     spec.loader.exec_module(migration)
 
     pairs = [
-        ("WORKFLOW_RUN_STATUS_VALUES",),
         ("WORKFLOW_RUN_ACTIVE_STATUS",),
         ("WORKFLOW_STAGE_ATTEMPT_STATUS_VALUES",),
         ("EDITORIAL_DECISION_TYPE_VALUES",),
@@ -513,6 +523,134 @@ def test_publication_attempt_state_values_match_latest_migration() -> None:
     assert models.PUBLICATION_ATTEMPT_STATE_VALUES == (
         migration.PUBLICATION_ATTEMPT_STATE_VALUES
     ), "PUBLICATION_ATTEMPT_STATE_VALUES diverged between models.py and a4d9a4ba00aa"
+
+
+def test_workflow_run_status_values_match_latest_migration() -> None:
+    """84cf98a379c1 (Plan 060 / Phase 4a) is the latest migration to touch
+    ck_workflow_runs_status — its own hand-copied WORKFLOW_RUN_STATUS_VALUES
+    and WORKFLOW_RUN_QUEUEABLE_STATUSES must match models.py exactly, same
+    "can't import application models" reasoning as
+    test_publication_attempt_state_values_match_latest_migration above.
+    """
+    import importlib.util
+
+    from news_collector.storage import models
+
+    module_path = (
+        ROOT
+        / "alembic"
+        / "versions"
+        / "84cf98a379c1_extend_workflow_runs_durable_dispatch.py"
+    )
+    spec = importlib.util.spec_from_file_location("84cf98a379c1_migration", module_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    assert (
+        models.WORKFLOW_RUN_STATUS_VALUES == migration.WORKFLOW_RUN_STATUS_VALUES
+    ), "WORKFLOW_RUN_STATUS_VALUES diverged between models.py and 84cf98a379c1"
+    assert (
+        models.WORKFLOW_RUN_QUEUEABLE_STATUSES
+        == migration.WORKFLOW_RUN_QUEUEABLE_STATUSES
+    ), "WORKFLOW_RUN_QUEUEABLE_STATUSES diverged between models.py and 84cf98a379c1"
+
+
+def test_84cf98a379c1_upgrade_and_downgrade_handle_a_real_legacy_row(
+    tmp_path: Path,
+) -> None:
+    """Regression test for two bugs an automated review caught in this
+    migration, neither visible against the real dev DB's 0-row
+    workflow_runs table (nor against this suite's other migration tests,
+    which build the DB via DatabaseManager's create_all() — meaning the
+    new columns already exist from *current* models.py before the
+    migration's own idempotent "if column not in columns" check even
+    runs, so an ADD-COLUMN bug can never surface there either). This test
+    builds workflow_runs in its genuine pre-Phase-4a shape via raw DDL
+    (mirroring the effe4ec70d6d/a4d9a4ba00aa schema exactly, not
+    create_all) with one real legacy 'completed' row, then exercises the
+    actual upgrade/downgrade/re-upgrade path against it:
+
+    1. Backfill ordering: 'completed' -> 'succeeded' was written before the
+       CHECK constraint was widened to permit 'succeeded' — violates the
+       still-narrow constraint and aborts the upgrade the moment a real
+       'completed' row exists to backfill.
+    2. `updated_at ADD COLUMN ... NOT NULL DEFAULT CURRENT_TIMESTAMP` via
+       plain (non-batch) op.add_column: SQLite rejects a NOT NULL column
+       with a non-constant default the moment the table has any existing
+       row needing a backfilled value ("Cannot add a column with
+       non-constant default").
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "legacy_row_migration.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("""
+            CREATE TABLE workflow_runs (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                run_type VARCHAR(50) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                started_at DATETIME NOT NULL,
+                finished_at DATETIME,
+                run_metadata JSON,
+                created_at DATETIME NOT NULL,
+                CONSTRAINT ck_workflow_runs_status CHECK (
+                    status IN ('running', 'completed', 'failed', 'cancelled')
+                )
+            )
+            """)
+        conn.execute(
+            "CREATE UNIQUE INDEX uq_workflow_runs_one_active_collection "
+            "ON workflow_runs (run_type) "
+            "WHERE run_type = 'collection' AND status = 'running'"
+        )
+        conn.execute(
+            "INSERT INTO workflow_runs "
+            "(run_type, status, started_at, finished_at, created_at) "
+            "VALUES ('collection', 'completed', datetime('now'), "
+            "datetime('now'), datetime('now'))"
+        )
+        conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(32))")
+        conn.execute("INSERT INTO alembic_version VALUES ('a4d9a4ba00aa')")
+        conn.commit()
+    finally:
+        conn.close()
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        # The upgrade itself must not raise — this is the actual regression
+        # check for both bugs above.
+        command.upgrade(alembic_cfg, "head")
+
+        conn = sqlite3.connect(db_path)
+        try:
+            row = conn.execute(
+                "SELECT status, updated_at FROM workflow_runs"
+            ).fetchone()
+            assert row is not None
+            assert row[0] == "succeeded", "backfill did not rename completed->succeeded"
+            assert (
+                row[1] is not None
+            ), "updated_at was not backfilled for the existing row"
+        finally:
+            conn.close()
+
+        # And the reverse direction must not raise either.
+        command.downgrade(alembic_cfg, "a4d9a4ba00aa")
+        conn = sqlite3.connect(db_path)
+        try:
+            status = conn.execute("SELECT status FROM workflow_runs").fetchone()[0]
+            assert (
+                status == "completed"
+            ), "downgrade did not un-rename succeeded->completed"
+        finally:
+            conn.close()
+
+        command.upgrade(alembic_cfg, "head")
 
 
 def test_lifecycle_tables_upgrade_body_is_reentrant_within_one_connection() -> None:
@@ -655,6 +793,131 @@ def test_workflow_runs_one_active_collection_partial_unique_index_raises(
                 session.commit()
     finally:
         mgr.close()
+
+
+def test_workflow_runs_one_active_collection_blocks_queued_against_running(
+    tmp_path: Path,
+) -> None:
+    """Plan 060 / Phase 4a widened the partial index's predicate from
+    ``status = 'running'`` to ``status IN ('queued', 'running')`` — a
+    queued-but-not-yet-started duplicate collection request must also
+    conflict, not just two 'running' rows."""
+    db_path = tmp_path / "queued_vs_running.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            session.add(
+                WorkflowRun(run_type="collection", status="running", started_at=now)
+            )
+            session.commit()
+
+            session.add(
+                WorkflowRun(run_type="collection", status="queued", started_at=now)
+            )
+            with pytest.raises(IntegrityError):
+                session.commit()
+    finally:
+        mgr.close()
+
+
+def test_workflow_runs_idempotency_key_active_partial_unique_index_raises(
+    tmp_path: Path,
+) -> None:
+    """A second queued/running row with the same (run_type, idempotency_key)
+    must conflict; a terminal row's key must be reusable."""
+    db_path = tmp_path / "idempotency_key.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            session.add(
+                WorkflowRun(
+                    run_type="refinery",
+                    status="running",
+                    started_at=now,
+                    idempotency_key="key-1",
+                )
+            )
+            session.commit()
+
+            session.add(
+                WorkflowRun(
+                    run_type="refinery",
+                    status="queued",
+                    started_at=now,
+                    idempotency_key="key-1",
+                )
+            )
+            with pytest.raises(IntegrityError):
+                session.commit()
+    finally:
+        mgr.close()
+
+
+def test_workflow_runs_idempotency_key_reusable_after_terminal(
+    tmp_path: Path,
+) -> None:
+    """Once the first row reaches a terminal status, the same
+    (run_type, idempotency_key) pair may be reused by a new row — the
+    partial index only scopes queued/running rows."""
+    db_path = tmp_path / "idempotency_key_reuse.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            session.add(
+                WorkflowRun(
+                    run_type="refinery",
+                    status="succeeded",
+                    started_at=now,
+                    idempotency_key="key-2",
+                )
+            )
+            session.commit()
+
+            session.add(
+                WorkflowRun(
+                    run_type="refinery",
+                    status="queued",
+                    started_at=now,
+                    idempotency_key="key-2",
+                )
+            )
+            session.commit()  # must not raise
+    finally:
+        mgr.close()
+
+
+def test_workflow_runs_downgrade_refuses_with_unrepresentable_status(
+    tmp_path: Path,
+) -> None:
+    """84cf98a379c1's downgrade() must refuse (NotImplementedError) rather
+    than silently drop data when a row is in 'queued' or 'interrupted' — a
+    status the pre-Phase-4a four-value constraint cannot represent."""
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "downgrade_guard.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config: dict = {"type": "sqlite", "path": db_path}
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        mgr = DatabaseManager(database_config=test_db_config)
+        try:
+            now = datetime.now(timezone.utc)
+            with mgr.SessionLocal() as session:
+                session.add(
+                    WorkflowRun(run_type="collection", status="queued", started_at=now)
+                )
+                session.commit()
+        finally:
+            mgr.close()
+
+        command.stamp(alembic_cfg, "head")
+        with pytest.raises(NotImplementedError):
+            command.downgrade(alembic_cfg, "a4d9a4ba00aa")
 
 
 def test_workflow_stage_attempts_duplicate_attempt_raises(tmp_path: Path) -> None:

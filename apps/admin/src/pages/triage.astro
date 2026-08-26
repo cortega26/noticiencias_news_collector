@@ -77,6 +77,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
 <script>
   import {
+    ConflictError,
     clearToken,
     getArticle,
     getCollectStatus,
@@ -87,6 +88,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     startCollect,
     updateAuditStatus,
   } from "../lib/api";
+  import type { AdminCollectStarted } from "../lib/types";
   import type {
     AdminArticleDetail,
     AdminArticleListItem,
@@ -482,6 +484,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             items = [];
             void loadQueue();
           }, 1200);
+        } else if (st.status === "cancelled") {
+          renderCollectStatus(`Collection cancelled${st.error ? `: ${st.error}` : "."}`);
+        } else if (st.status === "interrupted") {
+          renderCollectStatus(
+            `Collection interrupted (server restarted mid-run)${st.error ? `: ${st.error}` : "."}`,
+          );
         } else {
           renderCollectStatus(`Collection failed: ${st.error ?? "unknown error"}`);
         }
@@ -510,6 +518,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         clearToken();
         showAuthGate();
         return;
+      }
+      if (e instanceof ConflictError) {
+        const existing = e.body as Partial<AdminCollectStarted>;
+        if (existing.run_id) {
+          renderCollectStatus(
+            `A collection run is already in progress (${existing.run_id}) — watching it instead.`,
+          );
+          await pollCollect(existing.run_id);
+          return;
+        }
       }
       renderCollectStatus("Failed to start collection: " + (e as Error).message);
     } finally {

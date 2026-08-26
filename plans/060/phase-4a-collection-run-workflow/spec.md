@@ -291,16 +291,25 @@ work.
 
 - [ ] `workflow_runs` migration merged, additive, matches every prior
       Phase 3 migration's own safety bar (upgrade/downgrade round-trip
-      tested against a scratch copy of the real dev DB).
-- [ ] Two concurrent `POST /v1/admin/collect` calls yield exactly one
-      `202` and one `409` with the existing run's id.
-- [ ] `GET /v1/admin/collect/status?run_id=<unknown>` returns `404`, never
-      substitutes the latest run.
-- [ ] A simulated process restart with a `running`-but-stale row recovers
+      tested against a scratch copy of the real dev DB). Implemented and
+      round-trip tested (revision `84cf98a379c1`) — left unchecked because
+      it is not yet merged (branch `feat/phase-4a-collection-run-workflow`,
+      operator review pending, per this program's process).
+- [x] Two concurrent `POST /v1/admin/collect` calls yield exactly one
+      `202` and one `409` with the existing run's id. Proven by
+      `test_admin_collect_concurrent_start_yields_one_202_one_409`.
+- [x] `GET /v1/admin/collect/status?run_id=<unknown>` returns `404`, never
+      substitutes the latest run. Proven by
+      `test_admin_collect_status_unknown_run_id_returns_404_not_latest`.
+- [x] A simulated process restart with a `running`-but-stale row recovers
       it to `interrupted` at next startup, deterministically (not
-      timer-dependent).
-- [ ] Terminal rows older than 90 days are pruned; active
+      timer-dependent). Proven by
+      `test_admin_collect_restart_recovers_stale_running_row_to_interrupted`
+      through a real FastAPI `lifespan` startup, not by calling the
+      workflow method directly.
+- [x] Terminal rows older than 90 days are pruned; active
       (`queued`/`running`) rows of any age are never pruned — proven by a
-      test, not just code inspection.
-- [ ] All module-global run state (`_admin_runs` and friends) is deleted,
-      not dual-written alongside the DB.
+      test, not just code inspection. `tests/unit/storage/test_prune_workflow_runs.py`.
+- [x] All module-global run state (`_admin_runs` and friends) is deleted,
+      not dual-written alongside the DB. Confirmed via `hasattr` smoke
+      test against the imported `api` module.
