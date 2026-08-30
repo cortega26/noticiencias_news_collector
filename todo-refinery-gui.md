@@ -6,6 +6,9 @@ Status: `[ ]` pending · `[x]` done · `[~]` in progress
 
 - [x] `apps/admin/` — Astro 7 + Tailwind 4 + TypeScript app scaffold
 - [x] `Makefile` targets: `admin-install`, `admin-dev`, `admin-build`, `admin-test`
+- [x] `Makefile` targets: `serve` (API alone) + `admin` (full stack via `scripts/dev/admin_stack.sh`, one Ctrl+C)
+- [x] `astro.config.mjs` dev proxy `/v1/*` → `ADMIN_API_TARGET` (default `:8000`); `apps/admin/.env.example`
+- [x] Refine & Publish (Phase 4c): `PublicationRunWorkflow` + `POST /v1/admin/publish` + `/triage` publish action + URL box — see `plans/060/phase-4c-publication-run-workflow/`
 
 ## Core client
 
@@ -20,7 +23,7 @@ Status: `[ ]` pending · `[x]` done · `[~]` in progress
 
 ## Views
 
-- [x] `AuthGate.astro` — token entry, sessionStorage, 401 re-auth (no reload loop)
+- [x] `AuthGate.astro` — token entry, localStorage, 401 re-auth (no reload loop); dev-server bypass via `AUTH_BYPASS`
 - [x] `/triage` — queue + detail + hotkeys (j/k/r/a/f/o) + status filter pills
 - [x] `/article?id=` — full detail (static-friendly query param route)
 - [x] `/sources` — source health table

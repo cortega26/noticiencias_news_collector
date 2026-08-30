@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  AUTH_BYPASS,
   AuthError,
   ConflictError,
   NetworkError,
@@ -31,6 +32,8 @@ import {
   savePrompts,
   setToken,
   startCollect,
+  startPublish,
+  getPublishStatus,
   toggleSource,
   unpublishArticle,
   upsertSource,
@@ -62,7 +65,7 @@ class MemoryStorage implements Storage {
   }
 }
 
-vi.stubGlobal("sessionStorage", new MemoryStorage());
+vi.stubGlobal("localStorage", new MemoryStorage());
 
 const envelope: AdminArticleListEnvelope = {
   data: [
@@ -83,6 +86,8 @@ const envelope: AdminArticleListEnvelope = {
       error_message: null,
       published_url: null,
       refinery_id: "refinery-1",
+      publishable: true,
+      export_score: 0.92,
     },
   ],
   pagination: { next_cursor: null, has_more: false, page_size: 20, returned: 1 },
@@ -110,7 +115,7 @@ function mockFetchReject(): void {
 }
 
 beforeEach(() => {
-  sessionStorage.clear();
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -118,12 +123,17 @@ afterEach(() => {
 });
 
 describe("token helpers", () => {
-  it("persists and clears the token in sessionStorage", () => {
+  it("persists and clears the token in localStorage", () => {
     expect(getToken()).toBeNull();
     setToken("admin-key");
     expect(getToken()).toBe("admin-key");
-    expect(sessionStorage.getItem("refinery_admin_token")).toBe("admin-key");
+    expect(localStorage.getItem("refinery_admin_token")).toBe("admin-key");
     clearToken();
+    expect(getToken()).toBeNull();
+  });
+
+  it("does not bypass auth outside the dev server (MODE=test)", () => {
+    expect(AUTH_BYPASS).toBe(false);
     expect(getToken()).toBeNull();
   });
 });
@@ -181,6 +191,24 @@ describe("listArticles", () => {
   it("throws NetworkError when fetch rejects", async () => {
     mockFetchReject();
     await expect(listArticles("pending")).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it.each([502, 503, 504])(
+    "maps gateway status %i to a NetworkError that names the fix",
+    async (status) => {
+      mockFetchResponse(status, "");
+      const err = await listArticles("pending").catch((e) => e);
+      expect(err).toBeInstanceOf(NetworkError);
+      expect((err as NetworkError).message).toContain("serving API");
+      expect((err as NetworkError).message).toContain("make admin");
+    },
+  );
+
+  it("still reports other 5xx as a bare HTTP error", async () => {
+    mockFetchResponse(500, { detail: "boom" });
+    const err = await listArticles("pending").catch((e) => e);
+    expect(err).not.toBeInstanceOf(NetworkError);
+    expect((err as Error).message).toBe("HTTP 500");
   });
 });
 
@@ -302,6 +330,70 @@ describe("phase 3 operational client", () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain(
       "/v1/admin/collect/status?run_id=collect-1",
     );
+  });
+
+  it("startPublish POSTs article_id (url null)", async () => {
+    mockFetchResponse(202, { run_id: "7", status: "queued", detail: "Publication started." });
+
+    await startPublish({ articleId: 42 });
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/admin/publish");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      article_id: 42,
+      article_url: null,
+      dry_run: false,
+    });
+  });
+
+  it("startPublish POSTs article_url (id null)", async () => {
+    mockFetchResponse(202, { run_id: "8", status: "queued", detail: "Publication started." });
+
+    await startPublish({ articleUrl: "https://example.com/x" });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      article_id: null,
+      article_url: "https://example.com/x",
+      dry_run: false,
+    });
+  });
+
+  it("startPublish surfaces a 409 as ConflictError carrying the active run id", async () => {
+    mockFetchResponse(409, { run_id: "5", status: "running", detail: "A publication run is already queued or running." });
+
+    const err = await startPublish({ articleId: 1 }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).body).toMatchObject({ run_id: "5" });
+  });
+
+  it("startPublish maps a proxy 502 to NetworkError", async () => {
+    mockFetchResponse(502, "");
+    await expect(startPublish({ articleId: 1 })).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it("getPublishStatus hits the status path with run_id", async () => {
+    mockFetchResponse(200, {
+      run_id: "7",
+      status: "succeeded",
+      started_at: "now",
+      finished_at: "later",
+      error: null,
+      summary: { pr_url: "https://github.com/x/y/pull/9" },
+      active: false,
+      pr_url: "https://github.com/x/y/pull/9",
+      failure_class: null,
+      final_slug: "gene-therapy",
+    });
+
+    const st = await getPublishStatus("7");
+
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain(
+      "/v1/admin/publish/status?run_id=7",
+    );
+    expect(st.pr_url).toBe("https://github.com/x/y/pull/9");
   });
 
   it("reprocessArticle / toggleSource / resetSourceCircuit POST correctly", async () => {

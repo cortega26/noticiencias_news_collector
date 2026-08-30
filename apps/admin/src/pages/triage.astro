@@ -21,7 +21,21 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         <button id="logout-btn" class="btn-ghost" type="button">Sign out</button>
       </div>
     </header>
+
+    <form id="publish-url-form" class="mb-4 flex items-center gap-2">
+      <input
+        id="publish-url"
+        type="url"
+        placeholder="Publish from URL — paste an article link to refine & open a PR"
+        class="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-3.5 py-2 font-mono text-xs text-ink-100 outline-none transition-colors placeholder:text-ink-600 focus:border-amber-500"
+      />
+      <button id="publish-url-btn" class="btn-ghost whitespace-nowrap" type="submit">
+        Refine &amp; publish
+      </button>
+    </form>
+
     <div id="collect-status" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
+    <div id="publish-status" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
 
     <div id="status-filter" class="mb-6 flex flex-wrap gap-2"></div>
 
@@ -60,6 +74,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 <style>
   @reference "../styles/global.css";
 
+  .queue-item {
+    @apply space-y-1.5;
+  }
   .queue-card {
     @apply w-full cursor-pointer rounded-lg border border-ink-700 bg-ink-900/60 p-3.5 text-left transition-all;
   }
@@ -70,6 +87,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     @apply border-amber-500/70 bg-ink-800;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-amber-500) 40%, transparent);
   }
+  .queue-publish-btn {
+    @apply w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-300 transition-colors;
+  }
+  .queue-publish-btn:hover:not(:disabled) {
+    @apply border-amber-500/70 bg-amber-500/20 text-amber-200;
+  }
+  .queue-publish-btn:disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
   .score-chip {
     @apply font-mono text-xs font-semibold text-amber-400;
   }
@@ -78,17 +104,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 <script>
   import {
     ConflictError,
+    NetworkError,
     clearToken,
     getArticle,
     getCollectStatus,
+    getPublishStatus,
     listArticles,
     rejectArticle,
     reprocessArticle,
     showAuthGate,
     startCollect,
+    startPublish,
     updateAuditStatus,
   } from "../lib/api";
-  import type { AdminCollectStarted } from "../lib/types";
+  import type { AdminCollectStarted, AdminPublishStarted } from "../lib/types";
   import type {
     AdminArticleDetail,
     AdminArticleListItem,
@@ -196,6 +225,8 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     countEl.textContent = `${items.length}${cursor ? "+" : ""} · ${status}`;
     queueEl.innerHTML = "";
     items.forEach((item, index) => {
+      const wrap = document.createElement("div");
+      wrap.className = "queue-item";
       const card = document.createElement("button");
       card.type = "button";
       card.className = "queue-card" + (item.id === selectedId ? " active" : "");
@@ -222,7 +253,26 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       });
       card.setAttribute("data-id", String(item.id));
       card.setAttribute("data-index", String(index));
-      queueEl.appendChild(card);
+      wrap.appendChild(card);
+
+      if (item.publishable) {
+        const pub = document.createElement("button");
+        pub.type = "button";
+        pub.className = "queue-publish-btn";
+        pub.textContent = "Refine & publish →";
+        pub.title =
+          item.export_score != null
+            ? `In the current shortlist (score ${item.export_score.toFixed(3)}) — refine and open a PR`
+            : "In the current shortlist — refine and open a PR";
+        pub.disabled = publishInFlight;
+        pub.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void doPublish({ articleId: item.id });
+        });
+        wrap.appendChild(pub);
+      }
+
+      queueEl.appendChild(wrap);
     });
     queueEl.querySelector(`[data-id="${selectedId}"]`)?.classList.add("active");
     scrollSelectedIntoView();
@@ -273,7 +323,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <span class="${statusPillClass(detail.processing_status)}">${esc(detail.processing_status ?? "new")}</span>
           <span class="ml-2 font-mono text-xs text-ink-400">#${detail.id}</span>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap justify-end gap-2">
           <button class="btn-ghost" data-action="open" type="button">Open original</button>
           <button class="btn-ghost" data-action="full" type="button">Full view</button>
           <button class="btn-ghost" data-action="reprocess" type="button">Reprocess</button>
@@ -464,9 +514,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   async function pollCollect(runId: string) {
     window.clearInterval(pollTimer);
+    // A collection run writes files; with `uvicorn --reload` that can bounce
+    // the API for a second or two. Tolerate a few transient failures instead
+    // of abandoning a run that is still going.
+    let transientFailures = 0;
+    const MAX_TRANSIENT = 5;
     pollTimer = window.setInterval(async () => {
       try {
         const st = await getCollectStatus(runId);
+        transientFailures = 0;
         if (st.status === "running" || st.status === "queued") {
           renderCollectStatus(`Collecting… (${runId}) — started ${st.started_at ?? "now"}`);
           return;
@@ -494,12 +550,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           renderCollectStatus(`Collection failed: ${st.error ?? "unknown error"}`);
         }
       } catch (e) {
-        window.clearInterval(pollTimer);
         if (e instanceof Error && e.name === "AuthError") {
+          window.clearInterval(pollTimer);
           clearToken();
           showAuthGate();
           return;
         }
+        if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
+          transientFailures += 1;
+          renderCollectStatus(
+            `Collecting… (${runId}) — API briefly unreachable, retrying (${transientFailures}/${MAX_TRANSIENT})`,
+          );
+          return;
+        }
+        window.clearInterval(pollTimer);
         renderCollectStatus(`Status poll failed: ${(e as Error).message}`);
       }
     }, 2000);
@@ -533,6 +597,141 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     } finally {
       collectBtn.removeAttribute("disabled");
     }
+  });
+
+  // ------------------------------------------------------------------
+  // Refine & Publish (Phase 4c): start one Refinery run for a candidate
+  // article (by id, must be publishable) or a pasted URL, poll status,
+  // surface the PR link or the editorial-rejection reason.
+  // ------------------------------------------------------------------
+
+  const publishStatusEl = document.getElementById("publish-status");
+  const publishUrlForm = document.getElementById("publish-url-form") as HTMLFormElement | null;
+  const publishUrlInput = document.getElementById("publish-url") as HTMLInputElement | null;
+  const publishUrlBtn = document.getElementById("publish-url-btn");
+  let publishPollTimer: number | undefined;
+  let publishInFlight = false;
+
+  function renderPublishStatus(html: string) {
+    if (!publishStatusEl) return;
+    publishStatusEl.innerHTML = html;
+    publishStatusEl.classList.remove("hidden");
+  }
+
+  function setPublishInFlight(active: boolean) {
+    publishInFlight = active;
+    publishUrlBtn?.toggleAttribute("disabled", active);
+    document
+      .querySelectorAll(".queue-publish-btn")
+      .forEach((btn) => btn.toggleAttribute("disabled", active));
+  }
+
+  function pollPublish(runId: string) {
+    window.clearInterval(publishPollTimer);
+    let transientFailures = 0;
+    const MAX_TRANSIENT = 5;
+    publishPollTimer = window.setInterval(async () => {
+      try {
+        const st = await getPublishStatus(runId);
+        transientFailures = 0;
+        if (st.status === "running" || st.status === "queued") {
+          renderPublishStatus(
+            `Refining… (run ${runId}) — editor → auditor → image → PR. This takes a few minutes.`,
+          );
+          return;
+        }
+        window.clearInterval(publishPollTimer);
+        setPublishInFlight(false);
+        if (st.status === "succeeded" && st.pr_url) {
+          renderPublishStatus(
+            `Published — PR opened: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Merge it to go live. Refreshing queue…`,
+          );
+          setTimeout(() => {
+            publishStatusEl?.classList.add("hidden");
+            status = "pending";
+            cursor = null;
+            items = [];
+            selectedId = null;
+            detail = null;
+            void loadQueue();
+          }, 2500);
+        } else if (st.status === "succeeded") {
+          renderPublishStatus(
+            `Refinery reported success but no PR URL was recorded (run ${runId}). Check the publication attempt summary.`,
+          );
+        } else if (st.status === "interrupted") {
+          renderPublishStatus(
+            `Publication interrupted (server restarted mid-run, run ${runId}).`,
+          );
+        } else {
+          const reason = st.failure_class
+            ? `${st.failure_class} — ${st.error ?? "no detail"}`
+            : (st.error ?? "unknown error");
+          renderPublishStatus(`Not published (run ${runId}): ${esc(reason)}`);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.name === "AuthError") {
+          window.clearInterval(publishPollTimer);
+          setPublishInFlight(false);
+          clearToken();
+          showAuthGate();
+          return;
+        }
+        if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
+          transientFailures += 1;
+          renderPublishStatus(
+            `Refining… (run ${runId}) — API briefly unreachable, retrying (${transientFailures}/${MAX_TRANSIENT})`,
+          );
+          return;
+        }
+        window.clearInterval(publishPollTimer);
+        setPublishInFlight(false);
+        renderPublishStatus(`Status poll failed: ${esc((e as Error).message)}`);
+      }
+    }, 3000);
+  }
+
+  async function doPublish(opts: { articleId?: number; articleUrl?: string }) {
+    if (publishInFlight) {
+      showToast("A publication run is already in progress.", "err");
+      return;
+    }
+    setPublishInFlight(true);
+    renderPublishStatus("Starting Refinery run…");
+    try {
+      const started: AdminPublishStarted = await startPublish({
+        articleId: opts.articleId,
+        articleUrl: opts.articleUrl,
+      });
+      renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
+      pollPublish(started.run_id);
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        setPublishInFlight(false);
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (e instanceof ConflictError) {
+        const existing = e.body as Partial<AdminPublishStarted>;
+        if (existing.run_id) {
+          renderPublishStatus(
+            `A publication run is already in progress (run ${existing.run_id}) — watching it instead.`,
+          );
+          pollPublish(existing.run_id);
+          return;
+        }
+      }
+      setPublishInFlight(false);
+      renderPublishStatus(`Failed to start publication: ${esc((e as Error).message)}`);
+    }
+  }
+
+  publishUrlForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const url = publishUrlInput?.value.trim();
+    if (!url) return;
+    void doPublish({ articleUrl: url });
   });
 
   renderFilters();

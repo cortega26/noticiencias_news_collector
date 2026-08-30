@@ -625,6 +625,19 @@ class WorkflowRun(Base):
                 f"run_type = 'collection' AND {_WORKFLOW_RUN_QUEUEABLE_STATUS_CHECK}"
             ),
         ),
+        # Idéntico al anterior pero para run_type='publication' (Fase 4c):
+        # una sola corrida de "Refinar y Publicar" activa a la vez — el
+        # RefineryEngine clona el repo destino en un directorio compartido y
+        # abre un PR; dos corridas concurrentes se corromperían. Independiente
+        # del guard de colección.
+        Index(
+            "uq_workflow_runs_one_active_publication",
+            "run_type",
+            unique=True,
+            sqlite_where=text(
+                f"run_type = 'publication' AND {_WORKFLOW_RUN_QUEUEABLE_STATUS_CHECK}"
+            ),
+        ),
         # Idempotencia: dentro de un mismo run_type, una idempotency_key no
         # puede repetirse mientras haya una fila queued/running con esa
         # clave — un reintento con la misma clave debe toparse con la

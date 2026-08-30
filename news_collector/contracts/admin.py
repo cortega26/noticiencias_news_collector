@@ -33,6 +33,12 @@ class AdminArticleListItem(BaseModel):
     error_message: Optional[str] = None
     published_url: Optional[str] = None
     refinery_id: Optional[str] = None
+    # Phase 4c: True when this article is in the current
+    # `data/exports/latest_articles.json` shortlist and not already
+    # in-flight/published — i.e. "Refine & Publish" can be triggered for it
+    # by id. Articles not in the export are published via the URL box.
+    publishable: bool = False
+    export_score: Optional[float] = None
 
 
 class AdminArticlePagination(BaseModel):
@@ -162,6 +168,38 @@ class AdminCollectStarted(BaseModel):
     run_id: str
     status: AdminRunStatus = "queued"
     detail: str
+
+
+class AdminPublishRequest(BaseModel):
+    """Body for POST /v1/admin/publish — exactly one of article_id / article_url."""
+
+    article_id: Optional[int] = None
+    article_url: Optional[str] = None
+    dry_run: bool = False
+
+
+class AdminPublishStarted(BaseModel):
+    """Response to POST /v1/admin/publish."""
+
+    run_id: str
+    status: AdminRunStatus = "queued"
+    detail: str
+
+
+class AdminPublishStatus(BaseModel):
+    """Status of the most recent (or a named) publication run."""
+
+    run_id: Optional[str] = None
+    status: AdminRunStatus = "queued"
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    error: Optional[str] = None
+    summary: Dict[str, Any] = Field(default_factory=dict)
+    active: bool = False
+    # Pulled from summary for convenience — the two things the GUI shows.
+    pr_url: Optional[str] = None
+    failure_class: Optional[str] = None
+    final_slug: Optional[str] = None
 
 
 class AdminSourceListItem(BaseModel):

@@ -715,7 +715,7 @@ def test_admin_collect_starts_and_status_lifecycle(
             release.wait(timeout=10)
             return {"status": "ok", "sources_processed": 3}
 
-        async def shutdown(self):
+        async def shutdown(self, close_db: bool = True):
             return None
 
         def export_latest_articles(self, file_path=None, limit=50):
@@ -760,6 +760,12 @@ def test_admin_collect_starts_and_status_lifecycle(
         assert status["status"] == "succeeded"
         assert status["summary"].get("sources_processed") == 3
 
+        # Regression (Plan 060): the run must not have disposed the shared
+        # DatabaseManager singleton — a follow-up admin request still works
+        # (before the fix, this 500'd with `SessionLocal is None`).
+        after = api_client.get("/v1/admin/articles", headers=_admin_headers())
+        assert after.status_code == 200
+
 
 def test_admin_collect_concurrent_start_yields_one_202_one_409(
     api_client: TestClient, monkeypatch
@@ -787,7 +793,7 @@ def test_admin_collect_concurrent_start_yields_one_202_one_409(
             release.wait(timeout=10)
             return {"status": "ok"}
 
-        async def shutdown(self):
+        async def shutdown(self, close_db: bool = True):
             return None
 
         def export_latest_articles(self, file_path=None, limit=50):
@@ -896,6 +902,181 @@ def test_admin_collect_restart_recovers_stale_running_row_to_interrupted(
     body = response.json()
     assert body["status"] == "interrupted"
     assert body["active"] is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 4c: POST /v1/admin/publish + GET /v1/admin/publish/status
+# ---------------------------------------------------------------------------
+
+
+def test_admin_publish_requires_exactly_one_of_id_or_url(
+    api_client: TestClient,
+) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        neither = api_client.post(
+            "/v1/admin/publish", json={}, headers=_admin_headers()
+        )
+        both = api_client.post(
+            "/v1/admin/publish",
+            json={"article_id": 1, "article_url": "https://x"},
+            headers=_admin_headers(),
+        )
+    assert neither.status_code == 422
+    assert both.status_code == 422
+
+
+def test_admin_publish_lifecycle_and_db_survives(
+    api_client: TestClient, monkeypatch, tmp_path
+) -> None:
+    """A publish run reaches `succeeded` with the PR url surfaced, and a
+    follow-up admin request still works (Phase 4a regression guard)."""
+    import threading as _threading
+
+    release = _threading.Event()
+    monkeypatch.chdir(tmp_path)  # workflow + fake both resolve the same rel path
+    attempts = tmp_path / "data" / "runtime" / "publication_attempts"
+    attempts.mkdir(parents=True)
+
+    def _fake_main(**kwargs):
+        release.wait(timeout=10)
+        (attempts / "77.json").write_text(
+            json.dumps(
+                {
+                    "article_id": "77",
+                    "success": True,
+                    "pr_url": "https://github.com/org/noticiencias/pull/9",
+                    "final_slug": "x",
+                    "stages": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {"status": "success", "processed_count": 1}
+
+    monkeypatch.setattr("apps.refinery.main.main", _fake_main, raising=False)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        started = api_client.post(
+            "/v1/admin/publish", json={"article_id": 77}, headers=_admin_headers()
+        )
+        assert started.status_code == 202
+        run_id = started.json()["run_id"]
+
+        running = api_client.get(
+            "/v1/admin/publish/status",
+            params={"run_id": run_id},
+            headers=_admin_headers(),
+        ).json()
+        assert running["status"] in ("queued", "running")
+
+        release.set()
+        for _ in range(50):
+            st = api_client.get(
+                "/v1/admin/publish/status",
+                params={"run_id": run_id},
+                headers=_admin_headers(),
+            ).json()
+            if st["status"] == "succeeded":
+                break
+            time.sleep(0.1)
+        assert st["status"] == "succeeded"
+        assert st["pr_url"] == "https://github.com/org/noticiencias/pull/9"
+
+        after = api_client.get("/v1/admin/articles", headers=_admin_headers())
+        assert after.status_code == 200
+
+
+def test_admin_publish_concurrent_yields_one_202_one_409(
+    api_client: TestClient, monkeypatch
+) -> None:
+    import threading as _threading
+
+    release = _threading.Event()
+    monkeypatch.setattr(
+        "apps.refinery.main.main",
+        lambda **kw: (
+            release.wait(timeout=10),
+            {"status": "success", "processed_count": 1},
+        )[1],
+        raising=False,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.post(
+            "/v1/admin/publish", json={"article_id": 1}, headers=_admin_headers()
+        )
+        second = api_client.post(
+            "/v1/admin/publish",
+            json={"article_url": "https://example.com/x"},
+            headers=_admin_headers(),
+        )
+
+        assert sorted([first.status_code, second.status_code]) == [202, 409]
+        conflicted = second if first.status_code == 202 else first
+        assert conflicted.json()["status"] == "running"
+
+        # let the dispatched run finish before the fixture DB closes
+        release.set()
+        started = first if first.status_code == 202 else second
+        for _ in range(50):
+            st = api_client.get(
+                "/v1/admin/publish/status",
+                params={"run_id": started.json()["run_id"]},
+                headers=_admin_headers(),
+            ).json()
+            if st["status"] not in ("queued", "running"):
+                break
+            time.sleep(0.1)
+
+
+def test_admin_publish_status_unknown_run_id_returns_404(
+    api_client: TestClient,
+) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/publish/status",
+            params={"run_id": "999999"},
+            headers=_admin_headers(),
+        )
+    assert response.status_code == 404
+
+
+def test_admin_articles_marks_export_candidates_publishable(
+    api_client: TestClient, db_manager: DatabaseManager, monkeypatch, tmp_path
+) -> None:
+    """`publishable` is True only for pending articles in the current
+    `latest_articles.json` shortlist."""
+    from news_collector.serving import api as serving_api
+
+    with db_manager.get_session() as session:
+        for aid, title in [(501, "in export"), (502, "not in export")]:
+            session.add(
+                Article(
+                    id=aid,
+                    title=title,
+                    url=f"https://example.com/{aid}",
+                    source_id="nature",
+                    source_name="Nature",
+                    processing_status="pending",
+                    final_score=0.9,
+                )
+            )
+        session.commit()
+
+    export = tmp_path / "latest_articles.json"
+    export.write_text(json.dumps({"articles": [{"id": 501, "score": 0.9}]}), "utf-8")
+    monkeypatch.setattr(serving_api, "_EXPORT_ARTIFACT_PATH", export, raising=False)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        rows = {
+            r["id"]: r
+            for r in api_client.get(
+                "/v1/admin/articles", headers=_admin_headers()
+            ).json()["data"]
+        }
+    assert rows[501]["publishable"] is True
+    assert rows[501]["export_score"] == 0.9
+    assert rows[502]["publishable"] is False
 
 
 def test_admin_sources_list_toggle_reset(

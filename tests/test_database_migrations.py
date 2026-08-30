@@ -252,7 +252,8 @@ ALL_REVISIONS = [
     "b61c2d3e4f50",  # add_score_logs_latest_index
     "effe4ec70d6d",  # add_durable_lifecycle_tables
     "a4d9a4ba00aa",  # extend_publication_attempts_state_check
-    "84cf98a379c1",  # extend_workflow_runs_durable_dispatch (head)
+    "84cf98a379c1",  # extend_workflow_runs_durable_dispatch
+    "e3f168a66d38",  # workflow_runs_one_active_publication (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -267,6 +268,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "effe4ec70d6d",
     "a4d9a4ba00aa",
     "84cf98a379c1",
+    "e3f168a66d38",
 ]
 
 
@@ -791,6 +793,34 @@ def test_workflow_runs_one_active_collection_partial_unique_index_raises(
             )
             with pytest.raises(IntegrityError):
                 session.commit()
+    finally:
+        mgr.close()
+
+
+def test_workflow_runs_one_active_publication_index_is_independent_of_collection(
+    tmp_path: Path,
+) -> None:
+    """Phase 4c: `uq_workflow_runs_one_active_publication` constrains a
+    second active publication row, but a collection run in flight does not
+    block a publication run (and vice versa) — the two guards are separate."""
+    db_path = tmp_path / "one_active_publication.db"
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        now = datetime.now(timezone.utc)
+        with mgr.SessionLocal() as session:
+            session.add(
+                WorkflowRun(run_type="collection", status="running", started_at=now)
+            )
+            session.add(
+                WorkflowRun(run_type="publication", status="running", started_at=now)
+            )
+            session.commit()  # both coexist — different run_types
+
+            session.add(
+                WorkflowRun(run_type="publication", status="queued", started_at=now)
+            )
+            with pytest.raises(IntegrityError):
+                session.commit()  # second active publication rejected
     finally:
         mgr.close()
 

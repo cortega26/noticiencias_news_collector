@@ -27,6 +27,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import hmac
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -83,6 +84,9 @@ from news_collector.contracts.admin import (
     AdminImageQueueEnvelope,
     AdminMutationResult,
     AdminPromptsEnvelope,
+    AdminPublishRequest,
+    AdminPublishStarted,
+    AdminPublishStatus,
     AdminRejectRequest,
     AdminRunStatus,
     AdminSourceHealthEnvelope,
@@ -93,6 +97,9 @@ from news_collector.contracts.admin import (
 )
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
+from news_collector.logic.workflows.publication_run_workflow import (
+    PublicationRunWorkflow,
+)
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog
 from news_collector.utils.logger import get_logger
@@ -323,7 +330,46 @@ def _build_article_payload(row: RowType) -> Dict[str, Any]:
     }
 
 
-def _build_admin_list_item(row: RowType) -> AdminArticleListItem:
+_EXPORT_ARTIFACT_PATH = Path("data/exports/latest_articles.json")
+# Statuses where an article is already in flight or published — never
+# offer "Refine & Publish" for those even if they linger in the export.
+_NON_PUBLISHABLE_STATUSES = frozenset({"publishing", "completed", "rejected"})
+
+
+def load_export_candidate_scores(
+    path: Optional[Path] = None,
+) -> Dict[int, float]:
+    """`{article_id: score}` for the current `latest_articles.json` shortlist.
+
+    This is the set an editor can "Refine & Publish" by id — same source the
+    Streamlit panel's publish dropdown reads. Missing/unreadable export → an
+    empty map (publish-by-id simply unavailable until the next collection).
+    Reads the module-level `_EXPORT_ARTIFACT_PATH` at call time (tests patch it).
+    """
+    path = path or _EXPORT_ARTIFACT_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    articles = payload.get("articles") if isinstance(payload, dict) else payload
+    if not isinstance(articles, list):
+        return {}
+    scores: Dict[int, float] = {}
+    for art in articles:
+        if not isinstance(art, dict):
+            continue
+        try:
+            scores[int(art["id"])] = float(
+                art.get("score") or art.get("final_score") or 0.0
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return scores
+
+
+def _build_admin_list_item(
+    row: RowType, export_scores: Optional[Dict[int, float]] = None
+) -> AdminArticleListItem:
     """Build an admin triage-row payload from an explicit-projection row.
 
     Same projection discipline as ``_build_article_payload`` (plan 045):
@@ -333,6 +379,11 @@ def _build_admin_list_item(row: RowType) -> AdminArticleListItem:
     topics = _extract_topics_from_metadata(row.article_metadata, row.keywords)
     metadata = row.article_metadata or {}
     refinery_id = (metadata.get("publication") or {}).get("refinery_id")
+    scores = export_scores or {}
+    export_score = scores.get(row.article_id)
+    publishable = export_score is not None and (
+        (row.processing_status or "") not in _NON_PUBLISHABLE_STATUSES
+    )
     return AdminArticleListItem(
         id=row.article_id,
         title=row.title,
@@ -350,6 +401,8 @@ def _build_admin_list_item(row: RowType) -> AdminArticleListItem:
         error_message=row.error_message,
         published_url=row.published_url,
         refinery_id=refinery_id,
+        publishable=publishable,
+        export_score=export_score,
     )
 
 
@@ -484,6 +537,7 @@ def create_app(  # noqa: C901
 
     db_manager = database_manager or get_database_manager()
     collection_run_workflow = CollectionRunWorkflow(db_manager)
+    publication_run_workflow = PublicationRunWorkflow(db_manager)
 
     @contextlib.asynccontextmanager
     async def _lifespan(_app: FastAPI):
@@ -501,6 +555,13 @@ def create_app(  # noqa: C901
                 "Startup: recovered {} stale collection run(s): {}",
                 len(recovered),
                 recovered,
+            )
+        recovered_pub = publication_run_workflow.recover_expired_leases()
+        if recovered_pub:
+            logger.warning(
+                "Startup: recovered {} stale publication run(s): {}",
+                len(recovered_pub),
+                recovered_pub,
             )
         yield
 
@@ -887,7 +948,8 @@ def create_app(  # noqa: C901
             if has_more:
                 records = records[:page_size]
 
-            items = [_build_admin_list_item(row) for row in records]
+            export_scores = load_export_candidate_scores()
+            items = [_build_admin_list_item(row, export_scores) for row in records]
             next_cursor = _encode_cursor(records[-1]) if has_more else None
 
             return AdminArticleListEnvelope(
@@ -1197,6 +1259,95 @@ def create_app(  # noqa: C901
             error=result.error_detail,
             summary=result.summary,
             active=active,
+        )
+
+    # ------------------------------------------------------------------
+    # Phase 4c: publication ("Refine & Publish") — thin wrapper around
+    # PublicationRunWorkflow, exactly like the collect routes above.
+    # ------------------------------------------------------------------
+
+    @app.post(
+        "/v1/admin/publish",
+        response_model=AdminPublishStarted,
+        status_code=status.HTTP_202_ACCEPTED,
+        responses={
+            409: {
+                "model": AdminPublishStarted,
+                "description": "A publication run is already queued or running.",
+            }
+        },
+    )
+    def admin_publish(
+        payload: AdminPublishRequest,
+        response: Response,
+        _: None = Depends(verify_admin_token),
+    ) -> AdminPublishStarted:
+        """Start one Refinery run (async): refine a candidate article (by
+        `article_id`, must be in the current export) or ingest+refine a
+        `article_url`, then open a PR against the frontend repo. Exactly one
+        of `article_id` / `article_url` is required. A second call while one
+        run is active yields 409 with the active run's id."""
+        result = publication_run_workflow.start(
+            article_id=payload.article_id,
+            article_url=payload.article_url,
+            dry_run=payload.dry_run,
+        )
+        if result.status == "invalid_request":
+            raise HTTPException(status_code=422, detail=result.detail)
+        if result.status == "already_running":
+            response.status_code = status.HTTP_409_CONFLICT
+            return AdminPublishStarted(
+                run_id=str(result.run_id), status="running", detail=result.detail
+            )
+        response.status_code = status.HTTP_202_ACCEPTED
+        return AdminPublishStarted(
+            run_id=str(result.run_id), status="queued", detail=result.detail
+        )
+
+    @app.get(
+        "/v1/admin/publish/status",
+        response_model=AdminPublishStatus,
+        responses={
+            404: {
+                "model": AdminPublishStatus,
+                "description": "run_id was given but does not match any run.",
+            }
+        },
+    )
+    def admin_publish_status(
+        response: Response,
+        run_id: Optional[str] = Query(None, alias="run_id"),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminPublishStatus:
+        """Most recent publication run, or the named one via ?run_id=. An
+        unrecognized run_id returns 404 — never falls back to the latest."""
+        parsed_run_id: Optional[int] = None
+        if run_id is not None:
+            try:
+                parsed_run_id = int(run_id)
+            except ValueError:
+                if run_id:
+                    response.status_code = status.HTTP_404_NOT_FOUND
+                    return AdminPublishStatus()
+
+        result = publication_run_workflow.get_status(parsed_run_id)
+        if result.status == "not_found":
+            if parsed_run_id is not None:
+                response.status_code = status.HTTP_404_NOT_FOUND
+            return AdminPublishStatus()
+
+        summary = result.summary if isinstance(result.summary, dict) else {}
+        return AdminPublishStatus(
+            run_id=str(result.run_id),
+            status=cast(AdminRunStatus, result.run_status),
+            started_at=result.started_at.isoformat() if result.started_at else None,
+            finished_at=result.finished_at.isoformat() if result.finished_at else None,
+            error=result.error_detail,
+            summary=summary,
+            active=result.run_status in ("queued", "running"),
+            pr_url=summary.get("pr_url"),
+            failure_class=summary.get("failure_class"),
+            final_slug=summary.get("final_slug"),
         )
 
     @app.post(

@@ -320,15 +320,27 @@ class NewsCollectorSystem:
 
         return _get_stats(self)
 
-    async def shutdown(self):
-        """Cierra ordenadamente los componentes del sistema."""
+    async def shutdown(self, close_db: bool = True):
+        """Cierra ordenadamente los componentes del sistema.
+
+        Args:
+            close_db: si es True (por defecto — correcto para procesos
+                efímeros como ``scripts/run_collector.py`` o los smokes),
+                dispone el engine del ``DatabaseManager``. Los llamadores
+                dentro de un proceso de larga vida que comparte el singleton
+                global de DB (p. ej. el serving API ejecutando
+                ``CollectionRunWorkflow`` en un hilo) deben pasar
+                ``close_db=False``: ``bootstrap.build_database()`` devuelve
+                ese singleton y cerrarlo dejaría todo request posterior con
+                ``SessionLocal is None``.
+        """
         if self.collector and hasattr(self.collector, "close"):
             if asyncio.iscoroutinefunction(self.collector.close):
                 await self.collector.close()
             else:
                 self.collector.close()
 
-        if self.db_manager:
+        if close_db and self.db_manager:
             self.db_manager.close()
 
         if self.system_logger:

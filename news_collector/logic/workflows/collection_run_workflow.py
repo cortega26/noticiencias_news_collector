@@ -45,10 +45,12 @@ from typing import Any, Literal
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
 from news_collector.storage.models import WorkflowRun
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
+
 
 RUN_TYPE_COLLECTION = "collection"
 DEFAULT_LEASE_TIMEOUT_SECONDS = 3600  # 1 hour — a collection cycle's own
@@ -230,7 +232,14 @@ class CollectionRunWorkflow:
                         )
                     return summary
                 finally:
-                    await system.shutdown()
+                    # close_db=False: build_database() hands back the
+                    # process-wide DatabaseManager singleton, which this same
+                    # process's serving API keeps using. Closing it here left
+                    # `complete()`/`fail()` below — and every later
+                    # `/v1/admin/*` request — hitting `SessionLocal is None`.
+                    # The serving process owns the engine lifetime; a run
+                    # only borrows it.
+                    await system.shutdown(close_db=False)
 
             summary = asyncio.run(_cycle())
             self.complete(run_id, summary=summary or {})
@@ -332,7 +341,10 @@ class CollectionRunWorkflow:
                     status="succeeded",
                     updated_at=datetime.now(timezone.utc),
                     finished_at=datetime.now(timezone.utc),
-                    run_metadata={**existing_metadata, "summary": summary},
+                    run_metadata={
+                        **existing_metadata,
+                        "summary": _json_safe(summary),
+                    },
                 )
             )
             updated = bool(result.rowcount == 1)

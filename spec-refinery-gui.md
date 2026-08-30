@@ -14,9 +14,13 @@ Success criteria:
    `/v1/admin/analytics`, `/v1/admin/config`); no direct DB/file access.
 2. Editorial actions (reject, audit-status) go through the Phase-1 mutation
    endpoints; no workflow logic in the GUI.
-3. Auth: user enters `ADMIN_API_KEY` once; GUI stores it in
-   `sessionStorage` (not localStorage), sends it as Bearer on every request,
-   fails with a clear 401 screen when the key is wrong/expired.
+3. Auth: user enters `ADMIN_API_KEY` once; GUI stores it in `localStorage`
+   (persists across browser restarts), sends it as Bearer on every request,
+   fails with a clear 401 screen when the key is wrong/expired. The key may
+   also be seeded from `PUBLIC_ADMIN_API_KEY` (`apps/admin/.env`). Under
+   `astro dev` with no configured key the gate is skipped entirely
+   (`AUTH_BYPASS`), mirroring the backend fail-open in the "development"
+   environment; production builds always enforce auth.
 4. Professional, responsive, dark-mode editorial UI (Streamlit-grade
    aesthetics); keyboard-first triage: approve/reject/skip hotkeys.
 5. Testable without a running backend: unit tests for the API client (mocked
@@ -60,7 +64,7 @@ apps/admin/
 │   ├── components/
 │   │   ├── ArticleCard.astro # triage card: score, why_ranked, actions
 │   │   ├── ScoreBar.astro    # component breakdown bar
-│   │   ├── AuthGate.astro    # ADMIN_API_KEY entry + sessionStorage
+│   │   ├── AuthGate.astro    # ADMIN_API_KEY entry + localStorage (dev-bypassable)
 │   │   ├── SourceHealthTable.astro
 │   │   ├── AnalyticsView.astro
 │   │   └── ConfigView.astro
@@ -78,7 +82,9 @@ apps/admin/
 
 ### API client (`src/lib/api.ts`)
 
-- `getToken()/setToken()/clearToken()` — sessionStorage `refinery_admin_token`.
+- `getToken()/setToken()/clearToken()` — localStorage `refinery_admin_token`,
+  falling back to the `PUBLIC_ADMIN_API_KEY` env var. `AUTH_BYPASS` (dev-only,
+  no key configured) short-circuits `getToken()` to `null`.
 - `apiFetch<T>(path, init)` — attaches Bearer, maps HTTP errors:
   401/403 → `AuthError` (UI shows re-auth), 404 → `NotFoundError`,
   422 → `ValidationError`, network → `NetworkError`.
@@ -116,9 +122,10 @@ apps/admin/
 
 ### Auth flow
 
-- `AuthGate.astro` wraps all pages: no token → full-screen token entry.
-- Token lives in `sessionStorage` only (survives reload within the tab,
-  not across browser restarts — the minimal surface for an internal tool).
+- `AuthGate.astro` wraps all pages: no resolvable token → full-screen token
+  entry. Skipped when `AUTH_BYPASS` is true (`astro dev`, no key configured).
+- Token lives in `localStorage` (persists across browser restarts); may be
+  seeded from `PUBLIC_ADMIN_API_KEY`. Internal single-operator tool.
 - 401 from any request → clear token, show re-auth screen.
 
 ### Tests
@@ -141,6 +148,17 @@ apps/admin/
    admin surface.
 4. `spec-refinery-gui.md` + `todo-refinery-gui.md` — this file + todo.
 
+### Streamlit → Astro parity (addendum, 2026-08-29)
+
+- **Refine & Publish** — the Streamlit "Operaciones del Pipeline" publish
+  action (pick a scored candidate → run the Refinery → open a PR) is now in
+  the Astro GUI: `POST /v1/admin/publish` + `PublicationRunWorkflow`
+  (Plan 060 / Phase 4c, `plans/060/phase-4c-publication-run-workflow/`),
+  surfaced on `/triage` (per-card "Refine & publish" button on `publishable`
+  queue cards) plus a "Publish from URL" box.
+- Still Streamlit-only (minor, separate follow-up): the "Settings & Logs"
+  system-logs viewer and the "Reinicio de Fábrica" factory reset.
+
 ### Explicitly out of scope (documented)
 
 - Migration/removal of the Streamlit app (`apps/refinery/`) — kept working
@@ -153,14 +171,25 @@ apps/admin/
 ## Cross-origin note (Phase 2 addendum)
 
 The GUI is a separate static app; the serving API must answer browser
-requests from its origin. Add `CORSMiddleware` to `create_app` with an
+requests from its origin. `create_app` adds `CORSMiddleware` with an
 explicit allowlist (`ADMIN_CORS_ORIGINS` env var, comma-separated; default
-`http://localhost:4322,http://localhost:4321` for `astro dev`/`preview`),
+`http://localhost:4321,http://localhost:4322` for `astro dev`/`preview`),
 `allow_credentials=False` (Bearer header auth, no cookies),
-`allow_methods=["GET","POST"]`, `allow_headers=["Authorization",
+`allow_methods=["GET","POST","PUT","DELETE"]`, `allow_headers=["Authorization",
 "Content-Type"]`. Regression tests assert the preflight/actual responses
 carry the expected CORS headers for an allowlisted origin and no
 `Access-Control-Allow-Origin` for a non-allowlisted one.
+
+### Local dev: same-origin via proxy (addendum)
+
+CORS is the contract for a **built/hosted** GUI. For local `astro dev`,
+`astro.config.mjs` also declares a Vite `server.proxy` that forwards
+`/v1/*` to `ADMIN_API_TARGET` (default `http://localhost:8000`), so the
+browser sees one origin and no `PUBLIC_ADMIN_API_BASE` / CORS setup is
+needed. `make admin` runs the serving API and the GUI together (Ctrl+C
+stops both); `make serve` / `make admin-dev` run them separately. The proxy
+is dev-only — `astro preview` and a served `dist/` still rely on CORS +
+`PUBLIC_ADMIN_API_BASE` (see `apps/admin/.env.example`).
 
 ## Verification
 
