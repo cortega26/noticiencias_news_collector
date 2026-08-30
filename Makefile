@@ -116,11 +116,23 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" REFINERY_UI_UNSAFE_ALLOW=1 PYTHONPATH=$(CURDIR) $(PYTHON_REFINERY) -m pytest -c tools/ci/pytest_refinery.toml --rootdir=.
 
 
+.PHONY: serve admin admin-install admin-dev admin-build admin-test
+serve: ## Run the serving API (FastAPI on :8000, autoreload) — the admin GUI's backend
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_BIN) -m news_collector.serving
+
 admin-install: ## Install the new Refinery admin GUI (Astro app in apps/admin/)
 	@cd apps/admin && npm install
 
-admin-dev: ## Run the Refinery admin GUI dev server (Astro; expects the serving API on :8000)
+admin-dev: ## Run ONLY the admin GUI (Astro :4321). You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`.
+	@bash -c 'if ! (exec 3<>/dev/tcp/127.0.0.1/8000) 2>/dev/null; then \
+	  echo "WARNING: nothing is listening on :8000 — the serving API is not running."; \
+	  echo "         Run \`make serve\` in another terminal, or just use \`make admin\` (runs both)."; \
+	  echo; \
+	fi'
 	@cd apps/admin && npm run dev
+
+admin: ## Run the full Refinery admin stack: serving API (:8000) + GUI (:4321). One Ctrl+C stops both.
+	@PYTHON_BIN="$(PYTHON_BIN)" bash scripts/dev/admin_stack.sh
 
 admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
 	@cd apps/admin && npm run check && npm run build

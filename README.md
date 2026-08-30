@@ -36,7 +36,8 @@ This repository is the system of record for collection, enrichment, scoring, sto
 ```bash
 make bootstrap
 python scripts/run_collector.py --dry-run
-make admin-dev     # current Refinery admin (Astro; expects the serving API on :8000)
+make admin-install # once: install the Astro admin GUI deps
+make admin         # current Refinery admin: serving API + GUI together (Ctrl+C stops both)
 make refinery      # legacy Refinery admin (Streamlit) — fallback only
 make lint
 make type
