@@ -13,15 +13,18 @@ tests the workflow class's own state machine, not the collection pipeline
 it dispatches.
 """
 
+import inspect
 import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
+from sqlalchemy import select
 
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Base, WorkflowRun
+from news_collector.system import NewsCollectorSystem
 
 
 @pytest.fixture
@@ -105,6 +108,50 @@ def test_complete_after_running_transition_records_summary(
         row = session.get(WorkflowRun, result.run_id)
         assert row.run_metadata["dry_run"] is True
         assert row.run_metadata["summary"] == {"sources_processed": 3}
+
+
+def test_complete_coerces_a_non_json_serialisable_summary(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """The collection report is a deep dict that can carry pydantic models
+    (the dry-run selection branch puts `CollectorArticleModel` objects in
+    `selection_results.articles`) and datetimes. `complete()` must persist
+    the row anyway — a finished run losing its bookkeeping write is the
+    exact failure mode Phase 4a exists to prevent.
+    """
+    import json
+
+    import pydantic
+
+    class _Article(pydantic.BaseModel):
+        title: str
+        published_at: datetime
+
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(dry_run=True).run_id
+    assert workflow._transition(run_id, from_status="queued", to_status="running")
+
+    summary = {
+        "collection_summary": {"sources_processed": 4},
+        "selection_results": {
+            "articles": [
+                _Article(
+                    title="Freeze-dried microbes",
+                    published_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                )
+            ]
+        },
+    }
+    assert workflow.complete(run_id, summary=summary)
+
+    status = workflow.get_status(run_id)
+    assert status.run_status == "succeeded"
+    stored = status.summary
+    assert stored["collection_summary"]["sources_processed"] == 4
+    assert (
+        stored["selection_results"]["articles"][0]["title"] == "Freeze-dried microbes"
+    )
+    json.dumps(stored)  # the whole thing is now JSON-round-trippable
 
 
 def test_fail_records_error_code_and_detail(db_manager, workflow, monkeypatch) -> None:
@@ -353,12 +400,23 @@ def test_recover_expired_leases_excludes_a_row_that_loses_the_cas_race(
 
 
 class _FakeSystem:
-    def __init__(self, *, initialize_ok=True, cycle_result=None, cycle_error=None):
+    def __init__(
+        self,
+        *,
+        initialize_ok=True,
+        cycle_result=None,
+        cycle_error=None,
+        db_manager=None,
+    ):
         self._initialize_ok = initialize_ok
         self._cycle_result = cycle_result if cycle_result is not None else {}
         self._cycle_error = cycle_error
+        # When set, mirrors the real system: shutdown(close_db=True) disposes
+        # the engine. Left None, shutdown is a pure no-op recorder.
+        self._db_manager = db_manager
         self.export_called = False
         self.shutdown_called = False
+        self.shutdown_close_db: bool | None = None
 
     def initialize(self) -> bool:
         return self._initialize_ok
@@ -368,8 +426,11 @@ class _FakeSystem:
             raise self._cycle_error
         return self._cycle_result
 
-    async def shutdown(self):
+    async def shutdown(self, close_db: bool = True):
         self.shutdown_called = True
+        self.shutdown_close_db = close_db
+        if close_db and self._db_manager is not None:
+            self._db_manager.close()
 
     def export_latest_articles(self, file_path=None, limit=50):
         self.export_called = True
@@ -393,6 +454,32 @@ def test_run_completes_and_exports_when_not_dry_run(
     status = workflow.get_status(result.run_id)
     assert status.run_status == "succeeded"
     assert status.summary == {"sources_processed": 5}
+
+
+def test_run_keeps_the_shared_db_open_for_its_bookkeeping_writes(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """Regression (Plan 060): ``bootstrap.build_database()`` hands back the
+    process-wide ``DatabaseManager`` singleton, which the serving process
+    keeps using. ``_run`` must ask ``system.shutdown(close_db=False)`` — if
+    the engine gets disposed, ``complete()``/``fail()`` here (and every later
+    ``/v1/admin/*`` request) hit ``TypeError: 'NoneType' object is not
+    callable`` from ``SessionLocal()``.
+    """
+    fake = _FakeSystem(cycle_result={"sources_processed": 7}, db_manager=db_manager)
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: fake, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(dry_run=False).run_id
+
+    workflow._run(run_id, False)
+
+    assert fake.shutdown_close_db is False
+    assert db_manager.SessionLocal is not None  # engine survived the run
+    status = workflow.get_status(run_id)  # ... so bookkeeping + status work
+    assert status.run_status == "succeeded"
+    assert status.summary == {"sources_processed": 7}
 
 
 def test_run_skips_export_when_dry_run(db_manager, workflow, monkeypatch) -> None:
@@ -474,3 +561,84 @@ def test_heartbeat_loop_stops_promptly_when_heartbeat_returns_false(
     thread.join(timeout=5)
 
     assert not thread.is_alive()  # returned on its own, stop was never set
+
+
+# ---------------------------------------------------------------------------
+# Regression guards for the Phase 4a defect: `_run` closing the process-wide
+# `DatabaseManager` the serving process (and this workflow's own cached
+# `self._db`) keeps using. Two instruments:
+#   1. `_run` drives the REAL `NewsCollectorSystem.shutdown` and the cached
+#      manager must survive it.
+#   2. a signature-drift table: every call `_run` makes must stay bindable
+#      against BOTH the real system and the `_FakeSystem` the other tests use
+#      — a real-side failure means the workflow's call sites went stale
+#      (exactly how the Phase 4a `shutdown(close_db=...)` change slipped
+#      through); a fake-side failure means the test double drifted.
+# ---------------------------------------------------------------------------
+
+
+def _async_returning(value):
+    async def _fn(*args, **kwargs):
+        return value
+
+    return _fn
+
+
+def test_run_drives_the_real_system_shutdown_without_closing_the_cached_db(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """P1: not a fake `shutdown` — the real
+    ``NewsCollectorSystem.shutdown``. ``get_database_manager()`` self-heals a
+    closed singleton, but ``serving/api.py`` and this workflow both hold a
+    *cached* reference that never re-fetches, so a regressed
+    ``close_db`` default (or a dropped parameter) silently bricks every later
+    ``complete()``/``fail()`` and ``/v1/admin/*`` request. Only the leaf
+    pipeline steps are stubbed; ``shutdown`` runs for real.
+    """
+    real = NewsCollectorSystem()
+    real.db_manager = db_manager  # what bootstrap.build_database would return
+    real.collector = None
+    real.system_logger = None
+    real.initialize = lambda: True  # type: ignore[method-assign]
+    real.run_collection_cycle = _async_returning(  # type: ignore[method-assign]
+        {"sources_processed": 1}
+    )
+    real.export_latest_articles = lambda **kw: {}  # type: ignore[method-assign]
+
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: real, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(dry_run=False).run_id
+
+    workflow._run(run_id, False)
+
+    # The real shutdown ran (close_db defaults notwithstanding) and the
+    # cached manager is still usable for the bookkeeping write + status read.
+    assert db_manager.SessionLocal is not None
+    with db_manager.get_session() as session:
+        session.execute(select(WorkflowRun.id)).all()
+    assert workflow.get_status(run_id).run_status == "succeeded"
+
+
+_WORKFLOW_SYSTEM_CALLS = [
+    ("initialize", {}),
+    ("run_collection_cycle", {"dry_run": False}),
+    (
+        "export_latest_articles",
+        {"file_path": "data/exports/latest_articles.json", "limit": 50},
+    ),
+    ("shutdown", {"close_db": False}),
+]
+
+
+@pytest.mark.parametrize("method_name, call_kwargs", _WORKFLOW_SYSTEM_CALLS)
+def test_real_system_accepts_every_call_run_makes(method_name, call_kwargs) -> None:
+    sig = inspect.signature(getattr(NewsCollectorSystem, method_name))
+    sig.bind(None, **call_kwargs)  # None stands in for `self`; TypeError on drift
+
+
+@pytest.mark.parametrize("method_name, call_kwargs", _WORKFLOW_SYSTEM_CALLS)
+def test_fake_system_accepts_every_call_run_makes(method_name, call_kwargs) -> None:
+    sig = inspect.signature(getattr(_FakeSystem, method_name))
+    sig.bind(None, **call_kwargs)

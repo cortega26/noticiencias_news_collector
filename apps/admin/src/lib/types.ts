@@ -27,6 +27,8 @@ export interface AdminArticleListItem {
   error_message: string | null;
   published_url: string | null;
   refinery_id: string | null;
+  publishable: boolean;
+  export_score: number | null;
 }
 
 export interface AdminArticleDetail extends AdminArticleListItem {
@@ -113,6 +115,25 @@ export interface AdminCollectStatus {
   error: string | null;
   summary: Record<string, unknown>;
   active: boolean;
+}
+
+export interface AdminPublishStarted {
+  run_id: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+  detail: string;
+}
+
+export interface AdminPublishStatus {
+  run_id: string | null;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  summary: Record<string, unknown>;
+  active: boolean;
+  pr_url: string | null;
+  failure_class: string | null;
+  final_slug: string | null;
 }
 
 export interface AdminSourceListItem {

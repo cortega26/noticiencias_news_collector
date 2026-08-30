@@ -313,3 +313,52 @@ work.
 - [x] All module-global run state (`_admin_runs` and friends) is deleted,
       not dual-written alongside the DB. Confirmed via `hasattr` smoke
       test against the imported `api` module.
+
+## Post-merge corrections (2026-08-27)
+
+Two defects found running the feature through the admin GUI for the first
+time (both fixed, both with regression tests in
+`tests/unit/logic/workflows/test_collection_run_workflow.py`):
+
+1. **In-process run tore down the serving DB.** `_run`'s
+   `finally: await system.shutdown()` reached `db_manager.close()` on the
+   process-wide `DatabaseManager` singleton (`bootstrap.build_database()`
+   returns it) — the same one the serving API uses. After every "Fetch
+   fresh news", `complete()`/`fail()` and every later `/v1/admin/*`
+   request hit `TypeError: 'NoneType' object is not callable` from
+   `SessionLocal()`. `get_db()` captures the manager reference, so the
+   `get_database_manager()` zombie-recovery branch never fires in the
+   serving process — nothing self-heals. Fix: `NewsCollectorSystem.shutdown`
+   grew `close_db: bool = True` (default preserves CLI/smoke behavior);
+   the in-process run passes `close_db=False`. The serving process owns
+   the engine lifetime; a run borrows it.
+2. **Dry-run summary was not JSON-serialisable.** `_execute_final_selection`'s
+   dry-run branch returns raw `CollectorArticleModel` objects in
+   `selection_results.articles` (the normal branch calls `.to_dict()`).
+   That flows into `complete(summary=...)` → the `run_metadata` JSON write
+   raises `Object of type CollectorArticleModel is not JSON serializable`.
+   Masked by defect 1 until it was fixed. Fix: `complete()` runs the
+   summary through a `_json_safe()` coercion (pydantic `model_dump`,
+   datetime `isoformat`, `str()` fallback) before persisting — the
+   persistence boundary must never lose a finished run's bookkeeping
+   write over a rich leaf type.
+
+### Why the old tests did not catch defect 1 (2026-08-29 follow-up)
+
+The `_run` tests all used a hand-rolled `_FakeSystem` whose `shutdown`
+signature could — and did — drift from the real
+`NewsCollectorSystem.shutdown` without any test failing. Added, alongside
+the existing fake-based coverage:
+
+- `test_run_drives_the_real_system_shutdown_without_closing_the_cached_db`
+  — drives the **real** `NewsCollectorSystem.shutdown` (only the leaf
+  pipeline steps stubbed) and asserts the workflow's cached `self._db`
+  is still usable afterward. Flipping `close_db=False` → `True` in `_run`
+  reproduces the exact original error
+  (`Collection run N failed: 'NoneType' object is not callable`).
+- `test_{real,fake}_system_accepts_every_call_run_makes` — a parametrized
+  `inspect.signature(...).bind()` table over every call `_run` makes into
+  the system. A real-side failure means the workflow's call sites went
+  stale (how defect 1 shipped); a fake-side failure means the test double
+  drifted. Sibling guard for `apps.refinery.main.main` in
+  `test_publication_run_workflow.py::test_refinery_main_accepts_every_kwarg_run_passes`.

@@ -1,7 +1,12 @@
 ---
 /**
- * Token gate: if no ADMIN_API_KEY is in sessionStorage, show a full-screen
- * entry form and hide the page content; otherwise reveal the content.
+ * Token gate: if no ADMIN_API_KEY is resolvable, show a full-screen entry
+ * form and hide the page content; otherwise reveal the content.
+ *
+ * The key is resolved by `getToken()` (localStorage, then the
+ * `PUBLIC_ADMIN_API_KEY` env var). Under `astro dev` with no configured key
+ * `AUTH_BYPASS` is true and the gate never shows — the serving backend
+ * fail-opens in the "development" environment. Production builds always gate.
  *
  * Redirect-on-valid is intentionally avoided on load (it would loop on the
  * page itself). Instead, page scripts run normally: with no token their
@@ -43,7 +48,7 @@
         </button>
 
         <p class="pt-1 text-center text-xs text-ink-400">
-          The key is kept in this tab's session only.
+          The key is stored in this browser (localStorage) until you clear it.
         </p>
       </form>
     </div>
@@ -53,7 +58,7 @@
 <div id="auth-content"><slot /></div>
 
 <script>
-  import { getToken, setToken, clearToken, listArticles } from "../lib/api";
+  import { getToken, setToken, clearToken, listArticles, AUTH_BYPASS } from "../lib/api";
 
   const gate = document.getElementById("auth-gate");
   const form = document.getElementById("auth-form");
@@ -63,9 +68,9 @@
     gate?.classList.remove("hidden");
   }
 
-  // No token → gate now; with a token, let the page scripts run (their
-  // first call 401s and reloads if the key is wrong).
-  if (!getToken()) {
+  // Dev bypass → never gate. Otherwise: no token → gate now; with a token,
+  // let the page scripts run (their first call 401s and reloads if wrong).
+  if (!AUTH_BYPASS && !getToken()) {
     showGate();
   }
 
