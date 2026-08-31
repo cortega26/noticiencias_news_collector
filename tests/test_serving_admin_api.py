@@ -1044,39 +1044,99 @@ def test_admin_publish_status_unknown_run_id_returns_404(
 def test_admin_articles_marks_export_candidates_publishable(
     api_client: TestClient, db_manager: DatabaseManager, monkeypatch, tmp_path
 ) -> None:
-    """`publishable` is True only for pending articles in the current
-    `latest_articles.json` shortlist."""
+    """`publishable` == in the current `latest_articles.json` shortlist AND
+    not already in flight / deployed. A plain ``completed`` status (the state
+    the scoring phase leaves every scored article in) does NOT disqualify —
+    that is exactly an editorial publish candidate. Mirrors
+    ``ArticleRepository.is_article_in_flight_or_done``.
+    """
+    from datetime import datetime, timezone
+
     from news_collector.serving import api as serving_api
 
     with db_manager.get_session() as session:
-        for aid, title in [(501, "in export"), (502, "not in export")]:
+        # (id, in_export, processing_status, published_url, published_at)
+        fixtures = [
+            (501, True, "completed", None, None),  # scored candidate -> publishable
+            (502, False, "completed", None, None),  # not in the shortlist
+            (503, True, "completed", "https://noticiencias.com/x", None),  # deployed
+            (504, True, "publishing", None, None),  # open PR
+            (505, True, "completed", None, datetime.now(timezone.utc)),  # deployed
+        ]
+        for aid, _in_export, pstatus, purl, pat in fixtures:
             session.add(
                 Article(
                     id=aid,
-                    title=title,
+                    title=f"article {aid}",
                     url=f"https://example.com/{aid}",
                     source_id="nature",
                     source_name="Nature",
-                    processing_status="pending",
+                    processing_status=pstatus,
                     final_score=0.9,
+                    published_url=purl,
+                    published_at=pat,
                 )
             )
         session.commit()
 
     export = tmp_path / "latest_articles.json"
-    export.write_text(json.dumps({"articles": [{"id": 501, "score": 0.9}]}), "utf-8")
+    export.write_text(
+        json.dumps(
+            {"articles": [{"id": i, "score": 0.9} for i in (501, 503, 504, 505)]}
+        ),
+        "utf-8",
+    )
     monkeypatch.setattr(serving_api, "_EXPORT_ARTIFACT_PATH", export, raising=False)
 
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         rows = {
             r["id"]: r
             for r in api_client.get(
-                "/v1/admin/articles", headers=_admin_headers()
+                "/v1/admin/articles?status=completed", headers=_admin_headers()
+            ).json()["data"]
+        }
+        publishing = {
+            r["id"]: r
+            for r in api_client.get(
+                "/v1/admin/articles?status=publishing", headers=_admin_headers()
             ).json()["data"]
         }
     assert rows[501]["publishable"] is True
     assert rows[501]["export_score"] == 0.9
-    assert rows[502]["publishable"] is False
+    assert rows[502]["publishable"] is False  # not in the export shortlist
+    assert rows[503]["publishable"] is False  # already has a published_url
+    assert rows[505]["publishable"] is False  # already has a published_at
+    assert publishing[504]["publishable"] is False  # open PR
+
+    # The virtual `?status=publishable` filter returns exactly the candidates
+    # (in the shortlist, not in flight / deployed) regardless of their real
+    # processing_status — 501 only, here.
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        resp = api_client.get(
+            "/v1/admin/articles?status=publishable", headers=_admin_headers()
+        )
+        assert resp.status_code == 200
+        candidate_ids = {r["id"] for r in resp.json()["data"]}
+        assert candidate_ids == {501}
+        assert all(r["publishable"] for r in resp.json()["data"])
+
+        # a genuinely unknown status is still a 422
+        assert (
+            api_client.get(
+                "/v1/admin/articles?status=bogus", headers=_admin_headers()
+            ).status_code
+            == 422
+        )
+
+    # a missing / empty export → an empty publishable page, never a 500/422
+    missing = tmp_path / "gone.json"
+    monkeypatch.setattr(serving_api, "_EXPORT_ARTIFACT_PATH", missing, raising=False)
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        empty = api_client.get(
+            "/v1/admin/articles?status=publishable", headers=_admin_headers()
+        )
+    assert empty.status_code == 200
+    assert empty.json()["data"] == []
 
 
 def test_admin_sources_list_toggle_reset(

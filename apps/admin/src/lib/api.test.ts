@@ -166,6 +166,17 @@ describe("listArticles", () => {
     expect(url).toContain("cursor=abc123");
   });
 
+  it("passes the virtual 'publishable' filter through as a status", async () => {
+    setToken("admin-key");
+    mockFetchResponse(200, envelope);
+
+    await listArticles("publishable");
+
+    const fetchMock = vi.mocked(fetch);
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("status=publishable");
+  });
+
   it("throws AuthError on 401", async () => {
     mockFetchResponse(401, { detail: "Missing Authorization header" });
     await expect(listArticles("pending")).rejects.toBeInstanceOf(AuthError);

@@ -124,9 +124,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     ArticleStatus,
   } from "../lib/types";
 
-  const STATUSES: ArticleStatus[] = ["pending", "publishing", "rejected", "completed"];
+  const STATUSES: ArticleStatus[] = [
+    "publishable",
+    "pending",
+    "publishing",
+    "rejected",
+    "completed",
+  ];
 
-  let status: ArticleStatus = "pending";
+  let status: ArticleStatus = "publishable";
   let items: AdminArticleListItem[] = [];
   let selectedId: number | null = null;
   let detail: AdminArticleDetail | null = null;

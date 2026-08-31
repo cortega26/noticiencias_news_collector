@@ -124,6 +124,26 @@ by both workflows.
 - **Publish-by-id needs the article in the current export.** Articles not
   in `latest_articles.json` are published via the URL box. Same constraint
   the Streamlit flow lives with.
+- **`publishable` = in the export shortlist AND not in flight / deployed**
+  (`processing_status == 'publishing'` → open PR; `published_url` /
+  `published_at` set → deployed). A plain `completed` status does NOT
+  disqualify — the scoring phase leaves every scored article `completed`,
+  so that is the normal state of a publish candidate (see
+  `ArticleRepository.is_article_in_flight_or_done`). This pipeline has no
+  `pending` review queue — scoring routes straight to `completed`/`rejected`.
+- **`GET /v1/admin/articles?status=publishable`** is a virtual filter (not a
+  real `processing_status`): it returns exactly that candidate set, ordered
+  by score, regardless of the rows' real status. `/triage` surfaces it as
+  the first pill and the default view — an empty export yields an empty
+  page, never a 422. A genuinely unknown status is still 422.
+- **Cross-repo dedup gap (accepted).** The Streamlit panel also cloned the
+  frontend repo to hide articles whose slug is already published
+  (`resolve_published_refinery_ids`, needed because export-published rows
+  carry a non-numeric `refinery_id` invisible to the DB check). The
+  `/v1/admin/articles` list endpoint does not — cloning a repo per list
+  request is not acceptable. Consequence: a previously-published article
+  can still show as `publishable`; publishing it fails safely later at
+  permalink-collision in the Refinery.
 - **`GITHUB_TOKEN` must be in the serving process env** for PR creation
   (`config.github.token`) — runbook note.
 - **SQLite**: `main()`'s own `DatabaseManager` is a second connection to the
@@ -144,7 +164,9 @@ by both workflows.
       (`failure_class` + message) is preserved and shown.
 - [ ] Stale `running` `publication` rows recover to `interrupted` at
       startup, deterministically.
-- [ ] `publishable` is True only for pending articles in the current export.
+- [x] `publishable` is True for export-shortlist articles that are not in
+      flight / deployed — `completed` included (fixed 2026-08-30; the first
+      cut wrongly excluded `completed`, so no candidate was ever publishable).
 - [ ] `make test` / `make type` green; `apps/admin` `check`/`test`/`build`
       green.
 

@@ -41,6 +41,13 @@ Execution index for [`spec.md`](spec.md). spec.md is binding.
       `_lifespan` recovery, workflow construction in `serving/api.py`.
 - [x] `load_export_candidate_scores()` + `publishable` wiring in the
       articles list route.
+- [x] `publishable` mirrors `is_article_in_flight_or_done` (`completed` is a
+      valid candidate; only `publishing`/`published_url`/`published_at`
+      disqualify). Fixed 2026-08-30 — the first cut excluded `completed`, so
+      every candidate showed as non-publishable.
+- [x] `GET /v1/admin/articles?status=publishable` virtual filter — the
+      shortlist candidate set, score-ordered, any real status; unknown status
+      still 422; empty export → empty page.
 - [x] `tests/test_serving_admin_api.py` — 6 tests: 422 id/url combo,
       lifecycle + db-survives, concurrent 202/409, status 404, publishable flag.
 
@@ -49,7 +56,7 @@ Execution index for [`spec.md`](spec.md). spec.md is binding.
 - [x] `types.ts` + `api.ts` (`startPublish`, `getPublishStatus`).
 - [x] `triage.astro` — URL box, per-card "Refine & publish" button (rendered
       only on `publishable` queue cards), `#publish-status` polling panel,
-      `publishInFlight`.
+      `publishInFlight`. First/default pill is "publishable".
 - [x] `src/lib/api.test.ts` — 5 tests (id-only/url-only body, 409→Conflict,
       502→Network, status path).
 
