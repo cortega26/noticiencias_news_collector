@@ -331,9 +331,6 @@ def _build_article_payload(row: RowType) -> Dict[str, Any]:
 
 
 _EXPORT_ARTIFACT_PATH = Path("data/exports/latest_articles.json")
-# Statuses where an article is already in flight or published — never
-# offer "Refine & Publish" for those even if they linger in the export.
-_NON_PUBLISHABLE_STATUSES = frozenset({"publishing", "completed", "rejected"})
 
 
 def load_export_candidate_scores(
@@ -381,8 +378,18 @@ def _build_admin_list_item(
     refinery_id = (metadata.get("publication") or {}).get("refinery_id")
     scores = export_scores or {}
     export_score = scores.get(row.article_id)
-    publishable = export_score is not None and (
-        (row.processing_status or "") not in _NON_PUBLISHABLE_STATUSES
+    # "Refine & publish" candidates = in the current export shortlist AND not
+    # already in flight / deployed. This mirrors
+    # ArticleRepository.is_article_in_flight_or_done exactly: `publishing`
+    # means an open PR, `published_url`/`published_at` mean a real deploy.
+    # Plain `completed` does NOT disqualify — the scoring phase marks an
+    # article `completed` as soon as it is scored, so a scored-but-never-
+    # published article is exactly what an editor wants to publish.
+    publishable = (
+        export_score is not None
+        and (row.processing_status or "") != "publishing"
+        and row.published_url is None
+        and row.published_at is None
     )
     return AdminArticleListItem(
         id=row.article_id,
@@ -861,15 +868,21 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminArticleListEnvelope:
-        if status_filter not in _ADMIN_VALID_STATUSES:
+        # "publishable" is a virtual filter, not a real processing_status: the
+        # current export shortlist minus anything already in flight / deployed.
+        # It is where an editor picks candidates for "Refine & publish" (the
+        # bulk of them sit at processing_status='completed', not 'pending').
+        publishable_only = status_filter == "publishable"
+        if not publishable_only and status_filter not in _ADMIN_VALID_STATUSES:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
                     f"Invalid status '{status_filter}'. "
-                    f"Valid: {sorted(_ADMIN_VALID_STATUSES)}"
+                    f"Valid: {sorted(_ADMIN_VALID_STATUSES | {'publishable'})}"
                 ),
             )
 
+        export_scores = load_export_candidate_scores()
         score_column = func.coalesce(Article.final_score, 0.0)
         with manager.get_session() as session:
             latest_log_subquery = (
@@ -900,6 +913,7 @@ def create_app(  # noqa: C901
                     Article.processing_status,
                     Article.error_message,
                     Article.published_url,
+                    Article.published_at,
                     score_log_alias.score_explanation,
                 )
                 .outerjoin(
@@ -914,8 +928,19 @@ def create_app(  # noqa: C901
                         == latest_log_subquery.c.latest_calculated,
                     ),
                 )
-                .filter(Article.processing_status == status_filter)
             )
+
+            if publishable_only:
+                # in_(()) on an empty shortlist is a valid always-false filter
+                # in SQLAlchemy 2.x — an empty export yields an empty page.
+                query = query.filter(
+                    Article.id.in_(tuple(export_scores)),
+                    Article.processing_status != "publishing",
+                    Article.published_url.is_(None),
+                    Article.published_at.is_(None),
+                )
+            else:
+                query = query.filter(Article.processing_status == status_filter)
 
             if source:
                 query = query.filter(Article.source_id.in_(source))
@@ -948,7 +973,6 @@ def create_app(  # noqa: C901
             if has_more:
                 records = records[:page_size]
 
-            export_scores = load_export_candidate_scores()
             items = [_build_admin_list_item(row, export_scores) for row in records]
             next_cursor = _encode_cursor(records[-1]) if has_more else None
 
@@ -1002,6 +1026,7 @@ def create_app(  # noqa: C901
                     Article.processing_status,
                     Article.error_message,
                     Article.published_url,
+                    Article.published_at,
                     Article.content,
                     Article.cluster_id,
                     score_log_alias.final_score.label("latest_score"),

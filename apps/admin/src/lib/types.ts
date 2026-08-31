@@ -92,9 +92,14 @@ export type ArticleStatus =
   | "pending"
   | "publishing"
   | "rejected"
-  | "completed";
+  | "completed"
+  // Virtual filter (not a real processing_status): the current export
+  // shortlist minus anything already in flight / deployed — the "Refine &
+  // publish" candidate list.
+  | "publishable";
 
 export const ARTICLE_STATUSES: ArticleStatus[] = [
+  "publishable",
   "pending",
   "publishing",
   "rejected",

@@ -154,8 +154,9 @@ apps/admin/
   action (pick a scored candidate → run the Refinery → open a PR) is now in
   the Astro GUI: `POST /v1/admin/publish` + `PublicationRunWorkflow`
   (Plan 060 / Phase 4c, `plans/060/phase-4c-publication-run-workflow/`),
-  surfaced on `/triage` (per-card "Refine & publish" button on `publishable`
-  queue cards) plus a "Publish from URL" box.
+  surfaced on `/triage`: a "publishable" filter pill (first and default —
+  the export shortlist minus anything in flight / deployed) with a per-card
+  "Refine & publish" button, plus a "Publish from URL" box.
 - Still Streamlit-only (minor, separate follow-up): the "Settings & Logs"
   system-logs viewer and the "Reinicio de Fábrica" factory reset.
 
