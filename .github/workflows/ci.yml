@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-python-env
@@ -49,7 +49,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Checkout front-end contract checker (sparse)
         # The front-end repo owns the authoritative cross-repo parity checker
         # (scripts/check-contract-sync.js, the same one Content Guard runs).
@@ -72,7 +72,7 @@ jobs:
         # (needed for ESM resolution) so backend CI enforces the exact same
         # strict gate — catching type/constraint/optionality drift at backend
         # CI time instead of only on the next frontend push.
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cortega26/noticiencias
           path: .tmp/frontend-contract
@@ -108,7 +108,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -118,7 +118,7 @@ jobs:
       # Note: actions/checkout no longer supports path outside the repo checkout
       # directory, so we use a subdirectory instead of ../noticiencias.
       - name: Checkout front-end schema (sparse)
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cortega26/noticiencias
           path: .tmp/frontend-schema
@@ -152,7 +152,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Download coverage artifact
@@ -177,7 +177,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -197,7 +197,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -220,7 +220,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
@@ -277,7 +277,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Debug CI workflow metadata
