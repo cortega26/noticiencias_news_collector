@@ -8,7 +8,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Sequence, cast
 
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.frontend_schema import AstroPost
@@ -17,6 +17,7 @@ from news_collector.contracts.publication_validation import (
     PublicationFailureClass,
     PublicationValidationSummary,
 )
+from news_collector.editorial.classifier import EditorialClassifier
 
 FIXTURE_ARTICLE_ID = "smoke-test-ci-fixture"
 FIXTURE_POST_FILENAME = "_smoke-test.md"
@@ -169,13 +170,25 @@ def _enrichment_response_json(omit_field: str | None = None) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
-class _NullCategoryClassifier:
+class _NullCategoryClassifier(EditorialClassifier):
     """Deterministic no-op classifier for CI fixture generation. Always
     declines classification so category resolution falls back to the
     raw/metadata category (matches the stubbing pattern used by
     tests/unit/editorial/test_enrichment_fields.py's setUp)."""
 
-    def try_classify_article(self, *_args, **_kwargs):
+    def __init__(self) -> None:
+        # No LLM provider: the fixture never classifies, it always declines.
+        pass
+
+    def try_classify_article(
+        self,
+        title: str,
+        summary: str,
+        content: str = "",
+        *,
+        allowed_categories: Sequence[str] | None = None,
+        allow_editorial: bool = True,
+    ) -> str | None:
         return None
 
 
@@ -202,7 +215,7 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
 
     agent = EditorAgent("http://fixture.invalid", "fixture-model")
     agent.category_resolver._classifier = _NullCategoryClassifier()
-    agent._critic_pass = lambda *args, **kwargs: (True, None)  # type: ignore[method-assign]
+    agent._critic_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
     agent._critic_editorial_pass = lambda *args, **kwargs: (  # type: ignore[method-assign]
         True,
         None,
@@ -251,10 +264,13 @@ def render_fixture_markdown(
         agent = _build_fixture_editor_agent(enrichment_omit_field=enrichment_omit_field)
         agent.cache_dir = Path(cache_dir)
         raw_text = _fixture_raw_text(include_source_metadata=include_source_metadata)
-        return agent.process_article(
-            raw_text,
-            override_date="2026-01-01",
-            explicit_article_id=FIXTURE_ARTICLE_ID,
+        return cast(
+            str,
+            agent.process_article(
+                raw_text,
+                override_date="2026-01-01",
+                explicit_article_id=FIXTURE_ARTICLE_ID,
+            ),
         )
 
 
@@ -519,7 +535,7 @@ def run_frontend_publication_validation(
 
 def validate_post_frontmatter_fast(
     post_path: Path,
-) -> tuple[bool, str | None, str | None]:
+) -> tuple[bool, PublicationFailureClass | None, str | None]:
     """Fast, dependency-free frontmatter validation of a generated post.
 
     Parses the post's YAML frontmatter and validates it against the backend

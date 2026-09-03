@@ -30,22 +30,11 @@ SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Each entry must include an expiry date so suppressions cannot become permanent.
-PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
-    # GHSA exceptions for packages with no upstream fix yet or that cannot be
-    # upgraded in this cycle (Starlette major-version boundary affecting FastAPI).
-    "GHSA-5239-wwwm-4pmq": {
-        "reason": "Pygments 2.19.2 vulnerability - fix available in 2.20.0.",
-        "expires_on": "2026-08-31",
-    },
-    "GHSA-mf9w-mj56-hr94": {
-        "reason": "python-dotenv 1.2.1 vulnerability - fix available in 1.2.2.",
-        "expires_on": "2026-08-31",
-    },
-    "GHSA-gc5v-m9x4-r6x2": {
-        "reason": "requests 2.32.5 vulnerability - fix available in 2.33.0.",
-        "expires_on": "2026-08-31",
-    },
-}
+# Empty: the Pygments 2.20.0 / python-dotenv 1.2.2 / requests 2.34.2 upgrades
+# already shipped in requirements.lock, so the previous suppressions
+# (GHSA-5239-wwwm-4pmq, GHSA-mf9w-mj56-hr94, GHSA-gc5v-m9x4-r6x2 — all expired
+# 2026-08-31) were removed rather than renewed.
+PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {}
 
 
 def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:

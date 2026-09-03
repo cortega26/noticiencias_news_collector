@@ -172,6 +172,6 @@ def is_first_party_editorial_source(
         return True
 
     lowered_name = str(source_name or "").strip().casefold()
-    return lowered_name and any(
+    return bool(lowered_name) and any(
         pattern in lowered_name for pattern in FIRST_PARTY_NAME_PATTERNS
     )

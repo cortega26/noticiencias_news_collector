@@ -761,7 +761,9 @@ class EditorAgent:
                 / "technical_glossary.json"
             )
             if path.exists():
-                return json.loads(path.read_text(encoding="utf-8"))
+                return cast(
+                    dict[Any, Any], json.loads(path.read_text(encoding="utf-8"))
+                )
         except Exception as e:
             logger.warning(f"Failed to load technical glossary: {e}")
         return {}
@@ -1073,7 +1075,7 @@ class EditorAgent:
             try:
                 data = json.loads(match.group(0))
                 if "score" in data:
-                    return data
+                    return cast(dict[Any, Any], data)
             except (ValueError, KeyError):
                 continue
         # Fallback: try singly-nested (one level of nesting)
@@ -1081,7 +1083,7 @@ class EditorAgent:
             try:
                 data = json.loads(match.group(0))
                 if "score" in data:
-                    return data
+                    return cast(dict[Any, Any], data)
             except (ValueError, KeyError):
                 continue
         logger.warning(
@@ -1981,7 +1983,7 @@ class EditorAgent:
                         repair_reason,
                     )
                     is_valid = False
-                    reason = repair_reason
+                    reason: str | None = repair_reason
                     recoverable = True
                 else:
                     critic_result = self._critic_pass(final_content)

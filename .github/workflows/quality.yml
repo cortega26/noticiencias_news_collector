@@ -44,16 +44,17 @@ jobs:
       - name: Install Gitleaks
         run: |
           set -euo pipefail
-          GITLEAKS_VERSION="8.18.1"
+          GITLEAKS_VERSION="8.30.1"
           WORKDIR="$(mktemp -d)"
-          curl -sSL -o "$WORKDIR/gitleaks.tar.gz" \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          TARBALL="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL -o "$WORKDIR/$TARBALL" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TARBALL}"
           curl -sSL -o "$WORKDIR/checksums.txt" \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          grep "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" "$WORKDIR/checksums.txt" > "$WORKDIR/expected.sha256"
+          grep "$TARBALL" "$WORKDIR/checksums.txt" > "$WORKDIR/expected.sha256"
           (cd "$WORKDIR" && sha256sum -c expected.sha256)
           mkdir -p "$RUNNER_TEMP/bin"
-          tar -xz -C "$RUNNER_TEMP/bin" -f "$WORKDIR/gitleaks.tar.gz" gitleaks
+          tar -xz -C "$RUNNER_TEMP/bin" -f "$WORKDIR/$TARBALL" gitleaks
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Run Quality Checks (CI Strict Mode)

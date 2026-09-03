@@ -44,6 +44,7 @@ from news_collector.contracts import (
     PublicationAttemptStageResult,
     PublicationAttemptSummary,
 )
+from news_collector.contracts.publication_validation import PublicationFailureClass
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
     validate_post_frontmatter_fast,
@@ -308,7 +309,9 @@ class RefineryEngine:
                 )
             )
 
-        def persist_attempt(success: bool, failure_class: str | None = None) -> None:
+        def persist_attempt(
+            success: bool, failure_class: PublicationFailureClass | None = None
+        ) -> None:
             self._persist_publication_attempt_summary(
                 article_id=article_id,
                 success=success,
@@ -677,7 +680,7 @@ class RefineryEngine:
         branch_name: str | None = None,
         pr_url: str | None = None,
         validation_summary_path: str | None = None,
-        failure_class: str | None = None,
+        failure_class: PublicationFailureClass | None = None,
     ) -> None:
         safe_article_id = self._safe_publication_artifact_name(article_id)
 
