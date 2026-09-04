@@ -191,3 +191,42 @@ def test_reading_time_sanitizer_clamps_all_non_finite(bad_reading_time, expected
     }
     model = CollectorArticleModel(**data)
     assert model.reading_time_minutes == expected
+
+
+def test_collector_article_id_preserved_when_present():
+    """Plan 077: export/DB identity survives validation (int and str)."""
+    base = {
+        "url": "http://example.com/foo",
+        "title": "A very long title that meets the requirements",
+        "summary": "Short summary",
+        "content": "A" * 501,
+        "source_id": "test_src",
+        "source_name": "Test Source",
+        "category": "science",
+        "published_date": datetime(2025, 1, 1),
+    }
+    assert CollectorArticleModel(**{**base, "id": 158}).id == 158
+    assert CollectorArticleModel(**{**base, "id": "158"}).id == "158"
+    assert CollectorArticleModel(**base).id is None
+
+
+def test_adapt_export_payload_preserves_id():
+    """Plan 077: the export->collector adapter no longer strips `id`."""
+    from news_collector.contracts.adapters import (
+        adapt_export_article_to_collector_payload,
+    )
+
+    out = adapt_export_article_to_collector_payload(
+        {
+            "id": 158,
+            "title": "A very long title that meets the requirements",
+            "url": "https://example.com/x",
+            "summary": "s",
+            "content": "c",
+            "source_id": "nature",
+            "source_name": "Nature",
+            "category": "science",
+            "published_date": "2026-01-01T00:00:00",
+        }
+    )
+    assert out["id"] == 158

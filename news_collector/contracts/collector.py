@@ -130,6 +130,13 @@ class CollectorArticlePayload(TypedDict, total=False):
 class CollectorArticleModel(BaseModel):
     """Pydantic model validating collector payloads before persistence."""
 
+    # Export/DB identity carried through adaptation (plan 077). Optional so
+    # legacy payloads without it still validate; never used for inserts
+    # (save paths construct Article with explicit keywords, dedup is
+    # URL/hash-based). Lets publish-by-id keep numeric identity downstream
+    # (attempt files, DB marking, callback correlation) instead of
+    # degrading to title fallback.
+    id: int | str | None = None
     url: AnyHttpUrl
     original_url: str | None = None
     title: str = Field(min_length=10)

@@ -18,6 +18,10 @@ class _DummyDB:
 def _build_engine_with_mocks(data_dir: Path):
     mock_db = MagicMock()
     mock_db.get_canonical_slug.return_value = None
+    # No stuck publishing state: export-loaded payloads now carry numeric
+    # ids (plan 077), so recovery is consulted — it must find nothing here
+    # for the golden full-pipeline path.
+    mock_db.get_publishing_state.return_value = None
 
     mock_git = MagicMock()
     mock_git.create_branch.return_value = "content/update/2024-01-01-audit-160"
