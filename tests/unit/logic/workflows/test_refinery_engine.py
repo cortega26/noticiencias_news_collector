@@ -120,6 +120,51 @@ class TestRefineryEngine(unittest.TestCase):
                 123, "http://pr.url", "123"
             )
 
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_process_single_article_records_readability_stage(self, mock_dt_refinery):
+        """Plan 065: a successful run persists a `readability` stage with the
+        deterministic legibility snapshot of the refined body."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        mock_repo = MagicMock()
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: test-slug\n---\n"
+            "La fotosíntesis convierte la luz solar en energía química. "
+            "Las plantas usan este proceso cada día."
+        )
+        self.mock_db.get_canonical_slug.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.engine.publication_attempts_dir = Path(tmpdir)
+            target_dir = Path(tmpdir) / "target"
+            target_dir.mkdir()
+            result = self.engine.process_single_article(article, mock_repo, target_dir)
+
+            self.assertTrue(result)
+            summary = json.loads((Path(tmpdir) / "123.json").read_text())
+            stages = {stage["name"]: stage for stage in summary["stages"]}
+            self.assertIn("readability", stages)
+            details = stages["readability"]["details"]
+            self.assertTrue(stages["readability"]["success"])
+            self.assertEqual(details["words"], 16)
+            self.assertEqual(details["sentences"], 2)
+            self.assertEqual(details["grade"], "normal")
+            self.assertAlmostEqual(details["ifsz"], 62.56, places=1)
+            self.assertGreaterEqual(details["suitability"], 0.0)
+            self.assertLessEqual(details["suitability"], 1.0)
+
     def test_process_articles_batch(self):
         articles = [{"id": "1"}, {"id": "2"}]
         self.engine.process_single_article = MagicMock(side_effect=[True, False])
@@ -396,7 +441,7 @@ class TestRefineryEngine(unittest.TestCase):
         self.mock_db.get_canonical_slug.return_value = None
         self.mock_editor.process_article.side_effect = GeneratedArticleValidationError(
             "V2 article missing required enrichment fields: ['sources']. "
-            "Stage 4 output is incomplete; retry or supply fields manually.",
+            "Stage 6 output is incomplete; retry or supply fields manually.",
             error_code="editorial_v2_incomplete",
         )
         self.engine.writer.write_article = MagicMock()
@@ -422,7 +467,7 @@ class TestRefineryEngine(unittest.TestCase):
         self, mock_dt_refinery
     ):
         """Integration-boundary regression for the Phase 2c fact-check gate
-        (news_collector/components/editorial/ai_editor.py, Stage 4.5 +
+        (news_collector/components/editorial/ai_editor.py, Stage 7 +
         "editorial_fact_check_disputed"). Mirrors
         test_process_single_article_returns_false_for_v2_incomplete_block
         above: RefineryEngine.process_single_article must stop BEFORE any

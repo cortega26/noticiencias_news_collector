@@ -87,6 +87,11 @@ from news_collector.contracts.admin import (
     AdminPublishRequest,
     AdminPublishStarted,
     AdminPublishStatus,
+    AdminQualityAggregate,
+    AdminQualityReadability,
+    AdminQualityRecentEnvelope,
+    AdminQualityRunItem,
+    AdminQualityStageItem,
     AdminRejectRequest,
     AdminRunStatus,
     AdminSourceHealthEnvelope,
@@ -101,7 +106,7 @@ from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
 )
 from news_collector.storage.database import DatabaseManager, get_database_manager
-from news_collector.storage.models import Article, ScoreLog
+from news_collector.storage.models import Article, ScoreLog, WorkflowRun
 from news_collector.utils.logger import get_logger
 from news_collector.utils.pydantic_compat import get_pydantic_module
 
@@ -410,6 +415,100 @@ def _build_admin_list_item(
         refinery_id=refinery_id,
         publishable=publishable,
         export_score=export_score,
+    )
+
+
+def _as_str(value: Any) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _as_float(value: Any) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _as_int(value: Any) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
+    return int(value) if isinstance(value, int) else None
+
+
+def _quality_readability_from_stages(stages: Any) -> Optional[AdminQualityReadability]:
+    """Pull the plan-065 `readability` stage details out of a persisted
+    attempt summary. Anything unexpected (older runs, partial writes)
+    yields None — never raises."""
+    if not isinstance(stages, list):
+        return None
+    for stage in stages:
+        if not isinstance(stage, dict) or stage.get("name") != "readability":
+            continue
+        details = stage.get("details")
+        if not isinstance(details, dict):
+            return None
+        return AdminQualityReadability(
+            ifsz=_as_float(details.get("ifsz")),
+            ifh=_as_float(details.get("ifh")),
+            grade=_as_str(details.get("grade")),
+            suitability=_as_float(details.get("suitability")),
+            words=_as_int(details.get("words")),
+            sentences=_as_int(details.get("sentences")),
+        )
+    return None
+
+
+def _quality_stages_from_summary(
+    summary: Dict[str, Any],
+) -> List[AdminQualityStageItem]:
+    stages = summary.get("stages")
+    if not isinstance(stages, list):
+        return []
+    items: List[AdminQualityStageItem] = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            continue
+        details = stage.get("details")
+        items.append(
+            AdminQualityStageItem(
+                name=str(stage.get("name") or "unknown"),
+                success=bool(stage.get("success", False)),
+                details=details if isinstance(details, dict) else {},
+            )
+        )
+    return items
+
+
+def _build_quality_run_item(row: Any) -> AdminQualityRunItem:
+    """Build one quality-review row from a `WorkflowRun` ORM entity.
+
+    The run summary lives in `run_metadata.summary` (written by
+    `PublicationRunWorkflow`); every field is optional because older runs
+    and interrupted runs may carry partial or no summaries.
+    """
+    metadata = getattr(row, "run_metadata", None)
+    summary = metadata.get("summary") if isinstance(metadata, dict) else None
+    if not isinstance(summary, dict):
+        summary = {}
+    article_id = summary.get("article_id")
+    stages = _quality_stages_from_summary(summary)
+    return AdminQualityRunItem(
+        run_id=int(row.id),
+        status=str(row.status or "unknown"),
+        started_at=row.started_at.isoformat() if row.started_at else None,
+        finished_at=row.finished_at.isoformat() if row.finished_at else None,
+        article_id=(
+            str(article_id)
+            if article_id is not None and not isinstance(article_id, bool)
+            else None
+        ),
+        article_url=_as_str(summary.get("article_url")),
+        final_slug=_as_str(summary.get("final_slug")),
+        output_filename=_as_str(summary.get("output_filename")),
+        pr_url=_as_str(summary.get("pr_url")),
+        failure_class=_as_str(summary.get("failure_class")),
+        error=_as_str(row.error_detail) or _as_str(summary.get("message")),
+        readability=_quality_readability_from_stages(summary.get("stages")),
+        stages=stages,
     )
 
 
@@ -1050,7 +1149,7 @@ def create_app(  # noqa: C901
             if row is None:
                 raise HTTPException(status_code=404, detail="Article not found")
 
-            list_item = _build_admin_list_item(row)
+            list_item = _build_admin_list_item(row, load_export_candidate_scores())
             metadata = dict(row.article_metadata or {})
             detail = list_item.model_dump()
             detail.update(
@@ -1373,6 +1472,45 @@ def create_app(  # noqa: C901
             pr_url=summary.get("pr_url"),
             failure_class=summary.get("failure_class"),
             final_slug=summary.get("final_slug"),
+        )
+
+    @app.get("/v1/admin/quality/recent", response_model=AdminQualityRecentEnvelope)
+    def admin_quality_recent(
+        limit: int = Query(20, ge=1, le=50, alias="limit"),
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminQualityRecentEnvelope:
+        """Most recent publication runs with their persisted quality signals
+        (plan 066 review loop): outcome (PR link / failure) plus the
+        `readability` stage and the full stage checklist. Runs predating a
+        signal (or interrupted before writing one) show nulls — never 500."""
+        with manager.get_session() as session:
+            rows = (
+                session.query(WorkflowRun)
+                .filter(WorkflowRun.run_type == "publication")
+                .order_by(WorkflowRun.started_at.desc(), WorkflowRun.id.desc())
+                .limit(limit)
+                .all()
+            )
+            items = [_build_quality_run_item(row) for row in rows]
+
+        suits = [
+            item.readability.suitability
+            for item in items
+            if item.readability is not None and item.readability.suitability is not None
+        ]
+        return AdminQualityRecentEnvelope(
+            runs=items,
+            aggregate=AdminQualityAggregate(
+                count=len(items),
+                succeeded=sum(1 for item in items if item.status == "succeeded"),
+                failed=sum(1 for item in items if item.status == "failed"),
+                with_readability=sum(
+                    1 for item in items if item.readability is not None
+                ),
+                avg_suitability=round(sum(suits) / len(suits), 3) if suits else None,
+            ),
+            meta={"generated_at": datetime.now(timezone.utc).isoformat()},
         )
 
     @app.post(

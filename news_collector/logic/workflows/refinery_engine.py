@@ -45,6 +45,7 @@ from news_collector.contracts import (
     PublicationAttemptSummary,
 )
 from news_collector.contracts.publication_validation import PublicationFailureClass
+from news_collector.editorial.readability import analyze_body_readability
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
     validate_post_frontmatter_fast,
@@ -452,6 +453,18 @@ class RefineryEngine:
                 return False
             raise ve
         record_stage("editor_refinement", True)
+
+        # Deterministic audience-readability snapshot (plan 065): pure
+        # computation over the refined body, advisory only — it never blocks.
+        # The stage persists in the attempt summary (visible via the publish
+        # status API) so editors can track legibility per article.
+        readability = analyze_body_readability(refined_content)
+        logger.info(
+            f"Readability: IFSZ={readability.ifsz} ({readability.grade}), "
+            f"suitability={readability.suitability} over "
+            f"{readability.words} words / {readability.sentences} sentences."
+        )
+        record_stage("readability", True, **readability.stage_details())
 
         audit_should_run = False
         try:

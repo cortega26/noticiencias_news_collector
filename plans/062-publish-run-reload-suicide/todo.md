@@ -1,0 +1,6 @@
+- [x] Spec (root cause + fix + verification)
+- [x] Add `RELOAD_EXCLUDES` (absolute dirs) + wire `reload_excludes` in `serving/__main__.py`
+- [x] Unit test: excludes cover temp/data/logs (`tests/unit/system/test_serving_reload_excludes.py`, 2 tests)
+- [x] Live reload test on scratch port 8100: 25 nested `.py` bajo `temp/` → 0 restarts
+- [x] `make lint` + serving-admin subset (60 passed)
+- [ ] User restarts `make admin` and retries publish (takes minutes, not seconds)

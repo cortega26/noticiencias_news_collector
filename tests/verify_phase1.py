@@ -100,7 +100,9 @@ def test_critic_pass_rejects_bad_content(mock_provider_cls):
 @patch("news_collector.components.editorial.ai_editor.OllamaProvider")
 def test_headline_schema_validation(mock_provider_cls):
     """
-    Verifies that _generate_headlines validates output against Pydantic schema.
+    Verifies that _generate_headlines fails open on schema-invalid output
+    (plan 063): the last partial dict is returned for the deterministic
+    repair layer instead of raising and failing the whole article.
     """
     agent = EditorAgent("http://mock", "mock")
 
@@ -109,16 +111,9 @@ def test_headline_schema_validation(mock_provider_cls):
 
     agent._send_prompt = MagicMock(return_value=bad_json)
 
-    try:
-        # We access private method to test schema directly or mock _extract_json
-        agent._generate_headlines("Content")
-        raise AssertionError("Should raise ValueError (Schema Validation)")
-    except ValueError as e:
-        # Expect PydanticValidationError wrapped in ValueError
-        assert (
-            "Schema Validation Failed" in str(e) or "validation error" in str(e).lower()
-        )
-        print("✅ Schema Guardrail Test Passed: Detected malformed JSON.")
+    result = agent._generate_headlines("Content")
+    assert result == {"direct": "Title"}, result
+    print("✅ Schema Guardrail Test Passed: Malformed JSON fails open.")
 
 
 if __name__ == "__main__":

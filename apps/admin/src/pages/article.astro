@@ -15,10 +15,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 </AdminLayout>
 
 <script>
-  import { clearToken, getArticle, showAuthGate } from "../lib/api";
+  import { clearToken, getArticle, showAuthGate, startPublish } from "../lib/api";
   import type { AdminArticleDetail } from "../lib/types";
 
   const root = document.getElementById("detail");
+
+  function notPublishableReason(
+    article: Pick<AdminArticleDetail, "processing_status" | "published_url">,
+  ): string {
+    if (article.processing_status === "publishing") {
+      return "Already in flight — a publication run is open for this article";
+    }
+    if (article.published_url) {
+      return "Already published";
+    }
+    return "Not in the current export shortlist — run Fetch fresh news or publish from Triage via URL";
+  }
 
   function esc(s: string | null | undefined): string {
     if (s == null) return "";
@@ -50,8 +62,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         <div class="mb-4 flex flex-wrap items-center gap-2">
           <span class="status-pill status-${esc(article.processing_status ?? "new")}">${esc(article.processing_status ?? "new")}</span>
           <span class="font-mono text-xs text-ink-400">#${article.id} · ${esc(article.refinery_id ?? "no refinery id")}</span>
-          <a class="btn-ghost ml-auto" href="${esc(article.url)}" target="_blank" rel="noopener">Open original ↗</a>
+          <span class="ml-auto flex flex-wrap items-center gap-2">
+            <button id="publish-btn" class="btn-primary" type="button">✨ Refine &amp; publish</button>
+            <a class="btn-ghost" href="${esc(article.url)}" target="_blank" rel="noopener">Open original ↗</a>
+          </span>
         </div>
+        <p id="publish-msg" class="font-mono text-xs text-ink-400"></p>
         <h1 class="display-title text-4xl leading-tight text-paper-100">${esc(article.title)}</h1>
         <div class="mt-2 font-mono text-xs text-ink-400">${esc(article.source.name)} · ${esc(article.category ?? "—")} · collected ${esc(article.collected_at ?? "—")}</div>
         ${article.summary ? `<p class="mt-4 max-w-3xl text-[15px] leading-relaxed text-ink-200">${esc(article.summary)}</p>` : ""}
@@ -87,6 +103,35 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
         ${article.content ? `<div class="card mt-4 p-6"><div class="data-label mb-3">CONTENT</div><div class="max-h-[70vh] overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-ink-200">${esc(article.content)}</div></div>` : ""}
       `;
+
+      const pubBtn = root.querySelector("#publish-btn") as HTMLButtonElement | null;
+      const pubMsg = root.querySelector("#publish-msg");
+      if (pubBtn) {
+        if (article.publishable) {
+          pubBtn.title = "Refine this article and open a publication PR";
+          pubBtn.addEventListener("click", () => {
+            pubBtn.toggleAttribute("disabled", true);
+            if (pubMsg) pubMsg.textContent = "Starting Refinery run…";
+            startPublish({ articleId: article.id }).then(
+              (started) => {
+                if (pubMsg) {
+                  pubMsg.innerHTML =
+                    `Refinery run started (<span class="font-mono">${esc(started.run_id)}</span>) — watch it in <a class="underline" href="/triage">Triage</a>.`;
+                }
+              },
+              (err: Error) => {
+                pubBtn.toggleAttribute("disabled", false);
+                if (pubMsg) {
+                  pubMsg.textContent = `Failed to start publication: ${err.message}`;
+                }
+              },
+            );
+          });
+        } else {
+          pubBtn.toggleAttribute("disabled", true);
+          pubBtn.title = notPublishableReason(article);
+        }
+      }
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
         clearToken();

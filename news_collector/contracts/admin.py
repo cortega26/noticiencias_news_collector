@@ -76,6 +76,10 @@ class AdminArticleDetail(BaseModel):
     error_message: Optional[str] = None
     published_url: Optional[str] = None
     refinery_id: Optional[str] = None
+    # Phase 4c (plan 061): same "Refine & Publish" candidacy as the list
+    # rows — the detail view renders its own publish button from these.
+    publishable: bool = False
+    export_score: Optional[float] = None
     content: Optional[str] = None
     cluster_id: Optional[str] = None
     article_metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -200,6 +204,65 @@ class AdminPublishStatus(BaseModel):
     pr_url: Optional[str] = None
     failure_class: Optional[str] = None
     final_slug: Optional[str] = None
+
+
+class AdminQualityReadability(BaseModel):
+    """Deterministic legibility snapshot (plan 065) for one published
+    article, lifted from the run's `readability` stage details. All
+    Optional: runs predating plan 065 have no such stage."""
+
+    ifsz: Optional[float] = None
+    ifh: Optional[float] = None
+    grade: Optional[str] = None
+    suitability: Optional[float] = None
+    words: Optional[int] = None
+    sentences: Optional[int] = None
+
+
+class AdminQualityStageItem(BaseModel):
+    """One stage of a publication attempt (`PublicationAttemptStageResult`
+    shape, JSON-safe)."""
+
+    name: str
+    success: bool = False
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AdminQualityRunItem(BaseModel):
+    """One row of the quality review loop (plan 066): a publication run
+    plus the quality signals its attempt summary persisted."""
+
+    run_id: int
+    status: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    article_id: Optional[str] = None
+    article_url: Optional[str] = None
+    final_slug: Optional[str] = None
+    output_filename: Optional[str] = None
+    pr_url: Optional[str] = None
+    failure_class: Optional[str] = None
+    error: Optional[str] = None
+    readability: Optional[AdminQualityReadability] = None
+    stages: List[AdminQualityStageItem] = Field(default_factory=list)
+
+
+class AdminQualityAggregate(BaseModel):
+    """Page-level rollup over the returned runs."""
+
+    count: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    with_readability: int = 0
+    avg_suitability: Optional[float] = None
+
+
+class AdminQualityRecentEnvelope(BaseModel):
+    """Recent publication runs for the quality review page."""
+
+    runs: List[AdminQualityRunItem] = Field(default_factory=list)
+    aggregate: AdminQualityAggregate = Field(default_factory=AdminQualityAggregate)
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AdminSourceListItem(BaseModel):

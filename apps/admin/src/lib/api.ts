@@ -33,6 +33,7 @@ import type {
   AdminImageBriefUploadResult,
   AdminMutationResult,
   AdminPromptsEnvelope,
+  AdminQualityRecentEnvelope,
   AdminSourceHealthEnvelope,
   AdminSourceListItem,
   AdminSourceUpsertPayload,
@@ -334,6 +335,14 @@ export function savePrompts(
 
 export function getContent(): Promise<AdminContentEnvelope> {
   return apiFetch<AdminContentEnvelope>("/v1/admin/content");
+}
+
+export function getQualityRecent(
+  limit = 20,
+): Promise<AdminQualityRecentEnvelope> {
+  return apiFetch<AdminQualityRecentEnvelope>(
+    `/v1/admin/quality/recent?limit=${encodeURIComponent(String(limit))}`,
+  );
 }
 
 export function getImageQueue(): Promise<{ briefs: AdminImageBriefItem[] }> {

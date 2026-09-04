@@ -28,7 +28,7 @@ def run_json_benchmark():
     print("==========================================================")
     print("   QWEN 3.5 MIGRATION A/B TEST: PYDANTIC STRICTNESS")
     print("==========================================================")
-    print(f"Testing Stage 3: Headline Generation (Strict JSON mode)")
+    print(f"Testing Stage 5: Headline Generation (Strict JSON mode)")
     print(f"Iterations per model: {NUM_ITERATIONS}")
     print("==========================================================\n")
 
@@ -54,7 +54,7 @@ def run_json_benchmark():
             start_t = time.time()
 
             try:
-                # Stage 3 directly invokes Pydantic Validation on JSON generated
+                # Stage 5 directly invokes Pydantic Validation on JSON generated
                 print("(procesando...) ", end="", flush=True)
                 result = agent._generate_headlines(TEST_ARTICLE)
                 duration = time.time() - start_t

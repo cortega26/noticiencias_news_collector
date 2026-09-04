@@ -37,7 +37,7 @@ CommandRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]
 # The LLM provider is stubbed deterministically (no network calls) following
 # the same pattern used by tests/unit/editorial/test_enrichment_fields.py's
 # setUp: headline/critic stages are overridden to return fixed values, and
-# Stage 4 (editorial enrichment) is exercised for real via a stubbed
+# Stage 6 (editorial enrichment) is exercised for real via a stubbed
 # _send_prompt so its own validation/backfill logic runs unmodified.
 
 _FIXTURE_RAW_CONTENT = (
@@ -134,7 +134,7 @@ def _fixture_raw_text(*, include_source_metadata: bool = True) -> dict:
     article (news_collector/components/editorial/ai_editor.py:1701-1724).
 
     ``include_source_metadata=False`` omits ``url``/``source_name`` so the
-    Stage 4 sources backfill (ai_editor.py:1409-1421) cannot fire — used
+    Stage 6 sources backfill (ai_editor.py:1409-1421) cannot fire — used
     only by the "sources" missing-field regression test, which must prove
     the V2 gate itself rejects an empty sources list rather than relying on
     the backfill to silently paper over it.
@@ -155,7 +155,7 @@ def _fixture_raw_text(*, include_source_metadata: bool = True) -> dict:
 
 
 def _enrichment_response_json(omit_field: str | None = None) -> str:
-    """Serialize the fixture's Stage 4 LLM response, optionally omitting
+    """Serialize the fixture's Stage 6 LLM response, optionally omitting
     one field. Omitting (rather than emptying) a key lets Pydantic apply
     its unvalidated default for that one field (news_collector/components/
     editorial/ai_editor.py:EnrichmentSchema — Pydantic v2 does not validate
@@ -197,14 +197,14 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
 
     Stubs the LLM provider so every pipeline stage returns fixed,
     schema-valid output — no network calls are made, and the fixture is
-    reproducible across runs. Stage 4 (editorial enrichment) is NOT stubbed
+    reproducible across runs. Stage 6 (editorial enrichment) is NOT stubbed
     directly: instead, `_send_prompt` is stubbed to return a JSON payload
     for the enrichment call specifically, so EditorAgent's own
     `_generate_enrichment_fields` (schema validation + sources backfill)
     runs for real. This is required for the sources-omission regression
     case to actually exercise the real gate (see _fixture_raw_text).
 
-    Stage 4.5 (Phase 2c fact-check verification) follows the same pattern:
+    Stage 7 (Phase 2c fact-check verification) follows the same pattern:
     only its network seam (`_send_fact_check_prompt`, which talks to the
     dedicated `fact_check_provider`) is stubbed, so `_verify_fact_check_claims`
     still runs for real — including the overwrite-all rule and the

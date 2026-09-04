@@ -10,6 +10,13 @@ from typing import Any, Dict, List, Optional
 
 from news_collector.config.settings import get_runtime_config
 
+# Oversample factor for the export shortlist (plan 068): the diversity
+# caps below can only filter, so more candidates are fetched than exported
+# to keep the shortlist full under realistic source/topic concentration.
+# Extreme single-source dominance still yields fewer than `limit` — the
+# caps working as designed, never an error.
+EXPORT_RERANK_OVERSAMPLE = 3
+
 
 def get_top_articles(
     system, limit: int = 10, category: Optional[str] = None
@@ -49,6 +56,25 @@ def get_top_articles(
         raise
 
 
+def _rank_dict_for_export(article: Any) -> Dict[str, Any]:
+    """Build the reranker input for one ORM article.
+
+    `to_dict()` plus safely-attached `article_metadata` (detached/expired
+    sessions yield `{}` instead of raising) and `None`-hardened sort keys —
+    the reranker's `(final_score, published_date, source)` tuple would
+    `TypeError` on `None` ties.
+    """
+    payload: Dict[str, Any] = article.to_dict()
+    try:
+        metadata = article.article_metadata or {}
+    except Exception:
+        metadata = {}
+    payload["article_metadata"] = metadata if isinstance(metadata, dict) else {}
+    payload["final_score"] = payload.get("final_score") or 0.0
+    payload["published_date"] = payload.get("published_date") or ""
+    return payload
+
+
 def export_latest_articles(
     system, file_path: Optional[str] = None, limit: int = 50
 ) -> Dict[str, Any]:
@@ -58,15 +84,36 @@ def export_latest_articles(
     try:
         scoring_config = get_runtime_config().scoring_config
         articles = system.db_manager.get_articles_by_score(
-            limit=limit,
+            limit=limit * EXPORT_RERANK_OVERSAMPLE,
             exclude_published=True,
             max_age_days=scoring_config.get("candidate_max_age_days", 30),
         )
 
         from news_collector.contracts.adapters import adapt_article_to_export
         from news_collector.contracts.export import ExportContractV2
+        from news_collector.reranker import rerank_articles
 
-        export_models = [adapt_article_to_export(art) for art in articles]
+        # Diversity caps (plan 068): same operator-tunable knobs as
+        # `get_top_articles`, so the publish shortlist cannot be filled by
+        # a single dominant source/topic. Deterministic via configured seed.
+        rank_inputs = [_rank_dict_for_export(article) for article in articles]
+        reranked = rerank_articles(
+            rank_inputs,
+            limit=limit,
+            source_cap_percentage=scoring_config.get("source_cap_percentage", 0.5),
+            topic_cap_percentage=scoring_config.get("topic_cap_percentage", 0.5),
+            seed=scoring_config.get("reranker_seed", 42),
+        )
+        by_id = {
+            payload["id"]: article
+            for article, payload in zip(articles, rank_inputs, strict=True)
+            if payload.get("id") is not None
+        }
+        selected = [
+            by_id[payload["id"]] for payload in reranked if payload["id"] in by_id
+        ]
+
+        export_models = [adapt_article_to_export(art) for art in selected]
 
         contract = ExportContractV2(
             generated_at=datetime.now(timezone.utc).isoformat(),

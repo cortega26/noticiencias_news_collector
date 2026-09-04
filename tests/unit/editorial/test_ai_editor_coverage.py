@@ -25,8 +25,10 @@ from news_collector.components.editorial.ai_editor import (
     _sample_for_critic,
     _strip_llm_epilogue,
     _strip_llm_preamble,
+    _HEADLINE_FORMAT_MAX_ATTEMPTS,
     validate_generated_article_markdown,
 )
+from news_collector.editorial.uncertainty import GENERIC_UNCERTAINTY_NOTE
 
 
 def _json_parser():
@@ -521,6 +523,16 @@ class TestCriticPasses:
         assert agent._generate_headlines.call_count == 1
         assert agent._headline_critic_pass.call_count == 1
 
+    def test_generate_headlines_with_critic_skips_critic_on_empty(self):
+        """Plan 063: generation exhausted with nothing usable → no critic
+        LLM calls judging nothing; {} flows to deterministic repair."""
+        agent = _bare_agent()
+        agent._generate_headlines = MagicMock(return_value={})
+        agent._headline_critic_pass = MagicMock()
+        result = agent._generate_headlines_with_critic("body")
+        assert result == {}
+        agent._headline_critic_pass.assert_not_called()
+
 
 class TestHeadlineGeneration:
     def _headlines_agent(self):
@@ -564,19 +576,42 @@ class TestHeadlineGeneration:
             result = agent._generate_headlines("content")
         assert result == {"direct": "only-direct"}
 
-    def test_generate_headlines_schema_failure(self):
+    def test_generate_headlines_schema_failure_returns_partial(self):
+        """Plan 063: a schema-invalid payload no longer fails the article —
+        the last partial dict goes to the deterministic repair layer."""
         agent = self._headlines_agent()
         agent._send_prompt = MagicMock(return_value='{"unexpected": true}')
-        with pytest.raises(ValueError) as exc:
-            agent._generate_headlines("content")
-        assert "Schema Validation Failed" in str(exc.value)
+        result = agent._generate_headlines("content")
+        assert result == {"unexpected": True}
+        assert agent._send_prompt.call_count == _HEADLINE_FORMAT_MAX_ATTEMPTS
 
-    def test_generate_headlines_generic_failure(self):
+    def test_generate_headlines_generic_failure_returns_empty(self):
+        """Plan 063: unparseable responses (run 17's empty reply) are
+        retried, then fail open with {} for the repair layer."""
         agent = self._headlines_agent()
-        agent._extract_json = MagicMock(side_effect=RuntimeError("no json"))
-        with pytest.raises(ValueError) as exc:
-            agent._generate_headlines("content")
-        assert "Failed to generate headlines" in str(exc.value)
+        agent._extract_json = MagicMock(return_value={})
+        result = agent._generate_headlines("content")
+        assert result == {}
+        assert agent._send_prompt.call_count == _HEADLINE_FORMAT_MAX_ATTEMPTS
+
+    def test_generate_headlines_retries_then_succeeds(self):
+        agent = self._headlines_agent()
+        valid = json.dumps(
+            {
+                "direct": "Direct Headline",
+                "question": "Question?",
+                "benefit": "Benefit",
+                "excerpt": "Excerpt long enough for SEO purposes here.",
+                "tags": ["espacio", "fisica"],
+            }
+        )
+        agent._send_prompt = MagicMock(side_effect=["not json at all", valid])
+        result = agent._generate_headlines("content")
+        assert result["direct"] == "Direct Headline"
+        assert HeadlinesSchema.model_validate(result)
+        assert agent._send_prompt.call_count == 2
+        # The retry carries the format-repair note.
+        assert "Corrección de formato" in agent._send_prompt.call_args.args[0]
 
 
 class TestRepairOutput:
@@ -843,6 +878,57 @@ class TestProcessArticlePaths:
             override_date="2026-03-02",
         )
         assert "El resultado aún es preliminar" in result
+
+    def test_uncertainty_missing_note_falls_back_to_generic(self, tmp_path):
+        """Plan 067: requires=true without a note must not ship an invisible
+        requirement — the generic caveat is published instead."""
+        agent = self._pipeline_agent(tmp_path)
+        agent._generate_headlines = lambda *a, **k: {
+            "direct": "Direct Headline",
+            "question": "Question Headline?",
+            "benefit": "Benefit Headline",
+            "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
+            "tags": ["espacio"],
+            "requires_uncertainty_note": True,
+        }
+        result = agent.process_article(
+            {
+                "title": "Demo",
+                "summary": "Resumen",
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+            },
+            override_date="2026-03-02",
+        )
+        assert GENERIC_UNCERTAINTY_NOTE in result
+        assert "requires_uncertainty_note: true" in result
+
+    def test_curiosity_gap_preliminary_forces_counterweight(self, tmp_path):
+        """Plan 067: curiosity-gap hook + preliminary confidence forces the
+        flag on (voice §2.4.3), even when the model did not set it."""
+        agent = self._pipeline_agent(tmp_path)
+        agent._generate_headlines = lambda *a, **k: {
+            "direct": "Direct Headline",
+            "question": "Question Headline?",
+            "benefit": "Benefit Headline",
+            "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
+            "tags": ["espacio"],
+            "pattern_used": "curiosity_gap",
+        }
+        agent._generate_enrichment_fields = lambda *a, **k: dict(
+            _VALID_ENRICHMENT_FIELDS, confidence="Moderada — hipótesis."
+        )
+        result = agent.process_article(
+            {
+                "title": "Demo",
+                "summary": "Resumen",
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+            },
+            override_date="2026-03-02",
+        )
+        assert GENERIC_UNCERTAINTY_NOTE in result
+        assert "requires_uncertainty_note: true" in result
 
     def test_override_date_invalid_format(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)

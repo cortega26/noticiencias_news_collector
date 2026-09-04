@@ -784,12 +784,12 @@ class OllamaConfig(StrictModel):
     )
     enrichment_model: Optional[str] = Field(
         default=None,
-        description="Model override for enrichment phase (Stage 4).",
+        description="Model override for enrichment phase (Stage 6).",
     )
     fact_check_model: Optional[str] = Field(
         default=None,
         description=(
-            "Model override for the Stage 4.5 fact-check verification phase. "
+            "Model override for the Stage 7 fact-check verification phase. "
             "Deliberately intended to be a different model than editor_model "
             "(independent verification). Defaults to editor_model's resolved "
             "value when unset."

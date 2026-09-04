@@ -167,6 +167,49 @@ export interface AdminContentEnvelope {
   }>;
 }
 
+export interface AdminQualityReadability {
+  ifsz: number | null;
+  ifh: number | null;
+  grade: string | null;
+  suitability: number | null;
+  words: number | null;
+  sentences: number | null;
+}
+
+export interface AdminQualityStageItem {
+  name: string;
+  success: boolean;
+  details: Record<string, unknown>;
+}
+
+export interface AdminQualityRunItem {
+  run_id: number;
+  status: string;
+  started_at: string | null;
+  finished_at: string | null;
+  article_id: string | null;
+  article_url: string | null;
+  final_slug: string | null;
+  output_filename: string | null;
+  pr_url: string | null;
+  failure_class: string | null;
+  error: string | null;
+  readability: AdminQualityReadability | null;
+  stages: AdminQualityStageItem[];
+}
+
+export interface AdminQualityRecentEnvelope {
+  runs: AdminQualityRunItem[];
+  aggregate: {
+    count: number;
+    succeeded: number;
+    failed: number;
+    with_readability: number;
+    avg_suitability: number | null;
+  };
+  meta: { generated_at: string };
+}
+
 export interface AdminImageBriefItem {
   slug: string;
   article_id: string;

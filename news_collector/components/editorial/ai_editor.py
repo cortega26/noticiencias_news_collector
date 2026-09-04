@@ -19,6 +19,8 @@ from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
+from news_collector.editorial.readability import check_headline
+from news_collector.editorial.uncertainty import resolve_uncertainty_counterweight
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
@@ -202,7 +204,7 @@ class SourceItem(BaseModel):
 
 
 class EnrichmentSchema(BaseModel):
-    """Stage 4 structured output: editorial enrichment fields for schema v2+."""
+    """Stage 6 structured output: editorial enrichment fields for schema v2+."""
 
     summary_points: list[str] = Field(default_factory=list, min_length=2, max_length=5)
     glossary: list[GlossaryItem] = Field(default_factory=list, min_length=1)
@@ -213,7 +215,7 @@ class EnrichmentSchema(BaseModel):
 
 
 # Fields a schema_version >= 2 article must carry before publication. Used by
-# both the frontmatter enforcement gate and the Stage 4 cache-validity check
+# both the frontmatter enforcement gate and the Stage 6 cache-validity check
 # (a cached artifact missing any of these is treated as poisoned and
 # regenerated, instead of failing every subsequent run).
 _V2_REQUIRED_ENRICHMENT_FIELDS = (
@@ -224,6 +226,15 @@ _V2_REQUIRED_ENRICHMENT_FIELDS = (
     "confidence",
     "sources",
 )
+
+
+# Attempts per `_generate_headlines` call (initial + format-repair retry).
+# A malformed/empty model response is a transient glitch, not a quality
+# iteration (that's the headline-critic loop's job), so this stays small and
+# fixed: on exhaustion the last partial dict (or {}) is returned for the
+# deterministic repair layer instead of raising (plan 063 — run 17 died on
+# a 0.61s empty response after minutes of successful stages).
+_HEADLINE_FORMAT_MAX_ATTEMPTS = 2
 
 
 class GeneratedArticleValidationError(ValueError):
@@ -956,7 +967,7 @@ class EditorAgent:
 
     def _critic_pass(self, content: str) -> tuple[bool, str | None, bool]:
         """
-        Stage 1.5: Critic Guardrail.
+        Stage 3 gate: Critic Guardrail.
         Verifies that the content is in Spanish and relevant to science.
         """
         # Feature Flag: Kill Switch
@@ -1097,7 +1108,7 @@ class EditorAgent:
         context: dict | None = None,
     ) -> tuple[bool, str | None, bool]:
         """
-        Stage 2.6: Editorial Critic Gate.
+        Stage 4: Editorial Critic Gate.
 
         Evaluates the article against editorial-quality dimensions defined in
         prompts.yaml::editor_critic (hook, clarity, structure, rigor, voice,
@@ -1233,7 +1244,7 @@ class EditorAgent:
         self, body: str, headlines: dict[str, Any]
     ) -> tuple[bool, str | None]:
         """
-        Stage 3.5: Headline Critic Gate.
+        Stage 5 gate: Headline Critic Gate.
 
         Validates that the generated headlines (a) honor what the body
         actually delivers and (b) do not cross into clickbait per
@@ -1332,7 +1343,7 @@ class EditorAgent:
         return False, regenerate_instruction
 
     def _generate_headlines_with_critic(self, final_content: str) -> dict:
-        """Stage 3 + 3.5 orchestrator.
+        """Stage 5 orchestrator (headlines + critic gate).
 
         Calls `_generate_headlines` and then gates the result through
         `_headline_critic_pass`, retrying up to `max_headline_retries`
@@ -1348,6 +1359,16 @@ class EditorAgent:
         """
         max_headline_retries = getattr(self, "max_headline_retries", 2)
         headlines = self._generate_headlines(final_content)
+        if not headlines:
+            # Generation exhausted its format retries with nothing usable —
+            # there is nothing for the critic to judge, and calling it would
+            # only burn LLM calls. Hand the empty dict to the deterministic
+            # repair layer, which backfills direct/question/benefit (plan 063).
+            logger.warning(
+                "Headline generation produced no usable payload; skipping "
+                "the headline critic and relying on deterministic repair."
+            )
+            return headlines
         for attempt in range(max_headline_retries + 1):
             approved, regen_instruction = self._headline_critic_pass(
                 final_content, headlines
@@ -1390,7 +1411,7 @@ class EditorAgent:
         source_url: str = "",
         source_name: str = "",
     ) -> dict[str, list | str]:
-        """Stage 4: Editorial Enrichment Field Generation.
+        """Stage 6: Editorial Enrichment Field Generation.
 
         Analyzes the final edited article and generates structured editorial
         metadata (summary_points, glossary, fact_check, why_it_matters,
@@ -1399,7 +1420,7 @@ class EditorAgent:
         The prompt allows the LLM to omit fields it cannot derive from the
         article. ``sources`` is the field most often dropped (the model cannot
         see the original feed metadata), and an empty ``sources`` list blocks
-        V2 publication (``editorial_v2_incomplete``). To keep Stage 4 from
+        V2 publication (``editorial_v2_incomplete``). To keep Stage 6 from
         failing every run, the article's own original URL/name (always known
         by the caller) is injected into the prompt context as the fallback
         source of truth, and if the LLM still returns an empty ``sources``
@@ -1486,7 +1507,7 @@ class EditorAgent:
         article_title: str,
         content_mode: str,
     ) -> list[dict]:
-        """Stage 4.5: independent fact-check verification (Phase 2c).
+        """Stage 7: independent fact-check verification (Phase 2c).
 
         Compares each Stage-4-drafted ``fact_check`` claim's ``label``
         against the article's own original-language ``source_content``,
@@ -1495,7 +1516,7 @@ class EditorAgent:
 
         Every claim's ``status`` is overwritten unconditionally with the
         verifier's own three-value verdict (``confirmed`` / ``uncertain`` /
-        ``disputed``) — Stage 4's six-value self-assessment (including any
+        ``disputed``) — Stage 6's six-value self-assessment (including any
         self-assessed ``disputed``) never survives this step, by design:
         the verifier is the only thing allowed to produce a status that can
         block publication.
@@ -1606,7 +1627,8 @@ class EditorAgent:
         context: dict | None = None,
     ) -> str:
         """
-        Stage 2.5 Repair: Re-run adaptation with specific feedback.
+        Repair worker for the critic gates (Stages 3-4): re-run adaptation
+        with specific feedback.
         Re-injects situational context so the rewrite stays grounded in the
         original article's intent and source.
         """
@@ -1666,17 +1688,25 @@ class EditorAgent:
         adapted_content: str,
         regenerate_instruction: str | None = None,
     ) -> dict:
-        """Stage 3: Headline Generation & Metadata.
+        """Stage 5: Headline Generation & Metadata.
 
         When `regenerate_instruction` is provided, the headline_critic gate
         rejected the previous attempt; the instruction is appended to the
         user prompt so the model knows which pattern to try next.
+
+        Resilient to malformed model responses (plan 063): a missing or
+        schema-invalid JSON payload is retried once with a format-repair
+        note appended, and on exhaustion the last partial dict (or {}) is
+        returned instead of raising — the deterministic repair layer
+        backfills `direct`/`question`/`benefit` and every downstream
+        consumer reads headlines via `.get()` with fallbacks, so a headline
+        glitch must never fail the whole article.
         """
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe.
         # Keys mirror HeadlinesSchema; the three editorial-voice fields are
         # additive and described in detail by the system prompt.
-        prompt = (
+        base_prompt = (
             "Analyze this article and generate JSON with keys: 'direct', "
             "'question', 'benefit', 'excerpt' (max 140 chars summary for SEO), "
             "'tags' (list of 3-5 semantic keywords in Spanish. Rules: lowercase, "
@@ -1693,35 +1723,54 @@ class EditorAgent:
             f"{adapted_content[:2000]}"
         )
         if regenerate_instruction:
-            prompt += (
+            base_prompt += (
                 "\n\n## Instrucción de regeneración\n\n"
                 "El intento anterior fue rechazado por el headline_critic. "
                 "Aplica esta instrucción al regenerar los titulares:\n\n"
                 f"{regenerate_instruction}"
             )
-        response = self._send_prompt(
-            prompt, system=system_prompt, model=self.headlines_model
-        )
 
-        try:
-            data = self._extract_json(response)
-
-            # Feature Flag: Kill Switch
-            if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
-                return data
-
-            # Schema Enforcement (MVS)
-            validated = HeadlinesSchema(**data)
-            return validated.model_dump()
-        except ValidationError as ve:
-            logger.error(f"❌ Headline Schema Validation Failed: {ve}")
-            raise ValueError(f"Schema Validation Failed: {ve}") from ve
-        except Exception as e:
-            logger.error(
-                f"Failed to generate headlines: {e} | Response snippet: {response[:100]}..."
+        last_partial: dict = {}
+        for attempt in range(1, _HEADLINE_FORMAT_MAX_ATTEMPTS + 1):
+            prompt = base_prompt
+            if attempt > 1:
+                prompt += (
+                    "\n\n## Corrección de formato\n\n"
+                    "Tu respuesta anterior no era un objeto JSON válido con "
+                    "las claves pedidas. Devuelve EXCLUSIVAMENTE el objeto "
+                    "JSON, sin texto adicional."
+                )
+            response = self._send_prompt(
+                prompt, system=system_prompt, model=self.headlines_model
             )
-            # Fallback to empty if fails
-            raise ValueError(f"Failed to generate headlines: {e}") from e
+            try:
+                data: dict[str, Any] = self._extract_json(response)
+                if not data:
+                    raise ValueError("No parsing valid JSON object found")
+
+                # Feature Flag: Kill Switch
+                if os.getenv("ENABLE_TRANSLATION_GUARD", "true").lower() == "false":
+                    return data
+
+                # Schema Enforcement (MVS)
+                validated = HeadlinesSchema(**data)
+                return validated.model_dump()
+            except Exception as e:
+                if isinstance(data, dict) and data:
+                    last_partial = data
+                logger.warning(
+                    "⚠️ Headline generation attempt "
+                    f"{attempt}/{_HEADLINE_FORMAT_MAX_ATTEMPTS} failed: {e} | "
+                    f"Response snippet: {response[:200]}..."
+                )
+
+        logger.error(
+            "❌ Headline generation exhausted all "
+            f"{_HEADLINE_FORMAT_MAX_ATTEMPTS} attempts; returning last partial "
+            "payload for the deterministic repair layer instead of failing "
+            "the article."
+        )
+        return last_partial
 
     def _repair_output(  # noqa: C901
         self, content: str, headlines: dict, input_len: int
@@ -1963,11 +2012,11 @@ class EditorAgent:
             final_content = self._extract_markdown_content(final_content)  # Cleanup
             self._write_editorial_cache_if_valid(cache_s2, final_content)
 
-        # --- STAGE 2.5: Critic Pass (Validation & Repair) ---
+        # --- STAGE 3: Critic Pass (Validation & Repair) ---
         # Narrow translation/integrity guardrail. Blocks for: residual
         # English fragments, off-topic content, untranslated canonical
         # entities, truncation. Not a quality gate.
-        print("\n--- STAGE 2.5: Critic Pass (Validation & Repair) ---")
+        print("\n--- STAGE 3: Critic Pass (Validation & Repair) ---")
 
         # Checkpoint: If we already passed the critic gate for this article, skip re-evaluation
         cache_s2_5 = self._get_cache_path(article_id, "stage2_5_critic_ok")
@@ -2037,7 +2086,7 @@ class EditorAgent:
                         f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
                     )
 
-        # --- STAGE 2.6: Editorial Critic Gate (Quality) ---
+        # --- STAGE 4: Editorial Critic Gate (Quality) ---
         # Editor-in-chief evaluation against hook/clarity/structure/rigor/
         # voice/shareability/closing. Bloquea por debajo del umbral con
         # feedback accionable; fails open si la infra del LLM falla.
@@ -2049,7 +2098,7 @@ class EditorAgent:
         elif os.getenv(
             "ENABLE_EDITORIAL_CRITIC", "true"
         ).lower() != "false" and self.prompts.get("editor_critic", {}).get("system"):
-            print("\n--- STAGE 2.6: Editorial Critic Gate ---")
+            print("\n--- STAGE 4: Editorial Critic Gate ---")
             max_editorial_retries = 1
             for attempt in range(max_editorial_retries + 1):
                 ed_is_valid, ed_reason, ed_recoverable = self._critic_editorial_pass(
@@ -2104,15 +2153,20 @@ class EditorAgent:
                         f"Publishing with caveat. Reason: {ed_reason}"
                     )
 
-        # --- STAGE 3: Metadata & Headlines (+ Headline Critic gate) ---
-        print("\n--- STAGE 3: Metadata & Headlines ---")
-        # Stage 3 is fast enough relative to others, and depends on final content structure.
+        # --- STAGE 5: Metadata & Headlines (+ Headline Critic gate) ---
+        print("\n--- STAGE 5: Metadata & Headlines ---")
+        # Stage 5 is fast enough relative to others, and depends on final content structure.
         # We could cache it, but usually we want to regenerate headlines if we tweak code.
-        # For now, we won't cache Stage 3 to allow easier re-runs of the final formatting.
+        # For now, we won't cache Stage 5 to allow easier re-runs of the final formatting.
         # The orchestrator runs the headline writer and then gates the result
         # through prompts.yaml::headline_critic (fidelity gancho-cuerpo +
         # línea roja de sensacionalismo) with up to 2 retries.
         headlines = self._generate_headlines_with_critic(final_content)
+
+        # Deterministic headline tripwires from the voice contract (plan 065):
+        # advisory warnings only — the headline critic (LLM) stays the judge.
+        for issue in check_headline(headlines.get("direct", "")):
+            logger.warning(f"Headline readability [{issue.code}]: {issue.message}")
 
         # --- DETERMINISTIC REPAIR LAYER ---
         final_content, headlines = self._repair_output(
@@ -2120,12 +2174,12 @@ class EditorAgent:
         )
         validate_generated_article_markdown(final_content)
 
-        # --- STAGE 4: Editorial Enrichment Fields ---
-        print("\n--- STAGE 4: Editorial Enrichment Fields ---")
+        # --- STAGE 6: Editorial Enrichment Fields ---
+        print("\n--- STAGE 6: Editorial Enrichment Fields ---")
         cache_s4 = self._get_cache_path(article_id, "stage4_enrichment")
 
         def _enrichment_cache_is_usable(cached: Any) -> bool:
-            """A Stage 4 cache artifact is usable only when it carries every
+            """A Stage 6 cache artifact is usable only when it carries every
             V2-required enrichment field. A cache with an empty ``sources``
             list (LLM omitted it, per prompt) would otherwise fail the V2
             frontmatter gate on every run, blocking publication forever
@@ -2180,10 +2234,10 @@ class EditorAgent:
             except Exception as _e:
                 logger.warning(f"Failed to persist enrichment cache: {_e}")
 
-        # --- STAGE 4.5: Fact-Check Verification (Phase 2c) ---
+        # --- STAGE 7: Fact-Check Verification (Phase 2c) ---
         # Runs unconditionally here, after BOTH the cache-hit and cache-miss
         # branches above have produced `enrichment_fields` — never inside
-        # either branch. This is deliberate: a Stage 4 disk cache treats any
+        # either branch. This is deliberate: a Stage 6 disk cache treats any
         # non-empty `fact_check` (including an old self-assessed value) as
         # "usable" and skips `_generate_enrichment_fields` entirely, so
         # placing verification anywhere upstream of this convergence point
@@ -2192,7 +2246,7 @@ class EditorAgent:
         # (one small local-Ollama call per claim) and re-running it on a
         # cache hit is the correct tradeoff over risking silent staleness.
         #
-        # This unconditionally overwrites every claim's `status`; Stage 4's
+        # This unconditionally overwrites every claim's `status`; Stage 6's
         # six-value self-assessment (including any self-assessed "disputed")
         # never reaches the gate below.
         verified_fact_check = self._verify_fact_check_claims(
@@ -2308,7 +2362,7 @@ class EditorAgent:
             if hl_variants:
                 model_dict["headlines_variants"] = hl_variants
 
-            # V2 Editorial Enrichment Fields (Stage 4 generated).
+            # V2 Editorial Enrichment Fields (Stage 6 generated).
             # Generated values serve as defaults. Upstream raw_text values
             # take precedence when present (allows pipeline overrides and
             # manual editorial corrections from the Refinery UI).
@@ -2337,7 +2391,7 @@ class EditorAgent:
                     if key in raw_text and raw_text[key]:
                         model_dict[key] = raw_text[key]
 
-            # Non-enrichment passthrough fields (not generated by Stage 4)
+            # Non-enrichment passthrough fields (not generated by Stage 6)
             if isinstance(raw_text, dict):
                 for key in [
                     "uncertainty_note",
@@ -2348,17 +2402,17 @@ class EditorAgent:
                     if key in raw_text:
                         model_dict[key] = raw_text[key]
 
-            requires_uncertainty_note = headlines.get(
-                "requires_uncertainty_note", False
+            requires_uncertainty_note, uncertainty_note = (
+                resolve_uncertainty_counterweight(
+                    headlines, model_dict.get("confidence")
+                )
             )
-            model_dict["requires_uncertainty_note"] = bool(requires_uncertainty_note)
-
-            uncertainty_note = headlines.get("uncertainty_note")
-            if uncertainty_note and requires_uncertainty_note:
-                model_dict["uncertainty_note"] = str(uncertainty_note)
+            model_dict["requires_uncertainty_note"] = requires_uncertainty_note
+            if uncertainty_note:
+                model_dict["uncertainty_note"] = uncertainty_note
 
             # V2 contract enforcement: a schema_version >= 2 article MUST
-            # carry every enrichment field.  Omission means Stage 4 produced
+            # carry every enrichment field.  Omission means Stage 6 produced
             # empty or invalid output — treat as retryable editorial failure.
             schema_ver = model_dict.get("schema_version", 1)
             if isinstance(schema_ver, int) and schema_ver >= 2:
@@ -2368,12 +2422,12 @@ class EditorAgent:
                 if missing:
                     raise GeneratedArticleValidationError(
                         f"V2 article missing required enrichment fields: {missing}. "
-                        "Stage 4 output is incomplete; retry or supply fields manually.",
+                        "Stage 6 output is incomplete; retry or supply fields manually.",
                         error_code="editorial_v2_incomplete",
                     )
 
             # Fact-check gate (Phase 2c): block publication only on a claim
-            # the independent verifier (Stage 4.5, above) actually returned
+            # the independent verifier (Stage 7, above) actually returned
             # as "disputed" — i.e. the verifier compared the claim against
             # the article's own source content and found a contradiction.
             # Deliberately reads `verified_fact_check` (the verifier's own

@@ -1139,6 +1139,171 @@ def test_admin_articles_marks_export_candidates_publishable(
     assert empty.json()["data"] == []
 
 
+def test_admin_article_detail_mirrors_publishable_candidacy(
+    api_client: TestClient, db_manager: DatabaseManager, monkeypatch, tmp_path
+) -> None:
+    """Plan 061: the detail payload carries the same `publishable` /
+    `export_score` candidacy as the list rows — the detail and Full-view
+    publish buttons read these fields. Previously the detail endpoint never
+    returned them, so any detail-level publish affordance was dead."""
+    from news_collector.serving import api as serving_api
+
+    with db_manager.get_session() as session:
+        session.add(
+            Article(
+                id=9001,
+                title="detail candidate",
+                url="https://example.com/9001",
+                source_id="nature",
+                source_name="Nature",
+                processing_status="completed",
+                final_score=0.9,
+            )
+        )
+        session.add(
+            Article(
+                id=9002,
+                title="detail non-candidate",
+                url="https://example.com/9002",
+                source_id="nature",
+                source_name="Nature",
+                processing_status="completed",
+                final_score=0.9,
+            )
+        )
+        session.commit()
+
+    export = tmp_path / "latest_articles.json"
+    export.write_text(json.dumps({"articles": [{"id": 9001, "score": 0.88}]}), "utf-8")
+    monkeypatch.setattr(serving_api, "_EXPORT_ARTIFACT_PATH", export, raising=False)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        candidate = api_client.get(
+            "/v1/admin/articles/9001", headers=_admin_headers()
+        ).json()
+        non_candidate = api_client.get(
+            "/v1/admin/articles/9002", headers=_admin_headers()
+        ).json()
+    assert candidate["publishable"] is True
+    assert candidate["export_score"] == 0.88
+    assert non_candidate["publishable"] is False
+    assert non_candidate["export_score"] is None
+
+
+def test_admin_quality_recent_lists_runs_with_signals(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Plan 066: recent publication runs surface outcome + persisted quality
+    signals; legacy runs without summaries degrade to nulls; other run types
+    are excluded; newest first; `limit` is validated."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+                run_metadata={
+                    "summary": {
+                        "article_id": 492,
+                        "final_slug": "muse-glimmer",
+                        "pr_url": "https://github.com/o/r/pull/1",
+                        "stages": [
+                            {"name": "editor_refinement", "success": True},
+                            {
+                                "name": "readability",
+                                "success": True,
+                                "details": {
+                                    "ifsz": 66.45,
+                                    "grade": "normal",
+                                    "suitability": 0.857,
+                                    "words": 340,
+                                    "sentences": 18,
+                                },
+                            },
+                        ],
+                    }
+                },
+            )
+        )
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="failed",
+                started_at=now - timedelta(minutes=5),
+                finished_at=now - timedelta(minutes=4),
+                error_code="publication_failed",
+                error_detail="boom",
+                run_metadata={
+                    "summary": {
+                        "article_id": 502,
+                        "failure_class": "editorial_rejected",
+                    }
+                },
+            )
+        )
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="succeeded",
+                started_at=now - timedelta(minutes=10),
+                finished_at=now - timedelta(minutes=2),
+            )
+        )
+        session.add(
+            WorkflowRun(
+                run_type="collection",
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+            )
+        )
+        session.commit()
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/quality/recent", headers=_admin_headers())
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body["runs"]) == 3
+        # Newest first.
+        assert body["runs"][0]["article_id"] == "492"
+        assert body["runs"][0]["pr_url"] == "https://github.com/o/r/pull/1"
+        assert body["runs"][0]["readability"]["ifsz"] == 66.45
+        assert body["runs"][0]["readability"]["grade"] == "normal"
+        assert [s["name"] for s in body["runs"][0]["stages"]] == [
+            "editor_refinement",
+            "readability",
+        ]
+        assert body["runs"][1]["failure_class"] == "editorial_rejected"
+        assert body["runs"][1]["error"] == "boom"
+        assert body["runs"][1]["readability"] is None
+        assert body["runs"][2]["readability"] is None
+        assert body["runs"][2]["stages"] == []
+        assert body["runs"][2]["pr_url"] is None
+        agg = body["aggregate"]
+        assert agg["count"] == 3
+        assert agg["succeeded"] == 2
+        assert agg["failed"] == 1
+        assert agg["with_readability"] == 1
+        assert agg["avg_suitability"] == 0.857
+
+        limited = api_client.get(
+            "/v1/admin/quality/recent",
+            params={"limit": 1},
+            headers=_admin_headers(),
+        )
+        assert len(limited.json()["runs"]) == 1
+        assert (
+            api_client.get(
+                "/v1/admin/quality/recent",
+                params={"limit": 100},
+                headers=_admin_headers(),
+            ).status_code
+            == 422
+        )
+
+
 def test_admin_sources_list_toggle_reset(
     api_client: TestClient, db_manager: DatabaseManager
 ) -> None:

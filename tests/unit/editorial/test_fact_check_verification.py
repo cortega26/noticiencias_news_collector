@@ -1,7 +1,7 @@
-"""Tests for Plan 060 / Phase 2c: real fact-check verification (Stage 4.5).
+"""Tests for Plan 060 / Phase 2c: real fact-check verification (Stage 7).
 
 Covers `EditorAgent._verify_fact_check_claims` / `_send_fact_check_prompt`
-directly, the new Stage 4.5 call site in `process_article` (both the
+directly, the new Stage 7 call site in `process_article` (both the
 cache-hit and cache-miss branches must run verification), and the new
 "editorial_fact_check_disputed" fail-closed gate.
 
@@ -112,7 +112,7 @@ def _base_article(**overrides) -> dict:
 class TestVerifyFactCheckClaimsUnit:
     def test_confirmed_uncertain_disputed_paths(self) -> None:
         """The verifier's returned status is what ends up on each claim,
-        regardless of Stage 4's own self-assessed value."""
+        regardless of Stage 6's own self-assessed value."""
         agent = EditorAgent("http://example", "model")
         responses = iter(
             [
@@ -250,7 +250,7 @@ class TestVerifyFactCheckClaimsUnit:
         agent._send_fact_check_prompt.assert_not_called()
 
     def test_overwrite_all_rule_discards_stage4_self_assessment(self) -> None:
-        """A claim Stage 4 self-assessed as 'disputed' that the independent
+        """A claim Stage 6 self-assessed as 'disputed' that the independent
         verifier re-checks as 'confirmed' must end up 'confirmed' — the old
         six-value self-assessment never survives verification, not even
         partially."""
@@ -373,7 +373,7 @@ def test_live_cross_lingual_verification_against_real_ollama() -> None:
 
 
 # ---------------------------------------------------------------------------
-# process_article integration: Stage 4.5 call site, cache-hit proof, and the
+# process_article integration: Stage 7 call site, cache-hit proof, and the
 # new fail-closed gate.
 # ---------------------------------------------------------------------------
 
@@ -408,7 +408,7 @@ class TestProcessArticleFactCheckIntegration:
     def test_stage4_self_assessed_disputed_never_verified_does_not_block(
         self, tmp_path: Path
     ) -> None:
-        """Proves the overwrite-all rule end-to-end: Stage 4 drafted one
+        """Proves the overwrite-all rule end-to-end: Stage 6 drafted one
         claim self-assessed as 'disputed' (old six-value vocabulary), but
         the independent verifier re-checks it as 'confirmed' — publication
         must NOT be blocked, because only a verifier-returned 'disputed'
@@ -451,11 +451,11 @@ class TestProcessArticleFactCheckIntegration:
         }
         cache_path.write_text(json.dumps(cached_enrichment), encoding="utf-8")
 
-        # If Stage 4 were called for real on a cache hit, this would fail
+        # If Stage 6 were called for real on a cache hit, this would fail
         # the test with a clear signal — the cache-hit branch must reuse
         # `cached_enrichment` and never call _generate_enrichment_fields.
         agent._generate_enrichment_fields = MagicMock(
-            side_effect=AssertionError("Stage 4 must not run again on a cache hit")
+            side_effect=AssertionError("Stage 6 must not run again on a cache hit")
         )
         agent._send_fact_check_prompt = MagicMock(return_value={"status": "disputed"})
 
@@ -486,7 +486,7 @@ class TestProcessArticleFactCheckIntegration:
         cache_path.write_text(json.dumps(cached_enrichment), encoding="utf-8")
 
         agent._generate_enrichment_fields = MagicMock(
-            side_effect=AssertionError("Stage 4 must not run again on a cache hit")
+            side_effect=AssertionError("Stage 6 must not run again on a cache hit")
         )
         agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 

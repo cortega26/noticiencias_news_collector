@@ -1,4 +1,4 @@
-"""Tests for Stage 4 Editorial Enrichment Field Generation."""
+"""Tests for Stage 6 Editorial Enrichment Field Generation."""
 
 from __future__ import annotations
 
@@ -149,7 +149,7 @@ class TestEnrichmentGeneration:
         assert result["summary_points"] == []
 
     def test_sources_fallback_when_omitted_by_llm(self) -> None:
-        """LLM returning valid JSON without ``sources`` must not poison Stage 4:
+        """LLM returning valid JSON without ``sources`` must not poison Stage 6:
         the article's own original source is used as the deterministic default."""
         response_without_sources = json.dumps(
             {
@@ -364,7 +364,7 @@ class TestEnrichmentInProcessArticle:
             "benefit": "B",
             "excerpt": "SEO excerpt that is long enough for validation.",
         }
-        # Stage 4 returns empty / incomplete output
+        # Stage 6 returns empty / incomplete output
         agent._generate_enrichment_fields = MagicMock(return_value={})
 
         from news_collector.components.editorial.ai_editor import (
@@ -441,10 +441,10 @@ class TestEnrichmentInProcessArticle:
 
 
 class TestPoisonedStage4Cache:
-    """A cached Stage 4 artifact with an empty ``sources`` list must never be
+    """A cached Stage 6 artifact with an empty ``sources`` list must never be
     reused: it would fail the V2 frontmatter gate on every run. The cache is
     ignored and regenerated instead (the exact production failure mode that
-    made the pipeline 'consistently fail on Stage 4')."""
+    made the pipeline 'consistently fail on Stage 6')."""
 
     def _make_agent(self, tmp_path) -> EditorAgent:
         agent = EditorAgent("http://example", "model")

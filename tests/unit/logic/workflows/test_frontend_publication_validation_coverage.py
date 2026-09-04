@@ -20,7 +20,7 @@ from news_collector.logic.workflows.frontend_publication_validation import (
 def test_render_fixture_markdown_omits_source_url_when_metadata_absent() -> None:
     """include_source_metadata=False (used by the sources missing-field
     regression test) must not leave a stale/fabricated source_url behind.
-    The article's own Stage 4 ``sources`` entry still comes from the
+    The article's own Stage 6 ``sources`` entry still comes from the
     enrichment payload itself here (not the backfill), so this variant does
     not raise — only omitting the enrichment ``sources`` key too (see
     test_frontend_publication_validation.py) triggers the V2 gate."""

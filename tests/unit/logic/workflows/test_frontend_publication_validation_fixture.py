@@ -58,7 +58,7 @@ def test_complete_fixture_is_deterministic_across_runs() -> None:
     [f for f in _V2_REQUIRED_ENRICHMENT_FIELDS if f != "sources"],
 )
 def test_fixture_variant_missing_field_fails_closed(field: str) -> None:
-    """Stripping any single required enrichment field (via the Stage 4 LLM
+    """Stripping any single required enrichment field (via the Stage 6 LLM
     stub omitting that key — not by hand-editing rendered YAML, so this
     exercises EnrichmentSchema validation and the real V2 gate) must raise
     GeneratedArticleValidationError(error_code="editorial_v2_incomplete")
@@ -72,7 +72,7 @@ def test_fixture_variant_missing_field_fails_closed(field: str) -> None:
 
 def test_fixture_variant_missing_sources_fails_closed_without_backfill() -> None:
     """``sources`` is a special case (ai_editor.py:1409-1421): when the
-    Stage 4 LLM omits ``sources`` but the raw article input still carries
+    Stage 6 LLM omits ``sources`` but the raw article input still carries
     ``source_url``/``source_name``, _generate_enrichment_fields
     deterministically backfills a synthetic sources entry from the
     article's own original source — and the missing-field gate never
@@ -100,7 +100,7 @@ def test_fixture_missing_sources_with_source_metadata_backfills_and_succeeds() -
     """Companion/control case for the test above: proves the backfill
     behavior this fixture module relies on for its *default* (complete)
     build actually works as documented — omitting ``sources`` from the
-    Stage 4 response while source metadata IS present must NOT fail the
+    Stage 6 response while source metadata IS present must NOT fail the
     gate; the backfilled synthetic source satisfies it."""
     rendered = render_fixture_markdown(
         enrichment_omit_field="sources", include_source_metadata=True

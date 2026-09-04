@@ -1,0 +1,175 @@
+---
+import AuthGate from "../components/AuthGate.astro";
+import AdminLayout from "../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Quality" current="/quality">
+  <AuthGate>
+    <header class="mb-8 flex items-end justify-between gap-4">
+      <div>
+        <h1 class="display-title text-4xl text-paper-100">Quality review</h1>
+        <p class="data-label mt-2">PUBLISHED ARTICLE HEALTH · READABILITY + STAGE SIGNALS</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+      </div>
+    </header>
+    <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
+    <div class="card overflow-x-auto">
+      <table class="w-full min-w-[860px] text-left">
+        <thead>
+          <tr class="border-b border-ink-700">
+            <th class="data-label px-5 py-3">RUN</th>
+            <th class="data-label px-5 py-3">WHEN</th>
+            <th class="data-label px-5 py-3">ARTICLE</th>
+            <th class="data-label px-5 py-3">OUTCOME</th>
+            <th class="data-label px-5 py-3">READABILITY</th>
+            <th class="data-label px-5 py-3">STAGES</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
+        No publication runs found.
+      </div>
+    </div>
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+  </AuthGate>
+</AdminLayout>
+
+<script>
+  import { clearToken, getQualityRecent, showAuthGate } from "../lib/api";
+  import type {
+    AdminQualityRecentEnvelope,
+    AdminQualityRunItem,
+  } from "../lib/types";
+
+  const rowsEl = document.getElementById("rows");
+  const emptyEl = document.getElementById("empty");
+  const metaEl = document.getElementById("meta");
+  const toastEl = document.getElementById("toast");
+
+  function esc(s: unknown): string {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = String(s);
+    return div.innerHTML;
+  }
+
+  function showToast(message: string, kind: "ok" | "err" = "ok") {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.className =
+      `fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border px-4 py-3 text-sm shadow-xl ` +
+      (kind === "ok"
+        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
+        : "border-rose-500/50 bg-ink-900 text-rose-400");
+    toastEl.classList.remove("hidden");
+    window.setTimeout(() => toastEl?.classList.add("hidden"), 4000);
+  }
+
+  function readabilityBadge(run: AdminQualityRunItem): string {
+    const r = run.readability;
+    if (!r || r.ifsz == null) {
+      return `<span class="font-mono text-xs text-ink-600" title="Run predates readability signals">—</span>`;
+    }
+    const suit = r.suitability ?? 0;
+    const color =
+      suit >= 0.75
+        ? "border-verdigris-500/40 text-verdigris-400"
+        : suit >= 0.5
+          ? "border-amber-500/40 text-amber-400"
+          : "border-rose-500/40 text-rose-400";
+    const detail = [
+      r.grade ? `grade: ${r.grade}` : null,
+      r.words != null ? `${r.words} words` : null,
+      r.sentences != null ? `${r.sentences} sentences` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return `<span class="inline-flex items-center gap-2 rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs" title="${esc(detail)}">${esc(r.ifsz.toFixed(1))} · ${esc(r.grade ?? "?")}</span>`;
+  }
+
+  function outcomeCell(run: AdminQualityRunItem): string {
+    if (run.pr_url) {
+      return `<a class="font-mono text-xs text-amber-400 underline" href="${esc(run.pr_url)}" target="_blank" rel="noopener">PR ↗</a>`;
+    }
+    if (run.failure_class || run.status === "failed") {
+      const label = run.failure_class ?? run.status;
+      return `<span class="inline-flex items-center rounded-full border border-rose-500/40 px-2.5 py-0.5 font-mono text-xs text-rose-400" title="${esc(run.error ?? "")}">${esc(label)}</span>`;
+    }
+    return `<span class="font-mono text-xs text-ink-300">${esc(run.status)}</span>`;
+  }
+
+  function articleCell(run: AdminQualityRunItem): string {
+    const label = run.final_slug ?? run.output_filename ?? run.article_id ?? "—";
+    const numericId = run.article_id != null && /^\d+$/.test(run.article_id);
+    if (numericId) {
+      return `<a class="text-sm font-medium text-ink-100 hover:text-amber-400 hover:underline" href="/article?id=${esc(run.article_id)}">${esc(label)}</a>
+        <div class="font-mono text-[11px] text-ink-400">#${esc(run.article_id)}</div>`;
+    }
+    return `<div class="text-sm font-medium text-ink-100">${esc(label)}</div>`;
+  }
+
+  function stagesCell(run: AdminQualityRunItem): string {
+    const stages = run.stages ?? [];
+    if (!stages.length) {
+      return `<span class="font-mono text-xs text-ink-600">—</span>`;
+    }
+    const ok = stages.filter((s) => s.success).length;
+    const items = stages
+      .map(
+        (s) =>
+          `<li class="flex items-center gap-2 font-mono text-[11px] ${s.success ? "text-ink-300" : "text-rose-400"}"><span>${s.success ? "✓" : "✗"}</span><span>${esc(s.name)}</span></li>`,
+      )
+      .join("");
+    return `<details><summary class="cursor-pointer font-mono text-xs text-ink-300 hover:text-ink-100">${ok}/${stages.length} ✓</summary><ul class="mt-2 space-y-1">${items}</ul></details>`;
+  }
+
+  function whenCell(run: AdminQualityRunItem): string {
+    const raw = run.started_at ?? run.finished_at ?? "";
+    return `<span class="font-mono text-xs text-ink-400">${esc(raw.slice(0, 16).replace("T", " "))}</span>`;
+  }
+
+  async function load() {
+    try {
+      const envelope: AdminQualityRecentEnvelope = await getQualityRecent(20);
+      if (emptyEl) emptyEl.classList.toggle("hidden", envelope.runs.length > 0);
+      const agg = envelope.aggregate;
+      if (metaEl) {
+        metaEl.innerHTML = `
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">runs ${agg.count}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">succeeded ${agg.succeeded}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs ${agg.failed ? "text-rose-400" : "text-ink-200"}">failed ${agg.failed}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">with readability ${agg.with_readability}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">avg suitability ${agg.avg_suitability != null ? agg.avg_suitability.toFixed(3) : "—"}</div>
+        `;
+      }
+      if (!rowsEl) return;
+      rowsEl.innerHTML = envelope.runs
+        .map(
+          (run) => `
+          <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
+            <td class="px-5 py-3 font-mono text-xs text-ink-400">#${run.run_id}</td>
+            <td class="px-5 py-3">${whenCell(run)}</td>
+            <td class="px-5 py-3">${articleCell(run)}</td>
+            <td class="px-5 py-3">${outcomeCell(run)}</td>
+            <td class="px-5 py-3">${readabilityBadge(run)}</td>
+            <td class="px-5 py-3">${stagesCell(run)}</td>
+          </tr>`,
+        )
+        .join("");
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      showToast("Failed to load quality review: " + (e as Error).message, "err");
+    }
+  }
+
+  document.getElementById("refresh")?.addEventListener("click", () => void load());
+  void load();
+  window.addEventListener("auth:ready", () => void load());
+</script>
