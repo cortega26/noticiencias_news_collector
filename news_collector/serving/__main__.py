@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "news_collector.serving.__main__:app",
-        host="0.0.0.0",  # noqa: S104 — intended for local dev server
+        host="0.0.0.0",  # noqa: S104 # nosec B104 — local dev server only
         port=8000,
         reload=True,
         reload_excludes=RELOAD_EXCLUDES,

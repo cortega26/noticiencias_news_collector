@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from news_collector.components.editorial.ai_editor import (
+    _HEADLINE_FORMAT_MAX_ATTEMPTS,
     EditorAgent,
     GeneratedArticleValidationError,
     HeadlinesSchema,
@@ -25,7 +26,6 @@ from news_collector.components.editorial.ai_editor import (
     _sample_for_critic,
     _strip_llm_epilogue,
     _strip_llm_preamble,
-    _HEADLINE_FORMAT_MAX_ATTEMPTS,
     validate_generated_article_markdown,
 )
 from news_collector.editorial.uncertainty import GENERIC_UNCERTAINTY_NOTE
