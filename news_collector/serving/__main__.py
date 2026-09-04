@@ -23,6 +23,13 @@ app = create_app()
 # (relative dirs never equal them). Anchored at the file location so this
 # holds regardless of the process working directory.
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# The uvicorn watcher only honors ABSOLUTE EXISTING directories as
+# exclude_dirs (checked via `is_dir` at startup) — so make sure the
+# runtime workspace exists here, not just when the first run needs it.
+# Without this, a fresh checkout/container (no temp/ yet) silently loses
+# the exclusion and the first publication run kills the server again.
+for _runtime_dir in ("temp", "data", "logs"):
+    (_REPO_ROOT / _runtime_dir).mkdir(parents=True, exist_ok=True)
 RELOAD_EXCLUDES = [str(_REPO_ROOT / name) for name in ("temp", "data", "logs")]
 
 if __name__ == "__main__":
