@@ -108,6 +108,66 @@ def _safe_clone_source_repo(
         raise
 
 
+def _export_identity_matches_db(
+    art: Dict[str, Any], process_id: str, db_manager: DatabaseManager
+) -> bool:
+    """Wrong-article guard (plan 071): prove a `process_id`-matched export
+    entry is the same article as the production DB row before publishing it.
+
+    The committed export is built by CI against an ephemeral DB whose ids do
+    not match production — without this check, publish-by-id refines and
+    opens a PR for a completely different article (run 18 published the
+    tortoise piece when asked for id 158).
+
+    Returns True when identity is proven OR unverifiable (non-numeric id,
+    DB access trouble, non-string fields — fail-open with a warning).
+    Returns False only on proven mismatch or when the id is absent from
+    the production DB.
+    """
+    try:
+        numeric_id = int(str(process_id))
+    except (ValueError, TypeError):
+        return True
+    try:
+        row = db_manager.get_article_by_id(numeric_id)
+    except Exception as exc:
+        logger.warning(
+            "Export identity check unavailable for id {} ({}); proceeding.",
+            process_id,
+            exc,
+        )
+        return True
+    if row is None:
+        logger.error(
+            "Export identity check FAILED for id {}: no such article in the "
+            "production DB. Refusing to publish from this export entry.",
+            process_id,
+        )
+        return False
+    for field in ("title", "url"):
+        export_value = art.get(field)
+        db_value = getattr(row, field, None)
+        if not isinstance(export_value, str) or not isinstance(db_value, str):
+            logger.warning(
+                "Export identity check inconclusive for id {} (field {!r} "
+                "not comparable); proceeding.",
+                process_id,
+                field,
+            )
+            continue
+        if export_value.strip() != db_value.strip():
+            logger.error(
+                "Export identity check FAILED for id {}: export {!r} != DB "
+                "{!r} (field {!r}). Refusing to publish from this export entry.",
+                process_id,
+                export_value[:120],
+                db_value[:120],
+                field,
+            )
+            return False
+    return True
+
+
 def _load_export_articles(  # noqa: C901
     export_path: Path,
     db_manager: DatabaseManager,
@@ -194,6 +254,15 @@ def _load_export_articles(  # noqa: C901
     for art in header_articles:
         art_id = str(art.get("id", art.get("title")))
         if process_id and str(art_id) != str(process_id):
+            continue
+        # Wrong-article guard (plan 071): a matching id is not enough —
+        # CI-built exports carry ephemeral ids. Prove export entry and
+        # production row are the same article or refuse it loudly.
+        if (
+            process_id
+            and str(art_id) == str(process_id)
+            and not _export_identity_matches_db(art, process_id, db_manager)
+        ):
             continue
 
         try:

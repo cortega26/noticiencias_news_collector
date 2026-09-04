@@ -206,6 +206,14 @@ class RefineryEngine:
 
         self._last_blocked_error: Dict[str, str] | None = None
 
+        # Mirror of the in-flight `publication_stages` list of the article
+        # currently in `process_single_article` (plan 069): lets the
+        # `process_articles` except-block persist accumulated stages when an
+        # unexpected exception skips every explicit `persist_attempt` path.
+        self._last_publication_stages: Optional[List[PublicationAttemptStageResult]] = (
+            None
+        )
+
         self.writer = TargetRepoWriter()
         self.identity_resolver = PublicationIdentityResolver(
             db=self.db, manifest=self.writer
@@ -270,6 +278,9 @@ class RefineryEngine:
 
             except Exception as e:
                 logger.error(f"Failed to process {article_id}: {e}")
+                self._persist_interrupted_attempt(
+                    article_id, self._last_publication_stages
+                )
                 entry = {
                     "id": article_id,
                     "error": str(e),
@@ -289,6 +300,9 @@ class RefineryEngine:
         Orchestrates full cycle for one article.
         Returns True if successful (PR created), False otherwise.
         """
+        # Reset first: a raise before any stage (e.g. identity resolve)
+        # must not attribute the previous article's stages to this one.
+        self._last_publication_stages = None
         article_id = _resolve_article_identity(article)
         publication_stages: list[PublicationAttemptStageResult] = []
         branch_name: str | None = None
@@ -309,6 +323,7 @@ class RefineryEngine:
                     },
                 )
             )
+            self._last_publication_stages = publication_stages
 
         def persist_attempt(
             success: bool, failure_class: PublicationFailureClass | None = None
@@ -721,6 +736,48 @@ class RefineryEngine:
     def _safe_publication_artifact_name(article_id: str) -> str:
         safe_article_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", article_id).strip("_")
         return safe_article_id or "unknown"
+
+    def _persist_interrupted_attempt(
+        self,
+        article_id: str,
+        stages: Optional[List[PublicationAttemptStageResult]],
+    ) -> None:
+        """Persist accumulated stages when `process_single_article` raised
+        unexpectedly (plan 069), so failed runs still show a stage checklist
+        in the quality review loop.
+
+        Never overwrites an existing *successful* attempt file (a re-publish
+        crash must not destroy the prior PR record); never raises; keeps
+        `failure_class` unset (the contract Literal has no generic member —
+        the workflow row already carries the error).
+        """
+        if not article_id or article_id == "unknown" or not stages:
+            return
+        safe_article_id = self._safe_publication_artifact_name(article_id)
+        summary_path = self.publication_attempts_dir / f"{safe_article_id}.json"
+        try:
+            if summary_path.is_file():
+                existing = json.loads(summary_path.read_text(encoding="utf-8"))
+                if isinstance(existing, dict) and existing.get("success") is True:
+                    logger.info(
+                        f"Keeping prior successful attempt file for {article_id}; "
+                        "not overwriting with the interrupted run."
+                    )
+                    return
+        except (OSError, ValueError) as exc:
+            logger.warning(
+                f"Could not inspect prior attempt file for {article_id}: {exc}"
+            )
+        try:
+            self._persist_publication_attempt_summary(
+                article_id=article_id,
+                success=False,
+                stages=stages,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Could not persist interrupted attempt for {article_id}: {exc}"
+            )
 
     def _record_audit_status(
         self,

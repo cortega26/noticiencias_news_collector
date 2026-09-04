@@ -165,6 +165,95 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertGreaterEqual(details["suitability"], 0.0)
             self.assertLessEqual(details["suitability"], 1.0)
 
+    def test_interrupted_attempt_persists_recorded_stages(self):
+        """Plan 069: an unexpected mid-pipeline raise still persists the
+        stages recorded so far (success=False); the error entry is intact."""
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        self.mock_editor.process_article.side_effect = RuntimeError("boom")
+        self.mock_db.get_canonical_slug.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.engine.publication_attempts_dir = Path(tmpdir)
+            target_dir = Path(tmpdir) / "target"
+            target_dir.mkdir()
+            summary = self.engine.process_articles([article], MagicMock(), target_dir)
+
+            self.assertEqual(summary["processed_count"], 0)
+            self.assertEqual(len(summary["errors"]), 1)
+            self.assertEqual(summary["errors"][0]["error"], "boom")
+            persisted = json.loads((Path(tmpdir) / "123.json").read_text())
+            self.assertFalse(persisted["success"])
+            self.assertEqual(
+                [stage["name"] for stage in persisted["stages"]],
+                ["identity_resolved", "image_resolution"],
+            )
+
+    def test_interrupted_attempt_never_overwrites_successful_file(self):
+        """Plan 069: a re-publish crash must not destroy the prior PR record."""
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        self.mock_editor.process_article.side_effect = RuntimeError("boom")
+        self.mock_db.get_canonical_slug.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.engine.publication_attempts_dir = Path(tmpdir)
+            (Path(tmpdir) / "123.json").write_text(
+                json.dumps(
+                    {
+                        "success": True,
+                        "pr_url": "http://pr.url",
+                        "stages": [{"name": "pr_created", "success": True}],
+                    }
+                )
+            )
+            target_dir = Path(tmpdir) / "target"
+            target_dir.mkdir()
+            summary = self.engine.process_articles([article], MagicMock(), target_dir)
+
+            self.assertEqual(len(summary["errors"]), 1)
+            persisted = json.loads((Path(tmpdir) / "123.json").read_text())
+            self.assertTrue(persisted["success"])
+            self.assertEqual(persisted["pr_url"], "http://pr.url")
+
+    def test_interrupted_attempt_skips_unattributable_id(self):
+        """Plan 069: no summary file is written when the article id cannot
+        be resolved (avoids an "unknown.json" collision across articles)."""
+        from news_collector.contracts.publication_validation import (
+            PublicationAttemptStageResult,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.engine.publication_attempts_dir = Path(tmpdir)
+            stages = [
+                PublicationAttemptStageResult(name="identity_resolved", success=True)
+            ]
+            self.engine._persist_interrupted_attempt("unknown", stages)
+            self.engine._persist_interrupted_attempt("", stages)
+            self.engine._persist_interrupted_attempt("123", [])
+            self.engine._persist_interrupted_attempt("123", None)
+            self.assertEqual(list(Path(tmpdir).iterdir()), [])
+
     def test_process_articles_batch(self):
         articles = [{"id": "1"}, {"id": "2"}]
         self.engine.process_single_article = MagicMock(side_effect=[True, False])

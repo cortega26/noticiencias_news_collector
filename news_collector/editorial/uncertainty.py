@@ -1,7 +1,7 @@
 """Uncertainty-counterweight enforcement (EDITORIAL_VOICE.md §2.4.3).
 
-The editorial voice requires: a curiosity-gap hook over a preliminary
-finding ⇒ a mandatory, *visible* uncertainty note. The frontend already
+The editorial voice requires: a curiosity-gap (or stakes) hook over a
+preliminary finding ⇒ a mandatory, *visible* uncertainty note. The frontend already
 renders it (`TrustPanel.astro`: amber callout when required, plain line
 otherwise) — but the backend never guaranteed the invariant, so articles
 shipped with `requires_uncertainty_note: true` and no note at all (silent
@@ -29,7 +29,12 @@ GENERIC_UNCERTAINTY_NOTE = (
     "cautela."
 )
 
-_CURIOSITY_HOOK = "curiosity_gap"
+# Hooks that promise the reader something (plan 067: curiosity_gap;
+# plan 070: stakes joins — same promise-to-reader dynamics over
+# preliminary findings). `question` stays out deliberately: interrogative
+# hooks are normally answered in-body and the fidelity critic already
+# judges hook-body match; forcing caveats there would dilute the signal.
+_COUNTERWEIGHT_HOOKS = frozenset({"curiosity_gap", "stakes"})
 
 # First-word prefixes (case-insensitive) of the free-text `confidence`
 # field that suggest a preliminary finding. Observed in the wild: "Alta",
@@ -39,11 +44,13 @@ _PRELIMINARY_CONFIDENCE_PREFIXES = ("moderada", "media", "baja")
 
 
 def hook_needs_counterweight(pattern_used: Any) -> bool:
-    """True only for the curiosity-gap hook (validator §2.4 rule 3 names it
-    explicitly; stakes/question patterns are a follow-up, not this rule)."""
+    """True for hooks that promise the reader something over a finding
+    (validator §2.4 rule 3 names the curiosity gap; stakes joins it —
+    other patterns are judged by the fidelity critic instead)."""
     if not isinstance(pattern_used, str):
         return False
-    return pattern_used.strip().lower().replace(" ", "_") == _CURIOSITY_HOOK
+    normalized = pattern_used.strip().lower().replace(" ", "_")
+    return normalized in _COUNTERWEIGHT_HOOKS
 
 
 def confidence_suggests_preliminary(confidence: Any) -> bool:
