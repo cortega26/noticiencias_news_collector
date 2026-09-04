@@ -36,21 +36,16 @@ jobs:
         env:
           LOG_LEVEL: INFO
 
-      - name: Commit and Push Data
+      # NOTE (plan 071/073): do NOT commit data/exports/latest_articles.json
+      # from this job. It is built against an ephemeral CI database whose
+      # autoincrement ids do not match production, and every downstream
+      # consumer joins/filters by id — a committed CI export once caused a
+      # wrong-article publish (run 18). The committed file is now curated
+      # explicitly (production-DB regen); the refinery prefers the local
+      # sibling export and the plan-071 identity guard rejects mismatches.
+      - name: Verify export was produced (not committed)
         run: |
-          git config --global user.name "Noticiencias Bot"
-          git config --global user.email "bot@noticiencias.com"
-
-          # Check for changes in data/ folder
-          git add data/exports/latest_articles.json
-
-          # Only commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "🤖 Data update: $(date -u +'%Y-%m-%d')"
-            git push
-          fi
+          test -f data/exports/latest_articles.json && echo "export OK (local only, not committed)."
 
       - name: Alert on Failure
         if: failure()
