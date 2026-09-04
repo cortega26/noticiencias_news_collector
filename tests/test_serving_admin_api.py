@@ -2150,3 +2150,127 @@ def test_admin_config_save_accepts_snapshot_shape(
     saved = cfg_file.read_text(encoding="utf-8")
     assert "recency = 0.3" in saved
     assert "[paths]" in saved
+
+
+# ---------------------------------------------------------------------------
+# Quality helpers — defensive branches (plan 076 follow-up for the coverage
+# ratchet: every helper must degrade to nulls, never raise).
+# ---------------------------------------------------------------------------
+
+
+def test_quality_as_helpers_reject_non_scalars() -> None:
+    from news_collector.serving import api as serving_api
+
+    assert serving_api._as_str(123) is None
+    assert serving_api._as_str(None) is None
+    assert serving_api._as_float(True) is None
+    assert serving_api._as_float(None) is None
+    assert serving_api._as_float(2) == 2.0
+    assert serving_api._as_int(True) is None
+    assert serving_api._as_int(7) == 7
+    assert serving_api._as_int(7.9) is None
+
+
+def test_quality_readability_from_stages_tolerates_shapes() -> None:
+    from news_collector.serving import api as serving_api
+
+    assert serving_api._quality_readability_from_stages(None) is None
+    assert serving_api._quality_readability_from_stages([]) is None
+    assert serving_api._quality_readability_from_stages(["nope"]) is None
+    assert (
+        serving_api._quality_readability_from_stages(
+            [{"name": "readability", "details": None}]
+        )
+        is None
+    )
+    full = serving_api._quality_readability_from_stages(
+        [
+            {"name": "editor_refinement", "success": True},
+            {
+                "name": "readability",
+                "success": True,
+                "details": {"ifsz": 70, "grade": "normal", "suitability": 0.9},
+            },
+        ]
+    )
+    assert full is not None
+    assert full.ifsz == 70.0
+    assert full.grade == "normal"
+
+
+def test_quality_stages_from_summary_tolerates_shapes() -> None:
+    from news_collector.serving import api as serving_api
+
+    assert serving_api._quality_stages_from_summary({}) == []
+    assert serving_api._quality_stages_from_summary({"stages": None}) == []
+    stages = serving_api._quality_stages_from_summary(
+        {"stages": ["nope", {"name": "x", "details": None}, {"success": True}]}
+    )
+    assert [s.name for s in stages] == ["x", "unknown"]
+    assert stages[0].details == {}
+
+
+def test_quality_build_item_tolerates_partial_rows() -> None:
+    from news_collector.serving import api as serving_api
+
+    row = SimpleNamespace(
+        id=9,
+        status="failed",
+        started_at=None,
+        finished_at=None,
+        error_detail=None,
+        run_metadata=None,
+    )
+    item = serving_api._build_quality_run_item(row)
+    assert item.run_id == 9
+    assert item.article_id is None
+    assert item.error is None
+    assert item.stages == []
+
+    bool_id = SimpleNamespace(
+        id=10,
+        status="failed",
+        started_at=None,
+        finished_at=None,
+        error_detail=None,
+        run_metadata={"summary": {"article_id": True, "message": "kaput"}},
+    )
+    bool_item = serving_api._build_quality_run_item(bool_id)
+    assert bool_item.article_id is None
+    assert bool_item.error == "kaput"
+
+
+def test_quality_audit_states_empty_and_broken_session() -> None:
+    from news_collector.serving import api as serving_api
+
+    assert serving_api._quality_audit_states(MagicMock(), []) == {}
+
+    class _BrokenSession:
+        def query(self, *args):
+            raise RuntimeError("db down")
+
+    assert serving_api._quality_audit_states(_BrokenSession(), [1, 2]) == {}
+
+
+def test_admin_quality_recent_aggregate_without_readability(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """avg_suitability is null (not zero) when no run carries readability."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+            )
+        )
+        session.commit()
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        body = api_client.get(
+            "/v1/admin/quality/recent", headers=_admin_headers()
+        ).json()
+        assert body["aggregate"]["with_readability"] == 0
+        assert body["aggregate"]["avg_suitability"] is None
