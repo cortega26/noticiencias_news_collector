@@ -633,9 +633,84 @@ _WORKFLOW_SYSTEM_CALLS = [
 
 
 @pytest.mark.parametrize("method_name, call_kwargs", _WORKFLOW_SYSTEM_CALLS)
-def test_real_system_accepts_every_call_run_makes(method_name, call_kwargs) -> None:
-    sig = inspect.signature(getattr(NewsCollectorSystem, method_name))
+def test_fake_system_accepts_every_call_run_makes(method_name, call_kwargs) -> None:
+    sig = inspect.signature(getattr(_FakeSystem, method_name))
     sig.bind(None, **call_kwargs)  # None stands in for `self`; TypeError on drift
+
+
+# ---------------------------------------------------------------------------
+# Plan 078: start() reaps expired running leases (self-healing single-flight)
+# ---------------------------------------------------------------------------
+
+
+def test_start_reaps_expired_running_row(db_manager, workflow, monkeypatch) -> None:
+    """A stale `running` row (dead owner) is recovered on start instead of
+    409-blocking the new run forever (same deadlock as publication run 20)."""
+    stale = datetime.now(timezone.utc) - timedelta(seconds=3600)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="collection",
+                status="running",
+                started_at=stale,
+                heartbeat_at=stale,
+            )
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(dry_run=True)
+
+    assert result.status == "started"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [
+            (1, "interrupted"),
+            (2, "queued"),
+        ]
+
+
+def test_start_leaves_fresh_queued_row_alone(db_manager, workflow, monkeypatch) -> None:
+    """A fresh queued row may belong to a live concurrent start: it must
+    survive start() untouched, and the second starter still gets 409."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(WorkflowRun(run_type="collection", status="queued", started_at=now))
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(dry_run=True)
+
+    assert result.status == "already_running"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [(1, "queued")]
+
+
+def test_start_leaves_fresh_unbeaten_running_row_alone(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """Plan 078 nuance: a running row with no heartbeat yet but a fresh
+    started_at may belong to a thread mid-transition — never reap it."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="collection",
+                status="running",
+                started_at=now,
+                heartbeat_at=None,
+            )
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(dry_run=True)
+
+    assert result.status == "already_running"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [(1, "running")]
 
 
 @pytest.mark.parametrize("method_name, call_kwargs", _WORKFLOW_SYSTEM_CALLS)

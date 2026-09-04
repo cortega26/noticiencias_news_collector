@@ -136,6 +136,15 @@ class PublicationRunWorkflow:
                 detail="Provide exactly one of article_id or article_url.",
             )
 
+        # Self-healing single-flight (plan 078): reap expired leases here,
+        # not only at process boot. A stale `running` row (owner process
+        # dead, heartbeat older than the lease) would otherwise 409-block
+        # every new publish forever. Queued rows are deliberately excluded:
+        # at boot a queued row is definitionally an orphan, but here one
+        # may belong to a live in-flight start() — only expiry-proven
+        # running rows are safe to reap.
+        self.recover_expired_leases(include_queued=False)
+
         now = datetime.now(timezone.utc)
         run_id: int | None = None
         with self._db.get_session() as session:
@@ -432,26 +441,36 @@ class PublicationRunWorkflow:
     # lease recovery
     # ------------------------------------------------------------------
 
-    def recover_expired_leases(self) -> list[int]:
+    def recover_expired_leases(self, *, include_queued: bool = True) -> list[int]:
         """CAS every stale `run_type='publication'` row to `interrupted`.
-        Scoped to publication runs — must not touch collection rows. Called
-        once at process startup, same as `CollectionRunWorkflow`."""
+        Scoped to publication runs — must not touch collection rows. Queued
+        rows are only definitionally orphans at process startup, so
+        `start()` passes `include_queued=False` (a fresh queued row may
+        belong to a live in-flight start); startup keeps the default.
+        Called once at process startup, same as `CollectionRunWorkflow`,
+        and from `start()` for expired running rows."""
         cutoff = datetime.now(timezone.utc) - timedelta(
             seconds=self._lease_timeout_seconds
+        )
+        running_stale = (WorkflowRun.status == "running") & (
+            (WorkflowRun.heartbeat_at < cutoff)
+            # No heartbeat yet: only stale if the run never beat within a
+            # full lease (a live run beats ~60s after transitioning; a fresh
+            # NULL row may belong to a thread mid-transition — reaping it
+            # would murder a live run and break single-flight).
+            | (WorkflowRun.heartbeat_at.is_(None) & (WorkflowRun.started_at < cutoff))
+        )
+        status_filter = (
+            running_stale | (WorkflowRun.status == "queued")
+            if include_queued
+            else running_stale
         )
         with self._db.get_session() as session:
             stale = (
                 session.execute(
                     select(WorkflowRun.id, WorkflowRun.status).where(
                         WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
-                        (
-                            (WorkflowRun.status == "running")
-                            & (
-                                WorkflowRun.heartbeat_at.is_(None)
-                                | (WorkflowRun.heartbeat_at < cutoff)
-                            )
-                        )
-                        | (WorkflowRun.status == "queued"),
+                        status_filter,
                     )
                 )
                 .tuples()

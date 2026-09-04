@@ -283,3 +283,111 @@ def test_refinery_main_accepts_every_kwarg_run_passes() -> None:
         skip_visuals=False,
         dry_run=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# Plan 078: start() reaps expired running leases (self-healing single-flight)
+# ---------------------------------------------------------------------------
+
+
+def test_start_reaps_expired_running_row(db_manager, workflow, monkeypatch) -> None:
+    """A stale `running` row (dead owner, run-20 incident) is recovered on
+    start instead of 409-blocking the new run forever."""
+    stale = datetime.now(timezone.utc) - timedelta(seconds=3600)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="running",
+                started_at=stale,
+                heartbeat_at=stale,
+            )
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(article_id=7)
+
+    assert result.status == "started"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [
+            (1, "interrupted"),
+            (2, "queued"),
+        ]
+
+
+def test_start_leaves_fresh_queued_row_alone(db_manager, workflow, monkeypatch) -> None:
+    """A fresh queued row may belong to a live concurrent start: it must
+    survive start() untouched, and the second starter still gets 409."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(run_type="publication", status="queued", started_at=now)
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(article_id=7)
+
+    assert result.status == "already_running"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [(1, "queued")]
+
+
+def test_start_leaves_fresh_unbeaten_running_row_alone(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """A running row with no heartbeat yet but a fresh started_at may belong
+    to a thread mid-transition (first beat lands ~60s in): reaping it would
+    murder a live run AND break single-flight (the concurrent CI test caught
+    exactly this). Only lease-old unbeaten rows are stale."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="running",
+                started_at=now,
+                heartbeat_at=None,
+            )
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(article_id=7)
+
+    assert result.status == "already_running"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [(1, "running")]
+
+
+def test_start_reaps_lease_old_unbeaten_running_row(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """A running row that never beat within a full lease is dead (a live
+    run beats within ~60s of transitioning)."""
+    old = datetime.now(timezone.utc) - timedelta(seconds=3600)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="running",
+                started_at=old,
+                heartbeat_at=None,
+            )
+        )
+        session.commit()
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(article_id=7)
+
+    assert result.status == "started"
+    with db_manager.get_session() as session:
+        rows = session.query(WorkflowRun).order_by(WorkflowRun.id).all()
+        assert [(row.id, row.status) for row in rows] == [
+            (1, "interrupted"),
+            (2, "queued"),
+        ]

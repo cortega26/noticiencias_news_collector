@@ -134,6 +134,10 @@ class CollectionRunWorkflow:
         """
         now = datetime.now(timezone.utc)
         run_id: int | None = None
+        # Self-healing single-flight (plan 078): reap expired running
+        # leases here, not only at boot — but never queued rows, which may
+        # belong to a live concurrent start.
+        self.recover_expired_leases(include_queued=False)
         with self._db.get_session() as session:
             row = WorkflowRun(
                 run_type=RUN_TYPE_COLLECTION,
@@ -371,7 +375,7 @@ class CollectionRunWorkflow:
     # lease recovery
     # ------------------------------------------------------------------
 
-    def recover_expired_leases(self) -> list[int]:
+    def recover_expired_leases(self, *, include_queued: bool = True) -> list[int]:
         """Find every `running` `run_type='collection'` row whose
         `heartbeat_at` is older than the lease timeout (or NULL — started
         but never heartbeat once, e.g. crashed immediately) and
@@ -409,18 +413,29 @@ class CollectionRunWorkflow:
             # queued the same as running — an orphaned queued row would
             # otherwise permanently block every future collection request
             # with 409, with no process left able to finish or recover it.
+            # `include_queued=False` (used by `start()`) skips the queued
+            # clause: at startup no in-flight call can exist, but here a
+            # fresh queued row may belong to a live concurrent start.
+            running_stale = (WorkflowRun.status == "running") & (
+                (WorkflowRun.heartbeat_at < cutoff)
+                # No heartbeat yet: only stale if the run never beat within
+                # a full lease (a live run beats ~60s after transitioning; a
+                # fresh NULL row may belong to a thread mid-transition).
+                | (
+                    WorkflowRun.heartbeat_at.is_(None)
+                    & (WorkflowRun.started_at < cutoff)
+                )
+            )
+            status_filter = (
+                running_stale | (WorkflowRun.status == "queued")
+                if include_queued
+                else running_stale
+            )
             stale = (
                 session.execute(
                     select(WorkflowRun.id, WorkflowRun.status).where(
                         WorkflowRun.run_type == RUN_TYPE_COLLECTION,
-                        (
-                            (WorkflowRun.status == "running")
-                            & (
-                                WorkflowRun.heartbeat_at.is_(None)
-                                | (WorkflowRun.heartbeat_at < cutoff)
-                            )
-                        )
-                        | (WorkflowRun.status == "queued"),
+                        status_filter,
                     )
                 )
                 .tuples()
