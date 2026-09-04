@@ -32,7 +32,9 @@ for _runtime_dir in ("temp", "data", "logs"):
     (_REPO_ROOT / _runtime_dir).mkdir(parents=True, exist_ok=True)
 RELOAD_EXCLUDES = [str(_REPO_ROOT / name) for name in ("temp", "data", "logs")]
 
-if __name__ == "__main__":
+
+def main() -> None:
+    """Launch the dev server (auto-reload, runtime dirs excluded)."""
     import uvicorn
 
     uvicorn.run(
@@ -42,3 +44,7 @@ if __name__ == "__main__":
         reload=True,
         reload_excludes=RELOAD_EXCLUDES,
     )
+
+
+if __name__ == "__main__":  # pragma: no cover - process entrypoint
+    main()

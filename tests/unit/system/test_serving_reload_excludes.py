@@ -14,6 +14,8 @@ nested files) and compares `exclude_dirs` against absolute `path.parents`
 
 from pathlib import Path
 
+import pytest
+
 from news_collector.serving.__main__ import RELOAD_EXCLUDES
 
 
@@ -41,6 +43,31 @@ def test_reload_excludes_cover_runtime_write_dirs() -> None:
     for entry in RELOAD_EXCLUDES:
         assert Path(entry).is_absolute(), entry
         assert Path(entry).parent == root, entry
+
+
+def test_main_invokes_uvicorn_with_configured_excludes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The dev entrypoint passes the same excludes to uvicorn (covers the
+    `main()` launcher so the coverage ratchet holds on `__main__.py`)."""
+    import uvicorn
+
+    from news_collector.serving.__main__ import RELOAD_EXCLUDES, main
+
+    calls: dict[str, object] = {}
+
+    def _fake_run(*args: object, **kwargs: object) -> None:
+        calls["args"] = args
+        calls["kwargs"] = kwargs
+
+    monkeypatch.setattr(uvicorn, "run", _fake_run)
+    main()
+    assert calls["args"] == ("news_collector.serving.__main__:app",)
+    kwargs = calls["kwargs"]
+    assert isinstance(kwargs, dict)
+    assert kwargs["port"] == 8000
+    assert kwargs["reload"] is True
+    assert kwargs["reload_excludes"] == RELOAD_EXCLUDES
 
 
 def test_reload_filter_ignores_run_artifacts_but_watches_sources() -> None:
