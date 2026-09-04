@@ -116,7 +116,6 @@ class PublicationRunWorkflow:
         *,
         article_id: int | None = None,
         article_url: str | None = None,
-        dry_run: bool = False,
         idempotency_key: str | None = None,
     ) -> PublicationRunStartResult:
         """Insert a queued `workflow_runs` row and dispatch one Refinery run.
@@ -148,7 +147,6 @@ class PublicationRunWorkflow:
                 run_metadata={
                     "article_id": article_id,
                     "article_url": article_url,
-                    "dry_run": dry_run,
                 },
             )
             session.add(row)
@@ -177,9 +175,7 @@ class PublicationRunWorkflow:
                 )
             run_id = row.id
 
-        self._dispatch(
-            run_id, article_id=article_id, article_url=article_url, dry_run=dry_run
-        )
+        self._dispatch(run_id, article_id=article_id, article_url=article_url)
         return PublicationRunStartResult(
             status="started", run_id=run_id, detail="Publication started."
         )
@@ -190,11 +186,10 @@ class PublicationRunWorkflow:
         *,
         article_id: int | None,
         article_url: str | None,
-        dry_run: bool,
     ) -> None:
         threading.Thread(
             target=self._run,
-            args=(run_id, article_id, article_url, dry_run),
+            args=(run_id, article_id, article_url),
             daemon=True,
             name=f"publish-{run_id}",
         ).start()
@@ -204,7 +199,6 @@ class PublicationRunWorkflow:
         run_id: int,
         article_id: int | None,
         article_url: str | None,
-        dry_run: bool,
     ) -> None:
         if not self._transition(run_id, from_status="queued", to_status="running"):
             logger.error(
@@ -233,7 +227,6 @@ class PublicationRunWorkflow:
                 process_id=str(article_id) if article_id is not None else None,
                 article_url=article_url,
                 skip_visuals=False,
-                dry_run=dry_run,
             )
             summary = self._collect_publication_summary(
                 result, article_id=article_id, article_url=article_url

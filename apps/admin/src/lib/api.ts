@@ -262,14 +262,12 @@ export function getCollectStatus(
 export function startPublish(opts: {
   articleId?: number;
   articleUrl?: string;
-  dryRun?: boolean;
 }): Promise<AdminPublishStarted> {
   return apiFetch<AdminPublishStarted>("/v1/admin/publish", {
     method: "POST",
     body: JSON.stringify({
       article_id: opts.articleId ?? null,
       article_url: opts.articleUrl ?? null,
-      dry_run: opts.dryRun ?? false,
     }),
   });
 }

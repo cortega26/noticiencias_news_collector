@@ -175,11 +175,17 @@ class AdminCollectStarted(BaseModel):
 
 
 class AdminPublishRequest(BaseModel):
-    """Body for POST /v1/admin/publish — exactly one of article_id / article_url."""
+    """Body for POST /v1/admin/publish — exactly one of article_id / article_url.
+
+    NOTE (plan 074): there is intentionally NO dry_run flag here. A previous
+    version accepted and threaded one, but nothing on the publish path ever
+    consulted it — a "dry-run publish" executed a full real publish. The
+    flag was removed rather than left as a dishonest promise. (Collect
+    dry-run is real and lives on AdminCollectRequest.)
+    """
 
     article_id: Optional[int] = None
     article_url: Optional[str] = None
-    dry_run: bool = False
 
 
 class AdminPublishStarted(BaseModel):

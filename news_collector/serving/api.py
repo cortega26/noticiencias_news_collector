@@ -1414,7 +1414,6 @@ def create_app(  # noqa: C901
         result = publication_run_workflow.start(
             article_id=payload.article_id,
             article_url=payload.article_url,
-            dry_run=payload.dry_run,
         )
         if result.status == "invalid_request":
             raise HTTPException(status_code=422, detail=result.detail)

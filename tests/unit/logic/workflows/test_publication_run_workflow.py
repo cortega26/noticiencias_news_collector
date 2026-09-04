@@ -67,7 +67,6 @@ def test_start_inserts_queued_row_and_dispatches(db_manager, workflow, monkeypat
         "run_id": result.run_id,
         "article_id": 42,
         "article_url": None,
-        "dry_run": False,
     }
     with db_manager.get_session() as session:
         row = session.get(WorkflowRun, result.run_id)
@@ -136,7 +135,7 @@ def test_run_success_records_pr_url_from_the_attempt_summary(
         raising=False,
     )
 
-    workflow._run(run_id, 99, None, False)
+    workflow._run(run_id, 99, None)
 
     status = workflow.get_status(run_id)
     assert status.run_status == "succeeded"
@@ -169,7 +168,7 @@ def test_run_editorial_rejection_is_a_failed_run_that_keeps_the_reason(
         raising=False,
     )
 
-    workflow._run(run_id, 5, None, False)
+    workflow._run(run_id, 5, None)
 
     status = workflow.get_status(run_id)
     assert status.run_status == "failed"
@@ -190,7 +189,7 @@ def test_run_does_not_close_the_shared_db(db_manager, workflow, monkeypatch) -> 
         raising=False,
     )
 
-    workflow._run(run_id, 1, None, False)
+    workflow._run(run_id, 1, None)
 
     assert db_manager.SessionLocal is not None
     with db_manager.get_session() as session:  # still usable

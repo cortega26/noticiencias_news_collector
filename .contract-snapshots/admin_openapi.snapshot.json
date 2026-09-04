@@ -131,6 +131,17 @@
             ],
             "title": "Error Message"
           },
+          "export_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Score"
+          },
           "final_score": {
             "anyOf": [
               {
@@ -184,6 +195,11 @@
             "additionalProperties": true,
             "title": "Publication",
             "type": "object"
+          },
+          "publishable": {
+            "default": false,
+            "title": "Publishable",
+            "type": "boolean"
           },
           "published_at": {
             "anyOf": [
@@ -357,6 +373,17 @@
             ],
             "title": "Error Message"
           },
+          "export_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Score"
+          },
           "final_score": {
             "anyOf": [
               {
@@ -382,6 +409,11 @@
               }
             ],
             "title": "Processing Status"
+          },
+          "publishable": {
+            "default": false,
+            "title": "Publishable",
+            "type": "boolean"
           },
           "published_at": {
             "anyOf": [
@@ -1043,6 +1075,466 @@
           }
         },
         "title": "AdminPromptsEnvelope",
+        "type": "object"
+      },
+      "AdminPublishRequest": {
+        "description": "Body for POST /v1/admin/publish \u2014 exactly one of article_id / article_url.\n\nNOTE (plan 074): there is intentionally NO dry_run flag here. A previous\nversion accepted and threaded one, but nothing on the publish path ever\nconsulted it \u2014 a \"dry-run publish\" executed a full real publish. The\nflag was removed rather than left as a dishonest promise. (Collect\ndry-run is real and lives on AdminCollectRequest.)",
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "article_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Url"
+          }
+        },
+        "title": "AdminPublishRequest",
+        "type": "object"
+      },
+      "AdminPublishStarted": {
+        "description": "Response to POST /v1/admin/publish.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "default": "queued",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "detail"
+        ],
+        "title": "AdminPublishStarted",
+        "type": "object"
+      },
+      "AdminPublishStatus": {
+        "description": "Status of the most recent (or a named) publication run.",
+        "properties": {
+          "active": {
+            "default": false,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "failure_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Class"
+          },
+          "final_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Slug"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "default": "queued",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "title": "AdminPublishStatus",
+        "type": "object"
+      },
+      "AdminQualityAggregate": {
+        "description": "Page-level rollup over the returned runs.",
+        "properties": {
+          "avg_suitability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Suitability"
+          },
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "failed": {
+            "default": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "succeeded": {
+            "default": 0,
+            "title": "Succeeded",
+            "type": "integer"
+          },
+          "with_readability": {
+            "default": 0,
+            "title": "With Readability",
+            "type": "integer"
+          }
+        },
+        "title": "AdminQualityAggregate",
+        "type": "object"
+      },
+      "AdminQualityReadability": {
+        "description": "Deterministic legibility snapshot (plan 065) for one published\narticle, lifted from the run's `readability` stage details. All\nOptional: runs predating plan 065 have no such stage.",
+        "properties": {
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "ifh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ifh"
+          },
+          "ifsz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ifsz"
+          },
+          "sentences": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentences"
+          },
+          "suitability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suitability"
+          },
+          "words": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Words"
+          }
+        },
+        "title": "AdminQualityReadability",
+        "type": "object"
+      },
+      "AdminQualityRecentEnvelope": {
+        "description": "Recent publication runs for the quality review page.",
+        "properties": {
+          "aggregate": {
+            "$ref": "#/components/schemas/AdminQualityAggregate"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminQualityRunItem"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "title": "AdminQualityRecentEnvelope",
+        "type": "object"
+      },
+      "AdminQualityRunItem": {
+        "description": "One row of the quality review loop (plan 066): a publication run\nplus the quality signals its attempt summary persisted.",
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "article_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Url"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "failure_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Class"
+          },
+          "final_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Slug"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "output_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Filename"
+          },
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "readability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminQualityReadability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "integer"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/AdminQualityStageItem"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "AdminQualityRunItem",
+        "type": "object"
+      },
+      "AdminQualityStageItem": {
+        "description": "One stage of a publication attempt (`PublicationAttemptStageResult`\nshape, JSON-safe).",
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "success": {
+            "default": false,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AdminQualityStageItem",
         "type": "object"
       },
       "AdminRejectRequest": {
@@ -2802,6 +3294,205 @@
           }
         },
         "summary": "Admin Save Prompts"
+      }
+    },
+    "/v1/admin/publish": {
+      "post": {
+        "description": "Start one Refinery run (async): refine a candidate article (by\n`article_id`, must be in the current export) or ingest+refine a\n`article_url`, then open a PR against the frontend repo. Exactly one\nof `article_id` / `article_url` is required. A second call while one\nrun is active yields 409 with the active run's id.",
+        "operationId": "admin_publish_v1_admin_publish_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPublishStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPublishStarted"
+                }
+              }
+            },
+            "description": "A publication run is already queued or running."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Publish"
+      }
+    },
+    "/v1/admin/publish/status": {
+      "get": {
+        "description": "Most recent publication run, or the named one via ?run_id=. An\nunrecognized run_id returns 404 \u2014 never falls back to the latest.",
+        "operationId": "admin_publish_status_v1_admin_publish_status_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPublishStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPublishStatus"
+                }
+              }
+            },
+            "description": "run_id was given but does not match any run."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Publish Status"
+      }
+    },
+    "/v1/admin/quality/recent": {
+      "get": {
+        "description": "Most recent publication runs with their persisted quality signals\n(plan 066 review loop): outcome (PR link / failure) plus the\n`readability` stage and the full stage checklist. Runs predating a\nsignal (or interrupted before writing one) show nulls \u2014 never 500.",
+        "operationId": "admin_quality_recent_v1_admin_quality_recent_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminQualityRecentEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Quality Recent"
       }
     },
     "/v1/admin/sources": {

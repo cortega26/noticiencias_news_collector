@@ -354,7 +354,6 @@ describe("phase 3 operational client", () => {
     expect(JSON.parse(String(init.body))).toEqual({
       article_id: 42,
       article_url: null,
-      dry_run: false,
     });
   });
 
@@ -367,7 +366,6 @@ describe("phase 3 operational client", () => {
     expect(JSON.parse(String(init.body))).toEqual({
       article_id: null,
       article_url: "https://example.com/x",
-      dry_run: false,
     });
   });
 
