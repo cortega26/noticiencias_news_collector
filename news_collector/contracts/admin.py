@@ -250,6 +250,9 @@ class AdminQualityRunItem(BaseModel):
     failure_class: Optional[str] = None
     error: Optional[str] = None
     readability: Optional[AdminQualityReadability] = None
+    # Latest auditor verdict from the article's metadata (`audit.state`),
+    # batch-fetched for numeric article ids. None when never audited.
+    audit_state: Optional[str] = None
     stages: List[AdminQualityStageItem] = Field(default_factory=list)
 
 

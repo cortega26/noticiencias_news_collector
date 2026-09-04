@@ -254,6 +254,46 @@ class TestRefineryEngine(unittest.TestCase):
             self.engine._persist_interrupted_attempt("123", None)
             self.assertEqual(list(Path(tmpdir).iterdir()), [])
 
+    def test_process_single_article_records_critic_stage(self):
+        """Plan 076: the editor's stashed critic verdict is persisted as an
+        `editorial_critic` stage (mock editors without the attribute are
+        skipped silently)."""
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        self.mock_editor.process_article.return_value = (
+            "---\nslug: test-slug\n---\nContent"
+        )
+        self.mock_editor.last_critic_verdict = {
+            "approved": True,
+            "average": 8.5,
+        }
+        self.mock_db.get_canonical_slug.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.engine.publication_attempts_dir = Path(tmpdir)
+            target_dir = Path(tmpdir) / "target"
+            target_dir.mkdir()
+            result = self.engine.process_single_article(
+                article, MagicMock(), target_dir
+            )
+
+            self.assertTrue(result)
+            summary = json.loads((Path(tmpdir) / "123.json").read_text())
+            stages = {stage["name"]: stage for stage in summary["stages"]}
+            self.assertIn("editorial_critic", stages)
+            self.assertTrue(stages["editorial_critic"]["success"])
+            self.assertEqual(stages["editorial_critic"]["details"]["average"], 8.5)
+
     def test_process_articles_batch(self):
         articles = [{"id": "1"}, {"id": "2"}]
         self.engine.process_single_article = MagicMock(side_effect=[True, False])

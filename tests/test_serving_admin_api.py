@@ -1199,6 +1199,18 @@ def test_admin_quality_recent_lists_runs_with_signals(
     now = datetime.now(timezone.utc)
     with db_manager.get_session() as session:
         session.add(
+            Article(
+                id=492,
+                title="Audited article",
+                url="https://example.com/492",
+                source_id="nature",
+                source_name="Nature",
+                processing_status="completed",
+                final_score=0.9,
+                article_metadata={"audit": {"state": "passed"}},
+            )
+        )
+        session.add(
             WorkflowRun(
                 run_type="publication",
                 status="succeeded",
@@ -1271,6 +1283,7 @@ def test_admin_quality_recent_lists_runs_with_signals(
         assert body["runs"][0]["pr_url"] == "https://github.com/o/r/pull/1"
         assert body["runs"][0]["readability"]["ifsz"] == 66.45
         assert body["runs"][0]["readability"]["grade"] == "normal"
+        assert body["runs"][0]["audit_state"] == "passed"
         assert [s["name"] for s in body["runs"][0]["stages"]] == [
             "editor_refinement",
             "readability",
@@ -1278,6 +1291,7 @@ def test_admin_quality_recent_lists_runs_with_signals(
         assert body["runs"][1]["failure_class"] == "editorial_rejected"
         assert body["runs"][1]["error"] == "boom"
         assert body["runs"][1]["readability"] is None
+        assert body["runs"][1]["audit_state"] is None
         assert body["runs"][2]["readability"] is None
         assert body["runs"][2]["stages"] == []
         assert body["runs"][2]["pr_url"] is None

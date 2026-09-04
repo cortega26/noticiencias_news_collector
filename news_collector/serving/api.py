@@ -478,6 +478,30 @@ def _quality_stages_from_summary(
     return items
 
 
+def _quality_audit_states(session: Any, article_ids: List[int]) -> Dict[int, str]:
+    """Batch-read latest auditor verdicts (`article_metadata.audit.state`)
+    for quality rows. Never raises — audit visibility must not break the
+    review page."""
+    if not article_ids:
+        return {}
+    states: Dict[int, str] = {}
+    try:
+        rows = (
+            session.query(Article.id, Article.article_metadata)
+            .filter(Article.id.in_(article_ids))
+            .all()
+        )
+    except Exception:
+        return {}
+    for article_id, metadata in rows:
+        if not isinstance(metadata, dict):
+            continue
+        audit = metadata.get("audit")
+        if isinstance(audit, dict) and isinstance(audit.get("state"), str):
+            states[int(article_id)] = str(audit["state"])
+    return states
+
+
 def _build_quality_run_item(row: Any) -> AdminQualityRunItem:
     """Build one quality-review row from a `WorkflowRun` ORM entity.
 
@@ -1492,6 +1516,16 @@ def create_app(  # noqa: C901
                 .all()
             )
             items = [_build_quality_run_item(row) for row in rows]
+            numeric_ids: List[int] = []
+            for item in items:
+                if item.article_id is not None:
+                    with contextlib.suppress(ValueError, TypeError):
+                        numeric_ids.append(int(item.article_id))
+            audit_by_article = _quality_audit_states(session, numeric_ids)
+        for item in items:
+            if item.article_id is not None:
+                with contextlib.suppress(ValueError, TypeError):
+                    item.audit_state = audit_by_article.get(int(item.article_id))
 
         suits = [
             item.readability.suitability

@@ -469,6 +469,20 @@ class RefineryEngine:
             raise ve
         record_stage("editor_refinement", True)
 
+        # Editorial-critic verdict snapshot (plan 076): the editor stashes
+        # its last verdict on `last_critic_verdict`; mock editors lack the
+        # attribute and are skipped via getattr. Stage success mirrors the
+        # verdict — a published-with-caveat article shows a red critic row.
+        critic_verdict = getattr(self.editor, "last_critic_verdict", None)
+        if isinstance(critic_verdict, dict) and isinstance(
+            critic_verdict.get("average"), (int, float)
+        ):
+            record_stage(
+                "editorial_critic",
+                bool(critic_verdict.get("approved", False)),
+                average=float(critic_verdict["average"]),
+            )
+
         # Deterministic audience-readability snapshot (plan 065): pure
         # computation over the refined body, advisory only — it never blocks.
         # The stage persists in the attempt summary (visible via the publish

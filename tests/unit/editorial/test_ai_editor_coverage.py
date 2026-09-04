@@ -61,6 +61,7 @@ def _bare_agent() -> EditorAgent:
     agent.provider = MagicMock()
     agent.provider._extract_json = MagicMock(return_value={})
     agent.category_resolver = MagicMock()
+    agent.last_critic_verdict = None
     return agent
 
 
@@ -449,6 +450,60 @@ class TestCriticPasses:
         assert is_valid is False
         assert feedback
         assert recoverable is True
+
+    def test_editorial_critic_stashes_verdict_on_approve(self):
+        """Plan 076: the approved verdict is stashed for the engine's
+        queryable stage."""
+        agent = _bare_agent()
+        assert agent.last_critic_verdict is None
+        agent._send_prompt = MagicMock(
+            return_value=json.dumps(
+                {
+                    "approved": True,
+                    "average": 8.5,
+                    "hook_score": 9,
+                    "clarity_score": 8,
+                    "structure_score": 8,
+                    "rigor_score": 8,
+                    "voice_score": 9,
+                    "shareability_score": 8,
+                    "closing_score": 9,
+                    "feedback": "",
+                    "recoverable": True,
+                }
+            )
+        )
+        assert agent._critic_editorial_pass("real body") == (True, None, True)
+        assert agent.last_critic_verdict == {
+            "approved": True,
+            "average": 8.5,
+            "scores": {
+                "hook_score": 9,
+                "clarity_score": 8,
+                "structure_score": 8,
+                "rigor_score": 8,
+                "voice_score": 9,
+                "shareability_score": 8,
+                "closing_score": 9,
+            },
+        }
+
+    def test_editorial_critic_stashes_verdict_on_reject(self):
+        agent = _bare_agent()
+        agent._send_prompt = MagicMock(
+            return_value='{"approved": false, "recoverable": true, "average": 4.0}'
+        )
+        assert agent._critic_editorial_pass("real body")[0] is False
+        assert agent.last_critic_verdict is not None
+        assert agent.last_critic_verdict["approved"] is False
+        assert agent.last_critic_verdict["average"] == 4.0
+
+    def test_editorial_critic_no_verdict_when_skipped(self):
+        """Fail-open paths leave no verdict (engine stage skipped)."""
+        agent = _bare_agent()
+        agent._send_prompt = MagicMock(side_effect=RuntimeError("down"))
+        assert agent._critic_editorial_pass("real body") == (True, None, True)
+        assert agent.last_critic_verdict is None
 
     def test_extract_editorial_critic_json_fallback(self):
         agent = _bare_agent()

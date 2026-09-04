@@ -195,6 +195,7 @@ export interface AdminQualityRunItem {
   failure_class: string | null;
   error: string | null;
   readability: AdminQualityReadability | null;
+  audit_state: string | null;
   stages: AdminQualityStageItem[];
 }
 

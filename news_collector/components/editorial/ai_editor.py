@@ -507,6 +507,12 @@ class EditorAgent:
         else:
             self.critic_threshold = 70
 
+        # Last editorial-critic verdict (plan 076): {"approved", "average",
+        # "scores"} or None when the gate never produced one (empty body,
+        # infra error, unparseable reply). Read by the refinery engine to
+        # persist a queryable stage — never part of any return contract.
+        self.last_critic_verdict: dict[str, Any] | None = None
+
         self.prompts = self._load_prompts()
 
         resolved = resolve_ollama_model_map(
@@ -1190,6 +1196,11 @@ class EditorAgent:
             logger.info(
                 f"✅ Editorial Critic Approved (avg={average:.1f}, scores={scores})"
             )
+            self.last_critic_verdict = {
+                "approved": True,
+                "average": average,
+                "scores": scores,
+            }
             return True, None, True
 
         # If the model said `approved=false` but gave no reason, build one
@@ -1208,6 +1219,11 @@ class EditorAgent:
             f"⛔ EDITORIAL CRITIC REJECTED (avg={average:.1f}, scores={scores}, "
             f"recoverable={recoverable}). Feedback: {feedback}"
         )
+        self.last_critic_verdict = {
+            "approved": False,
+            "average": average,
+            "scores": scores,
+        }
         return False, feedback, recoverable
 
     def _extract_editorial_critic_json(self, text: str) -> dict[Any, Any]:

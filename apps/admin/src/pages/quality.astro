@@ -16,7 +16,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     </header>
     <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
     <div class="card overflow-x-auto">
-      <table class="w-full min-w-[860px] text-left">
+      <table class="w-full min-w-[980px] text-left">
         <thead>
           <tr class="border-b border-ink-700">
             <th class="data-label px-5 py-3">RUN</th>
@@ -24,6 +24,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             <th class="data-label px-5 py-3">ARTICLE</th>
             <th class="data-label px-5 py-3">OUTCOME</th>
             <th class="data-label px-5 py-3">READABILITY</th>
+            <th class="data-label px-5 py-3">AUDIT</th>
             <th class="data-label px-5 py-3">STAGES</th>
           </tr>
         </thead>
@@ -131,6 +132,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return `<span class="font-mono text-xs text-ink-400">${esc(raw.slice(0, 16).replace("T", " "))}</span>`;
   }
 
+  function auditBadge(run: AdminQualityRunItem): string {
+    const state = run.audit_state;
+    if (!state) {
+      return `<span class="font-mono text-xs text-ink-600">—</span>`;
+    }
+    const color =
+      state === "passed"
+        ? "border-verdigris-500/40 text-verdigris-400"
+        : state === "failed"
+          ? "border-rose-500/40 text-rose-400"
+          : state === "pending"
+            ? "border-amber-500/40 text-amber-400"
+            : "border-ink-600 text-ink-300";
+    return `<span class="inline-flex items-center rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs">${esc(state)}</span>`;
+  }
+
   async function load() {
     try {
       const envelope: AdminQualityRecentEnvelope = await getQualityRecent(20);
@@ -155,6 +172,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             <td class="px-5 py-3">${articleCell(run)}</td>
             <td class="px-5 py-3">${outcomeCell(run)}</td>
             <td class="px-5 py-3">${readabilityBadge(run)}</td>
+            <td class="px-5 py-3">${auditBadge(run)}</td>
             <td class="px-5 py-3">${stagesCell(run)}</td>
           </tr>`,
         )
