@@ -1018,6 +1018,33 @@ class TestProcessArticlePaths:
         assert "Una imagen" in result
         assert "featured: true" in result
 
+    def test_hero_alt_recomputed_in_spanish(self, tmp_path):
+        """Plan 079, Codex P2 verbatim case: a boilerplate EN alt never
+        reaches frontmatter — it is recomputed with the Spanish headline."""
+        agent = self._pipeline_agent(tmp_path)
+        agent._generate_headlines = lambda *a, **k: {
+            "direct": "¿Qué efectos tiene un rayo sin rasguños visibles?",
+            "question": "Question Headline?",
+            "benefit": "Benefit Headline",
+            "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
+            "tags": ["espacio"],
+        }
+        result = agent.process_article(
+            {
+                "title": "Demo",
+                "summary": "Resumen",
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+                "image_alt": "Ilustración editorial relacionada con Lightning strikes kill",
+            },
+            override_date="2026-03-02",
+        )
+        assert (
+            "image_alt: Ilustración editorial relacionada con "
+            "¿Qué efectos tiene un rayo sin rasguños visibles?" in result
+        )
+        assert "Lightning strikes kill" not in result
+
     def test_tag_normalization_failure_falls_back(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
         with patch(

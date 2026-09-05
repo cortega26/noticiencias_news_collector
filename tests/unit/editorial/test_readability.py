@@ -9,6 +9,7 @@ import pytest
 
 from news_collector.editorial.readability import (
     analyze_body_readability,
+    check_english_spillover,
     check_headline,
     count_syllables_es,
     count_words_es,
@@ -207,3 +208,38 @@ def test_check_headline_clickbait_and_period():
     assert [i.code for i in period] == ["trailing-period"]
     bang = check_headline("Llegó el eclipse más esperado del siglo!!")
     assert "shouting" in [i.code for i in bang]
+
+
+def test_check_english_spillover_flags_tendencies_with_context():
+    """Plan 079, Codex P2 verbatim case."""
+    body = (
+        "Los porcentajes deben leerse como indicaciones tendencies "
+        "más que como conclusiones definitivas."
+    )
+    issues = check_english_spillover(body)
+    assert [i.code for i in issues] == ["english-spillover"]
+    assert "tendencies" in issues[0].message
+    assert "indicaciones" in issues[0].message
+
+
+def test_check_english_spillover_clean_spanish():
+    body = (
+        "Los rayos causan miles de muertes al año. Los sobrevivientes "
+        "suelen presentar lesiones invisibles como dolor crónico."
+    )
+    assert check_english_spillover(body) == []
+    assert check_english_spillover("") == []
+    assert check_english_spillover(None) == []
+
+
+def test_check_english_spillover_skips_quotes_italics_code_urls():
+    quoted = 'Los autores hablan de "findings" preliminares en el estudio.'
+    assert check_english_spillover(quoted) == []
+    italic = "Los *findings* preliminares son importantes aquí."
+    assert check_english_spillover(italic) == []
+    fenced = "Texto limpio aquí.\n```\nfindings = load()\n```\n"
+    assert check_english_spillover(fenced) == []
+    linked = "Ver https://example.com/tendencies/report para más datos."
+    assert check_english_spillover(linked) == []
+    frontmatter = "---\ntitle: tendencies overview\n---\n\nCuerpo limpio total."
+    assert check_english_spillover(frontmatter) == []

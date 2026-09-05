@@ -19,7 +19,8 @@ from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
-from news_collector.editorial.readability import check_headline
+from news_collector.editorial.hero_alt import resolve_hero_alt_text
+from news_collector.editorial.readability import check_english_spillover, check_headline
 from news_collector.editorial.uncertainty import resolve_uncertainty_counterweight
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
@@ -2184,6 +2185,11 @@ class EditorAgent:
         for issue in check_headline(headlines.get("direct", "")):
             logger.warning(f"Headline readability [{issue.code}]: {issue.message}")
 
+        # Deterministic spillover tripwire (plan 079, Codex P2): lone
+        # English words the translation critic misses. Advisory only.
+        for spill in check_english_spillover(final_content):
+            logger.warning(f"Prose language [{spill.code}]: {spill.message}")
+
         # --- DETERMINISTIC REPAIR LAYER ---
         final_content, headlines = self._repair_output(
             final_content, headlines, len(input_text)
@@ -2369,8 +2375,15 @@ class EditorAgent:
             }
             if image_url:
                 model_dict["image"] = image_url
-            if image_alt:
-                model_dict["image_alt"] = str(image_alt).strip()
+            # Hero alt root fix (plan 079): the pre-edit fallback embeds the
+            # ENGLISH original title. Recompute boilerplate alts with the
+            # Spanish title now that it exists; good brief alts pass through.
+            previous_alt = image_alt if isinstance(image_alt, str) else None
+            resolved_alt = resolve_hero_alt_text(image_alt, final_title)
+            if resolved_alt and resolved_alt != (previous_alt or "").strip():
+                logger.info("Hero alt recomputed with the Spanish headline.")
+            if resolved_alt:
+                model_dict["image_alt"] = resolved_alt
             if source_url:
                 model_dict["source_url"] = source_url
             if article_id and article_id != "unknown":

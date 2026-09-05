@@ -134,6 +134,105 @@ _READABILITY_GRADES = (
 _DOT_PLACEHOLDER = "<dot>"
 
 
+@dataclass(frozen=True)
+class ProseIssue:
+    """One advisory finding about article prose. Severity is always
+    advisory — the translation critic (LLM) remains the judge; these are
+    cheap deterministic tripwires from the editorial-voice contract."""
+
+    code: str
+    message: str
+    severity: str = field(default="warn")
+
+
+# High-precision English spillover lexicon (plan 079, Codex P2 root fix):
+# words with no valid Spanish reading that an editor would always
+# translate in science journalism. Deliberately excludes common loanwords
+# (dataset, screening, briefing, feedback, preprint, mainstream) to keep
+# false positives near zero.
+SPILLOVER_WORDS = frozenset(
+    {
+        "tendencies",
+        "findings",
+        "stakeholders",
+        "policymakers",
+        "policymaking",
+        "overview",
+        "outset",
+        "handful",
+        "worthwhile",
+        "groundbreaking",
+        "shortcoming",
+        "shortcomings",
+        "compelling",
+        "stringent",
+        "negligible",
+        "confounding",
+        "livelihoods",
+        "rainfall",
+        "snowfall",
+        "robust",
+        "wildfire",
+        "upfront",
+        "regardless",
+        "meanwhile",
+    }
+)
+
+# Spans where English is legitimate and must not be flagged: double
+# quotes (attributed speech), guillemets, and *italics* (the voice
+# explicitly allows italicized anglicisms). Single-line only, so one
+# pathological line cannot blank the whole body.
+_QUOTED_OR_EMPHASIZED_RE = re.compile(
+    r'"[^"\n]*"|"[^"\n]*"|«[^»\n]*»|\*[^*\n]+\*|_[^_\n]+_'
+)
+
+
+def _blank_spans(text: str, pattern: re.Pattern[str]) -> str:
+    chars = list(text)
+    for match in pattern.finditer(text):
+        for i in range(match.start(), match.end()):
+            chars[i] = " "
+    return "".join(chars)
+
+
+def _enclosing_sentence(text: str, offset: int, window: int = 160) -> str:
+    start = offset
+    while start > 0 and text[start - 1] not in ".!?…\n":
+        start -= 1
+    end = offset
+    while end < len(text) and text[end] not in ".!?…\n":
+        end += 1
+    snippet = text[start:end].strip()
+    if len(snippet) > window:
+        snippet = snippet[:window].rstrip() + "…"
+    return snippet
+
+
+def check_english_spillover(markdown: str | None) -> list[ProseIssue]:
+    """Flag untranslated English words in Spanish prose (Codex P2:
+    `tendencies` slipped through the translation critic, which hunts
+    fused fragments, not lone words). Frontmatter, code, URLs, quotes
+    and italics are excluded. Never raises; empty list when clean."""
+    body = _strip_markdown_noise(markdown or "")
+    if not body.strip():
+        return []
+    clean = _blank_spans(body, _QUOTED_OR_EMPHASIZED_RE)
+    issues: list[ProseIssue] = []
+    for word in sorted(SPILLOVER_WORDS):
+        match = re.search(r"\b" + re.escape(word) + r"\b", clean, re.IGNORECASE)
+        if match is not None:
+            context = _enclosing_sentence(clean, match.start())
+            issues.append(
+                ProseIssue(
+                    "english-spillover",
+                    f"Posible anglicismo sin traducir "
+                    f"'{match.group(0)}': …{context}…",
+                )
+            )
+    return issues
+
+
 def count_syllables_es(word: str) -> int:
     """Count Spanish syllables in a single word.
 
