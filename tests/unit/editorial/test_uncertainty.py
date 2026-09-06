@@ -11,6 +11,8 @@ import pytest
 from news_collector.editorial.uncertainty import (
     GENERIC_UNCERTAINTY_NOTE,
     confidence_suggests_preliminary,
+    find_capability_overclaims,
+    find_unvalidated_capability_claims,
     hook_needs_counterweight,
     resolve_uncertainty_counterweight,
 )
@@ -116,4 +118,105 @@ def test_resolve_empty_headlines():
     assert resolve_uncertainty_counterweight(None, "Moderada — x.") == (
         False,
         None,
+    )
+
+
+# --- Capability-overclaim detector (plan 083) ---------------------------
+
+# Verbatim Codex P1 case on PR #153.
+_CODEX_WHY_IT_MATTERS = (
+    "Al aprovechar sensores CGM cada vez más accesibles, GlucoFM permite una "
+    "detección temprana y un manejo personalizado de la glucosa, lo que podría "
+    "disminuir complicaciones asociadas a la diabetes en la población."
+)
+
+
+def test_find_flags_codex_present_tense_claim():
+    found = find_capability_overclaims(_CODEX_WHY_IT_MATTERS)
+    assert found == [_CODEX_WHY_IT_MATTERS]
+
+
+def test_find_flags_second_clause_verb_a_rewriter_would_mangle():
+    text = (
+        "El modelo permite detectar la diabetes e identifica la resistencia "
+        "a la insulina."
+    )
+    assert find_capability_overclaims(text) == [text]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Hedged: the natural Spanish construction puts an infinitive after
+        # the modal, so no bare finite capability verb remains.
+        "El modelo podría permitir una detección temprana de la diabetes.",
+        "El sistema puede detectar el riesgo de diabetes.",
+        # No clinical context — an architectural statement.
+        "El modelo permite reutilizar las representaciones aprendidas.",
+        # Past tense — a reported result, not a live capability.
+        "GlucoFM detectó el riesgo de diabetes en cuatro cohortes.",
+        # No capability verb.
+        "GlucoFM es un modelo fundacional para el monitoreo de glucosa.",
+        "",
+        "   ",
+    ],
+)
+def test_find_ignores_safe_text(text):
+    assert find_capability_overclaims(text) == []
+
+
+def test_find_non_string_is_safe():
+    assert find_capability_overclaims(None) == []
+    assert find_capability_overclaims(123) == []
+
+
+def test_claims_no_counterweight_is_noop():
+    fields = {"why_it_matters": [_CODEX_WHY_IT_MATTERS]}
+    assert (
+        find_unvalidated_capability_claims(
+            fields, requires_uncertainty_note=False, uncertainty_note=None
+        )
+        == []
+    )
+
+
+def test_claims_flags_why_it_matters_under_flag():
+    fields = {
+        "why_it_matters": [
+            "Una predicción más fiable del riesgo de diabetes puede reducir la "
+            "carga de diagnóstico.",
+            _CODEX_WHY_IT_MATTERS,
+        ]
+    }
+    found = find_unvalidated_capability_claims(
+        fields, requires_uncertainty_note=True, uncertainty_note=None
+    )
+    assert found == [f"why_it_matters[1]: {_CODEX_WHY_IT_MATTERS}"]
+
+
+def test_claims_flags_benefit_headline_when_note_present():
+    fields = {
+        "headlines_variants": {
+            "question": "¿Puede la IA leer tu glucosa?",
+            "benefit": "El modelo que detecta la diabetes desde tu sensor de glucosa.",
+        }
+    }
+    found = find_unvalidated_capability_claims(
+        fields,
+        requires_uncertainty_note=False,
+        uncertainty_note="Aún no validado en estudios clínicos.",
+    )
+    assert found == [
+        "headlines_variants.benefit: El modelo que detecta la diabetes desde "
+        "tu sensor de glucosa."
+    ]
+
+
+def test_claims_returns_empty_when_nothing_matches():
+    fields = {"why_it_matters": ["GlucoFM separa la señal en dos corrientes."]}
+    assert (
+        find_unvalidated_capability_claims(
+            fields, requires_uncertainty_note=True, uncertainty_note=None
+        )
+        == []
     )
