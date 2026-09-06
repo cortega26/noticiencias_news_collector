@@ -21,7 +21,10 @@ from pydantic import BaseModel, Field, ValidationError
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from news_collector.editorial.hero_alt import resolve_hero_alt_text
 from news_collector.editorial.readability import check_english_spillover, check_headline
-from news_collector.editorial.uncertainty import resolve_uncertainty_counterweight
+from news_collector.editorial.uncertainty import (
+    find_unvalidated_capability_claims,
+    resolve_uncertainty_counterweight,
+)
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
@@ -2439,6 +2442,24 @@ class EditorAgent:
             model_dict["requires_uncertainty_note"] = requires_uncertainty_note
             if uncertainty_note:
                 model_dict["uncertainty_note"] = uncertainty_note
+
+            # Flag reader-facing narrative that contradicts that counterweight
+            # (plan 083): a post that disclaims clinical validation should not
+            # also assert the capability in the present tense in
+            # `why_it_matters` / `headlines_variants.benefit`. Advisory only —
+            # the PR reviewer (and the Codex re-review) act on it.
+            overclaims = find_unvalidated_capability_claims(
+                model_dict,
+                requires_uncertainty_note=requires_uncertainty_note,
+                uncertainty_note=uncertainty_note,
+            )
+            if overclaims:
+                joined_overclaims = " | ".join(overclaims)
+                logger.warning(
+                    "Present-tense capability claim(s) under a declared "
+                    "uncertainty counterweight — reframe as prospective before "
+                    f"merge: {joined_overclaims}"
+                )
 
             # V2 contract enforcement: a schema_version >= 2 article MUST
             # carry every enrichment field.  Omission means Stage 6 produced

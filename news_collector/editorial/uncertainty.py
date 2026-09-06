@@ -15,6 +15,7 @@ requirement, and nothing here ever blocks publication.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 from news_collector.utils.logger import get_logger
@@ -100,3 +101,136 @@ def resolve_uncertainty_counterweight(
         note = GENERIC_UNCERTAINTY_NOTE
 
     return requires, note
+
+
+# --- Capability-overclaim counterweight (plan 083) -------------------------
+#
+# Codex P1 on PR #153: an article whose `uncertainty_note` said GlucoFM "aún
+# no ha sido validado en estudios clínicos" still asserted, in `why_it_matters`,
+# that it "permite una detección temprana y un manejo personalizado de la
+# glucosa" — a present-tense clinical capability the post itself disclaims.
+# `requires_uncertainty_note` only guarantees the *note* is visible; nothing
+# reconciled the reader-facing narrative with it.
+#
+# This is a DETECTOR, not a rewriter. It runs only when a counterweight is in
+# force, scans the two fields written to sell the finding to the reader
+# (`why_it_matters`, `headlines_variants.benefit`), and returns a description
+# of each offending sentence for the caller to log. It never edits the text:
+# deterministically rewriting Spanish clinical prose ("permite" → "podría
+# permitir") mangles compound sentences ("… e identifica …" → "… e podría
+# identificar …"), and this module publishes through PRs a human merges — the
+# warning gives that reviewer, and the Codex re-review, exactly what they need.
+# `summary_points` (the study's measured results) and the article body (judged
+# by the fidelity critic) are out of scope. Fail-open: never raises.
+
+# Present-indicative capability verbs (3rd person, singular/plural) whose plain
+# present tense asserts a working capability.
+_CAPABILITY_VERBS: frozenset[str] = frozenset(
+    {
+        "permite",
+        "permiten",
+        "detecta",
+        "detectan",
+        "predice",
+        "predicen",
+        "identifica",
+        "identifican",
+        "diagnostica",
+        "diagnostican",
+        "anticipa",
+        "anticipan",
+        "posibilita",
+        "posibilitan",
+        "habilita",
+        "habilitan",
+    }
+)
+
+# The claim is only flagged when the sentence is about a clinical/health
+# outcome — a generic architectural statement ("el modelo permite reutilizar
+# representaciones") is left alone.
+_CLINICAL_CONTEXT_RE = re.compile(
+    r"cl[íi]nic|diagn[óo]stic|detecci[óo]n|s[íi]ntoma|enfermedad|diabet|"
+    r"glucos|insulin|c[áa]ncer|tumor|alzheimer|card[íi]ac|pacient|"
+    r"riesgo|salud|terap|tratamiento|c[ée]lula",
+    re.IGNORECASE,
+)
+
+# A hedge in the ~4 words before the verb means the claim is not a bare
+# present-tense assertion — skip it.
+_PRE_HEDGE_RE = re.compile(
+    r"\b(podr[íi]a|podr[íi]an|puede|pueden|podr[áa]|podr[áa]n|"
+    r"ayuda\s+a|ayudan\s+a|busca|buscan|pretende|pretenden|aspira\s+a)"
+    r"(?:\s+\S+){0,3}\s+$",
+    re.IGNORECASE,
+)
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?;])\s+")
+_WORD_RE = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+")
+
+
+def _sentence_has_bare_capability_claim(sentence: str) -> bool:
+    """True when a clinical sentence contains an un-hedged present-indicative
+    capability verb."""
+    if not _CLINICAL_CONTEXT_RE.search(sentence):
+        return False
+    for match in _WORD_RE.finditer(sentence):
+        if match.group(0).lower() not in _CAPABILITY_VERBS:
+            continue
+        if _PRE_HEDGE_RE.search(sentence[: match.start()]):
+            continue
+        return True
+    return False
+
+
+def find_capability_overclaims(text: Any) -> list[str]:
+    """Return the sentences of `text` that assert a clinical capability in the
+    bare present indicative. Empty for non-strings and clean text."""
+    if not isinstance(text, str) or not text.strip():
+        return []
+    sentences = _SENTENCE_SPLIT_RE.split(text.strip())
+    return [s.strip() for s in sentences if _sentence_has_bare_capability_claim(s)]
+
+
+def _has_counterweight(requires_uncertainty_note: Any, uncertainty_note: Any) -> bool:
+    if requires_uncertainty_note:
+        return True
+    return isinstance(uncertainty_note, str) and bool(uncertainty_note.strip())
+
+
+def _iter_narrative_fields(fields: Mapping[str, Any]) -> Iterator[tuple[str, Any]]:
+    """Yield `(label, text)` for every reader-facing narrative string that a
+    capability overclaim would surface in."""
+    raw_why = fields.get("why_it_matters")
+    if isinstance(raw_why, list):
+        for index, item in enumerate(raw_why):
+            yield f"why_it_matters[{index}]", item
+
+    raw_headlines = fields.get("headlines_variants")
+    if isinstance(raw_headlines, Mapping):
+        yield "headlines_variants.benefit", raw_headlines.get("benefit")
+
+
+def find_unvalidated_capability_claims(
+    fields: Mapping[str, Any],
+    *,
+    requires_uncertainty_note: bool,
+    uncertainty_note: Any,
+) -> list[str]:
+    """Flag reader-facing narrative that contradicts a declared uncertainty
+    counterweight.
+
+    Runs only when `requires_uncertainty_note` is true or a non-empty
+    `uncertainty_note` is present. Scans `why_it_matters` (list) and
+    `headlines_variants.benefit` (str) for present-tense clinical-capability
+    assertions. Returns a list of `"<field>: <sentence>"` strings for the
+    caller to log — it never edits `fields`. Never raises.
+    """
+    if not _has_counterweight(requires_uncertainty_note, uncertainty_note):
+        return []
+
+    return [
+        f"{label}: {sentence}"
+        for label, text in _iter_narrative_fields(fields)
+        for sentence in find_capability_overclaims(text)
+    ]
