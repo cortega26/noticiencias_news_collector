@@ -43,6 +43,7 @@ complex images.
 ## Design sketch
 
 ### `infrastructure/llm/gemini_provider.py` (MODIFY)
+
 Add `describe_image_sync(image_bytes, mime_type, prompt) -> str` that posts
 a `contents[].parts` payload with an `inline_data` part
 (`{mime_type, data: base64(image_bytes)}`) alongside the text prompt, reusing
@@ -52,6 +53,7 @@ raise `NotImplementedError` for now (vision is Gemini-only until a second
 provider is needed).
 
 ### `editorial/vision_alt.py` (CREATE — policy module, network-free except the injected provider)
+
 - `should_describe(current_alt, brief_alt) -> bool` — true only when
   `brief_alt` is absent/boilerplate and `current_alt` is absent/boilerplate.
 - `build_prompt(spanish_title, categories) -> str` — instructs: Spanish, 1–3
@@ -65,6 +67,7 @@ provider is needed).
   Returns `None` (caller keeps its current value) on any miss/failure.
 
 ### Wiring
+
 Call `describe_hero_image` from `ArticleImageHandler.resolve()` right after a
 local image path is known (cases 1–3), OR from the `resolve_hero_alt_text`
 call site in `ai_editor.py` frontmatter assembly once `final_title` (Spanish)
@@ -75,6 +78,7 @@ image file is on disk by then. `resolve_hero_alt_text` gains an optional
 behaviour) so the policy module stays free of provider imports.
 
 ### Cache
+
 `data/runtime/vision_alt/<sha256>.json` (`{alt, model, created_at}`), same
 directory convention as other runtime artefacts. Keyed by image bytes, so a
 re-download of an unchanged source image or an article retry is free.
