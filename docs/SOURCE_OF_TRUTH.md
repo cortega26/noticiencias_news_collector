@@ -1,7 +1,7 @@
 # Backend Source Of Truth
 
 Status: Active and binding  
-Scope: `/home/carlos/VS_Code_Projects/noticiencias/noticiencias_news_collector`
+Scope: the `noticiencias_news_collector` repository
 
 ## Purpose
 
@@ -22,7 +22,7 @@ This repo owns:
 - enrichment
 - scoring, validation, taxonomy, and editorial policy
 - persistence and API serving
-- Refinery UI and publication orchestration
+- Astro admin UI (`apps/admin/`), legacy Streamlit compatibility (`apps/refinery/`), and publication orchestration
 - the mirrored frontend publication contract
 
 This repo does not own:
@@ -45,7 +45,7 @@ The following files are authoritative for the exact concern they implement:
 4. `news_collector/storage/database.py`
    - persisted publication state and canonical slug persistence behavior
 5. `news_collector/logic/workflows/refinery_engine.py`
-   - current publication workflow behavior and recovery order
+   - editorial publication stages; lifecycle leases live in `collection_run_workflow.py` and `publication_run_workflow.py` in the same directory
 6. `config.toml`, `news_collector/config/*`, `config/sources.*`
    - runtime and source configuration
 7. `Makefile` and `.github/workflows/*.yml`
@@ -107,9 +107,9 @@ Any change to the publication frontmatter contract is a cross-repo change.
 
 ### Publication state semantics are bounded
 
-This repo currently records `PR_CREATED` after pull-request creation. Final public website publication happens outside this repo after the frontend merge/deploy path completes.
+Pull-request creation records `PR_CREATED`. Frontend merge/deploy happens in the sibling repo. Authenticated callbacks handled by `news_collector/serving/webhook_handler.py` can reject or complete matching publication attempts using explicit `publication_ids`; events without IDs do not guess the affected articles. A workflow run succeeding, scoring status `completed`, PR creation, and deployment acknowledgment are distinct states. See `docs/PIPELINE_CONTRACTS.md` and `docs/adr/0005-completed-is-scoring-state-not-publication.md`.
 
-### Identity reuse is real, absolute determinism is now universal
+### Publication identity reuses persisted evidence and never falls back to the clock
 
 Current publication identity reuse order is:
 
@@ -120,14 +120,15 @@ Current publication identity reuse order is:
 
 No runtime-clock fallback exists (LAW-B5): an article with neither date is
 quarantined with `UndatedArticleError` (`E_IDENTITY_NO_DATE`) instead of
-receiving today's date. See `plans/058-deterministic-publication-date/`.
+receiving today's date. See the archived Plan 058 record in `plans/README.md` and the identity contract in `docs/PIPELINE_CONTRACTS.md`.
 
 ## Fact Ownership
 
 Each cross-cutting fact type has one owning file (or pair of files, when a
 backend/frontend mirror exists). When that fact changes, the owner is
 responsible for updating the active docs that repeat it — and the doc-drift
-gates (`make docs-check`, `npm run check:doc-drift`) enforce the reference.
+gates (`make docs-check`, `npm run check:doc-drift`) check selected references
+and invariants, not every semantic claim or every document.
 
 | Fact | Owning file(s) | Repeaters to keep in sync |
 |---|---|---|
@@ -136,7 +137,7 @@ gates (`make docs-check`, `npm run check:doc-drift`) enforce the reference.
 | Validation commands | `Makefile` + `.github/workflows/*.yml` | `docs/ci.md`, `README.md`, `docs/AGENTS.md` |
 | Cross-repo contracts and failure semantics | `news_collector/contracts/*.py` | `docs/PIPELINE_CONTRACTS.md`, `context/CONTRACTS.md` (derived) |
 | Publication workflow states | `news_collector/logic/workflows/refinery_engine.py` | `docs/PRODUCT_FLOW.md`, `docs/SOURCE_OF_TRUTH.md` |
-| Deployment/host facts | frontend `src/config.yaml` / `astro.config.mjs` | `docs/PRODUCT_FLOW.md`, `docs/RUNBOOK_LOCAL_DEV.md` |
+| Deployment/host facts | frontend `src/config.yaml` / `astro.config.mjs`; backend `fly-serving.toml`, `fly-tunnel.toml` (declared configuration, not live-state proof) | `docs/PRODUCT_FLOW.md`, `docs/RUNBOOK_LOCAL_DEV.md` |
 | Search implementation | frontend `src/pages/search.json.js` + `src/utils/build-search-index.ts` | frontend `docs/ARCHITECTURE.md`, `docs/SOURCE_OF_TRUTH.md` |
 | Security/CI gates | `.github/workflows/quality.yml`, `scripts/security_gate.py` | `docs/security.md`, `docs/ci.md` |
 

@@ -1,24 +1,12 @@
-Module: news_collector/contracts/export.py
-Role: Defines data contracts used for system export operations.
-Inputs:
-- article_count: int
-- articles
-- authors
-- category
-- collected_date
-- components
-- content
-- contract
-Outputs:
-- ExportArticleModel
-- ExportContractV2
-Side effects:
-- None explicit
-Invariants:
-- LAW-1: Data Contracts Are Mandatory
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- adapters
+# contracts_export
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/contracts/export.py](../../news_collector/contracts/export.py)
+
+Defines data contracts used for system export operations.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

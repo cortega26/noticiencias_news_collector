@@ -82,3 +82,19 @@ class TestScholarlyMetadataEnricher:
             assert result["success"] is True
             assert "Mocked Title" in result["content"]
             assert result["metadata"]["DOI"] == "10.1111/mocked"
+
+    def test_fetch_metadata_passes_timeout(self):
+        from unittest.mock import Mock, patch
+
+        enricher = ScholarlyMetadataEnricher()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"message": {"title": ["Mocked Title"]}}
+
+        with patch.object(
+            enricher.session, "get", return_value=mock_response
+        ) as mock_get:
+            enricher.fetch_metadata("10.1111/mocked")
+
+            _, kwargs = mock_get.call_args
+            assert kwargs["timeout"] == 15

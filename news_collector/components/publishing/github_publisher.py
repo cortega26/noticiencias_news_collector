@@ -48,7 +48,9 @@ class GitHubPublisher:
     Formerly 'GitHandler' in the refinery app.
     """
 
-    def __init__(self, github_token: str = "", base_branch: str = DEFAULT_BASE_BRANCH):
+    def __init__(  # nosec B107 - empty default; real token comes from GITHUB_TOKEN env
+        self, github_token: str = "", base_branch: str = DEFAULT_BASE_BRANCH
+    ):
         self.github_token = github_token or os.environ.get("GITHUB_TOKEN", "")
         self.base_branch = base_branch or DEFAULT_BASE_BRANCH
         self._askpass_path: Path | None = None
@@ -397,8 +399,8 @@ class GitHubPublisher:
             "base": (base_branch or self.base_branch).strip() or self.base_branch,
         }
 
-        response = requests.post(  # noqa: S113
-            api_url, json=payload, headers=self.headers
+        response = requests.post(
+            api_url, json=payload, headers=self.headers, timeout=15
         )
 
         if response.status_code == 201:
@@ -413,8 +415,8 @@ class GitHubPublisher:
             )
             search_url = f"https://api.github.com/repos/{owner}/{repo_name}/pulls"
             search_params = {"head": f"{owner}:{branch_name}", "state": "open"}
-            search_response = requests.get(  # noqa: S113
-                search_url, params=search_params, headers=self.headers
+            search_response = requests.get(
+                search_url, params=search_params, headers=self.headers, timeout=15
             )
             if search_response.status_code == 200:
                 prs = search_response.json()

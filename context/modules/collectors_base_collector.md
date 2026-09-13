@@ -1,27 +1,12 @@
-Module: news_collector/collectors/base_collector.py
-Role: Defines the common interface that all data collectors must implement.
-Inputs:
-- collector_type: str
-- logger_factory
-- result: Dict[str, Any]
-- source_config: Dict[str, Any]
-- source_id: str
-- sources_config: Dict[str, Dict[str, Any]]
-Outputs:
-- BaseCollector
-- Dict[str, Any]
-- Dict[str, float]
-- bool
-Side effects:
-- File I/O
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- Exception
-- ValueError
-Used by:
-- rss_collector
-- headless_collector
-- dispatcher
-- html_collector
+# collectors_base_collector
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/collectors/base_collector.py](../../news_collector/collectors/base_collector.py)
+
+Provides collector construction and shared collection behavior.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

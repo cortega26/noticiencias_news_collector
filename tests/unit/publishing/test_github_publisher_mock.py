@@ -373,6 +373,44 @@ def test_create_pull_request_uses_configured_base_by_default():
         assert payload["base"] == "trunk"
 
 
+def test_create_pull_request_passes_timeout(publisher):
+    with patch("requests.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_resp.json.return_value = {"html_url": "http://pr/1"}
+        mock_post.return_value = mock_resp
+
+        publisher.create_pull_request(
+            "https://github.com/org/repo.git", "feat/b", "Title", "Body"
+        )
+
+        _, kwargs = mock_post.call_args
+        assert kwargs["timeout"] == 15
+
+
+def test_create_pull_request_422_recovery_passes_timeout(publisher):
+    with patch("requests.post") as mock_post, patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 422
+        mock_resp.text = "A pull request already exists"
+        mock_post.return_value = mock_resp
+
+        mock_search = MagicMock()
+        mock_search.status_code = 200
+        mock_search.json.return_value = [{"html_url": "http://pr/existing"}]
+        mock_get.return_value = mock_search
+
+        url = publisher.create_pull_request(
+            "https://github.com/org/repo.git", "feat/b", "Title", "Body"
+        )
+
+        assert url == "http://pr/existing"
+        _, post_kwargs = mock_post.call_args
+        assert post_kwargs["timeout"] == 15
+        _, get_kwargs = mock_get.call_args
+        assert get_kwargs["timeout"] == 15
+
+
 def test_safe_repo_url(publisher):
     # Test token injection
     clean = "https://github.com/org/repo.git"

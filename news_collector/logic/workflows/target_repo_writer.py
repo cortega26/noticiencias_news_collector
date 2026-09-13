@@ -24,6 +24,7 @@ import yaml
 
 from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.contracts import MANIFEST_FILENAME
+from news_collector.contracts.social_publication import stamp_social_frontmatter
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("TargetRepoWriter")
@@ -77,6 +78,21 @@ class TargetRepoWriter:
             raise ValueError(
                 f"Path traversal detected: {resolved_target} is outside {resolved_posts}"
             ) from err
+
+        # Social distribution stamping (plan social-distribution §9): assign or
+        # preserve the `social` opt-in on the generated front-matter, reading the
+        # previous target file when it exists. An unreadable / unparseable prior
+        # file blocks the write (ValueError) rather than being treated as new.
+        # RefineryEngine already catches ValueError from write_article.
+        previous_content: str | None = None
+        if target_file_path.exists():
+            try:
+                previous_content = target_file_path.read_text(encoding="utf-8")
+            except OSError as err:
+                raise ValueError(
+                    f"Cannot read previous target file {target_file_path}: {err}"
+                ) from err
+        content = stamp_social_frontmatter(content, previous_content)
 
         target_file_path.write_text(content, encoding="utf-8")
         logger.info("Written content to {}", target_file_path)

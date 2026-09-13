@@ -1,28 +1,12 @@
-Module: news_collector/config/settings.py
-Role: Provides the project configuration facade backed by Pydantic settings.
-Inputs:
-- config
-Outputs:
-- None explicit
-Side effects:
-- None explicit
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- ConfigError
-Used by:
-- logger
-- basic_scorer
-- database
-- collector
-- ai_editor
-- rss_collector
-- rate_limit_utils
-- base_collector
-- html_collector
-- pipeline
-- http_client
-- requests_client
-- bootstrap
-- activity_monitor
+# config_settings
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/config/settings.py](../../news_collector/config/settings.py)
+
+Provides the project configuration facade backed by Pydantic settings.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

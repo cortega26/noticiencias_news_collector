@@ -20,11 +20,10 @@ To run the verification suite locally (identical to CI):
 make test-system
 ```
 
-This command executes:
-
-```bash
-pytest -c tools/ci/pytest_system.toml --cov-config=tools/ci/coverage_system.rc tests/unit/system/test_s1_refactor.py
-```
+The `test-system` recipe in `Makefile` selects the S1 refactor, activity
+monitor and bootstrap coverage tests. Use that target rather than copying
+an incomplete pytest file list. The coverage configuration defines the
+measured source set and threshold.
 
 ### Configuration Files
 

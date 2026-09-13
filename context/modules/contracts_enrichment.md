@@ -1,26 +1,12 @@
-Module: news_collector/contracts/enrichment.py
-Role: Defines contracts for enrichment pipeline payloads.
-Inputs:
-- content: str
-- editorial_display_category
-- editorial_display_category: str
-- entities
-- language
-- language: str
-- model_version: str
-- normalized_summary: str
-Outputs:
-- ArticleEnrichment
-- ArticleEnrichmentModel
-- ArticleForEnrichment
-- ArticleForEnrichmentModel
-Side effects:
-- None explicit
-Invariants:
-- LAW-1: Data Contracts Are Mandatory
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- ValueError
-Used by:
-- common
+# contracts_enrichment
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/contracts/enrichment.py](../../news_collector/contracts/enrichment.py)
+
+Defines contracts for enrichment pipeline payloads.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

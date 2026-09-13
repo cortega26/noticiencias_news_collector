@@ -7,7 +7,7 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 ## Coding standards
 
 - Target **Python 3.13+** and keep functions annotated. Use `TypedDict`, `Protocol`, or dataclasses when sharing structures across modules.
-- Follow **PEP 8** plus `ruff` defaults for style. Keep `structlog`-style dictionaries in logging statements with `trace_id`, `source_id`, and `article_id`.
+- Follow **PEP 8** plus `ruff` defaults for style. Use the logger helpers in `news_collector/utils/logger.py` and include relevant trace, source and article identifiers.
 - Keep Makefile recipes tab-indented; `make lint` fails fast if spaces sneak into command lines.
 - Persist and compare timestamps in **UTC**; convert to `America/Santiago` only inside presentation layers.
 - Never swallow exceptions—wrap them with context and re-raise so the DLQ/runbooks have usable breadcrumbs.
@@ -22,22 +22,20 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
   ```bash
   make lint
   ```
-- `make lint` ejecuta `pre-commit run --all-files`, cubriendo Ruff, Black, isort, mypy y checks básicos.
+- `make lint` checks Makefile tabs, Black, Ruff and deprecated Streamlit arguments; it does not invoke pre-commit or mypy. Run `pre-commit run --all-files` explicitly for the hook suite. isort owns import ordering in the hook configuration; Ruff I rules are disabled.
 
 ## Quality gate checklist
 
-1. Create a virtual environment and install dependencies with hash checking:
+1. Bootstrap the repository environments and pinned application/security dependencies:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install --require-hashes -r requirements.lock
+   make bootstrap
    ```
-2. Before sending a PR run the full quality suite (auto-formatters will amend files as needed):
+2. Run the checks required by `docs/AGENTS.md` for the change class. Baseline Python checks are read/check operations rather than auto-formatting:
    ```bash
    make lint
    make type
    make test
-   make docs
+   make docs-check
    ```
    Puedes usar `make lint type test` para ejecutar los tres pasos en secuencia.
    > Nota: `make type` actualmente cubre los módulos que ya cuentan con tipado estricto (`scripts/generate_api_docs.py`, `news_collector/utils/logger.py`, `news_collector/utils/url_canonicalizer.py`) mientras avanzamos en la migración del resto del código.
@@ -76,7 +74,7 @@ When you intentionally change the scoring logic, refresh the regression fixtures
 
    ```bash
    python - <<'PY'
-   from datetime import datetime, timezone
+   from datetime import datetime
    import json
    from pathlib import Path
    from types import SimpleNamespace
@@ -86,7 +84,7 @@ When you intentionally change the scoring logic, refresh the regression fixtures
 
    data_path = Path("tests/data/scoring_golden.json")
    payload = json.loads(data_path.read_text(encoding="utf-8"))
-   frozen_at = datetime.now(timezone.utc)
+   frozen_at = datetime.fromisoformat(payload["frozen_at"].replace("Z", "+00:00"))
 
    class Frozen(datetime):
        @classmethod
@@ -122,7 +120,7 @@ When you intentionally change the scoring logic, refresh the regression fixtures
 
 - Keep PR descriptions action-oriented (what changed + why).
 - Link related tickets or incident reports when applicable.
-- Run `make format` if the CI formatter complains.
+- Use `make lint-fix` for the Black/Ruff fix target and the configured isort pre-commit hook for import ordering. Review their diff before committing.
 - Observe our security policy: never commit credentials or raw PII.
 
 Happy shipping! 🚀

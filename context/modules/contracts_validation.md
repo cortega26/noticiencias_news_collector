@@ -1,24 +1,12 @@
-Module: news_collector/contracts/validation.py
-Role: Defines the payloads for content validation exchanged between system boundaries.
-Inputs:
-- articles
-- content
-- context
-- id
-- published_date
-- source_id: str
-- summary
-- title: str
-Outputs:
-- ArticleValidationItem
-- ArticleValidationPayload
-Side effects:
-- None explicit
-Invariants:
-- LAW-1: Data Contracts Are Mandatory
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- adapters
+# contracts_validation
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/contracts/validation.py](../../news_collector/contracts/validation.py)
+
+Defines the payloads for content validation exchanged between system boundaries.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

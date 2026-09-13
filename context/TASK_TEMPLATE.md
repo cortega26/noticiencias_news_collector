@@ -1,50 +1,27 @@
-# Token-Efficient Task Prompt Template
+# Focused task template
+
+Use this template to provide context without duplicating the repository's laws.
 
 ```markdown
-**TASK**:
-[1-2 sentences explaining what needs to be accomplished]
+**Task:**
+[Concrete outcome, scope and relevant user constraints.]
 
-**REQUIRED CONTEXT REFS**:
+**Evidence and source owners:**
+[Relevant error, diff or reproduction; code paths and contracts to inspect.]
+Read docs/SOURCE_OF_TRUTH.md and docs/AGENTS.md, then applicable module context.
+Treat context notes as navigation aids and verify exact behavior in source.
 
-- `context/INVARIANTS.md`
-- `context/MODULE_INDEX.md`
-- [List specific `context/modules/<slug>.md` files needed]
+**Consequential decisions and invariants:**
+[Contracts to preserve, accepted compatibility changes, failure semantics.]
+Use the actual LAW-B identifiers in docs/AGENTS.md; do not create new rules here.
 
-**MINIMAL EVIDENCE**:
-[Provide a minimal diff, target function snippet, or specific error logs]
+**Acceptance and verification:**
+[Observable outcomes and checks required for the change class.]
+Record command results and meaningful limitations. Reuse the user's existing
+authorization; resolve routine choices from source and established conventions.
+Ask only when a consequential decision remains unresolved.
 
-- If no diff: provide (a) exact function/class name, (b) file path, (c) error log lines.
-  \`\`\`diff
-  --- a/path/to/file.py
-  +++ b/path/to/file.py
-  @@ -10,3 +10,3 @@
-- old_function(param1):
-
-* new_function(param1, param2):
-  \`\`\`
-
-**CONSTRAINTS & INVARIANTS**:
-
-- Adhere strictly to `docs/AGENTS.md` core laws (e.g., LAW-1 Data Contracts, LAW-2 Adapters).
-- Obey invariants defined in the module's context file.
-- Do NOT rewrite or modify functionality outside the exact scope.
-
-**CHECKS**:
-[List validation commands, e.g.:]
-
-- `make test-contracts`
-- `make test-boundaries`
-- `pytest path/to/specific_test.py`
-
-**STOP CONDITIONS**:
-Ask for clarification BEFORE making changes if:
-
-- Context files are missing or invariants contradict the request.
-- Changes require altering sealed contracts or boundary adapters without explicit permission.
-
-**OUTPUT FORMAT**:
-
-- Output unified diffs ONLY for the modified files.
-- Provide a 1-2 sentence summary of changes.
-- Do NOT output full file contents.
+**Handoff:**
+Summarize the result, changed files, verification and any unresolved issue.
+Keep plans decision-complete; avoid restating mechanical implementation steps.
 ```

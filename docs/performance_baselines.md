@@ -1,36 +1,34 @@
-# Pipeline Performance Baselines
+# Performance verification
 
-The performance regression suite enforces latency thresholds for the offline pipeline
-(using the same fixtures we rely on for end-to-end validation). These baselines are
-codified in `config/perf_thresholds.py` and exercised by the pytest module in
-`tests/perf/test_pipeline_perf.py`.
+Status: Active. Repository checked 2026-09-04.
 
-## When the perf test fails
+The current retained performance test is `tests/perf/test_serving_api_perf.py`.
+It asserts structural budgets (query count, payload size and response
+semantics), not wall-clock latency. Timing trends come from
+`scripts/benchmark_serving_api.py`. Inspect its dataset, markers and assertions
+before using a result to justify an API/query change. Run the test directly so a pytest failure remains visible:
 
-A failure means one of the measured stages (ingestion, enrichment, or scoring)
-exceeded either the configured P95 or max duration. Investigate the perf log produced
-at `reports/perf/pipeline_perf_metrics.json` (uploaded in CI as an artifact) to identify
-which stage regressed.
+```bash
+.venv/bin/python -m pytest tests/perf/test_serving_api_perf.py --no-cov
+```
 
-## Refreshing baselines after intentional optimizations
+`make perf` selects the `perf` marker and writes JUnit output, but its Make
+recipe catches pytest failures and emits a `SKIPPED` artifact. A successful
+Make exit therefore does not prove that performance tests passed. Likewise,
+verify marker selection and collected test counts rather than assuming a
+named target ran every benchmark.
 
-When you intentionally optimize part of the pipeline and want to bake the new timing
-into the guardrail:
+`news_collector/config/perf_thresholds.py` retains historical pipeline budgets.
+The earlier pipeline/enrichment/PostgreSQL profile test files cited here are
+no longer in the active test tree. Do not present those constants or old
+JSON results as current enforced SLOs or production database evidence.
 
-1. Run the profiling helper to capture reference numbers:
-   ```bash
-   python scripts/profile_pipeline.py > profiling.log
-   ```
-2. Review the log and identify the steady-state timings for ingestion, enrichment, and
-   scoring. Focus on representative runs (`optimized-advanced` scenario is our
-   reference).
-3. Update the values in `config/perf_thresholds.py` to reflect the new P95/max targets.
-   Keep headroom (≈10-15%) to avoid flakiness.
-4. Execute the perf test locally to verify it passes:
-   ```bash
-   pytest tests/perf/test_pipeline_perf.py
-   ```
-5. Commit the refreshed thresholds together with a summary of the profiling results in
-   your PR description.
+For a proposed optimization, capture a baseline and candidate result using
+the same revision-independent dataset and environment. Record hardware,
+Python/dependency versions, dataset size, concurrency, warm/cold caches and
+whether network/LLM work is real or mocked. Compare error rates and result
+quality as well as latency. Change thresholds only with repeatable evidence
+and a rationale for tolerances; never relax them merely to obtain a green run.
 
-This workflow ensures we lock in improvements while catching accidental slowdowns.
+See `docs/ci.md` for CI coverage and `docs/operations.md` for the distinction
+between test artifacts and operational measurements.

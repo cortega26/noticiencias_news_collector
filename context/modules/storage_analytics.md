@@ -1,23 +1,12 @@
-Module: news_collector/storage/analytics.py
-Role: Provides analytics helpers for database reporting.
-Inputs:
-- buckets: int
-- date
-- days: int
-- days_back: int
-- db_type: str
-- session: Session
-Outputs:
-- Dict[str, Any]
-- Dict[str, int]
-- List[Dict[str, Any]]
-Side effects:
-- Database I/O
-- Network I/O
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- database
+# storage_analytics
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/storage/analytics.py](../../news_collector/storage/analytics.py)
+
+Provides analytics helpers for database reporting.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

@@ -27,19 +27,30 @@ Current publication identity resolution order is:
 
 1. stored database slug
 2. existing frontend file or `refinery_manifest.json`
-3. deterministic derivation from article dates
-4. compatibility fallbacks
+3. source `published_date`, then `collected_date`
+4. quarantine with `UndatedArticleError` (`E_IDENTITY_NO_DATE`) if neither exists
 
-The compatibility fallback path still exists; documentation should not describe identity as perfectly deterministic when source dates are missing.
+There is no runtime-clock fallback. Reuse persisted identity before deriving a new slug.
 
 ### I-5: Frontend publication is a cross-repo contract
 
 `news_collector/contracts/frontend_schema.py` mirrors the frontend render contract in `../noticiencias/src/content.config.ts`. Either side changing that shape is a cross-repo contract event.
 
-### I-6: Backend publication state stops at PR creation
+### I-6: Publication stages and acknowledgments remain distinct
 
-This repo records candidate publication state as `PR_CREATED`. Final public website publication happens in the frontend repo after merge and deploy.
+PR creation records `PR_CREATED`; authenticated frontend callbacks can complete
+or reject matching publication attempts. Empty `publication_ids` do not trigger
+article guessing. Workflow success and scoring `completed` are not proof that a
+public URL is live. Frontend CI owns merge/build/deployment behavior.
 
 ### I-7: Context files are summaries, not constitutions
 
 `context/*` files help with efficient codebase reasoning. If they conflict with higher docs or code, the higher docs and code win.
+
+### I-8: Workflow recovery preserves active ownership
+
+Collection and publication each allow one queued/running run. Dispatch-time
+recovery interrupts expired running leases and preserves queued rows; startup
+also recovers queued rows under the single-owner startup assumption. A missing
+heartbeat is stale only after `started_at` exceeds the lease age. Terminal rows
+stay terminal. See the two run workflows and their unit tests for exact guards.

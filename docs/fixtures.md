@@ -1,57 +1,28 @@
-# Fixture Maintenance Guide
+# Fixture maintenance
 
-This document explains how to maintain the golden datasets used by the end-to-end
-collector pipeline tests. The goal is to keep `tests/data/golden_articles.json`
-and the chained fixture `tests/data/collector_pipeline_chain.json` in sync with the
-current schemas for collector payloads, enrichment outputs, and storage rows.
+Status: Active. Tests and contracts own fixture behavior; this guide describes
+how to change expectations without hiding a regression.
 
-## When to Refresh Fixtures
+Locate the test that loads a fixture before modifying it. `tests/data/` includes
+historical datasets as well as active cases. The retained
+`tests/data/golden_articles.json` and `tests/data/collector_pipeline_chain.json`
+were used by an older pipeline test that is no longer present; do not describe
+them as a currently enforced end-to-end gate or run that removed test command.
 
-Refresh the fixtures whenever one of the following happens:
+For an intentional behavior or contract change:
 
-- The collector contract (`CollectorArticleModel`) gains or changes required fields.
-- The enrichment pipeline updates its payload schema or output semantics.
-- Storage models (`Article`, `ScoreLog`) evolve in a way that changes persisted
-  columns validated by the tests.
-- Scoring logic adds new components or renames existing ones.
+1. Record the before/after behavior and affected boundary, then update only
+   the fixture fields that should change. Preserve stable article identity.
+2. Use fixed timestamps and provider responses for deterministic tests.
+   Evaluate live providers separately from fixture assertions.
+3. Review golden changes as expected behavior, not generated output to accept
+   automatically. Retain counterexamples, error cases and quality thresholds
+   unless evidence supports changing them.
+4. Run the consuming tests plus the applicable contract/boundary gates.
+   The current slow pipeline suite is `tests/e2e_pipeline/`, invoked through
+   `make test-e2e` with ordering specified by the Makefile.
+5. Commit fixture changes with the corresponding implementation and report
+   which tests consumed them. An unreferenced fixture is not test coverage.
 
-## Refresh Procedure
-
-1. **Regenerate enrichment expectations**
-   - Update `tests/data/golden_articles.json` so that it reflects the latest
-     enrichment outputs for your canonical article samples.
-   - If you have added new samples, ensure their `expected` block mirrors the
-     deterministic enrichment pipeline output.
-
-2. **Rebuild the chained pipeline fixture**
-   - Copy the structure used in `tests/data/collector_pipeline_chain.json` for
-     each article (source metadata, collector payload, expected storage fields).
-   - For new schema fields, add the minimum values required by
-     `CollectorArticleModel` and by the scoring/storage contracts.
-   - Keep summaries at least `TEXT_PROCESSING_CONFIG["min_content_length"]`
-     characters so validation passes.
-
-3. **Validate with the E2E test**
-   - Run `pytest -s tests/test_collector_pipeline_e2e.py` to execute the mocked
-     pipeline.
-   - The test writes a reconciliation artifact listing expected vs. actual
-     fields. Copy the printed `pipeline_reconciliation_artifact=...` path and
-     inspect the JSON to confirm the new schema is represented correctly.
-
-4. **Iterate until clean**
-   - Adjust fixture entries until the test passes without diffs outside the
-     acceptable tolerances (language, sentiment, topics/entities containment,
-     score thresholds, etc.).
-
-5. **Commit the updates**
-   - Commit changes to the fixture JSON files together with any schema or code
-     updates so CI runs against matching expectations.
-
-## Tips
-
-- When schemas gain optional fields, prefer adding them to the fixture so the
-  pipeline test exercises the new shape early.
-- If scoring parameters change, bump the `final_score_min` guardrails rather than
-  hard-coding exact scores—this keeps the test resilient to minor tuning.
-- Keep the reconciliation artifact from the latest run attached to CI logs; it
-  provides fast feedback when the pipeline diverges from the expected fixtures.
+See `CONTRIBUTING.md` for scoring-golden maintenance and `docs/testing.md` for
+system verification. No fixture or runtime prompt is changed by Plan 081.

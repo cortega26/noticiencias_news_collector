@@ -1,83 +1,66 @@
-# Operations Runbook
+# Operations runbook
 
-This runbook documents the two paging alerts that matter most for the Noticiencias pipeline today. Each section explains what
-triggers the alert, how to triage it, and which tools to use when you are in the middle of an incident.
+Status: Active. Commands run from the backend root after `make bootstrap`.
+For configuration, see [database_deployment.md](database_deployment.md) and
+[collector_runbook.md](collector_runbook.md). Dashboard availability and
+alert thresholds must be verified in the deployment; this repository does
+not establish a live Grafana paging policy.
 
-## Alert Catalogue
+## Collection freshness or backlog
 
-### 1. Ingest Lag Breach
-- **Signal**: Grafana alert `pipeline.ingest.lag_p95_minutes` (warning at 12 min, page at 18 min) or `python run_collector.py --healthcheck` returning a non-zero exit code.
-- **Impact**: Homepage stops showing newly published research; downstream enrichment and reranker backlogs accumulate.
-- **Primary owner**: Collector on-call.
+1. Run `.venv/bin/python scripts/run_collector.py --healthcheck` and capture
+   its output and exit status. The default limits are 250 pending articles
+   and 180 minutes since the latest ingest; see [runbooks/healthcheck.md](runbooks/healthcheck.md).
+2. Check the scheduler, active collection run and source-specific errors.
+   Compare the effective database path with the collector's configuration.
+   An empty or different database can make a healthy process appear idle.
+3. For SQLite lock failures, identify competing writers and stop the relevant
+   process gracefully. SQLite is a file database, not a PostgreSQL service
+   to restart. Do not delete state or add workers as a generic recovery step.
+4. For source failures, inspect rate-limit responses, feed parsing and
+   provider availability. A targeted dry-run can check connectivity but
+   does not drain backlog or prove normal persistence.
+5. Verify with an intended collection cycle, fresh persisted timestamps and
+   another healthcheck. Preserve the original thresholds in incident evidence;
+   increasing a threshold does not fix an incident.
 
-#### Diagnosis Workflow
-1. **Run the CLI healthcheck** to validate connectivity and queue depth without waiting on dashboards:
-   ```bash
-   python run_collector.py --healthcheck
-   ```
-   - Articles waiting above the default threshold (250) or an ingest lag older than 180 minutes will fail the check.
-   - Override thresholds when debugging chronic backlogs by exporting `HEALTHCHECK_MAX_PENDING=500` before invoking the CLI.
-2. **Inspect scheduler freshness**. Tail the structured logs for `collection_cycle.start`/`collection_cycle.completed` events and confirm cycles are still firing.
-   ```bash
-   sqlite3 data/news.db "SELECT MAX(collected_date) FROM articles;"
-   ```
-3. **Look for source specific failures** in the `sources` table. High `consecutive_failures` or stale `last_article_found` timestamps often indicate credential or robots.txt issues.
-   ```bash
-   sqlite3 data/news.db "SELECT id, last_article_found, consecutive_failures FROM sources ORDER BY consecutive_failures DESC LIMIT 10;"
-   ```
-4. **Check the DLQ** (`data/dlq/`). Files named `rss_<source>_*.json` represent payloads that failed to persist—open one to inspect the error context.
+## Stuck collection or publication runs
 
-#### Remediation Steps
-- **Transient network spikes**: re-run the collector in dry-run mode to confirm reachability.
-  ```bash
-  python run_collector.py --dry-run --sources nature mit_news
-  ```
-- **Rate limit throttling**: adjust `RATE_LIMITING_CONFIG["domain_overrides"]` or the per-source `min_delay_seconds` in `config/sources.py` and redeploy.
-- **Persistent parser failures**: replay the offending source through `scripts/replay_outage.py` with the fixture from `tests/data/monitoring/` to validate fixes before production.
-- **Database outage**: restart the managed SQLite/Postgres service and re-run `python run_collector.py --healthcheck` to verify the backlog clears.
+`workflow_runs` stores execution state. Inspect the run ID, run type, status,
+`heartbeat_at`, `started_at` and error before retrying. Collection and
+publication each permit one queued/running run at a time; the constraint is
+per run type, not a guarantee that only one writer exists in the whole system.
 
-#### Verification
-- Healthcheck exits with code `0` and reports a fresh ingest timestamp.
-- Grafana lag panel drops below 12 minutes within two pipeline cycles.
-- No new files land in `data/dlq/` for the affected sources.
+A start request recovers expired running leases without requiring a restart,
+then either starts a run or returns the existing active run as a conflict.
+A queued row is preserved during this request-time recovery. Startup recovery
+also interrupts queued rows under the current single-owner process assumption.
+Fresh running leases are preserved. Missing-heartbeat rows become stale only
+when their start time is older than the lease cutoff.
 
-### 2. Dedupe Drift
-- **Signal**: Alert `dedupe.near_duplicate_f1` (warning <0.93, page <0.90) or noticeable duplicate clusters in the ranked feed.
-- **Impact**: Users see repeated stories; reranker diversity guarantees no longer hold; scoring explanations degrade.
-- **Primary owner**: Dedupe/quality SME.
+Recovery marks work interrupted; it does not resume an LLM/Git operation at
+its last step. Inspect persisted publication identity and existing PRs before
+retrying. See [PIPELINE_CONTRACTS.md](PIPELINE_CONTRACTS.md) for exact ownership
+and tests. Do not promise exactly-once external effects or horizontal scaling
+from the database uniqueness constraint alone.
 
-#### Diagnosis Workflow
-1. **Quantify the drift** by running the regression suite:
-   ```bash
-   pytest tests/test_dedupe_utils.py
-   python scripts/dedupe_tuning.py --report
-   ```
-2. **Check recent clustering metrics** in the database:
-   ```bash
-   sqlite3 data/news.db "SELECT COUNT(*) FROM articles WHERE duplication_confidence > 0.8 AND collected_date > datetime('now', '-1 day');"
-   ```
-3. **Review canonicalization health** using the benchmark helper:
-   ```bash
-   python scripts/benchmark_canonicalize.py --sources nature science
-   ```
-4. **Inspect suspicious clusters** directly:
-   ```bash
-   python scripts/recluster_articles.py --cluster-id <uuid>
-   ```
+## Duplicate or low-quality candidates
 
-#### Remediation Steps
-- **Tokenizer or normalization regression**: roll back the offending commit or hotfix `src/utils/text_cleaner.py`, then rerun `pytest tests/test_text_cleaner.py` and `tests/test_dedupe_utils.py`.
-- **SimHash threshold tuning**: adjust `DEDUP_CONFIG["simhash_threshold"]` in `config/settings.py` and validate with `scripts/dedupe_tuning.py --simulate` before applying to production.
-- **Source specific anomalies**: temporarily suppress the source via `config/sources.py` (`is_active: false`) and coordinate with content owners.
+Capture representative article IDs, canonical URLs, source IDs and timestamps.
+Reproduce against fixture-based tests such as `tests/test_dedupe_utils.py`
+and `tests/unit/utils/test_dedupe.py`. Review the actual storage and dedupe
+implementation before proposing a threshold change or data repair. Do not
+query columns or run reclustering scripts copied from archived incident notes.
+Validate a repair on disposable data before applying it to editorial state.
 
-#### Verification
-- Run `python run_collector.py --healthcheck` to ensure backlog articles are processing normally after dedupe fixes.
-- Confirm Grafana dedupe F1 recovers above 0.95 and manual spot-checks show diverse top stories.
-- Clear any temporary source suppressions after data quality stabilises.
+## PR created but publication state is stale
 
-## Tooling Reference
-- `python run_collector.py --healthcheck` — fast signal for DB connectivity, queue backlog, and ingest recency.
-- `scripts/replay_outage.py` — reproduce historical outages and validate mitigations.
-- `scripts/dedupe_tuning.py` — stress-test SimHash thresholds.
-- `scripts/benchmark_canonicalize.py` — verify URL normalization after rule changes.
-- `docs/collector_runbook.md` — collector-specific operational guidance.
+Check frontend Content Guard/deploy logs, the callback's `publication_ids`
+and transport result, then the backend webhook logs and database identity.
+A successful workflow run is not deployment proof. Events without matching
+IDs do not complete/reject arbitrary attempts; a missing best-effort callback
+can leave state stale after a successful deployment. Use the sibling
+`docs/webhook-integration.md` for transport details.
+
+Record incident evidence, mitigation and verification results. No production
+incident, live alert or restoration was exercised by the documentation audit.

@@ -1,0 +1,2867 @@
+{
+  "scope": "Tracked and non-ignored first-party Markdown/MDX/reStructuredText; generated dependency trees excluded by git ignore",
+  "documents": [
+    {
+      "repo": "noticiencias",
+      "path": ".agent/rules/read-agents-md-first.md",
+      "category": "current-guidance-candidate",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias",
+      "path": ".github/pull_request_template.md",
+      "category": "current-guidance-candidate",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias",
+      "path": ".github/templates/post-template.md",
+      "category": "current-guidance-candidate",
+      "lines": 56
+    },
+    {
+      "repo": "noticiencias",
+      "path": "AGENTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 352
+    },
+    {
+      "repo": "noticiencias",
+      "path": "CHANGELOG.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 80
+    },
+    {
+      "repo": "noticiencias",
+      "path": "CLAUDE.md",
+      "category": "current-guidance-candidate",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias",
+      "path": "CONTRIBUTING.md",
+      "category": "current-guidance-candidate",
+      "lines": 122
+    },
+    {
+      "repo": "noticiencias",
+      "path": "NEXT_CONVERSATION_PROMPT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 100
+    },
+    {
+      "repo": "noticiencias",
+      "path": "README.md",
+      "category": "current-guidance-candidate",
+      "lines": 92
+    },
+    {
+      "repo": "noticiencias",
+      "path": "article_images_audit.md",
+      "category": "current-guidance-candidate",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias",
+      "path": "article_images_backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 51
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/ARCHITECTURE.md",
+      "category": "current-guidance-candidate",
+      "lines": 192
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/DEPLOYMENT_SECURITY_HEADERS.md",
+      "category": "current-guidance-candidate",
+      "lines": 40
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/EDITORIAL.md",
+      "category": "current-guidance-candidate",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/EDITORIAL_VOICE.md",
+      "category": "current-guidance-candidate",
+      "lines": 329
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/SOURCE_OF_TRUTH.md",
+      "category": "current-guidance-candidate",
+      "lines": 132
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0000-adr-template.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 22
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0001-server-first-rendering.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0002-two-ui-layers.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 39
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0003-content-schema-contract.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 60
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0004-npm-over-pnpm.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0005-durable-workflow-lifecycle-state.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 55
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0006-generate-contracts-instead-of-hand-maintained-parsers.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 87
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0007-harden-two-repo-boundary-before-reconsidering-consolidation.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/adr/0008-markdown-for-agents.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 565
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/audits/2026-04-source-of-truth-audit.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 78
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/audits/phase2b-second-independent-audit.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/backlog/editorial-visual-refresh-backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 322
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/backlog/source-of-truth-backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/checklists/SEO_CHECKLIST.md",
+      "category": "current-guidance-candidate",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/logs/MIGRATION_LOG.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 50
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/CONTENT_INVENTORY.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 36
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/CONTENT_SCHEMA.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/DEPLOYMENT_BASELINE.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 26
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/LAYOUT_DECISIONS.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/OVERVIEW.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 150
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/ROUTE_MAPPING.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/SEO_BASELINE.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/TEMPLATE_DIFF.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 41
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/migration/TEMPLATE_SELECTION.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 36
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/report-pipeline-setup.md",
+      "category": "current-guidance-candidate",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/supported-dependency-matrix.md",
+      "category": "current-guidance-candidate",
+      "lines": 47
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/tagging.md",
+      "category": "current-guidance-candidate",
+      "lines": 106
+    },
+    {
+      "repo": "noticiencias",
+      "path": "docs/webhook-integration.md",
+      "category": "current-guidance-candidate",
+      "lines": 67
+    },
+    {
+      "repo": "noticiencias",
+      "path": "heroimage_backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias",
+      "path": "heroimage_diagnosis.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 69
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-15-cursos-en-linea-abren-puertas-a-nuevas-carreras.md",
+      "category": "published-content",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-17-cientificos-descubren-adn-preservado-en-guepardos-momificados.md",
+      "category": "published-content",
+      "lines": 39
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-18-nasa-se-prepara-para-un-paso-historico-en-la-exploracion-espacial-humana-con-artemis-ii.md",
+      "category": "published-content",
+      "lines": 43
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-23-descubren-los-arpones-mas-antiguos-una-revelacion-que-cambia-nuestra-perspectiva-sobre-la-caza-de-ballenas.md",
+      "category": "published-content",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-24-thomas-edison-podria-haber-creado-el-grafeno-accidentalmente-en-1879.md",
+      "category": "published-content",
+      "lines": 80
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-25-investigadores-logran-la-superposicion-cuantica-mas-grande-registrada.md",
+      "category": "published-content",
+      "lines": 94
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-25-la-guarderia-un-lugar-donde-los-bebes-intercambian-microorganismos-y-desarrollan-su-microbioma.md",
+      "category": "published-content",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-27-conoce-a-los-misteriosos-electridos.md",
+      "category": "published-content",
+      "lines": 87
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-27-desafio-global-contra-el-sarampion-por-falta-de-confianza-en-las-vacunas.md",
+      "category": "published-content",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-27-herramientas-empunadas-de-piedra-sofisticadas-descubiertas-en-china-datan-de-hace-160-000-anos.md",
+      "category": "published-content",
+      "lines": 87
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-27-nuevas-plataformas-estratosfericas-podrian-revolucionar-la-conectividad-en-areas-remotas.md",
+      "category": "published-content",
+      "lines": 89
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-27-piezo1-identificado-como-sensor-de-ejercicio-interno-crucial.md",
+      "category": "published-content",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-28-moltbot-asistente-personal-de-inteligencia-artificial-ofrece-funcionalidades-innovadoras-pero-tambien-plantea-desafios-de-seguridad.md",
+      "category": "published-content",
+      "lines": 76
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-28-observatorio-de-la-energia-oscura-refina-comprension-de-expansion-cosmica.md",
+      "category": "published-content",
+      "lines": 78
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-31-como-claude-code-esta-llevando-el-vibe-coding-a-todos.md",
+      "category": "published-content",
+      "lines": 73
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-01-31-estudio-revela-menor-agrupamiento-de-galaxias-de-lo-esperado.md",
+      "category": "published-content",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-02-05-estudio-revela-que-un-tercio-del-cancer-es-prevenible-con-cambios-en-el-estilo-de-vida.md",
+      "category": "published-content",
+      "lines": 73
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-02-12-bienvenidos.md",
+      "category": "published-content",
+      "lines": 42
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-02-16-un-agujero-negro-se-forma-sin-explotar-una-estrella-masiva.md",
+      "category": "published-content",
+      "lines": 57
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-02-16-un-ingrediente-inesperado-puede-hacer-el-pan-mucho-mas-saludable.md",
+      "category": "published-content",
+      "lines": 78
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-02-18-un-almacenamiento-de-datos-durable-y-coste-efectivo-para-preservar-informacion-durante-10-000-anos.md",
+      "category": "published-content",
+      "lines": 102
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-03-27-el-error-de-redondeo-que-esconde-el-verdadero-terremoto-legal-para-meta-y-youtube.md",
+      "category": "published-content",
+      "lines": 117
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-04-02-comunicacion-laser-como-desbloqueara-datos-gigantes-y-video-hd-para-las-misiones-lunares-tripuladas.md",
+      "category": "published-content",
+      "lines": 56
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-04-06-nuevos-experimentos-desafian-la-afirmacion-sobre-la-deteccion-de-materia-oscura.md",
+      "category": "published-content",
+      "lines": 86
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-04-24-sitios-web-ocultan-ordenes-secretas-que-manipulan-a-las-ia-sin-que-los-usuarios-lo-sepan.md",
+      "category": "published-content",
+      "lines": 154
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-05-07-el-mit-descubre-que-la-automatizacion-no-mejora-la-productividad-como-se-creia.md",
+      "category": "published-content",
+      "lines": 72
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-05-15-un-asteroide-de-700-metros-rota-cada-1-88-minutos-desafiando-teorias-astronomicas.md",
+      "category": "published-content",
+      "lines": 54
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-05-23-un-cohete-con-un-motor-apagado-y-otro-fallando-llego-al-espacio-y-volvio.md",
+      "category": "published-content",
+      "lines": 69
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-06-12-los-chatbots-rescataron-a-elias-thorne-de-una-conversacion-casual-y-lo-convirtieron-en-una-ficcion-masiva.md",
+      "category": "published-content",
+      "lines": 53
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-06-14-1-121-especies-marinas-nuevas-descubiertas-y-la-mayoria-ya-estaban-en-los-estantes-de-los-museos.md",
+      "category": "published-content",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/content/posts/2026-08-12-un-modelo-de-ia-realizo-mas-de-17-500-acciones-en-hugging-face.md",
+      "category": "published-content",
+      "lines": 84
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/metodologia.md",
+      "category": "published-content",
+      "lines": 62
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/nosotros.md",
+      "category": "published-content",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/privacidad.md",
+      "category": "published-content",
+      "lines": 98
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/recursos/detector-de-hype.md",
+      "category": "published-content",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/terminos.md",
+      "category": "published-content",
+      "lines": 74
+    },
+    {
+      "repo": "noticiencias",
+      "path": "src/pages/transparencia.md",
+      "category": "published-content",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/broken/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/conflict/AGENTS.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 5
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/conflict/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 5
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/sibling-broken/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/sibling-ok/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/sibling-ok/_sibling/docs/PRODUCT_FLOW.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/stale/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/valid/AGENTS.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/doc-drift/valid/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias",
+      "path": "tests/fixtures/publication-contract-corpus/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 124
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".agent/rules/claude-mem-context.md",
+      "category": "current-guidance-candidate",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".agents/rules/read-agents-md-first.md",
+      "category": "agent-tooling",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "category": "current-guidance-candidate",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+      "category": "current-guidance-candidate",
+      "lines": 27
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".github/copilot-instructions.md",
+      "category": "current-guidance-candidate",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": ".github/pull_request_template.md",
+      "category": "current-guidance-candidate",
+      "lines": 20
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "AGENTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 143
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "CHANGELOG.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 41
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "CLAUDE.md",
+      "category": "current-guidance-candidate",
+      "lines": 30
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "CONTRIBUTING.md",
+      "category": "current-guidance-candidate",
+      "lines": 128
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "README.md",
+      "category": "current-guidance-candidate",
+      "lines": 91
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "SECURITY.md",
+      "category": "current-guidance-candidate",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "apps/refinery/config/editor_formatting.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 27
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/ADAPTIVE_ENRICHMENT_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 12
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/ENRICHMENT_FAILURE_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 23
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/ENRICHMENT_ROUTING_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/HEADLESS_BUDGET_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 6
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/JOURNAL_ENRICHMENT_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 9
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/METRICS_STORAGE_AUDIT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/RELEASE_NOTES.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 64
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/STRATEGY_LOCK_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 19
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/audit_summary.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 101
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/benchmark_output_B_Quality.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/benchmark_output_C_Speed.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 36
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/benchmark_output_D_Legacy.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 32
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/benchmark_report_summary.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 16
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/labels.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 10
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "archive/historical-reports/pipeline_map.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 219
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/00_inventory.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 46
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/01_docs_code_diff.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 24
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/02_readme_checklist.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 11
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/03_config_matrix.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 252
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/04_cli_behaviors.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 22
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/05_gui_findings.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/06_test_quality.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/07_asvs_checklist.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 20
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/07_security_report.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 41
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/08_supply_chain.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 35
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/09_perf_findings.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/10_ops.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/11_ci_cdpipeline.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/12_dx_checklist.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/13_release_notes.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 53
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "audit/14_editorial_quality_audit.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 133
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/CONTRACTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 35
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/CURRENT_STATE.md",
+      "category": "current-guidance-candidate",
+      "lines": 10
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/DECISIONS.md",
+      "category": "current-guidance-candidate",
+      "lines": 6
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/INVARIANTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 45
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/MODULE_INDEX.md",
+      "category": "current-guidance-candidate",
+      "lines": 136
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/TASK_TEMPLATE.md",
+      "category": "current-guidance-candidate",
+      "lines": 50
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/collectors_base_collector.md",
+      "category": "current-guidance-candidate",
+      "lines": 27
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/components_editorial_ai_editor.md",
+      "category": "current-guidance-candidate",
+      "lines": 29
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/config_settings.md",
+      "category": "current-guidance-candidate",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/contracts_adapters.md",
+      "category": "current-guidance-candidate",
+      "lines": 23
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/contracts_common.md",
+      "category": "current-guidance-candidate",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/contracts_enrichment.md",
+      "category": "current-guidance-candidate",
+      "lines": 26
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/contracts_export.md",
+      "category": "current-guidance-candidate",
+      "lines": 24
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/contracts_validation.md",
+      "category": "current-guidance-candidate",
+      "lines": 24
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/enrichment_pipeline.md",
+      "category": "current-guidance-candidate",
+      "lines": 17
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/enrichment_router.md",
+      "category": "current-guidance-candidate",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/infrastructure_llm_provider.md",
+      "category": "current-guidance-candidate",
+      "lines": 30
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/logic_parsers_rss_parser.md",
+      "category": "current-guidance-candidate",
+      "lines": 20
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/logic_workflows_refinery_engine.md",
+      "category": "current-guidance-candidate",
+      "lines": 24
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/monitoring_detectors.md",
+      "category": "current-guidance-candidate",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/observability_enrichment_metrics_store.md",
+      "category": "current-guidance-candidate",
+      "lines": 29
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/scoring_basic_scorer.md",
+      "category": "current-guidance-candidate",
+      "lines": 23
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/scoring_interfaces.md",
+      "category": "current-guidance-candidate",
+      "lines": 16
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/storage_analytics.md",
+      "category": "current-guidance-candidate",
+      "lines": 23
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/storage_database.md",
+      "category": "current-guidance-candidate",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/storage_maintenance.md",
+      "category": "current-guidance-candidate",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/storage_models.md",
+      "category": "current-guidance-candidate",
+      "lines": 27
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/system_bootstrap.md",
+      "category": "current-guidance-candidate",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/system_pipeline.md",
+      "category": "current-guidance-candidate",
+      "lines": 17
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/utils_logger.md",
+      "category": "current-guidance-candidate",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "context/modules/utils_text_cleaner.md",
+      "category": "current-guidance-candidate",
+      "lines": 20
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "data/audit/audit_report_20260515T172330Z.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "data/audit/audit_report_20260515T172550Z.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "data/mock_article.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 1
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "data/reports/PRODUCTION_AUTONOMOUS_OPERATION_REPORT.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "data/reports/PRODUCTION_TRAINING_REPORT.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/AGENTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 421
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/ARCHITECTURE.md",
+      "category": "current-guidance-candidate",
+      "lines": 162
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/CHANGELOG.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 96
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/EDITORIAL_MODES.md",
+      "category": "current-guidance-candidate",
+      "lines": 77
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/INDEX.md",
+      "category": "current-guidance-candidate",
+      "lines": 110
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/PIPELINE_CONTRACTS.md",
+      "category": "current-guidance-candidate",
+      "lines": 132
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/PRODUCT_FLOW.md",
+      "category": "current-guidance-candidate",
+      "lines": 205
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/RUNBOOK_LOCAL_DEV.md",
+      "category": "current-guidance-candidate",
+      "lines": 213
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/SOURCE_OF_TRUTH.md",
+      "category": "current-guidance-candidate",
+      "lines": 166
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/SPRINT_B_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 64
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0000-adr-template.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 22
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0001-adapter-pattern-contracts.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 39
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0002-hash-pinned-lockfiles.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0003-two-repo-split-and-schema-versioning.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 76
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0004-curated-enrichment-registry-spike.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 237
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0005-completed-is-scoring-state-not-publication.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 85
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0006-durable-workflow-lifecycle-state.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 144
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 105
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 74
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/api_examples.md",
+      "category": "current-guidance-candidate",
+      "lines": 107
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/archive/s1_refactor/S1C_AUDIT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 85
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/archive/s1_refactor/historical_walkthrough.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 48
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/2026-04-source-of-truth-audit.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 94
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/2026-08-plans-rejected-findings.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 42
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A-1_Context_Pack.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 121
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A0_Site_Structure.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A0_Structure_Modularity.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A1_Correctness_Report.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A1_Site_Correctness.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 19
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A2_Quick_Scan.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 30
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A3_Data_AI.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 27
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A4a_Engineering_Quality.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A4a_Site_Quality.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A4b_Site_UX_Accessibility.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 16
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A5_Ops_DevEx.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/A6_Release_Change_Safety.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 43
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/Audit_Backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/Audit_Master_Plan.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 63
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/Findings_Ledger.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 51
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/OLLAMA_MODEL_CONCORDANCE_AUDIT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 162
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/remediation/README.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/remediation/backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 321
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/remediation/plan.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 151
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/remediation/test-plan.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 64
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/audits/replay_smoke_seam.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 17
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/ci.md",
+      "category": "current-guidance-candidate",
+      "lines": 128
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/collector_runbook.md",
+      "category": "current-guidance-candidate",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/common_output_format.md",
+      "category": "current-guidance-candidate",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/config_fields.md",
+      "category": "current-guidance-candidate",
+      "lines": 167
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/contracts_inventory.md",
+      "category": "current-guidance-candidate",
+      "lines": 52
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/database_deployment.md",
+      "category": "current-guidance-candidate",
+      "lines": 208
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/BACKLOG.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 15
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/QUALITY.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 91
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/QUALITY_BASELINE.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 47
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/REFACTOR_PLAN.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 83
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/STATIC_ANALYSIS.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 21
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/TEST_GAPS.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 31
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/pr_plan.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 18
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/dev/source-of-truth-backlog.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 53
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/editorial_quality_system.md",
+      "category": "current-guidance-candidate",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/faq.md",
+      "category": "current-guidance-candidate",
+      "lines": 52
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/fixtures.md",
+      "category": "current-guidance-candidate",
+      "lines": 57
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/operations.md",
+      "category": "current-guidance-candidate",
+      "lines": 69
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/ops/RUNBOOK.md",
+      "category": "current-guidance-candidate",
+      "lines": 19
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/performance_baselines.md",
+      "category": "current-guidance-candidate",
+      "lines": 36
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/placeholder_policy.md",
+      "category": "current-guidance-candidate",
+      "lines": 101
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/prompts/5_new_features.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 148
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/prompts/quickest5.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 157
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/refinery_stage3_push_collision_fix.md",
+      "category": "current-guidance-candidate",
+      "lines": 32
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/release-checklist.md",
+      "category": "current-guidance-candidate",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/release_notes.md",
+      "category": "current-guidance-candidate",
+      "lines": 4
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/reports/AUDIT_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/reports/DEDUPLICATION_REPORT.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 67
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/runbook.md",
+      "category": "current-guidance-candidate",
+      "lines": 83
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/runbooks/healthcheck.md",
+      "category": "current-guidance-candidate",
+      "lines": 67
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/security.md",
+      "category": "current-guidance-candidate",
+      "lines": 94
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/security_removal_plan.md",
+      "category": "current-guidance-candidate",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/bulk-article-actions.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 98
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/cluster-master-story.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 47
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/curated-enrichment-registry.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 193
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/enrichment-corpus-labeling-guide.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 131
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/reader-correction-loop.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 107
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/spikes/versioned-publication-feed.md",
+      "category": "historical-proposal-or-decision",
+      "lines": 85
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/strategic_features.md",
+      "category": "current-guidance-candidate",
+      "lines": 116
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/testing.md",
+      "category": "current-guidance-candidate",
+      "lines": 40
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "docs/tools_audit_issues.md",
+      "category": "current-guidance-candidate",
+      "lines": 43
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "news_collector/editorial/prompts/editorial_image_prompt_v1.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 63
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "news_collector/taxonomy/README.md",
+      "category": "current-guidance-candidate",
+      "lines": 51
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "perf/bench.md",
+      "category": "current-guidance-candidate",
+      "lines": 41
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/048-spike-curated-enrichment-registry.md",
+      "category": "plan-or-task-record",
+      "lines": 112
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/048/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 162
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/048/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 147
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-0-baseline/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 718
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-0-baseline/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 84
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-1-trust-gates/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 838
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-1-trust-gates/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2a-v2-failclosed/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 292
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2a-v2-failclosed/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 86
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2b-corpus-cutover/inventory/README.md",
+      "category": "plan-or-task-record",
+      "lines": 120
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2b-corpus-cutover/inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md",
+      "category": "plan-or-task-record",
+      "lines": 776
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2b-corpus-cutover/review/step2-review-outcomes.md",
+      "category": "plan-or-task-record",
+      "lines": 217
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2b-corpus-cutover/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 172
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2b-corpus-cutover/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2c-real-fact-check/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 297
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-2c-real-fact-check/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 124
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3a-durable-schema/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 326
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3a-durable-schema/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 101
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3b-typed-repos/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 370
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3b-typed-repos/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 112
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3c-dual-write/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 398
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-3c-dual-write/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 266
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4a-collection-run-workflow/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 364
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4a-collection-run-workflow/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 111
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4b-source-catalog-workflow/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 267
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4b-source-catalog-workflow/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 72
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4c-publication-run-workflow/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 177
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/phase-4c-publication-run-workflow/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 87
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 836
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/060/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 269
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/061-curation-desk-publish-button/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 75
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/061-curation-desk-publish-button/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 15
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/062-publish-run-reload-suicide/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 68
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/062-publish-run-reload-suicide/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 6
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/063-headline-stage-failopen/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 57
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/063-headline-stage-failopen/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 9
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/064-integer-stage-numbers/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/064-integer-stage-numbers/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 8
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/065-readability-gates/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 60
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/065-readability-gates/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 9
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/066-quality-review-loop/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 53
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/066-quality-review-loop/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 19
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/067-uncertainty-counterweight/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 61
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/067-uncertainty-counterweight/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 14
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/068-export-diversity-caps/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 47
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/068-export-diversity-caps/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/069-interrupted-attempt-stages/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 36
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/069-interrupted-attempt-stages/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 4
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/070-counterweight-stakes/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/070-counterweight-stakes/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 6
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/071-export-identity-guard/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/071-export-identity-guard/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 8
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/073-poisoned-export-commit/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/074-publish-dryrun-removal/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 37
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/074-publish-dryrun-removal/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/075-backfill-uncertainty-notes/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/075-backfill-uncertainty-notes/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 5
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/076-quality-signals-critic-auditor/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 40
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/076-quality-signals-critic-auditor/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 10
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/077-preserve-export-id/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 39
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/077-preserve-export-id/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/078-startup-less-lease-recovery/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 43
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/078-startup-less-lease-recovery/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 11
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/079-codex-p2-root-fixes/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/079-codex-p2-root-fixes/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 8
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/00-evidence.md",
+      "category": "plan-or-task-record",
+      "lines": 82
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/01-stateful-workflows.md",
+      "category": "plan-or-task-record",
+      "lines": 115
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/02-admin-contracts.md",
+      "category": "plan-or-task-record",
+      "lines": 160
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/03-editorial-evaluation.md",
+      "category": "plan-or-task-record",
+      "lines": 228
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/04-verification-and-deferred.md",
+      "category": "plan-or-task-record",
+      "lines": 57
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 131
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/tests/README.md",
+      "category": "plan-or-task-record",
+      "lines": 23
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/tests/planning-results.md",
+      "category": "plan-or-task-record",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/080/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 54
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/081/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 51
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/081/tests/results.md",
+      "category": "plan-or-task-record",
+      "lines": 6
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/081/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 9
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/README.md",
+      "category": "plan-or-task-record",
+      "lines": 201
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/001-externalize-committed-secrets.md",
+      "category": "plan-or-task-record",
+      "lines": 157
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/002-publication-identity-deterministic-recovery-date.md",
+      "category": "plan-or-task-record",
+      "lines": 147
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/003-council-exact-approval-match.md",
+      "category": "plan-or-task-record",
+      "lines": 140
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/004-heuristic-scorer-tests.md",
+      "category": "plan-or-task-record",
+      "lines": 140
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/005-scorelog-latest-index.md",
+      "category": "plan-or-task-record",
+      "lines": 200
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/006-fix-precommit-mypy-paths.md",
+      "category": "plan-or-task-record",
+      "lines": 133
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/007-remove-redundant-setup-py.md",
+      "category": "plan-or-task-record",
+      "lines": 146
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/008-validation-loop-persist-check.md",
+      "category": "plan-or-task-record",
+      "lines": 183
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/009-security-hardening-prompt-injection-and-ssrf.md",
+      "category": "plan-or-task-record",
+      "lines": 185
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/010-cluster-master-story-api-spike.md",
+      "category": "plan-or-task-record",
+      "lines": 121
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/011-ci-gates-fail-closed.md",
+      "category": "plan-or-task-record",
+      "lines": 207
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/012-refinery-auth-constant-time.md",
+      "category": "plan-or-task-record",
+      "lines": 152
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/013-operational-scripts-report-failure.md",
+      "category": "plan-or-task-record",
+      "lines": 220
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/014-refinery-source-editor-and-render-robustness.md",
+      "category": "plan-or-task-record",
+      "lines": 207
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/015-spike-enrichment-economics-dashboard.md",
+      "category": "plan-or-task-record",
+      "lines": 100
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/016-spike-blacklist-lifecycle-ui.md",
+      "category": "plan-or-task-record",
+      "lines": 114
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/017-spike-bulk-article-actions.md",
+      "category": "plan-or-task-record",
+      "lines": 108
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/018-gate-entire-refinery-surface.md",
+      "category": "plan-or-task-record",
+      "lines": 96
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/019-remove-tracked-virtualenv.md",
+      "category": "plan-or-task-record",
+      "lines": 90
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/020-enforce-cross-repo-schema-parity.md",
+      "category": "plan-or-task-record",
+      "lines": 87
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/021-rebuild-publication-callback-contract.md",
+      "category": "plan-or-task-record",
+      "lines": 109
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/021/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 444
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/021/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 49
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/022-block-executable-published-content.md",
+      "category": "plan-or-task-record",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/023-connect-and-harden-report-pipeline.md",
+      "category": "plan-or-task-record",
+      "lines": 107
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/023/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 158
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/023/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 47
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/024-canonicalize-backend-dependencies.md",
+      "category": "plan-or-task-record",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/025-refresh-backend-security-locks.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/026-pin-github-actions.md",
+      "category": "plan-or-task-record",
+      "lines": 88
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/027-complete-stage4-wiring-and-cache.md",
+      "category": "plan-or-task-record",
+      "lines": 92
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/028-enforce-v2-editorial-contract.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/029-fix-backend-coverage-ratchet.md",
+      "category": "plan-or-task-record",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/030-lock-developer-toolchains.md",
+      "category": "plan-or-task-record",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/031-enforce-representative-frontend-tests.md",
+      "category": "plan-or-task-record",
+      "lines": 98
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/031/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 403
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/031/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 151
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/032-migrate-frontend-dependencies.md",
+      "category": "plan-or-task-record",
+      "lines": 106
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/032/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 113
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/032/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 68
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/033-make-config-refresh-live.md",
+      "category": "plan-or-task-record",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/033/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 141
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/033/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 54
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/034-centralize-article-admission.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/034/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 115
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/034/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 74
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/035-make-astro-scripts-idempotent.md",
+      "category": "plan-or-task-record",
+      "lines": 88
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/035/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 79
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/035/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 41
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/036-bound-scoring-work.md",
+      "category": "plan-or-task-record",
+      "lines": 104
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/036/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 327
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/036/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 170
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/037-batch-article-persistence.md",
+      "category": "plan-or-task-record",
+      "lines": 103
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/037/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 169
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/037/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 131
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/038-decouple-telemetry-and-refinery-reruns.md",
+      "category": "plan-or-task-record",
+      "lines": 105
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/038/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 330
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/038/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 103
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/039-prebuild-browser-search-index.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/039/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 96
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/039/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 46
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/040-account-for-dispatcher-failures.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/040/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 259
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/040/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 85
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/041-add-whole-workspace-verification.md",
+      "category": "plan-or-task-record",
+      "lines": 107
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/041/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 92
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/041/tests/baselines/check-matrix.md",
+      "category": "plan-or-task-record",
+      "lines": 74
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/041/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 35
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/042-remove-frontend-runtime-artifacts.md",
+      "category": "plan-or-task-record",
+      "lines": 95
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/043-repair-active-documentation.md",
+      "category": "plan-or-task-record",
+      "lines": 101
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/043/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 163
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/043/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/044-unify-pagination-and-prune-dead-components.md",
+      "category": "plan-or-task-record",
+      "lines": 105
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/044/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 34
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/044/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 30
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/045-measure-and-optimize-ranked-api-query.md",
+      "category": "plan-or-task-record",
+      "lines": 106
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/045/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 84
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/045/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 32
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/046-prove-and-automate-production-migrations.md",
+      "category": "plan-or-task-record",
+      "lines": 114
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/046/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 205
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/046/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 67
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/047-spike-reader-correction-loop.md",
+      "category": "plan-or-task-record",
+      "lines": 112
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/047/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 97
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/049-spike-versioned-publication-feed.md",
+      "category": "plan-or-task-record",
+      "lines": 114
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/049/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 94
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/050-candidate-max-age-gate.md",
+      "category": "plan-or-task-record",
+      "lines": 93
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/050/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 143
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/050/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 56
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/051-provider-degradation-failover.md",
+      "category": "plan-or-task-record",
+      "lines": 66
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/051/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 187
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/051/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 52
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/053-nvidia-degradation-hardening.md",
+      "category": "plan-or-task-record",
+      "lines": 328
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/054-isolate-test-logging-sink.md",
+      "category": "plan-or-task-record",
+      "lines": 156
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/055-bridge-factory-logging-to-loguru.md",
+      "category": "plan-or-task-record",
+      "lines": 165
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/056-collector-regression-sweep.md",
+      "category": "plan-or-task-record",
+      "lines": 109
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/057-stop-rebuilding-wheels.md",
+      "category": "plan-or-task-record",
+      "lines": 217
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/058-deterministic-publication-date/spec.md",
+      "category": "plan-or-task-record",
+      "lines": 94
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "plans/archive/058-deterministic-publication-date/todo.md",
+      "category": "plan-or-task-record",
+      "lines": 48
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "quality_gate/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 67
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "quality_gate/snapshots/01_frog/output.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 25
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "quality_gate/snapshots/02_printing/output.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 40
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "quality_gate/snapshots/03_battery/output.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 38
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "scripts/debugging/README.md",
+      "category": "current-guidance-candidate",
+      "lines": 9
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-admin-api-surface.md",
+      "category": "plan-or-task-record",
+      "lines": 143
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-flaky-tests.md",
+      "category": "plan-or-task-record",
+      "lines": 119
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-fly-webhook-hosting.md",
+      "category": "plan-or-task-record",
+      "lines": 54
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-llm-health-weights-fix.md",
+      "category": "plan-or-task-record",
+      "lines": 99
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-logs-warnings-concurrency.md",
+      "category": "plan-or-task-record",
+      "lines": 65
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-nvidia-routing-fix.md",
+      "category": "plan-or-task-record",
+      "lines": 176
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-plans-ledger-hygiene.md",
+      "category": "plan-or-task-record",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-refinery-gui-phase3.md",
+      "category": "plan-or-task-record",
+      "lines": 100
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-refinery-gui-phase4-addendum-source-editor.md",
+      "category": "plan-or-task-record",
+      "lines": 66
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-refinery-gui-phase4.md",
+      "category": "plan-or-task-record",
+      "lines": 102
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec-refinery-gui.md",
+      "category": "plan-or-task-record",
+      "lines": 205
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "spec.md",
+      "category": "plan-or-task-record",
+      "lines": 431
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/broken/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/make-target/AGENTS.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/make-target/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 5
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/sibling-broken/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/sibling-ok/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/sibling-ok/_sibling/docs/PRODUCT_FLOW.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 1
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/stale-python/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 3
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/stale/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/fixtures/doc-drift/valid/README.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 7
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "tests/placeholder_audit/fixtures/doc_page.md",
+      "category": "fixture-runtime-or-generated-content",
+      "lines": 11
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-admin-api-surface.md",
+      "category": "plan-or-task-record",
+      "lines": 50
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-flaky-tests.md",
+      "category": "plan-or-task-record",
+      "lines": 24
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-fly-webhook-hosting.md",
+      "category": "plan-or-task-record",
+      "lines": 28
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-llm-health-weights-fix.md",
+      "category": "plan-or-task-record",
+      "lines": 43
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-logs-warnings-concurrency.md",
+      "category": "plan-or-task-record",
+      "lines": 44
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-nvidia-routing-fix.md",
+      "category": "plan-or-task-record",
+      "lines": 54
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-plans-ledger-hygiene.md",
+      "category": "plan-or-task-record",
+      "lines": 11
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-refinery-gui-phase3.md",
+      "category": "plan-or-task-record",
+      "lines": 45
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-refinery-gui-phase4-addendum-source-editor.md",
+      "category": "plan-or-task-record",
+      "lines": 33
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-refinery-gui-phase4.md",
+      "category": "plan-or-task-record",
+      "lines": 42
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo-refinery-gui.md",
+      "category": "plan-or-task-record",
+      "lines": 46
+    },
+    {
+      "repo": "noticiencias_news_collector",
+      "path": "todo.md",
+      "category": "plan-or-task-record",
+      "lines": 591
+    }
+  ]
+}

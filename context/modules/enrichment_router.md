@@ -1,18 +1,12 @@
-Module: news_collector/enrichment/router.py
-Role: Decides and executes the appropriate enrichment strategy for a given article.
-Inputs:
-- candidate: Dict[str, Any]
-- source_config: Dict[str, Any]
-- source_id: str
-Outputs:
-- Dict[str, Any]
-- EnrichmentStrategyRouter
-Side effects:
-- File I/O
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- rss_collector
+# enrichment_router
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/enrichment/router.py](../../news_collector/enrichment/router.py)
+
+Decides and executes the appropriate enrichment strategy for a given article.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

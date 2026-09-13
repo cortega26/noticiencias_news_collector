@@ -20,7 +20,7 @@
 ### Baseline validation commands
 
 ```bash
-make lint       # black --check + ruff (incl. isort rules) + Makefile-tab + Streamlit-deprecation checks
+make lint       # black --check + ruff (isort runs separately in pre-commit) + Makefile-tab + Streamlit-deprecation checks
 make type       # mypy (incremental: 3 files only) + pytest coverage run + coverage ratchet gate
 make test       # unit suite (excludes slow tests/e2e_pipeline; use make test-all for the full suite)
 ```
@@ -48,7 +48,7 @@ Additional gates by change type:
 |---|---|
 | First-time setup | `make bootstrap` (Python 3.13; hash-pinned installs from `requirements.lock`) |
 | Validate config | `make config-validate` |
-| Run collector (no side effects) | `python scripts/run_collector.py --dry-run` |
+| Run collector dry-run (see runbook limits) | `python scripts/run_collector.py --dry-run` |
 | Launch Refinery admin (current, Astro) | `make admin` (runs the serving API `:8000` + GUI `:4321` together, one Ctrl+C stops both; login gate skipped in dev). Split form: `make serve` + `make admin-dev`. |
 | Launch Refinery admin (legacy, Streamlit) | `make refinery` (isolated `.venv-refinery`; runs migrations first) |
 | Run full quality gate | `make quality` |
@@ -92,7 +92,7 @@ noticiencias_news_collector/
 │   ├── editorial/       # classification, policy, council, AI editor
 │   ├── reranker/        # final ranking before export
 │   ├── logic/workflows/ # refinery engine, PR orchestration, publication
-│   ├── serving/         # FastAPI read layer
+│   ├── serving/         # FastAPI reads + authenticated workflow dispatch
 │   ├── monitoring/      # health checks, detection, canary, reporting
 │   ├── components/      # editorial (AI editor) + publishing (GitHub publisher)
 │   └── utils/           # narrow helpers only (no mixed concerns)
