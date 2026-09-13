@@ -4,11 +4,22 @@ The placeholder audit enforces structured TODO/FIXME/TBD markers so that each op
 
 ## Allowed Markers
 
-| Marker | Example | Notes |
-| --- | --- | --- |
-| `TODO` | `# TODO[owner=@alice; due=2025-10-31; issue=#123]: handle retries` | Use in production code comments. |
-| `FIXME` | `# FIXME[owner=@bob; due=2025-11-15; issue=https://tracker/ISSUE-9]: replace stub` | Flag known defects. |
-| `TBD` | `` `TBD[issue=#123]: outline future CLI` `` | Docs only; must link to an issue or live inside a fenced block. |
+| Marker | Notes |
+| --- | --- |
+| `TODO` | Use in production code comments. Requires `owner`, `due`, and `issue`. |
+| `FIXME` | Flag known defects. Requires `owner`, `due`, and `issue`. |
+| `TBD` | Docs only; must link to an issue or live inside a fenced block. |
+
+### Canonical examples
+
+The samples below live inside a fenced block with linked issues, so the audit
+itself skips them (see "Markdown fenced code blocks" under Blocking Rules):
+
+```markdown
+# TODO[owner=@alice; due=2027-10-31; issue=#123]: handle retries
+# FIXME[owner=@bob; due=2027-11-15; issue=https://tracker/ISSUE-9]: replace stub
+TBD[issue=#123]: outline future CLI
+```
 
 ## Blocking Rules
 
@@ -70,6 +81,19 @@ The checker reads `.placeholder-audit.yaml`. Defaults can be overridden if new c
 | `block_severities` | list[str] | `['HIGH']` | Yes | Severities that fail CI. |
 | `delta_mode` | bool | `true` | Yes | Enable net-new HIGH gating. |
 | `pr_halo_lines` | int | `10` | Yes | Halo lines to include around diff hunks. |
+
+## Self-audit scope
+
+The audit's own test data is excluded from scans in `.placeholder-audit.yaml`:
+
+* `tests/placeholder_audit/fixtures/**` — intentionally malformed markers
+  asserted by unit tests.
+* `tests/placeholder_audit/test_placeholder_audit.py` — audit-pattern examples
+  embedded in string literals asserted by unit tests.
+
+The examples in this document stay inside fenced blocks with linked issues
+instead of exclusions, so the documented syntax remains visible to readers
+while the audit skips it by rule.
 
 ## CLI Usage
 
