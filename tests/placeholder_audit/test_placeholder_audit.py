@@ -154,7 +154,7 @@ def test_scan_files_flags_net_new_high(
     )
     base_content = path.read_text(encoding="utf-8").replace(
         "# TODO[owner=@alice; issue=#123]: add retries",
-        "# TODO[owner=@alice; due=2025-12-31; issue=#123]: add retries",
+        "# TODO[owner=@alice; due=2027-12-31; issue=#123]: add retries",
     )
     monkeypatch.setattr(
         "tools.placeholder_audit.compute_age_days",

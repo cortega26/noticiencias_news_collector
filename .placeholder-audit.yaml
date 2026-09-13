@@ -9,6 +9,13 @@ exclude:
   - "build/**"
   - "**/*.min.*"
   - "**/generated/**"
+  # Self-audit exclusions: the paths below contain audit-pattern examples as
+  # test data, not real placeholders. tests/placeholder_audit/fixtures/** holds
+  # intentionally malformed markers asserted by unit tests, and
+  # test_placeholder_audit.py embeds TODO/FIXME strings inside literals that the
+  # same tests assert on. Scanning them can only produce false positives.
+  - "tests/placeholder_audit/fixtures/**"
+  - "tests/placeholder_audit/test_placeholder_audit.py"
 contexts:
   prod_code: ["**/*.py"]
   tests: ["tests/**", "examples/**"]
