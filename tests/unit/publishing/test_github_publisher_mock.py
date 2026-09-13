@@ -1,6 +1,7 @@
+import os
 import types
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import git
 import pytest
@@ -427,3 +428,199 @@ def test_askpass_generation(publisher):
         script_path = publisher._ensure_askpass_script()
         assert script_path is not None
         mock_write.assert_called_once()
+
+
+def _no_token_publisher():
+    with patch.dict(os.environ, {"GITHUB_TOKEN": ""}):
+        return GitHubPublisher(github_token="")
+
+
+def test_strip_credentials_removes_embedded_token(publisher):
+    assert (
+        publisher._strip_credentials("https://user:pass@github.com/org/repo.git")
+        == "https://github.com/org/repo.git"
+    )
+    plain = "https://github.com/org/repo.git"
+    assert publisher._strip_credentials(plain) == plain
+
+
+def test_safe_repo_url_without_token_returns_url_unchanged():
+    publisher = _no_token_publisher()
+    clean = "https://github.com/org/repo.git"
+    assert publisher._safe_repo_url(clean) == clean
+
+
+def test_safe_repo_url_non_github_host_returns_url_unchanged(publisher):
+    other = "https://gitlab.example.com/org/repo.git"
+    assert publisher._safe_repo_url(other) == other
+
+
+def test_ensure_askpass_script_without_token_raises():
+    publisher = _no_token_publisher()
+    with pytest.raises(RuntimeError, match="GitHub token required"):
+        publisher._ensure_askpass_script()
+
+
+def test_ensure_askpass_script_returns_cached_path(publisher, tmp_path):
+    cached = tmp_path / "askpass.sh"
+    cached.write_text("#!/bin/sh\n")
+    publisher._askpass_path = cached
+
+    with patch("pathlib.Path.write_text") as mock_write:
+        assert publisher._ensure_askpass_script() == cached
+        mock_write.assert_not_called()
+
+
+def test_ensure_askpass_script_windows_content(publisher, tmp_path):
+    from pathlib import PosixPath
+
+    def _posix_path(*args, **kwargs):
+        return PosixPath(*args, **kwargs)
+
+    with (
+        patch.object(os, "name", "nt"),
+        patch(
+            "news_collector.components.publishing.github_publisher.Path",
+            side_effect=_posix_path,
+        ),
+        patch("tempfile.gettempdir", return_value=str(tmp_path)),
+        patch("pathlib.Path.write_text") as mock_write,
+    ):
+        script_path = publisher._ensure_askpass_script()
+
+    assert str(script_path).endswith(".cmd")
+    written = mock_write.call_args[0][0]
+    assert "@echo off" in written
+
+
+def test_ensure_askpass_script_posix_writes_executable(publisher, tmp_path):
+    import stat
+
+    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+        script_path = publisher._ensure_askpass_script()
+
+    assert script_path.exists()
+    assert "printf" in script_path.read_text(encoding="utf-8")
+    assert stat.S_IMODE(script_path.stat().st_mode) == 0o700
+
+
+def test_auth_env_without_token_returns_empty():
+    assert _no_token_publisher()._auth_env() == {}
+
+
+def test_get_conflict_files_returns_empty_on_git_error(publisher, mock_repo):
+    mock_repo.git.diff.side_effect = git.GitCommandError("diff", 1)
+    assert publisher._get_conflict_files(mock_repo) == []
+
+
+def test_get_git_state_markers_returns_empty_when_git_dir_unreadable(publisher):
+    class BrokenGitDirRepo:
+        git = MagicMock()
+
+        @property
+        def git_dir(self):
+            raise Exception("unreadable")
+
+    assert publisher._get_git_state_markers(BrokenGitDirRepo()) == []
+
+
+def test_get_git_state_markers_detects_marker_file(publisher, tmp_path):
+    (tmp_path / "MERGE_HEAD").write_text("abc123")
+    repo = MagicMock()
+    repo.git_dir = str(tmp_path)
+    assert publisher._get_git_state_markers(repo) == ["MERGE_HEAD"]
+
+
+def test_ensure_clean_exit_state_detached_head_recovers(publisher):
+    class DetachedHeadRepo:
+        git = MagicMock()
+        git_dir = "/tmp/non-existent-git-dir"
+
+        @property
+        def active_branch(self):
+            raise Exception("detached HEAD")
+
+        @staticmethod
+        def is_dirty(untracked_files=False):
+            return False
+
+    repo = DetachedHeadRepo()
+    publisher._ensure_clean_exit_state(repo, "feat/branch", None)
+
+    repo.git.checkout.assert_called_once_with("feat/branch", env=None)
+
+
+def test_ensure_clean_exit_state_falls_back_to_base_branch(publisher, mock_repo):
+    mock_repo.active_branch.name = "main"
+    mock_repo.is_dirty.return_value = False
+    mock_repo.git.checkout.side_effect = [
+        git.GitCommandError("checkout", 1),
+        None,
+    ]
+
+    publisher._ensure_clean_exit_state(mock_repo, "feat/branch", None)
+
+    assert mock_repo.git.checkout.call_args_list == [
+        call("feat/branch", env=None),
+        call("main", env=None),
+    ]
+
+
+def test_ensure_clean_exit_state_raises_on_lingering_markers(publisher, tmp_path):
+    (tmp_path / "MERGE_HEAD").write_text("abc123")
+    repo = MagicMock()
+    repo.git_dir = str(tmp_path)
+    repo.git = MagicMock()
+    repo.active_branch = MagicMock()
+    repo.active_branch.name = "feat/branch"
+    repo.is_dirty.return_value = False
+
+    with pytest.raises(RuntimeError, match="in-progress git state"):
+        publisher._ensure_clean_exit_state(repo, "feat/branch", None)
+
+
+def test_cleanup_on_failure_reports_cleanup_error(publisher, mock_repo):
+    with patch.object(
+        publisher,
+        "_ensure_clean_exit_state",
+        side_effect=RuntimeError("cleanup boom"),
+    ):
+        with pytest.raises(RuntimeError, match="Cleanup verification failed"):
+            with publisher._cleanup_on_failure(
+                repo=mock_repo, branch_name="feat/b", env=None, operation="Push"
+            ):
+                raise ValueError("original failure")
+
+
+def test_cleanup_dir_removes_existing_directory(publisher, tmp_path):
+    target = tmp_path / "old-clone"
+    target.mkdir()
+    (target / "file.txt").write_text("data")
+
+    publisher._cleanup_dir(target)
+
+    assert not target.exists()
+
+
+def test_create_branch_without_explicit_name_uses_random_suffix(publisher, mock_repo):
+    mock_repo.refs = [types.SimpleNamespace(name="origin/main")]
+
+    branch = publisher.create_branch(mock_repo, "news/article")
+
+    assert branch.startswith("news/article-")
+    suffix = branch[len("news/article-") :]
+    assert len(suffix) == 8
+    int(suffix, 16)
+
+
+def test_create_pull_request_failure_raises(publisher):
+    with patch("requests.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_resp.text = "server exploded"
+        mock_post.return_value = mock_resp
+
+        with pytest.raises(Exception, match="PR Creation failed"):
+            publisher.create_pull_request(
+                "https://github.com/org/repo.git", "feat/b", "Title", "Body"
+            )

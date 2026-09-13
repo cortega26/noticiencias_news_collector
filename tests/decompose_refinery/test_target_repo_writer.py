@@ -503,3 +503,66 @@ class TestSocialStamping:
         # Every generated field survives the round trip with its value and type.
         assert written == generated_fields
         assert text.endswith("\n\nCuerpo nuevo.")
+
+
+# ---------------------------------------------------------------------------
+# Coverage gaps: I/O failure branches and frontmatter edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageGaps:
+    def test_write_article_unreadable_previous_file_raises_value_error(
+        self, writer, posts_dir, target_dir
+    ):
+        previous = posts_dir / "2024-01-25-test.md"
+        previous.write_text("---\ntitle: Old\n---\nBody", encoding="utf-8")
+
+        with patch.object(Path, "read_text", side_effect=OSError("denied")):
+            with pytest.raises(ValueError, match="Cannot read previous target file"):
+                writer.write_article(
+                    posts_dir=posts_dir,
+                    output_filename="2024-01-25-test.md",
+                    content="---\ntitle: New\n---\nBody",
+                    article_id="1",
+                    target_dir=target_dir,
+                )
+
+    def test_load_manifest_invalid_json_resets_cache(self, writer, posts_dir):
+        (posts_dir / MANIFEST_FILENAME).write_text("{invalid json", encoding="utf-8")
+
+        writer.load_manifest(posts_dir)
+
+        assert writer._manifest_cache == {}
+        assert writer._manifest_loaded is True
+
+    def test_update_manifest_persist_failure_keeps_memory_cache(
+        self, writer, posts_dir
+    ):
+        with patch("os.replace", side_effect=OSError("disk full")):
+            writer.update_manifest(posts_dir, "42", "2024-01-25-test.md")
+
+        assert writer._manifest_cache == {"42": "2024-01-25-test.md"}
+        assert not (posts_dir / MANIFEST_FILENAME).exists()
+
+    def test_find_existing_file_skips_undecodable_files(self, writer, posts_dir):
+        (posts_dir / "bad.md").write_bytes(b"\xff\xd8\xff\xe0\x00garbage")
+
+        assert writer.find_existing_file(posts_dir, "nope") is None
+
+    def test_find_existing_file_scan_failure_returns_none(self, writer, posts_dir):
+        with patch.object(Path, "glob", side_effect=Exception("boom")):
+            assert writer.find_existing_file(posts_dir, "nope") is None
+
+    def test_frontmatter_match_rejects_missing_opening_marker(self):
+        assert (
+            TargetRepoWriter._frontmatter_refinery_id_matches("plain body", "1")
+            is False
+        )
+
+    def test_frontmatter_match_rejects_yaml_error(self):
+        content = "---\nfoo: [unclosed\n---\nbody text\n"
+        assert TargetRepoWriter._frontmatter_refinery_id_matches(content, "1") is False
+
+    def test_frontmatter_match_rejects_non_dict_frontmatter(self):
+        content = "---\n- just\n- a\n- list\n---\nbody\n"
+        assert TargetRepoWriter._frontmatter_refinery_id_matches(content, "1") is False
