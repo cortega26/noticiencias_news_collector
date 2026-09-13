@@ -54,7 +54,7 @@ class ScholarlyMetadataEnricher:
         """
         try:
             # "mailto" in UA is polite for Crossref for faster rate limits
-            resp = self.session.get(f"{self.CROSSREF_API_URL}{doi}")
+            resp = self.session.get(f"{self.CROSSREF_API_URL}{doi}", timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 message = data.get("message", {})

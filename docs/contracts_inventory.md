@@ -17,22 +17,23 @@ implementation state.  For contract shapes and failure semantics, see
 ### 3. Scoring Input/Output
 
 - **Input**: `ScoringInputModel` (`contracts/scoring.py`)
-- **Output**: `ScoringRequestModel` (`contracts/scoring.py`)
+- **Persistence payload**: `ScoringRequestModel` (`contracts/scoring.py`)
 - **Status**: Enforced.  System uses `adapt_to_scoring_input`.
 
 ### 4. Export Payload
 
 - **Contract**: `ExportContractV2` (`contracts/export.py`)
 - **Status**: Enforced.  System uses `adapt_article_to_export`.  `schema_version: 2` is
-  the preferred path; legacy `schema_version: 1` artifacts are still tolerated by
-  `apps/refinery/main.py` with logged warnings.  New output must use V2.
+  the preferred contract; the CLI `--export-json` currently writes V1, tolerated by
+  `apps/refinery/main.py` with compatibility handling. New contract work should use V2;
+  do not claim that every current producer emits it.
 
 ### 5. Frontend Publication
 
 - **Contract**: `AstroPost` (`contracts/frontend_schema.py`)
-- **Status**: Enforced.  Published MDX frontmatter must satisfy `AstroPost`.  Field-level
-  parity with `../noticiencias/src/content.config.ts` is verified by
-  `tests/test_contracts_sync.py::test_frontend_schema_field_parity` on every CI run.
+- **Status**: Enforced.  Published MDX frontmatter must satisfy `AstroPost`.  The Python parity test compares field names; the frontend checker invoked
+  by backend CI also checks types, constraints and optionality. See
+  `docs/PIPELINE_CONTRACTS.md` for ownership and intentional divergences.
 
 ### 6. Scoring/Validation Adapters
 

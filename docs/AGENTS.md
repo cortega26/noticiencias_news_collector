@@ -113,7 +113,7 @@ Rules:
 
 Allowed exception:
 
-- `serving/` may perform read-only query composition against storage models because it is an edge adapter. Do not add write workflows there.
+- `serving/` may compose read-only queries and authenticate/validate mutation requests before dispatching to existing workflows or storage facades. Keep mutation policy and database-write implementation outside the HTTP adapter.
 
 ### LAW-B5: Canonical publication identity is deterministic and idempotent
 
@@ -271,13 +271,14 @@ Must not:
 
 Must:
 
-- expose a stable read-oriented HTTP interface
+- expose stable public reads and authenticated admin/webhook interfaces
+- dispatch mutations to existing workflows or storage facades
 - validate inputs explicitly
 - paginate deterministically
 
 Must not:
 
-- mutate editorial state through convenience endpoints
+- implement editorial state transitions or direct database writes in endpoint handlers
 - replicate workflow logic already present elsewhere
 
 ## 4) Testing Is Architectural Evidence
@@ -352,7 +353,7 @@ Reject these changes unless the diff includes a concrete justification:
 - New `manager`, `service`, or `factory` classes with no clear lifecycle or composition responsibility.
 - New cross-package dict payloads instead of typed boundaries.
 - Business logic added to `system/` because it was "already coordinating things".
-- Database writes from serving or utility code.
+- Direct database writes from serving or utility code; authenticated dispatch to an existing mutation workflow is allowed.
 - Transport/retry/env logic hidden inside rule modules.
 - One-off helpers moved to `utils/` for discoverability.
 - Generic plugin frameworks created before there are real plugins.

@@ -1,33 +1,12 @@
-Module: news_collector/utils/logger.py
-Role: Configures the robust and elegant application-wide logging system.
-Inputs:
-- config: Optional[Dict[str, Any]]
-- config_summary: Optional[Dict[str, Any]]
-- context: Optional[Dict[str, Any]]
-- context: str
-- error: Exception
-- func
-- logger_instance
-- metrics: Dict[str, Any]
-Outputs:
-- Any
-- CollectionSessionLogger
-- NewsCollectorLogger
-Side effects:
-- File I/O
-- Logging
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- Exception
-- ImportError
-Used by:
-- policy
-- ai_editor
-- auditor
-- github_publisher
-- rss_collector
-- base_collector
-- html_collector
-- provider
+# utils_logger
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/utils/logger.py](../../news_collector/utils/logger.py)
+
+Configures application logging and contextual logging helpers.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

@@ -1,6 +1,8 @@
-# Decisions Log
+# Context documentation decision
 
-Decision: Introduce INVARIANTS.md as formal architectural invariant registry
-Rationale: enforce deterministic agent behavior and prevent invariant drift
-Authority: subordinate to SOURCE_OF_TRUTH.md (absolute) and docs/AGENTS.md (secondary)
-Impact: major improvement in agent reliability and token efficiency
+The context directory is a compact navigation layer derived from code and
+higher-authority documentation. The original notes called it a formal invariant
+registry; current authority is explicitly defined by `docs/SOURCE_OF_TRUTH.md`.
+Use `docs/AGENTS.md` for engineering law and `context/INVARIANTS.md` only as
+its summary. This directory does not independently guarantee completeness,
+determinism or agent reliability.

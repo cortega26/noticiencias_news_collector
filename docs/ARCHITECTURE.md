@@ -16,9 +16,11 @@ It is not a target-state manifesto.
 - `news_collector/contracts/`
   - Pydantic models and adapter functions for export, scoring, validation, frontend publication, system payloads, and image briefs
 - `news_collector/serving/`
-  - FastAPI read surface
+  - public reads, authenticated admin dispatch and frontend callbacks
+- `apps/admin/`
+  - current Astro admin UI, launched with `make admin`
 - `apps/refinery/`
-  - Streamlit UI and local published-content inspection helpers
+  - legacy Streamlit UI and local published-content inspection helpers
 
 ### Ingestion And External I/O
 
@@ -70,7 +72,7 @@ Specific rules:
 - `system/` should coordinate, not author business rules
 - `contracts/` should validate and map, not perform I/O
 - `storage/` should own writes and DB-specific behavior
-- `serving/` should stay read-oriented
+- `serving/` owns public reads and authenticated dispatch; state transitions stay in workflows/storage
 - `apps/refinery/` should not become an alternate contract-definition layer
 
 ## Current End-To-End Flow
@@ -85,11 +87,12 @@ Specific rules:
 
 ### Refinery And Publication
 
-1. `apps/refinery/main.py` loads export artifacts and supports legacy payload handling.
+1. The Astro admin dispatches publication through the API and `publication_run_workflow.py`; legacy `apps/refinery/main.py` also loads export artifacts.
 2. `news_collector/logic/workflows/refinery_engine.py` coordinates editorial processing, image handling, policy checks, file writing, manifest updates, Git operations, and PR creation.
 3. Publication targets the sibling frontend repo path `src/content/posts/`.
 4. After PR creation, the backend records publication state as `PR_CREATED`.
-5. Optional auditor work runs after PR creation and records audit metadata without changing site publication state.
+5. Optional auditor work runs after PR creation and records audit metadata; pre-PR editorial/fact checks are separate.
+6. Frontend callbacks can complete/reject matching publication attempts; missing IDs do not infer affected articles. See `docs/PIPELINE_CONTRACTS.md`.
 
 ### API Serving
 
@@ -114,7 +117,7 @@ as "reinvented wheels" in future audits.
   `serving/webhook_handler.py`): the frontend deploy has no native "notify
   my backend" hook, so the envelope + bearer auth + `refinery_id` matching
   is a deliberate cross-repo API (plan 021). The envelope is versioned; the
-  auth is constant-time HMAC-style comparison; the frontend secret never
+  auth uses constant-time Bearer-token comparison (not payload HMAC signing); the frontend secret never
   appears in code/logs/docs.
 - **Ranked API query + health tracking** (`serving/api.py`, `diagnostics.py`):
   plan 045 measured and rejected an index (the `coalesce()` ORDER BY is

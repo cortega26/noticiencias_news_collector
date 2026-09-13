@@ -32,8 +32,8 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | API usage examples | [`api_examples.md`](api_examples.md) |
 | Common output format across pipeline stages | [`common_output_format.md`](common_output_format.md) |
 | Contract inventory (all typed boundaries) | [`contracts_inventory.md`](contracts_inventory.md) |
-| Database deployment (SQLite → PostgreSQL) | [`database_deployment.md`](database_deployment.md) |
-| Editorial modes (cognitive, basic, pattern) | [`EDITORIAL_MODES.md`](EDITORIAL_MODES.md) |
+| SQLite deployment, migrations and recovery | [`database_deployment.md`](database_deployment.md) |
+| Editorial policy modes (velocity, standard, strict) | [`EDITORIAL_MODES.md`](EDITORIAL_MODES.md) |
 | Editorial quality system | [`editorial_quality_system.md`](editorial_quality_system.md) |
 | FAQ (common errors and fixes) | [`faq.md`](faq.md) |
 | Fixture management for tests | [`fixtures.md`](fixtures.md) |
@@ -45,24 +45,27 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | Release checklist | [`release-checklist.md`](release-checklist.md) |
 | Release notes | [`release_notes.md`](release_notes.md) |
 | Security policy | [`security.md`](security.md) |
-| Security removal plan | [`security_removal_plan.md`](security_removal_plan.md) |
+| Historical security exception removal plan (expired; see SECURITY.md) | [`security_removal_plan.md`](security_removal_plan.md) |
 | Testing strategy and test taxonomy | [`testing.md`](testing.md) |
-| Tools audit findings | [`tools_audit_issues.md`](tools_audit_issues.md) |
+| Audit-to-issue tool usage | [`tools_audit_issues.md`](tools_audit_issues.md) |
 
 ---
+
+Current delivery status lives in [`../plans/README.md`](../plans/README.md).
+The development reports below are historical snapshots, not current measured baselines.
 
 ## Reference — development
 
 | Topic | Document |
 |---|---|
-| Active development backlog | [`dev/BACKLOG.md`](dev/BACKLOG.md) |
-| Quality baseline and current metrics | [`dev/QUALITY_BASELINE.md`](dev/QUALITY_BASELINE.md) |
+| Historical development backlog | [`dev/BACKLOG.md`](dev/BACKLOG.md) |
+| Historical quality baseline | [`dev/QUALITY_BASELINE.md`](dev/QUALITY_BASELINE.md) |
 | Quality checklist | [`dev/QUALITY.md`](dev/QUALITY.md) |
 | Refactor plan | [`dev/REFACTOR_PLAN.md`](dev/REFACTOR_PLAN.md) |
 | Static analysis findings | [`dev/STATIC_ANALYSIS.md`](dev/STATIC_ANALYSIS.md) |
 | Test gaps | [`dev/TEST_GAPS.md`](dev/TEST_GAPS.md) |
 | PR plan | [`dev/pr_plan.md`](dev/pr_plan.md) |
-| Source-of-truth backlog | [`dev/source-of-truth-backlog.md`](dev/source-of-truth-backlog.md) |
+| Historical source-of-truth backlog | [`dev/source-of-truth-backlog.md`](dev/source-of-truth-backlog.md) |
 
 ---
 

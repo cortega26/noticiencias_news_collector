@@ -1,52 +1,44 @@
 # Troubleshooting FAQ
 
-Cuando la tubería falla, comienza con estos síntomas comunes antes de escalar al on-call.
+## SQLite: database is locked
 
-## Error: `sqlite3.OperationalError: database is locked`
-- **Contexto típico**: ejecuciones paralelas del colector o scripts de replay golpeando la misma base.
-- **Diagnóstico rápido**:
-  - Ejecuta `lsof | grep data/news.db` para confirmar procesos aún abiertos.
-  - Revisa los locks activos con `sqlite3 data/news.db "PRAGMA locking_mode;"`.
-- **Resolución**:
-  - Finaliza procesos huérfanos (`pkill -f run_collector.py`) y vuelve a correr `python run_collector.py --healthcheck`.
-  - Si necesitas concurrencia, cambia a Postgres siguiendo las instrucciones del [Runbook Operacional](runbook.md#operations-runbook).
+Confirmar la ruta efectiva en la configuración y el proceso que mantiene la
+base abierta. Detener el escritor pertinente de forma ordenada; no usar un
+`pkill` global ni borrar la base. Revisar transacciones y ejecuciones activas
+antes de aumentar concurrencia. SQLite sigue siendo la base seleccionada;
+ver [database_deployment.md](database_deployment.md).
 
-## Error: `429 Too Many Requests`
-- **Contexto típico**: configuraciones agresivas en `config/sources.py` o sobrescrituras en `[rate_limiting]` dentro de `config.toml`.
-- **Diagnóstico rápido**:
-  - Consulta los logs estructurados (`event: rate_limit.backoff`) para identificar la fuente.
-  - Ejecuta `python -m scripts.load_test --num-sources 1 --concurrency 1` para observar latencias y reintentos con la fuente problemática.
-- **Resolución**:
-  - Ajusta `domain_overrides` en `[rate_limiting]` (`config.toml`) o los parámetros de la fuente en `config/sources.py`, y reinicia el collector para aplicar los cambios.
-  - Repite la ejecución con `python run_collector.py --dry-run --sources <id>` y verifica que el Runbook no reporte nuevas alertas.
+## Respuestas HTTP 429
 
-## Error: "Configuration validation failed" al guardar desde la GUI
-- **Contexto típico**: valores numéricos o estructuras inválidas capturados por el validador de `noticiencias.config_schema` al presionar **Save**.
-- **Diagnóstico rápido**:
-  - El cuadro de diálogo indica la clave específica (`database.connect_timeout`, etc.).
-  - Ejecuta `python -m noticiencias.config_manager --config ./config.toml --validate` para obtener el detalle completo en consola, incluyendo la capa que originó el valor.
-- **Resolución**:
-  - Corrige el valor en la GUI (asegurando tipos positivos para enteros y JSON válido para listas/tablas) y vuelve a guardar.
-  - Confirma el cambio con `python -m noticiencias.config_manager --config ./config.toml --explain <clave>`; la salida debe mostrar `source: file (.../config.toml)` con el nuevo valor.
+Identificar la fuente y sus respuestas/reintentos en los registros. Revisar
+`[rate_limiting]` y la configuración de esa fuente en `config/`. Mantener el
+backoff y las restricciones del proveedor. Una ejecución focalizada puede
+comprobar conectividad; no demuestra que el backlog se haya procesado.
 
-## Error: Refinery usa un modelo o token distinto al esperado
-- **Contexto típico**: antes existía una configuración paralela en `apps/refinery/.env`, lo que producía drift entre la UI y el runtime del backend.
-- **Diagnóstico rápido**:
-  - Ejecuta `python -m noticiencias.config_manager --explain ollama.model` desde la raíz del repo.
-  - Verifica el archivo raíz `.env`; es la única capa local admitida para overrides.
-  - Si todavía existe `apps/refinery/.env`, trátalo como deuda de migración. La UI lo ignora y mostrará una advertencia.
-- **Resolución**:
-  - Mueve cualquier override necesario a la raíz del repo (`.env`) o a `config.toml`, según corresponda.
-  - Reinicia `make refinery` tras cambiar configuración persistida.
-  - Si necesitas saber por qué un valor está activo, usa `ConfigMetadata.provenance` o `python -m noticiencias.config_manager --explain <clave>`.
+## Error al guardar configuración
 
-## Error: `ModuleNotFoundError` para modelos de enriquecimiento
-- **Contexto típico**: entorno virtual sin dependencias opcionales o modelos locales eliminados.
-- **Diagnóstico rápido**:
-  - Comprueba dependencias con `pip install --require-hashes -r requirements.lock`.
-  - Verifica la caché de modelos (`.cache/noticiencias/models/`) y las rutas esperadas bajo `[enrichment.models]` en `config.toml`.
-- **Resolución**:
-  - Ejecuta `make bootstrap` para reinstalar dependencias y descargar modelos declarados en el `Makefile`.
-  - Si necesitas regenerar embeddings, sigue la sección "Enrichment drift" del [Runbook Operacional](runbook.md#2-dedupe-drift).
+Ejecutar `make config-validate` y revisar la clave indicada por el validador.
+`noticiencias/config_manager.py` y `docs/config_fields.md` definen los tipos
+y valores admitidos. La raíz `.env` y el entorno pueden sobrescribir
+`config.toml`; consultar `--explain <clave>` del módulo de configuración para
+conocer la procedencia sin asumir que el archivo gana siempre.
 
-> ℹ️ Para incidentes más amplios, consulta `docs/runbook.md` y `docs/collector_runbook.md` junto con los logs estructurados mencionados en el README.
+## Modelo o token distinto al esperado
+
+Revisar la procedencia del valor con
+`.venv/bin/python -m noticiencias.config_manager --explain ollama.model`.
+`apps/refinery/.env` ya no es una fuente de configuración. Reiniciar el
+proceso pertinente después de cambiar su configuración de arranque. Un
+modelo listado en Ollama no garantiza que haya RAM suficiente para generarlo.
+
+## Módulo o modelo local ausente
+
+Usar `make bootstrap` para el backend y el entorno correspondiente para la
+UI heredada. Verificar qué dependencia/modelo requiere el componente y su
+configuración; bootstrap no prueba que todos los modelos externos estén
+instalados o que los proveedores sean accesibles.
+
+El inicio actual de la GUI es `make admin`. `make refinery` es la alternativa
+Streamlit heredada. Ver [RUNBOOK_LOCAL_DEV.md](RUNBOOK_LOCAL_DEV.md) para
+puertos, autenticación y límites de dry-run; [runbook.md](runbook.md) para
+incidentes y recuperación.

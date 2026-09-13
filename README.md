@@ -13,8 +13,8 @@ This repository is the system of record for collection, enrichment, scoring, sto
 
 - collect and normalize source articles
 - score, validate, rerank, and persist them
-- expose read-oriented API endpoints
-- run the Streamlit Refinery UI
+- expose public API reads and authenticated admin/workflow endpoints
+- run the Astro admin UI, with Streamlit retained as a legacy fallback
 - generate publication artifacts and open pull requests against the frontend repo
 - maintain the mirrored frontend publication contract in `news_collector/contracts/frontend_schema.py`
 
@@ -27,7 +27,7 @@ This repository is the system of record for collection, enrichment, scoring, sto
 - `news_collector/scoring/`, `validation/`, `taxonomy/`, `editorial/`, `reranker/`: policy and decision logic
 - `news_collector/logic/workflows/`: workflow composition, publication, manual ingest, image briefs
 - `news_collector/components/editorial/` and `components/publishing/`: editorial and publishing collaborators
-- `news_collector/serving/`: FastAPI read surface
+- `news_collector/serving/`: FastAPI public reads and authenticated workflow dispatch
 - `apps/admin/`: Astro Refinery admin panel (current — use this)
 - `apps/refinery/`: Streamlit Refinery application (legacy fallback, kept until `apps/admin/` is confirmed flawless in daily use)
 
@@ -35,7 +35,8 @@ This repository is the system of record for collection, enrichment, scoring, sto
 
 ```bash
 make bootstrap
-python scripts/run_collector.py --dry-run
+make migrate
+.venv/bin/python scripts/run_collector.py --dry-run  # network/initialization; see runbook limits
 make admin-install # once: install the Astro admin GUI deps
 make admin         # current Refinery admin: serving API + GUI together (Ctrl+C stops both)
 make refinery      # legacy Refinery admin (Streamlit) — fallback only
@@ -79,8 +80,8 @@ If either changes, treat it as a cross-repo contract change.
 - [`docs/RUNBOOK_LOCAL_DEV.md`](docs/RUNBOOK_LOCAL_DEV.md): first-time setup and daily development runbook for the full system.
 - [`docs/ci.md`](docs/ci.md): workflow and gate reference.
 - [`docs/runbook.md`](docs/runbook.md): current operational alert runbook.
-- [`docs/audits/2026-04-source-of-truth-audit.md`](docs/audits/2026-04-source-of-truth-audit.md): documentation audit for this pass.
-- [`docs/dev/source-of-truth-backlog.md`](docs/dev/source-of-truth-backlog.md): prioritized follow-up backlog.
+- [`docs/audits/2026-04-source-of-truth-audit.md`](docs/audits/2026-04-source-of-truth-audit.md): historical April documentation audit.
+- [`docs/dev/source-of-truth-backlog.md`](docs/dev/source-of-truth-backlog.md): historical follow-up backlog; current plan statuses are in `plans/README.md`.
 
 ## Historical Material
 

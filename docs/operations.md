@@ -1,69 +1,31 @@
-# Operaciones, Métricas y SLOs
+# Operaciones y métricas
 
-Este documento describe cómo medimos el desempeño y la confiabilidad del pipeline de Noticiencias, qué fuentes de verdad usar
-para cada métrica y cuáles son los objetivos operativos (SLOs) vigentes. Todas las rutas y comandos asumen que trabajas desde la
-raíz del repositorio.
+Estado: Activo. Revisión documental: 2026-09-04.
 
-## 1. Fuentes de datos
+Las mediciones de fixtures, los replays y las métricas de producción responden
+a preguntas diferentes. Este documento no certifica SLOs de producción ni
+la existencia de un dashboard desplegado.
 
-| Métrica | Fuente | Cómo generarla | Artefacto |
-| --- | --- | --- | --- |
-| Latencia y throughput del pipeline | `pytest tests/perf/test_pipeline_perf.py` | Ejecuta la suite de performance; corre en modo SQLite y PostgreSQL | `reports/perf/pipeline_perf_metrics.json` |
-| Latencia de enriquecimiento NLP | `pytest tests/perf/test_enrichment_latency.py` | Usa el dataset dorado de enriquecimiento | `reports/perf/enrichment_latency.json` |
-| Throughput de escritura en PostgreSQL | `pytest tests/perf/test_postgres_write_profile.py` | Simula 60 inserciones consecutivas | `reports/perf/postgres_write_profile.json` |
-| Disponibilidad por fuente | `python scripts/replay_outage.py tests/data/monitoring/outage_replay.json` | Reproduce el log operacional semanal | `reports/ops/monitoring_outage_report.json` |
+| Pregunta | Fuente comprobable | Límite de la evidencia |
+| --- | --- | --- |
+| ¿La base responde, hay backlog o ingesta reciente? | `scripts/healthcheck.py` | No demuestra disponibilidad pública ni publicación |
+| ¿Qué ocurrió con una ejecución? | `workflow_runs`, workflows de colección/publicación y sus registros | Estado durable no equivale a reanudación de cada paso |
+| ¿Cambió el rendimiento de las consultas? | `tests/perf/test_serving_api_perf.py` | Dataset y entorno de prueba; no capacidad de producción |
+| ¿Qué estrategia de enriquecimiento se utilizó? | `news_collector/observability/enrichment_metrics_store.py` | Confirmar cobertura, retención y entorno antes de agregar |
+| ¿Qué se desplegó? | CI del frontend, callbacks con IDs y comprobación de URLs | Un PR creado o un workflow terminado no bastan |
 
-Todos los artefactos se actualizan automáticamente cuando corres las pruebas/perfiles anteriores.
+Los anteriores números de throughput y precisión de fixtures, y el perfil
+PostgreSQL simulado, eran capturas históricas. No describen el estado actual:
+SQLite es la base seleccionada y varias pruebas antiguas ya no existen en
+el árbol activo. Consultar los registros históricos para aquellas capturas,
+no usarlas como capacidad prometida.
 
-## 2. Procedimiento de recolección
+Para evaluar escalabilidad o rendimiento, registrar revisión, dataset,
+entorno, concurrencia, dependencias externas, errores y percentiles junto
+con el resultado. Definir un SLO operativo requiere una población, ventana,
+fuente de medición y responsable explícitos. Mantener las muestras y los
+umbrales junto al código o configuración que realmente los consume.
 
-1. Ejecuta la suite de performance completa:
-   ```bash
-   pytest tests/perf/test_pipeline_perf.py tests/perf/test_postgres_write_profile.py tests/perf/test_enrichment_latency.py
-   ```
-   Esto genera o actualiza los tres reportes dentro de `reports/perf/`.
-2. Si necesitas refrescar los indicadores operacionales, vuelve a procesar el payload semanal:
-   ```bash
-   mkdir -p reports/ops
-   python scripts/replay_outage.py tests/data/monitoring/outage_replay.json > reports/ops/monitoring_outage_report.json
-   ```
-3. Calcula el ratio de disponibilidad global (normalizando ratios > 1 a 1.0) con:
-   ```bash
-   python - <<'PY'
-   import json
-   from pathlib import Path
-
-   report = json.loads(Path("reports/ops/monitoring_outage_report.json").read_text())
-   ratios = [min(metric["value"], 1.0) for metric in report["metrics"] if metric["name"] == "source.ingestion_ratio"]
-   availability = sum(ratios) / len(ratios) if ratios else 0.0
-   print(f"availability_ratio={availability:.2%}")
-   PY
-   ```
-
-## 3. Métricas validadas (última captura)
-
-- **Pipeline (SQLite dev profile)**: 11.5 artículos/s end-to-end, con p95 de ingestión en 128 ms y enriquecimiento p95 en 72 ms.
-- **Pipeline (perfil PostgreSQL simulado)**: 46.6 artículos/s end-to-end con p95 de ingestión en 31.7 ms. Configuración de pool `QueuePool(12/6)`.
-- **Accuracy del scorer**: error absoluto medio 0.0, 100% de acierto en `should_include` y ordenamiento igual al dorado.
-- **Enriquecimiento NLP**: p95 en 0.39 ms (muy por debajo del presupuesto de 250 ms).
-- **Disponibilidad observada**: 50% de ratio de ingesta (1 de 2 fuentes dentro de objetivo) en el replay semanal, con 2 fuentes suprimidas.
-
-Consulta los valores exactos en los reportes JSON vinculados en la tabla de la sección 1 para un análisis detallado.
-
-## 4. Objetivos de nivel de servicio (SLOs)
-
-| Dominio | SLO | Umbral | Fuente |
-| --- | --- | --- | --- |
-| Latencia de ingestión | p95 ≤ 0.35 s, p99 ≤ 0.45 s | `PIPELINE_PERF_THRESHOLDS['ingestion']` | `reports/perf/pipeline_perf_metrics.json` |
-| Latencia de enriquecimiento | p95 ≤ 0.25 s | `PIPELINE_PERF_THRESHOLDS['enrichment_nlp']` | `reports/perf/enrichment_latency.json` |
-| Precisión de scoring | `mean_absolute_error` ≤ 0.02, `should_include_accuracy` ≥ 0.95 | Métricas derivadas del dorado | `reports/perf/pipeline_perf_metrics.json` |
-| Disponibilidad de fuentes | Ratio de ingesta normalizado ≥ 0.90 para cada fuente; media semanal ≥ 0.95 | Replay semanal y dashboards | `reports/ops/monitoring_outage_report.json` |
-
-Cuando una métrica cae por debajo del objetivo, crea un incidente en el canal de operaciones y adjunta el JSON correspondiente. La
-historia y evolución de los objetivos debe registrarse en los `CHANGELOG.md` operativos.
-
-## 5. Automatización y próximos pasos
-
-- Publicar los reportes de `reports/perf/` como artefactos en CI para tener un historial semanal.
-- Enriquecer el replay operacional con métricas de latencia de alerta y disponibilidad de API (no solo ingesta).
-- Integrar un job nocturno que ejecute el cálculo de disponibilidad y alimente el dashboard de Grafana.
+Ver [performance_baselines.md](performance_baselines.md) para la limitación
+del target `make perf`, [runbook.md](runbook.md) para incidentes y
+[runbooks/healthcheck.md](runbooks/healthcheck.md) para los checks operativos.

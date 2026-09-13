@@ -1,213 +1,121 @@
-# Local Development Runbook
+# Local development runbook
 
-Status: Active  
-Authority: Subordinate to `docs/SOURCE_OF_TRUTH.md`  
-Scope: First-time setup and daily development for the full Noticiencias system
+Status: Active. Subordinate to `docs/SOURCE_OF_TRUTH.md`.
 
-This document is the single starting point for getting the complete product running
-locally — back-end pipeline, Refinery UI, and front-end site. It assumes the two
-sibling repositories are checked out under the same parent directory:
+The product has sibling repositories `noticiencias_news_collector` (Python
+backend and Astro admin) and `noticiencias` (public Astro site). Use Python
+3.13+ and Node 24.x as declared in the repositories; apply the frontend
+`.nvmrc` with `nvm use` when using nvm.
 
-```
-noticiencias/
-├── noticiencias/                  ← front-end (Astro)
-└── noticiencias_news_collector/   ← back-end (Python)
-```
+## Backend setup
 
----
-
-## Prerequisites
-
-| Requirement | Minimum version | How to verify |
-|-------------|-----------------|---------------|
-| Python | 3.13 | `python3 --version` |
-| Node.js | 24.x | `node --version` — run `nvm use` in the front-end repo to apply `.nvmrc` |
-| npm | bundled with Node.js | `npm --version` |
-| make | any | `make --version` |
-| git | any | `git --version` |
-| Ollama (optional) | latest | `ollama --version` — only needed for LLM-enriched workflows |
-
-> Note: CI and local development both use Node 24. Run `nvm use` in the front-end repo to apply the version from `.nvmrc`.
-
----
-
-## Step 1: Bootstrap the back-end
+Start in the backend repository. Preserve an existing `.env`:
 
 ```bash
-cd noticiencias_news_collector
-make bootstrap          # creates .venv with hash-pinned deps (idempotent)
-cp .env.example .env    # copy the template; edit as needed (see below)
-make config-validate    # confirm config.toml is valid
-make migrate            # apply DB schema to SQLite (runs automatically in make refinery)
-make test               # confirm the baseline test suite passes
+make bootstrap
+test -f .env || cp .env.example .env
+make config-validate
+make migrate
+npm --prefix apps/admin ci
 ```
 
-### Required `.env` edits for local use
+Runtime configuration comes from built-in defaults, `config.toml`, root
+`.env`, then process environment. `apps/refinery/.env` is ignored legacy
+configuration. Check `docs/config_fields.md` and `.env.example` for supported
+keys. API keys, GitHub access and provider availability are needed only for
+features that use them; do not assume a blank template provides full publication.
 
-All variables in `.env.example` have safe defaults for local SQLite-based development.
-The only supported local environment override file is the repo-root `.env`.
-Do not create or edit `apps/refinery/.env`; Refinery no longer reads it.
+For configured Ollama models, a successful `/api/tags` request is insufficient:
+the provider preflight also probes generation, which requires enough RAM.
+The `NOTICIENCIAS__OLLAMA__API_URL`, `NOTICIENCIAS__OLLAMA__MODEL` and
+`NOTICIENCIAS__GEMINI__API_KEY` overrides select those provider settings.
 
-The only values you may need to set for full pipeline functionality:
+## Admin and public site
 
-| Variable | Purpose | Required for |
-|----------|---------|--------------|
-| `NOTICIENCIAS__OLLAMA__API_URL` | Ollama endpoint | LLM enrichment, headline generation |
-| `NOTICIENCIAS__OLLAMA__MODEL` | Model name | LLM enrichment |
-| `NOTICIENCIAS__GEMINI__API_KEY` | Gemini key | Gemini-backed enrichment (optional path) |
-
-Without Ollama or Gemini configured the collector still runs in dry-run and structural
-test modes.
-
-Note: a successful `GET /api/tags` response is not sufficient to prove local Ollama is
-usable. The startup preflight now probes actual generation for each configured model, so
-the machine must have enough free RAM to admit those models, not just list them.
-
----
-
-## Step 2: Bootstrap the front-end
+From the backend root:
 
 ```bash
-cd noticiencias
-cp .env.example .env    # all vars are optional for local dev without R2
-npm ci                  # use npm, not pnpm — matches CI (see CONTRIBUTING.md)
-npm run validate:content
-npm run build
-npm run test:audit
+make admin
 ```
 
-The front-end `.env` variables are all optional in local development. Without
-Cloudflare R2 credentials the site falls back to Astro's built-in image optimization.
+This launches FastAPI at `http://localhost:8000` and the current Astro admin
+at `http://localhost:4321`. One Ctrl+C stops the stack it started. Split
+operation uses `make serve` and `make admin-dev` in separate terminals.
+Migrate before starting: these targets do not depend on `make migrate`.
 
----
+Admin authentication and dev bypass are defined by `apps/admin/src/lib/api.ts`
+and the serving auth code. The client uses localStorage with a build-time
+`PUBLIC_ADMIN_API_KEY` fallback. A `PUBLIC_*` value is client-visible, so
+it is not a server-side secret; see [Astro environment variables](https://docs.astro.build/en/guides/environment-variables/). Production serving requires `ADMIN_API_KEY`;
+configure CORS through `ADMIN_CORS_ORIGINS` when using cross-origin requests.
 
-## Step 3: Run the collector (dry run)
+In a separate terminal, start from the backend root and enter its sibling:
 
 ```bash
-cd noticiencias_news_collector
-python scripts/run_collector.py --dry-run
+cd ../noticiencias
+test -f .env || cp .env.example .env
+npm ci
+npm run dev -- --port 4322
 ```
 
-Dry-run mode fetches and normalizes articles but does not write to the database,
-generate LLM enrichments, or produce any output files. Use it to verify connectivity
-and source configuration without side effects.
+Port 4322 avoids colliding with the admin at 4321. The public site's committed
+image mode is `github`, selected in `data/image-delivery-mode.json` through
+`src/utils/image-delivery-mode.js`. Mode and credentials together control R2
+behavior. A production build can generate image artifacts and, in R2 mode
+with credentials, upload derivatives.
 
----
+`make refinery` remains the legacy Streamlit fallback at port 8501. It
+bootstraps `.venv-refinery` and migrates before launching. Use it for legacy
+compatibility work; it is not the default admin entrypoint.
 
-## Step 4: Launch the Refinery UI
+## Collector entrypoints and dry-run limits
 
-```bash
-cd noticiencias_news_collector
-make refinery           # starts Streamlit at http://localhost:8501
-```
+Run these from the backend root using `.venv/bin/python`:
 
-`make refinery` runs `make bootstrap-refinery` and `make migrate` automatically, then
-launches `apps/refinery/admin_panel.py` in its isolated `.venv-refinery` environment.
-Refinery resolves configuration from the same `config.toml` and repo-root `.env`
-that `load_config()` uses everywhere else in the backend.
+| Command | Purpose |
+| --- | --- |
+| `scripts/run_collector.py --dry-run` | Exercise collection without the normal article-persistence path |
+| `scripts/run_collector.py` | Run a full collection cycle |
+| `scripts/run_collector.py --fast` | Run with the CLI's fast-processing option |
+| `scripts/run_collector.py --sources nature mit_news` | Restrict collection to selected source IDs |
+| `scripts/run_collector_continuous.py` | Repeated subprocess-based collection |
+| `scripts/run_collector.py --healthcheck` | Check database, backlog and ingest recency |
 
----
+Dry-run still initializes the system and can perform network/provider
+preflight, logging and cache activity. An explicit `--export-json` writes an
+export artifact even during dry-run. It is not an offline test, a read-only
+sandbox, or evidence that queued articles were processed. Use fixture tests
+for deterministic checks without external providers. See CLI `--help` for
+exact options; the legacy root `main.py` entrypoint was removed.
 
-## Step 5: Run the front-end dev server
+## Validation
 
-```bash
-cd noticiencias
-npm run dev             # starts Astro at http://localhost:4321
-```
+Backend Python changes start with `make lint`, `make type` and `make test`.
+Add contract/boundary/publication checks according to `docs/AGENTS.md`'s
+change matrix. `make type` includes its own test/coverage pass; its mypy
+scope is the small target list in `Makefile`, not the whole package.
 
----
+Admin changes also use `make admin-build` and `make admin-test`. Frontend
+changes follow the sibling `AGENTS.md`: baseline `npm run lint` and
+`npm run validate:content`, plus build, dist and unit tests for runtime/UI
+changes and manual 375px/1280px checks for visual or interaction changes.
+Cross-repo contract changes require both sides and strict schema parity.
+See `docs/ci.md` for what aggregate commands include and omit.
 
-## Collector entrypoint reference
+## Troubleshooting and hosted configuration
 
-Three collector entrypoints exist. Use the table below to pick the right one:
+For a SQLite lock, identify the exact owner process and stop it gracefully;
+do not terminate every matching collector or start additional workers to
+clear the symptom. For missing modules, rerun the appropriate bootstrap.
+For schema errors, inspect content validation or database revision as appropriate.
 
-| Command | Behaviour | When to use |
-|---------|-----------|-------------|
-| `python scripts/run_collector.py --dry-run` | Fetch + normalize; no DB writes, no LLM | Local testing, CI smoke check |
-| `python scripts/run_collector.py` | Full single collection cycle with DB writes | One-shot runs, cron |
-| `python scripts/run_collector.py --fast` | Full cycle, skip AI scoring | Quick data ingestion |
-| `python scripts/run_collector.py --sources nature mit_news` | Single-source targeted run | Debugging a specific source |
-| `python scripts/run_collector_continuous.py` | Infinite loop, respawns collector subprocess | Long-running daemon, Docker |
-| `main.py` | **Removed** — was a legacy compatibility surface | Use `scripts/run_collector.py` |
+See [database_deployment.md](database_deployment.md) for SQLite and migration
+ownership, [runbook.md](runbook.md) for incidents, and [faq.md](faq.md) for
+configuration errors. `fly-serving.toml`, `fly-tunnel.toml` and
+`Dockerfile.serving` describe hosted serving/tunnel configuration; repository
+files do not prove that deployment is currently healthy or that it shares
+the collector database. Confirm the remotely managed tunnel route and secrets
+in the deployment environment before changing them.
 
----
-
-## Validation commands by change type
-
-| Change type | Commands to run |
-|-------------|-----------------|
-| Back-end code only | `make lint && make type && make test` |
-| Contract or adapter | `make lint && make type && make test && make test-contracts` |
-| Orchestration, workflow, storage | `make lint && make type && make test && make test-boundaries` |
-| Publication / Refinery | `make lint && make type && make test && make quality-gate` |
-| Front-end content only | `npm run lint && npm run validate:content` |
-| Front-end component or layout | `npm run lint && npm run validate:content && npm run build && npm run test:dist && npm run test:audit` |
-| Cross-repo schema change | All of the above, both repos |
-
-See `docs/AGENTS.md §10` (back-end) and `AGENTS.md §9` (front-end) for the full
-change matrices.
-
----
-
-## Common failure modes
-
-| Error | Likely cause | Fix |
-|-------|-------------|-----|
-| `sqlite3.OperationalError: database is locked` | Parallel collector processes | `pkill -f run_collector.py` then retry |
-| `429 Too Many Requests` | Aggressive rate limit config | Adjust `[rate_limiting]` in `config.toml`; see `docs/faq.md` |
-| `500` from Ollama with `requires more system memory` | Host RAM/swap exhausted; model cannot be admitted | Free memory first (`ps aux --sort=-%mem | head`, stop stale `vitest`/Node jobs), then retry. If the machine still cannot fit the configured model, use Gemini or override to a smaller local Ollama model. |
-| `Configuration validation failed` | Invalid `config.toml` value | Run `make config-validate` for details |
-| `ModuleNotFoundError` | Stale or missing venv | `make bootstrap` |
-| Front-end `astro check` fails | Schema mismatch in content file | `npm run validate:content` for field-level detail |
-| Refinery UI blank after launch | Missing DB migration | `make migrate` |
-
-For operational incidents see `docs/runbook.md` and `docs/collector_runbook.md`.  
-For configuration questions see `docs/faq.md` and `docs/config_fields.md`.
-
----
-
-## Webhook hosting (production)
-
-The frontend CI posts validation results to `POST https://api.noticiencias.com/api/v1/webhook/frontend`
-(`WEBHOOK_API_KEY` Bearer token, fail-closed). The endpoint is served from the cloud so it
-does not depend on a local PC:
-
-- **App** — Fly.io `noticiencias-serve`: `docker build -f Dockerfile.serving .` +
-  `fly deploy --config fly-serving.toml` (uvicorn on port 8000; `WEBHOOK_API_KEY` as a Fly secret).
-- **Tunnel** — Cloudflare Tunnel `noticiencias-webhook` (remotely managed; do not recreate
-  locally) with a connector running as the Fly app `noticiencias-tunnel`
-  (`cloudflare/cloudflared:latest`; secret `TUNNEL_TOKEN` from
-  `cloudflared tunnel token noticiencias-webhook`):
-  `fly deploy --config fly-tunnel.toml --image cloudflare/cloudflared:latest`
-  (the `--image` flag is required — `[image]` in the toml is ignored by Fly).
-- **Route** — Zero Trust dashboard: hostname `api.noticiencias.com` → service
-  `https://noticiencias-serve.fly.dev` (public URL, not `noticiencias-serve.internal`:
-  each Fly app gets its own private network, so internal DNS does not resolve across apps).
-- Local connectors are no longer used; the `~/.cloudflared/config.yml` was retired
-  (2026-08-04) once the tunnel became remotely managed.
-
----
-
-## Docker (optional)
-
-The `docker-compose.yml` provides a PostgreSQL-backed stack for production-parity
-local testing. It is **not** the recommended path for day-to-day development.
-
-```bash
-cd noticiencias_news_collector
-cp .env.example .env
-# Set POSTGRES_PASSWORD in .env
-
-docker compose --profile app up --build
-```
-
-Services:
-- `db` — PostgreSQL 15
-- `refinery` — Streamlit Refinery UI at `http://localhost:8501`
-- `collector` — runs `--help` by default to prevent accidental scraping
-
-To run a single collection cycle inside the container:
-
-```bash
-docker compose run --rm collector python scripts/run_collector.py --dry-run
-```
+The PostgreSQL/Streamlit `docker-compose.yml` is legacy scaffolding; it is
+not a supported production-parity setup or the current admin stack.

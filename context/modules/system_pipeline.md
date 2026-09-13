@@ -1,17 +1,12 @@
-Module: news_collector/system/pipeline.py
-Role: Encapsulates the execution orchestration logic of the full news collection cycle.
-Inputs:
-- None explicit
-Outputs:
-- None explicit
-Side effects:
-- None explicit
-Invariants:
-- LAW-3: System Layer Is Orchestration Only
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- Exception
-- RuntimeError
-Used by:
-- None
+# system_pipeline
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/system/pipeline.py](../../news_collector/system/pipeline.py)
+
+Encapsulates the execution orchestration logic of the full news collection cycle.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

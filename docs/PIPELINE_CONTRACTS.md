@@ -18,8 +18,8 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Validation boundary | workflow/system code | validation modules | `ArticleValidationPayload` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
-| Admin API (Phase 1) | `news_collector/serving/api.py` | Refinery GUI (future client) | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing idempotent storage transitions only |
-| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py` | token in sessionStorage, Bearer header, CORS allowlist via `ADMIN_CORS_ORIGINS` |
+| Admin API (Phase 1) | `news_collector/serving/api.py` | Astro admin GUI | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing storage/workflow modules |
+| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py` | token in localStorage with `PUBLIC_ADMIN_API_KEY` build-time fallback; Bearer header; CORS allowlist via `ADMIN_CORS_ORIGINS` |
 
 ## Export To Refinery
 
@@ -85,7 +85,7 @@ immutable identity, but they no longer include a non-deterministic path.
 
 ## API Contract
 
-The serving layer currently exposes a read-oriented API:
+The serving layer exposes public reads and authenticated admin workflow dispatch:
 
 - validated request parameters via `ArticleListParams`
 - deterministic cursor encoding using score, collected timestamp, and article ID
@@ -111,9 +111,10 @@ The serving layer currently exposes a read-oriented API:
   already queued/running, existing run id in the body);
   `GET /v1/admin/collect/status?run_id=` returns 404 for an unrecognized
   id rather than substituting the latest run. `AdminRunStatus` now spans
-  `queued`/`running`/`succeeded`/`failed`/`cancelled`/`interrupted`. A
-  `lifespan` hook recovers any run left `queued`/`running` at process
-  startup to `interrupted`.
+  `queued`/`running`/`succeeded`/`failed`/`cancelled`/`interrupted`. Startup recovery interrupts queued runs and running runs whose lease has expired.
+  Starting a new run also recovers expired running leases, without recovering
+  queued rows that may belong to an in-flight dispatch. A missing heartbeat
+  is stale only when `started_at` is older than the lease cutoff.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)
@@ -130,3 +131,22 @@ The serving layer is not the owner of editorial mutation workflows.
 - Frontend validation-failure notifications (`POST /api/v1/webhook/frontend`, `serving/api.py`) depend on `BACKEND_WEBHOOK_URL`/`BACKEND_WEBHOOK_TOKEN` being configured in the frontend repository — they must be set for the failure loop to close.
 - Publication identity reuse is strong but still has fallback branches that can use non-source dates.
 - `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.
+
+## Workflow lifecycle and client boundaries
+
+`CollectionRunWorkflow` and `PublicationRunWorkflow` own status rows in
+`workflow_runs`. The database enforces one active run per run type. Their
+default lease is 3,600 seconds with a 60-second heartbeat cadence; constructor
+values and tests own the exact cutoff behavior. Recovery marks runs
+`interrupted`; daemon-thread execution does not resume from a persisted step.
+Do not infer exactly-once Git/LLM effects or multiple-worker safety.
+
+Publication start accepts exactly one of `article_id` or `url`; it has no
+publication dry-run switch. Workflow success is distinct from frontend deploy
+acknowledgment. Tests in `tests/unit/logic/workflows/` cover both run types.
+
+Admin TypeScript interfaces are currently maintained by hand. Plan 080 proposes
+generation for selected response types; it is not a current codegen guarantee.
+`apps/admin/src/lib/api.ts` defines the localStorage/build-time token fallback
+and development bypass. `PUBLIC_ADMIN_API_KEY` is browser-visible; it must not
+be described as a server-only secret.

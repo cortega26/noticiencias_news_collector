@@ -1,23 +1,12 @@
-Module: news_collector/contracts/adapters.py
-Role: Adapts safely between raw ORM or system objects and validated Pydantic contracts.
-Inputs:
-- article: Any
-- article: Article
-- articles: List[Any]
-- source_config
-Outputs:
-- ArticleScoringData
-- ArticleValidationPayload
-- ExportArticleModel
-- ScoringInputModel
-Side effects:
-- None explicit
-Invariants:
-- LAW-1: Data Contracts Are Mandatory
-- LAW-2: Adapters Are the Only Conversion Layer
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- None
+# contracts_adapters
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/contracts/adapters.py](../../news_collector/contracts/adapters.py)
+
+Adapts safely between raw ORM or system objects and validated Pydantic contracts.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

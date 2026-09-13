@@ -1,6 +1,6 @@
 # Sistema de Calidad Editorial y Auditoría
 
-Este documento describe el sistema de control de calidad editorial implementado en Noticiencias para garantizar el rigor epistémico, la claridad y la seguridad de los artículos generados por IA.
+Este documento describe el sistema de control de calidad editorial implementado en Noticiencias para evaluar el rigor epistémico y la claridad de los artículos generados por IA.
 
 ## Componentes
 
@@ -55,9 +55,16 @@ Los promedios móviles se guardan en `data/article_metadata/auditor_rolling_aver
 
 1. **Refinery Engine** procesa el artículo (Traducción -> Edición).
 2. Se genera el contenido refinado.
-3. **Auditor** analiza el contenido (si cumple triggers).
-4. El resultado del auditor se guarda en disco.
-5. El artículo se publica (PR a GitHub) independientemente del resultado del auditor (si `blocking = false`).
+3. Los controles previos al PR incluyen el crítico y la verificación de afirmaciones.
+4. Se crea el PR. El auditor opcional se envía después, si corresponde por sus triggers.
+5. El auditor guarda resultados y estado en disco. Con `blocking = false`, sus
+   puntuaciones en caché son informativas y no bloquean reintentos; con bloqueo
+   explícito se aplican los controles descritos en `docs/EDITORIAL_MODES.md`.
+
+Los archivos de auditoría son artefactos bajo el directorio de datos configurado,
+no una prueba de publicación en la web. `audit_unavailable` o `audit_failed`
+no deben confundirse con una puntuación válida. El prompt expresa criterios
+editoriales; no garantiza por sí solo que el texto generado los cumpla.
 
 ## Mantenimiento
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-13T13:46:39.954606+00:00",
+  "generated_at": "2026-09-13T14:54:32.429642+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -100,9 +100,11 @@
     ],
     "data/": [
       "audit",
+      "data",
       "editorial_policy_enforcement_log.jsonl",
       "exports",
       "image-briefs",
+      "image-uploads",
       "mock_article.md",
       "reports"
     ],
@@ -207,11 +209,14 @@
       "048",
       "048-spike-curated-enrichment-registry.md",
       "060",
+      "080",
+      "081",
       "082-pending-plans-review-handoff",
       "083-codex-p1-uncertainty-overclaim",
       "084-vision-hero-alt",
       "README.md",
-      "archive"
+      "archive",
+      "social-distribution"
     ],
     "pyproject.toml": null,
     "quality_gate/": [
@@ -464,7 +469,6 @@
     "todo-refinery-gui.md": null,
     "todo.md": null,
     "tools/": [
-      "__pycache__",
       "audit_to_issues.sh",
       "check_makefile_tabs.py",
       "ci",
@@ -923,6 +927,8 @@
     "context/modules/enrichment_router.md",
     "context/modules/infrastructure_llm_provider.md",
     "context/modules/logic_parsers_rss_parser.md",
+    "context/modules/logic_workflows_collection_run_workflow.md",
+    "context/modules/logic_workflows_publication_run_workflow.md",
     "context/modules/logic_workflows_refinery_engine.md",
     "context/modules/monitoring_detectors.md",
     "context/modules/observability_enrichment_metrics_store.md",
@@ -1060,6 +1066,18 @@
     "plans/060/phase-4c-publication-run-workflow/todo.md",
     "plans/060/spec.md",
     "plans/060/todo.md",
+    "plans/080/00-evidence.md",
+    "plans/080/01-stateful-workflows.md",
+    "plans/080/02-admin-contracts.md",
+    "plans/080/03-editorial-evaluation.md",
+    "plans/080/04-verification-and-deferred.md",
+    "plans/080/spec.md",
+    "plans/080/tests/README.md",
+    "plans/080/tests/planning-results.md",
+    "plans/080/todo.md",
+    "plans/081/spec.md",
+    "plans/081/tests/results.md",
+    "plans/081/todo.md",
     "plans/082-pending-plans-review-handoff/spec.md",
     "plans/082-pending-plans-review-handoff/todo.md",
     "plans/083-codex-p1-uncertainty-overclaim/spec.md",
@@ -1200,6 +1218,8 @@
     "plans/archive/078-startup-less-lease-recovery/todo.md",
     "plans/archive/079-codex-p2-root-fixes/spec.md",
     "plans/archive/079-codex-p2-root-fixes/todo.md",
+    "plans/social-distribution/spec.md",
+    "plans/social-distribution/todo.md",
     "quality_gate/README.md",
     "quality_gate/snapshots/01_frog/output.md",
     "quality_gate/snapshots/02_printing/output.md",

@@ -1,11 +1,13 @@
 # Monitoring Common Output Format (monitoring.v1)
 
-All monitoring entrypoints emit JSON payloads following this schema:
+The payload builder in `news_collector/monitoring/common.py` defines this
+monitoring envelope. It is not the output format of every CLI, healthcheck,
+workflow status or admin endpoint. Illustrative JSON:
 
 ```json
 {
   "version": "monitoring.v1",
-  "status": "ok" | "info" | "warning" | "critical",
+  "status": "ok",
   "window": {
     "start": "ISO-8601 UTC timestamp",
     "end": "ISO-8601 UTC timestamp"
@@ -38,6 +40,10 @@ All monitoring entrypoints emit JSON payloads following this schema:
   }
 }
 ```
+
+The allowed status values are `ok`, `info`, `warning` and `critical`.
+Example timestamps, destinations and metric names above are placeholders,
+not live dashboard or alert configuration.
 
 The `status` field is derived automatically from the highest severity among
 anomalies and alerts. All timestamps must be in UTC and ISO-8601 with timezone

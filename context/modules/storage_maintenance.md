@@ -1,18 +1,12 @@
-Module: news_collector/storage/maintenance.py
-Role: Provides maintenance helpers for database cleanup and health checks.
-Inputs:
-- days_to_keep: int
-- db_type: str
-- session: Session
-Outputs:
-- Dict[str, Any]
-Side effects:
-- Database I/O
-- Network I/O
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- database
+# storage_maintenance
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/storage/maintenance.py](../../news_collector/storage/maintenance.py)
+
+Provides maintenance helpers for database cleanup and health checks.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

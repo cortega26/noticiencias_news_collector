@@ -54,7 +54,11 @@ class TestWriteArticle:
     def test_write_01_file_created_with_correct_content(
         self, writer, posts_dir, target_dir, tmp_path
     ):
-        """WRITE-01: write_article creates posts_dir/output_filename with given content."""
+        """WRITE-01: write_article creates posts_dir/output_filename with given content.
+
+        A brand-new file with no source_url gains an explicit disabled social
+        block (plan social-distribution §9); the body is preserved verbatim.
+        """
         with patch(
             "apps.refinery.published_content.prune_hero_placeholder_allowlist_for_post",
             return_value=False,
@@ -69,7 +73,10 @@ class TestWriteArticle:
 
         assert result == posts_dir / "2024-01-25-test.md"
         assert result.exists()
-        assert result.read_text() == "---\ntitle: Test\n---\nBody"
+        text = result.read_text()
+        assert text.startswith("---\ntitle: Test\n")
+        assert "social:\n  publish: false" in text
+        assert text.endswith("\n---\nBody")
 
     def test_write_02_manifest_updated_after_write(self, writer, posts_dir, target_dir):
         """WRITE-02: write_article calls update_manifest after writing the file."""
@@ -80,7 +87,7 @@ class TestWriteArticle:
             writer.write_article(
                 posts_dir=posts_dir,
                 output_filename="2024-01-25-test.md",
-                content="---\n---\nBody",
+                content="---\ntitle: Test\n---\nBody",
                 article_id="42",
                 target_dir=target_dir,
             )
@@ -244,3 +251,318 @@ class TestFindExistingFile:
         result = writer.find_existing_file(posts_dir, "33")
         assert result == real_file
         assert writer.find_existing_file(posts_dir, "44") is None
+
+
+# ---------------------------------------------------------------------------
+# Social distribution stamping (plan social-distribution §9)
+# ---------------------------------------------------------------------------
+
+
+SOURCE_URL = "https://www.nature.com/articles/s41586-024-00001-2"
+
+
+def _write(writer, posts_dir, target_dir, *, filename, content, article_id):
+    with patch(
+        "apps.refinery.published_content.prune_hero_placeholder_allowlist_for_post",
+        return_value=False,
+    ):
+        return writer.write_article(
+            posts_dir=posts_dir,
+            output_filename=filename,
+            content=content,
+            article_id=article_id,
+            target_dir=target_dir,
+        )
+
+
+class TestSocialStamping:
+    def test_new_file_with_source_url_opts_in(self, writer, posts_dir, target_dir):
+        from news_collector.contracts.social_publication import derive_social_id
+
+        body = "\n\nCuerpo con tildes áéí.\n\n<!-- source_identity: source_id=1; source_name=x -->"
+        content = (
+            f"---\ntitle: Hola\ndate: 2026-05-07\nsource_url: {SOURCE_URL}\n---{body}"
+        )
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-hola.md",
+            content=content,
+            article_id="1",
+        )
+        text = path.read_text()
+        assert "publish: true" in text
+        assert f"id: {derive_social_id(SOURCE_URL)}" in text
+        assert text.endswith(body)  # body byte-for-byte
+        assert "date: 2026-05-07\n" in text  # date not quoted
+
+    def test_new_file_without_source_url_writes_disabled(
+        self, writer, posts_dir, target_dir
+    ):
+        content = "---\ntitle: Manual\ndate: 2026-05-07\n---\n\nBody"
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-manual.md",
+            content=content,
+            article_id="2",
+        )
+        assert "social:\n  publish: false" in path.read_text()
+
+    def test_rewrite_preserves_prior_social_id_and_body(
+        self, writer, posts_dir, target_dir
+    ):
+        prior_id = "b" * 64
+        existing = (
+            f"---\ntitle: Viejo\ndate: 2026-05-07\nsocial:\n  publish: true\n"
+            f"  id: {prior_id}\n---\n\nCuerpo original."
+        )
+        target = posts_dir / "2026-05-07-post.md"
+        target.write_text(existing)
+
+        regenerated = (
+            f"---\ntitle: Titulo corregido\ndate: 2026-05-07\nsource_url: {SOURCE_URL}\n"
+            f"---\n\nCuerpo reescrito."
+        )
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-post.md",
+            content=regenerated,
+            article_id="3",
+        )
+        text = path.read_text()
+        assert f"id: {prior_id}" in text  # prior identity preserved
+        assert "Titulo corregido" in text  # editorial content still updated
+        assert text.endswith("\n\nCuerpo reescrito.")
+
+    def test_rewrite_preserves_prior_publish_false(self, writer, posts_dir, target_dir):
+        target = posts_dir / "2026-05-07-paused.md"
+        target.write_text(
+            "---\ntitle: Pausado\ndate: 2026-05-07\nsocial:\n  publish: false\n---\n\nBody"
+        )
+        regenerated = f"---\ntitle: Pausado\ndate: 2026-05-07\nsource_url: {SOURCE_URL}\n---\n\nBody"
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-paused.md",
+            content=regenerated,
+            article_id="4",
+        )
+        text = path.read_text()
+        assert "publish: false" in text
+        assert "publish: true" not in text
+
+    def test_rewrite_of_legacy_file_without_social_keeps_absence(
+        self, writer, posts_dir, target_dir
+    ):
+        target = posts_dir / "2026-05-07-legacy.md"
+        target.write_text("---\ntitle: Legacy\ndate: 2026-05-07\n---\n\nBody")
+        regenerated = f"---\ntitle: Legacy\ndate: 2026-05-07\nsource_url: {SOURCE_URL}\n---\n\nBody"
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-legacy.md",
+            content=regenerated,
+            article_id="5",
+        )
+        assert "social:" not in path.read_text()
+
+    def test_unparseable_previous_frontmatter_blocks_write(
+        self, writer, posts_dir, target_dir
+    ):
+        target = posts_dir / "2026-05-07-corrupt.md"
+        target.write_text("this file has no yaml frontmatter fence")
+        original_bytes = target.read_bytes()
+
+        with pytest.raises(ValueError, match="parseable YAML front-matter"):
+            _write(
+                writer,
+                posts_dir,
+                target_dir,
+                filename="2026-05-07-corrupt.md",
+                content="---\ntitle: New\n---\n\nBody",
+                article_id="6",
+            )
+        # File not overwritten.
+        assert target.read_bytes() == original_bytes
+
+    def test_stamped_output_passes_fast_frontmatter_validation(
+        self, writer, posts_dir, target_dir
+    ):
+        from news_collector.logic.workflows.frontend_publication_validation import (
+            validate_post_frontmatter_fast,
+        )
+
+        content = (
+            "---\n"
+            "title: Un titular suficientemente largo\n"
+            "schema_version: 1\n"
+            "excerpt: Una bajada con mas de diez caracteres.\n"
+            "date: 2026-05-07\n"
+            "image: /_astro/hero.jpg\n"
+            "image_alt: Descripcion del hero\n"
+            f"source_url: {SOURCE_URL}\n"
+            "---\n\nCuerpo del articulo."
+        )
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-valid.md",
+            content=content,
+            article_id="7",
+        )
+        ok, error_class, error = validate_post_frontmatter_fast(path)
+        assert ok, f"{error_class}: {error}"
+
+    def test_corrupt_previous_blocks_write_even_if_generated_is_malformed(
+        self, writer, posts_dir, target_dir
+    ):
+        """Both sides broken is the case that would silently clobber a stored
+        editorial decision, so the previous-file guard must still fire."""
+        target = posts_dir / "2026-05-07-both-broken.md"
+        target.write_text("this file has no yaml frontmatter fence")
+        original_bytes = target.read_bytes()
+
+        with pytest.raises(ValueError, match="parseable YAML front-matter"):
+            _write(
+                writer,
+                posts_dir,
+                target_dir,
+                filename="2026-05-07-both-broken.md",
+                content="---\ntitle: [unclosed\n---\n\nBody",
+                article_id="8",
+            )
+        assert target.read_bytes() == original_bytes
+
+    def test_regeneration_over_prettier_formatted_file_keeps_every_value(
+        self, writer, posts_dir, target_dir
+    ):
+        """The previous file on a PR branch is prettier-formatted (quoted scalars,
+        indented sequences), not PyYAML-formatted. Re-serialisation must preserve
+        the prior decision and every generated field *value* — no key may be lost
+        or retyped by the round trip."""
+        import yaml as _yaml
+
+        prior_id = "d" * 64
+        # Verbatim shape of a real committed post (quoted scalars, indented list
+        # items) plus the editor's pause decision.
+        existing = (
+            "---\n"
+            "title: 'Cursos en línea abren puertas a nuevas carreras'\n"
+            "schema_version: 1\n"
+            "categories:\n"
+            "  - 'Tecnología'\n"
+            "permalink: '2026-05-07-cursos'\n"
+            "refinery_id: '135'\n"
+            "investigation: false\n"
+            "social:\n"
+            "  publish: false\n"
+            f"  id: '{prior_id}'\n"
+            "---\n\nCuerpo viejo."
+        )
+        target = posts_dir / "2026-05-07-cursos.md"
+        target.write_text(existing, encoding="utf-8")
+
+        generated_fields = {
+            "title": "Cursos en línea abren puertas a nuevas carreras (v2)",
+            "schema_version": 1,
+            "categories": ["Tecnología"],
+            "permalink": "2026-05-07-cursos",
+            "refinery_id": "135",
+            "investigation": False,
+            "featured": False,
+            "source_url": SOURCE_URL,
+        }
+        dumped = _yaml.safe_dump(
+            generated_fields,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+            width=1000,
+        ).strip()
+        path = _write(
+            writer,
+            posts_dir,
+            target_dir,
+            filename="2026-05-07-cursos.md",
+            content=f"---\n{dumped}\n---\n\nCuerpo nuevo.",
+            article_id="9",
+        )
+
+        text = path.read_text(encoding="utf-8")
+        written = _yaml.safe_load(text[4 : text.find("\n---", 4)])
+        # Prior decision preserved verbatim, including the paused publish flag.
+        assert written.pop("social") == {"publish": False, "id": prior_id}
+        # Every generated field survives the round trip with its value and type.
+        assert written == generated_fields
+        assert text.endswith("\n\nCuerpo nuevo.")
+
+
+# ---------------------------------------------------------------------------
+# Coverage gaps: I/O failure branches and frontmatter edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageGaps:
+    def test_write_article_unreadable_previous_file_raises_value_error(
+        self, writer, posts_dir, target_dir
+    ):
+        previous = posts_dir / "2024-01-25-test.md"
+        previous.write_text("---\ntitle: Old\n---\nBody", encoding="utf-8")
+
+        with patch.object(Path, "read_text", side_effect=OSError("denied")):
+            with pytest.raises(ValueError, match="Cannot read previous target file"):
+                writer.write_article(
+                    posts_dir=posts_dir,
+                    output_filename="2024-01-25-test.md",
+                    content="---\ntitle: New\n---\nBody",
+                    article_id="1",
+                    target_dir=target_dir,
+                )
+
+    def test_load_manifest_invalid_json_resets_cache(self, writer, posts_dir):
+        (posts_dir / MANIFEST_FILENAME).write_text("{invalid json", encoding="utf-8")
+
+        writer.load_manifest(posts_dir)
+
+        assert writer._manifest_cache == {}
+        assert writer._manifest_loaded is True
+
+    def test_update_manifest_persist_failure_keeps_memory_cache(
+        self, writer, posts_dir
+    ):
+        with patch("os.replace", side_effect=OSError("disk full")):
+            writer.update_manifest(posts_dir, "42", "2024-01-25-test.md")
+
+        assert writer._manifest_cache == {"42": "2024-01-25-test.md"}
+        assert not (posts_dir / MANIFEST_FILENAME).exists()
+
+    def test_find_existing_file_skips_undecodable_files(self, writer, posts_dir):
+        (posts_dir / "bad.md").write_bytes(b"\xff\xd8\xff\xe0\x00garbage")
+
+        assert writer.find_existing_file(posts_dir, "nope") is None
+
+    def test_find_existing_file_scan_failure_returns_none(self, writer, posts_dir):
+        with patch.object(Path, "glob", side_effect=Exception("boom")):
+            assert writer.find_existing_file(posts_dir, "nope") is None
+
+    def test_frontmatter_match_rejects_missing_opening_marker(self):
+        assert (
+            TargetRepoWriter._frontmatter_refinery_id_matches("plain body", "1")
+            is False
+        )
+
+    def test_frontmatter_match_rejects_yaml_error(self):
+        content = "---\nfoo: [unclosed\n---\nbody text\n"
+        assert TargetRepoWriter._frontmatter_refinery_id_matches(content, "1") is False
+
+    def test_frontmatter_match_rejects_non_dict_frontmatter(self):
+        content = "---\n- just\n- a\n- list\n---\nbody\n"
+        assert TargetRepoWriter._frontmatter_refinery_id_matches(content, "1") is False

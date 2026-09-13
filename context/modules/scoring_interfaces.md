@@ -1,16 +1,12 @@
-Module: news_collector/scoring/interfaces.py
-Role: Defines protocol abstractions for asynchronous article scorers.
-Inputs:
-- None explicit
-Outputs:
-- AsyncScorer
-Side effects:
-- None explicit
-Invariants:
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- None explicit
-Used by:
-- feature_scorer
-- basic_scorer
+# scoring_interfaces
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/scoring/interfaces.py](../../news_collector/scoring/interfaces.py)
+
+Defines protocol abstractions for asynchronous article scorers.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

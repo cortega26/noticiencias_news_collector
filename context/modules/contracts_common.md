@@ -1,25 +1,12 @@
-Module: news_collector/contracts/common.py
-Role: Provides common shared contract definitions.
-Inputs:
-- credibility_score
-- credibility_score: float
-- enrichment
-- enrichment: ArticleEnrichment
-- fallback: str
-- image_source
-- image_source: str
-- image_status
-Outputs:
-- ArticleMetadata
-- ArticleMetadataModel
-- Dict[str, Any]
-Side effects:
-- None explicit
-Invariants:
-- LAW-1: Data Contracts Are Mandatory
-- LAW-4: Canonical Identity Is Immutable
-- LAW-5: Canonical URLs Are Deterministic & Immutable
-Failure modes:
-- ValueError
-Used by:
-- collector
+# contracts_common
+
+Status: Derived navigation note; exact behavior belongs to source.
+
+Module: [news_collector/contracts/common.py](../../news_collector/contracts/common.py)
+
+Provides common shared contract definitions.
+
+Read the source for signatures, side effects and failure handling. These notes
+do not enumerate callers or guarantee purity. Apply the relevant laws from
+[engineering governance](../../docs/AGENTS.md) and boundary rules from
+[pipeline contracts](../../docs/PIPELINE_CONTRACTS.md).

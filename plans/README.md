@@ -22,6 +22,13 @@ archived plans, and plan ledger; see `scripts/validate_plans_ledger.py`.
 
 ## Execution order & status
 
+### Targeted technology adoption (2026-09-04)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 080 | [Targeted reliability, API contracts, and editorial evaluation](080/spec.md) | P2 | M | 078; complements 060 Phase 6 | TODO — bounded implementation handoff: stateful workflow tests, four generated admin response aliases with drift checks, and an offline editorial replay pilot; other technology adoption deferred behind evidence gates. |
+| 081 | [Workspace documentation reconciliation](081/spec.md) | P1 | M | None | IN_PROGRESS — reconcile both repositories' governance, contracts, onboarding, operational guidance and derived context with current source; preserve historical records. |
+
 ### First-pass plans (2026-06-12)
 
 > Plans 001–017 are DONE and archived. Plan 017 (bulk despublicar/reset spike) shipped
@@ -110,8 +117,9 @@ boundaries and fact ownership are declared in both repos. See `plans/archive/043
 
 ## Dependency notes (remaining work)
 
-- **031 Step 3** is blocked on a toolchain-lock decision (vitest ^4.1.0 vs the
-  deliberately pinned 4.0.18 in `workers/`) — operator decision, not plan scope.
+- **031 Step 3** toolchain blocker is historical: both frontend npm packages now
+  pin Vitest 4.1.10 and the Worker pool dependency is ^0.21.1. See the frontend
+  dependency matrix and lockfiles for current compatibility.
 - **048 Steps 4-6** wait on the operator actually labeling the enrichment corpus.
 
 ## Open — needs operator input (not rejected, do not re-audit as new)
