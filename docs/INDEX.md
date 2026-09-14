@@ -76,7 +76,11 @@ The development reports below are historical snapshots, not current measured bas
 | [`adr/0001-adapter-pattern-contracts.md`](adr/0001-adapter-pattern-contracts.md) | Adapter pattern as the only shape-conversion choke point |
 | [`adr/0002-hash-pinned-lockfiles.md`](adr/0002-hash-pinned-lockfiles.md) | Hash-pinned dependency lockfiles for reproducible builds |
 | [`adr/0003-two-repo-split-and-schema-versioning.md`](adr/0003-two-repo-split-and-schema-versioning.md) | Two-repo split and cross-repo schema versioning strategy |
+| [`adr/0004-curated-enrichment-registry-spike.md`](adr/0004-curated-enrichment-registry-spike.md) | Curated multilingual topic/entity registry spike (plan 048); status updated in place, see the document |
 | [`adr/0005-completed-is-scoring-state-not-publication.md`](adr/0005-completed-is-scoring-state-not-publication.md) | `completed` is a scoring state; publication proof lives in `published_url`/`published_at` |
+| [`adr/0006-durable-workflow-lifecycle-state.md`](adr/0006-durable-workflow-lifecycle-state.md) | Durable `workflow_runs` state for collection/publication lifecycle (plan 060; proposed) |
+| [`adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md`](adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md) | Generate contract parsers/admin types instead of hand-maintaining them (plan 060; proposed) |
+| [`adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md`](adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md) | Harden the two-repo boundary before reconsidering consolidation (plan 060; proposed) |
 
 ---
 

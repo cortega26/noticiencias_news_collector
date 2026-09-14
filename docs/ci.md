@@ -87,6 +87,14 @@ make verify-ci
   - source config, feed reliability, and LLM resilience checks
 - `.github/workflows/e2e.yml`
   - legacy E2E contract validation workflow
+- `.github/workflows/publication-smoke.yml`
+  - path-triggered on PRs touching `news_collector/contracts/frontend_schema.py`,
+    `news_collector/contracts/publication_validation.py`,
+    `news_collector/logic/workflows/frontend_publication_validation.py`,
+    `news_collector/logic/workflows/**`, `news_collector/components/publishing/**`,
+    `scripts/generate_fixture_post.py`, or `scripts/validate_frontend_publication.py`;
+    sparse-checks out the sibling frontend repo and runs
+    `scripts/validate_frontend_publication.py` against it
 
 ### Other triggers (consult each YAML; some also run on PRs)
 

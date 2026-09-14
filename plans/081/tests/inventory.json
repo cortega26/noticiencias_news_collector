@@ -58,8 +58,9 @@
     {
       "repo": "noticiencias",
       "path": "article_images_audit.md",
-      "category": "current-guidance-candidate",
-      "lines": 82
+      "category": "historical-proposal-or-decision",
+      "lines": 82,
+      "note": "Reclassified during plan 081: content is a closed root-cause post-mortem (both fixes marked Fixed with commit refs), not active guidance."
     },
     {
       "repo": "noticiencias",
