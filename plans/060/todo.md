@@ -54,44 +54,42 @@ do not implement from this checklist alone.
       Phase 2a added regression coverage, not the behavior itself.)
 - [x] Replace the backend v1 smoke fixture with deterministic production-path v2.
       (Phase 2a.)
-- [ ] Inventory and human-review the 30 incomplete posts; invent no facts.
-      **Partial, further along, now two audit rounds deep**: Phase 2b
-      Step 1 produced a machine-drafted inventory (30/30 posts drafted).
-      Round 1: the operator commissioned an independent adversarial audit
-      against real sources
-      (`phase-2b-corpus-cutover/inventory/adversarial-audit/`); its
-      findings were applied — 15 posts downgraded to `schema_version: 1`
-      (6 unreachable source, 9 body-level errors this session found by
-      independently checking the audit's findings against the published
-      bodies, not just the drafted metadata — worst case, a fabricated
-      quote attributed to a real NASA official, corrected directly), and
-      15 posts had their v2 metadata corrected per the audit's specific
-      findings. Round 2: a second independent audit re-checked all 30
-      posts' metadata and body against real sources again
-      (`noticiencias/docs/audits/phase2b-second-independent-audit.md`);
-      14 of the 15 v2 posts and 5 more downgraded posts' bodies were
-      corrected, and 3 posts whose sources became reachable again were
-      promoted back to `schema_version: 2` — all independently
-      re-verified against real sources before merge (`noticiencias` PRs
-      #137/#138). **Still not checked**: no post has `reviewed: true` —
-      an AI-run audit, even two real-source-checking rounds the operator
-      directed, is evidence for the operator's review per spec.md, not
-      the review itself. Do not check this box until the operator does
-      their own pass. See
-      `phase-2b-corpus-cutover/review/step2-review-outcomes.md`.
-- [ ] Reach zero strict editorial errors. **Mechanically achieved**:
-      `STRICT_EDITORIAL=true node scripts/check-editorial-fields.js
-      --json` reports zero errors across the full corpus, now 19 v2 posts
-      after round 2's 3 promotions. **Left unchecked anyway**: this check only
-      validates schema completeness (every v2 field present and
-      shaped correctly), not that the content is verified — that's
-      still gated on the human-review line above, per the master plan's
-      own rule ("never leave CI permissive while producers claim v2").
-- [ ] Make frontend v2 semantics/checker unconditional and remove CI/deploy
-      bypass. (Phase 2b item 5, blocked on the line above.)
-- [ ] Prove producer and consumer reject every partial-v2 fixture. Producer
-      (backend) side proven by Phase 2a; consumer (frontend) side still
-      gated behind `STRICT_EDITORIAL` pending Phase 2b.
+- [x] Inventory and human-review the corpus; invent no facts. Two AI audit
+      rounds (August 2026) got this most of the way — see prior history
+      below — but per spec.md an AI audit is evidence for the operator's
+      review, not a substitute. **On 2026-09-14 the operator was asked
+      directly and explicitly authorized the assistant to perform this
+      review itself**, a recorded one-time policy override (see
+      `phase-2b-corpus-cutover/review/step2-review-outcomes-2026-09-14.md`,
+      "Policy note"). Under that authorization all 23 posts currently at
+      `schema_version: 2` (corpus grew to 35 posts total since August)
+      were independently re-verified from scratch against real sources:
+      19/23 clean, 4/23 got minor metadata/body-reconciliation
+      corrections (not factual retractions), 0 downgrades, 0 material
+      errors. Prior history: Phase 2b Step 1 produced a machine-drafted
+      inventory (30/30 posts drafted); round 1 (operator-commissioned
+      adversarial audit,
+      `phase-2b-corpus-cutover/inventory/adversarial-audit/`) downgraded
+      15 posts (6 unreachable source, 9 body-level errors including a
+      fabricated NASA-official quote) and corrected 15 more; round 2
+      (`noticiencias/docs/audits/phase2b-second-independent-audit.md`)
+      corrected 14 of those 15 plus 5 more downgraded posts' bodies and
+      promoted 3 back to v2 (`noticiencias` PRs #137/#138).
+- [x] Reach zero strict editorial errors.
+      `node scripts/check-editorial-fields.js --json` reports zero errors
+      across the full corpus (23 v2 posts, 2026-09-14, after the 4
+      corrections above) — no `STRICT_EDITORIAL=true` prefix needed since
+      enforcement is unconditional (see next line).
+- [x] Make frontend v2 semantics/checker unconditional and remove CI/deploy
+      bypass. Verified 2026-09-14: `STRICT_EDITORIAL` no longer appears
+      anywhere in frontend source/tests (`content.config.ts`,
+      `check-editorial-fields.js`, `tests/content-config-schema.test.ts`)
+      — this had already been done in an earlier session but was never
+      checked off here; corrected the stale bookkeeping.
+- [x] Prove producer and consumer reject every partial-v2 fixture. Producer
+      (backend) side proven by Phase 2a; consumer (frontend) side proven
+      by `tests/content-config-schema.test.ts` (unconditional now, not
+      `STRICT_EDITORIAL`-gated) — reconfirmed 2026-09-14.
 
 **Phase 2c — real fact-checking against the original source.** Implemented:
 new articles get `fact_check` statuses from a genuine comparison against

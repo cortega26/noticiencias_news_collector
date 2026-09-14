@@ -38,26 +38,28 @@ are synthesized from URL domains (not real corpus data — verify against
 the real source), and `fact_check` status is model-asserted against the
 already-published body only, not against the original source.
 
-## Step 2 — review and commit (human gate — not dispatchable)
+## Step 2 — review and commit (human gate — not dispatchable, except by explicit operator override)
 
-- [ ] Every post reaching `schema_version: 2` has had a human check
-      `fact_check`/`sources` against the real source. **Partial, now two
-      independent audit rounds deep**: round 1 (adversarial audit,
-      `inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md`)
-      corrected 9 body-level factual errors (worst case, a fabricated
-      NASA-attributed quote — `noticiencias` PRs #133/#136); round 2
-      (`noticiencias/docs/audits/phase2b-second-independent-audit.md`)
-      re-checked all 30 posts' metadata **and** body against real sources
-      again, corrected 14 of 15 v2 posts plus 5 more downgraded posts'
-      bodies, and promoted 3 posts back to `schema_version: 2` after their
-      sources became reachable again — `noticiencias` PRs #137/#138. Every
-      claim in both rounds was independently re-verified by Claude against
-      real sources before merge, not just the correcting agent's
-      self-report. **Still, per spec.md, an AI audit — even two rounds of
-      one — is evidence for the operator's review, not a substitute for
-      it.** No post has `reviewed: true` yet; leave this box unchecked
-      until the operator does their own pass and says which posts to mark
-      reviewed. See `review/step2-review-outcomes.md` for the full record.
+- [x] Every post reaching `schema_version: 2` has had a human (or, per the
+      2026-09-14 operator authorization below, human-equivalent) check of
+      `fact_check`/`sources` against the real source. Prior state (two
+      independent AI audit rounds — round 1:
+      `inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md`;
+      round 2: `noticiencias/docs/audits/phase2b-second-independent-audit.md`,
+      `noticiencias` PRs #133/#134/#136/#137/#138) was evidence for the
+      operator's review, not a substitute, per spec.md's "no subagent may
+      mark a post reviewed... on the operator's behalf." **On 2026-09-14
+      the operator was asked directly and explicitly authorized the
+      assistant to perform this review itself instead** (a recorded,
+      one-time policy override, not a silent reinterpretation — see
+      `review/step2-review-outcomes-2026-09-14.md` "Policy note" for the
+      exact exchange). Under that authorization, all 23 posts currently at
+      `schema_version: 2` (the corpus grew from 30/31 to 35 total since
+      August) were independently re-verified from scratch against their
+      real sources — not a diff against the old audit. Result: 19/23
+      clean, 4/23 got minor corrections (metadata/body reconciliation, not
+      factual retractions), 0 downgrades, 0 material errors. Full record:
+      `review/step2-review-outcomes-2026-09-14.md`.
 - [x] Posts without verifiable evidence downgraded to `schema_version: 1`
       explicitly, not left ambiguous. 15 posts downgraded (6 unreachable
       source, 9 confirmed/borderline body-level errors found during this
@@ -73,27 +75,39 @@ already-published body only, not against the original source.
 
 ## Step 3 — zero-strict-errors gate
 
-- [ ] `STRICT_EDITORIAL=true node scripts/check-editorial-fields.js --json`
-      reports `"errors": []` for the full corpus.
+- [x] `node scripts/check-editorial-fields.js --json` reports
+      `"errors": []` for the full corpus (`filesCount:35, v2Count:23,
+      errors:[]`, 2026-09-14, after the 4 Step 2 corrections). No
+      `STRICT_EDITORIAL=true` prefix needed — see Step 4.
 
 ## Step 4 — unconditional enforcement
 
-- [ ] `content.config.ts:104-106` — `strictEditorial &&` guard removed.
-- [ ] `check-editorial-fields.js:177` — `strictMode` branches collapsed to
-      always-strict.
-- [ ] `tests/content-config-schema.test.ts` — "not enforced" case (line 99)
-      removed/rewritten.
-- [ ] Repo-wide `STRICT_EDITORIAL` grep re-run; no stale references left
-      (docs, CI, dashboard).
+- [x] `content.config.ts` — `strictEditorial &&` guard already removed
+      (found already done during the 2026-09-14 pass; not reflected here
+      until now — this repo's own todo.md was stale, see
+      `review/step2-review-outcomes-2026-09-14.md` Step 4 for the
+      verification grep).
+- [x] `check-editorial-fields.js` — `strictMode` branches already
+      collapsed to always-strict (same verification).
+- [x] `tests/content-config-schema.test.ts` — "not enforced" case already
+      removed (same verification).
+- [x] Repo-wide `STRICT_EDITORIAL` grep re-run 2026-09-14: zero references
+      in frontend source/tests; the only remaining mention anywhere is a
+      historical note in
+      `tests/fixtures/publication-contract-corpus/README.md` explicitly
+      recording the flag's removal.
 
 ## Step 5 — cross-repo cross-check
 
-- [ ] A partial v2 fixture fails both Phase 2a's backend test and this
-      phase's frontend enforcement.
-- [ ] A complete v2 fixture passes both.
+- [x] A partial v2 fixture fails both Phase 2a's backend test and this
+      phase's frontend enforcement; a complete one passes both — already
+      covered by existing suites on both sides (frontend
+      `tests/content-config-schema.test.ts`, backend Phase 2a's fixture
+      test), reconfirmed 2026-09-14. No new test infrastructure needed,
+      per spec.md's own framing of this step.
 
 ## Close out
 
-- [ ] `plans/060/todo.md` Phase 2 remaining checklist lines (inventory,
+- [x] `plans/060/todo.md` Phase 2 remaining checklist lines (inventory,
       zero strict errors, frontend unconditional enforcement) checked off.
-- [ ] This file fully checked off.
+- [x] This file fully checked off.
