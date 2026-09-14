@@ -364,18 +364,46 @@ function fail(message) {
   process.exit(1);
 }
 
+function stripSurroundingQuotes(value) {
+  return value.replace(/^(['"])(.*)\\1$/, "$2");
+}
+
 function parseFrontmatter(text) {
   const match = text.match(/^---\\n([\\s\\S]*?)\\n---/);
   if (!match) return {};
   const result = {};
+  let currentKey = null;
   for (const line of match[1].split("\\n")) {
+    // Block-style list items ("- item") belong to the current key. The
+    // pipeline YAML-serialises frontmatter on write, so generated posts
+    // may use block style where fixtures use flow style.
+    const item = line.match(/^\\s*-\\s*(.*)$/);
+    if (item && currentKey) {
+      if (!Array.isArray(result[currentKey])) {
+        result[currentKey] = result[currentKey] ? [result[currentKey]] : [];
+      }
+      result[currentKey].push(stripSurroundingQuotes(item[1].trim()));
+      continue;
+    }
+    // An indented line that isn't a list item is a nested mapping field
+    // inside a block-style list-of-objects (e.g. glossary/fact_check/
+    // sources entries have "term:"/"status:"/"url:" sub-fields under each
+    // "- " item). This checker only needs top-level scalar/list fields, so
+    // nested fields are intentionally dropped rather than merged into
+    // `result` -- letting them fall through would hijack `currentKey` and
+    // silently corrupt whichever top-level field parses next.
+    if (/^\\s/.test(line)) continue;
     const idx = line.indexOf(":");
     if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
-    result[key] = value;
+    currentKey = line.slice(0, idx).trim();
+    result[currentKey] = stripSurroundingQuotes(line.slice(idx + 1).trim());
   }
   return result;
+}
+
+// Normalise a parsed frontmatter value (scalar or list) to comparable text.
+function frontmatterText(value) {
+  return Array.isArray(value) ? value.join(" ") : (value || "");
 }
 
 function loadPosts() {
@@ -410,10 +438,10 @@ if (mode === "lint") {
 
 if (mode === "validate_content") {
   for (const post of posts) {
-    if ((post.frontmatter["categories"] || "").includes("Invalid")) {
+    if (frontmatterText(post.frontmatter["categories"]).includes("Invalid")) {
       fail("taxonomy contract violation: invalid categories");
     }
-    if (!(post.frontmatter["permalink"] || "").length) {
+    if (!frontmatterText(post.frontmatter["permalink"]).length) {
       fail("schema mismatch: missing permalink");
     }
   }
@@ -434,7 +462,7 @@ if (mode === "build") {
 if (mode === "test_dist") {
   const seen = new Map();
   for (const post of posts) {
-    const permalink = post.frontmatter["permalink"] || "";
+    const permalink = frontmatterText(post.frontmatter["permalink"]);
     if (seen.has(permalink)) {
       fail("duplicate permalink detected");
     }
