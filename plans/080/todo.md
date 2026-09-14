@@ -15,17 +15,25 @@ only after its acceptance evidence and required review exist.
 
 ## Phase 0 — execution preflight
 
-- [ ] Record checkout versions, dirty files, assigned scope and baseline checks.
-- [ ] Reconcile any code changes since planning; read the assigned phase's docs.
+- [x] Record checkout versions, dirty files, assigned scope and baseline checks.
+  See `tests/baseline.md`.
+- [x] Reconcile any code changes since planning; read the assigned phase's docs.
 
 ## Phase 1 — workflow stateful tests
 
-- [ ] Add isolated SQLite machine, controlled clock and no-op dispatch.
-- [ ] Add independent expected-state model and actions for both run types.
-- [ ] Prove W1 single-flight/isolation and W2 exact expiry boundaries.
-- [ ] Prove W3 queued/NULL-heartbeat recovery modes and W4 terminal stability.
-- [ ] Prove W5 cleanup and fault sensitivity; retain existing concurrency tests.
-- [ ] Run required gates; record `tests/phase-1-results.md`; resolve fresh review.
+- [x] Add isolated SQLite machine, controlled clock and no-op dispatch.
+- [x] Add independent expected-state model and actions for both run types.
+- [x] Prove W1 single-flight/isolation and W2 exact expiry boundaries.
+- [x] Prove W3 queued/NULL-heartbeat recovery modes and W4 terminal stability.
+- [x] Prove W5 cleanup and fault sensitivity; retain existing concurrency tests.
+- [x] Run required gates; record `tests/phase-1-results.md`; resolve fresh review.
+  Gates: new file + both unit test files (55 passed), admin API tests
+  (65 passed), `make lint` (pass), `make type` (exit nonzero — mypy pass
+  and coverage ratchet pass verified independently, but the target's own
+  pytest step has 5 pre-existing/unrelated failures, each independently
+  reproduced in isolation — see `tests/phase-1-results.md`), `make test`
+  (2364 passed), `make test-boundaries` (3
+  passed). No production code left modified. Phase 2/3 not started.
 
 ## Phase 2 — generated admin response contracts
 
