@@ -8,7 +8,7 @@ import json
 import os
 import shutil
 import stat
-import subprocess
+import subprocess  # nosec B404 - deliberate: runs fixed-arg npx/node commands (no user input in argv)
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import mkdtemp
