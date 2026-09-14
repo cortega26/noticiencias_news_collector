@@ -88,3 +88,31 @@ Derivado de `spec.md`. Marcar al verificar, no antes.
   pasa hoy **solo** porque el plan 081 tiene sucios `docs/ARCHITECTURE.md`,
   `docs/SOURCE_OF_TRUTH.md`, etc. Un commit únicamente social fallaría esa puerta:
   el paso 11 de §26 (docs BE/FE) debe entrar en el mismo commit o antes.
+
+## Cierre — paquetes 2–7 + rollout vía Buffer (2026-09-14)
+
+Los paquetes 2–7 del plan (§26 pasos 4–10: manifiesto, transporte, copy,
+ledger, adaptadores, orquestación, workflow) más el rollout (§26 pasos
+12–15) se implementaron y verificaron en el repo frontend. Este `todo.md`
+solo cubría el paquete 1, así que se cierra aquí con evidencia en vez de
+reconstruir casillas retroactivas.
+
+Verificado en producción 2026-09-14 (todo en `cortega26/noticiencias`):
+- [x] FE PR #163 (pkg 7: adaptador Buffer, `publish.js`, workflow) + PR #164
+      (fix: `--execute` llegaba a `runDistribution` como `dry-run`; el job de
+      publish hacía cero mutations en silencio) — ambos mergeados a `main`,
+      CI verde incl. Codacy
+- [x] `doctor` verde: 1 org + 3 canales Buffer (facebook/x/linkedin);
+      rama `social-state` inicializada (`init-state`, rev 0)
+- [x] Primer publish real (run 34897448358): modo `publish`,
+      `mutation_count: 3`, `exit_code: 0`, sin warnings — facebook PUBLISHED,
+      x PUBLISHED, linkedin ACCEPTED (reconcilia a sent en runs siguientes);
+      ledger `social-state` en rev 7; re-runs no duplican
+- [x] Kill switch operativo: `SOCIAL_PUBLISH_ENABLED=false` + cancelar el run
+      activo; `SOCIAL_PLATFORMS` limita por red
+
+Abierto / diferido (no bloquea el MVP Buffer):
+- [ ] Bluesky: sin cuenta todavía — faltan `BLUESKY_DID` / `BLUESKY_PDS_URL` /
+      `BLUESKY_APP_PASSWORD` (fase 3 del rollout, §22)
+- [ ] `workflow_dispatch` con `mode=reconcile` no llega al CLI (el job usa
+      `--execute` fijo); solo importa para reconciliación manual
