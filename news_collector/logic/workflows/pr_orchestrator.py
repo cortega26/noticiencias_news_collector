@@ -72,6 +72,18 @@ class PROrchestrator:
         Returns a PRResult with pr_url set if successful, or pr_url=None on failure.
         """
         git = git_handler if git_handler is not None else self._git
+        try:
+            numeric_id = int(article_id)
+        except (TypeError, ValueError) as exc:
+            logger.error(
+                "Refusing to create PR for non-numeric article id {}: "
+                "no DB row exists to correlate the publication with.",
+                article_id,
+            )
+            raise AttributeError(
+                f"Invalid article identity for publication: {article_id!r} "
+                "is not a numeric DB id; refusing to create an untracked PR."
+            ) from exc
         repo_url = self.resolve_repo_url()
         if not repo_url:
             raise AttributeError(
@@ -104,19 +116,14 @@ class PROrchestrator:
 
         if pr_url:
             logger.info("Pull Request created successfully: {}", pr_url)
-            try:
-                numeric_id = int(article_id)
-                # article_id here is the same value refinery_engine's
-                # _resolve_article_identity() writes into the committed
-                # post's `refinery_id` frontmatter field (in the normal,
-                # DB-id case they're the same string) — persisting it lets
-                # webhook_handler match this exact publication attempt.
-                self._db.mark_article_published(numeric_id, pr_url, article_id)
-            except ValueError:
-                logger.warning(
-                    "Could not mark non-numeric ID {} in main DB. Skipping state update.",
-                    article_id,
-                )
+            # article_id here is the same value refinery_engine's
+            # _resolve_article_identity() writes into the committed
+            # post's `refinery_id` frontmatter field (in the normal,
+            # DB-id case they're the same string) — persisting it lets
+            # webhook_handler match this exact publication attempt.
+            # Non-numeric ids are rejected at the top of this method, so
+            # the int() conversion there guarantees numeric_id is valid here.
+            self._db.mark_article_published(numeric_id, pr_url, article_id)
 
         return PRResult(pr_url=pr_url, recovered=recovered)
 
