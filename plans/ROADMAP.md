@@ -25,10 +25,10 @@
 |------|-------|-------|------|--------|
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
-| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 5/6 | IN PROGRESS (100 DONE in `3540b03`) |
+| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 6/6 | DONE (095 partial; remainder → 106) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **21** | **18/21** | |
+| **Total** | | **22** | **19/22** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -119,7 +119,7 @@
 | 092 | [Batch existence checks](092-batch-existence-check.md) | P2 | S | 3 | TODO |
 | 093 | [Dedupe image download](093-dedupe-image-download.md) | P2 | S | 2.3 | DONE |
 | 094 | [Unify slug extraction](094-unify-slug-extraction.md) | P2 | S | 2.2 | DONE |
-| 095 | [Workflow→UI decoupling](095-workflow-ui-decoupling.md) | P2 | M | 2.6 | TODO |
+| 095 | [Workflow→UI decoupling](095-workflow-ui-decoupling.md) | P2 | M | 2.6 | DONE-as-partial (Step 3 → 106) |
 | 096 | [Audit exception hygiene](096-audit-exception-hygiene.md) | P1 | S | 0.3 | DONE |
 | 097 | [Unmask perf failures](097-perf-fail-open.md) | P2 | S | 0.2 | DONE |
 | 098 | [audit-placeholders alias](098-audit-placeholders-alias.md) | P3 | S | 0.1 | DONE |
@@ -130,6 +130,7 @@
 | 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | DONE |
 | 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | DONE |
 | 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | DONE |
+| 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | TODO |
 
 ## Deferred & rejected (do not re-audit)
 
