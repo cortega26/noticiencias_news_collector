@@ -125,15 +125,33 @@ Repo conventions that apply here:
 Run `Install`, then `make security` on the unmodified checkout and RECORD the
 per-scanner verdicts (pip-audit/bandit/gitleaks) verbatim. Then `Lint`.
 
-- If `make security` already fails on the clean tree, record the exact failure — that is your starting evidence, not a STOP (you're here to change these gates deliberately). Any *other* `declared` command failing is a STOP — report it.
+Known pre-existing reds (verified by the advisor on the clean tree — NOT STOPs,
+NOT in scope, do not touch):
+- `make quality` fails at its Bandit leg (`Makefile:175`): exit 1 with exactly
+  11 Low-severity findings (B105 hardcoded-password-STRING on a Reddit URL,
+  B404 subprocess imports, B607 partial paths), 0 Medium/High. The sibling
+  `quality-ci` gate filters Bandit to HIGH, so this redness is unique to the
+  unfiltered `make quality` invocation. If your run shows anything OTHER than
+  this signature (different count, any Medium+), STOP and report.
+- `make security-dev` is red on the raw NLTK display independent of this plan
+  (see NLTK note in Step 2). Do not run it as a gate; do not fix it here.
 
-**Verify**: baseline verdicts recorded; `make lint` exits 0.
+**Verify**: baseline verdicts recorded; `make lint` exits 0; `make quality`
+shows only the known Bandit-leg signature above.
 
 ### Step 1: Investigate CVE-2026-0994 (no change yet)
 
 1. Run the un-ignored audit read-only: `.venv/bin/python -m pip_audit -r requirements.lock --desc` (or the repo's pinned invocation) and capture the `CVE-2026-0994` entry: affected package + versions, severity, and whether the package is reachable runtime code or build-only.
 2. Check git history for the flag's origin: `git log -S CVE-2026-0994 --oneline -- Makefile` — who added it, when, with what message.
-3. Verdict, one of:
+3. Prior executor's leads (2026-09-16, RE-VERIFY both before relying on them):
+   - `CVE-2026-0994`, `GHSA-7gcm-g887-7qv7`, and `PYSEC-2026-1805` are the SAME
+     protobuf advisory (ParseDict/Any-recursion DoS) under three IDs — the
+     security-lock JSON lists them as aliases of one entry. If true, the two
+     Makefile flags suppress one advisory, not two.
+   - `requirements.lock` contains no protobuf at all → the `Makefile:177` flag
+     may be verdict (a) deletable. Prove by running the un-ignored audit.
+   - Flag origin lead: commit `9e20cec` (2026-01-24, no rationale in message).
+4. Verdict, one of:
    - (a) Fixed upstream / not actually present → delete the flag everywhere.
    - (b) Real but accepted risk → move it into the `PIP_AUDIT_ALLOWLIST` model in `security_gate.py` with `reason` + short `expires_on`, wire the gate so ALL THREE audit paths enforce the same set, and delete the Makefile `--ignore-vuln` flag.
    - (c) Real and unacceptable → remove the flag and file/upgrade work as a follow-up (STOP and report — do not start the upgrade inside this plan).
@@ -142,29 +160,30 @@ per-scanner verdicts (pip-audit/bandit/gitleaks) verbatim. Then `Lint`.
 
 ### Step 2: Resolve the expired protobuf ignore
 
-1. Re-run the lock sync for the security/refinery locks per the repo flow and re-audit: does `GHSA-7gcm-g887-7qv7` still fire?
-2. If fixed → delete both `--ignore-vuln GHSA-7gcm-g887-7qv7` flags from `security-dev`, check off `docs/security_removal_plan.md`, update `SECURITY.md` (exception retired, date).
+1. Re-run the lock sync for the security/refinery locks per the repo flow and re-audit: does `GHSA-7gcm-g887-7qv7` (or its alias `PYSEC-2026-1805`) still fire?
+2. Prior executor's leads (2026-09-16, RE-VERIFY): the sync completed with ZERO diff (protobuf stays 4.25.9 security / 6.33.5 refinery); the literal GHSA id fires nowhere but the same advisory still fires on `requirements-security.lock` as `PYSEC-2026-1805` (fixes exist upstream at 5.29.6/6.33.5 but the sync cannot reach them); the refinery lock's protobuf (6.33.5) is already fixed. NLTK `GHSA-8mgp-746c-j5xp` (aliases `PYSEC-2026-3740`, `CVE-2026-81726`, no fix available) fires on ALL three locks with gate coverage only until 2026-09-30 — note it, do not renew it here.
+3. If fixed → delete both `--ignore-vuln GHSA-7gcm-g887-7qv7` flags from `security-dev`, check off `docs/security_removal_plan.md`, update `SECURITY.md` (exception retired, date).
 3. If still firing → do NOT extend the inline flag. Either upgrade protobuf through the sync flow, or replace the inline flag with an enforced, expiring entry per the allowlist model + a dated `SECURITY.md` note + removal-plan update. If neither is achievable quickly, STOP and report (an expired suppression must not be quietly renewed).
 
 **Verify**: `grep -n "ignore-vuln" Makefile` → no undocumented inline flags remain (every remaining one, if any, points at the enforced model).
 
 ### Step 3: Converge the three audit paths + docs
 
-1. After Steps 1-2, `make quality`, `make quality-ci` (or at least its pip-audit leg — read the target first; don't run the whole CI-only target if it requires CI env), and `make security` must implement the SAME exception set. Document the single source of truth (the allowlist in `security_gate.py`) in a comment at each Makefile invocation.
+1. After Steps 1-2, the pip-audit legs of `make quality`, `make quality-ci` (or at least its pip-audit leg — read the target first; don't run the whole CI-only target if it requires CI env), and `make security` must implement the SAME exception set. Document the single source of truth (the allowlist in `security_gate.py`) in a comment at each Makefile invocation. NOTE: full `make quality` exit-0 is NOT required (its Bandit leg is red pre-existing per Step 0 — out of scope); demonstrate the pip-audit leg agreement directly instead.
 2. Update `SECURITY.md` + `docs/security_removal_plan.md` to describe the end state; `make docs-check` green.
 
-**Verify**: `make security` → exit 0; `make quality` → exit 0; `make docs-check` → exit 0; all three audit paths reference one exception source.
+**Verify**: `make security` → exit 0; `make docs-check` → exit 0; all three pip-audit paths reference one exception source (show the three invocations + gate agreement).
 
 ## Test plan
 
 - No new unit tests expected (Make/policy change). If you add an allowlist entry, add/extend the gate's own tests if any exist (check `tests/` for `security_gate` coverage first).
-- Verification is the gates themselves: `make security`, `make quality`, `make docs-check`, plus `make lint`.
+- Verification is the gates themselves: `make security`, the three pip-audit legs, `make docs-check`, plus `make lint`.
 
 ## Done criteria
 
 Machine-checkable. ALL must hold:
 
-- [ ] `make lint`, `make security`, `make quality`, `make docs-check` all exit 0
+- [ ] `make lint`, `make security`, `make docs-check` all exit 0, and the three pip-audit legs (quality / quality-ci / security) demonstrably enforce the same exception set (full `make quality` exit-0 is explicitly NOT required — Bandit leg red pre-existing, Step 0)
 - [ ] `grep -n "ignore-vuln" Makefile` shows no bare undocumented flag (each remaining occurrence, if any, cites the enforced allowlist + expiry)
 - [ ] `SECURITY.md` no longer describes the protobuf item as unresolved drift (retired or renewed-with-expiry)
 - [ ] `git diff --name-only e77a039...HEAD` lists only the in-scope files (lockfile diffs from the official sync flow are acceptable — call them out)
@@ -178,7 +197,7 @@ Stop and report back (do not improvise) if:
 - Step 1 verdict is (c) — real, unacceptable vuln needing an upgrade (report; don't start it here).
 - The protobuf advisory still fires AND no upgrade path exists within the sync flow (report; don't renew silently).
 - The NLTK `GHSA-8mgp` entry already expired relative to today (2026-09-30) and the gate hard-fails for that reason — note it prominently; renewing it is out of scope.
-- A `declared` command (other than the deliberately-changed audit verdicts) fails on the unmodified checkout.
+- A `declared` command (other than the deliberately-changed audit verdicts, the known Bandit-leg redness, and the known `security-dev` NLTK display) fails on the unmodified checkout.
 
 ## Maintenance notes
 

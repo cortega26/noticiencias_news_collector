@@ -122,4 +122,5 @@
 - **Rejected at vetting:** auth fail-open as vuln (fail-closed since plan 021); `numpy==2.4.1` pin (satisfies `!=2.4.0`); wildcard-CORS as vuln (explicit allowlist + no credentials).
 - **Real but unplanned (lower leverage, future waves):** HtmlCollector follow-on SSRF validation · admin-contract unit tests · refinery-engine de-mocking · SQL score histogram · `make type` double-suite cost · 3-file mypy scope · stale `/healthz` doc example · NLTK expiry watch (fold into 096).
 - **Direction (maintainer decision, not scheduled):** reader-correction loop · social distribution past Buffer MVP · vision-model hero alt text (plan 084 spec exists) · offline editorial replay (covered by plan 080 Phase 3 — do not duplicate).
+- **Wave-0 follow-up (surfaced 2026-09-16, advisor-verified):** `make quality` Bandit leg red pre-existing (11 Lows) vs `quality-ci` HIGH filter — needs its own plan; 096 deliberately excludes it.
 - Full journal: `plans/README.md` fifth-pass section + `docs/audits/2026-08-plans-rejected-findings.md` (prior passes).
