@@ -3,7 +3,7 @@
 Same conventions as `test_collection_run_workflow.py`: exercises the class
 directly against a real SQLite DB; `_dispatch` is monkeypatched to a no-op
 for the state-machine tests; the `_run` tests call `_run` synchronously with
-a fake `apps.refinery.main.main` so no real Refinery pipeline is touched.
+a fake pipeline entry point so no real Refinery pipeline is touched.
 """
 
 import inspect
@@ -106,7 +106,7 @@ def test_a_collection_run_does_not_block_a_publication_run(db_manager, workflow)
 
 
 # ---------------------------------------------------------------------------
-# _run — maps apps.refinery.main.main() -> succeeded / failed
+# _run — maps run_publication_pipeline() -> succeeded / failed
 # ---------------------------------------------------------------------------
 
 
@@ -130,7 +130,7 @@ def test_run_success_records_pr_url_from_the_attempt_summary(
         failure_class=None,
     )
     monkeypatch.setattr(
-        "apps.refinery.main.main",
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
         lambda **kw: {"status": "success", "processed_count": 1},
         raising=False,
     )
@@ -158,7 +158,7 @@ def test_run_editorial_rejection_is_a_failed_run_that_keeps_the_reason(
         pr_url=None,
     )
     monkeypatch.setattr(
-        "apps.refinery.main.main",
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
         lambda **kw: {
             "status": "error",
             "processed_count": 0,
@@ -179,12 +179,12 @@ def test_run_editorial_rejection_is_a_failed_run_that_keeps_the_reason(
 
 def test_run_does_not_close_the_shared_db(db_manager, workflow, monkeypatch) -> None:
     """Phase 4a lesson: whatever `_run` invokes must not dispose the
-    process-wide engine. `apps.refinery.main.main` uses its own
+    process-wide engine. The pipeline entry point uses its own
     DatabaseManager, but pin the guarantee with a test."""
     monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
     run_id = workflow.start(article_id=1).run_id
     monkeypatch.setattr(
-        "apps.refinery.main.main",
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
         lambda **kw: {"status": "success", "processed_count": 1},
         raising=False,
     )
@@ -268,21 +268,70 @@ def test_read_attempt_for_id_uses_the_refinery_engine_sanitiser(workflow, tmp_pa
 
 
 # ---------------------------------------------------------------------------
-# Signature-drift guard for the `apps.refinery.main.main` call `_run` makes.
+# Signature-drift guard for the pipeline entry point `_run` calls.
 # The `_run` tests fake it with `lambda **kw: ...`, which would swallow a
 # renamed/removed parameter silently — bind the real signature instead.
 # ---------------------------------------------------------------------------
 
 
-def test_refinery_main_accepts_every_kwarg_run_passes() -> None:
-    from apps.refinery.main import main as run_refinery
+def test_pipeline_entry_point_accepts_every_kwarg_run_passes() -> None:
+    from news_collector.logic.workflows.publication_pipeline import (
+        run_publication_pipeline,
+    )
 
-    inspect.signature(run_refinery).bind_partial(
+    inspect.signature(run_publication_pipeline).bind_partial(
         process_id="123",
         article_url=None,
         skip_visuals=False,
         dry_run=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# Plan 106: `_run` delegates to the workflow-layer pipeline, never the UI.
+# ---------------------------------------------------------------------------
+
+
+def test_run_calls_pipeline_entry_point_with_expected_kwargs(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """`_run` forwards the serving-dispatch contract's kwargs
+    (`process_id` as str, `article_url`, `skip_visuals=False`) to the
+    pipeline entry point."""
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(article_id=42).run_id
+    seen: dict = {}
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        lambda **kw: seen.update(kw) or {"status": "noop", "processed_count": 0},
+        raising=False,
+    )
+
+    workflow._run(run_id, 42, None)
+
+    assert seen == {"process_id": "42", "article_url": None, "skip_visuals": False}
+
+
+def test_run_does_not_import_the_legacy_ui_module(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """Poison `apps.refinery.main` in `sys.modules` and prove the success
+    path still completes — `_run` must resolve the pipeline without
+    touching the legacy UI module."""
+    import sys
+
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(article_id=11).run_id
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        lambda **kw: {"status": "success", "processed_count": 1},
+        raising=False,
+    )
+    monkeypatch.setitem(sys.modules, "apps.refinery.main", None)
+
+    workflow._run(run_id, 11, None)
+
+    assert workflow.get_status(run_id).run_status == "succeeded"
 
 
 # ---------------------------------------------------------------------------
