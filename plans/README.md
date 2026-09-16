@@ -215,7 +215,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 |------|-------|----------|--------|------------|--------|
 | 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
-| 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 094 (unify slug extraction behind resolver) DONE and archived — merged in `36d1a60` (engine method now thin delegate; wrapper kept for the `extract_slug_fn` monkeypatch hook; 18-case parity probe promoted to 12 committed cases).
 - 093 (deduplicate image-download implementations) DONE and archived — merged in `54e15df` (engine delegates to handler; old patch-namespaces still apply; 4 new delegation tests).
 - 086 (fail closed before untracked PRs) DONE and archived — merged in `4921cd5` (numeric guard before all side effects, existing `AttributeError` type; 5 test files touched — 1 new + 4 fixture-hygiene encoding the old buggy path; bare-MagicMock-DB recovery masking noted for reviewers).
+- 100 (move manual-ingest policy out of workflow) DONE and archived — merged in `3540b03` (credibility/tier/word-gates to `[collection]` config, shared `infer_manual_published_date` + persisted inferred flag, LAW-B5 note recorded pre-code; first push blocked by gitleaks FP on the new `_KEY` identifier — resolved by amending `gitleaks:allow` into the unpushed branch commits and re-merging, verified non-credentials).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 

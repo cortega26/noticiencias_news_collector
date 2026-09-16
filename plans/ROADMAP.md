@@ -25,10 +25,10 @@
 |------|-------|-------|------|--------|
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
-| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 4/6 | IN PROGRESS (086 DONE in `4921cd5`) |
+| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 5/6 | IN PROGRESS (100 DONE in `3540b03`) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **21** | **17/21** | |
+| **Total** | | **21** | **18/21** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -124,7 +124,7 @@
 | 097 | [Unmask perf failures](097-perf-fail-open.md) | P2 | S | 0.2 | DONE |
 | 098 | [audit-placeholders alias](098-audit-placeholders-alias.md) | P3 | S | 0.1 | DONE |
 | 099 | [Fail-open warning](099-fail-open-warning.md) | P2 | S | 1.6 | DONE |
-| 100 | [Manual-ingest policy](100-manual-ingest-policy.md) | P3 | M | 2.5 | TODO |
+| 100 | [Manual-ingest policy](100-manual-ingest-policy.md) | P3 | M | 2.5 | DONE |
 | 101 | [Explicit config injection](101-explicit-config-injection.md) | P3 | M | 3 | TODO |
 | 102 | [Quality-gate success path](102-quality-gate-success-path.md) | P2 | S | 0.4 | DONE |
 | 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | DONE |
