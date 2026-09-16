@@ -35,6 +35,10 @@ recent_days_threshold = 365
 user_agent = "NoticienciasBot/1.0 (+https://noticiencias.com)"
 canonicalization_cache_size = 2048
 source_timeout_seconds = 300
+manual_ingest_source_credibility = 0.5
+manual_ingest_source_tier = "D"
+manual_ingest_min_words = 80
+manual_ingest_summary_min_words = 40
 
 [rate_limiting]
 delay_between_requests_seconds = 1.0

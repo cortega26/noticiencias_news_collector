@@ -10,7 +10,9 @@ from typing import Any, Iterable, Mapping
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
+from noticiencias.config_schema import CollectionConfig
 
+from news_collector.config.settings import get_runtime_config
 from news_collector.config.sources import ALL_SOURCES, save_sources
 from news_collector.contracts.adapters import adapt_article_to_export
 from news_collector.contracts.collector import CollectorArticleModel
@@ -27,7 +29,18 @@ logger = get_logger().create_module_logger(__name__)
 
 _FETCH_METHODS = ("scholarly", "http", "headless")
 _HOST_PREFIXES = ("www.", "feeds.")
-MANUAL_INGEST_MIN_WORDS = 80
+# Policy keys owned by CollectionConfig ([collection] section); the workflow
+# must not hardcode their values (LAW-B3). Values below are read from the
+# schema defaults — never literals — so a schema change flows automatically.
+_MANUAL_POLICY_KEYS = (
+    "manual_ingest_source_credibility",
+    "manual_ingest_source_tier",
+    "manual_ingest_min_words",
+    "manual_ingest_summary_min_words",
+)
+_MANUAL_POLICY_DEFAULTS = {
+    key: getattr(CollectionConfig(), key) for key in _MANUAL_POLICY_KEYS
+}
 _NARRATIVE_WORD_RE = re.compile(r"\b[\wÁÉÍÓÚáéíóúÑñ'-]+\b", flags=re.UNICODE)
 _BUNDLE_NOISE_MARKERS = (
     "sourcescontent",
@@ -310,12 +323,34 @@ class ManualUrlIngestService:
         db_manager: DatabaseManager,
         *,
         export_dir: Path | None = None,
+        policy: Mapping[str, Any] | None = None,
     ) -> None:
         self.db = db_manager
         self.http = HttpEnricher()
         self.headless = HeadlessEnricher()
         self.scholarly = ScholarlyMetadataEnricher()
         self.export_dir = export_dir or Path("temp/manual_ingest")
+        # Explicit per-instance overrides (tests, callers with their own
+        # config handle). When None, values come from runtime collection
+        # config, falling back to the CollectionConfig schema defaults.
+        self._policy = dict(policy) if policy is not None else {}
+
+    def _manual_policy(self) -> dict[str, Any]:
+        """Resolve manual-ingest tunables from their policy owner (LAW-B3)."""
+        merged = dict(_MANUAL_POLICY_DEFAULTS)
+        try:
+            runtime = get_runtime_config().collection_config or {}
+        except Exception as exc:
+            logger.warning(
+                "Manual ingest falling back to schema policy defaults: {}", exc
+            )
+            runtime = {}
+        for key in merged:
+            if key in self._policy:
+                merged[key] = self._policy[key]
+            elif key in runtime:
+                merged[key] = runtime[key]
+        return merged
 
     def ingest(self, article_url: str) -> dict[str, Any]:
         canonical_url = canonicalize_url(str(article_url).strip()) or ""
@@ -436,10 +471,11 @@ class ManualUrlIngestService:
             return source_id, dict(existing), False
 
         base_url = f"{parsed.scheme or 'https'}://{normalized_host}/"
+        policy = self._manual_policy()
         source_cfg = {
             "name": normalized_host,
             "url": base_url,
-            "credibility_score": 0.5,
+            "credibility_score": policy["manual_ingest_source_credibility"],
             "update_frequency": "manual",
             "category": "multidisciplinary",
             "language": "en",
@@ -450,7 +486,7 @@ class ManualUrlIngestService:
             "headless_enabled": True,
             "headless_max_seconds": 60,
             "_group": "COMMUNITY_FEEDS",
-            "tier": "D",
+            "tier": policy["manual_ingest_source_tier"],
             "fetchability_score": 50,
             "crawl_interval_seconds": 86400,
             "manual_only": True,
@@ -589,7 +625,11 @@ class ManualUrlIngestService:
 
         word_basis = content or summary or ""
         word_count = max(1, _word_count(word_basis))
-        minimum_words = 40 if not content and summary else MANUAL_INGEST_MIN_WORDS
+        policy = self._manual_policy()
+        if not content and summary:
+            minimum_words = policy["manual_ingest_summary_min_words"]
+        else:
+            minimum_words = policy["manual_ingest_min_words"]
         if word_count < minimum_words:
             return None, {
                 "error_code": "source_unusable",

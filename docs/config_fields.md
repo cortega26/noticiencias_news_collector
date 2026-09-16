@@ -36,6 +36,10 @@
 | collection.user_agent | str | "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" | HTTP User-Agent header sent to providers. |  |  |
 | collection.canonicalization_cache_size | int | 2048 | LRU cache size for canonical URLs; set to 0 to disable caching. |  |  |
 | collection.source_timeout_seconds | int | 300 | Total soft timeout per source (includes fetch, parse, enrichment). |  |  |
+| collection.manual_ingest_source_credibility | float | 0.5 | Credibility score assigned to auto-created manual-ingest sources. |  |  |
+| collection.manual_ingest_source_tier | str | "D" | Tier assigned to auto-created manual-ingest sources ("D" = manual/restricted). |  |  |
+| collection.manual_ingest_min_words | int | 80 | Minimum narrative words required for a manual-ingest article. |  |  |
+| collection.manual_ingest_summary_min_words | int | 40 | Minimum narrative words for summary-only manual ingest (no full text). |  |  |
 | rate_limiting | RateLimitingConfig |  |  |  |  |
 | rate_limiting.delay_between_requests_seconds | float | 1.0 | Base delay enforced between requests to the same source. |  |  |
 | rate_limiting.domain_default_delay_seconds | float | 1.0 | Fallback delay applied when a domain has no override. |  |  |

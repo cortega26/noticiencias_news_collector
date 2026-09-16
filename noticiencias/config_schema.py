@@ -264,6 +264,32 @@ class CollectionConfig(StrictModel):
         default=300,
         description="Total soft timeout per source (includes fetch, parse, enrichment).",
     )
+    manual_ingest_source_credibility: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Credibility score assigned to auto-created manual-ingest sources.",
+    )
+    manual_ingest_source_tier: str = Field(
+        default="D",
+        description='Tier assigned to auto-created manual-ingest sources ("D" = manual/restricted).',
+    )
+    manual_ingest_min_words: PositiveInt = Field(
+        default=80,
+        description="Minimum narrative words required for a manual-ingest article.",
+    )
+    manual_ingest_summary_min_words: PositiveInt = Field(
+        default=40,
+        description="Minimum narrative words for summary-only manual ingest (no full text).",
+    )
+
+    @field_validator("manual_ingest_source_tier")
+    @classmethod
+    def _normalize_manual_ingest_tier(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if normalized not in {"A", "B", "C", "D"}:
+            raise ValueError("manual_ingest_source_tier must be one of: A, B, C, D")
+        return normalized
 
 
 class RateLimitingConfig(StrictModel):
