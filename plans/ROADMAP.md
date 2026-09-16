@@ -111,7 +111,7 @@
 
 | Order | Plan | One-liner | Files touched |
 |-------|------|-----------|---------------|
-| 5.1 + 5.2 (parallel-safe) | 107 | Privacy analytics + per-article cost/SLO baseline | FE `config.yaml`, `Analytics.astro`; BE `monitoring/reporting.py`, `scripts/ops/cost_report.py` (new) |
+| 5.1 + 5.2 (parallel-safe) | 107 | GA4 event model (Sprint 0) + cost/SLO baseline | FE `config.yaml`, `Analytics.astro`, article/related components, `docs/analytics-sprint-0.md`; BE `monitoring/reporting.py`, `scripts/ops/cost_report.py` (new) |
 | 5.1 + 5.2 (parallel-safe) | 108 | Newsletter Worker endpoint + frontend enablement | FE `workers/` (new handler), `NewsletterCapture.astro`, `newsletter.astro`, `config.yaml` |
 
 **Wave-done check:** traffic flowing, newsletter subscribe→confirm→unsubscribe e2e green on preview, cost/SLO numbers captured; `validate_plans_ledger.py` → OK.

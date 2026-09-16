@@ -2,6 +2,9 @@
 
 > **Executor instructions**: Clone the Worker report pattern (plan 023) for a separate newsletter endpoint. Never POST subscriptions to `/api/report` (different wire contract). Update the `108` row in `plans/README.md` when complete.
 >
+> **Status 2026-09-16 — SUPERSEDED as build owner, kept as fallback:** the frontend spike program decided ADR-0009 (Buttondown via plain-HTML form POST) and its build plan 008 (`../noticiencias/plans/008-newsletter-build.md`) owns execution — config + CSP + disclosures, zero markup changes, zero server code. This plan's Worker design stays valid ONLY if the operator rejects Buttondown (cost, data-residency, or control reasons); do not build both. While blocked, this plan's live items are: (a) keep this fallback current, (b) answer frontend Q3 from the backend side if asked (endpoint ownership is frontend/operator domain).
+> **Hard gates for either path:** ADR-0009 `Accepted` (still `Proposed`) + operator inputs (endpoint URL or Buttondown username, Friday owner, billing owner, sending-domain decision). Without them, no newsletter code lands anywhere.
+>
 > **Drift check (run first)**:
 > `git diff --stat HEAD -- plans/archive/social-distribution/ 2>/dev/null; git status --short | head` (backend) plus frontend `git diff --stat HEAD -- src/config.yaml src/components/common/NewsletterCapture.astro workers/src/`.
 
