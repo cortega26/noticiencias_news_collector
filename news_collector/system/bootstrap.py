@@ -89,13 +89,13 @@ def build_database(logger: Any):
     return db_manager
 
 
-def build_collectors(logger: Any, health_tracker: Any):
+def build_collectors(logger: Any, health_tracker: Any, config: Any = None):
     """Configura los colectores del sistema."""
     try:
         from news_collector.collectors.dispatcher import CollectorDispatcher
 
         collector = CollectorDispatcher(
-            logger_factory=logger, health_tracker=health_tracker
+            logger_factory=logger, health_tracker=health_tracker, config=config
         )
         print(
             f"DEBUG: System created Dispatcher with health_tracker={health_tracker} id={id(health_tracker) if health_tracker else 'None'}"

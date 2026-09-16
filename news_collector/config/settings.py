@@ -390,6 +390,17 @@ def refresh_runtime_config(config: Any | None = None) -> RuntimeConfigSnapshot:
 
     _CURRENT_SNAPSHOT = new_snapshot
 
+    # Plan 101: push the validator language set through an explicit channel
+    # instead of contracts reading ambient runtime state per article. Wired
+    # here — the single choke point every refresh path flows through — so
+    # refresh-takes-effect-immediately semantics are preserved. Lazy import:
+    # contracts.collector must not be imported at module level (cycle).
+    from news_collector.contracts.collector import set_supported_languages
+
+    set_supported_languages(
+        new_snapshot.text_processing_config.get("supported_languages", ["en", "es"])
+    )
+
     return new_snapshot
 
 

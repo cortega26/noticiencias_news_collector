@@ -29,13 +29,18 @@ class CategoryResolution:
 
 
 class EditorialCategoryResolver:
-    def __init__(self, classifier: EditorialClassifier | None = None):
+    def __init__(
+        self,
+        classifier: EditorialClassifier | None = None,
+        config: Any | None = None,
+    ):
         self._classifier = classifier
+        self._config = config
 
     @property
     def classifier(self) -> EditorialClassifier:
         if self._classifier is None:
-            self._classifier = EditorialClassifier()
+            self._classifier = EditorialClassifier(config=self._config)
         return self._classifier
 
     def resolve_category(

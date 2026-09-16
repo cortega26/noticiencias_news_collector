@@ -3,8 +3,6 @@
 from collections.abc import Sequence
 from typing import Any, Optional
 
-from noticiencias.config_manager import load_config
-
 from news_collector.config.prompts import build_editorial_classification_system_prompt
 from news_collector.editorial.categories import (
     CANONICAL_PUBLIC_CATEGORIES,
@@ -23,8 +21,13 @@ class EditorialClassifier:
     """
 
     def __init__(self, llm_client: Optional[Any] = None, config: Any | None = None):
+        if llm_client is None and config is None:
+            raise ValueError(
+                "EditorialClassifier requires llm_client or config explicitly; "
+                "the implicit load_config() fallback was removed (plan 101)."
+            )
         if llm_client is None:
-            active_config = config or load_config()
+            active_config = config
             model = get_model_for_stage(
                 "classifier", config=active_config, logger=logger
             )
