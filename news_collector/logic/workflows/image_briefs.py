@@ -19,6 +19,52 @@ PROMPT_TEMPLATE_PATH = (
 )
 DEFAULT_TONE = "curiosity, credibility, relevance, scientific wonder, seriousness"
 
+# NC-BE-087 S1 GUARD: slug allowlist. Slugs are produced by derive_slug →
+# `{date}-{slugified}` so they may only contain ASCII alphanumerics plus
+# `-`/`_` and must not start with a separator (no `.`, `/`, or empty).
+_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+
+# NC-BE-087 S2: upload/storage-scoped image type allowlist (extensions only;
+# genuine-type enforcement comes from _verify_image_magic below).
+_ALLOWED_UPLOAD_EXTENSIONS = frozenset(
+    {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
+)
+
+
+def _validate_slug(slug: str) -> str:
+    """Reject traversal-shaped or otherwise unsafe slugs.
+
+    Raises ValueError naming the offending slug; applied at brief_path()
+    (the choke point for load/save/list) and before staging uploads.
+    """
+    if not _SLUG_RE.match(slug or ""):
+        raise ValueError(f"Invalid image-brief slug: {slug!r}")
+    return slug
+
+
+def _verify_image_magic(content: bytes, extension: str) -> None:
+    """Verify uploaded bytes match the claimed image type by magic signature.
+
+    Local byte check only (stdlib imghdr was removed in Python 3.13 — no new
+    dependency). Raises ValueError on mismatch or empty content.
+    """
+    if not content:
+        raise ValueError("Empty image upload")
+    if extension == ".png":
+        valid = content[:8] == b"\x89PNG\r\n\x1a\n"
+    elif extension in (".jpg", ".jpeg"):
+        valid = content[:3] == b"\xff\xd8\xff"
+    elif extension == ".gif":
+        valid = content[:6] in (b"GIF87a", b"GIF89a")
+    elif extension == ".webp":
+        valid = content[:4] == b"RIFF" and content[8:12] == b"WEBP"
+    elif extension == ".avif":
+        valid = content[4:8] == b"ftyp" and content[8:12] in (b"avif", b"avis")
+    else:  # pragma: no cover - extension allowlist guards this branch
+        valid = False
+    if not valid:
+        raise ValueError(f"Uploaded content does not match {extension} image signature")
+
 
 def _ensure_min_text(value: str, *, fallback: str, min_length: int) -> str:
     """Guarantee contract-safe text for brief fields fed from sparse article data."""
@@ -58,12 +104,27 @@ class ImageBriefStore:
         self.prompt_template = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
 
     def brief_path(self, slug: str) -> Path:
-        return self.briefs_dir / f"{slug}.json"
+        _validate_slug(slug)
+        candidate = self.briefs_dir / f"{slug}.json"
+        # NC-BE-087 S1 GUARD (defense-in-depth): containment check on the
+        # resolved path, mirroring target_repo_writer.py NC-BE-015.
+        try:
+            candidate.resolve().relative_to(self.briefs_dir.resolve())
+        except ValueError as err:
+            raise ValueError(
+                f"Path traversal detected for image-brief slug: {slug!r}"
+            ) from err
+        return candidate
 
     def list_briefs(self) -> list[ImageBriefModel]:
         briefs: list[ImageBriefModel] = []
         for brief_file in sorted(self.briefs_dir.glob("*.json")):
-            brief = self.load_brief(brief_file.stem)
+            try:
+                brief = self.load_brief(brief_file.stem)
+            except ValueError:
+                # Stray file whose stem is not a valid slug — skip rather
+                # than breaking the whole queue listing.
+                continue
             if brief is not None:
                 briefs.append(brief)
         briefs.sort(key=lambda item: item.updated_at, reverse=True)
@@ -81,7 +142,11 @@ class ImageBriefStore:
         for slug in slug_candidates:
             if not slug:
                 continue
-            brief = self.load_brief(slug)
+            try:
+                brief = self.load_brief(slug)
+            except ValueError:
+                # Invalid candidate slug can never match a stored brief.
+                continue
             if brief is not None:
                 return brief
 
@@ -216,8 +281,22 @@ class ImageBriefStore:
         scientific_domain: str,
         subject_scene: str,
     ) -> ImageBriefModel:
-        safe_ext = Path(filename).suffix.lower() or ".png"
+        _validate_slug(brief.slug)
+        raw_ext = Path(filename).suffix.lower()
+        if raw_ext not in _ALLOWED_UPLOAD_EXTENSIONS:
+            raise ValueError(f"Disallowed image upload extension: {raw_ext!r}")
+        # Normalize .jpeg -> .jpg like the downloaders do.
+        safe_ext = ".jpg" if raw_ext == ".jpeg" else raw_ext
+        _verify_image_magic(content, safe_ext)
         staged_path = self.uploads_dir / f"{brief.slug}{safe_ext}"
+        # NC-BE-087 S1 GUARD (defense-in-depth): containment check on the
+        # resolved staged path, mirroring target_repo_writer.py NC-BE-015.
+        try:
+            staged_path.resolve().relative_to(self.uploads_dir.resolve())
+        except ValueError as err:
+            raise ValueError(
+                f"Path traversal detected for image-brief slug: {brief.slug!r}"
+            ) from err
         staged_path.write_bytes(content)
 
         updated = brief.model_copy(

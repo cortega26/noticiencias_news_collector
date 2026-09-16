@@ -1940,6 +1940,116 @@ def test_admin_image_brief_upload_stages_asset(
     assert staged.uploaded_asset_path
 
 
+def test_admin_image_brief_traversal_slug_422(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Traversal-shaped slugs map to 422 (not 404/500) at the API boundary."""
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-ok"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        # %2E%2E decodes to `..` after routing, reaching the slug guard.
+        response = api_client.put(
+            "/v1/admin/images/%2E%2E",
+            json={"topic": "x"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        response = api_client.put(
+            "/v1/admin/images/.hidden",
+            json={"topic": "x"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        response = api_client.post(
+            "/v1/admin/images/%2E%2E/upload",
+            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+
+def test_admin_image_brief_upload_rejects_bad_type_422(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-badtype"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        # Disallowed extension, even with genuine PNG bytes.
+        response = api_client.post(
+            "/v1/admin/images/brief-badtype/upload",
+            files={"file": ("hero.svg", b"\x89PNG\r\n\x1a\nfake", "image/svg+xml")},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        # Allowed extension but mismatched magic bytes.
+        response = api_client.post(
+            "/v1/admin/images/brief-badtype/upload",
+            files={
+                "file": ("hero.png", b"\xff\xd8\xff\xe0fake-jpeg", "image/png"),
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+
+def test_admin_image_brief_upload_oversize_413(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.serving import api as serving_api
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-big"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+    monkeypatch.setattr(serving_api, "MAX_UPLOAD_BYTES", 16)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/images/brief-big/upload",
+            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\n0123456789", "image/png")},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 413
+
+
+def test_read_upload_capped_rejects_over_cap() -> None:
+    """Direct unit cover for the chunked-read 413 branch."""
+    import io
+
+    import pytest as _pytest
+    from fastapi import UploadFile
+    from fastapi.exceptions import HTTPException
+
+    from news_collector.serving.api import _read_upload_capped
+
+    small = UploadFile(file=io.BytesIO(b"abc"), filename="hero.png")
+    assert _read_upload_capped(small, cap_bytes=16) == b"abc"
+
+    big = UploadFile(
+        file=io.BytesIO(b"\x89PNG\r\n\x1a\n0123456789"), filename="hero.png"
+    )
+    with _pytest.raises(HTTPException) as exc_info:
+        _read_upload_capped(big, cap_bytes=16)
+    assert exc_info.value.status_code == 413
+
+
 def test_admin_delete_source_removes_yaml_and_db(
     api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
 ) -> None:

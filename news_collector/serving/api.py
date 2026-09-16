@@ -52,6 +52,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Request,
     Response,
     UploadFile,
     status,
@@ -115,6 +116,27 @@ logger = get_logger().create_module_logger("serving.api")
 # Collector export artifact consumed by the admin source-health endpoint.
 # Overridable in tests via monkeypatch.
 ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
+
+# NC-BE-087 S2: ceiling for admin image-brief uploads — generous above any
+# GUI-produced hero image. Overridable in tests via monkeypatch.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+
+def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
+    """Read an upload in chunks, rejecting bodies over *cap_bytes* (413)."""
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = upload.file.read(_UPLOAD_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > cap_bytes:
+            raise HTTPException(status_code=413, detail="File upload too large")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 
 # processing_status values the admin triage queue can filter by. Mirrors the
 # statuses the storage layer transitions between (pending/new → publishing →
@@ -1826,7 +1848,10 @@ def create_app(  # noqa: C901
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
 
         store = ImageBriefStore(Path("data"))
-        brief = store.load_brief(slug)
+        try:
+            brief = store.load_brief(slug)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         if brief is None:
             raise HTTPException(status_code=404, detail="Brief not found")
 
@@ -1840,7 +1865,10 @@ def create_app(  # noqa: C901
             updated = ImageBriefModel.model_validate(updated.model_dump())
         except Exception as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        store.save_brief(updated)
+        try:
+            store.save_brief(updated)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return AdminImageBriefUploadResult(
             brief=updated.model_dump(mode="json"),
             asset_path=updated.uploaded_asset_path or "",
@@ -1852,6 +1880,7 @@ def create_app(  # noqa: C901
     )
     def admin_upload_image_brief(
         slug: str,
+        request: Request,
         file: UploadFile = File(...),
         topic: Optional[str] = Form(None),
         news_angle: Optional[str] = Form(None),
@@ -1863,24 +1892,40 @@ def create_app(  # noqa: C901
         """Stage an image asset for a brief (multipart)."""
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
 
+        # NC-BE-087 S2: early reject when the declared body already exceeds
+        # the cap, before touching the store or reading the stream.
+        declared_length = request.headers.get("content-length")
+        if (
+            declared_length
+            and declared_length.isdigit()
+            and int(declared_length) > MAX_UPLOAD_BYTES
+        ):
+            raise HTTPException(status_code=413, detail="File upload too large")
+
         store = ImageBriefStore(Path("data"))
-        brief = store.load_brief(slug)
+        try:
+            brief = store.load_brief(slug)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         if brief is None:
             raise HTTPException(status_code=404, detail="Brief not found")
 
-        content = file.file.read()
+        content = _read_upload_capped(file, cap_bytes=MAX_UPLOAD_BYTES)
         if not content:
             raise HTTPException(status_code=422, detail="Empty file upload")
-        updated = store.stage_upload(
-            brief=brief,
-            filename=file.filename or f"{slug}.png",
-            content=content,
-            draft_alt_text=draft_alt_text or brief.draft_alt_text,
-            topic=topic or brief.topic,
-            news_angle=news_angle or brief.news_angle,
-            scientific_domain=scientific_domain or brief.scientific_domain,
-            subject_scene=subject_scene or brief.subject_scene,
-        )
+        try:
+            updated = store.stage_upload(
+                brief=brief,
+                filename=file.filename or f"{slug}.png",
+                content=content,
+                draft_alt_text=draft_alt_text or brief.draft_alt_text,
+                topic=topic or brief.topic,
+                news_angle=news_angle or brief.news_angle,
+                scientific_domain=scientific_domain or brief.scientific_domain,
+                subject_scene=subject_scene or brief.subject_scene,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return AdminImageBriefUploadResult(
             brief=updated.model_dump(mode="json"),
             asset_path=updated.uploaded_asset_path or "",
