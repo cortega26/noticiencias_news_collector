@@ -227,8 +227,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
-| 102 | [Cover quality-gate success path](102-quality-gate-success-path.md) | P2 | S | — | TODO |
-
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 
 ### Fifth-pass dependency notes
@@ -243,7 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 098 (alias `audit-placeholders` to the real gate) DONE and archived — merged in `c050d00`, ledger commit `5c9f139`.
 - 097 (unmask `make perf` failures; clean skip only on zero collected) DONE and archived — merged in `cb5f67f` (executor proved pass/fail/empty branches; CI `perf` job has no tolerance flag so impact is nil).
 - 096 (unify pip-audit exceptions; retire expired protobuf ignore) DONE and archived — merged in `2c16c65` (first attempt STOPped correctly on pre-existing `make quality` Bandit red; plan refreshed, second attempt converged all four pip-audit legs on the enforced allowlist; CVE-2026-0994 flag deleted as alias-duplicate, protobuf residual allowlisted to 2026-10-31).
-- 096 (unify pip-audit exceptions; retire expired protobuf ignore) DONE and archived — merged in `2c16c65` (first attempt STOPped correctly on pre-existing `make quality` Bandit red; plan refreshed, second attempt converged all four pip-audit legs on the enforced allowlist; CVE-2026-0994 flag deleted as alias-duplicate, protobuf residual allowlisted to 2026-10-31).
+- 102 (cover quality-gate success path) DONE and archived — merged in `e033e91` (hermetic valid-golden exit-0 test + single-byte tamper test asserting exit 1 and the distinct `Missing required section content` message; existing tests untouched).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
