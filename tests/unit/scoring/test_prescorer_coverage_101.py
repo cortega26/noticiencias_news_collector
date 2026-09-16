@@ -20,9 +20,7 @@ def test_extract_balanced_segment_no_brace_returns_none():
 
 def test_extract_balanced_segment_nested():
     text = 'prefix {"a": [1, {"b": 2}]} suffix'
-    assert (
-        PreScorer._extract_balanced_segment(text, "{", "}") == '{"a": [1, {"b": 2}]}'
-    )
+    assert PreScorer._extract_balanced_segment(text, "{", "}") == '{"a": [1, {"b": 2}]}'
 
 
 def test_extract_balanced_segment_ignores_braces_in_strings():
