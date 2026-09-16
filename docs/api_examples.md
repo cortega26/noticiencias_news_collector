@@ -105,3 +105,20 @@ GET /readyz
   "status": "ready"
 }
 ```
+
+## Future B2B surface (plan 113 — inventory only, not for sale)
+
+The public ranked reads (`GET /v1/articles` with deterministic cursor
+pagination, filters by source/topic/date, plus `GET
+/v1/articles/{id}/related` over simhash clusters) are the natural base
+for a future paid digest API (university comms, lab press offices):
+ranked science picks with scores, topics, and source provenance.
+
+Prerequisites before any monetization (pointers, not built here):
+
+- public rate-limiting + API keys on the ranked reads (none exist today);
+- SLA/support story and versioned contract;
+- pricing and terms (none defined).
+
+Related internal surface: the authenticated admin API (`/v1/admin/*`)
+stays operator-only and is out of scope for any external product.

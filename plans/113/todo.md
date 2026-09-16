@@ -2,19 +2,20 @@
 
 Derived from `spec.md`. Mark when verified, not before.
 
-## Step 0 — Baseline
-- [ ] Drift check clean; 107 numbers availability noted (placeholders OK, invention forbidden)
+## Step 0 — Baseline (DONE 2026-09-16)
+- [x] Drift check clean; 107 numbers available (CF baseline recorded, GA4 deferred)
 
-## Step 1 — Media kit + donate
-- [ ] `patrocinios.md` created, footer + nosotros links; no ad scripts
-- [ ] `validate:content + lint + build` green
+## Step 1 — Media kit + donate (DONE 2026-09-16, corrected on evidence)
+- [x] `patrocinios.md` created with preliminary-numbers honesty + contact channel
+- [x] Donate links WITHHELD (no account exists — shipping dead links would be a broken promise; recorded as operator 5-min task like Bluesky)
+- [x] `validate:content + lint + build` green
 
-## Step 2 — Editorial principle
-- [ ] Red-line paragraph in `EDITORIAL.md`; `check:doc-drift` green
+## Step 2 — Editorial principle (DONE)
+- [x] Red-line section in `docs/EDITORIAL.md`; `check:doc-drift` green (via validate)
 
-## Step 3 — B2B one-pager
-- [ ] `docs/api_examples.md` documents ranked reads as future surface + rate-limit pointer
-- [ ] `make docs-check` green
+## Step 3 — B2B one-pager (DONE)
+- [x] `docs/api_examples.md` inventory + prerequisites pointer
+- [x] `make docs-check` green
 
 ## Close-out
-- [ ] `validate_plans_ledger.py` → OK; row 113 updated
+- [x] `validate_plans_ledger.py` → OK; row 113 updated

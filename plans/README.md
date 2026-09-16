@@ -275,8 +275,8 @@ Verified-baseline growth program: analytics/cost instrumentation first, then thr
 | 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | DONE — bulk circuit states (58→1 SELECTs), health merge, suppression-candidates rename, dead-knob documented, sources perf gate. KEEP: reference for Wave 6. |
 | 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | DONE — overclaim escalation in health scope (universal disputed block kept), MinHash rejected for cosine, per-page triage grouping + GUI chip. KEEP: reference for Wave 7. |
 | 112 | [Share UI + hero sweep + social close-out](112/spec.md) | P1 | M | None | DONE — share mounted w/ copy-link, hero sweep clean, dead widgets pruned, reconcile job added, runbook written, Bluesky deferred, contracts doc line added. KEEP: reference for Wave 7. |
-| 113 | [Monetization foundations without extraction](113/spec.md) | P2 | S | 107 | TODO — media-kit draft, donate link, editorial red line, B2B one-pager; zero ad scripts. |
-| 114 | [Series curation + transparency + search budget](114/spec.md) | P2 | S | None | TODO — 3 starter series, aggregate auditor numbers, Lunr to Pagefind trigger; no schema change. |
+| 113 | [Monetization foundations without extraction](113/spec.md) | P2 | S | 107 | DONE — patrocinios page, editorial red line, B2B inventory; zero scripts; donate links withheld (no account — recorded block). KEEP: reference for Wave 8. |
+| 114 | [Series curation + transparency + search budget](114/spec.md) | P2 | S | None | DONE — 3 series live (21 posts), aggregate auditor numbers with n disclosed, search trigger documented (122KB/150KB: ~10 posts headroom). KEEP: reference for Wave 8. |
 
 ### Seventh-pass wave rules
 
