@@ -1729,6 +1729,12 @@ class EditorAgent:
         consumer reads headlines via `.get()` with fallbacks, so a headline
         glitch must never fail the whole article.
         """
+        if not _extract_publishable_body(adapted_content or ""):
+            logger.warning(
+                "Headline generation skipped: no publishable body in adapted "
+                "content; relying on deterministic repair."
+            )
+            return {}
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe.
         # Keys mirror HeadlinesSchema; the three editorial-voice fields are
