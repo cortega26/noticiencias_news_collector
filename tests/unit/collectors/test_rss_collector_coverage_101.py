@@ -36,6 +36,7 @@ def collector():
     db.get_source_circuit_state.return_value = None
     db.get_source_feed_metadata.return_value = None
     db.article_exists.return_value = False
+    db.articles_exist.return_value = set()
     instance.db_manager = db
     return instance
 
@@ -346,7 +347,13 @@ def test_extract_stops_at_fetch_limit(collector):
 
 
 def test_extract_skips_known_urls(collector):
-    collector.db_manager.article_exists.side_effect = lambda url: url.endswith("/a0")
+    # Plan 092 switched the duplicate filter to the bulk API, which returns
+    # canonicalized URLs — the fake mirrors that contract.
+    from news_collector.utils.url_canonicalizer import canonicalize_url
+
+    collector.db_manager.articles_exist.side_effect = lambda urls: {
+        canonicalize_url(u) or u for u in urls if u.endswith("/a0")
+    }
     articles, _ = _extract(collector, [_candidate(0), _candidate(1)])
     assert [a["url"] for a in articles] == ["http://example.com/a1"]
 

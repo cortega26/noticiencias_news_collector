@@ -34,7 +34,10 @@ from news_collector.enrichment import enrichment_pipeline
 from news_collector.logic.parsers.image_extractor import ImageCandidate, ImageExtractor
 from news_collector.logic.parsers.rss_parser import RssParser
 from news_collector.scoring.pre_scorer import PreScorer
-from news_collector.utils.url_canonicalizer import configure_canonicalization_cache
+from news_collector.utils.url_canonicalizer import (
+    canonicalize_url,
+    configure_canonicalization_cache,
+)
 
 from .base_collector import BaseCollector
 
@@ -778,6 +781,15 @@ class RSSCollector(BaseCollector):
         candidate_multiplier = 4
         fetch_limit = max_articles * candidate_multiplier
 
+        # Bulk duplicate filter: one batched existence query per source
+        # instead of one per candidate (LAW-B10: no N+1 in collector loops).
+        # Membership is tested against canonicalized URLs, mirroring
+        # articles_exist() exactly (it canonicalizes each URL with
+        # `canonicalize_url(u) or u` before querying).
+        existing_urls = self.db_manager.articles_exist(
+            [cand["url"] for cand in candidates]
+        )
+
         count = 0
         for cand in candidates:
             if count >= fetch_limit:
@@ -795,8 +807,8 @@ class RSSCollector(BaseCollector):
                 if published < recent_threshold:
                     continue
 
-            # Duplicate filter
-            if self.db_manager.article_exists(cand["url"]):
+            # Duplicate filter (batched lookup above)
+            if (canonicalize_url(cand["url"]) or cand["url"]) in existing_urls:
                 continue
 
             filtered_candidates.append(cand)
