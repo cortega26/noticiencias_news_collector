@@ -48,7 +48,7 @@ logger = get_logger().create_module_logger("Orchestrator")
 
 # Repo root resolved from this file's package location
 # (news_collector/logic/workflows/ -> parents[3]); the legacy UI entrypoint
-# used parents[2] from apps/refinery/ — same directory either way.
+# used parents[2] from its own location — same directory either way.
 project_root = Path(__file__).resolve().parents[3]
 
 PROCESSED_LOG_FILE = "processed_log.json"
