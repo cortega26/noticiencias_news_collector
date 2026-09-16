@@ -340,7 +340,9 @@ class PublicationIdentityResolver:
             parsed = PublicationIdentityResolver._parse_date_like(raw)
             if parsed is not None:
                 return parsed.strftime("%Y-%m-%d")
-            missing = raw is None or (isinstance(raw, str) and not raw.strip()) or raw == ""
+            missing = (
+                raw is None or (isinstance(raw, str) and not raw.strip()) or raw == ""
+            )
             if not missing:
                 raise UndatedArticleError(
                     article.get("id", "unknown"),
