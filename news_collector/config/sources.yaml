@@ -977,6 +977,10 @@ bair_blog:
   tier: "A"
   fetchability_score: 95
   crawl_interval_seconds: 600
+  # 2026-09-16 (plan 105, verdict c): whole host bair.berkeley.edu unreachable — ConnectTimeout on /blog/feed.xml (x2), /blog/ root, and bare domain; DNS resolves but no redirect/successor observed. Re-enable by removing this block if the host returns.
+  blacklisted: true
+  blacklist_reason: "ConnectTimeout on https://bair.berkeley.edu/blog/feed.xml (verified 2026-09-16, twice) plus blog root and bare domain — host-level outage, zero articles for weeks, no verified successor URL."
+  blacklisted_date: "2026-09-16"
 
 hugging_face_blog:
   name: Hugging Face Blog
