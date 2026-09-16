@@ -12,6 +12,11 @@ from news_collector.scoring.cognitive_scorer import CognitiveScorer
 from news_collector.scoring.pre_scorer import PreScorer
 
 
+def _minimal_explicit_config() -> SimpleNamespace:
+    """Plan 101: policy constructors take config explicitly (no ambient load)."""
+    return SimpleNamespace(ollama=SimpleNamespace(api_url="http://localhost:11434"))
+
+
 def test_prescorer_uses_registry(monkeypatch):
     calls = []
 
@@ -35,7 +40,7 @@ def test_prescorer_uses_registry(monkeypatch):
         "news_collector.scoring.pre_scorer.get_provider", fake_get_provider
     )
 
-    scorer = PreScorer()
+    scorer = PreScorer(config=_minimal_explicit_config())
     assert scorer.llm.model == "registry-prescorer:7b"
     assert calls == ["pre_scorer"]
 
@@ -96,7 +101,7 @@ def test_classifier_uses_registry(monkeypatch):
         fake_get_provider,
     )
 
-    classifier = EditorialClassifier()
+    classifier = EditorialClassifier(config=_minimal_explicit_config())
     assert classifier.llm.model == "registry-classifier:14b"
     assert calls == ["classifier"]
 
@@ -125,7 +130,7 @@ def test_council_uses_registry(monkeypatch):
         fake_get_provider,
     )
 
-    council = EditorialCouncil()
+    council = EditorialCouncil(config=_minimal_explicit_config())
     assert council.llm.model == "registry-council:14b"
     assert calls == ["council"]
 

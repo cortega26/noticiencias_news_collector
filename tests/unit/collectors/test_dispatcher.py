@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.base_collector import create_collector
 from news_collector.collectors.dispatcher import CollectorDispatcher
@@ -19,7 +20,7 @@ def test_factory_invalid_type():
 
 
 def test_dispatcher_collect_all():
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
     with patch.object(
         dispatcher, "collect_from_multiple_sources_async", new_callable=AsyncMock
     ) as mock_async:
@@ -42,7 +43,7 @@ def _assert_total_invariant(summary):
 @pytest.mark.asyncio
 async def test_dispatcher_failed_task_attributed_with_source_identity():
     """Failed collector tasks must report source IDs and increment counts."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     mock_collector = MagicMock()
     mock_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -74,7 +75,7 @@ async def test_dispatcher_failed_task_attributed_with_source_identity():
 @pytest.mark.asyncio
 async def test_dispatcher_partial_failure_mixed_results():
     """One failing and one succeeding task must both be counted."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     fail_collector = MagicMock()
     fail_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -118,7 +119,7 @@ async def test_dispatcher_partial_failure_mixed_results():
 async def test_dispatcher_all_success_via_real_merge_path():
     """All-success case exercised through the real gather/merge logic,
     not mocked away (unlike test_dispatcher_collect_all)."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     rss_collector = MagicMock()
     rss_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -157,7 +158,7 @@ async def test_dispatcher_all_success_via_real_merge_path():
 async def test_dispatcher_malformed_result_attributed_as_failure():
     """A child collector returning a non-dict, non-exception value must
     not silently vanish — it becomes a counted failure per source."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     malformed_collector = MagicMock()
     malformed_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -183,7 +184,7 @@ async def test_dispatcher_missing_collector_attributed_as_failure():
     """If even the rss fallback target has no registered collector
     (e.g. total initialization failure), requested sources must be
     counted as failures, not silently dropped."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
     dispatcher.collectors.clear()  # simulate every collector failing init
 
     sources = {
@@ -208,7 +209,7 @@ async def test_dispatcher_known_type_uninitialized_collector_not_rerouted_to_rss
     collector_unavailable, not silently rerouted to rss the way a
     genuinely unknown type string is. rss stays present and healthy so
     this proves the failure isn't just the total-wipeout case."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
     dispatcher.collectors.pop("headless", None)
 
     rss_collector = MagicMock()
@@ -240,7 +241,7 @@ async def test_dispatcher_child_source_details_omission_is_backfilled_as_failure
     dict whose source_details sub-map still omits one of the sources
     assigned to it. That source must not silently vanish from the
     summary — it must be reconciled and counted as a failure."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     under_reporting_collector = MagicMock()
     under_reporting_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -271,7 +272,7 @@ async def test_dispatcher_foreign_source_id_from_child_is_dropped_not_counted():
     """Mirror of the omission gap: a child collector reporting a sid
     that was never requested must not inflate succeeded/failed beyond
     sources_requested."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     over_reporting_collector = MagicMock()
     over_reporting_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -306,7 +307,7 @@ async def test_dispatcher_unknown_collector_type_falls_back_to_rss():
     coerces to 'rss' rather than being rejected — not externally
     promised anywhere else, but not changed by this plan either. This
     test locks it in so it is no longer untested."""
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
 
     rss_collector = MagicMock()
     rss_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -333,7 +334,7 @@ async def test_dispatcher_unknown_collector_type_falls_back_to_rss():
 
 @pytest.mark.asyncio
 async def test_dispatcher_empty_input_returns_zeroed_totals():
-    dispatcher = CollectorDispatcher()
+    dispatcher = CollectorDispatcher(config=load_config())
     result = await dispatcher.collect_from_multiple_sources_async({})
     summary = result["collection_summary"]
 
@@ -348,7 +349,7 @@ async def test_dispatcher_empty_input_returns_zeroed_totals():
 @pytest.mark.asyncio
 async def test_dispatcher_reports_failures_to_health_tracker():
     tracker = MagicMock()
-    dispatcher = CollectorDispatcher(health_tracker=tracker)
+    dispatcher = CollectorDispatcher(health_tracker=tracker, config=load_config())
 
     fail_collector = MagicMock()
     fail_collector.collect_from_multiple_sources_async = AsyncMock(
@@ -373,7 +374,7 @@ async def test_dispatcher_reports_failures_to_health_tracker():
 async def test_dispatcher_health_tracker_exception_does_not_break_summary():
     tracker = MagicMock()
     tracker.record_attempt.side_effect = RuntimeError("tracker is down")
-    dispatcher = CollectorDispatcher(health_tracker=tracker)
+    dispatcher = CollectorDispatcher(health_tracker=tracker, config=load_config())
 
     fail_collector = MagicMock()
     fail_collector.collect_from_multiple_sources_async = AsyncMock(

@@ -73,6 +73,7 @@ class RSSCollector(BaseCollector):
         self,
         logger_factory: Optional["NewsCollectorLogger"] = None,
         health_tracker: Optional[Any] = None,
+        config: Optional[Any] = None,
     ) -> None:
         super().__init__(logger_factory=logger_factory, health_tracker=health_tracker)
         # Replaced manual session with RobustRequestsClient
@@ -83,7 +84,7 @@ class RSSCollector(BaseCollector):
         # (ImageExtractor takes a session, we can pass self.client.session)
         self.session = self.client.session
 
-        self.pre_scorer = PreScorer()
+        self.pre_scorer = PreScorer(config=config)
         self.parser = RssParser()
         self.image_extractor = ImageExtractor(session=self.session)
 

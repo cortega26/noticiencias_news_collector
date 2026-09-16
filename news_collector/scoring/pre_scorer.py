@@ -2,8 +2,6 @@ import json
 import re
 from typing import Any, Dict, List, Optional
 
-from noticiencias.config_manager import load_config
-
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
@@ -34,8 +32,14 @@ class PreScorer:
     """
 
     def __init__(self, llm_client: Optional[Any] = None, config: Any | None = None):
+        if llm_client is None and config is None:
+            raise ValueError(
+                "PreScorer requires llm_client or config explicitly; "
+                "the implicit load_config() fallback was removed (plan 101)."
+            )
         if llm_client is None:
-            active_config = config or load_config()
+            # Guarded non-None above; Any preserves the pre-change type.
+            active_config: Any = config
             model = get_model_for_stage(
                 "pre_scorer", config=active_config, logger=logger
             )

@@ -1164,7 +1164,7 @@ class BaseCollector(ABC):
 # =================================================
 
 
-def create_collector(collector_type: str) -> BaseCollector:
+def create_collector(collector_type: str, config: Any | None = None) -> BaseCollector:
     """
     Factory function para crear colectores según el tipo.
 
@@ -1174,7 +1174,7 @@ def create_collector(collector_type: str) -> BaseCollector:
     if collector_type.lower() == "rss":
         from .rss_collector import RSSCollector
 
-        return RSSCollector()
+        return RSSCollector(config=config)
     elif collector_type.lower() == "html":
         from .html_collector import HtmlCollector
 

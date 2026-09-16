@@ -7,6 +7,8 @@ import sys
 # Add project root to path
 sys.path.append(os.getcwd())
 
+from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.config.settings import DATABASE_CONFIG, TEXT_PROCESSING_CONFIG
 
@@ -73,7 +75,8 @@ async def run_verification():
         if d.entries:
             print(f"   - First Entry Title: {d.entries[0].get('title', 'No Title')}")
 
-    collector = RSSCollector()
+    # Script entry point (bootstrap edge): config is loaded here, once.
+    collector = RSSCollector(config=load_config())
     results = await collector.collect_from_multiple_sources_async(rss_config)
 
     # 3. Validation Check

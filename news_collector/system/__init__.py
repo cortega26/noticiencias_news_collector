@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, cast
 
 from news_collector.config import ALL_SOURCES
-from news_collector.config.settings import get_runtime_config
+from news_collector.config.settings import get_config, get_runtime_config
 
 
 def _install_dry_run_mocks(
@@ -177,8 +177,10 @@ class NewsCollectorSystem:
             self.db_manager = bootstrap.build_database(self.logger)
 
             # 5. Collectors
+            # Bootstrap edge: the canonical Config is read here, once, and
+            # threaded explicitly down to policy constructors (plan 101).
             self.collector = bootstrap.build_collectors(
-                self.logger, self.health_tracker
+                self.logger, self.health_tracker, config=get_config()
             )
 
             # 6. Validation

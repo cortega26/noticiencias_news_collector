@@ -47,7 +47,9 @@ class CollectorDispatcher:
         {"rss", "html", "async_rss", "headless", "reddit"}
     )
 
-    def __init__(self, logger_factory=None, health_tracker=None):  # noqa: C901
+    def __init__(  # noqa: C901
+        self, logger_factory=None, health_tracker=None, config=None
+    ):
         self.collectors: Dict[str, BaseCollector] = {}
         self.logger_factory = logger_factory
         self.health_tracker = health_tracker
@@ -63,7 +65,7 @@ class CollectorDispatcher:
         rss_type = "rss"
 
         try:
-            self.collectors["rss"] = create_collector(rss_type)
+            self.collectors["rss"] = create_collector(rss_type, config=config)
         except Exception as e:
             logger.opt(exception=True).error(
                 "Failed to initialize RSS collector: {}", e

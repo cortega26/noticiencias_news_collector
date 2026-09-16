@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 
@@ -12,7 +13,7 @@ def mock_session():
 
 
 def test_fetch_feed_handles_404(mock_session):
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     mock_response = MagicMock()
     mock_response.status_code = 404
     mock_response.content = b""
@@ -35,7 +36,7 @@ def test_fetch_feed_handles_404(mock_session):
 
 def test_fetch_feed_handles_html_content_type(mock_session):
     # Simulate a 200 OK but with text/html content type
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.headers = {"Content-Type": "text/html"}
@@ -70,7 +71,7 @@ def test_fetch_feed_handles_html_content_type(mock_session):
 
 def test_fetch_feed_handles_410_gone(mock_session):
     # Regression test for Science feed issue
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     mock_response = MagicMock()
     mock_response.status_code = 410
     mock_response.content = b""
@@ -90,7 +91,7 @@ def test_fetch_feed_handles_410_gone(mock_session):
 
 def test_malformed_xml_handling():
     # Test that bozo bit handling prevents crashing
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
 
     # Malformed XML
     malformed_content = "<rss><channel><title>Test</title><item><title>Bad item</item></channel></rss>"  # Missing closing title

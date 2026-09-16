@@ -596,7 +596,7 @@ class EditorAgent:
             self.headlines_model = cloud_model
             self.enrichment_model = cloud_model
 
-        self.category_resolver = EditorialCategoryResolver()
+        self.category_resolver = EditorialCategoryResolver(config=cfg)
         logger.info(
             f"EditorAgent model routing resolved: default={self.model}, "
             f"translator={self.translator_model}, editor={self.editor_model}, "

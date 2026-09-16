@@ -1,4 +1,5 @@
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors import RSSCollector
 
@@ -8,7 +9,7 @@ def test_ssrf_protection_blocks_internal_ips(monkeypatch):
     Test that the RSSCollector blocks requests to internal/private IP addresses
     to prevent SSRF attacks.
     """
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
 
     # Mock _respect_robots avoiding network calls
     monkeypatch.setattr(RSSCollector, "_respect_robots", lambda self, url: (True, None))

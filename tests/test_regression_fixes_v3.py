@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.storage.database import DatabaseManager
@@ -29,7 +30,7 @@ class TestRegressionFixesV3:
             "news_collector.collectors.base_collector.get_database_manager",
             return_value=mock_db,
         ):
-            collector = RSSCollector()
+            collector = RSSCollector(config=load_config())
             # Explicitly set db_manager just in case
             collector.db_manager = mock_db
             return collector

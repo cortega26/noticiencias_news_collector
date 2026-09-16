@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 
@@ -14,7 +15,7 @@ class TestQualityContract:
         db_manager = MagicMock()
         # Mock storage calls to avoid DB errors
         db_manager.save_article.return_value = MagicMock()
-        return RSSCollector(db_manager)
+        return RSSCollector(db_manager, config=load_config())
 
     @pytest.fixture
     def source_config(self):

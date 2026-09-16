@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 
@@ -9,7 +10,7 @@ from news_collector.collectors.rss_collector import RSSCollector
 @pytest.mark.regression
 def test_enrichment_failure_fail_open():
     """Verify that enrichment failures produce a valid degraded article object."""
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
 
     # Mock Enrichment Pipeline using patch
     with patch(

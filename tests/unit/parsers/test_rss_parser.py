@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 
@@ -11,7 +12,7 @@ from news_collector.collectors.rss_collector import RSSCollector
 
 @pytest.fixture
 def rss_collector():
-    return RSSCollector()
+    return RSSCollector(config=load_config())
 
 
 def test_rss_parses_atom_entry(rss_collector):

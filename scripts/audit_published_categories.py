@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from noticiencias.config_manager import load_config
+
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
 
 
@@ -40,7 +42,8 @@ def main() -> int:
     args = parser.parse_args()
 
     posts_dir = Path(args.posts_dir).resolve()
-    resolver = EditorialCategoryResolver()
+    # Script entry point (bootstrap edge): config is loaded here, once.
+    resolver = EditorialCategoryResolver(config=load_config())
     mismatches: list[tuple[str, str, str, str]] = []
     scanned = 0
 

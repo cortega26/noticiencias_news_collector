@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from datetime import date, datetime, time, timezone
 from typing import Any, Dict, List, TypedDict
 
@@ -15,19 +16,31 @@ from pydantic import (
     model_validator,
 )
 
-from news_collector.config.settings import get_runtime_config
 from news_collector.utils.url_canonicalizer import canonicalize_url
 
 from .common import ArticleMetadata, ArticleMetadataModel
 
+# Explicit language-set snapshot (plan 101). The validator must not read
+# ambient runtime config per article; the bootstrap owner
+# (refresh_runtime_config in news_collector/config/settings.py) pushes
+# updates here via set_supported_languages(), preserving the old
+# refresh-takes-effect-immediately semantics through an explicit channel.
+_SUPPORTED_LANGUAGES: set[str] | None = None
+
+_DEFAULT_SUPPORTED_LANGUAGES = frozenset({"en", "es"})
+
+
+def set_supported_languages(languages: Iterable[str]) -> None:
+    """Replace the validator language snapshot (called from bootstrap)."""
+    global _SUPPORTED_LANGUAGES
+    _SUPPORTED_LANGUAGES = set(languages)
+
 
 def _supported_languages() -> set[str]:
-    """Read live so a refresh_runtime_config() change takes effect immediately."""
-    return set(
-        get_runtime_config().text_processing_config.get(
-            "supported_languages", ["en", "es"]
-        )
-    )
+    """Return the snapshot; the bootstrap default when never set."""
+    if _SUPPORTED_LANGUAGES is None:
+        return set(_DEFAULT_SUPPORTED_LANGUAGES)
+    return set(_SUPPORTED_LANGUAGES)
 
 
 def _ensure_not_none(value: Any) -> Any:
