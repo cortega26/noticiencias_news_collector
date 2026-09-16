@@ -13,6 +13,9 @@ class TestEditorialPolicyEnforcement:
     def mock_components(self):
         db = MagicMock()
         db.get_canonical_slug.return_value = None  # Default: No slug in DB
+        # Default: nothing stuck in "publishing" (mirrors the real DB's None;
+        # a truthy auto-mock would short-circuit publishing recovery).
+        db.get_publishing_state.return_value = None
         git = MagicMock()
         editor = MagicMock()
         config = MagicMock()
@@ -158,7 +161,9 @@ class TestEditorialPolicyEnforcement:
         engine.auditor.get_cached_score.return_value = score
 
         article = {
-            "id": "test_allowed",
+            # Numeric fixture id (plan 086): non-numeric identities fail closed
+            # in PROrchestrator.create_pr before any PR side effect.
+            "id": "123",
             "title": "Test with valid length",
             "url": "http://x",
             "summary": "This is a sufficiently long summary for editorial policy validation.",
