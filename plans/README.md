@@ -216,7 +216,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 086 | [Fail closed before PRs for title-fallback articles](086-pr-without-tracking.md) | P1 | M | — | TODO |
 | 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
 | 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
-| 094 | [Unify slug extraction behind resolver](094-unify-slug-extraction.md) | P2 | S | — | TODO |
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 091 (422 not 500 for invalid public list queries) DONE and archived — merged in `d0e5333` (inline `ge/le` + `ValidationError`→422 via the pydantic compat accessor; first attempt's TYPE_CHECKING import broke mypy, fixed per house pattern; 6 new tests).
 - 099 (warn loudly on dev-only auth fail-open) DONE and archived — merged in `abea67c` (warning naming exact var + consequence at both fail-open sites; 503 branch and `development` default untouched per scope; 4 new tests).
 - 089 (whitespace-only dates count as missing in identity) DONE and archived — merged in `4986cdc` (strip-aware missing check in `_derive_date` only; garbage still quarantines; 3 new tests).
+- 094 (unify slug extraction behind resolver) DONE and archived — merged in `36d1a60` (engine method now thin delegate; wrapper kept for the `extract_slug_fn` monkeypatch hook; 18-case parity probe promoted to 12 committed cases).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
