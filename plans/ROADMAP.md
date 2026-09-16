@@ -25,10 +25,10 @@
 |------|-------|-------|------|--------|
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
-| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 3/6 | IN PROGRESS (093 DONE in `54e15df`) |
+| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 4/6 | IN PROGRESS (086 DONE in `4921cd5`) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **21** | **16/21** | |
+| **Total** | | **21** | **17/21** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -110,7 +110,7 @@
 | Plan | Title | Pri | Effort | Wave | Status |
 |------|-------|-----|--------|------|--------|
 | 085 | [Bulk-reset cap reporting](085-bulk-reset-cap-reporting.md) | P1 | S | 1.1 | DONE |
-| 086 | [Fail closed before untracked PRs](086-pr-without-tracking.md) | P1 | M | 2.4 | TODO |
+| 086 | [Fail closed before untracked PRs](086-pr-without-tracking.md) | P1 | M | 2.4 | DONE |
 | 087 | [Image-brief hardening](087-image-brief-hardening.md) | P1 | S | 1.2 | DONE |
 | 088 | [Cursor precision](088-cursor-precision.md) | P2 | S | 1.3 | DONE |
 | 089 | [Whitespace dates as missing](089-whitespace-dates.md) | P2 | S | 2.1 | DONE |
