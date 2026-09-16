@@ -328,6 +328,71 @@ class TestIdentityCreationMode:
                 posts_dir=posts_dir,
             )
 
+    def test_ident_05_whitespace_published_date_falls_through(self, tmp_path):
+        """IDENT-05e: whitespace-only published_date is missing (not garbage) —
+        falls through to collected_date like None/''."""
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        identity = PublicationIdentityResolver(
+            db=db, manifest=_make_manifest_stub()
+        ).resolve(
+            article_id="3e",
+            article={
+                "published_date": "   ",
+                "collected_date": datetime(2025, 11, 10),
+            },
+            posts_dir=posts_dir,
+        )
+
+        assert identity.canonical_date == "2025-11-10"
+
+    def test_ident_05_whitespace_both_dates_quarantines(self, tmp_path):
+        """IDENT-05f: whitespace-only published_date AND collected_date →
+        quarantine, never today."""
+        from news_collector.logic.workflows.publication_identity import (
+            UndatedArticleError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        with pytest.raises(UndatedArticleError):
+            PublicationIdentityResolver(db=db, manifest=_make_manifest_stub()).resolve(
+                article_id="3f",
+                article={"published_date": "   ", "collected_date": "  \t "},
+                posts_dir=posts_dir,
+            )
+
+    def test_ident_05_garbage_published_date_quarantines_despite_collected(
+        self, tmp_path
+    ):
+        """IDENT-05g: genuinely-unparseable published_date still quarantines
+        even when collected_date is valid — garbage is a data problem, not
+        a silent skip."""
+        from news_collector.logic.workflows.publication_identity import (
+            UndatedArticleError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+
+        with pytest.raises(UndatedArticleError):
+            PublicationIdentityResolver(db=db, manifest=_make_manifest_stub()).resolve(
+                article_id="3g",
+                article={
+                    "published_date": "not-a-date",
+                    "collected_date": datetime(2025, 11, 10),
+                },
+                posts_dir=posts_dir,
+            )
+
     def test_ident_05_identity_is_clock_independent(self, tmp_path):
         """IDENT-05c: same article resolved twice yields the identical
         identity — no runtime clock input anywhere in the derivation."""
