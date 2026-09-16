@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
+from noticiencias.config_manager import load_config
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.config.settings import RATE_LIMITING_CONFIG
 from news_collector.storage.database import DatabaseManager
@@ -39,7 +40,7 @@ def _setup_collector(tmp_path, monkeypatch):
     #     "news_collector.collectors.rss_collector.get_database_manager",
     #     lambda: db_manager,
     # )
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     source_config = {
         "name": "Test Feed",
         "url": "https://example.com/feed.xml",
@@ -53,7 +54,7 @@ def _setup_collector(tmp_path, monkeypatch):
 
 
 def test_backoff_monotonic_small():
-    c = RSSCollector()
+    c = RSSCollector(config=load_config())
     # measure successive delays (not exact, but ensure non-negative)
     for attempt in range(3):
         start = time.perf_counter()
@@ -144,7 +145,7 @@ def test_collect_from_source_handles_not_modified(tmp_path, monkeypatch):
 
 
 def test_rate_limit_chooses_strictest_override(monkeypatch):
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     domain = "example.com"
     collector._domain_last_request[domain] = 100.0
 
@@ -173,7 +174,7 @@ def test_rate_limit_chooses_strictest_override(monkeypatch):
 
 
 def test_rate_limit_applies_jitter(monkeypatch):
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     domain = "jitter.test"
     collector._domain_last_request[domain] = 50.0
 

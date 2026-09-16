@@ -3,6 +3,7 @@ from typing import Type
 
 import pytest
 
+from noticiencias.config_manager import load_config
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore
 
@@ -54,7 +55,7 @@ class _Response429(_BaseResponse):
 def test_fetch_feed_applies_conditional_headers(
     response_cls: Type[_BaseResponse],
 ) -> None:
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     store = MemoryFeedStore()
     store.update_source_feed_metadata(
         "source-1", etag='W/"cached"', last_modified="Wed, 12 Mar 2025 11:00:00 GMT"
@@ -85,7 +86,7 @@ def test_fetch_feed_applies_conditional_headers(
 
 
 def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     store = MemoryFeedStore()
     collector.db_manager = store
 
@@ -109,7 +110,7 @@ def test_fetch_feed_invokes_backoff_on_retry(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_fetch_feed_skips_when_content_hash_matches() -> None:
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     store = MemoryFeedStore()
     collector.db_manager = store
     content_hash = hashlib.sha256(_Response200Same.content).hexdigest()

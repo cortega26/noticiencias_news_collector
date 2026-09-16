@@ -7,6 +7,7 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch
 
+from noticiencias.config_manager import load_config
 from news_collector.collectors.rss_collector import RSSCollector
 
 # Configure basic logging to capture events
@@ -104,7 +105,7 @@ class TestHeadlessFunnel(unittest.TestCase):
 
         # 3. Setup Collector with Mocks
         # Instantiate
-        collector = RSSCollector()
+        collector = RSSCollector(config=load_config())
         collector.db_manager = mock_db
 
         # Mock the HeadlessEnricher inside the router
@@ -236,7 +237,7 @@ class TestHeadlessFunnel(unittest.TestCase):
         mock_db = MagicMock()
         mock_db.article_exists.return_value = False
 
-        collector = RSSCollector()
+        collector = RSSCollector(config=load_config())
         collector.db_manager = mock_db
 
         # Mock Headless

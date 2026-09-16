@@ -2,12 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from noticiencias.config_manager import load_config
 from news_collector.collectors.rss_collector import RSSCollector
 
 
 @pytest.fixture
 def collector():
-    return RSSCollector()
+    return RSSCollector(config=load_config())
 
 
 def test_fetch_feed_robust_success(collector):

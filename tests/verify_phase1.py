@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+from noticiencias.config_manager import load_config
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.components.editorial.ai_editor import EditorAgent
 
@@ -28,7 +29,7 @@ def test_circuit_breaker_skips_cooldown(mock_client_cls, mock_db_cls):
         "is_active": True,
     }
 
-    collector = RSSCollector()
+    collector = RSSCollector(config=load_config())
     collector.db_manager = mock_db  # Ensure it uses our mock
 
     # Execution
