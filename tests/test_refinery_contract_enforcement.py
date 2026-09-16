@@ -53,6 +53,9 @@ def test_process_single_article_enforces_contract(tmp_path):
     assert list(tmp_path.rglob("*.md")) == [], "No files should be written"
 
     valid_article = {
+        # Numeric DB-like id (plan 086): non-numeric identities fail closed
+        # in PROrchestrator.create_pr before any PR side effect.
+        "id": "123",
         "title": "Valid title 123",
         "summary": "This is a sufficiently long summary for testing",
         "content": "Valid content",
@@ -170,6 +173,9 @@ def test_process_single_article_accepts_audited_article_after_strip(tmp_path):
 
     # Article 502 shape: DB-sourced payload carrying persisted audit evidence.
     audited_article = {
+        # Numeric DB id matching the "502" shape (plan 086: non-numeric
+        # identities fail closed in PROrchestrator.create_pr).
+        "id": "502",
         "title": "Valid title 123",
         "summary": "This is a sufficiently long summary for testing",
         "content": "Valid content",

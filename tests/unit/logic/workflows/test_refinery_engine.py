@@ -388,7 +388,11 @@ class TestRefineryEngine(unittest.TestCase):
         mock_dt_refinery.now.return_value.isoformat.return_value = "2050-01-01T12:00:00"
 
         article = {
-            "id": "1999-id",
+            # Numeric fixture id (plan 086): non-numeric identities now fail
+            # closed in PROrchestrator.create_pr before any PR side effect,
+            # so end-to-end fixtures must use DB-like numeric ids. The "1999"
+            # still matches this test's 1999-12-31 payload date below.
+            "id": "1999",
             "title": "A vintage article",
             "url": "http://x",
             "summary": "This is a sufficiently long summary for vintage refinery validation.",

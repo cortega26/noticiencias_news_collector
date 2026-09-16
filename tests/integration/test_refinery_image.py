@@ -11,6 +11,10 @@ from news_collector.logic.workflows.refinery_engine import RefineryEngine
 @pytest.fixture
 def mock_refinery_engine(tmp_path):
     db_manager = MagicMock()
+    # No article is stuck in "publishing" (plan 086: numeric ids now enter
+    # attempt_recovery, so the mock must mirror the real DB's None here
+    # instead of a truthy auto-mock that would short-circuit recovery).
+    db_manager.get_publishing_state.return_value = None
     git_handler = MagicMock()
     git_handler.create_branch.return_value = "content/update/test"
     git_handler.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
@@ -47,7 +51,7 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
     target_dir.mkdir()
 
     article = {
-        "id": "test-123",
+        "id": "123",
         "title": "Test Article",
         "url": "http://x",
         "summary": "sum",
@@ -137,7 +141,7 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     target_dir.mkdir()
 
     article = {
-        "id": "test-125",
+        "id": "125",
         "title": "Test Article Ready For Editorial Image",
         "url": "https://example.com/editorial-image",
         "summary": "A valid summary for an article that should use a staged manual image.",
