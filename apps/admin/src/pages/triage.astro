@@ -339,6 +339,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <span class="${statusPillClass(item.processing_status)}">${esc(item.processing_status ?? "new")}</span>
           <span class="score-chip">${item.final_score != null ? item.final_score.toFixed(3) : "—"}</span>
         </div>
+        ${item.similar_group_id ? `<div class="mb-1.5"><span class="rounded bg-indigo-900/50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300" title="Near-duplicate group ${esc(item.similar_group_id)} — keep the top-ranked, publish one">≈ similar ×${item.similar_group_size ?? "?"}</span></div>` : ""}
         <div class="font-display text-[15px] leading-snug text-ink-100">${esc(item.title)}</div>
         <div class="mt-1.5 flex items-center gap-2 font-mono text-[11px] text-ink-400">
           <span>${esc(item.source.name)}</span>

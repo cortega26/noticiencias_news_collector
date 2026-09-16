@@ -19,6 +19,7 @@ from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
+from news_collector.editorial.health_scope import is_health_scope
 from news_collector.editorial.hero_alt import resolve_hero_alt_text
 from news_collector.editorial.readability import check_english_spillover, check_headline
 from news_collector.editorial.uncertainty import (
@@ -249,6 +250,37 @@ class GeneratedArticleValidationError(ValueError):
     ):
         super().__init__(message)
         self.error_code = error_code
+
+
+def _capability_overclaim_block(
+    overclaims: list[str],
+    *,
+    categories: Any = None,
+    raw_category: Any = None,
+    metadata_category: Any = None,
+    claim_text: Any = None,
+) -> str | None:
+    """Health-scope escalation for plan-083 overclaims (plan 111).
+
+    Returns the block message when publication must stop, else None.
+    Outside health scope the caller keeps the advisory warning; inside
+    health scope an unvalidated present-tense clinical-capability claim
+    is a patient-safety-grade defect. Pure: no I/O, fully unit-testable —
+    the inline call site only raises on a non-None return.
+    """
+    if not overclaims:
+        return None
+    if not is_health_scope(
+        categories=categories,
+        category=raw_category,
+        metadata_category=metadata_category,
+        text=claim_text,
+    ):
+        return None
+    return (
+        "Unvalidated clinical-capability claim(s) in health scope — "
+        "reframe as prospective before publication: " + " | ".join(overclaims)
+    )
 
 
 def _extract_publishable_body(markdown: str) -> str:
@@ -2459,8 +2491,10 @@ class EditorAgent:
             # Flag reader-facing narrative that contradicts that counterweight
             # (plan 083): a post that disclaims clinical validation should not
             # also assert the capability in the present tense in
-            # `why_it_matters` / `headlines_variants.benefit`. Advisory only —
-            # the PR reviewer (and the Codex re-review) act on it.
+            # `why_it_matters` / `headlines_variants.benefit`. Advisory by
+            # default — the PR reviewer (and the Codex re-review) act on it —
+            # except inside health scope, where plan 111 escalates to a
+            # hard block below.
             overclaims = find_unvalidated_capability_claims(
                 model_dict,
                 requires_uncertainty_note=requires_uncertainty_note,
@@ -2473,6 +2507,40 @@ class EditorAgent:
                     "uncertainty counterweight — reframe as prospective before "
                     f"merge: {joined_overclaims}"
                 )
+                # Health-scope escalation (plan 111): outside health scope
+                # the warning above stays advisory for the PR reviewer.
+                # Inside health scope (clinical categories or trigger
+                # vocabulary in the claim-bearing fields) an unvalidated
+                # present-tense capability claim is a patient-safety-grade
+                # defect — block publication until reframed as prospective.
+                # The universal verifier-disputed gate below is untouched.
+                claim_text = " ".join(
+                    [
+                        str(final_title or ""),
+                        *[
+                            str(item)
+                            for item in (model_dict.get("why_it_matters") or [])
+                            if isinstance(item, str)
+                        ],
+                        str(
+                            (model_dict.get("headlines_variants") or {}).get(
+                                "benefit", ""
+                            )
+                        ),
+                    ]
+                )
+                block_message = _capability_overclaim_block(
+                    overclaims,
+                    categories=model_dict.get("categories"),
+                    raw_category=raw_category,
+                    metadata_category=metadata_category,
+                    claim_text=claim_text,
+                )
+                if block_message is not None:
+                    raise GeneratedArticleValidationError(
+                        block_message,
+                        error_code="editorial_capability_overclaim",
+                    )
 
             # V2 contract enforcement: a schema_version >= 2 article MUST
             # carry every enrichment field.  Omission means Stage 6 produced

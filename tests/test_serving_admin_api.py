@@ -2787,3 +2787,75 @@ def test_admin_sources_list_still_carries_circuit_per_source(
         assert response.status_code == 200
         for item in response.json()["sources"]:
             assert "circuit" in item
+
+
+# Plan 111: triage list carries per-page similarity groups
+# ---------------------------------------------------------------------------
+
+
+def test_admin_list_attaches_similar_groups(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    title_a = "NASA confirms liquid water reservoir beneath Martian south pole"
+    summary_a = (
+        "Radar measurements reveal a stable body of liquid water trapped "
+        "beneath layered ice near the south pole."
+    )
+    with db_manager.get_session() as session:
+        session.add_all(
+            [
+                Article(
+                    title=title_a,
+                    url="https://example.com/mars-1",
+                    summary=summary_a,
+                    source_id="nature",
+                    source_name="Nature",
+                    category="Astronomía",
+                    final_score=0.9,
+                    collected_date=datetime.now(timezone.utc),
+                    processing_status="pending",
+                ),
+                Article(
+                    title="Liquid water lake detected under Mars south polar ice",
+                    url="https://example.com/mars-2",
+                    summary=(
+                        "Orbiter radar data point to a persistent reservoir "
+                        "of liquid water locked under thick ice layers."
+                    ),
+                    source_id="nature",
+                    source_name="Nature",
+                    category="Astronomía",
+                    final_score=0.8,
+                    collected_date=datetime.now(timezone.utc),
+                    processing_status="pending",
+                ),
+                Article(
+                    title="Fusion ignition milestone repeated at facility",
+                    url="https://example.com/fusion",
+                    summary="Laser implosion exceeded breakeven again.",
+                    source_id="nature",
+                    source_name="Nature",
+                    category="Física",
+                    final_score=0.7,
+                    collected_date=datetime.now(timezone.utc),
+                    processing_status="pending",
+                ),
+            ]
+        )
+        session.commit()
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        body = api_client.get(
+            "/v1/admin/articles",
+            params={"status": "pending", "page_size": 50},
+            headers=_admin_headers(),
+        ).json()
+
+    rows = {row["title"]: row for row in body["data"]}
+    mars_1 = rows[title_a]
+    mars_2 = rows["Liquid water lake detected under Mars south polar ice"]
+    fusion = rows["Fusion ignition milestone repeated at facility"]
+    assert mars_1["similar_group_id"] is not None
+    assert mars_1["similar_group_id"] == mars_2["similar_group_id"]
+    assert mars_1["similar_group_size"] == 2
+    assert fusion["similar_group_id"] is None

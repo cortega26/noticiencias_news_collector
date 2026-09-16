@@ -59,6 +59,7 @@ The render authority is:
 - category resolution reads top-level export `category` first, then falls back to `metadata.category`
 - refinery-generated posts must publish exactly one primary category from the current editorial taxonomy
 - `Editorial` is reserved for first-party Noticiencias-authored pieces; translated third-party articles must resolve to a non-`Editorial` category
+- optional `social` object (`{publish: bool = false, id?: 64-char lowercase hex}`): social-distribution opt-in stamped deterministically by `contracts/social_publication.py` at Markdown write time (absent by default; explicit `null` rejected on both sides; the LLM never decides it)
 
 ### Current Identity Reuse Order
 

@@ -32,8 +32,14 @@ The auditor is advisory everywhere (`blocking=false`, 20% sample) — a fabricat
 
 ## Steps
 
-### Step 1: Health block-lite
-Narrowly gate the publish path: disputed fact-check + (health category OR sensitive keyword) → hard block with explicit error code; all other cases keep current advisory behavior. Keep the rule pure (no I/O in the policy module).
+### Step 1: Health block-lite (implemented as escalation, not narrowing)
+
+Finding during implementation: the verifier-disputed gate already blocks
+ALL categories, so "block disputed for health only" would have weakened
+it. Instead: keep the universal disputed block untouched, and escalate
+the plan-083 overclaim detector (advisory `logger.warning`) to a hard
+`editorial_capability_overclaim` block inside health scope only.
+Non-health behavior is byte-identical to before.
 
 **Verify**: unit tests (disputed-health blocks, disputed-tech passes advisory, uncertain never blocks, infra-failure never blocks); existing auditor tests green.
 

@@ -39,6 +39,11 @@ class AdminArticleListItem(BaseModel):
     # by id. Articles not in the export are published via the URL box.
     publishable: bool = False
     export_score: Optional[float] = None
+    # Runtime near-duplicate grouping (plan 111): set when this row belongs
+    # to a same-page similarity group. Per-page only (no cross-page
+    # grouping); absent (None) when ungrouped. Master = first-ranked member.
+    similar_group_id: Optional[str] = None
+    similar_group_size: Optional[int] = None
 
 
 class AdminArticlePagination(BaseModel):

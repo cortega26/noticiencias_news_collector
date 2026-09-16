@@ -33,6 +33,24 @@ score currently proceeds; do not claim strict mode requires a fresh audit.
 The optional auditor task runs after PR creation and stores metadata. These
 semantics are separate from the pre-PR critic and fact-check stages.
 
+## Pre-PR hard gates (independent of auditor blocking)
+
+Two pre-PR gates block publication regardless of `[editorial_auditor].blocking`:
+
+1. **Verifier-disputed claims (all categories):** any fact-check claim the
+   independent Stage-7 verifier returns as `disputed` raises
+   `editorial_fact_check_disputed`. `uncertain` (including all
+   infrastructure-failure fallbacks) stays advisory.
+2. **Health-scope capability overclaims (plan 111):** a present-tense
+   clinical-capability claim under a declared uncertainty counterweight
+   (plan 083 detector) raises `editorial_capability_overclaim` when the
+   article is in health scope — clinical categories (`health`, `medicine`,
+   `biology`, `salud`, `medicina`, `biología`) or trigger vocabulary in
+   the claim-bearing fields. Outside health scope the detector stays
+   advisory for the PR reviewer. Scope vocabulary is owned once by
+   `news_collector/editorial/health_scope.py` (shared with the auditor's
+   sampling triggers).
+
 Change settings through the supported config path and restart consumers that
 load them at startup. Review the affected policy/workflow tests when changing
 thresholds or enforcement, rather than changing docs to imply a stronger gate.

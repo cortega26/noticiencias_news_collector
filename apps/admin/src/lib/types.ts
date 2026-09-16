@@ -29,6 +29,8 @@ export interface AdminArticleListItem {
   refinery_id: string | null;
   publishable: boolean;
   export_score: number | null;
+  similar_group_id?: string | null;
+  similar_group_size?: number | null;
 }
 
 export interface AdminArticleDetail extends AdminArticleListItem {

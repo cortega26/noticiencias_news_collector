@@ -11,6 +11,10 @@ from typing import Any, Dict, Optional
 import requests
 from noticiencias.config_manager import load_config
 
+from news_collector.editorial.health_scope import (
+    HEALTH_TRIGGER_CATEGORIES,
+    HEALTH_TRIGGER_KEYWORDS,
+)
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import (
     ModelRegistryError,
@@ -93,35 +97,11 @@ class EditorialAuditor:
             "OLLAMA_HEALTH_TIMEOUT_SECONDS"
         ) or self._resolve_positive_int(cfg_health_timeout, 2)
 
-        # Triggers
-        self.trigger_keywords = [
-            "tratamiento",
-            "therapy",
-            "treatment",
-            "drug",
-            "patients",
-            "prevent",
-            "cura",
-            "fármaco",
-            "terapia",
-            "clinical",
-            "clínico",
-            "prevención",
-            "vaccine",
-            "vacuna",
-            "cancer",
-            "cáncer",
-            "alzheimer",
-            "milagro",
-        ]
-        self.trigger_categories = [
-            "health",
-            "medicine",
-            "biology",
-            "salud",
-            "biología",
-            "medicina",
-        ]
+        # Triggers (plan 111): canonical lists live in
+        # news_collector.editorial.health_scope — same values, single
+        # owner. Matching below stays word-boundary (sampling semantics).
+        self.trigger_keywords = list(HEALTH_TRIGGER_KEYWORDS)
+        self.trigger_categories = list(HEALTH_TRIGGER_CATEGORIES)
 
         # Paths
         paths = getattr(config, "paths", None) or {}

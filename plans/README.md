@@ -273,8 +273,8 @@ Verified-baseline growth program: analytics/cost instrumentation first, then thr
 | 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | BLOCKED (ADR-0009 Proposed + no operator inputs; build owned by frontend plan 008) — backend keeps coordination pointer only. |
 | 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | DONE — single-slot sequential batch (≤5), shared _enqueue, GUI multi-select; OpenAPI snapshot regenerated. KEEP: reference for Wave 6. |
 | 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | DONE — bulk circuit states (58→1 SELECTs), health merge, suppression-candidates rename, dead-knob documented, sources perf gate. KEEP: reference for Wave 6. |
-| 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | TODO — disputed blocks health scope only, additive similar-story grouping without new infra. |
-| 112 | [Share UI + hero sweep + social close-out](112/spec.md) | P1 | M | None | TODO — mount share component, top-20 hero/OG sweep, Bluesky decision, reconcile flag, runbook, conditional contracts doc line. |
+| 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | DONE — overclaim escalation in health scope (universal disputed block kept), MinHash rejected for cosine, per-page triage grouping + GUI chip. KEEP: reference for Wave 7. |
+| 112 | [Share UI + hero sweep + social close-out](112/spec.md) | P1 | M | None | DONE — share mounted w/ copy-link, hero sweep clean, dead widgets pruned, reconcile job added, runbook written, Bluesky deferred, contracts doc line added. KEEP: reference for Wave 7. |
 | 113 | [Monetization foundations without extraction](113/spec.md) | P2 | S | 107 | TODO — media-kit draft, donate link, editorial red line, B2B one-pager; zero ad scripts. |
 | 114 | [Series curation + transparency + search budget](114/spec.md) | P2 | S | None | TODO — 3 starter series, aggregate auditor numbers, Lunr to Pagefind trigger; no schema change. |
 

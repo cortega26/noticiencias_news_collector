@@ -478,6 +478,37 @@ def _as_str(value: Any) -> Optional[str]:
     return value if isinstance(value, str) else None
 
 
+def _attach_similar_groups(items: List[AdminArticleListItem]) -> None:
+    """Set per-page near-duplicate group fields in place (plan 111).
+
+    Runtime grouping over the returned page only (ranked order preserved,
+    so the master is the highest-scored member). Ungrouped rows keep
+    None fields. Never raises: grouping is advisory UI sugar, and a
+    similarity failure must not 500 the triage queue.
+    """
+    try:
+        from news_collector.utils.similarity import group_similar_articles
+
+        payloads = [
+            {"id": item.id, "title": item.title, "summary": item.summary}
+            for item in items
+        ]
+        groups = group_similar_articles(payloads)
+    except Exception as exc:
+        logger.warning(
+            "Similar-group pass failed (triage continues ungrouped): {}", exc
+        )
+        return
+    by_id = {item.id: item for item in items}
+    for group in groups:
+        size = len(group.member_ids)
+        for member_id in group.member_ids:
+            row = by_id.get(member_id)
+            if row is not None:
+                row.similar_group_id = group.group_id
+                row.similar_group_size = size
+
+
 def _as_float(value: Any) -> Optional[float]:
     if isinstance(value, bool):
         return None
@@ -1167,6 +1198,7 @@ def create_app(  # noqa: C901
 
             items = [_build_admin_list_item(row, export_scores) for row in records]
             next_cursor = _encode_cursor(records[-1]) if has_more else None
+            _attach_similar_groups(items)
 
             return AdminArticleListEnvelope(
                 data=items,
