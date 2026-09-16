@@ -1167,6 +1167,13 @@ class EditorAgent:
             )
             logger.debug(f"Editorial Critic raw response: {response[:300]}")
             result = self._extract_editorial_critic_json(response)
+            if "approved" not in result and "average" not in result:
+                logger.warning(
+                    "Editorial Critic returned no verdict keys "
+                    f"('approved'/'average' missing; keys present: {sorted(map(str, result.keys()))}) — "
+                    "treating as infra/parse failure, failing open."
+                )
+                return True, None, True
         except Exception as e:
             logger.warning(
                 f"Editorial Critic Pass Failed (infra error): {e} - failing open"
