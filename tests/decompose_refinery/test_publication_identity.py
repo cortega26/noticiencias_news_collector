@@ -516,6 +516,55 @@ class TestExtractSlug:
 
 
 # ---------------------------------------------------------------------------
+# Plan 094: engine _extract_slug delegates to the resolver (parity pin)
+# ---------------------------------------------------------------------------
+
+
+def _make_engine_for_slug_parity():
+    """Minimal RefineryEngine (mirrors tests/test_refinery_slug_security.py)."""
+    from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+    with patch("news_collector.logic.workflows.refinery_engine.EditorialAuditor"):
+        mock_config = MagicMock()
+        mock_config.app.policy_integrity_mode = "disabled"
+        mock_config.app.editorial_mode = "standard"
+        mock_config.github = SimpleNamespace(
+            target_repo_url="https://github.com/org/repo"
+        )
+        return RefineryEngine(MagicMock(), MagicMock(), MagicMock(), mock_config)
+
+
+class TestSlugExtractionParity:
+    """Plan 094: RefineryEngine._extract_slug is a thin wrapper over
+    PublicationIdentityResolver.extract_slug — both entry points must agree
+    byte-for-byte on every corpus case. The single implementation lives in
+    the resolver; all slug-extraction fixes land there."""
+
+    @pytest.mark.parametrize(
+        "content, fallback_id",
+        [
+            ("---\nslug: my-slug\n---", "123"),
+            ('---\nslug: "quoted-slug"\n---', "123"),
+            ("---\ntitle: My Title Here\n---", "123"),
+            ('---\ntitle: "Quoted Title"\n---', "123"),
+            ("Just content", "123"),
+            ("", "123"),
+            ("slug: café résumé", "x"),
+            ("slug: ../../../etc/passwd", "fallback"),
+            ("slug: !@#$%^&*()", "fallback"),
+            ("slug: ---repeated---dashes---", "fallback"),
+            ("slug:   spaced-out   ", "123"),
+            ("---\nslug: my-slug\ntitle: Other Title\n---", "123"),
+        ],
+    )
+    def test_engine_delegates_to_resolver(self, content, fallback_id):
+        engine = _make_engine_for_slug_parity()
+        assert engine._extract_slug(
+            content, fallback_id
+        ) == PublicationIdentityResolver.extract_slug(content, fallback_id)
+
+
+# ---------------------------------------------------------------------------
 # backfill_slug / register_slug
 # ---------------------------------------------------------------------------
 

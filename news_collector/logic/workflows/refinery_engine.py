@@ -62,7 +62,6 @@ from news_collector.logic.workflows.publication_identity import (
 )
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 from news_collector.utils.logger import get_logger
-from news_collector.utils.slug import slugify
 
 if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
@@ -926,25 +925,14 @@ class RefineryEngine:
             )
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
-        """Extracts slug from frontmatter or generates fallback."""
-        slug = None
-        if "slug:" in content:
-            match = re.search(r'slug:\s*"?([^"\n]+)"?', content)
-            if match:
-                slug = match.group(1).strip()
+        """Extract slug from frontmatter or generate fallback.
 
-        if not slug and "title:" in content:
-            title_match = re.search(r'title:\s*"?([^"\n]+)"?', content)
-            if title_match:
-                slug = title_match.group(1).strip()
-
-        if not slug:
-            slug = f"article-{fallback_id}"
-
-        # --- NC-BE-015 S0 GUARD: Strict sanitize ---
-        slug = slugify(slug, fallback=f"article-{fallback_id}")
-
-        return slug
+        Delegates to PublicationIdentityResolver.extract_slug — the single
+        slug-extraction implementation (LAW-B5). All slug-extraction fixes
+        land there. Kept as a thin wrapper so the finalize_slug
+        extract_slug_fn hook and test-level monkeypatches keep working.
+        """
+        return PublicationIdentityResolver.extract_slug(content, fallback_id)
 
     def _has_quoted_date_only_frontmatter(self, content: str) -> bool:
         """
