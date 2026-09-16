@@ -1183,5 +1183,117 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         self.assertIsNone(recorder.call_args.kwargs["timeout_seconds"])
 
 
+class TestDownloadImageDelegation(unittest.TestCase):
+    """Plan 093: RefineryEngine._download_image delegates to ArticleImageHandler.download."""
+
+    def setUp(self):
+        self.mock_db = MagicMock()
+        self.mock_git = MagicMock()
+        self.mock_editor = MagicMock()
+        self.mock_config = MagicMock()
+        self.mock_config.github = SimpleNamespace(
+            target_repo_url="http://github.com/target"
+        )
+        self.mock_config.app.policy_integrity_mode = "disabled"
+
+        self.mock_db.get_publishing_state.return_value = None
+
+        self.git_patch = patch.dict(sys.modules, {"git": self.mock_git})
+        self.git_patch.start()
+        self.auditor_patch = patch(
+            "news_collector.logic.workflows.refinery_engine.EditorialAuditor"
+        )
+        self.auditor_patch.start()
+
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        # NOTE: unlike the other classes in this file, do NOT shadow
+        # _download_image with a MagicMock — these tests exercise the real delegate.
+        self.engine = RefineryEngine(
+            self.mock_db, self.mock_git, self.mock_editor, self.mock_config
+        )
+
+    def tearDown(self):
+        self.auditor_patch.stop()
+        self.git_patch.stop()
+
+    def _fake_client(self, content=b"\x89PNG", content_type="image/png", error=None):
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        if error is not None:
+            mock_client.get.side_effect = error
+        else:
+            response = MagicMock()
+            response.headers = {"Content-Type": content_type}
+            response.content = content
+            mock_client.get.return_value = response
+        return mock_client
+
+    def test_delegates_to_image_handler(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            with patch.object(
+                self.engine.image_handler,
+                "download",
+                return_value="~/assets/images/slug.jpg",
+            ) as spy:
+                result = self.engine._download_image(
+                    "https://x.com/a.png", "slug", target
+                )
+            self.assertEqual(result, "~/assets/images/slug.jpg")
+            spy.assert_called_once_with("https://x.com/a.png", "slug", target)
+
+    def test_parity_success(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            engine_dir = Path(tmpdir) / "engine"
+            handler_dir = Path(tmpdir) / "handler"
+            with patch(
+                "news_collector.infrastructure.requests_client.RobustRequestsClient",
+                return_value=self._fake_client(),
+            ):
+                engine_result = self.engine._download_image(
+                    "https://x.com/a.png", "slug", engine_dir
+                )
+            with patch(
+                "news_collector.infrastructure.requests_client.RobustRequestsClient",
+                return_value=self._fake_client(),
+            ):
+                handler_result = self.engine.image_handler.download(
+                    "https://x.com/a.png", "slug", handler_dir
+                )
+            self.assertEqual(engine_result, handler_result)
+            self.assertEqual(engine_result, "~/assets/images/slug.png")
+
+    def test_parity_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            engine_dir = Path(tmpdir) / "engine"
+            handler_dir = Path(tmpdir) / "handler"
+            with patch(
+                "news_collector.infrastructure.requests_client.RobustRequestsClient",
+                return_value=self._fake_client(error=RuntimeError("boom")),
+            ):
+                engine_result = self.engine._download_image(
+                    "https://x.com/a.png", "slug", engine_dir
+                )
+            with patch(
+                "news_collector.infrastructure.requests_client.RobustRequestsClient",
+                return_value=self._fake_client(error=RuntimeError("boom")),
+            ):
+                handler_result = self.engine.image_handler.download(
+                    "https://x.com/a.png", "slug", handler_dir
+                )
+            self.assertIsNone(engine_result)
+            self.assertIsNone(handler_result)
+
+    def test_parity_non_http(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            for bad_url in ("not-http", "", "   "):
+                self.assertIsNone(self.engine._download_image(bad_url, "slug", target))
+                self.assertIsNone(
+                    self.engine.image_handler.download(bad_url, "slug", target)
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
