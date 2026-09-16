@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -69,6 +69,35 @@ class PublicationIdentity:
     canonical_date: str  # e.g. "2024-01-25"
     output_filename: str  # e.g. "2024-01-25-my-article.md"
     is_new: bool  # True = creation mode; False = recovered from DB or FS
+
+
+MANUAL_INGEST_INFERRED_DATE_KEY = (
+    "published_date_inferred"  # gitleaks:allow (flag name string, not a credential)
+)
+"""Metadata flag marking a clock-invented ``published_date`` (plan 100, LAW-B5).
+
+Manual ingest materializes the inference BEFORE persistence and stamps this
+flag under ``article_metadata["source_metadata"]["manual_ingest"]``. The
+resolver treats such a materialized date as explicit input (see
+``_derive_date``) — feed-collected undated articles are never flagged and
+still quarantine via ``UndatedArticleError`` (plan 089 boundary).
+"""
+
+
+def infer_manual_published_date(value: datetime | None) -> tuple[datetime, bool]:
+    """Single owner of the manual-ingest undated rule (plan 100, LAW-B3).
+
+    Returns ``(published_date, inferred_flag)``: a present date passes
+    through untouched (``False``); a missing date is materialized from the
+    runtime clock (``True``) so the caller can stamp
+    ``MANUAL_INGEST_INFERRED_DATE_KEY`` next to the persisted row.
+
+    Only the manual-ingest entry path may call this. Identity resolution
+    itself (``_derive_date``) never invents dates.
+    """
+    if not value:
+        return datetime.now(timezone.utc), True
+    return value, False
 
 
 class PublicationIdentityResolver:
@@ -334,6 +363,11 @@ class PublicationIdentityResolver:
         else collection date (``collected_date``), else quarantine with
         ``UndatedArticleError``. The runtime clock never enters canonical
         identity — retrying the same article always yields the same date.
+
+        Manual-ingest rows whose ``published_date`` was clock-invented carry
+        ``MANUAL_INGEST_INFERRED_DATE_KEY`` in their source metadata; the
+        date was materialized before persistence, so it is accepted here as
+        explicit input (downstream behavior unchanged since plan 100).
         """
         for field in ("published_date", "collected_date"):
             raw = article.get(field)

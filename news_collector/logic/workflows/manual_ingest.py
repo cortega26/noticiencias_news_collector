@@ -20,6 +20,10 @@ from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
 from news_collector.enrichment.http_enricher import HttpEnricher
 from news_collector.enrichment.scholarly import ScholarlyMetadataEnricher
+from news_collector.logic.workflows.publication_identity import (
+    MANUAL_INGEST_INFERRED_DATE_KEY,
+    infer_manual_published_date,
+)
 from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
 from news_collector.utils.security import validate_url_safety
@@ -589,10 +593,10 @@ class ManualUrlIngestService:
             if not merged["authors"] and metadata.get("authors"):
                 merged["authors"] = list(metadata.get("authors") or [])
 
-        inferred_published_date = False
-        if not merged["published_date"]:
-            merged["published_date"] = datetime.now(timezone.utc)
-            inferred_published_date = True
+        inferred_published_date: bool
+        merged["published_date"], inferred_published_date = infer_manual_published_date(
+            merged["published_date"]
+        )
 
         if not merged["summary"] and best_content:
             merged["summary"] = _excerpt_from_text(best_content)
@@ -648,7 +652,7 @@ class ManualUrlIngestService:
                 "resolved_source_id": source_id,
                 "preferred_method": self._preferred_method(source_config),
                 "fetch_attempts": self._public_attempts(fetch_attempts),
-                "published_date_inferred": inferred_published_date,
+                MANUAL_INGEST_INFERRED_DATE_KEY: inferred_published_date,  # gitleaks:allow (metadata key name, not a credential)
             }
         }
 
