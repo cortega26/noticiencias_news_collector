@@ -213,7 +213,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 085 | [Report bulk-reset cap truncation explicitly](085-bulk-reset-cap-reporting.md) | P1 | S | — | TODO |
 | 086 | [Fail closed before PRs for title-fallback articles](086-pr-without-tracking.md) | P1 | M | — | TODO |
 | 087 | [Harden image-brief store: traversal guard + bounded uploads](087-image-brief-hardening.md) | P1 | S | — | TODO |
 | 088 | [Encode pagination cursors at full float precision](088-cursor-precision.md) | P2 | S | — | TODO |
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 097 (unmask `make perf` failures; clean skip only on zero collected) DONE and archived — merged in `cb5f67f` (executor proved pass/fail/empty branches; CI `perf` job has no tolerance flag so impact is nil).
 - 096 (unify pip-audit exceptions; retire expired protobuf ignore) DONE and archived — merged in `2c16c65` (first attempt STOPped correctly on pre-existing `make quality` Bandit red; plan refreshed, second attempt converged all four pip-audit legs on the enforced allowlist; CVE-2026-0994 flag deleted as alias-duplicate, protobuf residual allowlisted to 2026-10-31).
 - 102 (cover quality-gate success path) DONE and archived — merged in `e033e91` (hermetic valid-golden exit-0 test + single-byte tamper test asserting exit 1 and the distinct `Missing required section content` message; existing tests untouched).
+- 085 (report bulk-reset cap truncation explicitly) DONE and archived — merged in `b232981` (new `truncated`/`not_processed`/`cap_note` reporting; legacy Streamlit consumer audited display-only, semantics preserved; 5 new tests).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
