@@ -1,7 +1,8 @@
-# Roadmap — Plans 085–102 (Fifth Pass, Deep Audit)
+# Roadmap — Plans 085–114 (Fifth–Seventh Passes)
 
-**Audit base:** back-end repo `noticiencias_news_collector` @ `e77a039` (2026-09-16).
-**Scope:** plans 085–102 only. Prior passes live in `plans/README.md` (ledger) and `plans/archive/`.
+**Audit base (fifth/sixth pass):** back-end repo `noticiencias_news_collector` @ `e77a039` (2026-09-16).
+**Audit base (seventh pass, growth track):** back-end repo @ `9fa77b6` (2026-09-16), verified against both repos (parallel audits of pipeline, frontend engagement, and distribution state).
+**Scope:** plans 085–106 (done, archived) plus plans 107–114 (growth track: measure → throughput → trust/looks → monetization foundations). Prior passes live in `plans/README.md` (ledger) and `plans/archive/`.
 **Owner model:** one executor per plan, in an isolated worktree (`execute <NNN>`), advisor reviews the diff.
 **Ledger:** `plans/README.md` stays the status source of truth — this file is the *operating view* (order, waves, scoreboard). Executors update the ledger, not this file; the advisor refreshes the scoreboard below on reconcile.
 
@@ -9,10 +10,10 @@
 
 | I want to… | Go here |
 |---|---|
-| Pick the next plan to execute | [Wave 0](#wave-0--signal-hygiene-first) (start here) → Waves in order |
+| Pick the next plan to execute | [Wave 5](#wave-5--measure-first) (start here) → Waves in order |
 | Check overall progress | [Scoreboard](#scoreboard) |
 | Know what can run in parallel | [Wave execution rules](#wave-execution-rules) |
-| Find a plan file | [Backlog table](#backlog--all-18-plans) |
+| Find a plan file | [Backlog](#backlog--all-plans) |
 | Know what's deliberately NOT planned | [Deferred & rejected](#deferred--rejected-do-not-re-audit) |
 | Run the gates for any plan | `make lint && make type && make test` + plan-specific extras (each plan file lists them) |
 | Validate the ledger after updates | `.venv/bin/python scripts/validate_plans_ledger.py` → must print OK |
@@ -28,9 +29,13 @@
 | 2 | Identity & publication integrity (+106 follow-up) | 089, 094, 093, 086, 100, 095, 106 | 7/7 | DONE |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **22** | **22/22** | |
+| 5 | Measure first (analytics + newsletter) | 107, 108 | 0/2 | TODO |
+| 6 | Throughput (batch publish + source visibility) | 109, 110 | 0/2 | TODO |
+| 7 | Trust + looks (health gate/dedup + share/hero/social) | 111, 112 | 0/2 | TODO |
+| 8 | Money + compounding (monetization + series/transparency) | 113, 114 | 0/2 | TODO |
+| **Total** | | **30** | **22/30** | |
 
-**Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
+**Time-sensitive (resolved):** 096 touches the NLTK allowlist entry expiring **2026-09-30** — Wave 0 is DONE, so this is closed; no action remaining.
 
 ## Wave 0 — Signal hygiene first
 
@@ -88,7 +93,7 @@
 
 ## Wave execution rules
 
-1. **Waves run in order 0 → 3.** Wave 0 first (it repairs the signals later waves rely on). Waves 1–3 are mutually independent by files — after Wave 0, they may overlap *across* waves ONLY if different executors touch different files (check the tables; `serving/api.py` belongs to Wave 1 alone).
+1. **Waves run in order 0 → 8.** Waves 0–4 are DONE (historical). Wave 5 first (later growth waves need its numbers). Waves 6–8 are mutually independent by files — after Wave 5, they may overlap *across* waves ONLY if different executors touch different files (check the tables; `serving/api.py` belongs to 109 alone, FE template belongs to 112 alone).
 
 ## Wave 4 — Log-triage fixes (from the 2026-09-16 production-log triage)
 
@@ -99,13 +104,58 @@
 | 4.3 (independent, anytime) | 105 | Dead `bair_blog` source verdict (probe → fix/disable) | `sources.yaml` only |
 
 **Wave-done check:** `make lint && make type && make test && make test-contracts && make test-boundaries` all exit 0; article 502's shape re-validates; `bair_blog` verdict recorded with probe evidence.
+
+## Wave 5 — Measure first (PARALLEL-SAFE)
+
+*Why first:* every later growth wave needs numbers to prove impact, and both plans are instrumentation/enablement with zero behavior change to the pipeline. Analytics is wired-but-dead (`config.yaml` id `null`); the newsletter endpoint is empty while the Worker report pattern is proven. Disjoint files (frontend config/Worker vs backend reporting script) — MAY run concurrently.
+
+| Order | Plan | One-liner | Files touched |
+|-------|------|-----------|---------------|
+| 5.1 + 5.2 (parallel-safe) | 107 | Privacy analytics + per-article cost/SLO baseline | FE `config.yaml`, `Analytics.astro`; BE `monitoring/reporting.py`, `scripts/ops/cost_report.py` (new) |
+| 5.1 + 5.2 (parallel-safe) | 108 | Newsletter Worker endpoint + frontend enablement | FE `workers/` (new handler), `NewsletterCapture.astro`, `newsletter.astro`, `config.yaml` |
+
+**Wave-done check:** traffic flowing, newsletter subscribe→confirm→unsubscribe e2e green on preview, cost/SLO numbers captured; `validate_plans_ledger.py` → OK.
+
+## Wave 6 — Throughput (PARALLEL-SAFE)
+
+*Why grouped:* the two bottlenecks behind 3x/week cadence — single-article publish dispatch and invisible source outages. Disjoint files (publication pipeline/serving vs collectors/storage/monitoring) — MAY run concurrently. 109 extends the plan-106 seam; 110 finishes the visibility half of the already-shipped breaker.
+
+| Order | Plan | One-liner | Files touched |
+|-------|------|-----------|---------------|
+| 6.1 + 6.2 (parallel-safe) | 109 | Batch publish ≤5 with per-item outcomes | `publication_pipeline.py`, `contracts/admin.py`, `serving/api.py`, `apps/admin` triage |
+| 6.1 + 6.2 (parallel-safe) | 110 | Cooldown visibility + concurrency 1→3 | `source_repository.py` consumers, `monitoring/` (wire-or-remove), `source_health.py`, `config.toml` |
+
+**Wave-done check:** 5-item batch with 1 bad item publishes 4 + reports 1, re-runs create zero new identities; cooled-down sources visible in admin; `make perf` before/after recorded; `make quality-gate` green with snapshots untouched.
+
+## Wave 7 — Trust + looks (PARALLEL-SAFE)
+
+*Why grouped:* opposite ends of the stack — backend policy vs frontend template, no shared files. 111 tightens the trust gate only where it matters (health) and adds MinHash-first grouping (embeddings gated by plan 080's rule). 112 mounts the dead share component, sweeps top-20 heroes, and closes the 4 deferred social-distribution items.
+
+| Order | Plan | One-liner | Files touched |
+|-------|------|-----------|---------------|
+| 7.1 + 7.2 (parallel-safe) | 111 | Health-only disputed block + similar-story grouping | `components/editorial/auditor.py`, collectors dedup, `docs/EDITORIAL_MODES.md` |
+| 7.1 + 7.2 (parallel-safe) | 112 | Share UI + hero/OG sweep + social close-out | FE `PostLayout.astro`, `SocialShare.astro`, `social-manifest` chain, runbook; BE contracts doc line (conditional on 081) |
+
+**Wave-done check:** disputed health never reaches PR, duplicate trio merges with FP rate logged; share buttons live with correct unfurls, top-20 zero placeholders; `npm run validate:content + check:contract-sync --strict` green.
+
+## Wave 8 — Money + compounding (PARALLEL-SAFE)
+
+*Why grouped:* docs/pages only, no runtime behavior. Needs 107's numbers (113 ships placeholders marked preliminary until they exist). 113 builds the landing pad with zero ad scripts; 114 removes the series dead end, publishes aggregate trust numbers, and defines the search-migration trigger.
+
+| Order | Plan | One-liner | Files touched |
+|-------|------|-----------|---------------|
+| 8.1 + 8.2 (parallel-safe) | 113 | Media kit + donate + red line + B2B one-pager | FE `patrocinios.md` (new), footer, `EDITORIAL.md`; BE `docs/api_examples.md` |
+| 8.1 + 8.2 (parallel-safe) | 114 | 3 series + transparency aggregates + search trigger | FE `series/`, `transparencia.md`, search budget; BE aggregate file (read-only) |
+
+**Wave-done check:** kit/donate live with no third-party scripts, numbers match backend aggregates exactly, `check:search-budget` green with trigger documented.
 2. **Sequential inside Waves 1 and 2, no exceptions.** Same-file executors in isolated worktrees produce unmergeable diffs. One plan merges → next starts.
 3. **Parallel allowed inside Waves 0 and 3** (disjoint files), except 096/097/098 all touch `Makefile` — run those three in the listed sub-order (0.1 → 0.2 → 0.3).
 4. **Every plan starts with its Step 0 baseline and drift check.** A red baseline or drifted excerpt is a STOP, not a fix-forward.
 5. **Never run `make quality-gate-refresh`** (overwrites committed snapshots — plan 102's STOP conditions say so explicitly).
 6. **Merge discipline:** conventional-commit messages, one plan per branch (`advisor/<NNN>-<slug>` in each plan file), ledger row updated on completion, scoreboard refreshed at reconcile.
+7. **Growth-track specifics (Waves 5–8):** plans spanning both repos land frontend first, backend docs second; the 108/112/113 docs steps stay conditional on plan 081 and must not fight its edits; 111 treats embeddings as gated by plan 080's deferred-decision rule; 113 ships zero ad/tracking/paywall scripts and never invents traffic figures.
 
-## Backlog — all 18 plans
+## Backlog — all plans
 
 | Plan | Title | Pri | Effort | Wave | Status |
 |------|-------|-----|--------|------|--------|
@@ -131,11 +181,20 @@
 | 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | DONE |
 | 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | DONE |
 | 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | DONE |
+| 107 | [Analytics baseline + cost/SLO](107/spec.md) | P1 | S | 5 | TODO |
+| 108 | [Newsletter capture backend](108/spec.md) | P1 | M | 5 | TODO |
+| 109 | [Batch publication](109/spec.md) | P1 | M | 6 | TODO |
+| 110 | [Source-health visibility](110/spec.md) | P1 | M | 6 | TODO |
+| 111 | [Health block-lite + semantic dedup](111/spec.md) | P1 | M | 7 | TODO |
+| 112 | [Share UI + hero + social close-out](112/spec.md) | P1 | M | 7 | TODO |
+| 113 | [Monetization foundations](113/spec.md) | P2 | S | 8 | TODO |
+| 114 | [Series + transparency + search](114/spec.md) | P2 | S | 8 | TODO |
 
 ## Deferred & rejected (do not re-audit)
 
 - **Rejected at vetting:** auth fail-open as vuln (fail-closed since plan 021); `numpy==2.4.1` pin (satisfies `!=2.4.0`); wildcard-CORS as vuln (explicit allowlist + no credentials).
 - **Real but unplanned (lower leverage, future waves):** HtmlCollector follow-on SSRF validation · admin-contract unit tests · refinery-engine de-mocking · SQL score histogram · `make type` double-suite cost · 3-file mypy scope · stale `/healthz` doc example · NLTK expiry watch (fold into 096).
-- **Direction (maintainer decision, not scheduled):** reader-correction loop · social distribution past Buffer MVP · vision-model hero alt text (plan 084 spec exists) · offline editorial replay (covered by plan 080 Phase 3 — do not duplicate).
+- **Direction (maintainer decision, not scheduled):** reader-correction loop · Bluesky credentials (code ready in social providers, 112 records the decision) · vision-model hero alt text (plan 084 spec exists, sequenced after 112) · offline editorial replay (covered by plan 080 Phase 3 — do not duplicate).
 - **Wave-0 follow-up (surfaced 2026-09-16, advisor-verified):** `make quality` Bandit leg red pre-existing (11 Lows) vs `quality-ci` HIGH filter — needs its own plan; 096 deliberately excludes it.
 - Full journal: `plans/README.md` fifth-pass section + `docs/audits/2026-08-plans-rejected-findings.md` (prior passes).
+- **Archived this reconcile (2026-09-16, no code changes):** 082 handoff notes (delivered) · 083 overclaim detector (merged) · social-distribution package + Buffer MVP (residuals absorbed into 112). See `plans/README.md` seventh-pass reconciliation.

@@ -262,3 +262,42 @@ Triage of `data/logs/collector.log` (fetch + refine & publish, 2026-09-16) with 
 - 104 (strip lifecycle metadata before publish validation) DONE and archived — merged in `ad6329c` (adapter `strip_lifecycle_metadata` + validator wiring; strip set extended to `publishing_*` on verified merit — written post-S1-guard, same trap; 6 new tests incl. S1 publish-path case).
 - 105 (resolve dead `bair_blog` source, verdict c) DONE and archived — merged in `d47ac68` (blacklisted with dated probe evidence; host-level outage, no successor guessed; scheduler exclusion + strict schema verified).
 - 106 (extract publication process-mode pipeline from legacy UI) DONE and archived — merged in `a869828` (8 helpers + entry moved AST-verbatim into `publication_pipeline.py`, both callers rewired, `main.py` thin delegate with re-exports, no-UI-import tests; test-refinery identical to baseline by scratch-worktree proof).
+
+## Seventh pass (2026-09-16, growth track)
+
+Verified-baseline growth program: analytics/cost instrumentation first, then throughput, trust/looks, and monetization foundations. Circuit breaker and flash-triage need no new plans (already shipped as SourceRepository cooldown and the Astro triage UI). Social-distribution Buffer MVP is done; only its 4 deferred close-out items are planned (in 112). Each plan is a folder with spec.md, todo.md, and tests/; executors run one plan per isolated worktree and update their row.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 107 | [Analytics baseline + cost/SLO dashboard](107/spec.md) | P1 | S | None | TODO — privacy analytics enablement, per-article cost report, SLO snapshot; no behavior change. |
+| 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | TODO — Worker newsletter endpoint mirroring the report pattern, endpoint flip, runbook; never reuse the report contract. |
+| 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | TODO — batch dispatch up to 5 over the plan-106 pipeline seam, idempotent retry, triage multi-select. |
+| 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | TODO — surface cooldown state in admin health, resolve detectors wiring gap, concurrency 1 to 3 with perf proof. |
+| 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | TODO — disputed blocks health scope only, additive similar-story grouping without new infra. |
+| 112 | [Share UI + hero sweep + social close-out](112/spec.md) | P1 | M | None | TODO — mount share component, top-20 hero/OG sweep, Bluesky decision, reconcile flag, runbook, conditional contracts doc line. |
+| 113 | [Monetization foundations without extraction](113/spec.md) | P2 | S | 107 | TODO — media-kit draft, donate link, editorial red line, B2B one-pager; zero ad scripts. |
+| 114 | [Series curation + transparency + search budget](114/spec.md) | P2 | S | None | TODO — 3 starter series, aggregate auditor numbers, Lunr to Pagefind trigger; no schema change. |
+
+### Seventh-pass wave rules
+
+- Wave 0 (107, 108) first and parallel-safe — later waves need 107 numbers.
+- Wave 1 (109, 110) parallel-safe — disjoint files (publish path vs collectors/monitoring).
+- Wave 2 (111, 112) parallel-safe — backend policy vs frontend template.
+- Wave 3 (113, 114) parallel-safe — docs/pages only; 113 needs 107 numbers, placeholders marked preliminary until then.
+- Same-file executors never overlap; every plan starts with its Step 0 drift check; never run quality-gate-refresh.
+
+### Seventh-pass reconciliation (2026-09-16) — archive sweep + dispositions
+
+Archived as DONE (moved under plans/archive/, renames staged, no code changes):
+
+- 082 handoff notes — delivered as evidence, all boxes checked, no tasks assigned. Nothing to execute.
+- 083 capability-overclaim detector — merged in `62711d3` (uncertainty-verb flag + warning hook + unit tests + PR content fix). Only the commit/PR box was open; the merge closed it.
+- social-distribution — package 1 (contract + stamping) plus Buffer MVP packages 2-7, verified live and closed 2026-09-14. Residuals absorbed, not lost: Bluesky credentials and the reconcile-dispatch flag are 112-Step 2 items; the backend contracts doc line is 112-Step 3. Reference material moves with the folder; the workspace-root research doc is untouched.
+
+Kept active, with boundaries against 107-114 (no duplicates found):
+
+- 048 PARTIAL — blocked on human labeling (44 of 200 records); untouched by the growth track. 111 must not alter enrichment behavior or the pattern_v1 default.
+- 060 IN_PROGRESS — remaining work is source-catalog workflow (4b), generated TS client (6), correction loop (10), plus ambiguous phases. 109 extends the done 4c seam without re-litigating it; 110 is health visibility, a different concern from the 4b catalog; handwritten admin mirrors stay until the 060-Phase-6 / 080-Phase-2 generated-client slice lands.
+- 080 TODO — phases unstarted. 111 uses MinHash-family grouping and treats embeddings as gated by 080's own deferred-decision rule; 114 records a Pagefind trigger without migrating (080 defers Pagefind); 107 instruments existing perf/reporting paths (no new telemetry framework per 080's OTel deferral).
+- 081 IN_PROGRESS — docs reconciliation owns the governance files; the 108, 112, and 113 docs steps stay conditional on it and must not fight its edits.
+- 084 spec-only TODO — vision-model hero alt text; complementary to the 112 hero sweep (which fixes defects with existing checks) and sequenced after it. Needs a confirmed multimodal model plus a monthly call-budget decision before execution; no ledger row (suffixed directory, validator-invisible by design).
