@@ -138,12 +138,10 @@ def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
-# processing_status values the admin triage queue can filter by. Mirrors the
-# statuses the storage layer transitions between (pending/new → publishing →
-# rejected/completed).
-_ADMIN_VALID_STATUSES = frozenset(
-    {"new", "pending", "publishing", "rejected", "completed"}
-)
+# processing_status values the admin triage queue can filter by. Must stay a
+# subset of storage PROCESSING_STATUS_VALUES (models.py) — values outside the
+# DB CHECK can never match.
+_ADMIN_VALID_STATUSES = frozenset({"pending", "publishing", "rejected", "completed"})
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator

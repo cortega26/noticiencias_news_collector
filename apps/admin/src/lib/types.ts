@@ -88,7 +88,6 @@ export interface AdminMutationResult {
 }
 
 export type ArticleStatus =
-  | "new"
   | "pending"
   | "publishing"
   | "rejected"
