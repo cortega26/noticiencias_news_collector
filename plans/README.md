@@ -252,3 +252,15 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - Wave-0 follow-up surfaced by plan 096's first executor run (2026-09-16, verified by advisor on the clean tree): `make quality`'s Bandit leg is red pre-existing (exit 1, 11 Low B105/B404/B607, 0 Medium+) while `quality-ci` filters Bandit to HIGH — align the two invocations or triage the 11 Lows. Out of 096's scope by design; needs its own plan if the team wants `make quality` green.
 - Flaky-test watch (surfaced by plan 096's second run, 2026-09-16): `tests/test_reliability_features.py::test_429_retry_after_handling` fails under the randomized full `make quality`/`make type` suite but passes in isolation — order-dependent flake on the clean tree, unrelated to any plan. Needs a quarantine-or-fix pass if it blocks future gates.
 - Direction options (maintainer decision, not planned): reader-correction loop, social distribution past Buffer MVP, vision-model hero alt text (plan 084 spec exists), offline editorial replay (covered by plan 080 Phase 3).
+
+## Sixth pass (2026-09-16, production-log triage)
+
+Triage of `data/logs/collector.log` (fetch + refine & publish, 2026-09-16) with code-level root causes verified by reading each path. Operator selected waved plans + strip-at-validation design. Findings 1181 (false critic reject → empty body → blocked) and 502 (audit metadata → contract rejection on re-publish) became plans 103–104; dead Tier-A source `bair_blog` became plan 105. Deliberately not planned: transient 429/retried + graceful 403 enrichment skips (external, degrading correctly), NVIDIA 503/degrade/recover cycle + CognitiveScorer timeout fallback (infra flakiness with working breakers), V2-incomplete block + mixed-script critic catch (gates working), title-fallback identity (plan 086 territory), single deepmind empty-extraction rejection (validator working, not systemic).
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 103 | [Fail open the editorial critic on keyless verdicts](103-critic-fail-open.md) | P1 | S | — | TODO |
+| 104 | [Strip lifecycle metadata before publish validation](104-lifecycle-strip-validation.md) | P1 | S | — | TODO |
+| 105 | [Resolve the dead bair_blog source](105-bair-source-resolution.md) | P2 | S | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).

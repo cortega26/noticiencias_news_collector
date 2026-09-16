@@ -27,7 +27,8 @@
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
 | 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 0/6 | TODO (089→094 order matters) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
-| **Total** | | **18** | **10/18** | |
+| 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 0/3 | TODO |
+| **Total** | | **21** | **10/21** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -88,6 +89,16 @@
 ## Wave execution rules
 
 1. **Waves run in order 0 → 3.** Wave 0 first (it repairs the signals later waves rely on). Waves 1–3 are mutually independent by files — after Wave 0, they may overlap *across* waves ONLY if different executors touch different files (check the tables; `serving/api.py` belongs to Wave 1 alone).
+
+## Wave 4 — Log-triage fixes (from the 2026-09-16 production-log triage)
+
+| Order | Plan | One-liner | Files touched |
+|-------|------|-----------|---------------|
+| 4.1 + 4.2 (parallel-safe) | 103 | Critic fail-open on keyless verdicts + headline blank guard | `ai_editor.py` + editorial tests |
+| 4.1 + 4.2 (parallel-safe) | 104 | Strip lifecycle metadata before S1 validation | `contracts/adapters.py`, `apps/refinery/main.py` + contract tests |
+| 4.3 (independent, anytime) | 105 | Dead `bair_blog` source verdict (probe → fix/disable) | `sources.yaml` only |
+
+**Wave-done check:** `make lint && make type && make test && make test-contracts && make test-boundaries` all exit 0; article 502's shape re-validates; `bair_blog` verdict recorded with probe evidence.
 2. **Sequential inside Waves 1 and 2, no exceptions.** Same-file executors in isolated worktrees produce unmergeable diffs. One plan merges → next starts.
 3. **Parallel allowed inside Waves 0 and 3** (disjoint files), except 096/097/098 all touch `Makefile` — run those three in the listed sub-order (0.1 → 0.2 → 0.3).
 4. **Every plan starts with its Step 0 baseline and drift check.** A red baseline or drifted excerpt is a STOP, not a fix-forward.
@@ -116,6 +127,9 @@
 | 100 | [Manual-ingest policy](100-manual-ingest-policy.md) | P3 | M | 2.5 | TODO |
 | 101 | [Explicit config injection](101-explicit-config-injection.md) | P3 | M | 3 | TODO |
 | 102 | [Quality-gate success path](102-quality-gate-success-path.md) | P2 | S | 0.4 | DONE |
+| 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | TODO |
+| 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | TODO |
+| 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | TODO |
 
 ## Deferred & rejected (do not re-audit)
 
