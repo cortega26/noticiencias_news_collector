@@ -257,10 +257,8 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 
 Triage of `data/logs/collector.log` (fetch + refine & publish, 2026-09-16) with code-level root causes verified by reading each path. Operator selected waved plans + strip-at-validation design. Findings 1181 (false critic reject → empty body → blocked) and 502 (audit metadata → contract rejection on re-publish) became plans 103–104; dead Tier-A source `bair_blog` became plan 105. Deliberately not planned: transient 429/retried + graceful 403 enrichment skips (external, degrading correctly), NVIDIA 503/degrade/recover cycle + CognitiveScorer timeout fallback (infra flakiness with working breakers), V2-incomplete block + mixed-script critic catch (gates working), title-fallback identity (plan 086 territory), single deepmind empty-extraction rejection (validator working, not systemic).
 
-| Plan | Title | Priority | Effort | Depends on | Status |
-|------|-------|----------|--------|------------|--------|
-| 103 | [Fail open the editorial critic on keyless verdicts](103-critic-fail-open.md) | P1 | S | — | TODO |
-| 104 | [Strip lifecycle metadata before publish validation](104-lifecycle-strip-validation.md) | P1 | S | — | TODO |
-| 105 | [Resolve the dead bair_blog source](105-bair-source-resolution.md) | P2 | S | — | TODO |
+### Sixth-pass completed (archived)
 
-Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
+- 103 (fail open editorial critic on keyless verdicts + headline blank guard) DONE and archived — merged in `48cfc53` (verdict-keys check + blank-input short-circuit; 7 new tests incl. 1181-shape replay pinned vs pre-fix).
+- 104 (strip lifecycle metadata before publish validation) DONE and archived — merged in `ad6329c` (adapter `strip_lifecycle_metadata` + validator wiring; strip set extended to `publishing_*` on verified merit — written post-S1-guard, same trap; 6 new tests incl. S1 publish-path case).
+- 105 (resolve dead `bair_blog` source, verdict c) DONE and archived — merged in `d47ac68` (blacklisted with dated probe evidence; host-level outage, no successor guessed; scheduler exclusion + strict schema verified).

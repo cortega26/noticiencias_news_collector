@@ -27,8 +27,8 @@
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
 | 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 0/6 | TODO (089→094 order matters) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
-| 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 0/3 | TODO |
-| **Total** | | **21** | **10/21** | |
+| 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
+| **Total** | | **21** | **13/21** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -127,9 +127,9 @@
 | 100 | [Manual-ingest policy](100-manual-ingest-policy.md) | P3 | M | 2.5 | TODO |
 | 101 | [Explicit config injection](101-explicit-config-injection.md) | P3 | M | 3 | TODO |
 | 102 | [Quality-gate success path](102-quality-gate-success-path.md) | P2 | S | 0.4 | DONE |
-| 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | TODO |
-| 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | TODO |
-| 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | TODO |
+| 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | DONE |
+| 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | DONE |
+| 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | DONE |
 
 ## Deferred & rejected (do not re-audit)
 
