@@ -1167,6 +1167,13 @@ class EditorAgent:
             )
             logger.debug(f"Editorial Critic raw response: {response[:300]}")
             result = self._extract_editorial_critic_json(response)
+            if "approved" not in result and "average" not in result:
+                logger.warning(
+                    "Editorial Critic returned no verdict keys "
+                    f"('approved'/'average' missing; keys present: {sorted(map(str, result.keys()))}) — "
+                    "treating as infra/parse failure, failing open."
+                )
+                return True, None, True
         except Exception as e:
             logger.warning(
                 f"Editorial Critic Pass Failed (infra error): {e} - failing open"
@@ -1722,6 +1729,12 @@ class EditorAgent:
         consumer reads headlines via `.get()` with fallbacks, so a headline
         glitch must never fail the whole article.
         """
+        if not _extract_publishable_body(adapted_content or ""):
+            logger.warning(
+                "Headline generation skipped: no publishable body in adapted "
+                "content; relying on deterministic repair."
+            )
+            return {}
         system_prompt = self.prompts.get("headline", {}).get("system", "")
         # Prompt explicitly for JSON in the message body as well to be safe.
         # Keys mirror HeadlinesSchema; the three editorial-voice fields are
