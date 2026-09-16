@@ -395,7 +395,7 @@ bump-version: ## Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)
 	fi
 
 .PHONY: audit-placeholders
-audit-placeholders:
+audit-placeholders: audit-todos-check ## Alias: diff-aware placeholder audit (CONTRIBUTING entry point)
 
 .PHONY: check-deprecated
 check-deprecated: ## Check for deprecated Streamlit arguments
