@@ -421,6 +421,41 @@ def test_admin_articles_unknown_status_returns_422(api_client: TestClient) -> No
         assert response.status_code == 422
 
 
+def test_admin_articles_new_status_returns_422(api_client: TestClient) -> None:
+    """`new` is not a storable status — the filter must reject it (plan 090)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/articles",
+            params={"status": "new"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        assert "Invalid status" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "valid_status",
+    ["pending", "publishing", "rejected", "completed"],
+)
+def test_admin_articles_valid_statuses_still_filter(
+    api_client: TestClient, valid_status: str
+) -> None:
+    """Remaining filter values keep working after dropping `new` (plan 090)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/articles",
+            params={"status": valid_status},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["filters"]["status"] == valid_status
+        assert body["data"]
+        assert all(
+            item["processing_status"] == valid_status for item in body["data"]
+        )
+
+
 # ---------------------------------------------------------------------------
 # Detail
 # ---------------------------------------------------------------------------
