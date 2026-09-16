@@ -200,3 +200,51 @@ All 32 findings retained after code-level reconciliation became plans 018–049;
 of the retained findings was rejected by the operator. Each plan's STOP conditions,
 risk gates, and explicit out-of-scope section remain binding. Findings already
 resolved, rejected, or documented in plans 001–017 were not duplicated.
+
+## Fifth pass (2026-09-16, deep audit against `e77a039`)
+
+Full nine-category deep audit (correctness, security, performance, tests,
+tech-debt, dependencies, DX, docs, direction). Every finding below was vetted
+by opening the cited code; subagent-only items that could not be confirmed were
+dropped. Operator selected "all the net-positive ones" → plans 085–102 (087
+merges two image-brief findings, 096 merges two audit-hygiene findings).
+Direction items stay unplanned (options for the maintainer); the editorial
+replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 085 | [Report bulk-reset cap truncation explicitly](085-bulk-reset-cap-reporting.md) | P1 | S | — | TODO |
+| 086 | [Fail closed before PRs for title-fallback articles](086-pr-without-tracking.md) | P1 | M | — | TODO |
+| 087 | [Harden image-brief store: traversal guard + bounded uploads](087-image-brief-hardening.md) | P1 | S | — | TODO |
+| 088 | [Encode pagination cursors at full float precision](088-cursor-precision.md) | P2 | S | — | TODO |
+| 089 | [Whitespace-only dates count as missing in identity](089-whitespace-dates.md) | P2 | S | — | TODO |
+| 090 | [Remove impossible admin status=new filter](090-remove-status-new.md) | P3 | S | — | TODO |
+| 091 | [422 (not 500) for invalid public list queries](091-public-list-422.md) | P2 | S | — | TODO |
+| 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
+| 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
+| 094 | [Unify slug extraction behind resolver](094-unify-slug-extraction.md) | P2 | S | — | TODO |
+| 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
+| 096 | [Unify security-audit exception policy](096-audit-exception-hygiene.md) | P1 | S | — | TODO |
+| 097 | [Stop masking perf-suite failures](097-perf-fail-open.md) | P2 | S | — | TODO |
+| 098 | [Wire audit-placeholders to the real gate](098-audit-placeholders-alias.md) | P3 | S | — | TODO |
+| 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
+| 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
+| 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
+| 102 | [Cover quality-gate success path](102-quality-gate-success-path.md) | P2 | S | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
+
+### Fifth-pass dependency notes
+
+- 087's staged-asset allowlist and 095's `bulk_helper` note interact: 095 defers to 085's cap-logic ownership — execute 085 before 095.
+- 094 (identity dedup, behavior-preserving) should land before 100 (manual-ingest date rule) so identity semantics don't shift mid-plan.
+- 093/094 refactors assume no concurrent edits to `refinery_engine.py`/`image_handler.py` — sequence them, don't parallelize executors on the same files.
+- 096 is time-sensitive in one corner: the NLTK allowlist entry it touches expires 2026-09-30 (noted, not renewed, inside the plan).
+
+### Fifth-pass findings considered and rejected (do not re-audit)
+
+- Auth fail-open as a vulnerability: already fails closed outside `development` (503, plan 021) — kept only as warning-noise plan 099.
+- `numpy==2.4.1` vs `!=2.4.0`: satisfies the constraint; subagent misread.
+- Operator-set wildcard CORS: code pins an explicit allowlist with `allow_credentials=False`; config-footgun at most.
+- Second-tier real-but-unplanned (lower leverage, kept out per scope discipline): HtmlCollector follow-on SSRF validation, admin-contract unit tests, refinery-engine de-mocking, SQL score histogram, `make type` double-suite cost, 3-file mypy scope, stale `/healthz` doc example, NLTK expiry watch.
+- Direction options (maintainer decision, not planned): reader-correction loop, social distribution past Buffer MVP, vision-model hero alt text (plan 084 spec exists), offline editorial replay (covered by plan 080 Phase 3).
