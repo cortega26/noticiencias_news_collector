@@ -175,6 +175,30 @@ def test_articles_pagination_is_stable(api_client: TestClient):
     assert [item["id"] for item in second_payload["data"]] == full_ids[2:3]
 
 
+@pytest.mark.parametrize("page_size", [0, -1, 51, 1000])
+def test_public_list_rejects_out_of_range_page_size(
+    api_client: TestClient, page_size: int
+):
+    resp = api_client.get("/v1/articles", params={"page_size": page_size})
+    assert resp.status_code == 422
+
+
+def test_public_list_rejects_inverted_date_range(api_client: TestClient):
+    resp = api_client.get(
+        "/v1/articles",
+        params={
+            "date_from": "2026-02-01T00:00:00+00:00",
+            "date_to": "2026-01-01T00:00:00+00:00",
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_public_list_accepts_page_size_boundary(api_client: TestClient):
+    resp = api_client.get("/v1/articles", params={"page_size": 50})
+    assert resp.status_code == 200
+
+
 def test_cursor_codec_round_trips_full_precision():
     """Scores differing only past 6dp must survive encode->decode exactly."""
     collected = datetime(2026, 1, 1, tzinfo=timezone.utc)
