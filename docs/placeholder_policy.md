@@ -113,6 +113,7 @@ Use the bundled make targets for local workflows:
 
 ```bash
 make audit-todos-check  # delta mode with SARIF + PR comment artifacts
+make audit-placeholders # contributor alias of audit-todos-check (CONTRIBUTING entry point)
 make audit-todos        # full repository snapshot in reports/placeholders.*
 ```
 
