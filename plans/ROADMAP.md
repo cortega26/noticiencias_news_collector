@@ -29,11 +29,11 @@
 | 2 | Identity & publication integrity (+106 follow-up) | 089, 094, 093, 086, 100, 095, 106 | 7/7 | DONE |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| 5 | Measure first (analytics + newsletter) | 107, 108 | 0/2 | TODO |
+| 5 | Measure first (analytics + newsletter) | 107, 108 | 1/2 | TODO (108 blocked on operator inputs) |
 | 6 | Throughput (batch publish + source visibility) | 109, 110 | 0/2 | TODO |
 | 7 | Trust + looks (health gate/dedup + share/hero/social) | 111, 112 | 0/2 | TODO |
 | 8 | Money + compounding (monetization + series/transparency) | 113, 114 | 0/2 | TODO |
-| **Total** | | **30** | **22/30** | |
+| **Total** | | **30** | **23/30** | |
 
 **Time-sensitive (resolved):** 096 touches the NLTK allowlist entry expiring **2026-09-30** — Wave 0 is DONE, so this is closed; no action remaining.
 

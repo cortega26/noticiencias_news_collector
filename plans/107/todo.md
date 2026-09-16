@@ -25,10 +25,11 @@ Derived from `spec.md`. Mark when verified, not before.
 ## Step 3 — SLO snapshot (DONE 2026-09-16)
 - [x] Numbers captured above; `make perf` 8 passed, 2603 deselected, exit 0
 
-## Frontend track — BLOCKED on operator vendor decision (see spec Step 1)
-- [ ] ADR-0011 accepted (or GA4 chosen + ADR-0011 superseded) → frontend plan 007 executes in `../noticiencias`
-- [ ] Enablement validation + baseline template filled there, not here
+## Frontend track — DONE via frontend plan 007 (merged 2026-09-16)
+- [x] ADR-0011 accepted by operator → frontend plan 007 executed on branch advisor/007-analytics-build
+- [x] PR noticiencias#176: CI green (validate/build/hero-delivery/Codacy), merged to frontend main
+- [x] Tracking ships OFF (token null); enablement gated on token + legal Q2 + edge CSP mirror
 
 ## Close-out
-- [ ] `validate_plans_ledger.py` → OK
-- [ ] `plans/README.md` row 107 updated
+- [x] `validate_plans_ledger.py` → OK
+- [x] `plans/README.md` row 107 updated (DONE + KEEP)
