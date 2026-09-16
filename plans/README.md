@@ -226,7 +226,7 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
 | 096 | [Unify security-audit exception policy](096-audit-exception-hygiene.md) | P1 | S | — | TODO |
 | 097 | [Stop masking perf-suite failures](097-perf-fail-open.md) | P2 | S | — | TODO |
-| 098 | [Wire audit-placeholders to the real gate](098-audit-placeholders-alias.md) | P3 | S | — | TODO |
+| 098 | [Wire audit-placeholders to the real gate](098-audit-placeholders-alias.md) | P3 | S | — | DONE |
 | 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |

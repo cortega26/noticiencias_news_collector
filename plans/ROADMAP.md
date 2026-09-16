@@ -23,11 +23,11 @@
 
 | Wave | Theme | Plans | Done | Status |
 |------|-------|-------|------|--------|
-| 0 | Signal hygiene first | 096, 097, 098, 102 | 0/4 | TODO |
+| 0 | Signal hygiene first | 096, 097, 098, 102 | 1/4 | IN PROGRESS (098 DONE in `c050d00`) |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 0/6 | TODO (blocked on nothing; start after Wave 0) |
 | 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 0/6 | TODO (089→094 order matters) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
-| **Total** | | **18** | **0/18** | |
+| **Total** | | **18** | **1/18** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -111,7 +111,7 @@
 | 095 | [Workflow→UI decoupling](095-workflow-ui-decoupling.md) | P2 | M | 2.6 | TODO |
 | 096 | [Audit exception hygiene](096-audit-exception-hygiene.md) | P1 | S | 0.3 | TODO |
 | 097 | [Unmask perf failures](097-perf-fail-open.md) | P2 | S | 0.2 | TODO |
-| 098 | [audit-placeholders alias](098-audit-placeholders-alias.md) | P3 | S | 0.1 | TODO |
+| 098 | [audit-placeholders alias](098-audit-placeholders-alias.md) | P3 | S | 0.1 | DONE |
 | 099 | [Fail-open warning](099-fail-open-warning.md) | P2 | S | 1.6 | TODO |
 | 100 | [Manual-ingest policy](100-manual-ingest-policy.md) | P3 | M | 2.5 | TODO |
 | 101 | [Explicit config injection](101-explicit-config-injection.md) | P3 | M | 3 | TODO |
