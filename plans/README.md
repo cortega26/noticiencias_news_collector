@@ -269,7 +269,7 @@ Verified-baseline growth program: analytics/cost instrumentation first, then thr
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 107 | [Analytics baseline + cost/SLO dashboard](107/spec.md) | P1 | S | None | IN_PROGRESS — backend cost/SLO done (20 attempts, 0.6 success); frontend analytics gated on vendor decision, executes as frontend plan 007. |
+| 107 | [Analytics baseline + cost/SLO dashboard](107/spec.md) | P1 | S | None | IN_PROGRESS — backend cost/SLO done; frontend plan 007 executed on branch advisor/007-analytics-build (pending merge), tracking ships OFF. |
 | 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | BLOCKED (ADR-0009 Proposed + no operator inputs; build owned by frontend plan 008) — backend keeps coordination pointer only. |
 | 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | TODO — batch dispatch up to 5 over the plan-106 pipeline seam, idempotent retry, triage multi-select. |
 | 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | TODO — surface cooldown state in admin health, resolve detectors wiring gap, concurrency 1 to 3 with perf proof. |
