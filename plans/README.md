@@ -213,7 +213,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
 | 106 | [Extract publication process-mode pipeline from legacy UI](106-publication-pipeline.md) | P2 | M | — | TODO |
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 
@@ -243,6 +242,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 100 (move manual-ingest policy out of workflow) DONE and archived — merged in `3540b03` (credibility/tier/word-gates to `[collection]` config, shared `infer_manual_published_date` + persisted inferred flag, LAW-B5 note recorded pre-code; first push blocked by gitleaks FP on the new `_KEY` identifier — resolved by amending `gitleaks:allow` into the unpushed branch commits and re-merging, verified non-credentials).
 - 095 (break workflow→UI dependency) DONE-as-partial and archived — merged in `71a1bd7` (Step 2 helper relocation only: pure-I/O closure moved verbatim + shim, `target_repo_writer` decoupled, 235 tests green; Step 3 correctly STOPped — direct dispatch would drop ~400 lines of main-only glue, porting it duplicates the plan-071 guard; respun as plan 106 with widened scope).
 - 101 (inject config explicitly into policy constructors) DONE and archived — merged in `d696b51` (fallbacks removed, language snapshot via `refresh_runtime_config` choke point, config threaded bootstrap→dispatcher→collectors; wider than estimated — 12 prod files, all mechanical; reviewer applied a black fixup for one new test file the executor missed).
+- 092 (batch RSS URL existence checks) DONE and archived — merged in `8982b52` (per-item SELECT → one bulk `articles_exist`; first attempt STOPped correctly on the coverage ratchet — plan refreshed to M with a tests-only backfill; retry repaired a 101 test stale-mocked on the old API and lifted the file to ~99.7%; 3 pinned-but-unfixed warts reported).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 

@@ -26,9 +26,9 @@
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
 | 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 6/6 | DONE (095 partial; remainder → 106) |
-| 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 1/2 | IN PROGRESS (101 DONE in `d696b51`; 092 STOPped on coverage ratchet, being rescoped) |
+| 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **22** | **20/22** | |
+| **Total** | | **22** | **21/22** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -116,7 +116,7 @@
 | 089 | [Whitespace dates as missing](089-whitespace-dates.md) | P2 | S | 2.1 | DONE |
 | 090 | [Remove status=new](090-remove-status-new.md) | P3 | S | 1.4 | DONE |
 | 091 | [Public list 422s](091-public-list-422.md) | P2 | S | 1.5 | DONE |
-| 092 | [Batch existence checks](092-batch-existence-check.md) | P2 | S | 3 | TODO |
+| 092 | [Batch existence checks](092-batch-existence-check.md) | P2 | S | 3 | DONE |
 | 093 | [Dedupe image download](093-dedupe-image-download.md) | P2 | S | 2.3 | DONE |
 | 094 | [Unify slug extraction](094-unify-slug-extraction.md) | P2 | S | 2.2 | DONE |
 | 095 | [Workflow→UI decoupling](095-workflow-ui-decoupling.md) | P2 | M | 2.6 | DONE-as-partial (Step 3 → 106) |
