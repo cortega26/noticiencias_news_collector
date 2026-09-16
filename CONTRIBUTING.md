@@ -53,6 +53,7 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
   ```bash
   make audit-placeholders
   ```
+  (`audit-placeholders` is an alias of the diff-aware PR gate `audit-todos-check`.)
 - The audit reads `.placeholder-audit.yaml`; update the config and docs together if you extend the policy.
 
 ## Commit conventions
