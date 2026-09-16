@@ -1043,7 +1043,11 @@ def test_admin_publish_lifecycle_and_db_survives(
         )
         return {"status": "success", "processed_count": 1}
 
-    monkeypatch.setattr("apps.refinery.main.main", _fake_main, raising=False)
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        _fake_main,
+        raising=False,
+    )
 
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         started = api_client.post(
@@ -1083,7 +1087,7 @@ def test_admin_publish_concurrent_yields_one_202_one_409(
 
     release = _threading.Event()
     monkeypatch.setattr(
-        "apps.refinery.main.main",
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
         lambda **kw: (
             release.wait(timeout=10),
             {"status": "success", "processed_count": 1},

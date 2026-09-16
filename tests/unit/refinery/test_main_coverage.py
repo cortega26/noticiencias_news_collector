@@ -18,6 +18,7 @@ import pytest
 
 import apps.refinery.main as ref_main
 from news_collector.config import settings as config_settings
+from news_collector.logic.workflows import publication_pipeline as pipeline_mod
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -76,14 +77,14 @@ def _patch_main_deps(monkeypatch, tmp_path: Path) -> dict:
     engine.process_articles.return_value = {"processed_count": 1, "errors": []}
     captured: dict = {}
 
-    monkeypatch.setattr(ref_main, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_mod, "load_config", lambda: config)
     monkeypatch.setattr(config_settings, "refresh_runtime_config", lambda cfg=None: cfg)
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
-    monkeypatch.setattr(ref_main, "preflight_llm_provider", lambda **_kwargs: [])
-    monkeypatch.setattr(ref_main, "DatabaseManager", lambda: db)
-    monkeypatch.setattr(ref_main, "GitHubPublisher", lambda _token: git_handler)
+    monkeypatch.setattr(pipeline_mod, "preflight_llm_provider", lambda **_kwargs: [])
+    monkeypatch.setattr(pipeline_mod, "DatabaseManager", lambda: db)
+    monkeypatch.setattr(pipeline_mod, "GitHubPublisher", lambda _token: git_handler)
     monkeypatch.setattr(
-        ref_main,
+        pipeline_mod,
         "resolve_ollama_stage_models",
         lambda _config, logger=None: {
             "default": "main-model",
@@ -93,21 +94,21 @@ def _patch_main_deps(monkeypatch, tmp_path: Path) -> dict:
             "enrichment": "enrichment-model",
         },
     )
-    monkeypatch.setattr(ref_main, "EditorAgent", lambda **_kwargs: MagicMock())
+    monkeypatch.setattr(pipeline_mod, "EditorAgent", lambda **_kwargs: MagicMock())
 
     def _engine_factory(**kwargs):
         captured["engine_kwargs"] = kwargs
         return engine
 
-    monkeypatch.setattr(ref_main, "RefineryEngine", _engine_factory)
-    monkeypatch.setattr(ref_main, "run_collector_script", lambda *_a, **_k: None)
-    monkeypatch.setattr(ref_main, "SOURCE_DIR", tmp_path / "source")
-    monkeypatch.setattr(ref_main, "TARGET_DIR", tmp_path / "target")
+    monkeypatch.setattr(pipeline_mod, "RefineryEngine", _engine_factory)
+    monkeypatch.setattr(pipeline_mod, "run_collector_script", lambda *_a, **_k: None)
+    monkeypatch.setattr(pipeline_mod, "SOURCE_DIR", tmp_path / "source")
+    monkeypatch.setattr(pipeline_mod, "TARGET_DIR", tmp_path / "target")
 
     def _no_articles(*_a, **_k):
         return [], None
 
-    monkeypatch.setattr(ref_main, "_select_export_articles", _no_articles)
+    monkeypatch.setattr(pipeline_mod, "_select_export_articles", _no_articles)
 
     return {"config": config, "db": db, "git_handler": git_handler, "engine": engine}
 
@@ -120,19 +121,19 @@ def _patch_main_deps(monkeypatch, tmp_path: Path) -> dict:
 class TestIsFileLockError:
     def test_winerror_32(self):
         exc = SimpleNamespace(winerror=32)
-        assert ref_main._is_file_lock_error(exc) is True
+        assert pipeline_mod._is_file_lock_error(exc) is True
 
     def test_english_message(self):
         exc = RuntimeError("The file is being used by another process")
-        assert ref_main._is_file_lock_error(exc) is True
+        assert pipeline_mod._is_file_lock_error(exc) is True
 
     def test_spanish_message(self):
         exc = RuntimeError("El archivo está siendo utilizado por otro proceso")
-        assert ref_main._is_file_lock_error(exc) is True
+        assert pipeline_mod._is_file_lock_error(exc) is True
 
     def test_unrelated_message(self):
         exc = RuntimeError("disk full")
-        assert ref_main._is_file_lock_error(exc) is False
+        assert pipeline_mod._is_file_lock_error(exc) is False
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ class TestIsFileLockError:
 
 class TestUniquePostSlug:
     def test_base_slug_available(self, tmp_path):
-        slug, path = ref_main._unique_post_slug(
+        slug, path = pipeline_mod._unique_post_slug(
             posts_dir=tmp_path,
             date_str="2026-01-01",
             base_slug="science",
@@ -153,7 +154,7 @@ class TestUniquePostSlug:
 
     def test_suffix_collision_resolved(self, tmp_path):
         (tmp_path / "2026-01-01-science.md").touch()
-        slug, path = ref_main._unique_post_slug(
+        slug, path = pipeline_mod._unique_post_slug(
             posts_dir=tmp_path,
             date_str="2026-01-01",
             base_slug="science",
@@ -164,9 +165,11 @@ class TestUniquePostSlug:
 
     def test_empty_article_id_uses_uuid(self, tmp_path):
         (tmp_path / "2026-01-01-science.md").touch()
-        with patch("apps.refinery.main.uuid.uuid4") as mock_uuid:
+        with patch(
+            "news_collector.logic.workflows.publication_pipeline.uuid.uuid4"
+        ) as mock_uuid:
             mock_uuid.return_value.hex = "abcdef123456"
-            slug, _ = ref_main._unique_post_slug(
+            slug, _ = pipeline_mod._unique_post_slug(
                 posts_dir=tmp_path,
                 date_str="2026-01-01",
                 base_slug="science",
@@ -178,7 +181,7 @@ class TestUniquePostSlug:
         (tmp_path / "2026-01-01-science.md").touch()
         for suffix in ("42", "42-2", "42-3", "42-4"):
             (tmp_path / f"2026-01-01-science-{suffix}.md").touch()
-        slug, path = ref_main._unique_post_slug(
+        slug, path = pipeline_mod._unique_post_slug(
             posts_dir=tmp_path,
             date_str="2026-01-01",
             base_slug="science",
@@ -193,7 +196,7 @@ class TestUniquePostSlug:
         for attempt in range(2, 100):
             (tmp_path / f"2026-01-01-science-42-{attempt}.md").touch()
         with pytest.raises(RuntimeError, match="Unable to generate unique slug"):
-            ref_main._unique_post_slug(
+            pipeline_mod._unique_post_slug(
                 posts_dir=tmp_path,
                 date_str="2026-01-01",
                 base_slug="science",
@@ -209,7 +212,7 @@ class TestUniquePostSlug:
 class TestSafeCloneSourceRepo:
     def test_clone_success(self, tmp_path):
         handler = MagicMock()
-        result = ref_main._safe_clone_source_repo(handler, "https://x", tmp_path)
+        result = pipeline_mod._safe_clone_source_repo(handler, "https://x", tmp_path)
         assert result == tmp_path
         handler.clone_repo.assert_called_once()
 
@@ -217,14 +220,14 @@ class TestSafeCloneSourceRepo:
         (tmp_path / ".git").mkdir()
         handler = MagicMock()
         handler.clone_repo.side_effect = RuntimeError("being used by another process")
-        result = ref_main._safe_clone_source_repo(handler, "https://x", tmp_path)
+        result = pipeline_mod._safe_clone_source_repo(handler, "https://x", tmp_path)
         assert result == tmp_path
 
     def test_non_lock_error_raises(self, tmp_path):
         handler = MagicMock()
         handler.clone_repo.side_effect = RuntimeError("auth failed")
         with pytest.raises(RuntimeError, match="auth failed"):
-            ref_main._safe_clone_source_repo(handler, "https://x", tmp_path)
+            pipeline_mod._safe_clone_source_repo(handler, "https://x", tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -245,52 +248,54 @@ class TestLoadExportArticles:
 
     def test_unreadable_export_returns_empty(self, tmp_path):
         assert (
-            ref_main._load_export_articles(tmp_path / "missing.json", MagicMock(), None)
+            pipeline_mod._load_export_articles(
+                tmp_path / "missing.json", MagicMock(), None
+            )
             == []
         )
 
     def test_legacy_list_payload(self, tmp_path):
         p = self._write(tmp_path, [_valid_article(1)])
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
 
     def test_unexpected_format_returns_empty(self, tmp_path):
         p = self._write(tmp_path, {"articles": "nope"})
-        assert ref_main._load_export_articles(p, MagicMock(), None) == []
+        assert pipeline_mod._load_export_articles(p, MagicMock(), None) == []
 
     def test_invalid_schema_version_treated_legacy(self, tmp_path):
         p = self._write(
             tmp_path, {"schema_version": "abc", "articles": [_valid_article(1)]}
         )
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
 
     def test_missing_schema_version_assumed_legacy(self, tmp_path):
         p = self._write(tmp_path, {"contract": "x.v2", "articles": [_valid_article(1)]})
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
 
     def test_article_skipped_when_process_id_mismatch(self, tmp_path):
         p = self._write(tmp_path, {"articles": [_valid_article(1)]})
-        assert ref_main._load_export_articles(p, self._db(), process_id="999") == []
+        assert pipeline_mod._load_export_articles(p, self._db(), process_id="999") == []
 
     def test_invalid_payload_article_skipped(self, tmp_path):
         bad = _valid_article(1)
         bad["source_name"] = "No Such Source 99"
         bad.pop("source_id")
         p = self._write(tmp_path, {"articles": [bad]})
-        assert ref_main._load_export_articles(p, self._db(), None) == []
+        assert pipeline_mod._load_export_articles(p, self._db(), None) == []
 
     def test_in_flight_or_done_skips(self, tmp_path):
         p = self._write(tmp_path, {"articles": [_valid_article(1)]})
-        articles = ref_main._load_export_articles(p, self._db(in_flight=True), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(in_flight=True), None)
         assert articles == []
 
     def test_non_numeric_id_passes(self, tmp_path):
         art = _valid_article(1)
         art["id"] = "legacy-title-id"
         p = self._write(tmp_path, {"articles": [art]})
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
 
     def test_ambiguous_source_names_disabled(self, tmp_path, monkeypatch):
@@ -304,7 +309,7 @@ class TestLoadExportArticles:
         art = _valid_article(1)
         art["source_id"] = "s4"
         p = self._write(tmp_path, {"articles": [art]})
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
 
     def test_source_name_fallback_resolves(self, tmp_path, monkeypatch):
@@ -316,7 +321,7 @@ class TestLoadExportArticles:
         art.pop("source_id")
         art["source_name"] = "known source"
         p = self._write(tmp_path, {"articles": [art]})
-        articles = ref_main._load_export_articles(p, self._db(), None)
+        articles = pipeline_mod._load_export_articles(p, self._db(), None)
         assert len(articles) == 1
         assert articles[0]["source_id"] == "known_id"
 
@@ -334,9 +339,9 @@ class TestSelectExportArticles:
         preferred = tmp_path / "preferred.json"
         preferred.touch()
         monkeypatch.setattr(
-            ref_main, "_load_export_articles", lambda *a, **k: self._articles(1)
+            pipeline_mod, "_load_export_articles", lambda *a, **k: self._articles(1)
         )
-        articles, selected = ref_main._select_export_articles(
+        articles, selected = pipeline_mod._select_export_articles(
             tmp_path / "cloud.json",
             tmp_path / "sibling.json",
             MagicMock(),
@@ -357,8 +362,8 @@ class TestSelectExportArticles:
             calls["n"] += 1
             return self._articles(1) if calls["n"] == 2 else []
 
-        monkeypatch.setattr(ref_main, "_load_export_articles", _load)
-        articles, selected = ref_main._select_export_articles(
+        monkeypatch.setattr(pipeline_mod, "_load_export_articles", _load)
+        articles, selected = pipeline_mod._select_export_articles(
             cloud,
             tmp_path / "sibling.json",
             MagicMock(),
@@ -372,9 +377,9 @@ class TestSelectExportArticles:
         cloud = tmp_path / "cloud.json"
         cloud.touch()
         monkeypatch.setattr(
-            ref_main, "_load_export_articles", lambda *a, **k: self._articles(1)
+            pipeline_mod, "_load_export_articles", lambda *a, **k: self._articles(1)
         )
-        articles, selected = ref_main._select_export_articles(
+        articles, selected = pipeline_mod._select_export_articles(
             cloud,
             tmp_path / "sibling.json",
             MagicMock(),
@@ -394,8 +399,8 @@ class TestSelectExportArticles:
             calls["n"] += 1
             return self._articles(1) if calls["n"] == 2 else []
 
-        monkeypatch.setattr(ref_main, "_load_export_articles", _load)
-        articles, selected = ref_main._select_export_articles(
+        monkeypatch.setattr(pipeline_mod, "_load_export_articles", _load)
+        articles, selected = pipeline_mod._select_export_articles(
             cloud, sibling, MagicMock(), None
         )
         assert selected == sibling
@@ -403,9 +408,9 @@ class TestSelectExportArticles:
 
     def test_no_exports_returns_empty(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            ref_main, "_load_export_articles", lambda *a, **k: self._articles(1)
+            pipeline_mod, "_load_export_articles", lambda *a, **k: self._articles(1)
         )
-        articles, selected = ref_main._select_export_articles(
+        articles, selected = pipeline_mod._select_export_articles(
             tmp_path / "missing1.json", tmp_path / "missing2.json", MagicMock(), None
         )
         assert articles == []
@@ -443,9 +448,9 @@ class TestRunCollectorScript:
     def test_success_and_export(self, monkeypatch):
         system = _FakeSystem()
         monkeypatch.setattr(
-            ref_main, "create_system", lambda config_override=None: system
+            pipeline_mod, "create_system", lambda config_override=None: system
         )
-        ref_main.run_collector_script(Path("/tmp/source"), fast_mode=False)
+        pipeline_mod.run_collector_script(Path("/tmp/source"), fast_mode=False)
         assert system.exports
         assert system.shutdown_called
 
@@ -456,8 +461,8 @@ class TestRunCollectorScript:
             captured["config_override"] = config_override
             return _FakeSystem()
 
-        monkeypatch.setattr(ref_main, "create_system", _create)
-        ref_main.run_collector_script(Path("/tmp/source"), fast_mode=True)
+        monkeypatch.setattr(pipeline_mod, "create_system", _create)
+        pipeline_mod.run_collector_script(Path("/tmp/source"), fast_mode=True)
         assert (
             captured["config_override"]["scoring_weights"]["cognitive_engagement"]
             == 0.0
@@ -466,40 +471,42 @@ class TestRunCollectorScript:
     def test_dry_run_skips_export(self, monkeypatch):
         system = _FakeSystem()
         monkeypatch.setattr(
-            ref_main, "create_system", lambda config_override=None: system
+            pipeline_mod, "create_system", lambda config_override=None: system
         )
-        ref_main.run_collector_script(Path("/tmp/source"), dry_run=True)
+        pipeline_mod.run_collector_script(Path("/tmp/source"), dry_run=True)
         assert system.exports == []
         assert system.shutdown_called
 
     def test_initialize_failure_returns(self, monkeypatch):
         system = _FakeSystem(initialize=False)
         monkeypatch.setattr(
-            ref_main, "create_system", lambda config_override=None: system
+            pipeline_mod, "create_system", lambda config_override=None: system
         )
-        ref_main.run_collector_script(Path("/tmp/source"))
+        pipeline_mod.run_collector_script(Path("/tmp/source"))
         assert system.shutdown_called is False
 
     def test_runtime_error_loop_conflict(self, monkeypatch):
         system = _FakeSystem(run_error=RuntimeError("event loop is already running"))
         monkeypatch.setattr(
-            ref_main, "create_system", lambda config_override=None: system
+            pipeline_mod, "create_system", lambda config_override=None: system
         )
         captured = []
 
         def _err(msg, *a, **k):
             captured.append(str(msg))
 
-        monkeypatch.setattr("apps.refinery.main.logger.error", _err)
-        ref_main.run_collector_script(Path("/tmp/source"))
+        monkeypatch.setattr(
+            "news_collector.logic.workflows.publication_pipeline.logger.error", _err
+        )
+        pipeline_mod.run_collector_script(Path("/tmp/source"))
         assert any("Async loop conflict" in m for m in captured)
 
     def test_generic_exception_logged(self, monkeypatch):
         def _create(config_override=None):
             raise ValueError("collector exploded")
 
-        monkeypatch.setattr(ref_main, "create_system", _create)
-        ref_main.run_collector_script(Path("/tmp/source"))
+        monkeypatch.setattr(pipeline_mod, "create_system", _create)
+        pipeline_mod.run_collector_script(Path("/tmp/source"))
 
 
 # ---------------------------------------------------------------------------
@@ -510,7 +517,7 @@ class TestRunCollectorScript:
 class TestMainPaths:
     def test_config_error_returns_error(self, monkeypatch):
         monkeypatch.setattr(
-            ref_main,
+            pipeline_mod,
             "load_config",
             lambda: (_ for _ in ()).throw(ValueError("bad toml")),
         )
@@ -529,13 +536,13 @@ class TestMainPaths:
             "errors": [],
         }
         monkeypatch.setattr(
-            ref_main,
+            pipeline_mod,
             "_select_export_articles",
             lambda *a, **k: ([_valid_article(1)], export),
         )
         target = tmp_path / "target"
         target.mkdir()
-        monkeypatch.setattr(ref_main.git, "Repo", lambda _path: _DummyRepo())
+        monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
         result = ref_main.main(export_path=str(export), process_new_content=True)
         assert result["status"] == "success"
         assert result["processed_count"] == 1
@@ -555,7 +562,7 @@ class TestMainPaths:
                     "error_code": "fetch_failed",
                 }
 
-        monkeypatch.setattr(ref_main, "ManualUrlIngestService", _FakeIngest)
+        monkeypatch.setattr(pipeline_mod, "ManualUrlIngestService", _FakeIngest)
         result = ref_main.main(article_url="https://example.org/broken")
         assert result["status"] == "error"
         assert result["error_code"] == "fetch_failed"
@@ -610,7 +617,7 @@ class TestMainPaths:
         export = tmp_path / "export.json"
         export.write_text("{}", encoding="utf-8")
         monkeypatch.setattr(
-            ref_main, "_select_export_articles", lambda *a, **k: ([], export)
+            pipeline_mod, "_select_export_articles", lambda *a, **k: ([], export)
         )
         result = ref_main.main(export_path=str(export))
         assert result["status"] == "noop"
@@ -638,9 +645,9 @@ class TestMainPaths:
         deps["db"].is_processed.return_value = False
         target = tmp_path / "target"
         target.mkdir()
-        monkeypatch.setattr(ref_main.git, "Repo", lambda _path: _DummyRepo())
+        monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
         monkeypatch.setattr(
-            ref_main, "_safe_clone_source_repo", lambda *_a, **_k: source
+            pipeline_mod, "_safe_clone_source_repo", lambda *_a, **_k: source
         )
 
         result = ref_main.main(process_id="wanted")
@@ -657,9 +664,9 @@ class TestMainPaths:
         deps["engine"].process_articles.side_effect = RuntimeError("engine crashed")
         target = tmp_path / "target"
         target.mkdir()
-        monkeypatch.setattr(ref_main.git, "Repo", lambda _path: _DummyRepo())
+        monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
         monkeypatch.setattr(
-            ref_main, "_safe_clone_source_repo", lambda *_a, **_k: source
+            pipeline_mod, "_safe_clone_source_repo", lambda *_a, **_k: source
         )
 
         result = ref_main.main(process_id="x")
@@ -676,9 +683,9 @@ class TestMainPaths:
         deps["engine"].process_articles.side_effect = KeyboardInterrupt()
         target = tmp_path / "target"
         target.mkdir()
-        monkeypatch.setattr(ref_main.git, "Repo", lambda _path: _DummyRepo())
+        monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
         monkeypatch.setattr(
-            ref_main, "_safe_clone_source_repo", lambda *_a, **_k: source
+            pipeline_mod, "_safe_clone_source_repo", lambda *_a, **_k: source
         )
 
         result = ref_main.main(process_id="x")
@@ -692,12 +699,12 @@ class TestMainPaths:
         (data_dir / "x.md").write_text("x", encoding="utf-8")
         deps["db"].is_processed.return_value = False
         monkeypatch.setattr(
-            ref_main.git,
+            pipeline_mod.git,
             "Repo",
             lambda _path: (_ for _ in ()).throw(RuntimeError("git corrupt")),
         )
         monkeypatch.setattr(
-            ref_main, "_safe_clone_source_repo", lambda *_a, **_k: source
+            pipeline_mod, "_safe_clone_source_repo", lambda *_a, **_k: source
         )
         result = ref_main.main(process_id="x")
         assert result["status"] == "error"
