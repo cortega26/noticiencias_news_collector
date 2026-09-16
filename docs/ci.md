@@ -30,7 +30,7 @@ Current jobs:
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — full pytest suite with coverage XML
 - `coverage` — coverage ratchet vs base branch
-- `perf` — `make perf` (currently masks pytest failures; inspect artifacts or run pytest directly)
+- `perf` — `make perf` (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)

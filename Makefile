@@ -282,7 +282,14 @@ e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 
 perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@mkdir -p $(PERF_DIR)
-	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml || { echo "Performance tests not defined; skipped."; touch $(PERF_DIR)/SKIPPED; true; }
+	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml; \
+	code=$$?; \
+	if [ $$code -eq 5 ]; then \
+		echo "Performance tests not defined; skipped."; \
+		touch $(PERF_DIR)/SKIPPED; \
+	elif [ $$code -ne 0 ]; then \
+		exit $$code; \
+	fi
 
 audit: security ## Run supply-chain and security audits (alias for `make security`)
 
