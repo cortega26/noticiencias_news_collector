@@ -224,7 +224,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
 | 094 | [Unify slug extraction behind resolver](094-unify-slug-extraction.md) | P2 | S | — | TODO |
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
-| 096 | [Unify security-audit exception policy](096-audit-exception-hygiene.md) | P1 | S | — | TODO |
 | 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
@@ -243,6 +242,8 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 
 - 098 (alias `audit-placeholders` to the real gate) DONE and archived — merged in `c050d00`, ledger commit `5c9f139`.
 - 097 (unmask `make perf` failures; clean skip only on zero collected) DONE and archived — merged in `cb5f67f` (executor proved pass/fail/empty branches; CI `perf` job has no tolerance flag so impact is nil).
+- 096 (unify pip-audit exceptions; retire expired protobuf ignore) DONE and archived — merged in `2c16c65` (first attempt STOPped correctly on pre-existing `make quality` Bandit red; plan refreshed, second attempt converged all four pip-audit legs on the enforced allowlist; CVE-2026-0994 flag deleted as alias-duplicate, protobuf residual allowlisted to 2026-10-31).
+- 096 (unify pip-audit exceptions; retire expired protobuf ignore) DONE and archived — merged in `2c16c65` (first attempt STOPped correctly on pre-existing `make quality` Bandit red; plan refreshed, second attempt converged all four pip-audit legs on the enforced allowlist; CVE-2026-0994 flag deleted as alias-duplicate, protobuf residual allowlisted to 2026-10-31).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
@@ -251,4 +252,5 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - Operator-set wildcard CORS: code pins an explicit allowlist with `allow_credentials=False`; config-footgun at most.
 - Second-tier real-but-unplanned (lower leverage, kept out per scope discipline): HtmlCollector follow-on SSRF validation, admin-contract unit tests, refinery-engine de-mocking, SQL score histogram, `make type` double-suite cost, 3-file mypy scope, stale `/healthz` doc example, NLTK expiry watch.
 - Wave-0 follow-up surfaced by plan 096's first executor run (2026-09-16, verified by advisor on the clean tree): `make quality`'s Bandit leg is red pre-existing (exit 1, 11 Low B105/B404/B607, 0 Medium+) while `quality-ci` filters Bandit to HIGH — align the two invocations or triage the 11 Lows. Out of 096's scope by design; needs its own plan if the team wants `make quality` green.
+- Flaky-test watch (surfaced by plan 096's second run, 2026-09-16): `tests/test_reliability_features.py::test_429_retry_after_handling` fails under the randomized full `make quality`/`make type` suite but passes in isolation — order-dependent flake on the clean tree, unrelated to any plan. Needs a quarantine-or-fix pass if it blocks future gates.
 - Direction options (maintainer decision, not planned): reader-correction loop, social distribution past Buffer MVP, vision-model hero alt text (plan 084 spec exists), offline editorial replay (covered by plan 080 Phase 3).
