@@ -125,7 +125,10 @@ def test_load_export_articles_warns_on_legacy_schema(tmp_path, monkeypatch):
     def _capture_warning(message, *args, **kwargs):
         warnings.append(str(message))
 
-    monkeypatch.setattr("apps.refinery.main.logger.warning", _capture_warning)
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.logger.warning",
+        _capture_warning,
+    )
     articles = _load_export_articles(export_path, _DummyDB(), process_id="160")
 
     assert len(articles) == 1

@@ -6,8 +6,9 @@ Owns:
 - Inserting/transitioning `workflow_runs` rows for `run_type='publication'`
   (queued -> running -> succeeded/failed, or -> interrupted on lease
   recovery).
-- Dispatching one Refinery run (`apps.refinery.main.main`) in a background
-  thread once a run's row is durably queued.
+- Dispatching one Refinery run
+  (`news_collector.logic.workflows.publication_pipeline.run_publication_pipeline`)
+  in a background thread once a run's row is durably queued.
 - Lease-based crash/restart recovery, scoped to `run_type='publication'`.
 
 Does NOT own:
@@ -18,13 +19,15 @@ Does NOT own:
   and records its outcome, exactly as `CollectionRunWorkflow` does for the
   collection cycle.
 
-Why it wraps `apps.refinery.main.main(process_id=…)` rather than calling
-`RefineryEngine` directly: in `process_id` mode `main()` skips the collector
-and builds its **own** `DatabaseManager()` (`apps/refinery/main.py`), so it
+Why it wraps `run_publication_pipeline(process_id=…)` rather than calling
+`RefineryEngine` directly: in `process_id` mode the pipeline skips the
+collector and builds its **own** `DatabaseManager()`
+(`news_collector/logic/workflows/publication_pipeline.py`), so it
 never closes the process-wide singleton the serving API holds — the Phase 4a
-`system.shutdown()` defect cannot recur through this path. `main()` is the
-battle-tested wrapper the Streamlit panel already drives; reusing it keeps
-the target-repo clone / editor / auditor / PR logic in one place.
+`system.shutdown()` defect cannot recur through this path. The pipeline is the
+battle-tested flow the Streamlit panel already drives through its thin
+`apps.refinery.main.main` delegate; reusing it keeps the target-repo clone /
+editor / auditor / PR logic in one place.
 
 Design mirrors `collection_run_workflow.py` (Plan 060 / Phase 4a) exactly:
 constructor takes explicit `db_manager`, module logger, typed frozen-dataclass
@@ -226,13 +229,16 @@ class PublicationRunWorkflow:
         )
         heartbeat_thread.start()
         try:
-            from apps.refinery.main import main as run_refinery
+            from news_collector.logic.workflows.publication_pipeline import (
+                run_publication_pipeline,
+            )
 
-            # `main()` in process_id mode skips the collector and uses its
-            # own DatabaseManager — it never touches the serving singleton.
-            # It is blocking (runs its own asyncio loop internally); fine on
-            # this daemon thread, same as CollectionRunWorkflow._run.
-            result = run_refinery(
+            # `run_publication_pipeline()` in process_id mode skips the
+            # collector and uses its own DatabaseManager — it never touches
+            # the serving singleton. It is blocking (runs its own asyncio
+            # loop internally); fine on this daemon thread, same as
+            # CollectionRunWorkflow._run.
+            result = run_publication_pipeline(
                 process_id=str(article_id) if article_id is not None else None,
                 article_url=article_url,
                 skip_visuals=False,
@@ -267,7 +273,7 @@ class PublicationRunWorkflow:
         article_id: int | None,
         article_url: str | None,
     ) -> dict[str, Any]:
-        """Merge `main()`'s result dict with the persisted
+        """Merge the pipeline's result dict with the persisted
         `PublicationAttemptSummary` (has `pr_url`, `failure_class`,
         `final_slug`, `branch_name`, `stages`) so the GUI can show the PR
         link or the editorial-rejection reason.
@@ -281,8 +287,8 @@ class PublicationRunWorkflow:
             "article_url": article_url,
         }
 
-        # main() copies manual-ingest extras (incl. the resolved numeric id)
-        # onto its result via merge_manual_ingest_context. Only read the
+        # The pipeline copies manual-ingest extras (incl. the resolved numeric
+        # id) onto its result via merge_manual_ingest_context. Only read the
         # attempt file that matches THIS run's article — never fall back to
         # "newest file in the dir", which would splice a previous, unrelated
         # run's PR url / slug / stages into this summary (a noop run has no

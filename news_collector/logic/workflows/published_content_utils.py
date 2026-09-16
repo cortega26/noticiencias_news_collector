@@ -15,9 +15,10 @@ Does NOT own:
   re-exports these helpers until the panel is retired)
 - Manifest read/write for the target repo (see target_repo_writer.py)
 
-Relocated verbatim from apps.refinery.published_content (plan 095) so the
-workflow layer (target_repo_writer.py) no longer imports the legacy UI
-package. No Streamlit/UI-state/DB dependency: safe for workflow use.
+Relocated verbatim out of the legacy refinery published-content helper
+(plan 095) so the workflow layer (target_repo_writer.py) no longer imports
+the legacy UI package. No Streamlit/UI-state/DB dependency: safe for
+workflow use.
 """
 
 from __future__ import annotations

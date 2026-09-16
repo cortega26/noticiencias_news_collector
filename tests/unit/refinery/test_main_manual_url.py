@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import apps.refinery.main as refinery_main
 from news_collector.config import settings as config_settings
+from news_collector.logic.workflows import publication_pipeline as pipeline_mod
 
 
 class _DummyConfigWriter:
@@ -64,13 +65,13 @@ def test_main_article_url_uses_manual_ingest_export_and_normal_processing(
                 "article": {"id": 77, "title": "Manual article"},
             }
 
-    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
-    monkeypatch.setattr(refinery_main, "preflight_llm_provider", lambda **_kwargs: [])
+    monkeypatch.setattr(pipeline_mod, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_mod, "preflight_llm_provider", lambda **_kwargs: [])
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
-    monkeypatch.setattr(refinery_main, "DatabaseManager", lambda: db_manager)
-    monkeypatch.setattr(refinery_main, "GitHubPublisher", lambda _token: git_handler)
+    monkeypatch.setattr(pipeline_mod, "DatabaseManager", lambda: db_manager)
+    monkeypatch.setattr(pipeline_mod, "GitHubPublisher", lambda _token: git_handler)
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "resolve_ollama_stage_models",
         lambda _config, logger=None: {
             "default": "main-model",
@@ -80,15 +81,15 @@ def test_main_article_url_uses_manual_ingest_export_and_normal_processing(
             "enrichment": "enrichment-model",
         },
     )
-    monkeypatch.setattr(refinery_main, "EditorAgent", lambda **_kwargs: MagicMock())
-    monkeypatch.setattr(refinery_main, "RefineryEngine", lambda **_kwargs: engine)
+    monkeypatch.setattr(pipeline_mod, "EditorAgent", lambda **_kwargs: MagicMock())
+    monkeypatch.setattr(pipeline_mod, "RefineryEngine", lambda **_kwargs: engine)
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "ManualUrlIngestService",
         FakeManualUrlIngestService,
     )
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "_select_export_articles",
         lambda *args, **kwargs: (
             [
@@ -107,9 +108,9 @@ def test_main_article_url_uses_manual_ingest_export_and_normal_processing(
             export_path,
         ),
     )
-    monkeypatch.setattr(refinery_main.git, "Repo", lambda _path: _DummyRepo())
-    monkeypatch.setattr(refinery_main, "SOURCE_DIR", tmp_path / "source")
-    monkeypatch.setattr(refinery_main, "TARGET_DIR", tmp_path / "target")
+    monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
+    monkeypatch.setattr(pipeline_mod, "SOURCE_DIR", tmp_path / "source")
+    monkeypatch.setattr(pipeline_mod, "TARGET_DIR", tmp_path / "target")
 
     result = refinery_main.main(article_url="https://example.org/manual-77")
 
@@ -173,13 +174,13 @@ def test_main_article_url_propagates_processing_error_code(tmp_path: Path, monke
                 "article": {"id": 77, "title": "Manual article"},
             }
 
-    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
-    monkeypatch.setattr(refinery_main, "preflight_llm_provider", lambda **_kwargs: [])
+    monkeypatch.setattr(pipeline_mod, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_mod, "preflight_llm_provider", lambda **_kwargs: [])
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
-    monkeypatch.setattr(refinery_main, "DatabaseManager", lambda: db_manager)
-    monkeypatch.setattr(refinery_main, "GitHubPublisher", lambda _token: git_handler)
+    monkeypatch.setattr(pipeline_mod, "DatabaseManager", lambda: db_manager)
+    monkeypatch.setattr(pipeline_mod, "GitHubPublisher", lambda _token: git_handler)
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "resolve_ollama_stage_models",
         lambda _config, logger=None: {
             "default": "main-model",
@@ -189,15 +190,15 @@ def test_main_article_url_propagates_processing_error_code(tmp_path: Path, monke
             "enrichment": "enrichment-model",
         },
     )
-    monkeypatch.setattr(refinery_main, "EditorAgent", lambda **_kwargs: MagicMock())
-    monkeypatch.setattr(refinery_main, "RefineryEngine", lambda **_kwargs: engine)
+    monkeypatch.setattr(pipeline_mod, "EditorAgent", lambda **_kwargs: MagicMock())
+    monkeypatch.setattr(pipeline_mod, "RefineryEngine", lambda **_kwargs: engine)
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "ManualUrlIngestService",
         FakeManualUrlIngestService,
     )
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "_select_export_articles",
         lambda *args, **kwargs: (
             [
@@ -216,9 +217,9 @@ def test_main_article_url_propagates_processing_error_code(tmp_path: Path, monke
             export_path,
         ),
     )
-    monkeypatch.setattr(refinery_main.git, "Repo", lambda _path: _DummyRepo())
-    monkeypatch.setattr(refinery_main, "SOURCE_DIR", tmp_path / "source")
-    monkeypatch.setattr(refinery_main, "TARGET_DIR", tmp_path / "target")
+    monkeypatch.setattr(pipeline_mod.git, "Repo", lambda _path: _DummyRepo())
+    monkeypatch.setattr(pipeline_mod, "SOURCE_DIR", tmp_path / "source")
+    monkeypatch.setattr(pipeline_mod, "TARGET_DIR", tmp_path / "target")
 
     result = refinery_main.main(article_url="https://example.org/manual-77")
 
@@ -243,9 +244,9 @@ def test_main_fails_fast_when_llm_preflight_fails(monkeypatch) -> None:
     db_ctor = MagicMock()
     editor_ctor = MagicMock()
 
-    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_mod, "load_config", lambda: config)
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "preflight_llm_provider",
         lambda **_kwargs: [
             "Ollama generate probe failed: Ollama request failed for model "
@@ -254,8 +255,8 @@ def test_main_fails_fast_when_llm_preflight_fails(monkeypatch) -> None:
         ],
     )
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", False)
-    monkeypatch.setattr(refinery_main, "DatabaseManager", db_ctor)
-    monkeypatch.setattr(refinery_main, "EditorAgent", editor_ctor)
+    monkeypatch.setattr(pipeline_mod, "DatabaseManager", db_ctor)
+    monkeypatch.setattr(pipeline_mod, "EditorAgent", editor_ctor)
 
     result = refinery_main.main()
 
@@ -285,18 +286,18 @@ def test_main_refreshes_runtime_config_and_passes_same_config_to_editor_agent(
     refreshed: list[object] = []
     editor_kwargs: dict[str, object] = {}
 
-    monkeypatch.setattr(refinery_main, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_mod, "load_config", lambda: config)
     monkeypatch.setattr(
         config_settings,
         "refresh_runtime_config",
         lambda cfg=None: refreshed.append(cfg or config) or (cfg or config),
     )
-    monkeypatch.setattr(refinery_main, "preflight_llm_provider", lambda **_kwargs: [])
+    monkeypatch.setattr(pipeline_mod, "preflight_llm_provider", lambda **_kwargs: [])
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
-    monkeypatch.setattr(refinery_main, "DatabaseManager", lambda: db_manager)
-    monkeypatch.setattr(refinery_main, "GitHubPublisher", lambda _token: MagicMock())
+    monkeypatch.setattr(pipeline_mod, "DatabaseManager", lambda: db_manager)
+    monkeypatch.setattr(pipeline_mod, "GitHubPublisher", lambda _token: MagicMock())
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "resolve_ollama_stage_models",
         lambda _config, logger=None: {
             "default": "main-model",
@@ -307,26 +308,26 @@ def test_main_refreshes_runtime_config_and_passes_same_config_to_editor_agent(
         },
     )
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "EditorAgent",
         lambda **kwargs: editor_kwargs.update(kwargs) or MagicMock(),
     )
-    monkeypatch.setattr(refinery_main, "RefineryEngine", lambda **_kwargs: engine)
+    monkeypatch.setattr(pipeline_mod, "RefineryEngine", lambda **_kwargs: engine)
     monkeypatch.setattr(
-        refinery_main, "run_collector_script", lambda *_args, **_kwargs: None
+        pipeline_mod, "run_collector_script", lambda *_args, **_kwargs: None
     )
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "_safe_clone_source_repo",
         lambda *_args, **_kwargs: tmp_path / "source",
     )
     monkeypatch.setattr(
-        refinery_main,
+        pipeline_mod,
         "_select_export_articles",
         lambda *args, **kwargs: ([], None),
     )
-    monkeypatch.setattr(refinery_main, "SOURCE_DIR", tmp_path / "source")
-    monkeypatch.setattr(refinery_main, "TARGET_DIR", tmp_path / "target")
+    monkeypatch.setattr(pipeline_mod, "SOURCE_DIR", tmp_path / "source")
+    monkeypatch.setattr(pipeline_mod, "TARGET_DIR", tmp_path / "target")
 
     result = refinery_main.main(fetch_only=True)
 
