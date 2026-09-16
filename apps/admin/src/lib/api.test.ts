@@ -33,6 +33,7 @@ import {
   setToken,
   startCollect,
   startPublish,
+  startPublishBatch,
   getPublishStatus,
   toggleSource,
   unpublishArticle,
@@ -260,6 +261,28 @@ describe("mutation endpoints", () => {
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({
       audit_status: "failed",
       reason: "low signal",
+    });
+  });
+
+  it("startPublishBatch POSTs article_ids", async () => {
+    setToken("admin-key");
+    mockFetchResponse(202, {
+      run_id: "9",
+      status: "queued",
+      detail: "Batch publication started for 2 articles.",
+      accepted_ids: [3, 7],
+    });
+
+    const result = await startPublishBatch([3, 7]);
+
+    expect(result.run_id).toBe("9");
+    expect(result.accepted_ids).toEqual([3, 7]);
+    const fetchMock = vi.mocked(fetch);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/v1/admin/publish/batch");
+    expect((init as RequestInit).method).toBe("POST");
+    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+      article_ids: [3, 7],
     });
   });
 });

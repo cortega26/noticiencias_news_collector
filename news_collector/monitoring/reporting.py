@@ -35,7 +35,15 @@ class MonitoringDataset:
 
 @dataclass(slots=True)
 class QualityReportGenerator:
-    """Runs detectors and assembles the weekly monitoring payload."""
+    """Runs detectors and assembles the weekly monitoring payload.
+
+    Offline operator analysis only (plan 110): nothing here actuates.
+    Suppression decisions are *candidates* for a human run of the weekly
+    report / outage replay scripts — live actuation belongs exclusively
+    to the ``SourceRepository`` circuit breaker, which is the only writer
+    of source status. Do not wire this generator into collector runtime;
+    dual actuation paths would fight each other.
+    """
 
     schema_detector: SchemaDriftDetector
     outage_detector: SourceOutageDetector
@@ -63,12 +71,12 @@ class QualityReportGenerator:
         )
         metrics.append(
             Metric(
-                name="sources.auto_suppressed",
+                name="sources.suppression_candidates",
                 value=float(len(suppression_decisions)),
             )
         )
         metadata = {
-            "suppressed_sources": [
+            "suppression_candidate_sources": [
                 decision.source_id for decision in suppression_decisions
             ],
         }

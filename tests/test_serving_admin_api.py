@@ -2572,3 +2572,218 @@ def test_admin_quality_recent_aggregate_without_readability(
         ).json()
         assert body["aggregate"]["with_readability"] == 0
         assert body["aggregate"]["avg_suitability"] is None
+
+
+# Plan 109: POST /v1/admin/publish/batch
+# ---------------------------------------------------------------------------
+
+
+def test_admin_publish_batch_validation_rejects_bad_lists(
+    api_client: TestClient,
+) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        empty = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": []},
+            headers=_admin_headers(),
+        )
+        oversize = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [1, 2, 3, 4, 5, 6]},
+            headers=_admin_headers(),
+        )
+        dupes = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [4, 4]},
+            headers=_admin_headers(),
+        )
+        non_positive = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [0]},
+            headers=_admin_headers(),
+        )
+    assert empty.status_code == 422
+    assert oversize.status_code == 422
+    assert dupes.status_code == 422
+    assert non_positive.status_code == 422
+
+
+def test_admin_publish_batch_lifecycle_reports_per_item(
+    api_client: TestClient, monkeypatch, tmp_path
+) -> None:
+    """A batch run closes with an explicit per-item outcome for every id
+    on the shared publish/status endpoint."""
+    monkeypatch.chdir(tmp_path)
+    attempts = tmp_path / "data" / "runtime" / "publication_attempts"
+    attempts.mkdir(parents=True)
+
+    def _fake_pipeline(*, process_id=None, **kwargs):
+        (attempts / f"{process_id}.json").write_text(
+            json.dumps(
+                {
+                    "article_id": str(process_id),
+                    "success": True,
+                    "pr_url": f"https://github.com/org/noticiencias/pull/{process_id}",
+                    "final_slug": f"slug-{process_id}",
+                    "stages": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {"status": "success", "processed_count": 1}
+
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        _fake_pipeline,
+        raising=False,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        started = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [77, 78]},
+            headers=_admin_headers(),
+        )
+        assert started.status_code == 202
+        body = started.json()
+        assert body["accepted_ids"] == [77, 78]
+        run_id = body["run_id"]
+
+        for _ in range(100):
+            st = api_client.get(
+                "/v1/admin/publish/status",
+                params={"run_id": run_id},
+                headers=_admin_headers(),
+            ).json()
+            if st["status"] == "succeeded":
+                break
+            time.sleep(0.1)
+        assert st["status"] == "succeeded"
+        items = st["summary"]["items"]
+        assert [(i["article_id"], i["status"]) for i in items] == [
+            (77, "succeeded"),
+            (78, "succeeded"),
+        ]
+        assert items[0]["pr_url"] == "https://github.com/org/noticiencias/pull/77"
+
+
+def test_admin_publish_batch_conflicts_with_active_run(
+    api_client: TestClient, monkeypatch
+) -> None:
+    import threading as _threading
+
+    release = _threading.Event()
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        lambda **kw: (
+            release.wait(timeout=10),
+            {"status": "success", "processed_count": 1},
+        )[1],
+        raising=False,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [1, 2]},
+            headers=_admin_headers(),
+        )
+        assert first.status_code == 202
+        second = api_client.post(
+            "/v1/admin/publish/batch",
+            json={"article_ids": [3]},
+            headers=_admin_headers(),
+        )
+        assert second.status_code == 409
+        assert second.json()["run_id"] == first.json()["run_id"]
+        release.set()
+
+
+# Plan 110: health endpoint merges live circuit state
+# ---------------------------------------------------------------------------
+
+
+def test_admin_source_health_merges_cooldown_distinctly(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from datetime import datetime, timezone
+
+    export = {
+        "nature": {
+            "source_id": "nature",
+            "source_name": "Nature",
+            "feed_ok": False,
+            "pipeline_ok": True,
+            "content_ok": False,
+            "articles_found": 2,
+            "articles_saved": 0,
+            "operational_state": "failing_suppressed_candidate",
+        }
+    }
+    health_path = tmp_path / "exports" / "source_health.json"
+    health_path.parent.mkdir(parents=True)
+    health_path.write_text(json.dumps(export), encoding="utf-8")
+    monkeypatch.setattr(
+        "news_collector.serving.api.ADMIN_SOURCE_HEALTH_PATH", str(health_path)
+    )
+    monkeypatch.setattr(
+        "news_collector.storage.database.DatabaseManager.get_all_circuit_states",
+        lambda self: {
+            "nature": {
+                "status": "COOLDOWN",
+                "next_retry_at": datetime(2026, 9, 20, tzinfo=timezone.utc),
+                "consecutive_failures": 3,
+                "is_active": True,
+                "last_checked": None,
+            }
+        },
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/sources/health", headers=_admin_headers())
+        assert response.status_code == 200
+        (record,) = response.json()["sources"]
+        assert record["operational_state"] == "failing_suppressed_candidate"
+        assert record["circuit_status"] == "COOLDOWN"
+        assert record["circuit_next_retry_at"].startswith("2026-09-20")
+        assert record["circuit_consecutive_failures"] == 3
+
+
+def test_admin_source_health_without_circuit_state_stays_valid(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    export = {
+        "nature": {
+            "source_id": "nature",
+            "operational_state": "healthy_full_text",
+        }
+    }
+    health_path = tmp_path / "exports" / "source_health.json"
+    health_path.parent.mkdir(parents=True)
+    health_path.write_text(json.dumps(export), encoding="utf-8")
+    monkeypatch.setattr(
+        "news_collector.serving.api.ADMIN_SOURCE_HEALTH_PATH", str(health_path)
+    )
+    monkeypatch.setattr(
+        "news_collector.storage.database.DatabaseManager.get_all_circuit_states",
+        lambda self: {},
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/sources/health", headers=_admin_headers())
+        assert response.status_code == 200
+        (record,) = response.json()["sources"]
+        assert record.get("circuit_status") is None
+
+
+def test_admin_sources_list_still_carries_circuit_per_source(
+    api_client: TestClient,
+) -> None:
+    """Regression pin: the sources list keeps showing live circuit state
+    (now via the bulk lookup) — the Astro Sources page renders COOLDOWN
+    badges from it."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/sources", headers=_admin_headers())
+        assert response.status_code == 200
+        for item in response.json()["sources"]:
+            assert "circuit" in item

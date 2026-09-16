@@ -212,6 +212,54 @@ class AdminPublishStatus(BaseModel):
     final_slug: Optional[str] = None
 
 
+#: Batch publish cap (plan 109). One batch occupies the single-flight
+#: publication slot and refines articles sequentially, so the cap bounds
+#: worst-case run time, not parallelism. Enforced here (HTTP 422) and
+#: re-asserted defensively by the pipeline wrapper.
+BATCH_MAX_IDS = 5
+
+
+class AdminPublishBatchRequest(BaseModel):
+    """Body for POST /v1/admin/publish/batch — 1..5 article ids.
+
+    Ids only (no URLs): URL ingestion is per-article interactive work and
+    stays on the single-article route. Every id gets an explicit per-item
+    outcome in the run summary (LAW-B6); a duplicate or out-of-range id
+    rejects the whole request with 422 rather than silently dropping it.
+    """
+
+    article_ids: List[int] = Field(min_length=1, max_length=BATCH_MAX_IDS)
+
+    @field_validator("article_ids")
+    @classmethod
+    def _ids_must_be_positive_unique(cls, ids: List[int]) -> List[int]:
+        if any(i <= 0 for i in ids):
+            raise ValueError("article_ids must be positive article ids")
+        if len(set(ids)) != len(ids):
+            raise ValueError("article_ids must not contain duplicates")
+        return ids
+
+
+class AdminPublishBatchItem(BaseModel):
+    """Explicit per-item outcome inside a batch run summary."""
+
+    article_id: int
+    status: Literal["succeeded", "failed"]
+    pr_url: Optional[str] = None
+    failure_class: Optional[str] = None
+    final_slug: Optional[str] = None
+    message: Optional[str] = None
+
+
+class AdminPublishBatchStarted(BaseModel):
+    """Response to POST /v1/admin/publish/batch."""
+
+    run_id: str
+    status: AdminRunStatus = "queued"
+    detail: str
+    accepted_ids: List[int] = Field(default_factory=list)
+
+
 class AdminQualityReadability(BaseModel):
     """Deterministic legibility snapshot (plan 065) for one published
     article, lifted from the run's `readability` stage details. All

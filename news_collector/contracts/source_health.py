@@ -66,3 +66,9 @@ class SourceHealthRecord(BaseModel):
     last_error_message: Optional[str] = None
     failure_taxonomy: Optional[SourceFailureTaxonomy] = None
     operational_state: SourceOperationalState
+    # Live circuit-breaker state merged at read time (plan 110). Absent
+    # (None) for export files written before the merge or sources with no
+    # DB row — never a validation error.
+    circuit_status: Optional[str] = None
+    circuit_next_retry_at: Optional[str] = None
+    circuit_consecutive_failures: Optional[int] = None

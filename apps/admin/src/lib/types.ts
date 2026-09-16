@@ -140,6 +140,22 @@ export interface AdminPublishStatus {
   final_slug: string | null;
 }
 
+export interface AdminPublishBatchItem {
+  article_id: number;
+  status: "succeeded" | "failed";
+  pr_url: string | null;
+  failure_class: string | null;
+  final_slug: string | null;
+  message: string | null;
+}
+
+export interface AdminPublishBatchStarted {
+  run_id: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+  detail: string;
+  accepted_ids: number[];
+}
+
 export interface AdminSourceListItem {
   source_id: string;
   name: string | null;

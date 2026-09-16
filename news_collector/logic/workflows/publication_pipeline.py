@@ -834,3 +834,78 @@ def run_publication_pipeline(  # noqa: C901
 
     result = {"status": "success", "processed_count": processed_count}
     return merge_manual_ingest_context(result)
+
+
+def run_publication_batch(
+    article_ids: "list[int]",
+    *,
+    skip_visuals: bool = False,
+) -> Dict[str, Any]:
+    """Thin batch fan-out over :func:`run_publication_pipeline` (plan 109).
+
+    Runs one Refine-Only pass per id, sequentially, collecting an explicit
+    per-item outcome for each (LAW-B6: continue-on-error with per-item
+    reporting — one bad article never aborts the rest). Identity stays
+    deterministic per article (LAW-B5): re-running the same batch reuses
+    each article's canonical slug, never mints a new one.
+
+    Each pipeline call builds its own collaborators (config, editor agent,
+    DB manager), so per-item cost is ~1x a single publish; the cap
+    (``BATCH_MAX_IDS``, owned by ``contracts/admin.py``) bounds worst-case
+    run time. No new abstraction, no change to the single-article path.
+    """
+    from news_collector.contracts.admin import BATCH_MAX_IDS
+
+    ids = list(article_ids or [])
+    if not ids or len(ids) > BATCH_MAX_IDS:
+        raise ValueError(f"article_ids must hold 1..{BATCH_MAX_IDS} ids")
+
+    items: "list[Dict[str, Any]]" = []
+    for article_id in ids:
+        try:
+            result = run_publication_pipeline(
+                process_id=str(article_id),
+                skip_visuals=skip_visuals,
+            )
+        except Exception as exc:  # per-item crash -> explicit failed item
+            logger.error(
+                "Batch item {} crashed (continuing with the rest): {}",
+                article_id,
+                exc,
+            )
+            result = {
+                "status": "error",
+                "message": f"Batch item crashed: {exc}",
+                "processed_count": 0,
+                "error_code": "batch_item_crashed",
+            }
+        ok = result.get("status") == "success" and bool(result.get("processed_count"))
+        items.append(
+            {
+                "article_id": article_id,
+                "status": "succeeded" if ok else "failed",
+                "processed_count": int(result.get("processed_count") or 0),
+                "message": result.get("message"),
+                "error_code": result.get("error_code"),
+            }
+        )
+
+    succeeded = sum(1 for item in items if item["status"] == "succeeded")
+    if succeeded == len(items):
+        status = "success"
+    elif succeeded:
+        status = "partial"
+    else:
+        status = "error"
+    summary: Dict[str, Any] = {
+        "status": status,
+        "processed_count": succeeded,
+        "succeeded_count": succeeded,
+        "failed_count": len(items) - succeeded,
+        "total_count": len(items),
+        "items": items,
+    }
+    if status == "error":
+        summary["error_code"] = "batch_no_items_succeeded"
+        summary["message"] = "No batch item produced a PR (see items)."
+    return summary

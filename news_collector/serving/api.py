@@ -85,6 +85,8 @@ from news_collector.contracts.admin import (
     AdminImageQueueEnvelope,
     AdminMutationResult,
     AdminPromptsEnvelope,
+    AdminPublishBatchRequest,
+    AdminPublishBatchStarted,
     AdminPublishRequest,
     AdminPublishStarted,
     AdminPublishStatus,
@@ -116,6 +118,38 @@ logger = get_logger().create_module_logger("serving.api")
 # Collector export artifact consumed by the admin source-health endpoint.
 # Overridable in tests via monkeypatch.
 ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
+
+
+def _merge_circuit_into_health_record(
+    record: Dict[str, Any], circuits: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Attach live circuit-breaker state to one export health record.
+
+    Pure read-path composition (plan 110): export files predate the merge
+    or cover sources with no DB row, so every circuit field stays optional
+    and datetimes are ISO-formatted (the contract carries strings, and the
+    endpoint must never 500 on a naive/aware mix). Unknown source ids and
+    malformed circuit entries leave the record untouched.
+    """
+    circuit = circuits.get(record.get("source_id"))
+    if not isinstance(circuit, dict):
+        return record
+    merged = dict(record)
+    status = circuit.get("status")
+    if status is not None:
+        merged["circuit_status"] = str(status)
+    retry_at = circuit.get("next_retry_at")
+    if retry_at is not None:
+        merged["circuit_next_retry_at"] = (
+            retry_at.isoformat() if hasattr(retry_at, "isoformat") else str(retry_at)
+        )
+    failures = circuit.get("consecutive_failures")
+    if isinstance(failures, bool):
+        pass
+    elif isinstance(failures, int):
+        merged["circuit_consecutive_failures"] = failures
+    return merged
+
 
 # NC-BE-087 S2: ceiling for admin image-brief uploads — generous above any
 # GUI-produced hero image. Overridable in tests via monkeypatch.
@@ -1226,6 +1260,7 @@ def create_app(  # noqa: C901
 
     @app.get("/v1/admin/sources/health", response_model=AdminSourceHealthEnvelope)
     def admin_source_health(
+        manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminSourceHealthEnvelope:
         import json as _json
@@ -1239,7 +1274,17 @@ def create_app(  # noqa: C901
             logger.warning("Failed to read source health export: {}", exc)
             return AdminSourceHealthEnvelope(sources=[])
         records = data.values() if isinstance(data, dict) else data
-        return AdminSourceHealthEnvelope(sources=list(records))
+        try:
+            circuits = manager.get_all_circuit_states()
+        except Exception as exc:  # export stays useful without live state
+            logger.warning("Failed to read circuit states: {}", exc)
+            circuits = {}
+        merged = [
+            _merge_circuit_into_health_record(record, circuits)
+            for record in records
+            if isinstance(record, dict)
+        ]
+        return AdminSourceHealthEnvelope(sources=merged)
 
     @app.get("/v1/admin/analytics", response_model=AdminAnalyticsEnvelope)
     def admin_analytics(
@@ -1532,6 +1577,49 @@ def create_app(  # noqa: C901
             final_slug=summary.get("final_slug"),
         )
 
+    @app.post(
+        "/v1/admin/publish/batch",
+        response_model=AdminPublishBatchStarted,
+        status_code=status.HTTP_202_ACCEPTED,
+        responses={
+            409: {
+                "model": AdminPublishBatchStarted,
+                "description": "A publication run is already queued or running.",
+            }
+        },
+    )
+    def admin_publish_batch(
+        payload: AdminPublishBatchRequest,
+        response: Response,
+        _: None = Depends(verify_admin_token),
+    ) -> AdminPublishBatchStarted:
+        """Start one batch Refinery run (async) for 1..5 article ids: each id
+        is refined sequentially in a single run/slot and gets an explicit
+        per-item outcome in the run summary (poll the existing
+        `/v1/admin/publish/status` endpoint — batch rows share it). Empty,
+        oversized, duplicate, or non-positive id lists yield 422. A second
+        call while any run is active yields 409 with the active run's id."""
+        result = publication_run_workflow.start_batch(
+            article_ids=list(payload.article_ids),
+        )
+        if result.status == "invalid_request":
+            raise HTTPException(status_code=422, detail=result.detail)
+        if result.status == "already_running":
+            response.status_code = status.HTTP_409_CONFLICT
+            return AdminPublishBatchStarted(
+                run_id=str(result.run_id),
+                status="running",
+                detail=result.detail,
+                accepted_ids=[],
+            )
+        response.status_code = status.HTTP_202_ACCEPTED
+        return AdminPublishBatchStarted(
+            run_id=str(result.run_id),
+            status="queued",
+            detail=result.detail,
+            accepted_ids=list(payload.article_ids),
+        )
+
     @app.get("/v1/admin/quality/recent", response_model=AdminQualityRecentEnvelope)
     def admin_quality_recent(
         limit: int = Query(20, ge=1, le=50, alias="limit"),
@@ -1606,10 +1694,11 @@ def create_app(  # noqa: C901
     ) -> AdminSourceListEnvelope:
         from news_collector.config.sources import ALL_SOURCES
 
+        circuits = manager.get_all_circuit_states()
         items: List[AdminSourceListItem] = []
         for source_id in sorted(ALL_SOURCES):
             config = ALL_SOURCES[source_id] or {}
-            circuit = manager.get_source_circuit_state(source_id)
+            circuit = circuits.get(source_id)
             items.append(
                 AdminSourceListItem(
                     source_id=source_id,

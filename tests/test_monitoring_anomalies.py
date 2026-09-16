@@ -186,7 +186,7 @@ def test_quality_report_generator_builds_payload() -> None:
     payload = generator.generate(dataset)
     data = payload.to_dict()
     assert data["status"] in {"warning", "critical"}
-    assert data["metadata"]["suppressed_sources"] == ["nature"]
+    assert data["metadata"]["suppression_candidate_sources"] == ["nature"]
 
 
 def test_load_monitoring_dataset_roundtrip(tmp_path) -> None:
@@ -236,7 +236,7 @@ def test_load_monitoring_dataset_roundtrip(tmp_path) -> None:
         )
     )
     report = generator.generate(dataset)
-    assert report.metadata["suppressed_sources"] == ["nature"]
+    assert report.metadata["suppression_candidate_sources"] == ["nature"]
     # ensure serialization roundtrip
     text = json.dumps(report.to_dict())
     assert "monitoring.v1" in text

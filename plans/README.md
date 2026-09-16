@@ -271,8 +271,8 @@ Verified-baseline growth program: analytics/cost instrumentation first, then thr
 |------|-------|----------|--------|------------|--------|
 | 107 | [Analytics baseline + cost/SLO dashboard](107/spec.md) | P1 | S | None | DONE — backend cost/SLO shipped; frontend plan 007 merged (tracking OFF). KEEP: reference for Wave 5. |
 | 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | BLOCKED (ADR-0009 Proposed + no operator inputs; build owned by frontend plan 008) — backend keeps coordination pointer only. |
-| 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | TODO — batch dispatch up to 5 over the plan-106 pipeline seam, idempotent retry, triage multi-select. |
-| 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | TODO — surface cooldown state in admin health, resolve detectors wiring gap, concurrency 1 to 3 with perf proof. |
+| 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | DONE — single-slot sequential batch (≤5), shared _enqueue, GUI multi-select; OpenAPI snapshot regenerated. KEEP: reference for Wave 6. |
+| 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | DONE — bulk circuit states (58→1 SELECTs), health merge, suppression-candidates rename, dead-knob documented, sources perf gate. KEEP: reference for Wave 6. |
 | 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | TODO — disputed blocks health scope only, additive similar-story grouping without new infra. |
 | 112 | [Share UI + hero sweep + social close-out](112/spec.md) | P1 | M | None | TODO — mount share component, top-20 hero/OG sweep, Bluesky decision, reconcile flag, runbook, conditional contracts doc line. |
 | 113 | [Monetization foundations without extraction](113/spec.md) | P2 | S | 107 | TODO — media-kit draft, donate link, editorial red line, B2B one-pager; zero ad scripts. |

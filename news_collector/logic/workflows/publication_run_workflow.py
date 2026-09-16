@@ -148,18 +148,82 @@ class PublicationRunWorkflow:
         # running rows are safe to reap.
         self.recover_expired_leases(include_queued=False)
 
+        new_id, active_id = self._enqueue(
+            {"article_id": article_id, "article_url": article_url},
+            idempotency_key=idempotency_key,
+        )
+        if new_id is None:
+            return PublicationRunStartResult(
+                status="already_running",
+                run_id=active_id,
+                detail="A publication run is already queued or running.",
+            )
+
+        self._dispatch(new_id, article_id=article_id, article_url=article_url)
+        return PublicationRunStartResult(
+            status="started", run_id=new_id, detail="Publication started."
+        )
+
+    def start_batch(
+        self,
+        article_ids: list[int] | tuple[int, ...] | None,
+    ) -> PublicationRunStartResult:
+        """Insert a queued batch row and dispatch one sequential Refinery run.
+
+        One `workflow_runs` row, one daemon thread, one article after another
+        (plan 109): the partial unique index
+        `uq_workflow_runs_one_active_publication` cannot host parallel
+        publication runs, so a batch occupies the single slot and refines
+        ids in order. Every id gets an explicit per-item outcome in the run
+        summary — a second start (single or batch) while one is active
+        returns "already_running" with the active run's id, unchanged.
+        """
+        ids = list(article_ids or [])
+        if not ids:
+            return PublicationRunStartResult(
+                status="invalid_request",
+                run_id=0,
+                detail="Provide 1..5 article ids.",
+            )
+
+        self.recover_expired_leases(include_queued=False)
+
+        new_id, active_id = self._enqueue({"article_ids": ids, "mode": "batch"})
+        if new_id is None:
+            return PublicationRunStartResult(
+                status="already_running",
+                run_id=active_id,
+                detail="A publication run is already queued or running.",
+            )
+
+        self._dispatch_batch(new_id, article_ids=ids)
+        return PublicationRunStartResult(
+            status="started",
+            run_id=new_id,
+            detail=f"Batch publication started for {len(ids)} articles.",
+        )
+
+    def _enqueue(
+        self,
+        run_metadata: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> tuple[int | None, int]:
+        """Insert one queued publication row.
+
+        Returns ``(new_id, 0)`` on success, or ``(None, active_id)`` when
+        the single-flight index rejects the insert because a publication
+        run is already queued/running. Shared by single and batch starts
+        so both honor the same slot.
+        """
         now = datetime.now(timezone.utc)
-        run_id: int | None = None
         with self._db.get_session() as session:
             row = WorkflowRun(
                 run_type=RUN_TYPE_PUBLICATION,
                 status="queued",
                 started_at=now,
                 idempotency_key=idempotency_key,
-                run_metadata={
-                    "article_id": article_id,
-                    "article_url": article_url,
-                },
+                run_metadata=run_metadata,
             )
             session.add(row)
             try:
@@ -180,17 +244,9 @@ class PublicationRunWorkflow:
                     "is already queued/running (id={}).",
                     existing_id,
                 )
-                return PublicationRunStartResult(
-                    status="already_running",
-                    run_id=int(existing_id) if existing_id is not None else 0,
-                    detail="A publication run is already queued or running.",
-                )
-            run_id = row.id
-
-        self._dispatch(run_id, article_id=article_id, article_url=article_url)
-        return PublicationRunStartResult(
-            status="started", run_id=run_id, detail="Publication started."
-        )
+                return None, int(existing_id) if existing_id is not None else 0
+            assert row.id is not None
+            return int(row.id), 0
 
     def _dispatch(
         self,
@@ -206,6 +262,32 @@ class PublicationRunWorkflow:
             name=f"publish-{run_id}",
         ).start()
 
+    def _dispatch_batch(
+        self,
+        run_id: int,
+        *,
+        article_ids: list[int],
+    ) -> None:
+        threading.Thread(
+            target=self._run_batch,
+            args=(run_id, article_ids),
+            daemon=True,
+            name=f"publish-batch-{run_id}",
+        ).start()
+
+    def _start_heartbeat(self, run_id: int) -> tuple[threading.Event, threading.Thread]:
+        """Start the lease-heartbeat thread; caller must set the event and
+        join the thread when the run finishes (see `_run`/`_run_batch`)."""
+        stop_heartbeat = threading.Event()
+        heartbeat_thread = threading.Thread(
+            target=self._heartbeat_loop,
+            args=(run_id, stop_heartbeat),
+            daemon=True,
+            name=f"publish-{run_id}-heartbeat",
+        )
+        heartbeat_thread.start()
+        return stop_heartbeat, heartbeat_thread
+
     def _run(
         self,
         run_id: int,
@@ -220,14 +302,7 @@ class PublicationRunWorkflow:
             )
             return
 
-        stop_heartbeat = threading.Event()
-        heartbeat_thread = threading.Thread(
-            target=self._heartbeat_loop,
-            args=(run_id, stop_heartbeat),
-            daemon=True,
-            name=f"publish-{run_id}-heartbeat",
-        )
-        heartbeat_thread.start()
+        stop_heartbeat, heartbeat_thread = self._start_heartbeat(run_id)
         try:
             from news_collector.logic.workflows.publication_pipeline import (
                 run_publication_pipeline,
@@ -262,6 +337,99 @@ class PublicationRunWorkflow:
         except Exception as exc:  # pragma: no cover - failure path
             logger.error("Publication run {} failed: {}", run_id, exc)
             self.fail(run_id, error_code="publication_failed", error_detail=str(exc))
+        finally:
+            stop_heartbeat.set()
+            heartbeat_thread.join(timeout=5)
+
+    def _run_batch(
+        self,
+        run_id: int,
+        article_ids: list[int],
+    ) -> None:
+        """Execute one batch run: sequential Refine-Only passes, one per id.
+
+        Run-level outcome: `succeeded` when every item produced an explicit
+        outcome and at least one opened a PR path (`success`/`partial`
+        from the pipeline wrapper); `failed` when nothing succeeded or the
+        batch itself crashed — with the per-item list always present in the
+        summary either way (LAW-B6). Per-article identity is untouched:
+        each pass resolves its own canonical slug deterministically.
+        """
+        if not self._transition(run_id, from_status="queued", to_status="running"):
+            logger.error(
+                "Publication batch run {} could not transition queued -> "
+                "running; aborting dispatch.",
+                run_id,
+            )
+            return
+
+        stop_heartbeat, heartbeat_thread = self._start_heartbeat(run_id)
+        try:
+            from news_collector.logic.workflows.publication_pipeline import (
+                run_publication_batch,
+            )
+
+            batch = run_publication_batch(article_ids, skip_visuals=False)
+            items: list[dict[str, Any]] = []
+            for entry in batch.get("items", []):
+                if not isinstance(entry, dict):
+                    continue
+                item_id = entry.get("article_id")
+                item_result = {
+                    "status": (
+                        "success" if entry.get("status") == "succeeded" else "error"
+                    ),
+                    "processed_count": entry.get("processed_count", 0),
+                    "message": entry.get("message"),
+                    "error_code": entry.get("error_code"),
+                    "article_id": str(item_id),
+                }
+                item_summary = self._collect_publication_summary(
+                    item_result,
+                    article_id=item_id if isinstance(item_id, int) else None,
+                    article_url=None,
+                )
+                items.append(
+                    {
+                        "article_id": item_id,
+                        "status": entry.get("status"),
+                        "pr_url": item_summary.get("pr_url"),
+                        "failure_class": item_summary.get("failure_class"),
+                        "final_slug": item_summary.get("final_slug"),
+                        "message": entry.get("message"),
+                    }
+                )
+            summary = {
+                "mode": "batch",
+                "article_ids": list(article_ids),
+                "succeeded_count": batch.get("succeeded_count", 0),
+                "failed_count": batch.get("failed_count", 0),
+                "total_count": batch.get("total_count", len(items)),
+                "items": items,
+            }
+            if batch.get("status") in ("success", "partial"):
+                self.complete(run_id, summary=summary)
+            else:
+                self.fail(
+                    run_id,
+                    error_code=str(batch.get("error_code") or "batch_failed"),
+                    error_detail=str(
+                        batch.get("message") or "No batch item succeeded."
+                    ),
+                    summary=summary,
+                )
+        except Exception as exc:
+            logger.error("Publication batch run {} failed: {}", run_id, exc)
+            self.fail(
+                run_id,
+                error_code="batch_failed",
+                error_detail=str(exc),
+                summary={
+                    "mode": "batch",
+                    "article_ids": list(article_ids),
+                    "items": [],
+                },
+            )
         finally:
             stop_heartbeat.set()
             heartbeat_thread.join(timeout=5)

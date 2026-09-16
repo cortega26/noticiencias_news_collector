@@ -237,7 +237,11 @@ class CollectionConfig(StrictModel):
     )
     max_concurrent_requests: PositiveInt = Field(
         default=8,
-        description="Concurrency limit for async collectors.",
+        description=(
+            "RESERVED, no live consumer (plan 110): per-request politeness "
+            "is enforced by rate_limiting delays, fan-out by "
+            "max_concurrent_sources. Do not tune; wire a consumer first."
+        ),
     )
     max_concurrent_sources: PositiveInt = Field(
         default=10,

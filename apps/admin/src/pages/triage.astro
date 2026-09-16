@@ -46,6 +46,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <div class="data-label">QUEUE</div>
           <div id="queue-count" class="font-mono text-xs text-ink-400">—</div>
         </div>
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <button id="batch-publish-btn" class="btn-ghost whitespace-nowrap" type="button" disabled>
+            ✨ Publish selected (<span id="batch-count">0</span>/5)
+          </button>
+          <span class="font-mono text-[11px] text-ink-500">tick publishable rows · sequential, one slot</span>
+        </div>
         <div id="queue" class="max-h-[68vh] space-y-2 overflow-y-auto pr-1"></div>
         <button id="load-more" class="btn-ghost mt-4 hidden w-full justify-center" type="button">
           Load more
@@ -139,9 +145,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     showAuthGate,
     startCollect,
     startPublish,
+    startPublishBatch,
     updateAuditStatus,
   } from "../lib/api";
-  import type { AdminCollectStarted, AdminPublishStarted } from "../lib/types";
+  import type {
+    AdminCollectStarted,
+    AdminPublishBatchItem,
+    AdminPublishStarted,
+  } from "../lib/types";
   import type {
     AdminArticleDetail,
     AdminArticleListItem,
@@ -162,6 +173,10 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   let detail: AdminArticleDetail | null = null;
   let cursor: string | null = null;
   let loading = false;
+  // Batch selection (plan 109): ticked publishable row ids. Survives
+  // re-renders via renderBatchBar; cleared on filter change with the queue.
+  const BATCH_MAX = 5;
+  const batchSelected = new Set<number>();
 
   const queueEl = document.getElementById("queue");
   const detailEl = document.getElementById("detail");
@@ -171,6 +186,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   const countEl = document.getElementById("queue-count");
   const filterEl = document.getElementById("status-filter");
   const toastEl = document.getElementById("toast");
+  const batchBtn = document.getElementById("batch-publish-btn") as HTMLButtonElement | null;
+  const batchCountEl = document.getElementById("batch-count");
+
+  /** Publishable ids currently ticked AND still loaded (stale ticks drop). */
+  function batchIds(): number[] {
+    const loaded = new Set(
+      items.filter((i) => i.publishable).map((i) => i.id),
+    );
+    return [...batchSelected].filter((id) => loaded.has(id)).slice(0, BATCH_MAX);
+  }
+
+  function renderBatchBar() {
+    const n = batchIds().length;
+    if (batchCountEl) batchCountEl.textContent = String(n);
+    batchBtn?.toggleAttribute("disabled", publishInFlight || n === 0);
+  }
 
   function esc(s: string | null | undefined): string {
     if (s == null) return "";
@@ -230,6 +261,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         items = [];
         selectedId = null;
         detail = null;
+        batchSelected.clear();
         renderFilters();
         void loadQueue();
   window.addEventListener("auth:ready", () => void loadQueue());
@@ -270,6 +302,35 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     items.forEach((item, index) => {
       const wrap = document.createElement("div");
       wrap.className = "queue-item";
+      // Batch tick (plan 109): only publishable rows are tickable.
+      if (item.publishable) {
+        const tick = document.createElement("label");
+        tick.className = "flex cursor-pointer items-center gap-2 font-mono text-[11px] text-ink-400";
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.className = "batch-tick accent-amber-500";
+        box.checked = batchSelected.has(item.id);
+        box.disabled = publishInFlight;
+        box.setAttribute("aria-label", `Select article ${item.id} for batch publish`);
+        box.addEventListener("click", (event) => event.stopPropagation());
+        box.addEventListener("change", () => {
+          if (box.checked) {
+            if (batchSelected.size >= BATCH_MAX && !batchSelected.has(item.id)) {
+              box.checked = false;
+              showToast(`Batch is capped at ${BATCH_MAX} articles.`, "err");
+              return;
+            }
+            batchSelected.add(item.id);
+          } else {
+            batchSelected.delete(item.id);
+          }
+          renderBatchBar();
+        });
+        const cap = document.createElement("span");
+        cap.textContent = "batch";
+        tick.append(box, cap);
+        wrap.appendChild(tick);
+      }
       const card = document.createElement("button");
       card.type = "button";
       card.className = "queue-card" + (item.id === selectedId ? " active" : "");
@@ -327,6 +388,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     });
     queueEl.querySelector(`[data-id="${selectedId}"]`)?.classList.add("active");
     scrollSelectedIntoView();
+    renderBatchBar();
   }
 
   function scrollSelectedIntoView() {
@@ -702,6 +764,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function setPublishInFlight(active: boolean) {
     publishInFlight = active;
     publishUrlBtn?.toggleAttribute("disabled", active);
+    batchBtn?.toggleAttribute("disabled", active || batchIds().length === 0);
     // Only armed (publishable) buttons are toggled: disabled-by-state
     // buttons must stay disabled when a run finishes.
     document
@@ -710,6 +773,39 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     document
       .querySelectorAll('#detail [data-action="publish"][data-armed]')
       .forEach((btn) => btn.toggleAttribute("disabled", active));
+    document
+      .querySelectorAll('.batch-tick')
+      .forEach((btn) => btn.toggleAttribute("disabled", active));
+  }
+
+  /** Render a batch run's per-item outcomes (plan 109) into the status box. */
+  function renderBatchItems(runId: string, items: unknown): boolean {
+    if (!Array.isArray(items) || items.length === 0) return false;
+    const lines = (items as Partial<AdminPublishBatchItem>[]).map((item) => {
+      const id = esc(String(item.article_id ?? "?"));
+      if (item.status === "succeeded" && item.pr_url) {
+        return `#${id} ✓ <a class="text-amber-400 underline" href="${esc(item.pr_url)}" target="_blank" rel="noopener">${esc(item.pr_url)}</a>`;
+      }
+      const reason = esc(item.failure_class ?? item.message ?? "unknown error");
+      return `#${id} ✗ ${reason}`;
+    });
+    renderPublishStatus(
+      `Batch run ${esc(runId)} finished:<br>${lines.join("<br>")} <span class="text-ink-500">(refreshing queue…)</span>`,
+    );
+    return true;
+  }
+
+  function scheduleQueueRefresh() {
+    setTimeout(() => {
+      publishStatusEl?.classList.add("hidden");
+      status = "pending";
+      cursor = null;
+      items = [];
+      selectedId = null;
+      detail = null;
+      batchSelected.clear();
+      void loadQueue();
+    }, 2500);
   }
 
   function pollPublish(runId: string) {
@@ -728,19 +824,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         }
         window.clearInterval(publishPollTimer);
         setPublishInFlight(false);
+        const batchItems = (st.summary as Record<string, unknown> | undefined)?.items;
         if (st.status === "succeeded" && st.pr_url) {
           renderPublishStatus(
             `Published — PR opened: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Merge it to go live. Refreshing queue…`,
           );
-          setTimeout(() => {
-            publishStatusEl?.classList.add("hidden");
-            status = "pending";
-            cursor = null;
-            items = [];
-            selectedId = null;
-            detail = null;
-            void loadQueue();
-          }, 2500);
+          scheduleQueueRefresh();
+        } else if (st.status === "succeeded" && renderBatchItems(runId, batchItems)) {
+          batchSelected.clear();
+          scheduleQueueRefresh();
         } else if (st.status === "succeeded") {
           renderPublishStatus(
             `Refinery reported success but no PR URL was recorded (run ${runId}). Check the publication attempt summary.`,
@@ -819,6 +911,46 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     if (!url) return;
     void doPublish({ articleUrl: url });
   });
+
+  async function doPublishBatch() {
+    const ids = batchIds();
+    if (publishInFlight) {
+      showToast("A publication run is already in progress.", "err");
+      return;
+    }
+    if (ids.length === 0) {
+      showToast("Tick 1–5 publishable rows first.", "err");
+      return;
+    }
+    setPublishInFlight(true);
+    renderPublishStatus(`Starting batch run for ${ids.length} articles…`);
+    try {
+      const started = await startPublishBatch(ids);
+      renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
+      pollPublish(started.run_id);
+    } catch (e) {
+      if (e instanceof Error && e.name === "AuthError") {
+        setPublishInFlight(false);
+        clearToken();
+        showAuthGate();
+        return;
+      }
+      if (e instanceof ConflictError) {
+        const existing = e.body as Partial<AdminPublishStarted>;
+        if (existing.run_id) {
+          renderPublishStatus(
+            `A publication run is already in progress (run ${existing.run_id}) — watching it instead.`,
+          );
+          pollPublish(existing.run_id);
+          return;
+        }
+      }
+      setPublishInFlight(false);
+      renderPublishStatus(`Failed to start batch publication: ${esc((e as Error).message)}`);
+    }
+  }
+
+  batchBtn?.addEventListener("click", () => void doPublishBatch());
 
   renderFilters();
   void loadQueue();

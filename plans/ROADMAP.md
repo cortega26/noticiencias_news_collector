@@ -30,10 +30,10 @@
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
 | 5 | Measure first (analytics + newsletter) | 107, 108 | 1/2 | TODO (108 blocked on operator inputs) |
-| 6 | Throughput (batch publish + source visibility) | 109, 110 | 0/2 | TODO |
+| 6 | Throughput (batch publish + source visibility) | 109, 110 | 2/2 | DONE |
 | 7 | Trust + looks (health gate/dedup + share/hero/social) | 111, 112 | 0/2 | TODO |
 | 8 | Money + compounding (monetization + series/transparency) | 113, 114 | 0/2 | TODO |
-| **Total** | | **30** | **23/30** | |
+| **Total** | | **30** | **25/30** | |
 
 **Time-sensitive (resolved):** 096 touches the NLTK allowlist entry expiring **2026-09-30** — Wave 0 is DONE, so this is closed; no action remaining.
 
@@ -183,8 +183,8 @@
 | 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | DONE |
 | 107 | [Analytics baseline + cost/SLO](107/spec.md) | P1 | S | 5 | TODO |
 | 108 | [Newsletter capture backend](108/spec.md) | P1 | M | 5 | TODO |
-| 109 | [Batch publication](109/spec.md) | P1 | M | 6 | TODO |
-| 110 | [Source-health visibility](110/spec.md) | P1 | M | 6 | TODO |
+| 109 | [Batch publication](109/spec.md) | P1 | M | 6 | DONE |
+| 110 | [Source-health visibility](110/spec.md) | P1 | M | 6 | DONE |
 | 111 | [Health block-lite + semantic dedup](111/spec.md) | P1 | M | 7 | TODO |
 | 112 | [Share UI + hero + social close-out](112/spec.md) | P1 | M | 7 | TODO |
 | 113 | [Monetization foundations](113/spec.md) | P2 | S | 8 | TODO |

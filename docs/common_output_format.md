@@ -36,7 +36,7 @@ workflow status or admin endpoint. Illustrative JSON:
     }
   ],
   "metadata": {
-    "suppressed_sources": ["nature"]
+    "suppression_candidate_sources": ["nature"]
   }
 }
 ```

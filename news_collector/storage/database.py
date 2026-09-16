@@ -711,6 +711,9 @@ class DatabaseManager:
     def get_source_circuit_state(self, source_id: str) -> Optional[Dict[str, Any]]:
         return self.sources.get_source_circuit_state(source_id)
 
+    def get_all_circuit_states(self) -> Dict[str, Dict[str, Any]]:
+        return self.sources.get_all_circuit_states()
+
     def set_source_active(self, source_id: str, active: bool) -> bool:
         return self.sources.set_source_active(source_id, active)
 

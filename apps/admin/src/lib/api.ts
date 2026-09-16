@@ -25,6 +25,7 @@ import type {
   AdminBulkResetResult,
   AdminCollectStarted,
   AdminCollectStatus,
+  AdminPublishBatchStarted,
   AdminPublishStarted,
   AdminPublishStatus,
   AdminConfigSnapshot,
@@ -277,6 +278,20 @@ export function getPublishStatus(
 ): Promise<AdminPublishStatus> {
   const q = runId ? `?run_id=${encodeURIComponent(runId)}` : "";
   return apiFetch<AdminPublishStatus>(`/v1/admin/publish/status${q}`);
+}
+
+/**
+ * Start one batch "Refine & Publish" run for 1..5 article ids — refined
+ * sequentially in a single slot, each id getting an explicit per-item
+ * outcome in the run summary. 409 → ConflictError; 422 → ValidationError.
+ */
+export function startPublishBatch(
+  articleIds: number[],
+): Promise<AdminPublishBatchStarted> {
+  return apiFetch<AdminPublishBatchStarted>("/v1/admin/publish/batch", {
+    method: "POST",
+    body: JSON.stringify({ article_ids: articleIds }),
+  });
 }
 
 export function reprocessArticle(id: number): Promise<AdminMutationResult> {

@@ -52,6 +52,25 @@ class SourceRepository:
                 "last_checked": source.last_checked,
             }
 
+    def get_all_circuit_states(self) -> Dict[str, Dict[str, Any]]:
+        """Circuit state for every known source in ONE query (plan 110).
+
+        Powers the admin sources/health endpoints without the N+1 fan-out
+        of per-source lookups. Unknown sources are simply absent.
+        """
+        with self._session() as session:
+            rows = session.query(Source).all()
+            return {
+                row.id: {
+                    "status": row.status,
+                    "next_retry_at": row.next_retry_at,
+                    "consecutive_failures": row.consecutive_failures,
+                    "is_active": row.is_active,
+                    "last_checked": row.last_checked,
+                }
+                for row in rows
+            }
+
     def update_source_circuit_state(
         self,
         source_id: str,

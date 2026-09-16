@@ -29,7 +29,7 @@
 | collection.collection_interval_hours | int | 6 | Interval between collector runs in hours. |  |  |
 | collection.request_timeout_seconds | int | 30 | HTTP request timeout used by collectors. |  |  |
 | collection.async_enabled | bool | false | Enable asyncio-based fetchers when available. |  |  |
-| collection.max_concurrent_requests | int | 8 | Concurrency limit for async collectors. |  |  |
+| collection.max_concurrent_requests | int | 8 | RESERVED, no live consumer (plan 110): per-request politeness is enforced by rate_limiting delays, fan-out by max_concurrent_sources. Do not tune; wire a consumer first. |  |  |
 | collection.max_concurrent_sources | int | 10 | Cap on sources collected concurrently during async fan-out. |  |  |
 | collection.max_articles_per_source | int | 50 | Cap on articles per source per run. |  |  |
 | collection.recent_days_threshold | int | 7 | Number of trailing days considered 'recent'. |  |  |
