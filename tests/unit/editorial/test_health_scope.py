@@ -6,9 +6,7 @@ escalation matrix: empty/advisory/non-health never blocks; health-scope
 overclaims block with the exact message.
 """
 
-from news_collector.components.editorial.ai_editor import (
-    _capability_overclaim_block,
-)
+from news_collector.components.editorial.ai_editor import _capability_overclaim_block
 from news_collector.editorial.health_scope import (
     HEALTH_TRIGGER_CATEGORIES,
     HEALTH_TRIGGER_KEYWORDS,
