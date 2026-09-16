@@ -1,8 +1,7 @@
+import base64
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Dict, List
-
-import base64
 
 import pytest
 from fastapi.testclient import TestClient
