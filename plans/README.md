@@ -226,7 +226,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
 | 096 | [Unify security-audit exception policy](096-audit-exception-hygiene.md) | P1 | S | — | TODO |
 | 097 | [Stop masking perf-suite failures](097-perf-fail-open.md) | P2 | S | — | TODO |
-| 098 | [Wire audit-placeholders to the real gate](098-audit-placeholders-alias.md) | P3 | S | — | DONE |
 | 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
@@ -240,6 +239,10 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 094 (identity dedup, behavior-preserving) should land before 100 (manual-ingest date rule) so identity semantics don't shift mid-plan.
 - 093/094 refactors assume no concurrent edits to `refinery_engine.py`/`image_handler.py` — sequence them, don't parallelize executors on the same files.
 - 096 is time-sensitive in one corner: the NLTK allowlist entry it touches expires 2026-09-30 (noted, not renewed, inside the plan).
+
+### Fifth-pass completed (archived)
+
+- 098 (alias `audit-placeholders` to the real gate) DONE and archived — merged in `c050d00`, ledger commit `5c9f139`.
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
