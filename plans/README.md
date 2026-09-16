@@ -214,7 +214,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 086 | [Fail closed before PRs for title-fallback articles](086-pr-without-tracking.md) | P1 | M | — | TODO |
-| 089 | [Whitespace-only dates count as missing in identity](089-whitespace-dates.md) | P2 | S | — | TODO |
 | 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
 | 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
 | 094 | [Unify slug extraction behind resolver](094-unify-slug-extraction.md) | P2 | S | — | TODO |
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 090 (remove impossible admin `status=new` filter) DONE and archived — merged in `0fe689d` (set + comment + `ArticleStatus` union; GUI dropdown never offered it; 5 new tests).
 - 091 (422 not 500 for invalid public list queries) DONE and archived — merged in `d0e5333` (inline `ge/le` + `ValidationError`→422 via the pydantic compat accessor; first attempt's TYPE_CHECKING import broke mypy, fixed per house pattern; 6 new tests).
 - 099 (warn loudly on dev-only auth fail-open) DONE and archived — merged in `abea67c` (warning naming exact var + consequence at both fail-open sites; 503 branch and `development` default untouched per scope; 4 new tests).
+- 089 (whitespace-only dates count as missing in identity) DONE and archived — merged in `4986cdc` (strip-aware missing check in `_derive_date` only; garbage still quarantines; 3 new tests).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
@@ -258,7 +258,6 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 Triage of `data/logs/collector.log` (fetch + refine & publish, 2026-09-16) with code-level root causes verified by reading each path. Operator selected waved plans + strip-at-validation design. Findings 1181 (false critic reject → empty body → blocked) and 502 (audit metadata → contract rejection on re-publish) became plans 103–104; dead Tier-A source `bair_blog` became plan 105. Deliberately not planned: transient 429/retried + graceful 403 enrichment skips (external, degrading correctly), NVIDIA 503/degrade/recover cycle + CognitiveScorer timeout fallback (infra flakiness with working breakers), V2-incomplete block + mixed-script critic catch (gates working), title-fallback identity (plan 086 territory), single deepmind empty-extraction rejection (validator working, not systemic).
 
 ### Sixth-pass completed (archived)
-
 - 103 (fail open editorial critic on keyless verdicts + headline blank guard) DONE and archived — merged in `48cfc53` (verdict-keys check + blank-input short-circuit; 7 new tests incl. 1181-shape replay pinned vs pre-fix).
 - 104 (strip lifecycle metadata before publish validation) DONE and archived — merged in `ad6329c` (adapter `strip_lifecycle_metadata` + validator wiring; strip set extended to `publishing_*` on verified merit — written post-S1-guard, same trap; 6 new tests incl. S1 publish-path case).
 - 105 (resolve dead `bair_blog` source, verdict c) DONE and archived — merged in `d47ac68` (blacklisted with dated probe evidence; host-level outage, no successor guessed; scheduler exclusion + strict schema verified).
