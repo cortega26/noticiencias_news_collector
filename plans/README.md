@@ -219,7 +219,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
 | 094 | [Unify slug extraction behind resolver](094-unify-slug-extraction.md) | P2 | S | — | TODO |
 | 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
-| 099 | [Warn loudly on dev-only auth fail-open](099-fail-open-warning.md) | P2 | S | — | TODO |
 | 100 | [Move manual-ingest policy out of workflow](100-manual-ingest-policy.md) | P3 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 088 (encode pagination cursors at full float precision) DONE and archived — merged in `c5b16c4` (one-line `repr` encoder; bug-sensitive page-walk tests; pre-push isort reorder of the new `base64` import applied on landing).
 - 090 (remove impossible admin `status=new` filter) DONE and archived — merged in `0fe689d` (set + comment + `ArticleStatus` union; GUI dropdown never offered it; 5 new tests).
 - 091 (422 not 500 for invalid public list queries) DONE and archived — merged in `d0e5333` (inline `ge/le` + `ValidationError`→422 via the pydantic compat accessor; first attempt's TYPE_CHECKING import broke mypy, fixed per house pattern; 6 new tests).
+- 099 (warn loudly on dev-only auth fail-open) DONE and archived — merged in `abea67c` (warning naming exact var + consequence at both fail-open sites; 503 branch and `development` default untouched per scope; 4 new tests).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
