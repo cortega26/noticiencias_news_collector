@@ -38,7 +38,8 @@ class PreScorer:
                 "the implicit load_config() fallback was removed (plan 101)."
             )
         if llm_client is None:
-            active_config = config
+            # Guarded non-None above; Any preserves the pre-change type.
+            active_config: Any = config
             model = get_model_for_stage(
                 "pre_scorer", config=active_config, logger=logger
             )

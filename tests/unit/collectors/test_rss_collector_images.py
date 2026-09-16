@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
 
@@ -9,7 +10,7 @@ from news_collector.collectors.rss_collector import RSSCollector
 @pytest.fixture
 def collector():
     logger_factory = MagicMock()
-    return RSSCollector(logger_factory=logger_factory)
+    return RSSCollector(logger_factory=logger_factory, config=load_config())
 
 
 def test_rss_collector_image_fallback_to_dom(collector):
