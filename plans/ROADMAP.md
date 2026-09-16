@@ -24,10 +24,10 @@
 | Wave | Theme | Plans | Done | Status |
 |------|-------|-------|------|--------|
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
-| 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 3/6 | IN PROGRESS (088 DONE in `c5b16c4`) |
+| 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 4/6 | IN PROGRESS (090 DONE in `0fe689d`) |
 | 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 0/6 | TODO (089→094 order matters) |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 0/2 | TODO |
-| **Total** | | **18** | **7/18** | |
+| **Total** | | **18** | **8/18** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -103,7 +103,7 @@
 | 087 | [Image-brief hardening](087-image-brief-hardening.md) | P1 | S | 1.2 | DONE |
 | 088 | [Cursor precision](088-cursor-precision.md) | P2 | S | 1.3 | DONE |
 | 089 | [Whitespace dates as missing](089-whitespace-dates.md) | P2 | S | 2.1 | TODO |
-| 090 | [Remove status=new](090-remove-status-new.md) | P3 | S | 1.4 | TODO |
+| 090 | [Remove status=new](090-remove-status-new.md) | P3 | S | 1.4 | DONE |
 | 091 | [Public list 422s](091-public-list-422.md) | P2 | S | 1.5 | TODO |
 | 092 | [Batch existence checks](092-batch-existence-check.md) | P2 | S | 3 | TODO |
 | 093 | [Dedupe image download](093-dedupe-image-download.md) | P2 | S | 2.3 | TODO |

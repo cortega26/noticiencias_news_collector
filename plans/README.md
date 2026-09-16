@@ -215,7 +215,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 |------|-------|----------|--------|------------|--------|
 | 086 | [Fail closed before PRs for title-fallback articles](086-pr-without-tracking.md) | P1 | M | — | TODO |
 | 089 | [Whitespace-only dates count as missing in identity](089-whitespace-dates.md) | P2 | S | — | TODO |
-| 090 | [Remove impossible admin status=new filter](090-remove-status-new.md) | P3 | S | — | TODO |
 | 091 | [422 (not 500) for invalid public list queries](091-public-list-422.md) | P2 | S | — | TODO |
 | 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
 | 093 | [Deduplicate image-download implementations](093-dedupe-image-download.md) | P2 | S | — | TODO |
@@ -242,6 +241,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 085 (report bulk-reset cap truncation explicitly) DONE and archived — merged in `b232981` (new `truncated`/`not_processed`/`cap_note` reporting; legacy Streamlit consumer audited display-only, semantics preserved; 5 new tests).
 - 087 (harden image-brief store: traversal guard + bounded uploads) DONE and archived — merged in `f2cdf5b` (slug allowlist + containment, 10 MiB cap, extension allowlist + magic bytes; one integration fixture updated to genuine PNG bytes on merit; 43 new tests).
 - 088 (encode pagination cursors at full float precision) DONE and archived — merged in `c5b16c4` (one-line `repr` encoder; bug-sensitive page-walk tests; pre-push isort reorder of the new `base64` import applied on landing).
+- 090 (remove impossible admin `status=new` filter) DONE and archived — merged in `0fe689d` (set + comment + `ArticleStatus` union; GUI dropdown never offered it; 5 new tests).
 
 ### Fifth-pass findings considered and rejected (do not re-audit)
 
