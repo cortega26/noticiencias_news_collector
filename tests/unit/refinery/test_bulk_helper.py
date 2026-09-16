@@ -229,3 +229,40 @@ class TestRunBulk:
         assert len(result.failed) == 2  # item 2 (real failure) + cap note
         assert result.all_succeeded is False
         assert result.total == 3  # 2 succeeded + 1 real failure
+
+    def test_over_cap_reports_truncated_explicitly(self):
+        """Over-cap ids are recorded in truncated, not silently dropped."""
+        results: list[int] = []
+
+        def action(item: int) -> None:
+            results.append(item)
+
+        result = run_bulk(items=[1, 2, 3, 4, 5, 6], action=action, batch_cap=5)
+
+        assert results == [1, 2, 3, 4, 5]
+        assert result.truncated == [6]
+        assert result.all_succeeded is True
+        assert result.summary == "5 succeeded, 0 failed, 1 not processed (over cap)"
+
+    def test_over_cap_summary_counts_only_real_failures(self):
+        """Summary counts real failures; truncation is reported separately."""
+        results: list[int] = []
+
+        def action(item: int) -> None:
+            if item == 2:
+                raise RuntimeError("fail on 2")
+            results.append(item)
+
+        result = run_bulk(items=[1, 2, 3, 4, 5, 6, 7], action=action, batch_cap=5)
+
+        assert results == [1, 3, 4, 5]
+        assert result.truncated == [6, 7]
+        assert result.all_succeeded is False
+        assert result.summary == "4 succeeded, 1 failed, 2 not processed (over cap)"
+
+    def test_no_cap_leaves_truncated_empty_with_plain_summary(self):
+        """Without truncation the summary keeps the plain wording."""
+        result = run_bulk(items=[1, 2, 3], action=lambda x: None, batch_cap=5)
+
+        assert result.truncated == []
+        assert result.summary == "3 succeeded, 0 failed"

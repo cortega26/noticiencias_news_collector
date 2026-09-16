@@ -46,6 +46,7 @@ class BulkResult:
 
     succeeded: list[Any] = field(default_factory=list)
     failed: list[BulkFailure] = field(default_factory=list)
+    truncated: list[Any] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -54,7 +55,11 @@ class BulkResult:
 
     @property
     def summary(self) -> str:
-        return f"{len(self.succeeded)} succeeded, {len(self.failed)} failed"
+        real_failed = sum(1 for f in self.failed if f.item is not None)
+        base = f"{len(self.succeeded)} succeeded, {real_failed} failed"
+        if self.truncated:
+            base += f", {len(self.truncated)} not processed (over cap)"
+        return base
 
     @property
     def all_succeeded(self) -> bool:
@@ -93,6 +98,7 @@ def run_bulk(
     result = BulkResult()
 
     if batch_cap > 0 and len(items) > batch_cap:
+        result.truncated = items[batch_cap:]
         result.failed.append(
             BulkFailure(
                 item=None,

@@ -1770,6 +1770,100 @@ def test_admin_bulk_reset_all_whitespace_ids_returns_422(
     assert response.status_code == 422
 
 
+def test_admin_bulk_reset_over_cap_reports_not_processed(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """Over-cap ids are reported in not_processed; failed/summary agree."""
+    snapshot = SimpleNamespace(
+        repo_root=Path("/tmp/fake-target"),
+        posts_dir=Path("/tmp/fake-target/posts"),
+        source_label="fake",
+        freshness_label="fake",
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.resolve_published_content_snapshot",
+        lambda **k: snapshot,
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.find_published_article_by_refinery_id",
+        lambda posts_dir, refinery_id: SimpleNamespace(
+            file_path=Path(f"/tmp/fake-target/posts/{refinery_id}.md"),
+            file_name=f"{refinery_id}.md",
+            refinery_id=refinery_id,
+        ),
+    )
+    reset_calls: list[str] = []
+    monkeypatch.setattr(
+        "apps.refinery.published_content.reset_one_article",
+        lambda repo_root, article, db: reset_calls.append(article.refinery_id),
+    )
+
+    ids = ["a", "b", "c", "d", "e", "f"]
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/content/bulk-reset",
+            json={"refinery_ids": ids},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert sorted(body["succeeded"]) == ["a", "b", "c", "d", "e"]
+        assert body["failed"] == []
+        assert body["not_processed"] == ["f"]
+        assert body["summary"] == "5 succeeded, 0 failed, 1 not processed (over cap)"
+        assert body["cap_note"] is not None and "exceeds cap" in body["cap_note"]
+    assert reset_calls == ["a", "b", "c", "d", "e"]
+
+
+def test_admin_bulk_reset_over_cap_with_failure_reports_both(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """Over-cap truncation plus a real failure: both are reported."""
+
+    def _fake_find(posts_dir, refinery_id):
+        if refinery_id == "missing":
+            return None
+        return SimpleNamespace(
+            file_path=Path(f"/tmp/fake-target/posts/{refinery_id}.md"),
+            file_name=f"{refinery_id}.md",
+            refinery_id=refinery_id,
+        )
+
+    snapshot = SimpleNamespace(
+        repo_root=Path("/tmp/fake-target"),
+        posts_dir=Path("/tmp/fake-target/posts"),
+        source_label="fake",
+        freshness_label="fake",
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.resolve_published_content_snapshot",
+        lambda **k: snapshot,
+    )
+    monkeypatch.setattr(
+        "apps.refinery.published_content.find_published_article_by_refinery_id",
+        _fake_find,
+    )
+    reset_calls: list[str] = []
+    monkeypatch.setattr(
+        "apps.refinery.published_content.reset_one_article",
+        lambda repo_root, article, db: reset_calls.append(article.refinery_id),
+    )
+
+    ids = ["a", "missing", "b", "c", "d", "e"]
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/content/bulk-reset",
+            json={"refinery_ids": ids},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert sorted(body["succeeded"]) == ["a", "b", "c", "d"]
+        assert [f["refinery_id"] for f in body["failed"]] == ["missing"]
+        assert body["not_processed"] == ["e"]
+        assert body["summary"] == "4 succeeded, 1 failed, 1 not processed (over cap)"
+
+
 def test_admin_image_brief_update_roundtrip(
     api_client: TestClient, tmp_path, monkeypatch
 ) -> None:

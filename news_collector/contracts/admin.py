@@ -354,6 +354,8 @@ class AdminBulkResetResult(BaseModel):
     succeeded: List[str] = Field(default_factory=list)
     failed: List[AdminBulkResetFailure] = Field(default_factory=list)
     summary: str
+    not_processed: List[str] = Field(default_factory=list)
+    cap_note: Optional[str] = None
 
 
 class AdminImageBriefUpdate(BaseModel):
