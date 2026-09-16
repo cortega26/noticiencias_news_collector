@@ -130,3 +130,69 @@ def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
     assert normalized["source_id"] == "lilian_weng"
     assert result is True
     assert engine.git.create_pull_request.call_count == 1
+
+
+def test_process_single_article_accepts_audited_article_after_strip(tmp_path):
+    """Plan 104: audit-then-republish passes the S1 guard end to end."""
+    from news_collector.contracts.adapters import strip_lifecycle_metadata
+    from news_collector.contracts.collector import CollectorArticleModel
+
+    def production_validator(payload):
+        return CollectorArticleModel.model_validate(
+            strip_lifecycle_metadata(payload)
+        ).model_dump()
+
+    config = SimpleNamespace(
+        app=SimpleNamespace(
+            policy_integrity_mode="disabled", editorial_mode="standard"
+        ),
+        paths=SimpleNamespace(data_dir=tmp_path / "data"),
+        github=SimpleNamespace(target_repo_url="https://github.com/org/repo"),
+    )
+    engine = RefineryEngine(
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        config,
+        contract_validator=production_validator,
+    )
+    engine.db.set_canonical_slug = MagicMock()
+    engine.db.get_canonical_slug.return_value = None
+    engine.editor = MagicMock()
+    engine.editor.process_article.return_value = "content"
+    engine.auditor = MagicMock()
+    engine.auditor.get_cached_score.return_value = {"epistemic_rigor_score": 10.0}
+    engine.policy.auditor_threshold = 0.0
+    engine.policy.require_caveats = False
+    engine.git = MagicMock()
+    engine.git.create_branch.return_value = "content/update/test"
+    engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
+
+    # Article 502 shape: DB-sourced payload carrying persisted audit evidence.
+    audited_article = {
+        "title": "Valid title 123",
+        "summary": "This is a sufficiently long summary for testing",
+        "content": "Valid content",
+        "url": "https://example.com",
+        "category": "science",
+        "source_id": "test",
+        "source_name": "test",
+        "published_date": datetime(2024, 1, 1),
+        "word_count": 50,
+        "reading_time_minutes": 1,
+        "image_url": "~/assets/images/test.jpg",
+        "image_alt": "Imagen editorial del artículo válido",
+        "article_metadata": {
+            "source_metadata": {},
+            "audit": {
+                "state": "passed",
+                "reason": "",
+                "updated_at": "2026-09-03T00:00:00+00:00",
+            },
+        },
+    }
+
+    result = engine.process_single_article(audited_article, MagicMock(), tmp_path)
+
+    assert result is True
+    assert audited_article["article_metadata"]["audit"]["state"] == "passed"

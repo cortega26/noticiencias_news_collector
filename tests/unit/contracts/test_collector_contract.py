@@ -1,5 +1,6 @@
 """Tests for Collector Article Contract."""
 
+import copy
 from datetime import datetime, timezone
 
 import pytest
@@ -230,3 +231,95 @@ def test_adapt_export_payload_preserves_id():
         }
     )
     assert out["id"] == 158
+
+
+def _db_sourced_collector_payload(**metadata_extra):
+    """Article 502 shape: valid content payload plus persisted run-scoped metadata."""
+    return {
+        "url": "http://example.com/audited-502",
+        "title": "A very long title that meets the requirements",
+        "summary": "Short summary",
+        "content": "A" * 501,
+        "source_id": "test_src",
+        "source_name": "Test Source",
+        "category": "science",
+        "published_date": datetime(2026, 9, 3, tzinfo=timezone.utc),
+        "reading_time_minutes": 5,
+        "word_count": 100,
+        "article_metadata": {
+            "source_metadata": {"source_id": "test_src"},
+            "credibility_score": 0.9,
+            **metadata_extra,
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "lifecycle_metadata",
+    [
+        {
+            "audit": {
+                "state": "passed",
+                "reason": "",
+                "updated_at": "2026-09-03T00:00:00+00:00",
+            }
+        },
+        {
+            "publication": {
+                "state": "PR_CREATED",
+                "refinery_id": "502",
+                "pr_url": "https://github.com/org/repo/pull/1",
+            }
+        },
+        {
+            "audit": {
+                "state": "passed",
+                "reason": "",
+                "updated_at": "2026-09-03T00:00:00+00:00",
+            },
+            "publication": {"state": "PR_CREATED", "refinery_id": "502"},
+            "publishing_started_at": "2026-09-03T00:01:00+00:00",
+            "publishing_branch": "content/update-example",
+        },
+    ],
+)
+def test_lifecycle_metadata_stripped_before_validation(lifecycle_metadata):
+    """Plan 104: persisted audit/publication state must not fail the S1 guard."""
+    from news_collector.contracts.adapters import strip_lifecycle_metadata
+
+    payload = _db_sourced_collector_payload(**lifecycle_metadata)
+    snapshot = copy.deepcopy(payload)
+
+    cleaned = strip_lifecycle_metadata(payload)
+    model = CollectorArticleModel.model_validate(cleaned)
+
+    assert payload == snapshot  # persisted evidence untouched by validation
+    dumped = model.model_dump()
+    for key in lifecycle_metadata:
+        assert key not in dumped["article_metadata"]
+    assert dumped["article_metadata"]["credibility_score"] == 0.9
+    assert dumped["article_metadata"]["source_metadata"] == {"source_id": "test_src"}
+
+
+def test_lifecycle_keys_still_forbidden_without_strip():
+    """Plan 104: schemas unchanged — raw lifecycle keys are still rejected."""
+    payload = _db_sourced_collector_payload(
+        audit={
+            "state": "passed",
+            "reason": "",
+            "updated_at": "2026-09-03T00:00:00+00:00",
+        }
+    )
+    with pytest.raises(ValidationError) as exc:
+        CollectorArticleModel.model_validate(payload)
+    assert "article_metadata.audit" in str(exc.value)
+
+
+def test_unknown_metadata_key_still_rejected_after_strip():
+    """Plan 104: the strip is a scalpel — genuinely unknown keys still fail."""
+    from news_collector.contracts.adapters import strip_lifecycle_metadata
+
+    payload = _db_sourced_collector_payload(bogus_key=1)
+    with pytest.raises(ValidationError) as exc:
+        CollectorArticleModel.model_validate(strip_lifecycle_metadata(payload))
+    assert "bogus_key" in str(exc.value)

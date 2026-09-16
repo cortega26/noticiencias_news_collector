@@ -531,10 +531,13 @@ def main(  # noqa: C901
     )
 
     # Contract Validator to inject into Domain layer
+    from news_collector.contracts.adapters import strip_lifecycle_metadata
     from news_collector.contracts.collector import CollectorArticleModel
 
     def validate_collector_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
-        return CollectorArticleModel.model_validate(payload).model_dump()
+        return CollectorArticleModel.model_validate(
+            strip_lifecycle_metadata(payload)
+        ).model_dump()
 
     # Initialize Engine
     engine = RefineryEngine(
