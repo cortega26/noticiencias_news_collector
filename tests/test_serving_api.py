@@ -1,10 +1,14 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Dict, List
+
+import base64
 
 import pytest
 from fastapi.testclient import TestClient
 
 from news_collector.serving import create_app
+from news_collector.serving.api import _decode_cursor, _encode_cursor
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, ScoreLog
 
@@ -170,6 +174,85 @@ def test_articles_pagination_is_stable(api_client: TestClient):
     full_ids = [item["id"] for item in full_payload["data"]]
     assert [item["id"] for item in first_payload["data"]] == full_ids[:2]
     assert [item["id"] for item in second_payload["data"]] == full_ids[2:3]
+
+
+def test_cursor_codec_round_trips_full_precision():
+    """Scores differing only past 6dp must survive encode->decode exactly."""
+    collected = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    scores = [0.1 + 0.2, 1e-09, 123.456789012345, 0.500000001, 0.500000002]
+    tokens = set()
+    for index, score in enumerate(scores):
+        row = SimpleNamespace(
+            final_score=score, collected_date=collected, article_id=index + 1
+        )
+        token = _encode_cursor(row)
+        tokens.add(token)
+        decoded_score, decoded_collected, decoded_id = _decode_cursor(token)
+        assert decoded_score == score
+        assert decoded_collected == collected
+        assert decoded_id == index + 1
+    # The regression: with `:.6f` the last two scores collided on one token.
+    assert len(tokens) == len(scores)
+
+
+def test_cursor_page_walk_over_clustered_scores_has_no_dupes_or_gaps(tmp_path):
+    """Walk pages over scores differing at the 9th decimal: no dupes, no gaps."""
+    manager = DatabaseManager({"type": "sqlite", "path": tmp_path / "clustered.db"})
+    try:
+        base_time = datetime(2026, 2, 1, tzinfo=timezone.utc)
+        count = 7
+        with manager.get_session() as session:
+            for index in range(count):
+                session.add(
+                    Article(
+                        title=f"Clustered article {index}",
+                        url=f"https://example.com/clustered-{index}",
+                        source_id="cluster",
+                        source_name="Cluster Source",
+                        final_score=0.5 + index * 1e-9,
+                        published_date=base_time - timedelta(minutes=index),
+                        collected_date=base_time + timedelta(seconds=index),
+                        processing_status="completed",
+                    )
+                )
+        client = TestClient(create_app(database_manager=manager))
+        expected = client.get("/v1/articles", params={"page_size": 50}).json()
+        assert len(expected["data"]) == count
+        expected_ids = [item["id"] for item in expected["data"]]
+
+        seen: List[int] = []
+        cursor = None
+        while True:
+            params = {"page_size": 3}
+            if cursor:
+                params["cursor"] = cursor
+            page = client.get("/v1/articles", params=params)
+            assert page.status_code == 200
+            payload = page.json()
+            seen.extend(item["id"] for item in payload["data"])
+            if not payload["pagination"]["has_more"]:
+                assert payload["pagination"]["next_cursor"] is None
+                break
+            cursor = payload["pagination"]["next_cursor"]
+            assert cursor
+
+        assert seen == expected_ids
+        assert len(seen) == len(set(seen)) == count
+    finally:
+        manager.close()
+
+
+def test_cursor_decode_accepts_legacy_six_decimal_format():
+    """Cursors issued before the repr change (`:.6f`) must still decode."""
+    score = 0.123456789
+    legacy_payload = f"{score:.6f}|2026-01-01T00:00:00+00:00|42"
+    legacy_token = base64.urlsafe_b64encode(legacy_payload.encode("utf-8")).decode(
+        "utf-8"
+    )
+    decoded_score, decoded_collected, decoded_id = _decode_cursor(legacy_token)
+    assert decoded_score == float(f"{score:.6f}")
+    assert decoded_collected == datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert decoded_id == 42
 
 
 def test_health_and_readiness(api_client: TestClient):
