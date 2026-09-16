@@ -157,7 +157,8 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     ready_brief = mock_refinery_engine.image_briefs.stage_upload(
         brief=brief,
         filename="editorial.png",
-        content=b"manual-image-data",
+        # NC-BE-087: stage_upload requires genuine image bytes (magic-verified).
+        content=b"\x89PNG\r\n\x1a\nmanual-image-data",
         draft_alt_text="Imagen editorial del artículo de prueba",
         topic=brief.topic,
         news_angle=brief.news_angle,
@@ -175,7 +176,7 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
         / "src/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
     )
     assert expected_image_path.exists()
-    assert expected_image_path.read_bytes() == b"manual-image-data"
+    assert expected_image_path.read_bytes() == b"\x89PNG\r\n\x1a\nmanual-image-data"
 
     call_args = mock_refinery_engine.editor.process_article.call_args
     passed_article = call_args[0][0]
