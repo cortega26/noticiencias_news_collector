@@ -213,8 +213,7 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 106 | [Extract publication process-mode pipeline from legacy UI](106-publication-pipeline.md) | P2 | M | — | TODO |
-Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale). _(No remaining plans — the table is kept as the ledger schema.)_
 
 ### Fifth-pass dependency notes
 
@@ -262,3 +261,4 @@ Triage of `data/logs/collector.log` (fetch + refine & publish, 2026-09-16) with 
 - 103 (fail open editorial critic on keyless verdicts + headline blank guard) DONE and archived — merged in `48cfc53` (verdict-keys check + blank-input short-circuit; 7 new tests incl. 1181-shape replay pinned vs pre-fix).
 - 104 (strip lifecycle metadata before publish validation) DONE and archived — merged in `ad6329c` (adapter `strip_lifecycle_metadata` + validator wiring; strip set extended to `publishing_*` on verified merit — written post-S1-guard, same trap; 6 new tests incl. S1 publish-path case).
 - 105 (resolve dead `bair_blog` source, verdict c) DONE and archived — merged in `d47ac68` (blacklisted with dated probe evidence; host-level outage, no successor guessed; scheduler exclusion + strict schema verified).
+- 106 (extract publication process-mode pipeline from legacy UI) DONE and archived — merged in `a869828` (8 helpers + entry moved AST-verbatim into `publication_pipeline.py`, both callers rewired, `main.py` thin delegate with re-exports, no-UI-import tests; test-refinery identical to baseline by scratch-worktree proof).

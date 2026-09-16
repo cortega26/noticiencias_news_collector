@@ -25,10 +25,10 @@
 |------|-------|-------|------|--------|
 | 0 | Signal hygiene first | 096, 097, 098, 102 | 4/4 | DONE |
 | 1 | Serving API correctness (strictly sequential) | 085, 087, 088, 090, 091, 099 | 6/6 | DONE |
-| 2 | Identity & publication integrity (strictly sequential) | 089, 094, 093, 086, 100, 095 | 6/6 | DONE (095 partial; remainder → 106) |
+| 2 | Identity & publication integrity (+106 follow-up) | 089, 094, 093, 086, 100, 095, 106 | 7/7 | DONE |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| **Total** | | **22** | **21/22** | |
+| **Total** | | **22** | **22/22** | |
 
 **Time-sensitive:** 096 touches the NLTK allowlist entry expiring **2026-09-30** — do not let Wave 0 slip past that date without at least triaging it (the plan handles it; worst case, triage the expiry standalone).
 
@@ -130,7 +130,7 @@
 | 103 | [Critic fail-open](103-critic-fail-open.md) | P1 | S | 4.1 | DONE |
 | 104 | [Lifecycle strip at validation](104-lifecycle-strip-validation.md) | P1 | S | 4.2 | DONE |
 | 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | DONE |
-| 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | TODO |
+| 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | DONE |
 
 ## Deferred & rejected (do not re-audit)
 
