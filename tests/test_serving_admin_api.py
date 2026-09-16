@@ -451,9 +451,7 @@ def test_admin_articles_valid_statuses_still_filter(
         body = response.json()
         assert body["filters"]["status"] == valid_status
         assert body["data"]
-        assert all(
-            item["processing_status"] == valid_status for item in body["data"]
-        )
+        assert all(item["processing_status"] == valid_status for item in body["data"])
 
 
 # ---------------------------------------------------------------------------
