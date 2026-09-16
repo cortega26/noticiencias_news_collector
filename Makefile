@@ -174,7 +174,11 @@ quality: bootstrap ## Run all quality checks (lint, type, security, audit)
 	@echo "[quality] Running Bandit (Security)..."
 	@$(BANDIT) -q -r news_collector scripts -c pyproject.toml -f txt
 	@echo "[quality] Running pip-audit..."
-	@$(PIP_AUDIT) -r requirements.lock --desc --ignore-vuln CVE-2026-0994
+	@# Audit exceptions live only in scripts/security_gate.py (PIP_AUDIT_ALLOWLIST,
+	@# reason + expires_on enforced) — never as Makefile --ignore-vuln flags.
+	@mkdir -p $(SECURITY_DIR)
+	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT) --progress-spinner off || true
+	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality] Running Semgrep..."
 	@$(SEMGREP) scan --config .semgrep.yml --error || echo "Semgrep found issues (non-blocking for now)"
 
@@ -193,6 +197,7 @@ quality-ci: bootstrap context-validate ## Run strict quality checks for CI (no f
 	@$(BANDIT) -r news_collector scripts -c pyproject.toml -f json -o $(BANDIT_REPORT) --severity-level high --confidence-level high
 	@$(PYTHON) scripts/security_gate.py bandit $(BANDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running pip-audit..."
+	@# Same exception source as every other pip-audit leg: PIP_AUDIT_ALLOWLIST in scripts/security_gate.py.
 	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT) --progress-spinner off || true
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running Semgrep..."
@@ -296,6 +301,7 @@ audit: security ## Run supply-chain and security audits (alias for `make securit
 security: bootstrap ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
 	@echo "[security] Running pip-audit"
+	@# Same exception source as every other pip-audit leg: PIP_AUDIT_ALLOWLIST in scripts/security_gate.py.
 	@$(PIP_AUDIT) -r requirements.lock --format json --output $(PIP_AUDIT_REPORT) || true
 	@$(PYTHON_BIN) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[security] Running bandit"
@@ -311,9 +317,15 @@ security: bootstrap ## Run security and dependency scans
 
 security-dev: bootstrap ## Run security audit on dev and refinery environments
 	@echo "[security-dev] Auditing dev and refinery dependencies..."
-	@# Ignoring GHSA-7gcm-g887-7qv7 (protobuf) - Dev/Refinery only, unreachable in production
-	@$(PIP_AUDIT) -r requirements-security.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
-	@$(PIP_AUDIT) -r requirements-refinery.lock --desc --ignore-vuln GHSA-7gcm-g887-7qv7
+	@# Same exception source as every other pip-audit leg: PIP_AUDIT_ALLOWLIST in
+	@# scripts/security_gate.py (reason + expires_on enforced) — never as
+	@# Makefile --ignore-vuln flags. Dev-lock verdicts persist to status-dev.json
+	@# so they cannot clobber the application-lock verdicts in status.json.
+	@mkdir -p $(SECURITY_DIR)
+	@$(PIP_AUDIT) -r requirements-security.lock --format json --output $(SECURITY_DIR)/pip-audit-security.json || true
+	@$(PYTHON_BIN) scripts/security_gate.py pip-audit $(SECURITY_DIR)/pip-audit-security.json --severity HIGH --status $(SECURITY_DIR)/status-dev.json
+	@$(PIP_AUDIT) -r requirements-refinery.lock --format json --output $(SECURITY_DIR)/pip-audit-refinery.json || true
+	@$(PYTHON_BIN) scripts/security_gate.py pip-audit $(SECURITY_DIR)/pip-audit-refinery.json --severity HIGH --status $(SECURITY_DIR)/status-dev.json
 	@echo "[security-dev] All dev/refinery audits passed (no known vulnerabilities)."
 
 audit-issues: ## Create GitHub issues for each markdown audit finding (AUDIT_ISSUES_FLAGS=-n for dry-run)

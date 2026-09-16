@@ -42,6 +42,18 @@ PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
         "reason": "NLTK 3.10.3 path-sandbox bypass with no upstream fix yet; affected model-artifact APIs unused (transitive dep via textblob).",
         "expires_on": "2026-09-30",
     },
+    # protobuf ParseDict/Any-recursion DoS (PYSEC-2026-1805, aliases
+    # CVE-2026-0994 + GHSA-7gcm-g887-7qv7): requirements-security.lock pins
+    # protobuf 4.25.9 via the semgrep dev-tool chain while fixes exist
+    # upstream (5.29.6/6.33.5); the repo lock sync
+    # (scripts/sync_lockfiles.py) cannot reach them until semgrep unpins the
+    # range — re-run the sync at each review. Dev/security-tooling-only
+    # exposure (unreachable in production), DoS-only impact. The refinery
+    # lock already resolves protobuf 6.33.5 (fixed). Re-check on expiry.
+    "GHSA-7gcm-g887-7qv7": {
+        "reason": "protobuf 4.25.9 ParseDict/Any-recursion DoS confined to dev/security tooling env (semgrep chain pins range; sync cannot upgrade yet); DoS-only, unreachable in production.",
+        "expires_on": "2026-10-31",
+    },
 }
 
 

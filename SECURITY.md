@@ -14,19 +14,28 @@ High-severity risks require a fix or an explicit, time-limited exception with
 scope, exposure rationale, owner and expiry. Do not silently extend an expired
 exception or infer safety from an ignored scanner finding.
 
-## Implemented allowlist and policy discrepancy
+Every future suppression must enter through `PIP_AUDIT_ALLOWLIST` in
+`scripts/security_gate.py` with `reason` + `expires_on` — never as a Makefile
+`--ignore-vuln` flag. All pip-audit legs (`quality`, `quality-ci`,
+`security`, `security-dev`) evaluate reports through that gate, so every path
+enforces the same exception set.
+
+## Implemented allowlist and retired exceptions
 
 As checked on 2026-09-04, `scripts/security_gate.py` contains an exception for
 `GHSA-8mgp-746c-j5xp` expiring **2026-09-30**. The script owns its precise
 rationale and validates expiry. This document records configured policy;
 it does not independently verify current upstream fix availability.
 
-`make security-dev` still passes `--ignore-vuln GHSA-7gcm-g887-7qv7` for
-protobuf. Its previously documented authorization expired **2026-03-01**,
-and that Make recipe does not enforce expiry. This is unresolved policy/code
-drift, not a renewed exception. Re-audit the resolved tooling locks and remove
-the obsolete ignore, or obtain an explicit reviewed exception if still needed.
-The historical investigation is `docs/security_removal_plan.md`.
+The former `make security-dev` inline flag `--ignore-vuln GHSA-7gcm-g887-7qv7`
+(protobuf), whose documented authorization expired **2026-03-01**, was retired
+on 2026-09-16: the refinery lock already resolves protobuf 6.33.5 (fixed), and
+the still-pinned security-lock protobuf 4.25.9 is now an enforced, expiring
+`PIP_AUDIT_ALLOWLIST` entry (expires **2026-10-31**, dev-tooling-only DoS risk)
+instead of an unexpiring Makefile flag. The prior `make quality` inline flag
+`--ignore-vuln CVE-2026-0994` — the same advisory under an alias ID, firing on
+no lockfile — was deleted outright. The historical investigation is
+`docs/security_removal_plan.md`.
 
 The former NLTK exception `GHSA-7p94-766c-hgjp` expired **2026-04-15** and is
 not the current scripted allowlist entry. Old statements that version 3.9.2

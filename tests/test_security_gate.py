@@ -176,12 +176,13 @@ def test_pip_audit_allowlist_entries_are_not_expired() -> None:
     # Pygments / python-dotenv / requests suppressions that expired on
     # 2026-08-31 were removed (their upgrades already shipped in
     # requirements.lock), so they must no longer be allowlisted. The NLTK
-    # entry below is the only active suppression (no upstream fix exists).
+    # entry and the protobuf entry below are the only active suppressions.
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
     assert "GHSA-5239-wwwm-4pmq" not in active
     assert "GHSA-mf9w-mj56-hr94" not in active
     assert "GHSA-gc5v-m9x4-r6x2" not in active
     assert "GHSA-8mgp-746c-j5xp" in active
+    assert "GHSA-7gcm-g887-7qv7" in active
 
 
 def test_pip_audit_allowlist_expiry_guard(monkeypatch: pytest.MonkeyPatch) -> None:
