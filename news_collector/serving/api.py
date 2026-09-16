@@ -263,7 +263,7 @@ def _decode_cursor(raw_cursor: str) -> Tuple[float, datetime, int]:
 def _encode_cursor(row: RowType) -> str:
     score = row.final_score or 0.0
     collected = row.collected_date or datetime.now(timezone.utc)
-    payload = f"{score:.6f}|{collected.isoformat()}|{row.article_id}"
+    payload = f"{score!r}|{collected.isoformat()}|{row.article_id}"
     return base64.urlsafe_b64encode(payload.encode("utf-8")).decode("utf-8")
 
 
