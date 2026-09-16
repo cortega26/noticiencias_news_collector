@@ -152,6 +152,8 @@ else:
     field_validator = _pydantic.field_validator
     model_validator = _pydantic.model_validator
 
+ValidationError = get_pydantic_module().ValidationError
+
 
 class ArticleListParams(BaseModel):
     """Validated query parameters for listing ranked articles."""
@@ -743,17 +745,20 @@ def create_app(  # noqa: C901
         topic: Optional[List[str]] = Query(None, alias="topic"),
         date_from: Optional[Any] = Query(None, alias="date_from"),
         date_to: Optional[Any] = Query(None, alias="date_to"),
-        page_size: int = Query(20, alias="page_size"),
+        page_size: int = Query(20, ge=1, le=50, alias="page_size"),
         cursor: Optional[str] = Query(None, alias="cursor"),
     ) -> ArticleListParams:
-        return ArticleListParams(
-            source=source,
-            topic=topic,
-            date_from=date_from,
-            date_to=date_to,
-            page_size=page_size,
-            cursor=cursor,
-        )
+        try:
+            return ArticleListParams(
+                source=source,
+                topic=topic,
+                date_from=date_from,
+                date_to=date_to,
+                page_size=page_size,
+                cursor=cursor,
+            )
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     def get_db() -> DatabaseManager:
         return db_manager
