@@ -214,7 +214,6 @@ replay pilot is already covered by plan 080 Phase 3 and was not duplicated.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 092 | [Batch RSS URL existence checks](092-batch-existence-check.md) | P2 | S | — | TODO |
-| 095 | [Break workflow to legacy-UI dependency](095-workflow-ui-decoupling.md) | P2 | M | — | TODO |
 | 101 | [Inject config explicitly into policy constructors](101-explicit-config-injection.md) | P3 | M | — | TODO |
 | 106 | [Extract publication process-mode pipeline from legacy UI](106-publication-pipeline.md) | P2 | M | — | TODO |
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
