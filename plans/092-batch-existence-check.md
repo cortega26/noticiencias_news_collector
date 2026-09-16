@@ -15,11 +15,11 @@
 ## Status
 
 - **Priority**: P2
-- **Effort**: S
+- **Effort**: M (raised from S on 2026-09-16: first attempt STOPped correctly — the coverage ratchet demands ≥90% whole-file line coverage for changed files and `rss_collector.py` sits at ~76% pre-existing; closing the ~54-line gap needs honest characterization tests, see Step 3b)
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: perf
-- **Planned at**: commit `e77a039`, 2026-09-16
+- **Planned at**: commit `e77a039`, 2026-09-16; refreshed 2026-09-16 after the first executor run
 
 ## Why this matters
 
@@ -106,9 +106,10 @@ Repo conventions that apply here:
 
 **Out of scope** (do NOT touch, even though they look related):
 
-- The date filter, `fetch_limit` accounting, pre-scorer, or `_process_article` — behavior besides duplicate-check batching must be byte-identical.
+- The date filter, `fetch_limit` accounting, pre-scorer, or `_process_article` BEHAVIOR — characterization tests may pin behavior, never change it.
 - Double Pydantic validation per article (`rss_collector.py:1143` + `base_collector.py:941`) — real but separate; do not bundle.
 - Other collectors' loops (Reddit/HTML/headless) — same pattern may exist; report, don't expand.
+- Production code beyond the Step-2 batching change — the coverage backfill (Step 3b) is TESTS ONLY. If reaching 90% requires touching production code (refactors for testability), STOP and report instead.
 
 ## Git workflow
 
@@ -152,6 +153,29 @@ In `tests/unit/collectors/test_rss_collector.py`, with a fake `db_manager` expos
 
 **Verify**: new tests pass; full collector test dir green.
 
+### Step 3b: Backfill characterization coverage on `rss_collector.py` (added in refresh)
+
+The ratchet (`scripts/coverage_ratcheter.sh`) demands ≥90% whole-file line
+coverage for every changed module. `rss_collector.py` sits at ~76% for
+pre-existing reasons, so the Step-2 change cannot land without lifting the
+file to 90% with honest tests. Prior executor's per-function miss inventory
+(2026-09-16, RE-VERIFY with the coverage report — line numbers shift):
+
+- `collect_from_source` ~31 missed lines
+- `_fetch_feed_robust` ~27 missed lines
+- `_process_article` ~17 missed lines
+- `_extract_articles_from_feed` ~9 missed lines
+- `get_session_stats` ~5 missed lines, misc ~5
+
+Rules for the backfill (all must hold, else STOP and report):
+
+1. TESTS ONLY — no production-code change beyond Step 2 (not even "trivial" refactors for testability).
+2. Characterization style: fake transports/DB/clocks, assert CURRENT behavior (fetch/retry branches, error paths, session stats). If current behavior looks buggy, pin it and REPORT it — do not fix it here.
+3. No real network, no real timers (use the repo's fake-clock/fake-sleep patterns, e.g. `test_rate_limit_and_backoff.py`).
+4. No brittle time/date-sensitive assertions; no tests that depend on pytest execution order.
+
+**Verify**: coverage report shows `news_collector/collectors/rss_collector.py` ≥90% line coverage; `make type` (mypy + ratchet) → exit 0.
+
 ### Step 4: Run the full gates
 
 **Verify**: `make lint && make type && make test && make test-boundaries` → all exit 0.
@@ -159,15 +183,17 @@ In `tests/unit/collectors/test_rss_collector.py`, with a fake `db_manager` expos
 ## Test plan
 
 - New fake-DB tests pinning single-call batching + identical filtering/truncation semantics.
+- New characterization tests lifting `rss_collector.py` to ≥90% line coverage (Step 3b).
 - Existing RSS collector tests (incl. the `parsed_ok` health regression) stay green.
 
 ## Done criteria
 
 Machine-checkable. ALL must hold:
 
-- [ ] `make lint`, `make type`, `make test`, `make test-boundaries` all exit 0
+- [ ] `make lint`, `make type`, `make test`, `make test-boundaries` all exit 0 — with `make type`'s ratchet explicitly green on `rss_collector.py` (≥90%)
 - [ ] `grep -n "article_exists(" news_collector/collectors/rss_collector.py` → no matches (only the bulk call remains)
-- [ ] New batching tests exist and pass
+- [ ] New batching + backfill tests exist and pass
+- [ ] No production-code change beyond the Step-2 batching edit
 - [ ] `git diff --name-only e77a039...HEAD` lists only the in-scope files
 - [ ] `plans/README.md` status row updated
 
