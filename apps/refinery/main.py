@@ -240,7 +240,7 @@ def delete_article(target: str | dict[str, str]) -> dict:  # noqa: C901
         return {"status": "error", "message": str(e)}
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - CLI guard, never imported
     import shutil  # Need to ensure imports are present if we use them
 
     import git
