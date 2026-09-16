@@ -52,9 +52,7 @@ def test_bare_construction_raises_valueerror(cls):
         ),
     ],
 )
-def test_explicit_config_is_used_for_provider_wiring(
-    cls, module, stage, monkeypatch
-):
+def test_explicit_config_is_used_for_provider_wiring(cls, module, stage, monkeypatch):
     seen = {}
 
     def fake_get_model_for_stage(stage_name, config=None, logger=None, **kwargs):

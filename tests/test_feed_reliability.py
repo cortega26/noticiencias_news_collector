@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 
 

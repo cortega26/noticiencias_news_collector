@@ -7,9 +7,10 @@ import sys
 # Add project root to path
 sys.path.append(os.getcwd())
 
+from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.config.settings import DATABASE_CONFIG, TEXT_PROCESSING_CONFIG
-from noticiencias.config_manager import load_config
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

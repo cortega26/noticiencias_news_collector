@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 
 

@@ -2,8 +2,8 @@ import hashlib
 from typing import Type
 
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.perf import MemoryFeedStore
 

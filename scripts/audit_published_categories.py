@@ -12,8 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from noticiencias.config_manager import load_config
+
+from news_collector.editorial.category_resolver import EditorialCategoryResolver
 
 
 def _extract_frontmatter_and_body(text: str) -> tuple[dict, str]:

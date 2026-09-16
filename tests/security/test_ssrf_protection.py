@@ -1,6 +1,6 @@
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors import RSSCollector
 
 

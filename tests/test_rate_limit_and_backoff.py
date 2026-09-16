@@ -7,8 +7,8 @@ from types import MethodType
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.config.settings import RATE_LIMITING_CONFIG
 from news_collector.storage.database import DatabaseManager

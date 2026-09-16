@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 
 # Configure basic logging to capture events

@@ -14,6 +14,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.base_collector import BaseCollector
 from news_collector.collectors.rss_collector import RSSCollector
 

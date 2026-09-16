@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 
 # Assuming we will extract RssParser logic or test it via RSSCollector internals for now

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from noticiencias.config_manager import load_config
+
 from news_collector.collectors.rss_collector import RSSCollector
 from news_collector.components.editorial.ai_editor import EditorAgent
 
