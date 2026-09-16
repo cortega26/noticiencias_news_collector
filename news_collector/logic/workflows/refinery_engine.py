@@ -52,7 +52,6 @@ from news_collector.logic.workflows.frontend_publication_validation import (
 )
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.image_handler import (
-    CT_TO_EXT,
     ArticleImageHandler,
     publication_safe_image_alt,
 )
@@ -954,56 +953,13 @@ class RefineryEngine:
         Downloads a remote image to the local assets directory.
         Returns the Astro-compatible local path (e.g. "~/assets/images/slug.jpg")
         or None if download fails.
+
+        Compatibility delegate (plan 093): ArticleImageHandler.download owns
+        all download policy (timeout, retries, extension map). Kept so the
+        image_handler.resolve download_fn hook and test-level monkeypatches
+        keep working.
         """
-        url = str(url).strip()
-        if not url or not url.startswith("http"):
-            return None
-
-        # Determine extension from Content-Type header (reliable) with URL heuristic fallback
-        ext = None  # resolved after first request below
-
-        # Paths
-        assets_dir = target_dir / "src/assets/images"
-        assets_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"Downloading image from {url}")
-
-        from news_collector.infrastructure.requests_client import RobustRequestsClient
-
-        try:
-            with RobustRequestsClient() as client:
-                response = client.get(url, timeout=15)
-
-            # Resolve extension: Content-Type first, URL heuristic fallback
-            ct = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
-            ext = CT_TO_EXT.get(ct)
-            if not ext:
-                url_lower = url.lower().split("?")[0]
-                for candidate_ext in (
-                    ".png",
-                    ".webp",
-                    ".avif",
-                    ".gif",
-                    ".svg",
-                    ".jpeg",
-                    ".jpg",
-                ):
-                    if url_lower.endswith(candidate_ext):
-                        ext = ".jpg" if candidate_ext == ".jpeg" else candidate_ext
-                        break
-                else:
-                    ext = ".jpg"
-
-            filename = f"{slug}{ext}"
-            local_path = assets_dir / filename
-            local_path.write_bytes(response.content)
-            logger.info(
-                f"Image saved: {local_path} ({len(response.content) // 1024} KB, {ct})"
-            )
-            return f"~/assets/images/{filename}"
-        except Exception as e:
-            logger.error(f"Failed to download image {url}: {e}")
-            return None
+        return self.image_handler.download(url, slug, target_dir)
 
     def _normalize_article_payload(self, article: Any) -> Dict[str, Any]:
         """Convert contract objects and URL-like values into plain Python primitives."""
