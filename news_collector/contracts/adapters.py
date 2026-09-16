@@ -21,6 +21,7 @@ Failure modes:
 - Type mismatches will raise Pydantic validation errors.
 """
 
+import copy
 from typing import Any, Dict, List, Mapping, cast
 
 from sqlalchemy import inspect as sa_inspect
@@ -34,6 +35,39 @@ from news_collector.contracts.validation import (
     ArticleValidationPayload,
 )
 from news_collector.storage.models import Article
+
+# Run-scoped lifecycle keys persisted under ``article_metadata`` that are NOT
+# part of any collector content contract (``ArticleMetadataModel`` forbids
+# them with ``extra="forbid"``). Writers live in the storage layer:
+# - "audit": ArticleRepository.update_article_audit_status
+# - "publication": ArticleRepository.mark_article_published /
+#   reject_publication_attempts / complete_publication_attempts
+# - "publishing_started_at" / "publishing_branch":
+#   ArticleRepository.mark_article_publishing (called on every publish attempt
+#   that passes the S1 guard, so any retried publish carries them).
+# If a new lifecycle key is ever persisted, add it here with a comment naming
+# the writer — otherwise re-publish breaks again the same way.
+LIFECYCLE_METADATA_KEYS = frozenset(
+    {"audit", "publication", "publishing_started_at", "publishing_branch"}
+)
+
+
+def strip_lifecycle_metadata(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a copy of a DB-sourced article payload without run-scoped lifecycle keys.
+
+    Audit/publication/publishing state is persisted evidence but not collector
+    content, so it must be narrowed out of the validator INPUT (LAW-1: the
+    validator still returns a validated CollectorArticleModel dump). Never
+    mutates the input; all other keys are preserved byte-identically.
+    """
+    cleaned = dict(payload)
+    metadata = cleaned.get("article_metadata")
+    if isinstance(metadata, dict):
+        metadata_copy = copy.deepcopy(metadata)
+        for key in LIFECYCLE_METADATA_KEYS:
+            metadata_copy.pop(key, None)
+        cleaned["article_metadata"] = metadata_copy
+    return cleaned
 
 
 def _optional_article_attr(article: Any, attr_name: str, default: Any = None) -> Any:
