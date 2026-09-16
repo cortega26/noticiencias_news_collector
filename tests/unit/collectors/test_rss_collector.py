@@ -195,3 +195,131 @@ def test_parse_success_records_article_count_as_found(rss_collector):
 
     source = tracker.get_source("s1")
     assert source.parsed_ok == 3
+
+
+class _BatchOnlyDbManager:
+    """Fake db_manager pinning the bulk dedup path.
+
+    The singular per-item check raises if touched; the bulk check returns
+    a fixed set and records its calls.
+    """
+
+    def __init__(self, existing_urls):
+        self._existing = set(existing_urls)
+        self.bulk_calls = []
+
+    def article_exists(self, url):  # pragma: no cover - tripwire
+        raise AssertionError("per-item article_exists must not be called")
+
+    def articles_exist(self, urls):
+        self.bulk_calls.append(list(urls))
+        return set(self._existing)
+
+
+def _recent_candidate(url, summary="s" * 60):
+    from datetime import timezone
+
+    return {
+        "title": f"Article title for {url} that is long enough",
+        "url": url,
+        "published_date": datetime.now(timezone.utc),
+        "summary": summary,
+    }
+
+
+def _run_extraction(rss_collector, candidates, db_manager):
+    """Run _extract_articles_from_feed with network-touching seams stubbed."""
+    from unittest.mock import patch as _patch
+
+    from news_collector.config.settings import refresh_runtime_config
+
+    parser_mock = MagicMock()
+    parser_mock.extract_items.return_value = candidates
+    rss_collector.parser = parser_mock
+    rss_collector.db_manager = db_manager
+    rss_collector.pre_scorer = MagicMock()
+    rss_collector.pre_scorer.model_name = "ollama"
+    with (
+        _patch.object(
+            rss_collector, "router", MagicMock(route_enrichment=lambda *a, **k: {})
+        ),
+        _patch.object(rss_collector, "image_extractor", MagicMock()),
+    ):
+        refresh_runtime_config()
+        return rss_collector._extract_articles_from_feed(
+            MagicMock(), {"url": "http://feed.com"}, "s1"
+        )
+
+
+def test_extract_articles_batches_duplicate_check_single_bulk_call(rss_collector):
+    """Duplicate filtering must issue ONE bulk articles_exist call and never
+    the per-item article_exists (plan 092 regression)."""
+    urls = [f"https://batch.example.com/n{i}" for i in range(6)]
+    existing = {urls[1], urls[4]}
+    db_manager = _BatchOnlyDbManager(existing)
+
+    articles = _run_extraction(
+        rss_collector, [_recent_candidate(u) for u in urls], db_manager
+    )
+
+    assert db_manager.bulk_calls == [urls]  # one call, order preserved
+    assert [a["url"] for a in articles] == [urls[0], urls[2], urls[3], urls[5]]
+
+
+def test_extract_articles_truncation_matches_fetch_limit_semantics(rss_collector):
+    """Order + fetch_limit truncation must match the old per-item loop:
+    duplicates interspersed, loop keeps the first fetch_limit survivors."""
+    from news_collector.config.settings import get_runtime_config
+
+    cfg = get_runtime_config()
+    max_articles = cfg.collection_config["max_articles_per_source"]
+    fetch_limit = max_articles * 4
+
+    total = fetch_limit + 5
+    urls = [f"https://batch.example.com/t{i}" for i in range(total)]
+    dupes = {0, 10, total - 1}
+    existing = {urls[i] for i in dupes}
+    db_manager = _BatchOnlyDbManager(existing)
+
+    articles = _run_extraction(
+        rss_collector, [_recent_candidate(u) for u in urls], db_manager
+    )
+
+    # Old loop semantics: skip dupes, keep the first `fetch_limit` new
+    # candidates in feed order (count only increments on keep).
+    expected_kept = [u for i, u in enumerate(urls) if i not in dupes][:fetch_limit]
+    assert db_manager.bulk_calls == [urls]  # still exactly one bulk call
+    # Equal-length summaries keep the heuristic pre-scorer sort stable, so
+    # the first `max_articles` survivors come back in feed order.
+    assert [a["url"] for a in articles] == expected_kept[:max_articles]
+    # Late new candidates past the fetch_limit window never make it.
+    assert urls[total - 2] not in [a["url"] for a in articles]
+
+
+def test_extract_articles_bulk_match_uses_canonicalized_urls(rss_collector):
+    """A candidate whose raw URL differs from the stored canonical form
+    (case-only here) must still count as a duplicate — the same
+    canonicalization the singular check applied (plan 092 parity)."""
+    from news_collector.utils.url_canonicalizer import canonicalize_url
+
+    raw_dupe = "https://EXAMPLE.com/case-dupe"
+    canonical_dupe = canonicalize_url(raw_dupe) or raw_dupe
+    assert canonical_dupe != raw_dupe  # guard: the case must be meaningful
+    # The singular check canonicalized too, so it agreed on this duplicate.
+    assert canonical_dupe == "https://example.com/case-dupe"
+
+    urls = [
+        "https://batch.example.com/fresh-a",
+        raw_dupe,
+        "https://batch.example.com/fresh-b",
+    ]
+    db_manager = _BatchOnlyDbManager({canonical_dupe})
+
+    articles = _run_extraction(
+        rss_collector, [_recent_candidate(u) for u in urls], db_manager
+    )
+
+    assert [a["url"] for a in articles] == [
+        "https://batch.example.com/fresh-a",
+        "https://batch.example.com/fresh-b",
+    ]
