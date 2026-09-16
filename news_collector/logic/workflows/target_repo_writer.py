@@ -22,9 +22,11 @@ from typing import Dict
 
 import yaml
 
-from apps.refinery.published_content import prune_hero_placeholder_allowlist_for_post
 from news_collector.contracts import MANIFEST_FILENAME
 from news_collector.contracts.social_publication import stamp_social_frontmatter
+from news_collector.logic.workflows.published_content_utils import (
+    prune_hero_placeholder_allowlist_for_post,
+)
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("TargetRepoWriter")
