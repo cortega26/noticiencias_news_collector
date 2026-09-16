@@ -1993,6 +1993,8 @@ def create_app(  # noqa: C901
                 ]
             ],
             summary=result.summary,
+            not_processed=[str(item) for item in result.truncated],
+            cap_note=next((f.error for f in result.failed if f.item is None), None),
         )
 
     @app.delete(
