@@ -250,6 +250,63 @@ def test_admin_dev_mode_allows_without_key(api_client: TestClient) -> None:
         assert response.status_code == 200
 
 
+def test_admin_fail_open_in_development_logs_warning(
+    api_client: TestClient,
+) -> None:
+    """Plan 099: unset key + development tier succeeds AND logs a loud warning."""
+    from loguru import logger as loguru_logger
+
+    fake_runtime = MagicMock()
+    fake_runtime.environment = "development"
+    records: list[str] = []
+    sink_id = loguru_logger.add(
+        lambda message: records.append(str(message)), level="WARNING"
+    )
+    try:
+        with (
+            patch.dict(os.environ, clear=True),
+            patch(
+                "news_collector.serving.api.get_runtime_config",
+                return_value=fake_runtime,
+            ),
+        ):
+            response = api_client.get("/v1/admin/analytics", headers=_admin_headers())
+    finally:
+        loguru_logger.remove(sink_id)
+    assert response.status_code == 200
+    assert any(
+        "ADMIN_API_KEY" in record and "WITHOUT authentication" in record
+        for record in records
+    )
+
+
+def test_admin_fail_closed_in_staging_logs_no_fail_open_warning(
+    api_client: TestClient,
+) -> None:
+    """Plan 099: unset key + non-development tier 503s without the warning."""
+    from loguru import logger as loguru_logger
+
+    fake_runtime = MagicMock()
+    fake_runtime.environment = "staging"
+    records: list[str] = []
+    sink_id = loguru_logger.add(
+        lambda message: records.append(str(message)), level="WARNING"
+    )
+    try:
+        with (
+            patch.dict(os.environ, clear=True),
+            patch(
+                "news_collector.serving.api.get_runtime_config",
+                return_value=fake_runtime,
+            ),
+        ):
+            response = api_client.get("/v1/admin/analytics", headers=_admin_headers())
+    finally:
+        loguru_logger.remove(sink_id)
+    assert response.status_code == 503
+    assert not any("WITHOUT authentication" in record for record in records)
+
+
 # ---------------------------------------------------------------------------
 # CORS (Phase 2: separate static GUI calling the admin surface)
 # ---------------------------------------------------------------------------

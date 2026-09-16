@@ -618,6 +618,11 @@ def verify_webhook_token(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Webhook authentication is not configured for this environment",
             )
+        logger.warning(
+            "WEBHOOK_API_KEY is not set and environment is 'development' — "
+            "serving webhook requests WITHOUT authentication. "
+            "Set the key and a non-development environment tier in production."
+        )
         return  # explicit development-only fail-open
 
     if not authorization:
@@ -662,6 +667,11 @@ def verify_admin_token(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Admin authentication is not configured for this environment",
             )
+        logger.warning(
+            "ADMIN_API_KEY is not set and environment is 'development' — "
+            "serving admin requests WITHOUT authentication. "
+            "Set the key and a non-development environment tier in production."
+        )
         return  # explicit development-only fail-open
 
     if not authorization:
