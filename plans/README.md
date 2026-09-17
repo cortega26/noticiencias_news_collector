@@ -270,7 +270,7 @@ Verified-baseline growth program: analytics/cost instrumentation first, then thr
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 107 | [Analytics baseline + cost/SLO dashboard](107/spec.md) | P1 | S | None | DONE — backend cost/SLO shipped; frontend plan 007 merged (tracking OFF). KEEP: reference for Wave 5. |
-| 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | BLOCKED (ADR-0009 Proposed + no operator inputs; build owned by frontend plan 008) — backend keeps coordination pointer only. |
+| 108 | [Newsletter capture backend + frontend enablement](108/spec.md) | P1 | M | None | DONE — frontend plan 008 merged (Buttondown endpoint + CSP + disclosures); Worker fallback stays unbuilt per ADR-0009. KEEP: reference for Wave 5. |
 | 109 | [Batch publication with per-item outcomes](109/spec.md) | P1 | M | 106 | DONE — single-slot sequential batch (≤5), shared _enqueue, GUI multi-select; OpenAPI snapshot regenerated. KEEP: reference for Wave 6. |
 | 110 | [Source-health visibility + polite speed-up](110/spec.md) | P1 | M | None | DONE — bulk circuit states (58→1 SELECTs), health merge, suppression-candidates rename, dead-knob documented, sources perf gate. KEEP: reference for Wave 6. |
 | 111 | [Health block-lite + semantic dedup MVP](111/spec.md) | P1 | M | None | DONE — overclaim escalation in health scope (universal disputed block kept), MinHash rejected for cosine, per-page triage grouping + GUI chip. KEEP: reference for Wave 7. |

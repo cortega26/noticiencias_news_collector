@@ -29,11 +29,11 @@
 | 2 | Identity & publication integrity (+106 follow-up) | 089, 094, 093, 086, 100, 095, 106 | 7/7 | DONE |
 | 3 | Collector perf + policy architecture (parallel-safe) | 092, 101 | 2/2 | DONE |
 | 4 | Log-triage fixes (103+104 parallel-safe, 105 independent) | 103, 104, 105 | 3/3 | DONE |
-| 5 | Measure first (analytics + newsletter) | 107, 108 | 1/2 | TODO (108 blocked on operator inputs) |
+| 5 | Measure first (analytics + newsletter) | 107, 108 | 2/2 | DONE |
 | 6 | Throughput (batch publish + source visibility) | 109, 110 | 2/2 | DONE |
 | 7 | Trust + looks (health gate/dedup + share/hero/social) | 111, 112 | 2/2 | DONE |
 | 8 | Money + compounding (monetization + series/transparency) | 113, 114 | 2/2 | DONE |
-| **Total** | | **30** | **29/30** | |
+| **Total** | | **30** | **30/30** | |
 
 **Time-sensitive (resolved):** 096 touches the NLTK allowlist entry expiring **2026-09-30** — Wave 0 is DONE, so this is closed; no action remaining.
 
@@ -182,7 +182,7 @@
 | 105 | [bair_blog resolution](105-bair-source-resolution.md) | P2 | S | 4.3 | DONE |
 | 106 | [Publication pipeline extraction](106-publication-pipeline.md) | P2 | M | 2.x | DONE |
 | 107 | [Analytics baseline + cost/SLO](107/spec.md) | P1 | S | 5 | TODO |
-| 108 | [Newsletter capture backend](108/spec.md) | P1 | M | 5 | TODO |
+| 108 | [Newsletter capture backend](108/spec.md) | P1 | M | 5 | DONE |
 | 109 | [Batch publication](109/spec.md) | P1 | M | 6 | DONE |
 | 110 | [Source-health visibility](110/spec.md) | P1 | M | 6 | DONE |
 | 111 | [Health block-lite + semantic dedup](111/spec.md) | P1 | M | 7 | DONE |
