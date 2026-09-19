@@ -555,6 +555,18 @@ max_tokens = 4096
 timeout = 120
 extra_headers = { "HTTP-Referer" = "https://noticiencias.com", "X-Title" = "Noticiencias" }
 
+# Cloudflare Workers AI (OpenAI-compatible). ${CLOUDFLARE_ACCOUNT_ID} is read
+# from .env so the account id never lives in this file. Free allowance is
+# metered in "neurons" (~21-23 per short call, reported in usage.neurons);
+# used as a late fallback. Skipped with one warning when either variable is unset.
+[[llm_endpoints]]
+name = "cloudflare"
+base_url = "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1"
+model = "@cf/openai/gpt-oss-120b"
+api_key_env = "CLOUDFLARE_AI_API_KEY"
+max_tokens = 4096
+timeout = 120
+
 # Gemini uses the native provider ([gemini] api_key / NOTICIENCIAS__GEMINI__API_KEY),
 # already second in the default chain; no OpenAI-compat entry needed.
 
