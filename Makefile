@@ -381,6 +381,9 @@ config-validate: bootstrap ## Validate active configuration sources
 config-dump: bootstrap ## Print the built-in default configuration
 	@$(PYTHON_BIN) -m noticiencias.config_manager --dump-defaults
 
+llm-report: bootstrap ## LLM provider behaviour report (ARGS="--days 7 --by-purpose")
+	@$(PYTHON_BIN) scripts/llm_health_report.py $(ARGS)
+
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
