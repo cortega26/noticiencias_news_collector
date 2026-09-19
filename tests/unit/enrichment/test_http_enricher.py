@@ -87,3 +87,23 @@ def test_ssl_error_on_apex_host_retries_with_www() -> None:
 
     assert calls == ["https://caltech.edu/x", "https://www.caltech.edu/x"]
     assert result["success"] is True
+
+
+def test_undecodable_body_is_a_failure_not_stored_content() -> None:
+    from news_collector.enrichment.http_enricher import is_undecodable
+
+    garbage = "U7\x15R\ufffd~xDq\x1f\ufffd\x16tV\x0f\x01U\x12" * 40
+    assert is_undecodable(garbage) is True
+    assert is_undecodable("<html><body>hola mundo</body></html>") is False
+    assert is_undecodable("") is False
+
+    class _Resp:
+        status_code = 200
+        text = garbage
+
+    class _Client:
+        def get(self, url: str, timeout: int = 15):  # noqa: ARG002
+            return _Resp()
+
+    result = HttpEnricher(request_client=_Client()).enrich("https://a.org/x")
+    assert result["success"] is False and result["error"] == "undecodable_content"

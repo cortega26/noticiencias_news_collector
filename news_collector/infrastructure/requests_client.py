@@ -175,7 +175,10 @@ class RobustRequestsClient:
                 "User-Agent": final_ua,
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
-                "Accept-Encoding": "gzip, deflate, br",
+                # No "br": brotli support is optional in urllib3 and the package is
+                # not installed, so brotli bodies came back as undecoded binary
+                # garbage (36% of collected articles since 2026-09-01).
+                "Accept-Encoding": "gzip, deflate",
                 "Connection": "keep-alive",
                 "Upgrade-Insecure-Requests": "1",
                 "Sec-Fetch-Dest": "document",
