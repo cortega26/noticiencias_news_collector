@@ -317,3 +317,25 @@ class TestResolve:
         assert result.image_alt == (
             "Ilustración editorial relacionada con Test Article"
         )
+
+    def test_site_logo_image_skips_download_and_queues_brief(
+        self, handler, image_briefs_stub, target_dir
+    ):
+        """A brand-logo image_url is never downloaded or published."""
+        image_briefs_stub.find_for_article.return_value = None
+        download = MagicMock()
+
+        result = handler.resolve(
+            article=self._make_article(
+                "https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png"
+            ),
+            article_id="42",
+            canonical_date="2024-01-25",
+            preferred_slug=None,
+            target_dir=target_dir,
+            download_fn=download,
+        )
+
+        assert result.resolved is False
+        assert result.queued_brief is True
+        download.assert_not_called()

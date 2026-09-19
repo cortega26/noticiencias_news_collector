@@ -43,7 +43,11 @@ def _is_retryable_error(exception: BaseException) -> bool:
         if status == 429:
             return True
 
-    # Retry on specific Request errors (Connection, Timeout)
+    # A bad certificate chain never heals between attempts (SSLError subclasses
+    # ConnectionError, so it must be excluded before the generic check below).
+    if isinstance(exception, requests.exceptions.SSLError):
+        return False
+
     # Retry on specific Request errors (Connection, Timeout)
     return isinstance(
         exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
@@ -62,6 +66,26 @@ def _redact_headers(headers: Dict[str, Any]) -> Dict[str, Any]:
         if key.lower() in sensitive_keys:
             safe[key] = "[REDACTED]"
     return safe
+
+
+RATE_LIMIT_MIN_WAIT_S = 5.0
+RATE_LIMIT_MAX_WAIT_S = 30.0
+
+
+def _rate_limit_wait(retry_state, fallback) -> float:
+    """Backoff that honors ``Retry-After`` on 429 (a ~1s retry never clears it)."""
+    wait = float(fallback(retry_state))
+    outcome = retry_state.outcome
+    exc = outcome.exception() if outcome is not None and outcome.failed else None
+    response = getattr(exc, "response", None)
+    if response is None or response.status_code != 429:
+        return wait
+    retry_after = response.headers.get("Retry-After", "")
+    try:
+        requested = float(retry_after)
+    except (TypeError, ValueError):
+        requested = RATE_LIMIT_MIN_WAIT_S
+    return min(max(wait, requested, RATE_LIMIT_MIN_WAIT_S), RATE_LIMIT_MAX_WAIT_S)
 
 
 def _safe_retry_log(retry_state):
@@ -189,10 +213,13 @@ class RobustRequestsClient:
         rate_limiting_config = get_runtime_config().rate_limiting_config
         retryer = Retrying(
             stop=stop_after_attempt(rate_limiting_config.get("max_retries", 3)),
-            wait=wait_exponential(
-                multiplier=rate_limiting_config.get("backoff_base", 0.5),
-                min=1,
-                max=rate_limiting_config.get("backoff_max", 10.0),
+            wait=lambda state: _rate_limit_wait(
+                state,
+                wait_exponential(
+                    multiplier=rate_limiting_config.get("backoff_base", 0.5),
+                    min=1,
+                    max=rate_limiting_config.get("backoff_max", 10.0),
+                ),
             ),
             retry=retry_if_exception(_is_retryable_error),
             # re-raise exception after retries exhaustion

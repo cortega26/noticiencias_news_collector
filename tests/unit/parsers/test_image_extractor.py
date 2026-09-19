@@ -95,3 +95,16 @@ def test_validation_reject_small(image_extractor):
     image_extractor.session.head.return_value = mock_resp
 
     assert image_extractor.validate_image(candidate) is False
+
+
+def test_metadata_site_logo_is_skipped(image_extractor):
+    html = """
+    <html><head>
+        <meta property="og:image" content="https://www.biorxiv.org/sites/default/files/images/biorxiv_logo_homepage7-5-small.png" />
+        <meta name="twitter:image" content="https://example.com/analogous-study.jpg" />
+    </head><body></body></html>
+    """
+    candidates = image_extractor.extract_candidates(html, "https://example.com/a")
+    urls = [c.url for c in candidates]
+    assert all("biorxiv_logo" not in u for u in urls)
+    assert "https://example.com/analogous-study.jpg" in urls

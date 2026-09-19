@@ -131,7 +131,8 @@ def _merge_circuit_into_health_record(
     endpoint must never 500 on a naive/aware mix). Unknown source ids and
     malformed circuit entries leave the record untouched.
     """
-    circuit = circuits.get(record.get("source_id"))
+    source_id = record.get("source_id")
+    circuit = circuits.get(source_id) if isinstance(source_id, str) else None
     if not isinstance(circuit, dict):
         return record
     merged = dict(record)
@@ -708,6 +709,10 @@ def verify_webhook_token(
         )
 
 
+# The GUI polls admin endpoints every ~2 s; warn once per process, not per request.
+_admin_open_warning_emitted = False
+
+
 def verify_admin_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
@@ -732,11 +737,14 @@ def verify_admin_token(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Admin authentication is not configured for this environment",
             )
-        logger.warning(
-            "ADMIN_API_KEY is not set and environment is 'development' — "
-            "serving admin requests WITHOUT authentication. "
-            "Set the key and a non-development environment tier in production."
-        )
+        global _admin_open_warning_emitted
+        if not _admin_open_warning_emitted:
+            _admin_open_warning_emitted = True
+            logger.warning(
+                "ADMIN_API_KEY is not set and environment is 'development' — "
+                "serving admin requests WITHOUT authentication. "
+                "Set the key and a non-development environment tier in production."
+            )
         return  # explicit development-only fail-open
 
     if not authorization:
