@@ -960,6 +960,71 @@ class NvidiaConfig(StrictModel):
         return v
 
 
+class LLMEndpointConfig(StrictModel):
+    """One OpenAI-compatible LLM endpoint (Groq, Cerebras, OpenRouter, ...).
+
+    Endpoints join the provider chain after NVIDIA/Gemini and before Ollama.
+    Secrets never live in config: ``api_key_env`` names the environment
+    variable holding the key. An endpoint whose variable is unset is skipped
+    with a warning instead of failing startup.
+    """
+
+    name: str = Field(
+        description="Unique slug used in logs and metrics (e.g. 'groq').",
+        pattern=r"^[a-z0-9][a-z0-9_-]{0,31}$",
+    )
+    base_url: str = Field(
+        description="OpenAI-compatible base URL (without /chat/completions).",
+        pattern=r"^https?://",
+    )
+    model: str = Field(
+        description="Model identifier served by this endpoint (check its /models).",
+        min_length=1,
+        max_length=128,
+    )
+    api_key_env: str = Field(
+        description="Environment variable that holds the API key.",
+        pattern=r"^[A-Z][A-Z0-9_]*$",
+    )
+    enabled: bool = Field(
+        default=True, description="Set false to keep it configured but off."
+    )
+    timeout: PositiveInt = Field(default=120, description="Request timeout in seconds.")
+    max_tokens: PositiveInt = Field(
+        default=4096, description="Maximum number of tokens to generate per request."
+    )
+    json_mode_supported: bool = Field(
+        default=True,
+        description=(
+            "Send response_format=json_object. Set false for endpoints that "
+            "reject it; JSON is then extracted from the text."
+        ),
+    )
+    extra_headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Additional static headers (e.g. OpenRouter attribution).",
+    )
+    degraded_failure_threshold: Optional[PositiveInt] = Field(
+        default=None, description="Overrides [nvidia] degraded_failure_threshold."
+    )
+    degraded_cooldown_seconds: Optional[PositiveFloat] = Field(
+        default=None, description="Overrides [nvidia] degraded_cooldown_seconds."
+    )
+
+
+class LLMChainConfig(StrictModel):
+    """Ordering of the LLM provider chain."""
+
+    chain: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit provider order using 'nvidia', 'gemini' and endpoint "
+            "names. Empty = nvidia, gemini, endpoints (declared order). "
+            "Ollama is always appended last."
+        ),
+    )
+
+
 class LLMRateLimitingConfig(StrictModel):
     """Rate limiting configuration for LLM API calls."""
 
@@ -1047,6 +1112,11 @@ class Config(StrictModel):
     nvidia: NvidiaConfig = Field(default_factory=NvidiaConfig)
     llm_rate_limiting: LLMRateLimitingConfig = Field(
         default_factory=LLMRateLimitingConfig
+    )
+    llm: LLMChainConfig = Field(default_factory=LLMChainConfig)
+    llm_endpoints: list[LLMEndpointConfig] = Field(
+        default_factory=list,
+        description="Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig).",
     )
     editorial_auditor: EditorialAuditorConfig = Field(
         default_factory=EditorialAuditorConfig

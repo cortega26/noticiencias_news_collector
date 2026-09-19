@@ -1,0 +1,51 @@
+# ADR-0009: Multi-provider LLM chain with classified failures
+
+**Date**: 2026-09-19
+**Status**: Accepted
+**Deciders**: Engineering team
+
+---
+
+## Context
+
+The chain was NVIDIA NIM → Gemini (never configured) → local Ollama. The
+2026-09-18 pipeline audit measured ~10 % failed NIM calls (503, 60 s read
+timeouts; zero 429), latency p50 ≈ 21 s / p90 ≈ 62 s, and one blank HTTP 200
+that left an article with an empty excerpt and blocked its publication. NIM
+was effectively a single point of failure; every failure was an untyped
+`except Exception`, so nothing could be learned from them.
+
+## Decision
+
+1. **`OpenAICompatProvider`** — a thin subclass of `NvidiaProvider` (NIM is
+   OpenAI-compatible, so retries, JSON extraction, rate limiting and the
+   degradation window are reused). Any OpenAI-compatible service (Groq,
+   Cerebras, OpenRouter `:free`, Gemini's compat endpoint, a self-hosted
+   gateway such as freellmapi) is one `[[llm_endpoints]]` entry. Extracting a
+   shared base class from `NvidiaProvider` is deferred until a second
+   protocol needs it (avoids a 700-line refactor with no behavior change).
+2. **Secrets by reference** — endpoints name an environment variable
+   (`api_key_env`); an unset variable skips that endpoint with a warning.
+3. **Explicit failure taxonomy** (`failure_kinds.FailureKind`) drives policy:
+   `AUTH` disables the provider for the process (logged once),
+   `RATE_LIMITED` cools it down honoring `Retry-After`, blank/invalid-JSON
+   responses fail over, `CLIENT_ERROR` is not counted against provider health.
+   The last provider keeps the historical semantics (result returned as-is,
+   error propagated).
+4. **Observability first** — every attempt emits a structured `llm.attempt`
+   event (provider, model, purpose, kind, latency, failover index) and is
+   offered to pluggable sinks (`attempts.register_attempt_sink`), which are
+   fail-open. Persistent storage and reporting build on this hook.
+5. **Failover timeout stays at 60 s** for non-final providers. Measured p90
+   is 62 s; a 30 s cap would divert ~35 % of calls to slow local Ollama.
+   Fast failover on outages is handled by the degradation window instead.
+6. **Delivered inactive**: with no endpoints configured behavior is identical.
+   GitHub Actions has no LLM keys, so the daily collection is unaffected.
+
+## Consequences
+
+- Free-tier models can be weaker in Spanish editorial tasks: order the chain
+  per measured results (`purpose` labels every call) and keep NVIDIA first.
+- Free tiers carry provider terms/privacy caveats; the content processed is
+  public news text.
+- Adaptive re-ordering from metrics is intentionally out of scope.

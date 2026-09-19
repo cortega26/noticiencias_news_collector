@@ -517,6 +517,40 @@ degraded_probe_timeout_seconds = 5.0
 degraded_window_size = 5
 slow_response_seconds = 60.0
 
+# Provider chain: NVIDIA -> Gemini -> [[llm_endpoints]] (declared order) -> Ollama.
+# Ollama is always last. Uncomment [llm] to pin an explicit order/allow-list.
+# Keys are read from the environment variable named in `api_key_env` (never
+# put keys here). An endpoint whose variable is unset is skipped with a warning.
+# Verify each model id against the provider's /models before enabling it.
+#
+# [llm]
+# chain = ["nvidia", "groq", "cerebras", "openrouter", "ollama"]
+#
+# [[llm_endpoints]]
+# name = "groq"
+# base_url = "https://api.groq.com/openai/v1"
+# model = "<model id from GET /models>"
+# api_key_env = "GROQ_API_KEY"
+#
+# [[llm_endpoints]]
+# name = "cerebras"
+# base_url = "https://api.cerebras.ai/v1"
+# model = "<model id from GET /models>"
+# api_key_env = "CEREBRAS_API_KEY"
+#
+# [[llm_endpoints]]
+# name = "openrouter"
+# base_url = "https://openrouter.ai/api/v1"
+# model = "<a :free model id>"
+# api_key_env = "OPENROUTER_API_KEY"
+# extra_headers = { "HTTP-Referer" = "https://noticiencias.com", "X-Title" = "Noticiencias" }
+#
+# [[llm_endpoints]]
+# name = "gemini-compat"
+# base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+# model = "gemini-2.5-flash"
+# api_key_env = "GEMINI_API_KEY"
+
 [llm_rate_limiting]
 max_concurrent_requests = 2
 min_delay_between_requests = 1.0

@@ -59,6 +59,7 @@ class EditorialCouncil:
             active_config: Any = config
             model = get_model_for_stage("council", config=active_config, logger=logger)
             self.llm = get_provider(
+                purpose="council",
                 config=active_config,
                 api_url=active_config.ollama.api_url,
                 model=model,

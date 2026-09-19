@@ -68,6 +68,7 @@ class CognitiveScorer(BasicScorer):
         if llm_client is None:
             model = get_model_for_stage("scoring", config=active_config, logger=logger)
             self.llm: Any = get_provider(
+                purpose="scoring",
                 config=active_config,
                 api_url=active_config.ollama.api_url,
                 model=model,

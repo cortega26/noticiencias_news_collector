@@ -599,6 +599,7 @@ class EditorAgent:
         # Note: ai_editor uses a higher timeout (3600s) and max_tokens (32768)
         # than default because editorial articles require longer generation
         self.provider = get_provider(
+            purpose="editing",
             config=cfg,
             api_url=self.api_url,
             model=self.model,

@@ -1,11 +1,29 @@
 """Provider Factory for LLM connections."""
 
-from typing import Any, Dict, Generator, Optional, Union, cast
+import os
+import time
+from typing import Any, Dict, Generator, NoReturn, Optional, Union, cast
 
 from noticiencias.config_manager import load_config
 
+from news_collector.infrastructure.llm.attempts import (
+    blocked_reason,
+    cool_down_provider,
+    disable_provider,
+    emit_attempt,
+    provider_name,
+)
+from news_collector.infrastructure.llm.failure_kinds import (
+    EmptyResponseError,
+    FailureKind,
+    classify_exception,
+    retry_after_seconds,
+)
 from news_collector.infrastructure.llm.gemini_provider import GeminiProvider
 from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+from news_collector.infrastructure.llm.openai_compat_provider import (
+    OpenAICompatProvider,
+)
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
@@ -65,14 +83,129 @@ def _ensure_rate_limiter(cfg: Any) -> None:
 class FallbackProvider:
     """A wrapper provider that implements the LLM provider interface and executes
     calls sequentially through a list of providers when timeouts or errors occur.
+
+    Every attempt is classified (:mod:`failure_kinds`), logged as a structured
+    ``llm.attempt`` event and offered to registered sinks (:mod:`attempts`).
+    The last provider keeps the historical semantics: its result is returned
+    as-is and its error propagates.
     """
 
-    def __init__(self, providers: list[Any]):
+    # Non-final providers get a short leash so failover happens quickly.
+    FAILOVER_TIMEOUT_S = 60
+
+    def __init__(self, providers: list[Any], purpose: str = "unspecified"):
         if not providers:
             raise ValueError("FallbackProvider requires at least one provider.")
         self.providers = providers
+        self.purpose = purpose
         # Expose self.model from the first/primary provider
         self.model = getattr(providers[0], "model", None)
+
+    # ---- shared per-attempt logic (sync and async paths) ----
+
+    def _skip_reason(self, provider: Any, op: str) -> Optional[str]:
+        """Reason to skip this provider without calling it, else ``None``."""
+        name = provider_name(provider)
+        if _is_degraded(provider):
+            logger.info("Skipping degraded provider {} during {}", name, op)
+            return "degraded"
+        reason = blocked_reason(provider)
+        if reason:
+            logger.info("Skipping provider {} during {}: {}", name, op, reason)
+        return reason
+
+    def _timeout_for(self, index: int, timeout: Optional[int], provider: Any) -> int:
+        if index < len(self.providers) - 1:
+            return self.FAILOVER_TIMEOUT_S
+        return timeout or getattr(provider, "timeout", None) or self.FAILOVER_TIMEOUT_S
+
+    def _call_kwargs(
+        self, provider: Any, current_timeout: int, base: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        kwargs = dict(base)
+        # OllamaProvider does not accept timeout in its generate_* methods
+        if provider.__class__.__name__ != "OllamaProvider":
+            kwargs["timeout"] = current_timeout
+        return kwargs
+
+    def _check_result(self, res: Any, index: int) -> None:
+        """Fail over on a blank 200 unless this is the last provider."""
+        if index < len(self.providers) - 1 and _is_empty_response(res):
+            kind = (
+                FailureKind.INVALID_JSON
+                if isinstance(res, dict)
+                else FailureKind.EMPTY_RESPONSE
+            )
+            raise EmptyResponseError(kind)
+
+    def _record_success(
+        self, provider: Any, index: int, started: float, empty: bool = False
+    ) -> None:
+        emit_attempt(
+            provider,
+            purpose=self.purpose,
+            ok=not empty,
+            kind=FailureKind.EMPTY_RESPONSE if empty else None,
+            started=started,
+            failover_index=index,
+        )
+        if index > 0 and not empty:
+            logger.warning(
+                "LLM failover: served by {} (purpose={}) after {} failed attempt(s)",
+                provider_name(provider),
+                self.purpose,
+                index,
+            )
+
+    def _record_failure(
+        self, provider: Any, index: int, started: float, exc: BaseException
+    ) -> FailureKind:
+        kind = classify_exception(exc)
+        emit_attempt(
+            provider,
+            purpose=self.purpose,
+            ok=False,
+            kind=kind,
+            started=started,
+            failover_index=index,
+            error=exc,
+        )
+        name = provider_name(provider)
+        if kind is FailureKind.AUTH and disable_provider(provider, str(exc)[:120]):
+            logger.error(
+                "LLM provider {} rejected our credentials ({}); disabling it for "
+                "this process. Check its API key.",
+                name,
+                exc.__class__.__name__,
+            )
+        elif kind is FailureKind.RATE_LIMITED:
+            delay = cool_down_provider(provider, retry_after_seconds(exc))
+            logger.warning(
+                "LLM provider {} rate-limited; cooling down {:.0f}s", name, delay
+            )
+        else:
+            logger.warning(
+                "Provider {} failed during {} ({}): {}. Proceeding to fallback...",
+                name,
+                self.purpose,
+                kind.value,
+                exc,
+            )
+        return kind
+
+    def _exhausted(
+        self, last_error: Optional[BaseException], kinds: list[str]
+    ) -> NoReturn:
+        logger.error(
+            "LLM chain exhausted (purpose={}): {}",
+            self.purpose,
+            ", ".join(kinds) or "no active providers",
+        )
+        if last_error:
+            raise last_error
+        raise RuntimeError("FallbackProvider failed with no active providers.")
+
+    # ---- public API ----
 
     def generate_sync(  # noqa: C901
         self,
@@ -84,89 +217,59 @@ class FallbackProvider:
         timeout: Optional[int] = None,
         log_errors_as_warning: bool = False,
     ) -> Union[str, Dict[str, Any], Generator[str, None, None]]:
-        last_error = None
+        last_error: Optional[BaseException] = None
+        kinds: list[str] = []
+        base = {
+            "prompt": prompt,
+            "system": system,
+            "json_mode": json_mode,
+            "model": model,
+            "log_errors_as_warning": log_errors_as_warning,
+        }
         for i, provider in enumerate(self.providers):
-            if _is_degraded(provider):
-                logger.info(
-                    "Skipping degraded provider {} during generate_sync",
-                    provider.__class__.__name__,
-                )
+            skipped = self._skip_reason(provider, "generate_sync")
+            if skipped:
+                kinds.append(f"{provider_name(provider)}=skipped({skipped})")
                 continue
+            old_timeout = getattr(provider, "timeout", None)
+            current_timeout = self._timeout_for(i, timeout, provider)
+            started = time.monotonic()
             try:
-                old_timeout = getattr(provider, "timeout", None)
-                # First ones get a fast timeout of 60s to trigger failover quickly
-                current_timeout = (
-                    60
-                    if i < len(self.providers) - 1
-                    else (timeout or old_timeout or 60)
-                )
-
-                kwargs: Dict[str, Any] = {
-                    "prompt": prompt,
-                    "system": system,
-                    "json_mode": json_mode,
-                    "model": model,
-                    "log_errors_as_warning": log_errors_as_warning,
-                }
-
                 if old_timeout is not None:
                     provider.timeout = current_timeout
-
-                # OllamaProvider does not accept timeout in generate_sync
-                if provider.__class__.__name__ != "OllamaProvider":
-                    kwargs["timeout"] = current_timeout
-
+                kwargs = self._call_kwargs(provider, current_timeout, base)
                 logger.info(
                     "FallbackProvider attempting generate_sync with {} (timeout={})...",
                     provider.__class__.__name__,
                     current_timeout,
                 )
-
                 if stream:
                     # Buffer stream chunks to allow fallback on mid-stream failure
-                    chunks = []
-                    generator = provider.generate_sync(stream=True, **kwargs)
-                    try:
-                        for chunk in generator:
-                            chunks.append(chunk)
-                    except Exception as e:
-                        if old_timeout is not None:
-                            provider.timeout = old_timeout
-                        raise e
-
-                    if old_timeout is not None:
-                        provider.timeout = old_timeout
+                    chunks = list(provider.generate_sync(stream=True, **kwargs))
+                    self._record_success(provider, i, started, empty=not chunks)
 
                     def chunk_generator(
                         chunks_list: list[str] = chunks,
                     ) -> Generator[str, None, None]:
-                        for chunk in chunks_list:
-                            yield chunk
+                        yield from chunks_list
 
                     return chunk_generator()
-                else:
-                    res = cast(
-                        Union[str, Dict[str, Any], Generator[str, None, None]],
-                        provider.generate_sync(stream=False, **kwargs),
-                    )
-                    if old_timeout is not None:
-                        provider.timeout = old_timeout
-                    if _is_empty_response(res) and i < len(self.providers) - 1:
-                        raise ValueError("empty response")
-                    return res
+                res = cast(
+                    Union[str, Dict[str, Any], Generator[str, None, None]],
+                    provider.generate_sync(stream=False, **kwargs),
+                )
+                self._check_result(res, i)
+                self._record_success(provider, i, started, _is_empty_response(res))
+                return res
             except Exception as e:
-                if old_timeout is not None:
-                    provider.timeout = old_timeout
-                logger.warning(
-                    "Provider {} failed during generate_sync: {}. Proceeding to fallback...",
-                    provider.__class__.__name__,
-                    e,
+                kinds.append(
+                    f"{provider_name(provider)}={self._record_failure(provider, i, started, e).value}"
                 )
                 last_error = e
-
-        if last_error:
-            raise last_error
-        raise RuntimeError("FallbackProvider failed with no active providers.")
+            finally:
+                if old_timeout is not None:
+                    provider.timeout = old_timeout
+        return self._exhausted(last_error, kinds)
 
     async def generate_async(
         self,
@@ -176,63 +279,46 @@ class FallbackProvider:
         model: Optional[str] = None,
         timeout: Optional[int] = None,
     ) -> Union[str, Dict[str, Any]]:
-        last_error = None
+        last_error: Optional[BaseException] = None
+        kinds: list[str] = []
+        base = {
+            "prompt": prompt,
+            "system": system,
+            "json_mode": json_mode,
+            "model": model,
+        }
         for i, provider in enumerate(self.providers):
-            if _is_degraded(provider):
-                logger.info(
-                    "Skipping degraded provider {} during generate_async",
-                    provider.__class__.__name__,
-                )
+            skipped = self._skip_reason(provider, "generate_async")
+            if skipped:
+                kinds.append(f"{provider_name(provider)}=skipped({skipped})")
                 continue
+            old_timeout = getattr(provider, "timeout", None)
+            current_timeout = self._timeout_for(i, timeout, provider)
+            started = time.monotonic()
             try:
-                old_timeout = getattr(provider, "timeout", None)
-                # First ones get a fast timeout of 60s to trigger failover quickly
-                current_timeout = (
-                    60
-                    if i < len(self.providers) - 1
-                    else (timeout or old_timeout or 60)
-                )
-                kwargs: Dict[str, Any] = {
-                    "prompt": prompt,
-                    "system": system,
-                    "json_mode": json_mode,
-                    "model": model,
-                }
-
                 if old_timeout is not None:
                     provider.timeout = current_timeout
-
-                # OllamaProvider generate_async does not take timeout argument
-                if provider.__class__.__name__ != "OllamaProvider":
-                    kwargs["timeout"] = current_timeout
-
+                kwargs = self._call_kwargs(provider, current_timeout, base)
                 logger.info(
                     "FallbackProvider attempting generate_async with {} (timeout={})...",
                     provider.__class__.__name__,
                     current_timeout,
                 )
-
                 res = cast(
                     Union[str, Dict[str, Any]], await provider.generate_async(**kwargs)
                 )
-                if old_timeout is not None:
-                    provider.timeout = old_timeout
-                if _is_empty_response(res) and i < len(self.providers) - 1:
-                    raise ValueError("empty response")
+                self._check_result(res, i)
+                self._record_success(provider, i, started, _is_empty_response(res))
                 return res
             except Exception as e:
-                if old_timeout is not None:
-                    provider.timeout = old_timeout
-                logger.warning(
-                    "Provider {} failed during generate_async: {}. Proceeding to fallback...",
-                    provider.__class__.__name__,
-                    e,
+                kinds.append(
+                    f"{provider_name(provider)}={self._record_failure(provider, i, started, e).value}"
                 )
                 last_error = e
-
-        if last_error:
-            raise last_error
-        raise RuntimeError("FallbackProvider failed with no active providers.")
+            finally:
+                if old_timeout is not None:
+                    provider.timeout = old_timeout
+        return self._exhausted(last_error, kinds)
 
     def check_health(self, timeout_seconds: float = 2.0) -> tuple[bool, str]:
         return cast(tuple[bool, str], self.providers[0].check_health(timeout_seconds))
@@ -255,6 +341,71 @@ class FallbackProvider:
                 await provider.close()
 
 
+def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
+    """Build OpenAI-compatible providers from ``[[llm_endpoints]]``.
+
+    Misconfiguration (unset key variable) skips that endpoint with a warning:
+    a broken optional fallback must never take the whole chain down.
+    """
+    endpoints = getattr(cfg, "llm_endpoints", None)
+    if not isinstance(endpoints, list):
+        return []
+    providers: list[Any] = []
+    for ep in endpoints:
+        if not ep.enabled:
+            continue
+        api_key = os.environ.get(ep.api_key_env, "").strip()
+        if not api_key:
+            logger.warning(
+                "LLM endpoint '{}' skipped: environment variable {} is not set",
+                ep.name,
+                ep.api_key_env,
+            )
+            continue
+        threshold = ep.degraded_failure_threshold or getattr(
+            nvidia_cfg, "degraded_failure_threshold", 2
+        )
+        cooldown = ep.degraded_cooldown_seconds or getattr(
+            nvidia_cfg, "degraded_cooldown_seconds", 300.0
+        )
+        logger.info("Configuring endpoint '{}' with model {}", ep.name, ep.model)
+        providers.append(
+            OpenAICompatProvider(
+                name=ep.name,
+                api_key=api_key,
+                base_url=ep.base_url,
+                model=ep.model,
+                extra_headers=ep.extra_headers,
+                json_mode_supported=ep.json_mode_supported,
+                timeout=ep.timeout,
+                max_tokens=ep.max_tokens,
+                degraded_failure_threshold=threshold,
+                degraded_cooldown_seconds=cooldown,
+            )
+        )
+    return providers
+
+
+def _apply_chain_order(providers: list[Any], chain: Any) -> list[Any]:
+    """Order remote providers by ``[llm] chain`` (default: as built).
+
+    Unknown names are ignored with a warning; providers not listed are
+    dropped, so the list is an explicit allow-list.
+    """
+    if not isinstance(chain, list) or not chain:
+        return providers
+    by_name = {provider_name(p): p for p in providers}
+    ordered: list[Any] = []
+    for name in chain:
+        if name in by_name:
+            ordered.append(by_name[name])
+        else:
+            logger.warning(
+                "[llm] chain lists '{}' but no such provider is configured", name
+            )
+    return ordered
+
+
 def get_provider(
     api_url: Optional[str] = None,
     model: Optional[str] = None,
@@ -262,11 +413,15 @@ def get_provider(
     max_retries: int = 2,
     max_tokens: Optional[int] = None,
     config: Optional[Any] = None,
+    purpose: str = "unspecified",
 ) -> Any:
     """
     Returns an appropriate LLM provider (Ollama, NVIDIA, or Gemini) based on active configuration
     wrapped in a FallbackProvider for resilient multi-tiered fallback:
-    NVIDIA NIM -> Google Gemini API -> Local Ollama.
+    NVIDIA NIM -> Google Gemini API -> [[llm_endpoints]] -> Local Ollama
+    (order overridable with ``[llm] chain``; Ollama is always last).
+
+    ``purpose`` labels the caller ("headline", "scoring", ...) in attempt logs.
 
     Also ensures the process-wide LLM rate limiter is initialized.
     """
@@ -339,7 +494,13 @@ def get_provider(
             )
         )
 
-    # Priority 3: Ollama (local)
+    # Priority 3: extra OpenAI-compatible endpoints, then optional reordering
+    providers.extend(_build_endpoint_providers(cfg, nvidia_cfg))
+    providers = _apply_chain_order(
+        providers, getattr(getattr(cfg, "llm", None), "chain", None)
+    )
+
+    # Priority 4: Ollama (local)
     # Always include Ollama as the final fallback
     ollama_cfg = getattr(cfg, "ollama", None)
     default_ollama_model = getattr(ollama_cfg, "model", "qwen2.5:32b")
@@ -366,6 +527,6 @@ def get_provider(
             "Returning FallbackProvider with chain: {}",
             [p.__class__.__name__ for p in providers],
         )
-        return FallbackProvider(providers)
+        return FallbackProvider(providers, purpose=purpose)
 
     return providers[0]

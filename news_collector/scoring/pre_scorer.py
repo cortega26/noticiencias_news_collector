@@ -44,6 +44,7 @@ class PreScorer:
                 "pre_scorer", config=active_config, logger=logger
             )
             self.llm = get_provider(
+                purpose="prescoring",
                 config=active_config,
                 api_url=active_config.ollama.api_url,
                 model=model,

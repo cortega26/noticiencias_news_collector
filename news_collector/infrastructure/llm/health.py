@@ -153,6 +153,49 @@ class OllamaHealthChecker(LLMHealthChecker):
         return HealthResult(healthy=True)
 
 
+class OpenAICompatHealthChecker(LLMHealthChecker):
+    """Probe the first configured OpenAI-compatible endpoint (``GET /models``)."""
+
+    def check(self, config: Any, logger: Any) -> HealthResult:
+        from news_collector.infrastructure.llm.factory import (
+            _build_endpoint_providers,
+        )
+
+        providers = _build_endpoint_providers(config, getattr(config, "nvidia", None))
+        if not providers:
+            warning = "No usable [[llm_endpoints]] entry (check api_key_env variables)."
+            if logger:
+                logger.warning(warning)
+            return HealthResult(
+                healthy=False, disable_llm=True, error=warning, warning=warning
+            )
+        provider = providers[0]
+        try:
+            healthy, reason = provider.check_health(timeout_seconds=5)
+        except Exception as err:
+            healthy, reason = False, str(err)
+        label = f"LLM endpoint '{provider.name}'"
+        if healthy:
+            if logger:
+                logger.info(f"{label} health check passed (model={provider.model}).")
+            return HealthResult(healthy=True)
+        warning = f"{label} health check failed: {reason}"
+        if logger:
+            logger.warning(warning)
+        return HealthResult(
+            healthy=False, disable_llm=True, error=warning, warning=warning
+        )
+
+
+def _has_usable_endpoint(config: Any) -> bool:
+    import os
+
+    endpoints = getattr(config, "llm_endpoints", None)
+    return isinstance(endpoints, list) and any(
+        ep.enabled and os.environ.get(ep.api_key_env, "").strip() for ep in endpoints
+    )
+
+
 def resolve_health_checker(config: Any) -> LLMHealthChecker | None:
     """Return the appropriate checker for the active provider configuration."""
     nvidia_api_key = getattr(getattr(config, "nvidia", None), "api_key", None)
@@ -162,5 +205,8 @@ def resolve_health_checker(config: Any) -> LLMHealthChecker | None:
     gemini_api_key = getattr(getattr(config, "gemini", None), "api_key", None)
     if gemini_api_key:
         return GeminiHealthChecker()
+
+    if _has_usable_endpoint(config):
+        return OpenAICompatHealthChecker()
 
     return OllamaHealthChecker()

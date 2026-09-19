@@ -144,6 +144,7 @@ class EditorialAuditor:
 
         # OBJECTIVE 2: Strict Timeout Enforcement (15s)
         self.provider = get_provider(
+            purpose="audit",
             config=self.config,
             api_url=self.api_url,
             model=self.model,
