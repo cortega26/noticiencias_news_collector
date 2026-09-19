@@ -403,6 +403,7 @@ def _legacy_env_paths(config_path: Path) -> tuple[Path, ...]:
 def _legacy_env_key_map() -> dict[str, str]:
     return {
         "GITHUB_TOKEN": "github.token",  # nosec
+        "GEMINI_API_KEY": "gemini.api_key",  # nosec
         "GITHUB_USER_NAME": "github.user_name",
         "GITHUB_USER_EMAIL": "github.user_email",
         "SOURCE_REPO_URL": "github.source_repo_url",
