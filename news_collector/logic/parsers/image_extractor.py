@@ -20,6 +20,14 @@ class ImageCandidate:
     height: Optional[int] = None
 
 
+_SITE_LOGO_RE = re.compile(r"(?<![a-z])logo(?![a-z]{3})")
+
+
+def is_site_logo_url(url: str) -> bool:
+    """True for brand-logo filenames (avoids substrings like "analogous")."""
+    return bool(_SITE_LOGO_RE.search(url.lower().split("?")[0].rsplit("/", 1)[-1]))
+
+
 class ImageExtractor:
     """
     Robust image extractor for news articles.
@@ -231,11 +239,8 @@ class ImageExtractor:
         except Exception:
             return None
 
-    _SITE_LOGO_RE = re.compile(r"(?<![a-z])logo(?![a-z]{3})")
-
     def _is_site_logo(self, url: str) -> bool:
-        """True for brand-logo filenames (avoids substrings like "analogous")."""
-        return bool(self._SITE_LOGO_RE.search(url.lower().rsplit("/", 1)[-1]))
+        return is_site_logo_url(url)
 
     def _is_blacklisted(self, url: str) -> bool:
         url_lower = url.lower()

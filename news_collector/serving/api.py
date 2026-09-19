@@ -708,11 +708,11 @@ def verify_webhook_token(
         )
 
 
-def verify_admin_token(
 # The GUI polls admin endpoints every ~2 s; warn once per process, not per request.
 _admin_open_warning_emitted = False
 
 
+def verify_admin_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
     """Verify Bearer token against ADMIN_API_KEY env var (constant-time).
