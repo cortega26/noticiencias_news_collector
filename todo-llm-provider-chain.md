@@ -8,7 +8,8 @@
 - [x] Health checker, config.toml examples, .env.example, ADR-0009
 - [x] Tests
 - [x] Manual validation with real key: Groq (e2e failover, metrics, report)
-- [ ] Cerebras, OpenRouter, Gemini compat (need keys)
+- [x] OpenRouter (:free), Cloudflare Workers AI and Gemini (native) validated with real keys
+- [x] Cerebras dropped: no renewing free tier (ADR-0009 §8)
 
 ## PR B (next)
 - [x] LLMMetricsStore (SQLite, fail-open) registered as attempt sink

@@ -524,7 +524,7 @@ slow_response_seconds = 60.0
 # Verify each model id against the provider's /models before enabling it.
 #
 # [llm]
-# chain = ["nvidia", "gemini", "groq", "openrouter", "ollama"]
+# chain = ["nvidia", "gemini", "groq", "openrouter", "cloudflare", "ollama"]
 #
 # Validated 2026-09-19 (JSON mode, Spanish, p50 ~2s vs NIM 4-21s). Skipped
 # (one warning) when GROQ_API_KEY is not set, e.g. in CI.
@@ -535,13 +535,9 @@ model = "openai/gpt-oss-120b"
 api_key_env = "GROQ_API_KEY"
 max_tokens = 4096
 #
-# Cerebras: key valid but its free quota answered 402 (2026-09-19). Enable once
-# it returns 200:
-# [[llm_endpoints]]
-# name = "cerebras"
-# base_url = "https://api.cerebras.ai/v1"
-# model = "gpt-oss-120b"
-# api_key_env = "CEREBRAS_API_KEY"
+# Cerebras is intentionally NOT configured: it has no renewing free tier (only
+# $5 of trial credit that expires after 30 days, and a verified payment method is
+# required; an unfunded key answers 402). See ADR-0009 §8.
 
 # OpenRouter free route to the same model as the NVIDIA primary, on another
 # host (slow, ~10s, but zero cost: 1000 :free requests/day). Models MUST end in
