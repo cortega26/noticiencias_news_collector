@@ -20,7 +20,7 @@ was effectively a single point of failure; every failure was an untyped
 1. **`OpenAICompatProvider`** — a thin subclass of `NvidiaProvider` (NIM is
    OpenAI-compatible, so retries, JSON extraction, rate limiting and the
    degradation window are reused). Any OpenAI-compatible service (Groq,
-   Cerebras, OpenRouter `:free`, Gemini's compat endpoint, a self-hosted
+   Groq, OpenRouter `:free`, Cloudflare Workers AI, a self-hosted
    gateway such as freellmapi) is one `[[llm_endpoints]]` entry. Extracting a
    shared base class from `NvidiaProvider` is deferred until a second
    protocol needs it (avoids a 700-line refactor with no behavior change).
@@ -60,17 +60,14 @@ was effectively a single point of failure; every failure was an untyped
    raised as an HTTP error with the embedded status (retry/failover/cooldown
    apply) instead of being read as blank text. Degenerate JSON such as
    `{"": ""}` counts as an empty response.
-8. Cerebras stays commented out: its key is valid but the free quota answered
-   402 (2026-09-19). GitHub Models is retiring (410 brownout) and Gemini uses
-   the native provider (`[gemini]`), not an OpenAI-compat entry.
-
-9. **Call budget (`generate_async(budget=...)`).** The CognitiveScorer wrapped
-   the whole chain in one `asyncio.wait_for(40s)`; a slow first provider (NIM
-   p90 ≈ 62 s) consumed it and cancelled the call before failover was ever
-   tried (observed 2026-09-19: every scoring batch fell back to heuristics).
-   With a budget, each non-final attempt is capped at 60 % of the time left
-   (really cancelled) and the last provider gets the remainder, so failover fits
-   inside the caller's deadline. Without a budget behavior is unchanged.
+8. **Cerebras is not used.** Its official docs state there is no permanently
+   free tier: the Free Trial is $5 of credit that expires after 30 days and
+   needs a verified payment method (an unfunded key answers 402
+   `payment_required`). GitHub Models is retiring (410 brownout) and Gemini uses
+   the native provider (`[gemini]`, flat alias `GEMINI_API_KEY`), not an
+   OpenAI-compat entry. Verify any "free" provider against its own docs and a
+   real call before adding it (freellmapi's catalog lists it, but that does not
+   make it free for a continuous workload).
 
 ## Consequences
 
