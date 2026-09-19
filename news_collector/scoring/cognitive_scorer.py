@@ -78,8 +78,10 @@ class CognitiveScorer(BasicScorer):
         self.version = "2.2-hybrid-unified"
 
         # 3. Budget Config
-        self.max_cycle_budget_sec = 45.0
-        self.batch_timeout_sec = 20.0
+        # NIM latency is p50≈21s / p90≈62s; a 20s cap timed out (heuristic
+        # fallback) on every recent run. Keep the cycle budget above one batch.
+        self.max_cycle_budget_sec = 90.0
+        self.batch_timeout_sec = 40.0
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
