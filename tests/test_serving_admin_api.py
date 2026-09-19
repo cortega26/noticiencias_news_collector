@@ -252,10 +252,15 @@ def test_admin_dev_mode_allows_without_key(api_client: TestClient) -> None:
 
 def test_admin_fail_open_in_development_logs_warning(
     api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Plan 099: unset key + development tier succeeds AND logs a loud warning."""
+    """Plan 099: unset key + development tier succeeds AND logs a loud warning.
+
+    The warning is emitted once per process, not per request (GUI polling).
+    """
     from loguru import logger as loguru_logger
 
+    monkeypatch.setattr("news_collector.serving.api._admin_open_warning_emitted", False)
     fake_runtime = MagicMock()
     fake_runtime.environment = "development"
     records: list[str] = []
@@ -271,13 +276,17 @@ def test_admin_fail_open_in_development_logs_warning(
             ),
         ):
             response = api_client.get("/v1/admin/analytics", headers=_admin_headers())
+            second = api_client.get("/v1/admin/analytics", headers=_admin_headers())
     finally:
         loguru_logger.remove(sink_id)
     assert response.status_code == 200
-    assert any(
-        "ADMIN_API_KEY" in record and "WITHOUT authentication" in record
+    assert second.status_code == 200
+    warnings = [
+        record
         for record in records
-    )
+        if "ADMIN_API_KEY" in record and "WITHOUT authentication" in record
+    ]
+    assert len(warnings) == 1
 
 
 def test_admin_fail_closed_in_staging_logs_no_fail_open_warning(

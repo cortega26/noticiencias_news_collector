@@ -16,6 +16,15 @@ from news_collector.utils.logger import get_logger
 logger = get_logger().create_module_logger("infrastructure.llm.factory")
 
 
+def _is_empty_response(res: Any) -> bool:
+    """A 200 with no usable content (blank text or ``{}``) is a provider failure."""
+    if isinstance(res, str):
+        return not res.strip()
+    if isinstance(res, dict):
+        return not res
+    return False
+
+
 def _is_degraded(provider: Any) -> bool:
     """
     Return True when a provider is degraded.
@@ -142,6 +151,8 @@ class FallbackProvider:
                     )
                     if old_timeout is not None:
                         provider.timeout = old_timeout
+                    if _is_empty_response(res) and i < len(self.providers) - 1:
+                        raise ValueError("empty response")
                     return res
             except Exception as e:
                 if old_timeout is not None:
@@ -206,6 +217,8 @@ class FallbackProvider:
                 )
                 if old_timeout is not None:
                     provider.timeout = old_timeout
+                if _is_empty_response(res) and i < len(self.providers) - 1:
+                    raise ValueError("empty response")
                 return res
             except Exception as e:
                 if old_timeout is not None:
