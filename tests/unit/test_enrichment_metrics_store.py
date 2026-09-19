@@ -200,7 +200,12 @@ class TestBufferedFlushEquivalence(unittest.TestCase):
             self.assertEqual(immediate_row["avg_enrichment_time"], 18.75)
             self.assertEqual(batched_row["avg_enrichment_time"], 18.75)
 
+            # ``last_updated`` is wall-clock time (second resolution): the two
+            # replays run back to back and straddle a second boundary in ~1 of
+            # N runs, so it is not part of the aggregate-equivalence contract.
             for key in immediate_row:
+                if key == "last_updated":
+                    continue
                 self.assertEqual(
                     immediate_row[key],
                     batched_row[key],
