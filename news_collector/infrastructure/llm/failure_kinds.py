@@ -26,7 +26,9 @@ from typing import Optional
 import httpx
 import requests
 
-from news_collector.infrastructure.llm.nvidia_provider import ProviderDegradedError
+from news_collector.infrastructure.llm.nvidia_provider import (
+    ProviderDegradedError,
+)
 from news_collector.infrastructure.llm.nvidia_provider import (
     RateLimitError as _NimRateLimitError,
 )

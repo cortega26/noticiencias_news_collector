@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from noticiencias.config_manager import load_config
 
-from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.infrastructure.llm.factory import FallbackProvider, get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
 from news_collector.scoring.latam_relevance import LATAM_KEYWORDS, LOW_VALUE_KEYWORDS
@@ -419,11 +419,16 @@ class CognitiveScorer(BasicScorer):
 
         try:
             # Use async generation from OllamaProvider, enforcing batch_timeout_sec
+            call_kwargs: Dict[str, Any] = {}
+            if isinstance(self.llm, FallbackProvider):
+                # Give the chain the whole budget so each provider gets a fair
+                # slice and failover fits; the outer wait_for is a safety net.
+                call_kwargs["budget"] = self.batch_timeout_sec
             resp = await asyncio.wait_for(
                 self.llm.generate_async(
-                    joined_inputs, system=system_prompt, json_mode=True
+                    joined_inputs, system=system_prompt, json_mode=True, **call_kwargs
                 ),
-                timeout=self.batch_timeout_sec,
+                timeout=self.batch_timeout_sec + 5.0,
             )
 
             if not isinstance(resp, dict) or "results" not in resp:

@@ -398,3 +398,20 @@ def test_cache_roundtrip_and_read_failure(cognitive_scorer, sample_article):
         side_effect=sqlite3.Error("gone"),
     ):
         assert cognitive_scorer._get_from_cache(key) is None
+
+
+def test_scorer_passes_budget_only_to_fallback_chains(cognitive_scorer, mock_llm):
+    from news_collector.infrastructure.llm.factory import FallbackProvider
+
+    mock_llm.generate_async.return_value = {"results": []}
+    asyncio.run(cognitive_scorer._call_llm_batch(["item"]))
+    assert "budget" not in mock_llm.generate_async.call_args.kwargs  # plain provider
+
+    chain = FallbackProvider([MagicMock(), MagicMock()])
+    chain.generate_async = AsyncMock(return_value={"results": []})
+    cognitive_scorer.llm = chain
+    asyncio.run(cognitive_scorer._call_llm_batch(["item"]))
+    assert (
+        chain.generate_async.call_args.kwargs["budget"]
+        == cognitive_scorer.batch_timeout_sec
+    )
