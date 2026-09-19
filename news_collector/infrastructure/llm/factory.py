@@ -374,6 +374,9 @@ def resolve_secret(name: str) -> str:
         return ""
 
 
+_WARNED_MISSING_KEYS: set[str] = set()
+
+
 def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
     """Build OpenAI-compatible providers from ``[[llm_endpoints]]``.
 
@@ -389,11 +392,14 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
             continue
         api_key = resolve_secret(ep.api_key_env)
         if not api_key:
-            logger.warning(
-                "LLM endpoint '{}' skipped: environment variable {} is not set",
-                ep.name,
-                ep.api_key_env,
-            )
+            # Warn once per process: get_provider() runs once per pipeline stage.
+            if ep.name not in _WARNED_MISSING_KEYS:
+                _WARNED_MISSING_KEYS.add(ep.name)
+                logger.warning(
+                    "LLM endpoint '{}' skipped: environment variable {} is not set",
+                    ep.name,
+                    ep.api_key_env,
+                )
             continue
         threshold = ep.degraded_failure_threshold or getattr(
             nvidia_cfg, "degraded_failure_threshold", 2

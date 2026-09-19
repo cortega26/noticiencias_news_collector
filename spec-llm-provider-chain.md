@@ -5,7 +5,7 @@
 - Any OpenAI-compatible endpoint joins the chain via `[[llm_endpoints]]`.
 - Failures are classified, logged as structured `llm.attempt` events and
   exposed to pluggable sinks so later iterations can learn from them.
-- Delivered inactive: no endpoints configured => behavior unchanged.
+- Groq active by default; skipped (one warning) when its key is absent.
 
 ## Design (see docs/adr/0009-multi-provider-llm-chain.md)
 - `openai_compat_provider.OpenAICompatProvider` (subclass of `NvidiaProvider`).

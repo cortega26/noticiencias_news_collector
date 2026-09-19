@@ -41,8 +41,11 @@ was effectively a single point of failure; every failure was an untyped
 5. **Failover timeout stays at 60 s** for non-final providers. Measured p90
    is 62 s; a 30 s cap would divert ~35 % of calls to slow local Ollama.
    Fast failover on outages is handled by the degradation window instead.
-6. **Delivered inactive**: with no endpoints configured behavior is identical.
-   GitHub Actions has no LLM keys, so the daily collection is unaffected.
+6. **Groq is active by default** in `config.toml` (validated 2026-09-19:
+   `openai/gpt-oss-120b`, JSON mode, Spanish, p50 ≈ 2 s vs NIM 4–21 s; NVIDIA
+   forced to fail → served by Groq, skips and saves recorded). Without
+   `GROQ_API_KEY` (e.g. CI, which also has no NVIDIA/Gemini keys) the endpoint
+   is skipped with a single warning, so behavior there is unchanged.
 
 ## Consequences
 

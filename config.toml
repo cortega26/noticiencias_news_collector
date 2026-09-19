@@ -526,11 +526,14 @@ slow_response_seconds = 60.0
 # [llm]
 # chain = ["nvidia", "groq", "cerebras", "openrouter", "ollama"]
 #
-# [[llm_endpoints]]
-# name = "groq"
-# base_url = "https://api.groq.com/openai/v1"
-# model = "<model id from GET /models>"
-# api_key_env = "GROQ_API_KEY"
+# Validated 2026-09-19 (JSON mode, Spanish, p50 ~2s vs NIM 4-21s). Skipped
+# (one warning) when GROQ_API_KEY is not set, e.g. in CI.
+[[llm_endpoints]]
+name = "groq"
+base_url = "https://api.groq.com/openai/v1"
+model = "openai/gpt-oss-120b"
+api_key_env = "GROQ_API_KEY"
+max_tokens = 4096
 #
 # [[llm_endpoints]]
 # name = "cerebras"

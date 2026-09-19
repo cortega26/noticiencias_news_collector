@@ -493,3 +493,30 @@ def test_broken_dotenv_does_not_break_endpoint_resolution(monkeypatch):
     monkeypatch.delenv("GROQ_TEST_KEY", raising=False)
     monkeypatch.setattr(factory, "load_env_overrides", boom)
     assert factory.resolve_secret("GROQ_TEST_KEY") == ""
+
+
+def test_missing_key_warns_once_per_process(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    monkeypatch.delenv("GROQ_TEST_KEY", raising=False)
+    monkeypatch.setattr(factory, "load_env_overrides", lambda: {})
+    monkeypatch.setattr(factory, "_WARNED_MISSING_KEYS", set())
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        factory.logger, "warning", lambda msg, *a, **_k: warnings.append(msg)
+    )
+    cfg = _cfg([_endpoint()])
+    for _ in range(3):
+        assert _build_endpoint_providers(cfg, None) == []
+    assert len(warnings) == 1
+
+
+def test_shipped_config_activates_groq_endpoint():
+    from pathlib import Path
+
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
+    assert [(e.name, e.api_key_env) for e in cfg.llm_endpoints] == [
+        ("groq", "GROQ_API_KEY")
+    ]
