@@ -378,6 +378,18 @@ def resolve_secret(name: str) -> str:
 _WARNED_MISSING_KEYS: set[str] = set()
 
 
+def _install_metrics_sink() -> None:
+    """Persist attempt metrics (fail-open; see llm_metrics_store)."""
+    try:
+        from news_collector.observability.llm_metrics_store import (
+            install_default_metrics_sink,
+        )
+
+        install_default_metrics_sink()
+    except Exception as err:  # noqa: BLE001 - observability must never break calls
+        logger.debug("LLM metrics sink not installed: {}", err)
+
+
 def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
     """Build OpenAI-compatible providers from ``[[llm_endpoints]]``.
 
@@ -471,6 +483,7 @@ def get_provider(
 
     # Initialize rate limiter singleton from config (idempotent)
     _ensure_rate_limiter(cfg)
+    _install_metrics_sink()
 
     providers: list[Any] = []
 

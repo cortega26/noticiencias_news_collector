@@ -37,7 +37,12 @@ was effectively a single point of failure; every failure was an untyped
    event (provider, model, purpose, kind, latency, failover index; skipped
    providers emit a zero-latency `degraded_skip`) and is
    offered to pluggable sinks (`attempts.register_attempt_sink`), which are
-   fail-open. Persistent storage and reporting build on this hook.
+   fail-open. `LLMMetricsStore` (SQLite, `data/metrics/<env>/llm_metrics.db`,
+   90-day retention, disabled with `NOTICIENCIAS_LLM_METRICS=0`) persists them
+   and `make llm-report` / `scripts/llm_health_report.py` summarizes per
+   provider: success %, p50/p95, failure kinds, blank-response rate, skips and
+   *saves* (calls rescued after another provider failed). `--probe` performs a
+   live health check of each provider.
 5. **Failover timeout stays at 60 s** for non-final providers. Measured p90
    is 62 s; a 30 s cap would divert ~35 % of calls to slow local Ollama.
    Fast failover on outages is handled by the degradation window instead.

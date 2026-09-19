@@ -11,6 +11,7 @@
 - [ ] Cerebras, OpenRouter, Gemini compat (need keys)
 
 ## PR B (next)
-- [ ] LLMMetricsStore (SQLite, fail-open) registered as attempt sink
-- [ ] `scripts/llm_health_report.py` + `make llm-report` (+ `--probe`)
-- [ ] 90-day retention
+- [x] LLMMetricsStore (SQLite, fail-open) registered as attempt sink
+- [x] `scripts/llm_health_report.py` + `make llm-report` (+ `--probe`)
+- [x] 90-day retention
+- [ ] Phase 2 (out of scope): adaptive chain re-ordering from the report
