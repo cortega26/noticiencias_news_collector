@@ -157,9 +157,7 @@ class OpenAICompatHealthChecker(LLMHealthChecker):
     """Probe the first configured OpenAI-compatible endpoint (``GET /models``)."""
 
     def check(self, config: Any, logger: Any) -> HealthResult:
-        from news_collector.infrastructure.llm.factory import (
-            _build_endpoint_providers,
-        )
+        from news_collector.infrastructure.llm.factory import _build_endpoint_providers
 
         providers = _build_endpoint_providers(config, getattr(config, "nvidia", None))
         if not providers:
