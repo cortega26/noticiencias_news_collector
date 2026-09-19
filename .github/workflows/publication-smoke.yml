@@ -58,6 +58,13 @@ jobs:
             README.md
             AGENTS.md
             CLAUDE.md
+            CONTRIBUTING.md
+            CHANGELOG.md
+            .contract-snapshots/
+            .prettierrc
+            .prettierignore
+            .editorconfig
+            workers/
             docs/
             .github/workflows/
           sparse-checkout-cone-mode: false
