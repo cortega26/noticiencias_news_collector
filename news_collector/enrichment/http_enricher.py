@@ -18,6 +18,16 @@ def _is_smoke_mode_enabled() -> bool:
     return os.getenv("NOTICIENCIAS_SMOKE", "").strip().lower() in _TRUTHY_VALUES
 
 
+def is_undecodable(text: str, sample: int = 2000, threshold: float = 0.02) -> bool:
+    """True when decoded text is mostly control/replacement chars (a body the
+    HTTP layer failed to decompress, e.g. brotli without the codec)."""
+    head = text[:sample]
+    if not head:
+        return False
+    bad = sum(1 for ch in head if ord(ch) < 9 or 13 < ord(ch) < 32 or ch == "\ufffd")
+    return bad / len(head) > threshold
+
+
 class HttpEnricher:
     """
     Enriches articles by fetching HTML via standard HTTP and extracting text.
@@ -98,6 +108,16 @@ class HttpEnricher:
                     "success": False,
                     "content": None,
                     "error": "Empty response body",
+                    "status_code": response.status_code,
+                }
+
+            if is_undecodable(html_content):
+                # Fail (instead of storing garbage) so fallback strategies run.
+                return {
+                    "success": False,
+                    "content": None,
+                    "raw_content": None,
+                    "error": "undecodable_content",
                     "status_code": response.status_code,
                 }
 

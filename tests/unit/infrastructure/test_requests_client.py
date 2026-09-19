@@ -127,3 +127,14 @@ def test_ssl_errors_are_not_retried():
 
     assert _is_retryable_error(requests.exceptions.SSLError("bad cert")) is False
     assert _is_retryable_error(requests.exceptions.ConnectionError("reset")) is True
+
+
+def test_default_headers_do_not_advertise_brotli():
+    """brotli is not installed: advertising 'br' yields undecoded garbage bodies."""
+    client = RobustRequestsClient(timeout=1.0)
+    try:
+        encodings = client.session.headers["Accept-Encoding"]
+    finally:
+        client.close()
+    assert "br" not in [e.strip() for e in encodings.split(",")]
+    assert "gzip" in encodings
