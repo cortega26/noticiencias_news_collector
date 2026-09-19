@@ -64,3 +64,26 @@ def test_blocked_host_warns_once_then_debug() -> None:
     assert warning_logger.call_count == 2  # blocked.example once + other.example once
     debug_logger.assert_called_once()
     assert other["success"] is False
+
+
+def test_ssl_error_on_apex_host_retries_with_www() -> None:
+    import requests
+
+    calls: list[str] = []
+
+    class _Resp:
+        status_code = 200
+        text = "<html><body><p>hola mundo</p></body></html>"
+        headers: dict = {}
+
+    class _Client:
+        def get(self, url: str, timeout: int = 15):  # noqa: ARG002
+            calls.append(url)
+            if "://www." not in url:
+                raise requests.exceptions.SSLError("CERTIFICATE_VERIFY_FAILED")
+            return _Resp()
+
+    result = HttpEnricher(request_client=_Client()).enrich("https://caltech.edu/x")
+
+    assert calls == ["https://caltech.edu/x", "https://www.caltech.edu/x"]
+    assert result["success"] is True

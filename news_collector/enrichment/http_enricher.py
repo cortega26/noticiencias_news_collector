@@ -40,7 +40,19 @@ class HttpEnricher:
             self._warned_block_hosts.add(host)
         logger.warning(f"HttpEnricher fetch failed for {url}: {error}")
 
-    def enrich(self, url: str) -> Dict[str, Any]:
+    @staticmethod
+    def _www_fallback_url(url: str, error: Exception) -> Optional[str]:
+        """Apex hosts with a broken cert chain (e.g. caltech.edu) work on www."""
+        if not isinstance(error, requests.exceptions.SSLError):
+            return None
+        parts = urlparse(url)
+        if not parts.netloc or parts.netloc.startswith("www."):
+            return None
+        return parts._replace(netloc=f"www.{parts.netloc}").geturl()
+
+    def enrich(  # noqa: C901
+        self, url: str, _allow_www_fallback: bool = True
+    ) -> Dict[str, Any]:
         """
         Fetches the URL and extracts main content.
 
@@ -123,6 +135,9 @@ class HttpEnricher:
 
         except requests.RequestException as e:
             # Response is falsy on 4xx/5xx, so compare against None implicitly.
+            fallback_url = self._www_fallback_url(url, e)
+            if fallback_url and _allow_www_fallback:
+                return self.enrich(fallback_url, _allow_www_fallback=False)
             status = getattr(e.response, "status_code", None)
             self._log_fetch_failure(url, e, status)
             return {

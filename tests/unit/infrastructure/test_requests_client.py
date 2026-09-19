@@ -93,3 +93,37 @@ class TestRobustRequestsClient(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _retry_state(status: int | None, retry_after: str | None = None):
+    from types import SimpleNamespace
+
+    import requests
+
+    response = None
+    if status is not None:
+        response = requests.Response()
+        response.status_code = status
+        if retry_after is not None:
+            response.headers["Retry-After"] = retry_after
+    exc = requests.HTTPError("boom", response=response)
+    outcome = SimpleNamespace(failed=True, exception=lambda: exc)
+    return SimpleNamespace(outcome=outcome, attempt_number=1)
+
+
+def test_rate_limit_wait_honors_retry_after_and_caps():
+    from news_collector.infrastructure.requests_client import _rate_limit_wait
+
+    assert _rate_limit_wait(_retry_state(429, "12"), lambda s: 1.0) == 12.0
+    assert _rate_limit_wait(_retry_state(429, "999"), lambda s: 1.0) == 30.0
+    assert _rate_limit_wait(_retry_state(429), lambda s: 1.0) == 5.0
+    assert _rate_limit_wait(_retry_state(503), lambda s: 1.5) == 1.5
+
+
+def test_ssl_errors_are_not_retried():
+    import requests
+
+    from news_collector.infrastructure.requests_client import _is_retryable_error
+
+    assert _is_retryable_error(requests.exceptions.SSLError("bad cert")) is False
+    assert _is_retryable_error(requests.exceptions.ConnectionError("reset")) is True
