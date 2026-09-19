@@ -595,6 +595,10 @@ def test_retry_error_logs_use_the_endpoint_label(monkeypatch):
         raise requests.Timeout("slow")
 
     monkeypatch.setattr(nv.requests, "post", boom)
+    # Other tests may flip this process-wide switch; pin it for isolation.
+    from news_collector.config import settings
+
+    monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
     with pytest.raises(requests.Timeout):
         provider.generate_sync(prompt="p")
     assert any("openrouter" in m for m in seen) and not any(
