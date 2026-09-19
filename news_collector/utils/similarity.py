@@ -72,8 +72,11 @@ def _parse_id(item: object) -> int | None:
     """Article id as int, or None for missing/unparseable ids (never raises)."""
     if not isinstance(item, dict):
         return None
+    raw = item.get("id")
+    if raw is None:
+        return None
     try:
-        return int(item.get("id"))
+        return int(raw)
     except (TypeError, ValueError):
         return None
 

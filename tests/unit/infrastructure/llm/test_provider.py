@@ -444,3 +444,36 @@ class TestGetProvider(unittest.TestCase):
 if __name__ == "__main__":
 
     unittest.main()
+
+
+from news_collector.infrastructure.llm.factory import FallbackProvider  # noqa: E402
+
+
+class TestFallbackEmptyResponse(unittest.IsolatedAsyncioTestCase):
+    """A blank 200 from a non-final provider must fail over to the next one."""
+
+    @staticmethod
+    def _providers(first, second):
+        p1, p2 = MagicMock(), MagicMock()
+        p1.__class__.__name__ = "NvidiaProvider"
+        p2.__class__.__name__ = "OllamaProvider"
+        p1.timeout = p2.timeout = None
+        p1.generate_sync.return_value = first
+        p2.generate_sync.return_value = second
+        p1.generate_async = AsyncMock(return_value=first)
+        p2.generate_async = AsyncMock(return_value=second)
+        return p1, p2
+
+    def test_sync_falls_over_on_blank_and_empty_dict(self):
+        for empty in ("  ", "", {}):
+            p1, p2 = self._providers(empty, "ok")
+            self.assertEqual(FallbackProvider([p1, p2]).generate_sync("x"), "ok")
+            p2.generate_sync.assert_called_once()
+
+    def test_sync_last_provider_empty_is_returned_unchanged(self):
+        p1, p2 = self._providers("", "")
+        self.assertEqual(FallbackProvider([p1, p2]).generate_sync("x"), "")
+
+    async def test_async_falls_over_on_blank(self):
+        p1, p2 = self._providers("", "ok")
+        self.assertEqual(await FallbackProvider([p1, p2]).generate_async("x"), "ok")

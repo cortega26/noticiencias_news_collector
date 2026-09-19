@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
+from news_collector.logic.parsers.image_extractor import is_site_logo_url
 from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
 from news_collector.utils.logger import get_logger
 
@@ -125,6 +126,19 @@ class ArticleImageHandler:
                 raw_image_url = meta.get("image_url")
         if isinstance(raw_image_url, str):
             raw_image_url = raw_image_url.strip()
+
+        if raw_image_url and is_site_logo_url(raw_image_url):
+            # Generic brand logo (e.g. bioRxiv fallback og:image) is not an
+            # article image: skip the download and ask for an editorial image.
+            logger.warning(
+                "Image for article {} is a site logo ({}); routing to editorial image queue.",
+                article_id,
+                raw_image_url,
+            )
+            self._queue_brief(
+                article, article_id, image_slug, "missing_source_image", existing_brief
+            )
+            return ImageResolution(resolved=False, queued_brief=True)
 
         if raw_image_url and raw_image_url.startswith("http"):
             _dl = download_fn if download_fn is not None else self.download
