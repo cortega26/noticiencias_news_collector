@@ -196,14 +196,69 @@ def test_all_providers_blocked_raises_clear_error():
         FallbackProvider([provider]).generate_sync("p")
 
 
-def test_stream_success_and_empty_stream():
-    class Streamer(FakeProvider):
-        def generate_sync(self, **kwargs):
-            assert kwargs["stream"] is True
-            return iter(["a", "b"])
+class Streamer(FakeProvider):
+    def __init__(self, name, *chunks):
+        super().__init__(name)
+        self.chunks = chunks
 
-    out = FallbackProvider([FakeProvider("x", _http_error(503)), Streamer("s")])
+    def generate_sync(self, **kwargs):
+        assert kwargs["stream"] is True
+        self.calls += 1
+        return iter(self.chunks)
+
+
+def test_stream_success_after_failover():
+    out = FallbackProvider(
+        [FakeProvider("x", _http_error(503)), Streamer("s", "a", "b")]
+    )
     assert list(out.generate_sync("p", stream=True)) == ["a", "b"]
+
+
+def test_empty_stream_from_non_final_provider_fails_over():
+    first, second = Streamer("s1"), Streamer("s2", "ok")
+    chain = FallbackProvider([first, second])
+    assert list(chain.generate_sync("p", stream=True)) == ["ok"]
+    assert (first.calls, second.calls) == (1, 1)
+
+
+def test_endpoint_timeout_shorter_than_failover_leash_is_honored():
+    short, long_, last = FakeProvider("a"), FakeProvider("b"), FakeProvider("c")
+    short.timeout, long_.timeout = 30, 300
+    chain = FallbackProvider([short, long_, last])
+    assert chain._timeout_for(0, None, short) == 30
+    assert chain._timeout_for(1, None, long_) == FallbackProvider.FAILOVER_TIMEOUT_S
+    assert chain._timeout_for(2, 500, last) == 500
+
+
+def test_skipped_providers_emit_degraded_skip_events():
+    seen: list[attempts.AttemptRecord] = []
+    attempts.register_attempt_sink(seen.append)
+    blocked, healthy = FakeProvider("a"), FakeProvider("b", "ok")
+    attempts.cool_down_provider(blocked, 30)
+    try:
+        assert (
+            FallbackProvider([blocked, healthy], purpose="scoring").generate_sync("p")
+            == "ok"
+        )
+    finally:
+        attempts.unregister_attempt_sink(seen.append)
+    assert seen[0].kind is FailureKind.DEGRADED_SKIP
+    assert (
+        seen[0].provider == "a"
+        and seen[0].latency_ms == 0
+        and seen[0].purpose == "scoring"
+    )
+    assert blocked.calls == 0
+
+
+def test_auth_disable_expires(monkeypatch):
+    provider = FakeProvider("a")
+    assert attempts.disable_provider(provider, "401") is True
+    assert attempts.disable_provider(provider, "401") is False
+    assert "disabled" in attempts.blocked_reason(provider)
+    monkeypatch.setattr(attempts.time, "monotonic", lambda: 10**9)
+    assert attempts.blocked_reason(provider) is None
+    assert attempts.disable_provider(provider, "401") is True
 
 
 # ------------------------------------------------------------ events and sinks

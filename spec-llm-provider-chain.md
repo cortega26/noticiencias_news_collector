@@ -20,7 +20,7 @@
 ## Verification
 - `tests/unit/infrastructure/llm/test_provider_chain.py`: classification,
   failover matrix (5xx, timeout, blank/`{}`, unknown), last-provider
-  semantics, AUTH disable once process-wide, 429 cooldown with Retry-After,
+  semantics, AUTH disable (1h, expiring) process-wide, skip events, empty-stream failover, per-endpoint timeout, 429 cooldown with Retry-After,
   sinks fail-open, endpoint build/skip/inherit, chain order, schema rejects,
   health checker.
 - `make lint && make type && make test && make test-boundaries && make test-contracts`.

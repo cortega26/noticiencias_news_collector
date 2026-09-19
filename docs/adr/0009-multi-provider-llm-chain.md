@@ -27,13 +27,15 @@ was effectively a single point of failure; every failure was an untyped
 2. **Secrets by reference** — endpoints name an environment variable
    (`api_key_env`); an unset variable skips that endpoint with a warning.
 3. **Explicit failure taxonomy** (`failure_kinds.FailureKind`) drives policy:
-   `AUTH` disables the provider for the process (logged once),
+   `AUTH` disables the provider for 1 h (logged once, then retried so a key
+   rotation heals without a restart in long-lived services),
    `RATE_LIMITED` cools it down honoring `Retry-After`, blank/invalid-JSON
    responses fail over, `CLIENT_ERROR` is not counted against provider health.
    The last provider keeps the historical semantics (result returned as-is,
    error propagated).
 4. **Observability first** — every attempt emits a structured `llm.attempt`
-   event (provider, model, purpose, kind, latency, failover index) and is
+   event (provider, model, purpose, kind, latency, failover index; skipped
+   providers emit a zero-latency `degraded_skip`) and is
    offered to pluggable sinks (`attempts.register_attempt_sink`), which are
    fail-open. Persistent storage and reporting build on this hook.
 5. **Failover timeout stays at 60 s** for non-final providers. Measured p90

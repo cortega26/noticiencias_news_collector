@@ -116,6 +116,9 @@ class FallbackProvider:
 
     def _timeout_for(self, index: int, timeout: Optional[int], provider: Any) -> int:
         if index < len(self.providers) - 1:
+            own = getattr(provider, "timeout", None)
+            if isinstance(own, (int, float)) and 0 < own < self.FAILOVER_TIMEOUT_S:
+                return int(own)
             return self.FAILOVER_TIMEOUT_S
         return timeout or getattr(provider, "timeout", None) or self.FAILOVER_TIMEOUT_S
 
@@ -137,6 +140,19 @@ class FallbackProvider:
                 else FailureKind.EMPTY_RESPONSE
             )
             raise EmptyResponseError(kind)
+
+    def _record_skip(self, provider: Any, index: int, reason: str) -> str:
+        """Emit a zero-latency DEGRADED_SKIP attempt so skips are measurable."""
+        emit_attempt(
+            provider,
+            purpose=self.purpose,
+            ok=False,
+            kind=FailureKind.DEGRADED_SKIP,
+            started=time.monotonic(),
+            failover_index=index,
+            error=RuntimeError(reason),
+        )
+        return f"{provider_name(provider)}=skipped({reason})"
 
     def _record_success(
         self, provider: Any, index: int, started: float, empty: bool = False
@@ -174,7 +190,7 @@ class FallbackProvider:
         if kind is FailureKind.AUTH and disable_provider(provider, str(exc)[:120]):
             logger.error(
                 "LLM provider {} rejected our credentials ({}); disabling it for "
-                "this process. Check its API key.",
+                "1h (retried afterwards). Check its API key.",
                 name,
                 exc.__class__.__name__,
             )
@@ -229,7 +245,7 @@ class FallbackProvider:
         for i, provider in enumerate(self.providers):
             skipped = self._skip_reason(provider, "generate_sync")
             if skipped:
-                kinds.append(f"{provider_name(provider)}=skipped({skipped})")
+                kinds.append(self._record_skip(provider, i, skipped))
                 continue
             old_timeout = getattr(provider, "timeout", None)
             current_timeout = self._timeout_for(i, timeout, provider)
@@ -246,6 +262,7 @@ class FallbackProvider:
                 if stream:
                     # Buffer stream chunks to allow fallback on mid-stream failure
                     chunks = list(provider.generate_sync(stream=True, **kwargs))
+                    self._check_result("".join(chunks), i)
                     self._record_success(provider, i, started, empty=not chunks)
 
                     def chunk_generator(
@@ -290,7 +307,7 @@ class FallbackProvider:
         for i, provider in enumerate(self.providers):
             skipped = self._skip_reason(provider, "generate_async")
             if skipped:
-                kinds.append(f"{provider_name(provider)}=skipped({skipped})")
+                kinds.append(self._record_skip(provider, i, skipped))
                 continue
             old_timeout = getattr(provider, "timeout", None)
             current_timeout = self._timeout_for(i, timeout, provider)
