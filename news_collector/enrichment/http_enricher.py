@@ -2,6 +2,7 @@
 
 import os
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -25,6 +26,19 @@ class HttpEnricher:
     def __init__(self, request_client: Optional[RobustRequestsClient] = None):
         self.client = request_client or RobustRequestsClient()
         self._blocked_urls: set[str] = set()
+        self._warned_block_hosts: set[str] = set()
+
+    def _log_fetch_failure(
+        self, url: str, error: Exception, status: Optional[int]
+    ) -> None:
+        """Warn once per blocking host (403/429); later failures go to DEBUG."""
+        host = urlparse(url).netloc
+        if status in (403, 429):
+            if host in self._warned_block_hosts:
+                logger.debug(f"HttpEnricher fetch failed for {url}: {error}")
+                return
+            self._warned_block_hosts.add(host)
+        logger.warning(f"HttpEnricher fetch failed for {url}: {error}")
 
     def enrich(self, url: str) -> Dict[str, Any]:
         """
@@ -108,15 +122,15 @@ class HttpEnricher:
             }
 
         except requests.RequestException as e:
-            logger.warning(f"HttpEnricher fetch failed for {url}: {e}")
+            # Response is falsy on 4xx/5xx, so compare against None implicitly.
+            status = getattr(e.response, "status_code", None)
+            self._log_fetch_failure(url, e, status)
             return {
                 "success": False,
                 "content": None,
                 "raw_content": None,
                 "error": str(e),
-                "status_code": (
-                    getattr(e.response, "status_code", None) if e.response else None
-                ),
+                "status_code": status,
             }
         except ValueError as e:
             # URL safety validation errors (e.g., relative URLs) are expected inputs,

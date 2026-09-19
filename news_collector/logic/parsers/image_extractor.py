@@ -92,6 +92,9 @@ class ImageExtractor:
                 content = tag.get("content")
                 if content:
                     url = self._normalize_url(str(content), base_url)
+                    # Sites often fall back to a generic brand logo in og:image.
+                    if url and self._is_site_logo(url):
+                        continue
                     if url and url not in seen:
                         candidates.append(
                             ImageCandidate(
@@ -227,6 +230,12 @@ class ImageExtractor:
             return full_url
         except Exception:
             return None
+
+    _SITE_LOGO_RE = re.compile(r"(?<![a-z])logo(?![a-z]{3})")
+
+    def _is_site_logo(self, url: str) -> bool:
+        """True for brand-logo filenames (avoids substrings like "analogous")."""
+        return bool(self._SITE_LOGO_RE.search(url.lower().rsplit("/", 1)[-1]))
 
     def _is_blacklisted(self, url: str) -> bool:
         url_lower = url.lower()

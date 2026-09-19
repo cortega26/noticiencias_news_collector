@@ -709,6 +709,10 @@ def verify_webhook_token(
 
 
 def verify_admin_token(
+# The GUI polls admin endpoints every ~2 s; warn once per process, not per request.
+_admin_open_warning_emitted = False
+
+
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
     """Verify Bearer token against ADMIN_API_KEY env var (constant-time).
@@ -732,11 +736,14 @@ def verify_admin_token(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Admin authentication is not configured for this environment",
             )
-        logger.warning(
-            "ADMIN_API_KEY is not set and environment is 'development' — "
-            "serving admin requests WITHOUT authentication. "
-            "Set the key and a non-development environment tier in production."
-        )
+        global _admin_open_warning_emitted
+        if not _admin_open_warning_emitted:
+            _admin_open_warning_emitted = True
+            logger.warning(
+                "ADMIN_API_KEY is not set and environment is 'development' — "
+                "serving admin requests WITHOUT authentication. "
+                "Set the key and a non-development environment tier in production."
+            )
         return  # explicit development-only fail-open
 
     if not authorization:
