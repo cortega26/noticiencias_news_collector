@@ -8,6 +8,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# SECURITY: config.toml ships `environment = "development"`, and in that tier
+# verify_admin_token fails OPEN when ADMIN_API_KEY is unset — this image is
+# published through a Cloudflare Tunnel, so the admin routes would be reachable
+# unauthenticated. "production" makes them fail CLOSED (503) unless an
+# ADMIN_API_KEY is provided. Covers docker-compose and Fly alike.
+ENV NOTICIENCIAS__APP__ENVIRONMENT=production
+
 WORKDIR /app
 
 COPY pyproject.toml README.md LICENSE ./
