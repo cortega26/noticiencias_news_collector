@@ -24,7 +24,7 @@ was effectively a single point of failure; every failure was an untyped
    gateway such as freellmapi) is one `[[llm_endpoints]]` entry. Extracting a
    shared base class from `NvidiaProvider` is deferred until a second
    protocol needs it (avoids a 700-line refactor with no behavior change).
-2. **Secrets by reference** — endpoints name an environment variable
+2. **Secrets by reference** — endpoints name a variable (process environment first, then the repo `.env`, which config loading reads without exporting)
    (`api_key_env`); an unset variable skips that endpoint with a warning.
 3. **Explicit failure taxonomy** (`failure_kinds.FailureKind`) drives policy:
    `AUTH` disables the provider for 1 h (logged once, then retried so a key

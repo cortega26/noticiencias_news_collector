@@ -186,11 +186,11 @@ class OpenAICompatHealthChecker(LLMHealthChecker):
 
 
 def _has_usable_endpoint(config: Any) -> bool:
-    import os
+    from news_collector.infrastructure.llm.factory import resolve_secret
 
     endpoints = getattr(config, "llm_endpoints", None)
     return isinstance(endpoints, list) and any(
-        ep.enabled and os.environ.get(ep.api_key_env, "").strip() for ep in endpoints
+        ep.enabled and resolve_secret(ep.api_key_env) for ep in endpoints
     )
 
 

@@ -4,7 +4,7 @@ import os
 import time
 from typing import Any, Dict, Generator, NoReturn, Optional, Union, cast
 
-from noticiencias.config_manager import load_config
+from noticiencias.config_manager import load_config, load_env_overrides
 
 from news_collector.infrastructure.llm.attempts import (
     blocked_reason,
@@ -358,6 +358,22 @@ class FallbackProvider:
                 await provider.close()
 
 
+def resolve_secret(name: str) -> str:
+    """Secret from the process environment, else the canonical repo ``.env``.
+
+    ``config_manager`` reads ``.env`` without exporting it, so keys for
+    ``[[llm_endpoints]]`` would otherwise only work when exported by the shell.
+    """
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    try:
+        return str(load_env_overrides().get(name, "")).strip()
+    except Exception as err:  # noqa: BLE001 - a broken .env must not break the chain
+        logger.debug("Could not read .env for {}: {}", name, err)
+        return ""
+
+
 def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
     """Build OpenAI-compatible providers from ``[[llm_endpoints]]``.
 
@@ -371,7 +387,7 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
     for ep in endpoints:
         if not ep.enabled:
             continue
-        api_key = os.environ.get(ep.api_key_env, "").strip()
+        api_key = resolve_secret(ep.api_key_env)
         if not api_key:
             logger.warning(
                 "LLM endpoint '{}' skipped: environment variable {} is not set",

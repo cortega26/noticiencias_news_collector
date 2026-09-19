@@ -467,3 +467,29 @@ def test_health_checker_reports_probe_result(monkeypatch):
     assert result.healthy is False and "http_401" in result.error
     monkeypatch.delenv("GROQ_TEST_KEY")
     assert OpenAICompatHealthChecker().check(cfg, None).healthy is False
+
+
+def test_endpoint_key_is_read_from_dotenv_when_not_exported(monkeypatch, tmp_path):
+    from news_collector.infrastructure.llm import factory
+
+    monkeypatch.delenv("GROQ_TEST_KEY", raising=False)
+    monkeypatch.setattr(
+        factory, "load_env_overrides", lambda: {"GROQ_TEST_KEY": " from-dotenv "}
+    )
+    (provider,) = _build_endpoint_providers(_cfg([_endpoint()]), None)
+    assert provider.api_key == "from-dotenv"
+    # The process environment wins over the file.
+    monkeypatch.setenv("GROQ_TEST_KEY", "from-env")
+    (provider,) = _build_endpoint_providers(_cfg([_endpoint()]), None)
+    assert provider.api_key == "from-env"
+
+
+def test_broken_dotenv_does_not_break_endpoint_resolution(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    def boom():
+        raise OSError("unreadable")
+
+    monkeypatch.delenv("GROQ_TEST_KEY", raising=False)
+    monkeypatch.setattr(factory, "load_env_overrides", boom)
+    assert factory.resolve_secret("GROQ_TEST_KEY") == ""
