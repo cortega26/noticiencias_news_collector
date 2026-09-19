@@ -559,11 +559,13 @@ class NvidiaProvider:
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
                     limiter.circuit_breaker.record_rate_limit(retry_after)
-                    log_fn = logger.warning
+                    log_fn = self._log.warning
                 else:
                     self._record_failure()
                     limiter.circuit_breaker.record_error()
-                    log_fn = logger.warning if log_errors_as_warning else logger.error
+                    log_fn = (
+                        self._log.warning if log_errors_as_warning else self._log.error
+                    )
 
                 log_fn(
                     "Sync NVIDIA NIM {} (attempt {}/{}): {}",

@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+import requests
+
 from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 
 
@@ -37,6 +39,28 @@ class OpenAICompatProvider(NvidiaProvider):
         self.extra_headers = dict(extra_headers or {})
         self.json_mode_supported = json_mode_supported
         super().__init__(api_key=api_key, model=model, base_url=base_url, **kwargs)
+
+    @staticmethod
+    def _extract_text(data: Dict[str, Any]) -> str:
+        """Text of the first choice; upstream errors become real exceptions.
+
+        Gateways such as OpenRouter answer HTTP 200 with
+        ``{"error": {"code": 503, ...}}`` and no ``choices`` when the upstream
+        host fails. Reading that as blank text hid a transient failure behind
+        an "empty response"; raising an HTTPError with the embedded status lets
+        the normal retry/classification path (5xx, 429, auth) handle it.
+        """
+        error = data.get("error") if isinstance(data, dict) else None
+        if error and not data.get("choices"):
+            raw_code = error.get("code") if isinstance(error, dict) else None
+            status = int(str(raw_code)) if str(raw_code).isdigit() else 502
+            message = error.get("message") if isinstance(error, dict) else error
+            response = requests.Response()
+            response.status_code = status
+            raise requests.HTTPError(
+                f"upstream error {status}: {str(message)[:200]}", response=response
+            )
+        return NvidiaProvider._extract_text(data)
 
     def _resolve_model(self, model: Optional[str]) -> str:
         return self.model

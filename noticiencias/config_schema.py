@@ -1011,6 +1011,17 @@ class LLMEndpointConfig(StrictModel):
         default=None, description="Overrides [nvidia] degraded_cooldown_seconds."
     )
 
+    @model_validator(mode="after")
+    def _openrouter_models_must_be_free(self) -> "LLMEndpointConfig":
+        """Free-only guard: an OpenRouter key may hold purchased credit, and
+        a paid model id would silently start spending it."""
+        if "openrouter.ai" in self.base_url and not self.model.endswith(":free"):
+            raise ValueError(
+                f"llm endpoint '{self.name}': OpenRouter models must end with "
+                "':free' to guarantee zero spend."
+            )
+        return self
+
 
 class LLMChainConfig(StrictModel):
     """Ordering of the LLM provider chain."""

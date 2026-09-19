@@ -518,5 +518,85 @@ def test_shipped_config_activates_groq_endpoint():
 
     cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
     assert [(e.name, e.api_key_env) for e in cfg.llm_endpoints] == [
-        ("groq", "GROQ_API_KEY")
+        ("groq", "GROQ_API_KEY"),
+        ("openrouter", "OPENROUTER_API_KEY"),
     ]
+
+
+@pytest.mark.parametrize(
+    ("model", "ok"),
+    [
+        ("nvidia/nemotron-3-super-120b-a12b:free", True),
+        ("nvidia/nemotron-3-super-120b-a12b", False),
+        ("openai/gpt-4.1", False),
+    ],
+)
+def test_openrouter_models_must_be_free(model, ok):
+    kwargs = {
+        "base_url": "https://openrouter.ai/api/v1",
+        "model": model,
+        "name": "openrouter",
+    }
+    if ok:
+        assert _endpoint(**kwargs).model == model
+    else:
+        with pytest.raises(ValueError, match=":free"):
+            _endpoint(**kwargs)
+
+
+def test_non_openrouter_models_are_not_forced_to_free_suffix():
+    assert _endpoint(model="openai/gpt-oss-120b").model == "openai/gpt-oss-120b"
+
+
+def test_gateway_200_with_error_body_raises_classified_exception():
+    ok = {"choices": [{"message": {"content": "hola"}}]}
+    assert OpenAICompatProvider._extract_text(ok) == "hola"
+
+    body = {"error": {"code": 503, "message": "Upstream error: overloaded"}}
+    with pytest.raises(requests.HTTPError) as err:
+        OpenAICompatProvider._extract_text(body)
+    assert classify_exception(err.value) is FailureKind.HTTP_5XX
+
+    with pytest.raises(requests.HTTPError) as err:
+        OpenAICompatProvider._extract_text({"error": {"code": 429, "message": "slow"}})
+    assert classify_exception(err.value) is FailureKind.RATE_LIMITED
+
+    with pytest.raises(requests.HTTPError) as err:
+        OpenAICompatProvider._extract_text({"error": "plain string error"})
+    assert classify_exception(err.value) is FailureKind.HTTP_5XX
+
+
+def test_degenerate_json_counts_as_empty_and_fails_over():
+    first, second = FakeProvider("a", {"": ""}), FakeProvider("b", {"titular": "ok"})
+    assert FallbackProvider([first, second]).generate_sync("p") == {"titular": "ok"}
+
+
+def test_chain_order_ignores_ollama_silently():
+    providers = [SimpleNamespace(name="a"), SimpleNamespace(name="b")]
+    ordered = _apply_chain_order(providers, ["b", "ollama", "a"])
+    assert [p.name for p in ordered] == ["b", "a"]
+
+
+def test_retry_error_logs_use_the_endpoint_label(monkeypatch):
+    from news_collector.infrastructure.llm import nvidia_provider as nv
+
+    provider = OpenAICompatProvider(
+        name="openrouter",
+        api_key="k",
+        base_url="https://x.test/v1",
+        model="m:free",
+        max_retries=1,
+    )
+    seen: list[str] = []
+    monkeypatch.setattr(nv.logger, "error", lambda msg, *a, **_k: seen.append(msg))
+    monkeypatch.setattr(nv.logger, "warning", lambda msg, *a, **_k: seen.append(msg))
+
+    def boom(*_a, **_k):
+        raise requests.Timeout("slow")
+
+    monkeypatch.setattr(nv.requests, "post", boom)
+    with pytest.raises(requests.Timeout):
+        provider.generate_sync(prompt="p")
+    assert any("openrouter" in m for m in seen) and not any(
+        "NVIDIA NIM" in m for m in seen
+    )

@@ -47,6 +47,18 @@ was effectively a single point of failure; every failure was an untyped
    `GROQ_API_KEY` (e.g. CI, which also has no NVIDIA/Gemini keys) the endpoint
    is skipped with a single warning, so behavior there is unchanged.
 
+7. **OpenRouter free route** (`nvidia/nemotron-3-super-120b-a12b:free`, same
+   model as the primary on another host). The schema enforces the `:free`
+   suffix for `openrouter.ai` endpoints because the account has purchased
+   credit before (`is_free_tier=false`): a paid id would silently spend it.
+   Gateways answer HTTP 200 with `{"error": {"code": 503}}`; that body is now
+   raised as an HTTP error with the embedded status (retry/failover/cooldown
+   apply) instead of being read as blank text. Degenerate JSON such as
+   `{"": ""}` counts as an empty response.
+8. Cerebras stays commented out: its key is valid but the free quota answered
+   402 (2026-09-19). GitHub Models is retiring (410 brownout) and Gemini uses
+   the native provider (`[gemini]`), not an OpenAI-compat entry.
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain

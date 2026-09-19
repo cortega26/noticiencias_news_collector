@@ -39,7 +39,8 @@ def _is_empty_response(res: Any) -> bool:
     if isinstance(res, str):
         return not res.strip()
     if isinstance(res, dict):
-        return not res
+        # {} or a degenerate parse such as {"": ""} carries no content.
+        return not any(k or v for k, v in res.items())
     return False
 
 
@@ -436,6 +437,8 @@ def _apply_chain_order(providers: list[Any], chain: Any) -> list[Any]:
     by_name = {provider_name(p): p for p in providers}
     ordered: list[Any] = []
     for name in chain:
+        if name == "ollama":
+            continue  # always appended last by get_provider
         if name in by_name:
             ordered.append(by_name[name])
         else:
