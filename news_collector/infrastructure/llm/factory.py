@@ -1,6 +1,7 @@
 """Provider Factory for LLM connections."""
 
 import os
+import re
 import time
 from typing import Any, Dict, Generator, NoReturn, Optional, Union, cast
 
@@ -390,6 +391,27 @@ def _install_metrics_sink() -> None:
         logger.debug("LLM metrics sink not installed: {}", err)
 
 
+_PLACEHOLDER_RE = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
+
+
+def _expand_placeholders(text: str) -> Optional[str]:
+    """Replace ``${VAR}`` with ``resolve_secret(VAR)``; ``None`` if any is unset.
+
+    Lets an endpoint URL carry an identifier that must not live in the
+    committed config (e.g. Cloudflare's account id in the Workers AI path).
+    """
+    missing = False
+
+    def _sub(match: "re.Match[str]") -> str:
+        nonlocal missing
+        value = resolve_secret(match.group(1))
+        missing = missing or not value
+        return value
+
+    expanded = _PLACEHOLDER_RE.sub(_sub, text)
+    return None if missing else expanded
+
+
 def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
     """Build OpenAI-compatible providers from ``[[llm_endpoints]]``.
 
@@ -414,6 +436,15 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
                     ep.api_key_env,
                 )
             continue
+        base_url = _expand_placeholders(ep.base_url)
+        if base_url is None:
+            if ep.name not in _WARNED_MISSING_KEYS:
+                _WARNED_MISSING_KEYS.add(ep.name)
+                logger.warning(
+                    "LLM endpoint '{}' skipped: unresolved ${{VAR}} in base_url",
+                    ep.name,
+                )
+            continue
         threshold = ep.degraded_failure_threshold or getattr(
             nvidia_cfg, "degraded_failure_threshold", 2
         )
@@ -425,7 +456,7 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
             OpenAICompatProvider(
                 name=ep.name,
                 api_key=api_key,
-                base_url=ep.base_url,
+                base_url=base_url,
                 model=ep.model,
                 extra_headers=ep.extra_headers,
                 json_mode_supported=ep.json_mode_supported,

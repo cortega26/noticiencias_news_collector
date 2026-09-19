@@ -517,7 +517,7 @@ def test_shipped_config_activates_groq_endpoint():
     from noticiencias.config_manager import load_config
 
     cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
-    assert [(e.name, e.api_key_env) for e in cfg.llm_endpoints] == [
+    assert [(e.name, e.api_key_env) for e in cfg.llm_endpoints][:2] == [
         ("groq", "GROQ_API_KEY"),
         ("openrouter", "OPENROUTER_API_KEY"),
     ]
@@ -604,3 +604,41 @@ def test_retry_error_logs_use_the_endpoint_label(monkeypatch):
     assert any("openrouter" in m for m in seen) and not any(
         "NVIDIA NIM" in m for m in seen
     )
+
+
+def test_base_url_placeholder_is_resolved_from_env_and_skipped_when_unset(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    ep = _endpoint(
+        name="cloudflare",
+        base_url="https://api.cloudflare.com/client/v4/accounts/${CF_TEST_ACCOUNT}/ai/v1",
+        api_key_env="CF_TEST_KEY",
+    )
+    monkeypatch.setattr(factory, "load_env_overrides", lambda: {})
+    monkeypatch.setattr(factory, "_WARNED_MISSING_KEYS", set())
+    monkeypatch.setenv("CF_TEST_KEY", "tok")
+
+    monkeypatch.delenv("CF_TEST_ACCOUNT", raising=False)
+    assert _build_endpoint_providers(_cfg([ep]), None) == []  # unresolved -> skipped
+
+    monkeypatch.setenv("CF_TEST_ACCOUNT", "abc123")
+    (provider,) = _build_endpoint_providers(_cfg([ep]), None)
+    assert provider._endpoint_url == (
+        "https://api.cloudflare.com/client/v4/accounts/abc123/ai/v1/chat/completions"
+    )
+
+
+def test_expand_placeholders_plain_url_passthrough():
+    from news_collector.infrastructure.llm.factory import _expand_placeholders
+
+    assert _expand_placeholders("https://x.test/v1") == "https://x.test/v1"
+
+
+def test_shipped_config_includes_cloudflare_endpoint():
+    from pathlib import Path
+
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
+    names = [e.name for e in cfg.llm_endpoints]
+    assert names == ["groq", "openrouter", "cloudflare"]

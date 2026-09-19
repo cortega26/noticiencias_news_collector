@@ -974,7 +974,10 @@ class LLMEndpointConfig(StrictModel):
         pattern=r"^[a-z0-9][a-z0-9_-]{0,31}$",
     )
     base_url: str = Field(
-        description="OpenAI-compatible base URL (without /chat/completions).",
+        description=(
+            "OpenAI-compatible base URL (without /chat/completions). May contain "
+            "${VAR} placeholders resolved from the environment/.env."
+        ),
         pattern=r"^https?://",
     )
     model: str = Field(
