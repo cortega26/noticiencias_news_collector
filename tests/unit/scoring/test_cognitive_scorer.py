@@ -340,3 +340,61 @@ def test_no_missing_or_duplicate_item_across_chunks(cognitive_scorer, mock_llm):
 
     assert len(results) == 10
     assert all(r.get("decision_label") != "error" for r in results)
+
+
+def test_batch_timeout_budget_and_fallback(cognitive_scorer, mock_llm):
+    """A slow LLM batch returns None (heuristic fallback); budget exceeds it."""
+    assert cognitive_scorer.batch_timeout_sec == 40.0
+    assert cognitive_scorer.max_cycle_budget_sec > cognitive_scorer.batch_timeout_sec
+
+    mock_llm.generate_async.side_effect = asyncio.TimeoutError()
+    assert asyncio.run(cognitive_scorer._call_llm_batch(["item"])) is None
+
+    mock_llm.generate_async.side_effect = RuntimeError("provider down")
+    assert asyncio.run(cognitive_scorer._call_llm_batch(["item"])) is None
+
+    assert asyncio.run(cognitive_scorer._call_llm_batch([])) == []
+
+
+def test_reset_cycle_metrics_marks_unhealthy_llm(cognitive_scorer, mock_llm):
+    mock_llm.check_health.return_value = (False, "http_503")
+    cognitive_scorer.reset_cycle_metrics()
+    assert cognitive_scorer.is_llm_healthy is False
+
+    mock_llm.check_health.return_value = (True, "ok")
+    cognitive_scorer.reset_cycle_metrics()
+    assert cognitive_scorer.is_llm_healthy is True
+
+
+def test_cache_key_handles_missing_fields(cognitive_scorer):
+    article = MagicMock(url=None, title=None)
+    assert cognitive_scorer._get_cache_key(article) == "no_title_no_url"
+
+
+def test_cache_read_and_write_failures_are_swallowed(cognitive_scorer, sample_article):
+    with patch(
+        "news_collector.scoring.cognitive_scorer.sqlite3.connect",
+        side_effect=RuntimeError("locked"),
+    ):
+        cognitive_scorer._save_to_cache(
+            cognitive_scorer._get_cache_key(sample_article),
+            {"score": 1.0, "details": {}, "reasoning": "r"},
+        )
+
+
+def test_cache_roundtrip_and_read_failure(cognitive_scorer, sample_article):
+    key = cognitive_scorer._get_cache_key(sample_article)
+    assert cognitive_scorer._get_from_cache(key) is None
+    cognitive_scorer._save_to_cache(
+        key, {"score": 2.5, "details": {"a": 1}, "reasoning": "why"}
+    )
+    hit = cognitive_scorer._get_from_cache(key)
+    assert hit["score"] == 2.5 and hit["reasoning"] == "why (Cached)"
+
+    import sqlite3
+
+    with patch(
+        "news_collector.scoring.cognitive_scorer.sqlite3.connect",
+        side_effect=sqlite3.Error("gone"),
+    ):
+        assert cognitive_scorer._get_from_cache(key) is None
