@@ -20,7 +20,7 @@ was effectively a single point of failure; every failure was an untyped
 1. **`OpenAICompatProvider`** — a thin subclass of `NvidiaProvider` (NIM is
    OpenAI-compatible, so retries, JSON extraction, rate limiting and the
    degradation window are reused). Any OpenAI-compatible service (Groq,
-   Groq, OpenRouter `:free`, Cloudflare Workers AI, a self-hosted
+   OpenRouter `:free`, Cloudflare Workers AI, a self-hosted
    gateway such as freellmapi) is one `[[llm_endpoints]]` entry. Extracting a
    shared base class from `NvidiaProvider` is deferred until a second
    protocol needs it (avoids a 700-line refactor with no behavior change).
