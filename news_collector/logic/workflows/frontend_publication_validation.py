@@ -297,12 +297,13 @@ def _classify_failure(
         and "duplicate" in lowered
     ):
         return "permalink_collision"
+    # NB: never match bare "tags"/"categories": every lint run echoes
+    # "npm run check:tags" and prints a "[check:tags] ... tag warnings"
+    # banner, which used to make *any* lint failure look like a taxonomy one.
     if (
-        "[check:tags]" in lowered
+        "have tag errors" in lowered
         or "tag violations" in lowered
         or "tag contains disallowed" in lowered
-        or "categories" in lowered
-        or "tags" in lowered
         or "taxonomy" in lowered
     ):
         return "taxonomy_contract_violation"

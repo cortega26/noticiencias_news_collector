@@ -271,3 +271,21 @@ def test_validate_post_frontmatter_fast_missing_file(tmp_path: Path) -> None:
     ok, failure_class, _ = validate_post_frontmatter_fast(tmp_path / "missing.md")
     assert ok is False
     assert failure_class == "sidecar_missing_or_malformed"
+
+
+def test_classify_failure_ignores_tag_check_noise_from_other_lint_failures() -> None:
+    """A doc-drift failure must not be reported as a taxonomy violation just
+    because lint output echoes `npm run check:tags` and its warning banner."""
+    output = (
+        "> npm run check:tags\n"
+        "[check:tags] 1 post(s) have tag warnings:\n"
+        "[check:tags] OK — 38 posts checked, no tag errors found.\n"
+        "[check:doc-drift] 1 doc(s) not found:\n  • CONTRIBUTING.md\n"
+    )
+    assert _classify_failure("lint", output) == "schema_mismatch"
+
+
+def test_classify_failure_real_tag_errors_still_taxonomy() -> None:
+    assert _classify_failure("lint", "[check:tags] 2 post(s) have tag errors:") == (
+        "taxonomy_contract_violation"
+    )
