@@ -38,6 +38,32 @@ _CHAT_COMPLETIONS_PATH = "/chat/completions"
 _OLLAMA_MODEL_INDICATORS = ("llama", "qwen", "mistral", "phi", "gemma", "deepseek")
 
 
+class _LabeledLogger:
+    """Module logger proxy that renders the provider label in messages.
+
+    Messages are written for "NVIDIA NIM"; OpenAI-compatible subclasses reuse
+    them verbatim with their own label. The module-level ``logger`` is looked
+    up at call time so tests that patch it keep working.
+    """
+
+    _DEFAULT_LABEL = "NVIDIA NIM"
+
+    def __init__(self, label: str) -> None:
+        self._label = label
+
+    def __getattr__(self, level: str):
+        emit = getattr(logger, level)
+        if self._label == self._DEFAULT_LABEL:
+            return emit
+
+        def _emit(message: str, *args, **kwargs):
+            return emit(
+                message.replace(self._DEFAULT_LABEL, self._label), *args, **kwargs
+            )
+
+        return _emit
+
+
 class RateLimitError(Exception):
     """Raised when the provider returns 429 and the circuit breaker is open."""
 
@@ -103,6 +129,10 @@ class NvidiaProvider:
     - API key is never emitted to logs
     """
 
+    # Human-readable provider name used in log messages (overridden by
+    # OpenAI-compatible subclasses).
+    _label: str = "NVIDIA NIM"
+
     def __init__(
         self,
         api_key: str,
@@ -118,6 +148,7 @@ class NvidiaProvider:
         slow_response_seconds: Optional[float] = None,
     ):
         self.api_key = api_key
+        self._log = _LabeledLogger(self._label)
         self.model = model or "qwen/qwen3-next-80b-a3b-instruct"
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
@@ -197,7 +228,7 @@ class NvidiaProvider:
                 if names:
                     return names
         except Exception as exc:  # noqa: BLE001
-            logger.debug("Could not fetch NVIDIA model list: {}", exc)
+            self._log.debug("Could not fetch NVIDIA model list: {}", exc)
         return [self.model]
 
     # ---- Request helpers ----
@@ -354,7 +385,9 @@ class NvidiaProvider:
             ok, parsed = self._try_parse_json_dict(segment)
             if ok:
                 return parsed
-        logger.warning("Failed to extract JSON from NVIDIA response: {}...", text[:100])
+        self._log.warning(
+            "Failed to extract JSON from NVIDIA response: {}...", text[:100]
+        )
         return {}
 
     # ---- ASYNC API ----
@@ -383,7 +416,7 @@ class NvidiaProvider:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
             try:
-                logger.debug(
+                self._log.debug(
                     "Sending async prompt to NVIDIA NIM ({}) (timeout={}s, attempt={}/{})",
                     use_model,
                     use_timeout,
@@ -406,7 +439,7 @@ class NvidiaProvider:
                 data = response.json()
                 text = self._extract_text(data)
 
-                logger.debug(
+                self._log.debug(
                     "Async NVIDIA NIM complete in {:.2f}s", time.time() - start
                 )
                 limiter.circuit_breaker.record_success()
@@ -423,7 +456,7 @@ class NvidiaProvider:
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
                     limiter.circuit_breaker.record_rate_limit(retry_after)
-                    logger.warning(
+                    self._log.warning(
                         "NVIDIA NIM 429 (attempt {}/{}): {}",
                         attempt_num,
                         self.max_retries,
@@ -440,7 +473,7 @@ class NvidiaProvider:
                 else:
                     self._record_failure()
                     limiter.circuit_breaker.record_error()
-                    logger.error(
+                    self._log.error(
                         "Async NVIDIA NIM error (attempt {}/{}): {}",
                         attempt_num,
                         self.max_retries,
@@ -490,7 +523,7 @@ class NvidiaProvider:
 
             start = time.time()
             try:
-                logger.debug(
+                self._log.debug(
                     "Sending sync prompt to NVIDIA NIM ({}) (timeout={}s, attempt={}/{})",
                     use_model,
                     use_timeout,
@@ -526,11 +559,13 @@ class NvidiaProvider:
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
                     limiter.circuit_breaker.record_rate_limit(retry_after)
-                    log_fn = logger.warning
+                    log_fn = self._log.warning
                 else:
                     self._record_failure()
                     limiter.circuit_breaker.record_error()
-                    log_fn = logger.warning if log_errors_as_warning else logger.error
+                    log_fn = (
+                        self._log.warning if log_errors_as_warning else self._log.error
+                    )
 
                 log_fn(
                     "Sync NVIDIA NIM {} (attempt {}/{}): {}",
@@ -584,7 +619,7 @@ class NvidiaProvider:
             if time.monotonic() < self._state.degraded_until:
                 if not self._state.degraded_announced:
                     self._state.degraded_announced = True
-                    logger.warning(
+                    self._log.warning(
                         "NVIDIA NIM degraded — skipping until {:.0f}s",
                         self._state.degraded_until - time.monotonic(),
                     )
@@ -614,7 +649,7 @@ class NvidiaProvider:
                 time.monotonic() + self.degraded_cooldown_seconds
             )
             self._state.degraded_announced = False
-        logger.warning(
+        self._log.warning(
             "NVIDIA NIM probe failed — extending degraded window by {:.0f}s",
             self.degraded_cooldown_seconds,
         )
@@ -638,7 +673,7 @@ class NvidiaProvider:
                     time.monotonic() + self.degraded_cooldown_seconds
                 )
                 self._state.degraded_announced = False
-                logger.warning(
+                self._log.warning(
                     "NVIDIA NIM marked degraded for {:.0f}s after {} failures "
                     "in the last {} attempts",
                     self.degraded_cooldown_seconds,
@@ -665,7 +700,7 @@ class NvidiaProvider:
                         time.monotonic() + self.degraded_cooldown_seconds
                     )
                     self._state.degraded_announced = False
-                    logger.warning(
+                    self._log.warning(
                         "NVIDIA NIM marked degraded for {:.0f}s after {} slow "
                         "responses (>= {}s) in the last {} attempts",
                         self.degraded_cooldown_seconds,
@@ -679,7 +714,7 @@ class NvidiaProvider:
             if self._state.degraded_until != 0.0:
                 self._state.degraded_until = 0.0
                 self._state.degraded_announced = False
-                logger.warning("NVIDIA NIM recovered after a successful response")
+                self._log.warning("NVIDIA NIM recovered after a successful response")
 
     def _stream_generator(
         self, response: requests.Response

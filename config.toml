@@ -517,6 +517,47 @@ degraded_probe_timeout_seconds = 5.0
 degraded_window_size = 5
 slow_response_seconds = 60.0
 
+# Provider chain: NVIDIA -> Gemini -> [[llm_endpoints]] (declared order) -> Ollama.
+# Ollama is always last. Uncomment [llm] to pin an explicit order/allow-list.
+# Keys are read from the environment variable named in `api_key_env` (never
+# put keys here). An endpoint whose variable is unset is skipped with a warning.
+# Verify each model id against the provider's /models before enabling it.
+#
+# [llm]
+# chain = ["nvidia", "gemini", "groq", "openrouter", "ollama"]
+#
+# Validated 2026-09-19 (JSON mode, Spanish, p50 ~2s vs NIM 4-21s). Skipped
+# (one warning) when GROQ_API_KEY is not set, e.g. in CI.
+[[llm_endpoints]]
+name = "groq"
+base_url = "https://api.groq.com/openai/v1"
+model = "openai/gpt-oss-120b"
+api_key_env = "GROQ_API_KEY"
+max_tokens = 4096
+#
+# Cerebras: key valid but its free quota answered 402 (2026-09-19). Enable once
+# it returns 200:
+# [[llm_endpoints]]
+# name = "cerebras"
+# base_url = "https://api.cerebras.ai/v1"
+# model = "gpt-oss-120b"
+# api_key_env = "CEREBRAS_API_KEY"
+
+# OpenRouter free route to the same model as the NVIDIA primary, on another
+# host (slow, ~10s, but zero cost: 1000 :free requests/day). Models MUST end in
+# ":free" (schema-enforced: the account has purchased credit before).
+[[llm_endpoints]]
+name = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+model = "nvidia/nemotron-3-super-120b-a12b:free"
+api_key_env = "OPENROUTER_API_KEY"
+max_tokens = 4096
+timeout = 120
+extra_headers = { "HTTP-Referer" = "https://noticiencias.com", "X-Title" = "Noticiencias" }
+
+# Gemini uses the native provider ([gemini] api_key / NOTICIENCIAS__GEMINI__API_KEY),
+# already second in the default chain; no OpenAI-compat entry needed.
+
 [llm_rate_limiting]
 max_concurrent_requests = 2
 min_delay_between_requests = 1.0

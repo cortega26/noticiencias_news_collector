@@ -162,6 +162,9 @@
 | llm_rate_limiting.retry_backoff_base | float | 2.0 | Base for exponential backoff between retries. |  |  |
 | llm_rate_limiting.retry_backoff_max | float | 30.0 | Maximum backoff delay in seconds. |  |  |
 | llm_rate_limiting.retry_jitter_max | float | 2.0 | Maximum jitter added to backoff delay. |  |  |
+| llm | LLMChainConfig |  |  |  |  |
+| llm.chain | list | [] | Explicit provider order using 'nvidia', 'gemini' and endpoint names. Empty = nvidia, gemini, endpoints (declared order). Ollama is always appended last. |  |  |
+| llm_endpoints | list | [] | Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig). |  |  |
 | editorial_auditor | EditorialAuditorConfig |  |  |  |  |
 | editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |
 | editorial_auditor.sampling_rate | float | 0.2 | Probability of auditing an article. |  |  |

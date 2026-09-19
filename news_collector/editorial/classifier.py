@@ -33,6 +33,7 @@ class EditorialClassifier:
                 "classifier", config=active_config, logger=logger
             )
             self.llm = get_provider(
+                purpose="classification",
                 config=active_config,
                 api_url=active_config.ollama.api_url,
                 model=model,
