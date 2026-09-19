@@ -131,7 +131,8 @@ def _merge_circuit_into_health_record(
     endpoint must never 500 on a naive/aware mix). Unknown source ids and
     malformed circuit entries leave the record untouched.
     """
-    circuit = circuits.get(record.get("source_id"))
+    source_id = record.get("source_id")
+    circuit = circuits.get(source_id) if isinstance(source_id, str) else None
     if not isinstance(circuit, dict):
         return record
     merged = dict(record)
