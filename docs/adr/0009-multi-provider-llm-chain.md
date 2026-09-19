@@ -64,6 +64,14 @@ was effectively a single point of failure; every failure was an untyped
    402 (2026-09-19). GitHub Models is retiring (410 brownout) and Gemini uses
    the native provider (`[gemini]`), not an OpenAI-compat entry.
 
+9. **Call budget (`generate_async(budget=...)`).** The CognitiveScorer wrapped
+   the whole chain in one `asyncio.wait_for(40s)`; a slow first provider (NIM
+   p90 ≈ 62 s) consumed it and cancelled the call before failover was ever
+   tried (observed 2026-09-19: every scoring batch fell back to heuristics).
+   With a budget, each non-final attempt is capped at 60 % of the time left
+   (really cancelled) and the last provider gets the remainder, so failover fits
+   inside the caller's deadline. Without a budget behavior is unchanged.
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain

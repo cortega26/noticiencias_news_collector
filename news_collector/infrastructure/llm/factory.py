@@ -1,5 +1,6 @@
 """Provider Factory for LLM connections."""
 
+import asyncio
 import os
 import re
 import time
@@ -94,6 +95,10 @@ class FallbackProvider:
 
     # Non-final providers get a short leash so failover happens quickly.
     FAILOVER_TIMEOUT_S = 60
+    # With a call budget: share of the remaining time a non-final attempt may
+    # use, and the smallest slice worth starting another attempt for.
+    ATTEMPT_BUDGET_SHARE = 0.6
+    MIN_ATTEMPT_S = 2.0
 
     def __init__(self, providers: list[Any], purpose: str = "unspecified"):
         if not providers:
@@ -297,7 +302,16 @@ class FallbackProvider:
         json_mode: bool = False,
         model: Optional[str] = None,
         timeout: Optional[int] = None,
+        budget: Optional[float] = None,
     ) -> Union[str, Dict[str, Any]]:
+        """Run the chain; ``budget`` bounds the *whole* call in seconds.
+
+        Without a budget each attempt only has its own timeout. With one, a
+        slow provider can no longer starve the rest of the chain: every
+        non-final attempt is capped at ``ATTEMPT_BUDGET_SHARE`` of what is left
+        (and cancelled for real), so failover still fits inside the caller's
+        deadline. The final provider gets whatever remains.
+        """
         last_error: Optional[BaseException] = None
         kinds: list[str] = []
         base = {
@@ -306,6 +320,7 @@ class FallbackProvider:
             "json_mode": json_mode,
             "model": model,
         }
+        deadline = None if budget is None else time.monotonic() + budget
         for i, provider in enumerate(self.providers):
             skipped = self._skip_reason(provider, "generate_async")
             if skipped:
@@ -313,6 +328,17 @@ class FallbackProvider:
                 continue
             old_timeout = getattr(provider, "timeout", None)
             current_timeout = self._timeout_for(i, timeout, provider)
+            attempt_cap: Optional[float] = None
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining < self.MIN_ATTEMPT_S:
+                    kinds.append(f"{provider_name(provider)}=skipped(budget)")
+                    break
+                is_last = i >= len(self.providers) - 1
+                attempt_cap = (
+                    remaining if is_last else remaining * self.ATTEMPT_BUDGET_SHARE
+                )
+                current_timeout = max(1, int(min(current_timeout, attempt_cap)))
             started = time.monotonic()
             try:
                 if old_timeout is not None:
@@ -323,9 +349,10 @@ class FallbackProvider:
                     provider.__class__.__name__,
                     current_timeout,
                 )
-                res = cast(
-                    Union[str, Dict[str, Any]], await provider.generate_async(**kwargs)
-                )
+                call = provider.generate_async(**kwargs)
+                if attempt_cap is not None:
+                    call = asyncio.wait_for(call, timeout=attempt_cap)
+                res = cast(Union[str, Dict[str, Any]], await call)
                 self._check_result(res, i)
                 self._record_success(provider, i, started, _is_empty_response(res))
                 return res

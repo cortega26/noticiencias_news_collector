@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -642,3 +643,74 @@ def test_shipped_config_includes_cloudflare_endpoint():
     cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
     names = [e.name for e in cfg.llm_endpoints]
     assert names == ["groq", "openrouter", "cloudflare"]
+
+
+class SlowProvider(FakeProvider):
+    def __init__(self, name, delay, out="slow-ok"):
+        super().__init__(name)
+        self.delay, self.out = delay, out
+
+    async def generate_async(self, **_kwargs):
+        self.calls += 1
+        await asyncio.sleep(self.delay)
+        return self.out
+
+
+def _fast_budget(monkeypatch):
+    monkeypatch.setattr(FallbackProvider, "MIN_ATTEMPT_S", 0.05)
+
+
+def test_budget_caps_slow_first_provider_so_failover_fits(monkeypatch):
+    _fast_budget(monkeypatch)
+    slow, fast = SlowProvider("a", delay=30), FakeProvider("b", "rescued")
+    chain = FallbackProvider([slow, fast], purpose="scoring")
+    started = time.monotonic()
+    out = asyncio.run(chain.generate_async("p", budget=1.0))
+    assert out == "rescued"
+    assert time.monotonic() - started < 1.0  # slow one cancelled at ~0.6s
+    assert (slow.calls, fast.calls) == (1, 1)
+    assert slow.timeout == 300  # restored
+
+
+def test_budget_timeout_is_classified_and_recorded(monkeypatch):
+    _fast_budget(monkeypatch)
+    seen: list[attempts.AttemptRecord] = []
+    attempts.register_attempt_sink(seen.append)
+    try:
+        chain = FallbackProvider([SlowProvider("a", 30), FakeProvider("b", "ok")])
+        asyncio.run(chain.generate_async("p", budget=1.0))
+    finally:
+        attempts.unregister_attempt_sink(seen.append)
+    assert seen[0].kind is FailureKind.TIMEOUT and seen[1].ok is True
+
+
+def test_budget_last_provider_gets_the_remainder(monkeypatch):
+    _fast_budget(monkeypatch)
+    chain = FallbackProvider(
+        [FakeProvider("a", _http_error(503)), SlowProvider("b", 0.3)]
+    )
+    assert asyncio.run(chain.generate_async("p", budget=2.0)) == "slow-ok"
+
+
+def test_budget_exhausted_raises_last_error(monkeypatch):
+    _fast_budget(monkeypatch)
+    chain = FallbackProvider([SlowProvider("a", 30), SlowProvider("b", 30)])
+    with pytest.raises((TimeoutError, asyncio.TimeoutError)):
+        asyncio.run(chain.generate_async("p", budget=0.4))
+
+
+def test_budget_too_small_for_another_attempt_stops_the_chain(monkeypatch):
+    monkeypatch.setattr(FallbackProvider, "MIN_ATTEMPT_S", 0.5)
+    first, second = SlowProvider("a", 30), FakeProvider("b", "never")
+    chain = FallbackProvider([first, second])
+    with pytest.raises((TimeoutError, asyncio.TimeoutError)):
+        asyncio.run(chain.generate_async("p", budget=1.0))  # 0.6s used, 0.4s left < 0.5
+    assert second.calls == 0
+
+
+def test_no_budget_keeps_previous_behaviour():
+    slow = SlowProvider("a", delay=0.2, out="done")
+    assert (
+        asyncio.run(FallbackProvider([slow, FakeProvider("b")]).generate_async("p"))
+        == "done"
+    )
