@@ -526,6 +526,16 @@ class ScoringConfig(StrictModel):
         default=14,
         description="Lookback window in days to re-score completed unpublished articles.",
     )
+    llm_cycle_budget_seconds: PositiveInt = Field(
+        default=600,
+        description=(
+            "Total wall-clock seconds the cognitive scorer may spend on LLM "
+            "batches per cycle; once spent, remaining items are scored "
+            "heuristically (reported as heuristic.budget_exhausted). A 20-item "
+            "batch takes ~5-25 s on the free tiers and Groq refills its token "
+            "cap at ~3 batches/min, so ~370 items need several minutes."
+        ),
+    )
     candidate_max_age_days: PositiveInt = Field(
         default=30,
         description=(

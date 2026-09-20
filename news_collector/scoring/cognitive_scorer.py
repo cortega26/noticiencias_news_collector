@@ -85,12 +85,19 @@ class CognitiveScorer(BasicScorer):
         # batch (Groq ~8000 tokens/min), so a later batch may have to reach a
         # slower provider: the budget must fit one NVIDIA-class completion after
         # a fast failure. Scoring runs once per cycle, so the wait is bounded.
-        self.max_cycle_budget_sec = 200.0
+        self.max_cycle_budget_sec = float(
+            active_config.scoring.llm_cycle_budget_seconds
+        )
         self.batch_timeout_sec = 75.0
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
         self.is_llm_healthy = True
+        # One failed chunk must not disable the LLM for the rest of the cycle
+        # (a real run lost 307 of 314 articles that way): give up only after
+        # this many *consecutive* failed chunks, reset by any success.
+        self.max_consecutive_chunk_failures = 2
+        self._consecutive_chunk_failures = 0
 
         # Plan 036: bound each LLM prompt's item count/estimated size
         # instead of concatenating every uncached input into one prompt.
@@ -143,6 +150,7 @@ class CognitiveScorer(BasicScorer):
         self.chunks_processed_count = 0
         self.prompt_chars_sent = 0
         self.is_llm_healthy = True
+        self._consecutive_chunk_failures = 0
         if hasattr(self.llm, "check_health"):
             ok, reason = self.llm.check_health(timeout_seconds=2.0)
             if not ok:
@@ -162,6 +170,14 @@ class CognitiveScorer(BasicScorer):
             "heuristic_used": self.heuristic_used_count,
             "prompt_chars_sent": self.prompt_chars_sent,
         }
+
+    def _unavailable_reason(self) -> str:
+        """Why the LLM is not being used right now (for the run report)."""
+        if time.time() - self.cycle_start_time >= self.max_cycle_budget_sec:
+            return "budget_exhausted"
+        if not self.is_llm_healthy:
+            return "llm_unhealthy"
+        return "breaker_open"
 
     def _check_budget(self) -> bool:
         """Return True if we have budget left and the circuit breaker is not open."""
@@ -272,7 +288,9 @@ class CognitiveScorer(BasicScorer):
                         # chunk (and any remaining ones) fall back, but
                         # chunks already scored above are untouched.
                         llm_run_stats.record(
-                            "scoring", "heuristic.llm_unavailable", len(chunk)
+                            "scoring",
+                            f"heuristic.{self._unavailable_reason()}",
+                            len(chunk),
                         )
                         self._heuristic_fallback(chunk, payload_list, results_map)
                         continue
@@ -283,6 +301,7 @@ class CognitiveScorer(BasicScorer):
                     llm_results = await self._call_llm_batch(batch_inputs)
 
                     if llm_results:
+                        self._consecutive_chunk_failures = 0
                         # A parseable reply can still omit items: those get a
                         # zero-score placeholder (details.error) that is NOT
                         # LLM work and must not be cached as if it were.
@@ -322,14 +341,26 @@ class CognitiveScorer(BasicScorer):
                         # This chunk failed completely -> fall back to
                         # heuristic for just this chunk's articles; other
                         # (already-scored) chunks are not repeated.
-                        self.is_llm_healthy = False
+                        self._consecutive_chunk_failures += 1
+                        if (
+                            self._consecutive_chunk_failures
+                            >= self.max_consecutive_chunk_failures
+                        ):
+                            self.is_llm_healthy = False
+                            logger.warning(
+                                "CognitiveScorer: {} consecutive chunk failures — "
+                                "using heuristics for the rest of the cycle.",
+                                self._consecutive_chunk_failures,
+                            )
                         llm_run_stats.record(
                             "scoring", "heuristic.chunk_failed", len(chunk)
                         )
                         self._heuristic_fallback(chunk, payload_list, results_map)
             else:
                 llm_run_stats.record(
-                    "scoring", "heuristic.llm_unavailable", len(articles_to_process)
+                    "scoring",
+                    f"heuristic.{self._unavailable_reason()}",
+                    len(articles_to_process),
                 )
                 self._heuristic_fallback(
                     [(idx, art, None) for idx, art in articles_to_process],

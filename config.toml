@@ -80,6 +80,7 @@ topic_cap_percentage = 0.6
 llm_model = "llama3.2"
 rescore_days_back = 14
 candidate_max_age_days = 30
+llm_cycle_budget_seconds = 600
 
 [scoring.weights]
 source_credibility = 0.1
