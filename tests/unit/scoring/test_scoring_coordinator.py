@@ -527,3 +527,66 @@ class TestRescoring:
             coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
         )
         assert kwargs["days_back"] == 7
+
+
+class TestRescoreLlmPolicy:
+    """Re-scoring only uses the LLM when [scoring] rescore_uses_llm is on."""
+
+    class _Scorer:
+        def __init__(self):
+            self.calls = []
+
+        async def score_batch_async(self, payloads, *, phase="scoring", allow_llm=True):
+            self.calls.append((phase, allow_llm))
+            return [{"final_score": 0.5} for _ in payloads]
+
+    @pytest.mark.parametrize(
+        "is_pending,flag,expected",
+        [
+            (True, False, ("scoring", True)),
+            (False, False, ("rescoring", False)),
+            (False, True, ("rescoring", True)),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_phase_and_allow_llm(self, coordinator, is_pending, flag, expected):
+        coordinator.scorer = self._Scorer()
+        await coordinator._score_payloads(
+            [{"a": 1}],
+            2,
+            MagicMock(),
+            is_pending=is_pending,
+            rescore_uses_llm=flag,
+        )
+        assert coordinator.scorer.calls == [expected]
+
+    @pytest.mark.asyncio
+    async def test_policy_is_frozen_at_cycle_start(self, coordinator, monkeypatch):
+        """Config refreshed mid-cycle must not change later pages' policy."""
+        seen = []
+        snaps = iter([True, False, False])
+
+        class _Snap:
+            @property
+            def scoring_config(self):
+                return {"rescore_uses_llm": next(snaps, False)}
+
+        monkeypatch.setattr(
+            "news_collector.scoring.coordinator.get_runtime_config", lambda: _Snap()
+        )
+
+        async def fake_process(*a, **kw):
+            seen.append(kw["rescore_uses_llm"])
+            return MagicMock(persisted=True, scored=0, excluded=0)
+
+        monkeypatch.setattr(coordinator, "_process_page", fake_process)
+        pages = [
+            _page([_MockArticle(id=1)], _cursor(_MockArticle(id=1))),
+            _page([_MockArticle(id=2)], None),
+        ]
+        coordinator.db_manager.get_pending_articles_page.return_value = _EMPTY_PAGE
+        coordinator.db_manager.get_completed_articles_for_rescoring_page.side_effect = (
+            pages
+        )
+        await coordinator.execute({}, dry_run=False)
+        assert seen and all(v is True for v in seen)

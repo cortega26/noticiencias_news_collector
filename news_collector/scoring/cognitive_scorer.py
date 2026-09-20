@@ -234,11 +234,21 @@ class CognitiveScorer(BasicScorer):
             logger.warning(f"Cache write failed: {e}")
 
     async def score_batch_async(  # noqa: C901
-        self, payload_list: List[Dict[str, Any]]
+        self,
+        payload_list: List[Dict[str, Any]],
+        *,
+        phase: str = "scoring",
+        allow_llm: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Batched Scoring entry point.
         Scores a list of articles using Hybrid Strategy.
+
+        ``phase`` labels the run-report stage ("scoring" = first-time scoring of
+        new articles, "rescoring" = periodic re-score of already-completed ones).
+        ``allow_llm=False`` serves cache hits and scores the rest heuristically
+        without calling the LLM (used for re-scoring, see ``[scoring]
+        rescore_uses_llm``).
         """
         # 1. Prep
         results_map = {}  # map index -> result
@@ -269,7 +279,7 @@ class CognitiveScorer(BasicScorer):
             if cached:
                 # Apply cache hit immediately
                 self.cache_hit_count += 1
-                llm_run_stats.record("scoring", "cached")
+                llm_run_stats.record(phase, "cached")
                 results_map[i] = self._finalize_score(
                     art_obj, cached, payload.get("source_config")
                 )
@@ -279,7 +289,7 @@ class CognitiveScorer(BasicScorer):
         # 3. Process remaining items — chunked by item count/estimated size
         # (plan 036) instead of one unbounded prompt for the whole batch.
         if articles_to_process:
-            use_llm = self._check_budget()
+            use_llm = allow_llm and self._check_budget()
 
             if use_llm:
                 for chunk in self._chunk_articles(articles_to_process):
@@ -288,7 +298,7 @@ class CognitiveScorer(BasicScorer):
                         # chunk (and any remaining ones) fall back, but
                         # chunks already scored above are untouched.
                         llm_run_stats.record(
-                            "scoring",
+                            phase,
                             f"heuristic.{self._unavailable_reason()}",
                             len(chunk),
                         )
@@ -311,9 +321,9 @@ class CognitiveScorer(BasicScorer):
                             if isinstance(r.get("details"), dict)
                             and r["details"].get("error")
                         )
-                        llm_run_stats.record("scoring", "llm", len(chunk) - incomplete)
+                        llm_run_stats.record(phase, "llm", len(chunk) - incomplete)
                         llm_run_stats.record(
-                            "scoring", "heuristic.incomplete_response", incomplete
+                            phase, "heuristic.incomplete_response", incomplete
                         )
                         omitted = []
                         for j, res in enumerate(llm_results):
@@ -353,13 +363,17 @@ class CognitiveScorer(BasicScorer):
                                 self._consecutive_chunk_failures,
                             )
                         llm_run_stats.record(
-                            "scoring", "heuristic.chunk_failed", len(chunk)
+                            phase, "heuristic.chunk_failed", len(chunk)
                         )
                         self._heuristic_fallback(chunk, payload_list, results_map)
             else:
                 llm_run_stats.record(
-                    "scoring",
-                    f"heuristic.{self._unavailable_reason()}",
+                    phase,
+                    (
+                        "heuristic.no_llm_by_policy"
+                        if not allow_llm
+                        else f"heuristic.{self._unavailable_reason()}"
+                    ),
                     len(articles_to_process),
                 )
                 self._heuristic_fallback(

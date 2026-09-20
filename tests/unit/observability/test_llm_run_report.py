@@ -324,3 +324,33 @@ def test_record_failure_is_logged_once_with_context(monkeypatch):
         and "scoring.llm" in warnings[0]
         and "lock broken" in warnings[0]
     )
+
+
+def test_rescoring_stage_is_informational_and_never_alerts():
+    from news_collector.observability import llm_run_report as r
+
+    assert "rescoring" in r.STAGES
+    assert "rescoring" not in r.ALERTING_STAGES
+
+
+def test_rescore_only_report_still_shows_the_rescoring_row():
+    from news_collector.observability import llm_run_report as r
+
+    rep = r.LLMRunReport(
+        run_id="x",
+        stages=[
+            r.StageOutcome(
+                stage="rescoring",
+                llm=0,
+                cached=0,
+                heuristic=5,
+                heuristic_reasons={"no_llm_by_policy": 5},
+            )
+        ],
+        providers=[],
+        degraded=False,
+        reasons=[],
+        llm_activity=False,
+    )
+    text = r.format_run_report(rep)
+    assert "rescoring" in text and "no_llm_by_policy=5" in text

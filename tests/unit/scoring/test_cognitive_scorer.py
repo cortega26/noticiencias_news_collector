@@ -569,3 +569,36 @@ def test_cycle_budget_comes_from_config():
 
     cfg = load_config()
     assert cfg.scoring.llm_cycle_budget_seconds == 600
+
+
+def test_allow_llm_false_serves_cache_and_never_calls_llm(cognitive_scorer, mock_llm):
+    from news_collector.observability import llm_run_stats
+
+    mock_llm.generate_async = AsyncMock(side_effect=_uniform_generate_async)
+    cached = _articles(2, "Rc")
+    asyncio.run(
+        cognitive_scorer.score_batch_async(
+            [{"article": a.to_dict(), "source_config": {}} for a in cached]
+        )
+    )  # fills the cache
+    calls_before = mock_llm.generate_async.call_count
+
+    fresh = _articles(3, "Rf")
+    llm_run_stats.reset()
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in cached + fresh]
+    results = asyncio.run(
+        cognitive_scorer.score_batch_async(payloads, phase="rescoring", allow_llm=False)
+    )
+    assert len(results) == 5
+    assert mock_llm.generate_async.call_count == calls_before
+    assert llm_run_stats.snapshot() == {
+        "rescoring.cached": 2,
+        "rescoring.heuristic.no_llm_by_policy": 3,
+    }
+    llm_run_stats.reset()
+
+
+def test_rescore_uses_llm_defaults_to_false_in_config():
+    from noticiencias.config_manager import load_config
+
+    assert load_config().scoring.rescore_uses_llm is False

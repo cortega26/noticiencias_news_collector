@@ -126,6 +126,13 @@ was effectively a single point of failure; every failure was an untyped
     success resets the streak), the budget is `[scoring] llm_cycle_budget_seconds`
     (600) and unavailability reasons are reported separately. Measured on the
     same DB copy: LLM-scored 15 % -> 60 % (+15 % cached).
+17. **Re-scoring does not call the LLM (`[scoring] rescore_uses_llm = false`).**
+    Real cycles handled ~80 new vs ~300 re-scored items: ~80 % of the scoring
+    volume was re-scoring of completed articles, competing with first-time
+    scoring for the free-tier token budget. Re-scores now serve cache hits and
+    score the rest heuristically (`rescoring.heuristic.no_llm_by_policy`); the
+    `rescoring` stage is informational in the run report and never raises the
+    degraded alert. Set the flag to `true` to also upgrade heuristic items.
 
 ## Consequences
 

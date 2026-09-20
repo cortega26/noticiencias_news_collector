@@ -11,6 +11,7 @@ instead of scheduling one coroutine per article.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, cast
@@ -92,6 +93,9 @@ class ScoringCoordinator:
             "scoring_workers"
         ) or scoring_config.get("workers", 4)
         cycle_item_budget = scoring_config.get("cycle_item_budget")
+        # Frozen at the cycle boundary: a config refresh mid-cycle must not make
+        # some pages re-score with the LLM and others without.
+        rescore_uses_llm = bool(scoring_config.get("rescore_uses_llm", False))
         rescore_days = self.config_override.get(
             "rescore_days_back"
         ) or scoring_config.get("rescore_days_back", 14)
@@ -137,6 +141,7 @@ class ScoringCoordinator:
                 cycle_item_budget,
                 max_fallback_concurrency,
                 module_logger,
+                rescore_uses_llm=rescore_uses_llm,
             )
 
         return self._build_result(
@@ -151,6 +156,7 @@ class ScoringCoordinator:
         cycle_item_budget: Optional[int],
         max_fallback_concurrency: int,
         module_logger: Any,
+        rescore_uses_llm: bool = False,
     ) -> None:
         """Page through one source until exhausted, budget-stopped, or a
         persistence failure — mutating `state` in place."""
@@ -174,7 +180,11 @@ class ScoringCoordinator:
 
             if fresh_articles:
                 page_result = await self._process_page(
-                    fresh_articles, is_pending, max_fallback_concurrency, module_logger
+                    fresh_articles,
+                    is_pending,
+                    max_fallback_concurrency,
+                    module_logger,
+                    rescore_uses_llm=rescore_uses_llm,
                 )
                 if not page_result.persisted:
                     state.stop_reason = "persistence_failed"
@@ -247,13 +257,18 @@ class ScoringCoordinator:
         is_pending: bool,
         max_fallback_concurrency: int,
         module_logger: Any,
+        rescore_uses_llm: bool = False,
     ) -> _PageResult:
         """Score and persist one page. Never partially counts a page whose
         bulk persist failed — `persisted=False` means the caller must treat
         the whole page as not committed."""
         payloads = self._adapt_payloads(articles)
         results = await self._score_payloads(
-            payloads, max_fallback_concurrency, module_logger
+            payloads,
+            max_fallback_concurrency,
+            module_logger,
+            is_pending=is_pending,
+            rescore_uses_llm=rescore_uses_llm,
         )
 
         bulk_score_updates: List[tuple] = []
@@ -319,9 +334,17 @@ class ScoringCoordinator:
         payloads: List[Dict[str, Any]],
         max_fallback_concurrency: int,
         module_logger: Any,
+        is_pending: bool = True,
+        rescore_uses_llm: bool = False,
     ) -> List[Any]:
         """Score one page's payloads: batch if available, else a
         semaphore-bounded per-article fallback (never unbounded gather).
+
+        New (pending) articles may use the LLM; re-scoring of completed ones
+        only does so when ``[scoring] rescore_uses_llm`` is on (default off):
+        ~80 % of a cycle's items are re-scores whose cognitive part is served
+        by the score cache or scored heuristically, keeping LLM capacity for
+        first-time scoring.
         """
         if not payloads:
             return []
@@ -330,7 +353,16 @@ class ScoringCoordinator:
 
         if use_batch:
             try:
-                return cast(List[Any], await self.scorer.score_batch_async(payloads))
+                kwargs: Dict[str, Any] = {}
+                if (
+                    "phase"
+                    in inspect.signature(self.scorer.score_batch_async).parameters
+                ):
+                    kwargs["phase"] = "scoring" if is_pending else "rescoring"
+                    kwargs["allow_llm"] = is_pending or rescore_uses_llm
+                return cast(
+                    List[Any], await self.scorer.score_batch_async(payloads, **kwargs)
+                )
             except Exception as batch_error:
                 module_logger.error(
                     f"Batch scoring failed ({len(payloads)} items): {batch_error}"

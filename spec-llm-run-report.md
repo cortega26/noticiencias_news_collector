@@ -40,6 +40,22 @@
 - Measured (same DB copy): LLM-scored share 57/371 (15 %) -> 221/370 (60 %) +
   54 cached; residual 26 % = `budget_exhausted` 60 + `chunk_failed` 35.
 
+## Follow-up: re-scoring policy (`[scoring] rescore_uses_llm`)
+- Goal: ~80 % of a scoring cycle is re-scoring of completed, unpublished
+  articles; it competes with first-time scoring for the free-tier token budget.
+- `rescore_uses_llm` (default `false`): re-scores serve cache hits and score the
+  rest heuristically (`rescoring.heuristic.no_llm_by_policy`); new articles use
+  the LLM as before. The value is read once per cycle (`execute`), never per page.
+- `CognitiveScorer.score_batch_async(phase, allow_llm)`: `phase` labels the
+  counters (`scoring` | `rescoring`).
+- Report: `rescoring` is an informational stage (`ALERTING_STAGES` excludes it: its
+  heuristic share is expected and never raises `llm.run.degraded`); it is shown
+  even when there is no other LLM activity.
+- Verification: `allow_llm=False` serves cache and never calls the LLM;
+  coordinator passes phase/flag per source and freezes the flag per cycle; the
+  rescoring stage never alerts and renders in rescore-only reports; real run:
+  scoring LLM 65/104, rescoring 266 heuristic by policy.
+
 ## Verification
 - Unit: aggregation, thresholds, no-activity, outage-as-activity, scope,
   fail-open (store/config/IO), counter-failure logging, PreScorer (4 paths),

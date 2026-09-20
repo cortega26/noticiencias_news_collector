@@ -103,6 +103,7 @@
 | scoring.page_size | int | 200 | Number of articles fetched per repository page during a scoring cycle, instead of loading the entire pending/rescore backlog into memory at once. |  |  |
 | scoring.max_prompt_items | int | 20 | Max articles bundled into a single CognitiveScorer LLM prompt chunk. Provider context limits cannot be reliably determined without a live model probe, so this is a conservative, documented estimate rather than a measured limit. |  |  |
 | scoring.max_prompt_chars | int | 16000 | Estimated max total characters per CognitiveScorer LLM prompt chunk (sum of each article's own truncated prompt text). A chunk closes when the next item would exceed this bound or max_prompt_items, whichever comes first. |  |  |
+| scoring.rescore_uses_llm | bool | false | Whether re-scoring of already-completed articles may call the LLM. Off by default: re-scores are ~80% of a cycle's items, only LLM results are cached, and their cognitive part is served from the cache or scored heuristically; the LLM capacity goes to new articles. Turn on to also upgrade heuristic-scored items. |  |  |
 | scoring.cycle_item_budget | Optional |  | Optional cap on total articles processed by one scoring cycle, across both the pending and rescore sources. None means unbounded-by-budget (still bounded by page_size, one page at a time). |  |  |
 | text_processing | TextProcessingConfig |  |  |  |  |
 | text_processing.supported_languages | List | ["en", "es", "pt", "fr"] | Languages supported by NLP routines. |  |  |

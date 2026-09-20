@@ -576,6 +576,16 @@ class ScoringConfig(StrictModel):
             "max_prompt_items, whichever comes first."
         ),
     )
+    rescore_uses_llm: bool = Field(
+        default=False,
+        description=(
+            "Whether re-scoring of already-completed articles may call the LLM. "
+            "Off by default: re-scores are ~80% of a cycle's items, only LLM "
+            "results are cached, and their cognitive part is served from the "
+            "cache or scored heuristically; the LLM capacity goes to new "
+            "articles. Turn on to also upgrade heuristic-scored items."
+        ),
+    )
     cycle_item_budget: Optional[PositiveInt] = Field(
         default=None,
         le=1_000_000,
