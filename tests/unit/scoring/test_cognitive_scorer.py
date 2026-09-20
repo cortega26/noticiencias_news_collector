@@ -415,3 +415,30 @@ def test_scorer_passes_budget_only_to_fallback_chains(cognitive_scorer, mock_llm
         chain.generate_async.call_args.kwargs["budget"]
         == cognitive_scorer.batch_timeout_sec
     )
+
+
+def test_batch_prompt_no_longer_asks_for_per_item_reasoning(cognitive_scorer, mock_llm):
+    """Per-item justification doubled output tokens and nothing reads it."""
+    mock_llm.generate_async.return_value = {"results": []}
+    asyncio.run(cognitive_scorer._call_llm_batch(["item"]))
+    system = mock_llm.generate_async.call_args.kwargs["system"]
+    assert '"reasoning"' not in system and "NO explanatory text" in system
+
+
+def test_batch_results_without_reasoning_are_accepted(cognitive_scorer, mock_llm):
+    mock_llm.generate_async.return_value = {
+        "results": [
+            {
+                "item_index": 1,
+                "scores": {
+                    "substance": 4,
+                    "narrative": 3,
+                    "relevance": 5,
+                    "credibility": 4,
+                },
+            }
+        ]
+    }
+    out = asyncio.run(cognitive_scorer._call_llm_batch(["item"]))
+    assert out and out[0]["score"] > 0
+    assert out[0]["reasoning"] == "" and out[0]["details"]["reasoning"] == ""

@@ -100,6 +100,14 @@ was effectively a single point of failure; every failure was an untyped
     (~20k tokens/min) the free cap is still a hard ceiling; some batches still
     fall back to heuristics.
 
+14. **Token diet for scoring.** Output (mostly gpt-oss reasoning + per-item
+    justification text) dominates scoring cost. The batch prompt no longer asks
+    for per-item `reasoning` (nothing reads it) and the Groq endpoint sets
+    `extra_body = { reasoning_effort = "low" }`. Measured: 5106 -> 2817 tokens
+    for a 20-item batch (real scorer: 3758) with score differences inside the
+    model's own run-to-run noise. Shortening summaries to 300 chars was rejected
+    (correlations fell to ~0.4).
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain

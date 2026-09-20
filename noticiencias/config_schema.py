@@ -1014,6 +1014,14 @@ class LLMEndpointConfig(StrictModel):
         default_factory=dict,
         description="Additional static headers (e.g. OpenRouter attribution).",
     )
+    extra_body: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Extra top-level fields merged into every chat/completions request "
+            '(e.g. {reasoning_effort = "low"} for gpt-oss models to cut output '
+            "tokens). Never overrides model/messages/stream."
+        ),
+    )
     degraded_failure_threshold: Optional[PositiveInt] = Field(
         default=None, description="Overrides [nvidia] degraded_failure_threshold."
     )
