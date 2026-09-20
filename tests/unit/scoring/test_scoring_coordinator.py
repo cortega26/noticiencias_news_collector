@@ -588,8 +588,5 @@ class TestRescoreLlmPolicy:
         coordinator.db_manager.get_completed_articles_for_rescoring_page.side_effect = (
             pages
         )
-        try:
-            await coordinator.execute({}, dry_run=False)
-        except Exception:  # noqa: BLE001 - only the captured policy matters
-            pass
+        await coordinator.execute({}, dry_run=False)
         assert seen and all(v is True for v in seen)
