@@ -5,7 +5,7 @@ Know from data whether the test suite is useful, points at real code, covers wha
 (>=85 % lines) and really prevents regressions; then fix what the data shows, in small PRs.
 
 ## Design
-- Phase 0 (this PR): `news_collector/quality/suite_audit.py` (pure analysis: coverage per
+- Phase 0 (this PR): `scripts/test_suite_audit.py` (pure analysis functions + CLI: coverage per
   file/package incl. `noticiencias` and `scripts`, critical gaps ranked by missing lines, tests
   touching no measured code via per-test coverage contexts, assertion-less tests, mock-heavy
   files) + `scripts/test_suite_audit.py` + `make test-audit` + baseline report in

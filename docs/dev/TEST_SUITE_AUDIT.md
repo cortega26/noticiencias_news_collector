@@ -1,7 +1,7 @@
 # Test-suite audit (baseline 2026-09-20)
 
-Produced with `make test-audit` (`scripts/test_suite_audit.py`, logic in
-`news_collector/quality/suite_audit.py`). Numbers below are from the first run and are the
+Produced with `make test-audit` (`scripts/test_suite_audit.py`, logic in the
+same script). Numbers below are from the first run and are the
 backlog for the follow-up PRs (see `todo-test-suite-audit.md`).
 
 ## Coverage, measured honestly

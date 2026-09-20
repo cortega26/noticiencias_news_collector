@@ -1,8 +1,19 @@
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
-from news_collector.quality import suite_audit as sa
+
+def _load_script():
+    path = Path(__file__).resolve().parents[3] / "scripts" / "test_suite_audit.py"
+    spec = importlib.util.spec_from_file_location("suite_audit_script", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module  # dataclasses need the module registered
+    spec.loader.exec_module(module)
+    return module
+
+
+sa = _load_script()
 
 
 def _cov(tmp_path, files, contexts=None):
@@ -115,10 +126,7 @@ def test_script_writes_reports(tmp_path):
     tdir = tmp_path / "tests"
     tdir.mkdir()
     (tdir / "test_z.py").write_text("def test_z():\n    assert True\n")
-    script = Path(__file__).resolve().parents[3] / "scripts" / "test_suite_audit.py"
-    spec = importlib.util.spec_from_file_location("suite_audit_script", script)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod = sa
     out = tmp_path / "out"
     rc = mod.main(
         [
