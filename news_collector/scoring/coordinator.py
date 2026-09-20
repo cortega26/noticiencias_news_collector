@@ -93,6 +93,9 @@ class ScoringCoordinator:
             "scoring_workers"
         ) or scoring_config.get("workers", 4)
         cycle_item_budget = scoring_config.get("cycle_item_budget")
+        # Frozen at the cycle boundary: a config refresh mid-cycle must not make
+        # some pages re-score with the LLM and others without.
+        rescore_uses_llm = bool(scoring_config.get("rescore_uses_llm", False))
         rescore_days = self.config_override.get(
             "rescore_days_back"
         ) or scoring_config.get("rescore_days_back", 14)
@@ -138,6 +141,7 @@ class ScoringCoordinator:
                 cycle_item_budget,
                 max_fallback_concurrency,
                 module_logger,
+                rescore_uses_llm=rescore_uses_llm,
             )
 
         return self._build_result(
@@ -152,6 +156,7 @@ class ScoringCoordinator:
         cycle_item_budget: Optional[int],
         max_fallback_concurrency: int,
         module_logger: Any,
+        rescore_uses_llm: bool = False,
     ) -> None:
         """Page through one source until exhausted, budget-stopped, or a
         persistence failure — mutating `state` in place."""
@@ -175,7 +180,11 @@ class ScoringCoordinator:
 
             if fresh_articles:
                 page_result = await self._process_page(
-                    fresh_articles, is_pending, max_fallback_concurrency, module_logger
+                    fresh_articles,
+                    is_pending,
+                    max_fallback_concurrency,
+                    module_logger,
+                    rescore_uses_llm=rescore_uses_llm,
                 )
                 if not page_result.persisted:
                     state.stop_reason = "persistence_failed"
@@ -248,6 +257,7 @@ class ScoringCoordinator:
         is_pending: bool,
         max_fallback_concurrency: int,
         module_logger: Any,
+        rescore_uses_llm: bool = False,
     ) -> _PageResult:
         """Score and persist one page. Never partially counts a page whose
         bulk persist failed — `persisted=False` means the caller must treat
@@ -258,6 +268,7 @@ class ScoringCoordinator:
             max_fallback_concurrency,
             module_logger,
             is_pending=is_pending,
+            rescore_uses_llm=rescore_uses_llm,
         )
 
         bulk_score_updates: List[tuple] = []
@@ -324,6 +335,7 @@ class ScoringCoordinator:
         max_fallback_concurrency: int,
         module_logger: Any,
         is_pending: bool = True,
+        rescore_uses_llm: bool = False,
     ) -> List[Any]:
         """Score one page's payloads: batch if available, else a
         semaphore-bounded per-article fallback (never unbounded gather).
@@ -347,11 +359,7 @@ class ScoringCoordinator:
                     in inspect.signature(self.scorer.score_batch_async).parameters
                 ):
                     kwargs["phase"] = "scoring" if is_pending else "rescoring"
-                    kwargs["allow_llm"] = is_pending or bool(
-                        get_runtime_config().scoring_config.get(
-                            "rescore_uses_llm", False
-                        )
-                    )
+                    kwargs["allow_llm"] = is_pending or rescore_uses_llm
                 return cast(
                     List[Any], await self.scorer.score_batch_async(payloads, **kwargs)
                 )

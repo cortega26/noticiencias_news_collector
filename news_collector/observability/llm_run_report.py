@@ -136,25 +136,31 @@ def build_run_report(
     )
 
 
+def _format_stage(s: StageOutcome) -> str:
+    ratio = s.heuristic_ratio
+    why = ", ".join(f"{k}={v}" for k, v in sorted(s.heuristic_reasons.items())) or "-"
+    return (
+        f"{s.stage:<11} LLM {s.llm:>4} | caché {s.cached:>4} | heurístico "
+        f"{s.heuristic:>4}"
+        + (f" ({ratio:.0%})" if ratio is not None else "")
+        + f"  [{why}]"
+    )
+
+
 def format_run_report(report: LLMRunReport) -> str:
     """Plain-text block for the end of a run."""
     lines = ["", "🤖 LLM DE ESTA CORRIDA:", "-" * 40]
     if not report.llm_activity:
         lines.append("Sin actividad de LLM (¿no configurado? scoring heurístico).")
+        # Re-scoring is heuristic/cached by policy: still worth showing.
+        rescoring = [s for s in report.stages if s.stage == "rescoring" and s.total]
+        for s in rescoring:
+            lines.append(_format_stage(s))
         return "\n".join(lines)
     for s in report.stages:
         if not s.total:
             continue
-        ratio = s.heuristic_ratio
-        why = (
-            ", ".join(f"{k}={v}" for k, v in sorted(s.heuristic_reasons.items())) or "-"
-        )
-        lines.append(
-            f"{s.stage:<11} LLM {s.llm:>4} | caché {s.cached:>4} | heurístico "
-            f"{s.heuristic:>4}"
-            + (f" ({ratio:.0%})" if ratio is not None else "")
-            + f"  [{why}]"
-        )
+        lines.append(_format_stage(s))
     if report.providers:
         lines += ["", format_report(list(report.providers))]
     lines.append("")
