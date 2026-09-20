@@ -32,7 +32,7 @@
 | collection.max_concurrent_requests | int | 8 | RESERVED, no live consumer (plan 110): per-request politeness is enforced by rate_limiting delays, fan-out by max_concurrent_sources. Do not tune; wire a consumer first. |  |  |
 | collection.max_concurrent_sources | int | 10 | Cap on sources collected concurrently during async fan-out. |  |  |
 | collection.max_articles_per_source | int | 50 | Cap on articles per source per run. |  |  |
-| collection.recent_days_threshold | int | 7 | Number of trailing days considered 'recent'. |  |  |
+| collection.recent_days_threshold | int | 30 | Collection age cutoff in days: items published earlier are not fetched, enriched or admitted. The effective cutoff is the smaller of this and scoring.candidate_max_age_days. |  |  |
 | collection.user_agent | str | "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" | HTTP User-Agent header sent to providers. |  |  |
 | collection.canonicalization_cache_size | int | 2048 | LRU cache size for canonical URLs; set to 0 to disable caching. |  |  |
 | collection.source_timeout_seconds | int | 300 | Total soft timeout per source (includes fetch, parse, enrichment). |  |  |

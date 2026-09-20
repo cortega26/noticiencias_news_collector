@@ -252,8 +252,12 @@ class CollectionConfig(StrictModel):
         description="Cap on articles per source per run.",
     )
     recent_days_threshold: PositiveInt = Field(
-        default=7,
-        description="Number of trailing days considered 'recent'.",
+        default=30,
+        description=(
+            "Collection age cutoff in days: items published earlier are not "
+            "fetched, enriched or admitted. The effective cutoff is the smaller "
+            "of this and scoring.candidate_max_age_days."
+        ),
     )
     user_agent: str = Field(
         # Use a standard browser UA to minimize 403 blocks from sites like Cell/Phys.org

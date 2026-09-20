@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from news_collector.config.settings import RuntimeConfigSnapshot
@@ -26,6 +27,7 @@ from news_collector.contracts import CollectorArticleModel
 class AdmissionReason(str, enum.Enum):
     TITLE_TOO_SHORT = "title_too_short"
     CONTENT_TOO_SHORT = "content_too_short"
+    TOO_OLD = "too_old"
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,37 @@ class AdmissionDecision:
     accepted: bool
     reason: Optional[AdmissionReason] = None
     details: Dict[str, Any] = field(default_factory=dict)
+
+
+def effective_max_age_days(config: RuntimeConfigSnapshot) -> int:
+    """Single age cutoff (days) for collection *and* candidacy.
+
+    The smaller of ``collection.recent_days_threshold`` and
+    ``scoring.candidate_max_age_days``: collection can never be looser than the
+    window in which an article may still be a publication candidate, so nothing
+    is downloaded/scored that candidacy would discard anyway.
+    """
+    collection = int(config.collection_config.get("recent_days_threshold", 30))
+    candidacy = int(config.scoring_config.get("candidate_max_age_days", 30))
+    return max(1, min(collection, candidacy))
+
+
+def is_too_old(
+    published: Optional[datetime],
+    max_age_days: int,
+    now: Optional[datetime] = None,
+) -> bool:
+    """True when ``published`` is older than ``max_age_days`` before ``now``.
+
+    Naive datetimes are taken as UTC. A missing date cannot be judged, so it is
+    never "too old" (scoring already treats it as collected-today, penalised).
+    """
+    if not isinstance(published, datetime):
+        return False
+    if published.tzinfo is None:
+        published = published.replace(tzinfo=timezone.utc)
+    reference = now or datetime.now(timezone.utc)
+    return published < reference - timedelta(days=max_age_days)
 
 
 def evaluate_admission(
@@ -44,6 +77,17 @@ def evaluate_admission(
     performs no I/O. Every collector's real save path must call this exactly
     once per candidate article.
     """
+    max_age = effective_max_age_days(config)
+    if is_too_old(article.published_date, max_age):
+        return AdmissionDecision(
+            accepted=False,
+            reason=AdmissionReason.TOO_OLD,
+            details={
+                "published_date": article.published_date.isoformat(),
+                "max_age_days": max_age,
+            },
+        )
+
     min_title_length = config.text_processing_config.get("min_title_length", 10)
     title_length = len((article.title or "").strip())
     if title_length < min_title_length:

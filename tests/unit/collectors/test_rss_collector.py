@@ -13,7 +13,7 @@ def rss_collector():
         return RSSCollector(logger_factory=logger_mock, config=load_config())
 
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 
 def test_parse_feed_entry(rss_collector):
@@ -24,7 +24,7 @@ def test_parse_feed_entry(rss_collector):
         "url": "http://test.com",
         "summary": "Summary",
         "content": "Content " * 200,  # > 1000 chars
-        "published_date": datetime(2025, 1, 1, 12, 0, 0),
+        "published_date": datetime.now(timezone.utc) - timedelta(days=1),
     }
     enrichment_mock = {
         "language": "en",
@@ -88,10 +88,8 @@ def test_extract_articles_recency_filter_skips_non_datetime(rss_collector):
     """The recency filter must not crash when a candidate carries a
     non-datetime published_date (e.g. a string from a future source), and
     must drop candidates older than the recency window."""
-    from datetime import timedelta, timezone
-
     recent = datetime.now(timezone.utc)
-    old = recent - timedelta(days=400)
+    old = recent - timedelta(days=40)  # past the 30-day cutoff
     candidates = [
         {
             "title": "Old article title that is long enough",
@@ -156,7 +154,7 @@ def test_parse_success_records_article_count_as_found(rss_collector):
             "title": f"Title {i} is long enough",
             "url": f"http://feed.com/{i}",
             "summary": "Summary",
-            "published_date": datetime(2026, 8, 1, 12, 0, 0),
+            "published_date": datetime.now(timezone.utc) - timedelta(days=1),
         }
         for i in range(3)
     ]

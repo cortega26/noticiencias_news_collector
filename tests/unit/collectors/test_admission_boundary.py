@@ -9,6 +9,7 @@ persistence calls, not merely "wasn't in the saved count."
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from news_collector.collectors.base_collector import BaseCollector
@@ -31,7 +32,7 @@ def _article_payload(**overrides) -> dict:
         "source_id": "src-1",
         "source_name": "Source One",
         "category": "science",
-        "published_date": "2026-01-01T00:00:00Z",
+        "published_date": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
     }
     payload.update(overrides)
     return payload
