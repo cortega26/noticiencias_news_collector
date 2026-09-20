@@ -56,6 +56,14 @@
   rescoring stage never alerts and renders in rescore-only reports; real run:
   scoring LLM 65/104, rescoring 266 heuristic by policy.
 
+## Follow-up: prescoring diet (PR-B)
+- `[nvidia.purpose_extra_body.<purpose>]`: top-level request fields merged into NVIDIA
+  calls for that purpose only (`setdefault`, never overriding model/messages/stream).
+  Shipped: `prescoring.reasoning_effort = "low"`. Benchmark and decision: ADR-0009 §18.
+- Verification: payload merge without overriding the skeleton; factory passes the
+  purpose's body (and `{}` for other purposes); shipped config check; real run:
+  prescoring p50 before/after in the run report.
+
 ## Verification
 - Unit: aggregation, thresholds, no-activity, outage-as-activity, scope,
   fail-open (store/config/IO), counter-failure logging, PreScorer (4 paths),
