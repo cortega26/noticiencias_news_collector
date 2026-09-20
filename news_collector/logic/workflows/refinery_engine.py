@@ -45,6 +45,7 @@ from news_collector.contracts import (
     PublicationAttemptSummary,
 )
 from news_collector.contracts.publication_validation import PublicationFailureClass
+from news_collector.editorial.grounding import repair_text_hygiene
 from news_collector.editorial.readability import analyze_body_readability
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
@@ -466,6 +467,16 @@ class RefineryEngine:
                 return False
             raise ve
         record_stage("editor_refinement", True)
+
+        # Deterministic typography repair over the whole file (frontmatter and
+        # body): the model habitually emits U+202F before units and U+2011 in
+        # compounds. Pure string replacement; recorded only when it changed
+        # something so clean runs stay quiet.
+        if isinstance(refined_content, str):
+            refined_content, repaired_chars = repair_text_hygiene(refined_content)
+            if repaired_chars:
+                logger.info(f"Text hygiene: repaired {repaired_chars} special chars.")
+                record_stage("text_hygiene", True, repaired_chars=repaired_chars)
 
         # Editorial-critic verdict snapshot (plan 076): the editor stashes
         # its last verdict on `last_critic_verdict`; mock editors lack the
