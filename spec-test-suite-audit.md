@@ -27,8 +27,8 @@ Acceptance: suite 2909 -> 2876 (-33), covered lines of real code unchanged (17 1
 documents note where the prototypes can be recovered from git.
 
 ## Phase 1b (done): orphan scripts
-27 one-off scripts removed. Criteria (all required): zero references outside archived plans and the generated
+26 one-off scripts removed. Criteria (all required): zero references outside archived plans and the generated
 inventory (checked with `git grep` for `scripts/x`, `scripts.x`, `x.py` and imports), last change Feb-Jun 2026,
 0 % coverage, name/content of a diagnostic, demo, benchmark, one-time patch or duplicate check. Kept for the
-owner to decide: recently modified tools, `migrate_metrics_db.py` (a migration), and the two report generators.
+owner to decide: `audit_pipeline.py` (unified source-audit entry point that composes still-live pieces; restored after review), recently modified tools, `migrate_metrics_db.py` (a migration), and the two report generators.
 Acceptance: suite unchanged (2882 passed), ratchet OK, lint clean.
