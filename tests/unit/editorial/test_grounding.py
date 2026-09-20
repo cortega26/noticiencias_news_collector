@@ -156,3 +156,10 @@ def test_overclaim_translated_from_the_source_is_not_flagged():
         check_grounding(md, SOURCE + " an unprecedented result")
     )
     assert "overclaim" in kinds(check_grounding(md, SOURCE))
+
+
+def test_repair_text_hygiene_counts_replaced_characters():
+    from news_collector.editorial.grounding import repair_text_hygiene
+
+    assert repair_text_hygiene("5 % y co‑op​") == ("5 % y co-op", 3)
+    assert repair_text_hygiene("limpio") == ("limpio", 0)

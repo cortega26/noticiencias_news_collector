@@ -165,6 +165,54 @@ class TestRefineryEngine(unittest.TestCase):
             self.assertGreaterEqual(details["suitability"], 0.0)
             self.assertLessEqual(details["suitability"], 1.0)
 
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_text_hygiene_is_repaired_and_recorded_only_when_needed(
+        self, mock_dt_refinery
+    ):
+        """Special typography (U+202F/U+2011) is normalized over the whole file
+        before it is written; clean output records no `text_hygiene` stage."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+        article = {
+            "id": "123",
+            "title": "Test valid title",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for refinery validation.",
+            "image_url": "https://example.com/test-image.png",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+
+        def run(body, excerpt="dato\u202fclave"):
+            self.mock_editor.process_article.return_value = (
+                f"---\nslug: test-slug\nexcerpt: {excerpt}\n---\n" + body
+            )
+            self.mock_db.get_canonical_slug.return_value = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                self.engine.publication_attempts_dir = Path(tmpdir)
+                target_dir = Path(tmpdir) / "target"
+                target_dir.mkdir()
+                self.assertTrue(
+                    self.engine.process_single_article(article, MagicMock(), target_dir)
+                )
+                summary = json.loads((Path(tmpdir) / "123.json").read_text())
+                written = "".join(f.read_text() for f in target_dir.rglob("*.md"))
+                return {s["name"]: s for s in summary["stages"]}, written
+
+        stages, written = run("Un 5\u202f% más y co\u2011operación. Otra frase corta.")
+        self.assertEqual(stages["text_hygiene"]["details"]["repaired_chars"], 3)
+        self.assertNotIn("\u202f", written)
+        self.assertNotIn("\u2011", written)
+        self.assertIn("5 % más y co-operación", written)
+
+        clean_stages, _ = run(
+            "Frase limpia sin rarezas. Otra frase corta.", "dato clave"
+        )
+        self.assertNotIn("text_hygiene", clean_stages)
+
     def test_interrupted_attempt_persists_recorded_stages(self):
         """Plan 069: an unexpected mid-pipeline raise still persists the
         stages recorded so far (success=False); the error entry is intact."""

@@ -27,3 +27,10 @@ blocks publication.
 ## Next (C2)
 Advisory `grounding` stage after `readability` in `refinery_engine`, hygiene repair in
 `AIEditor._repair_output`, PR-body section, count in the run report.
+
+## C2a: hygiene repair (implemented)
+`refinery_engine` applies `repair_text_hygiene()` to the refined file (frontmatter and
+body) right after `editor_refinement`, and records a `text_hygiene` stage with
+`repaired_chars` only when it changed something. Pure replacement, never blocks.
+Verified by an engine test (repair written to the file, stage recorded; clean input
+records no stage) and unit tests of the helper.

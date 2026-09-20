@@ -281,6 +281,12 @@ def normalize_text_hygiene(text: str) -> str:
 _GROUPED_SPACE_RE = re.compile(r"(?<=\d)[ ](?=\d{3}(?!\d))")
 
 
+def repair_text_hygiene(text: str) -> Tuple[str, int]:
+    """``normalize_text_hygiene`` plus the number of characters it replaced."""
+    repaired = normalize_text_hygiene(text)
+    return repaired, sum(text.count(bad) for bad in _HYGIENE_REPAIR)
+
+
 def _fold(text: str) -> str:
     """Lowercase NFKC text with space-grouped thousands joined ("30 000" -> "30000")."""
     folded = unicodedata.normalize("NFKC", text).lower()
