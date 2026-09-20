@@ -581,6 +581,12 @@ timeout = 120
 # Gemini uses the native provider ([gemini] api_key / NOTICIENCIAS__GEMINI__API_KEY),
 # already second in the default chain; no OpenAI-compat entry needed.
 
+# End-of-run LLM health report: how much prescoring/scoring the LLM really did vs
+# heuristic fallbacks, and a warning when a stage falls back too often.
+[llm_health]
+enabled = true
+warn_heuristic_ratio = 0.5
+
 [llm_rate_limiting]
 max_concurrent_requests = 2
 min_delay_between_requests = 1.0

@@ -243,6 +243,14 @@ def run_simple_collection(args):  # noqa: C901
             tracker.export_json("data/exports/source_health.json")
         tracker.print_summary_table()
 
+        # LLM health for this run (LLM vs heuristic work, provider failures).
+        from news_collector.observability.llm_run_report import emit_run_report
+
+        emit_run_report(
+            emit=print,
+            export_path=None if args.dry_run else "data/exports/llm_run_report.json",
+        )
+
         print("🎉 ¡Recolección completada exitosamente!")
         return results
 

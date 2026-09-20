@@ -817,6 +817,11 @@ def run_publication_pipeline(  # noqa: C901
 
     logger.info("Refinery pass complete.")
 
+    # LLM health of the editing phase (same report as the collection run).
+    from news_collector.observability.llm_run_report import emit_run_report
+
+    emit_run_report(emit=logger.info, export_path=None)
+
     if processed_count == 0 and last_error:
         message = (
             last_error.get("message")
