@@ -1066,6 +1066,23 @@ class LLMChainConfig(StrictModel):
     )
 
 
+class LLMHealthConfig(StrictModel):
+    """End-of-run LLM health report (see observability/llm_run_report.py)."""
+
+    enabled: bool = Field(
+        default=True, description="Print/export the per-run LLM health report."
+    )
+    warn_heuristic_ratio: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Emit a degraded-run warning when more than this share of a stage's "
+            "items fell back to heuristics while an LLM was in use."
+        ),
+    )
+
+
 class LLMRateLimitingConfig(StrictModel):
     """Rate limiting configuration for LLM API calls."""
 
@@ -1155,6 +1172,7 @@ class Config(StrictModel):
         default_factory=LLMRateLimitingConfig
     )
     llm: LLMChainConfig = Field(default_factory=LLMChainConfig)
+    llm_health: LLMHealthConfig = Field(default_factory=LLMHealthConfig)
     llm_endpoints: list[LLMEndpointConfig] = Field(
         default_factory=list,
         description="Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig).",

@@ -221,18 +221,28 @@ class LLMMetricsStore:
     # ---- read path ----
 
     def summary(
-        self, since_ts: Optional[float] = None, by_purpose: bool = False
+        self,
+        since_ts: Optional[float] = None,
+        by_purpose: bool = False,
+        run_id: Optional[str] = None,
     ) -> List[ProviderSummary]:
-        """Aggregate rows since ``since_ts`` per provider/model[/purpose]."""
+        """Aggregate rows since ``since_ts`` per provider/model[/purpose].
+
+        ``run_id`` restricts the aggregation to one pipeline run.
+        """
         if not self._ensure_ready():
             return []
         try:
             with self._session() as conn:
-                rows = conn.execute(
+                query = (
                     "SELECT provider, model, purpose, ok, kind, latency_ms, "
-                    "failover_index FROM llm_calls WHERE ts >= ?",
-                    (since_ts or 0.0,),
-                ).fetchall()
+                    "failover_index FROM llm_calls WHERE ts >= ?"
+                )
+                params: list = [since_ts or 0.0]
+                if run_id is not None:
+                    query += " AND run_id = ?"
+                    params.append(run_id)
+                rows = conn.execute(query, params).fetchall()
         except sqlite3.Error as err:
             self._note_failure(err)
             return []

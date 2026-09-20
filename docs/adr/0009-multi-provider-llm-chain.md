@@ -108,6 +108,17 @@ was effectively a single point of failure; every failure was an untyped
     model's own run-to-run noise. Shortening summaries to 300 chars was rejected
     (correlations fell to ~0.4).
 
+15. **Per-run LLM health report.** Prescoring and scoring degrade to heuristics
+    silently when the chain fails. Each stage now records per-article outcomes
+    (`observability/llm_run_stats`) and every run ends with a report
+    (`observability/llm_run_report`): items done by LLM / cache / heuristic (with
+    reason), per-provider results for *this* run (`llm_metrics.db`, filtered by
+    `run_id`), a `llm.run.degraded` warning when a stage exceeds
+    `[llm_health] warn_heuristic_ratio`, and `data/exports/llm_run_report.json`.
+    Runs with no LLM activity (CI) never alert. First real run: 85 % of scoring
+    items fell back, 307 of 314 as `llm_unavailable` (one failed chunk marks the
+    LLM unhealthy for the rest of the cycle).
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+from news_collector.observability import llm_run_stats
 from news_collector.scoring.latam_relevance import (
     rank_candidates_for_latam_audience,
     score_candidate_for_latam_audience,
@@ -164,6 +165,7 @@ class PreScorer:
                 "PreScorer: Circuit breaker OPEN — falling back to heuristic rank for {} candidates.",
                 len(candidates),
             )
+            llm_run_stats.record("prescoring", "heuristic.breaker_open", limit)
             return [candidates[i] for i in heuristic_rank[:limit]]
 
         logger.info(
@@ -212,6 +214,8 @@ class PreScorer:
                     if idx not in valid_indices:
                         valid_indices.append(idx)
 
+            llm_valid = len(valid_indices)
+
             # Si el LLM falló o devolvió menos, rellenar con los primeros (FIFO fallback)
             if len(valid_indices) < limit:
                 logger.warning(
@@ -226,6 +230,10 @@ class PreScorer:
 
             # Recortar si devolvió de más
             valid_indices = valid_indices[:limit]
+            llm_run_stats.record("prescoring", "llm", min(llm_valid, limit))
+            llm_run_stats.record(
+                "prescoring", "heuristic.filled", limit - min(llm_valid, limit)
+            )
 
             # Construir resultado
             selected_candidates = [candidates[i] for i in valid_indices]
@@ -235,6 +243,14 @@ class PreScorer:
 
         except Exception as e:
             err_str = str(e)
+            reason = "error"
+            if "not configured" in err_str or "unavailable" in err_str.lower():
+                reason = "unavailable"
+            elif (
+                "circuit breaker" in err_str.lower() or "rate limit" in err_str.lower()
+            ):
+                reason = "rate_limited"
+            llm_run_stats.record("prescoring", f"heuristic.{reason}", limit)
             if "not configured" in err_str or "unavailable" in err_str.lower():
                 logger.warning(
                     "PreScorer: LLM not available. Falling back to heuristic rank. ({})",

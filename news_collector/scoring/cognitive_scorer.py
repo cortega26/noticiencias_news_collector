@@ -11,6 +11,7 @@ from noticiencias.config_manager import load_config
 from news_collector.infrastructure.llm.factory import FallbackProvider, get_provider
 from news_collector.infrastructure.llm.model_registry import get_model_for_stage
 from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+from news_collector.observability import llm_run_stats
 from news_collector.scoring.latam_relevance import LATAM_KEYWORDS, LOW_VALUE_KEYWORDS
 from news_collector.storage.models import Article
 from news_collector.utils.dict_wrapper import SafeNamespace
@@ -252,6 +253,7 @@ class CognitiveScorer(BasicScorer):
             if cached:
                 # Apply cache hit immediately
                 self.cache_hit_count += 1
+                llm_run_stats.record("scoring", "cached")
                 results_map[i] = self._finalize_score(
                     art_obj, cached, payload.get("source_config")
                 )
@@ -269,6 +271,9 @@ class CognitiveScorer(BasicScorer):
                         # Budget/circuit breaker tripped mid-cycle: this
                         # chunk (and any remaining ones) fall back, but
                         # chunks already scored above are untouched.
+                        llm_run_stats.record(
+                            "scoring", "heuristic.llm_unavailable", len(chunk)
+                        )
                         self._heuristic_fallback(chunk, payload_list, results_map)
                         continue
 
@@ -278,6 +283,7 @@ class CognitiveScorer(BasicScorer):
                     llm_results = await self._call_llm_batch(batch_inputs)
 
                     if llm_results:
+                        llm_run_stats.record("scoring", "llm", len(chunk))
                         for j, res in enumerate(llm_results):
                             original_idx, art, _ = chunk[j]
 
@@ -294,8 +300,14 @@ class CognitiveScorer(BasicScorer):
                         # heuristic for just this chunk's articles; other
                         # (already-scored) chunks are not repeated.
                         self.is_llm_healthy = False
+                        llm_run_stats.record(
+                            "scoring", "heuristic.chunk_failed", len(chunk)
+                        )
                         self._heuristic_fallback(chunk, payload_list, results_map)
             else:
+                llm_run_stats.record(
+                    "scoring", "heuristic.llm_unavailable", len(articles_to_process)
+                )
                 self._heuristic_fallback(
                     [(idx, art, None) for idx, art in articles_to_process],
                     payload_list,

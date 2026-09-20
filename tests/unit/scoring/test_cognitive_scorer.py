@@ -442,3 +442,50 @@ def test_batch_results_without_reasoning_are_accepted(cognitive_scorer, mock_llm
     out = asyncio.run(cognitive_scorer._call_llm_batch(["item"]))
     assert out and out[0]["score"] > 0
     assert out[0]["reasoning"] == "" and out[0]["details"]["reasoning"] == ""
+
+
+def test_scoring_outcomes_are_recorded_for_the_run_report(cognitive_scorer, mock_llm):
+    """Chunk 1 by LLM, chunk 2 fails, chunk 3 is skipped (LLM marked unhealthy)."""
+    from news_collector.observability import llm_run_stats
+
+    llm_run_stats.reset()
+    cognitive_scorer.max_prompt_items = 2
+    cognitive_scorer.max_prompt_chars = 1_000_000
+    calls = {"n": 0}
+
+    def flaky(prompt, system=None, json_mode=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _uniform_generate_async(prompt)
+        raise RuntimeError("provider down")
+
+    mock_llm.generate_async = AsyncMock(side_effect=flaky)
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(6)]
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))
+    assert llm_run_stats.snapshot() == {
+        "scoring.llm": 2,
+        "scoring.heuristic.chunk_failed": 2,
+        "scoring.heuristic.llm_unavailable": 2,
+    }
+    llm_run_stats.reset()
+
+
+def test_scoring_records_unavailable_llm_and_cache_hits(cognitive_scorer, mock_llm):
+    from news_collector.observability import llm_run_stats
+
+    llm_run_stats.reset()
+    cognitive_scorer.is_llm_healthy = False
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(3)]
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))
+    assert llm_run_stats.snapshot() == {"scoring.heuristic.llm_unavailable": 3}
+
+    llm_run_stats.reset()
+    cognitive_scorer.is_llm_healthy = True
+    mock_llm.generate_async = AsyncMock(side_effect=_uniform_generate_async)
+    arts = _articles(2, "Cached")
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in arts]
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))  # fills the cache
+    llm_run_stats.reset()
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))  # served from cache
+    assert llm_run_stats.snapshot() == {"scoring.cached": 2}
+    llm_run_stats.reset()
