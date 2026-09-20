@@ -19,3 +19,9 @@ Know from data whether the test suite is useful, points at real code, covers wha
 ## Verification
 Unit tests of the analysis (synthetic coverage JSON), a real `make test-audit` run whose numbers
 match `coverage.xml`, `make lint && make type && make test`, ratchet.
+
+## Phase 1a (done): obsolete tests
+Removed `tests/spikes/` (32 tests of self-contained prototypes), `tests/legacy/` (a print-only script and a
+self-testing helper) and the uncollected `verify_*`/`debug_*` scripts (one imported a non-existent module).
+Acceptance: suite 2909 -> 2876 (-33), covered lines of real code unchanged (17 190), ratchet OK, the two spike
+documents note where the prototypes can be recovered from git.
