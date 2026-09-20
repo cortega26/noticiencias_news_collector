@@ -21,8 +21,20 @@ def _write(root, name, codes):
 def test_scores_count_detected_survived_and_ignore_untested(tmp_path):
     _write(tmp_path, "pkg/a.py", [1, 1, 3, 36, 0, 0, 5, 33, 34, None])
     scores = ms.module_scores(tmp_path)
-    assert scores["pkg/a.py"] == {"detected": 4, "survived": 2, "ignored": 4}
-    assert round(ms.score(scores["pkg/a.py"]), 1) == 66.7
+    assert scores["pkg/a.py"] == {
+        "detected": 4,
+        "survived": 2,
+        "untested": 2,
+        "ignored": 2,
+    }
+    # 4 detected of 8 judged: unreached ("no tests") mutants count against the score
+    assert ms.score(scores["pkg/a.py"]) == 50.0
+
+
+def test_losing_test_reach_cannot_keep_the_gate_green():
+    only_reached = {"detected": 10}
+    assert ms.score(only_reached) == 100.0
+    assert ms.score({"detected": 10, "untested": 10}) == 50.0
 
 
 def test_unknown_exit_codes_count_against_the_score(tmp_path):
@@ -34,6 +46,7 @@ def test_unknown_exit_codes_count_against_the_score(tmp_path):
 
 def test_score_is_none_without_judged_mutants():
     assert ms.score({"ignored": 3}) is None
+    assert ms.score({"untested": 1}) == 0.0
     assert ms.score({}) is None
 
 
@@ -60,7 +73,8 @@ def test_render_and_main_check_exit_codes(tmp_path, capsys):
     )  # 75 % >= floor 70 %
     out = capsys.readouterr()
     assert (
-        "| news_collector/x.py | 3 | 1 | 75.0 % |" in out.out and "**total**" in out.out
+        "| news_collector/x.py | 3 | 1 | 0 | 75.0 % |" in out.out
+        and "**total**" in out.out
     )
     assert out.err == ""
     pyproject.write_text('[tool.mutation.floors]\n"news_collector/x.py" = 90\n')

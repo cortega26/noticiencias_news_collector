@@ -6,8 +6,10 @@ Usage:
 
 ``--check`` fails (exit 1) when a module is below its floor in ``[tool.mutation.floors]``
 of ``pyproject.toml`` (a floor is only ever raised: it is the score already achieved).
-Score = detected / (total - no-tests - skipped); detected = killed + timeout +
-segfault + caught-by-type-check; survivors are behavior changes no test notices.
+Score = detected / (detected + survived + untested + suspicious); detected = killed +
+timeout + segfault + caught-by-type-check. Survivors are behavior changes no test notices;
+"no tests" mutants (code no selected test reaches) also count against the score so that
+losing coverage of part of a module cannot keep the gate green. Skipped/unchecked are ignored.
 """
 
 from __future__ import annotations
@@ -23,7 +25,8 @@ from typing import Dict, List, Mapping
 # mutmut's exit-code -> verdict table (mutmut.stats.status_by_exit_code).
 _DETECTED = {1, 3, 36, -24, 24, 152, 255, -11, -9, 37}
 _SURVIVED = {0}
-_IGNORED = {5, 33, 34, None}  # no tests / skipped / not checked
+_UNTESTED = {5, 33}  # no test reaches the mutated code: counts AGAINST the score
+_IGNORED = {34, None}  # skipped / not checked
 
 
 def module_scores(mutants_dir: Path) -> Dict[str, Dict[str, int]]:
@@ -36,6 +39,8 @@ def module_scores(mutants_dir: Path) -> Dict[str, Dict[str, int]]:
                 counts["survived"] += 1
             elif code in _DETECTED:
                 counts["detected"] += 1
+            elif code in _UNTESTED:
+                counts["untested"] += 1
             elif code in _IGNORED:
                 counts["ignored"] += 1
             else:
@@ -49,6 +54,7 @@ def score(counts: Mapping[str, int]) -> float | None:
     judged = (
         counts.get("detected", 0)
         + counts.get("survived", 0)
+        + counts.get("untested", 0)
         + counts.get("suspicious", 0)
     )
     return 100.0 * counts.get("detected", 0) / judged if judged else None
@@ -78,19 +84,23 @@ def check(
 
 
 def render(scores: Mapping[str, Mapping[str, int]]) -> str:
-    lines = ["| module | detected | survived | score |", "|---|---:|---:|---:|"]
+    lines = [
+        "| module | detected | survived | untested | score |",
+        "|---|---:|---:|---:|---:|",
+    ]
     total: Counter[str] = Counter()
     for module, counts in scores.items():
         total.update(counts)
         value = score(counts)
         lines.append(
             f"| {module} | {counts.get('detected', 0)} | {counts.get('survived', 0)} "
+            f"| {counts.get('untested', 0)} "
             f"| {'n/a' if value is None else f'{value:.1f} %'} |"
         )
     value = score(total)
     lines.append(
         f"| **total** | {total['detected']} | {total['survived']} "
-        f"| {'n/a' if value is None else f'{value:.1f} %'} |"
+        f"| {total['untested']} | {'n/a' if value is None else f'{value:.1f} %'} |"
     )
     return "\n".join(lines)
 
