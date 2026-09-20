@@ -70,9 +70,8 @@ def synthetic_articles(n: int) -> List[Any]:
 
 
 def _llm_configured() -> bool:
-    from news_collector.infrastructure.llm.factory import get_provider
-
     from news_collector.infrastructure.llm.attempts import provider_name
+    from news_collector.infrastructure.llm.factory import get_provider
 
     chain = get_provider(purpose="probe")
     # Ollama is always last in the chain; only remote providers count as "keys".
