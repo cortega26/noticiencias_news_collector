@@ -985,3 +985,33 @@ def test_second_rate_limit_after_retry_fails_over_with_cooldown(monkeypatch):
     )
     assert out == "served" and limited.calls == 2 and slept == [3.0]  # only one wait
     assert "cooldown" in attempts.blocked_reason(limited)
+
+
+def test_extra_body_is_merged_but_never_overrides_the_request_skeleton():
+    provider = OpenAICompatProvider(
+        name="groq",
+        api_key="k",
+        base_url="https://extra.test/v1",
+        model="served-model",
+        extra_body={"reasoning_effort": "low", "model": "evil", "stream": True},
+    )
+    payload = provider._prepare_payload("hi", json_mode=True)
+    assert payload["reasoning_effort"] == "low"
+    assert payload["model"] == "served-model" and payload["stream"] is False
+
+
+def test_endpoint_extra_body_flows_from_config(monkeypatch):
+    monkeypatch.setenv("GROQ_TEST_KEY", "k")
+    ep = _endpoint(extra_body={"reasoning_effort": "low"})
+    (provider,) = _build_endpoint_providers(_cfg([ep]), None)
+    assert provider._prepare_payload("x")["reasoning_effort"] == "low"
+
+
+def test_shipped_groq_endpoint_uses_low_reasoning_effort():
+    from pathlib import Path
+
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
+    groq = next(e for e in cfg.llm_endpoints if e.name == "groq")
+    assert groq.extra_body == {"reasoning_effort": "low"}

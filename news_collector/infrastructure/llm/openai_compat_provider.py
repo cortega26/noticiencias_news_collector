@@ -36,12 +36,14 @@ class OpenAICompatProvider(NvidiaProvider):
         model: str,
         extra_headers: Optional[Dict[str, str]] = None,
         json_mode_supported: bool = True,
+        extra_body: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         self.name = name
         self._label = name
         self.extra_headers = dict(extra_headers or {})
         self.json_mode_supported = json_mode_supported
+        self.extra_body = dict(extra_body or {})
         super().__init__(api_key=api_key, model=model, base_url=base_url, **kwargs)
 
     @staticmethod
@@ -87,4 +89,7 @@ class OpenAICompatProvider(NvidiaProvider):
             # Endpoint rejects ``response_format``; JSON is still extracted
             # from the text by ``_extract_json``.
             payload.pop("response_format", None)
+        for key, value in self.extra_body.items():
+            # Provider-specific knobs only: the request skeleton stays ours.
+            payload.setdefault(key, value)
         return payload

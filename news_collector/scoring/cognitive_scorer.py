@@ -417,7 +417,10 @@ class CognitiveScorer(BasicScorer):
             "4. credibility — Trustworthiness, lack of hype. "
             "Named institutions, DOIs, and measured language score high. "
             "Clickbait, 'miracle cure', and unsourced claims score low.\n\n"
-            'Return a JSON Object: { "results": [ { "item_index": 1, "scores": {...}, "reasoning": "..." }, ... ] }'
+            'Return a JSON Object: { "results": [ { "item_index": 1, "scores": {...} }, ... ] } '
+            "with ONE result per item and NO explanatory text: per-item justification "
+            "roughly doubled the output tokens (5100 -> 2800 per 20-item batch) and "
+            "nothing downstream reads it."
         )
 
         try:

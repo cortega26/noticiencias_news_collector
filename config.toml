@@ -545,6 +545,10 @@ base_url = "https://api.groq.com/openai/v1"
 model = "openai/gpt-oss-120b"
 api_key_env = "GROQ_API_KEY"
 max_tokens = 4096
+# gpt-oss "reasoning" tokens dominate the output: low effort cut a 20-item scoring
+# batch from 5106 to 2817 tokens (-45%) with score differences within the model's
+# own run-to-run noise (measured 2026-09-20). Groq's free cap is 8000 tokens/min.
+extra_body = { reasoning_effort = "low" }
 #
 # Cerebras is intentionally NOT configured: it has no renewing free tier (only
 # $5 of trial credit that expires after 30 days, and a verified payment method is

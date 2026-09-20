@@ -543,6 +543,7 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
                 model=ep.model,
                 extra_headers=ep.extra_headers,
                 json_mode_supported=ep.json_mode_supported,
+                extra_body=ep.extra_body,
                 timeout=ep.timeout,
                 max_tokens=ep.max_tokens,
                 max_retries=ep.max_retries,
