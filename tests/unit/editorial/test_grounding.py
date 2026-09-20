@@ -173,3 +173,19 @@ def test_build_source_text_dedupes_summary_contained_in_content():
     b = {"title": "T", "content": "cuerpo", "summary": "otro"}
     assert build_source_text(b) == "T\ncuerpo\notro"
     assert build_source_text({}) == ""
+
+
+def test_pr_section_lists_errors_first_and_truncates():
+    from news_collector.editorial.grounding import format_pr_section
+
+    assert format_pr_section(check_grounding(_post(body="Todo 91."), SOURCE)) == ""
+    md = _post(
+        body=" ".join(f"Cifra {n}00." for n in range(1, 13)) + " Avance revolucionario."
+    )
+    section = format_pr_section(check_grounding(md, SOURCE), limit=3)
+    assert section.startswith("## ⚠ Verificación de grounding (advisory)")
+    assert "12 errores y 1 avisos" in section
+    assert section.count("\n- **number**") == 3 and "y 10 más" in section
+    assert (
+        "overclaim" not in section.split("y 10 más")[0]
+    )  # warnings ranked after errors

@@ -48,6 +48,7 @@ from news_collector.contracts.publication_validation import PublicationFailureCl
 from news_collector.editorial.grounding import (
     build_source_text,
     check_grounding,
+    format_pr_section,
     repair_text_hygiene,
 )
 from news_collector.editorial.readability import analyze_body_readability
@@ -299,14 +300,15 @@ class RefineryEngine:
     @staticmethod
     def _record_grounding_stage(
         article: Dict[str, Any], refined_content: Any, record_stage: Any
-    ) -> None:
+    ) -> str:
         """Advisory grounding stage: NO failure here may abort a publication.
+        Returns the PR-body section for the reviewer ("" when nothing to flag).
 
         Any error (checker defect, stage serialization) is logged with the article
         context and preserved as a structured skipped/error stage instead.
         """
         if not isinstance(refined_content, str):
-            return
+            return ""
         article_id = article.get("id")
         try:
             report = check_grounding(refined_content, build_source_text(article))
@@ -318,6 +320,7 @@ class RefineryEngine:
                     f"{len(report.warnings)} warnings {report.by_kind()}"
                 )
             record_stage("grounding", success, **details)
+            return format_pr_section(report)
         except Exception as exc:  # noqa: BLE001 - advisory stage must never block
             logger.warning(
                 f"Grounding check failed for {article_id} (advisory, ignored): {exc!r}"
@@ -328,6 +331,7 @@ class RefineryEngine:
                 )
             except Exception as stage_exc:  # noqa: BLE001 - still advisory
                 logger.warning(f"Could not record grounding error stage: {stage_exc!r}")
+        return ""
 
     def process_single_article(  # noqa: C901
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
@@ -532,7 +536,9 @@ class RefineryEngine:
         # Editorial grounding (advisory, never blocks): compares figures, vague
         # quantities and scope claims of the refined file with the source text the
         # editor wrote from. Findings persist in the attempt summary for review.
-        self._record_grounding_stage(article, refined_content, record_stage)
+        grounding_notes = self._record_grounding_stage(
+            article, refined_content, record_stage
+        )
 
         # Deterministic audience-readability snapshot (plan 065): pure
         # computation over the refined body, advisory only — it never blocks.
@@ -720,6 +726,7 @@ class RefineryEngine:
             branch_name=branch_name,
             output_filename=output_filename,
             git_handler=self.git,
+            review_notes=grounding_notes,
         )
         pr_url = pr_result.pr_url
 

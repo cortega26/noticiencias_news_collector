@@ -251,14 +251,22 @@ class TestRefineryEngine(unittest.TestCase):
         long_source = "Cell recovery was 91 percent after 25 days of culture. " * 40
         ok, stages = run(long_source)
         self.assertTrue(ok)  # advisory: never blocks
+        body = self.mock_git.create_pull_request.call_args.kwargs["body"]
+        self.assertIn("Verificación de grounding", body)
+        self.assertIn("95", body)  # the unsupported figure reaches the reviewer
         self.assertFalse(stages["grounding"]["success"])
         details = stages["grounding"]["details"]
         self.assertEqual(details["errors"], 1)
         self.assertEqual(details["findings"][0]["kind"], "number")
         self.assertIn("95", details["findings"][0]["detail"])
 
+        self.mock_git.create_pull_request.reset_mock()
         ok, stages = run("fuente corta")
         self.assertTrue(ok)
+        self.assertNotIn(
+            "Verificación de grounding",
+            self.mock_git.create_pull_request.call_args.kwargs["body"],
+        )
         self.assertTrue(stages["grounding"]["success"])
         self.assertEqual(
             stages["grounding"]["details"]["skipped_reason"], "source_too_short"

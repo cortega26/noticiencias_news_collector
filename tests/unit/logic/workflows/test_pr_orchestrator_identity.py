@@ -86,3 +86,17 @@ def test_create_pr_accepts_numeric_id_and_marks_published():
     assert result.pr_url == "https://example.test/pr/1"
     assert len(git.calls) == 1
     assert db.marks == [(123, "https://example.test/pr/1", "123")]
+
+
+def test_review_notes_are_appended_to_the_pr_body_only_when_given():
+    git, db = FakeGit(), FakeDB()
+    orchestrator = _orchestrator(git, db)
+    kwargs = dict(
+        article_id="12", article=_article(), branch_name="b", output_filename="x.md"
+    )
+    orchestrator.create_pr(**kwargs)
+    orchestrator.create_pr(**kwargs, review_notes="  ## Revisar\n- algo  ")
+    plain, noted = (c["body"] for c in git.calls)
+    assert "Revisar" not in plain
+    assert noted.endswith("## Revisar\n- algo")
+    assert noted.startswith(plain)

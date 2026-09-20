@@ -43,3 +43,11 @@ skipped_reason, top-5 findings). It never blocks publication and swallows (logs)
 errors. Verified by engine tests (unsupported figure -> failed stage but PR still
 created; short source -> skipped; checker failure ignored; non-string content skipped).
 Remaining: "Verificación de grounding" section in the content PR body.
+
+## C2c: PR-body section (implemented)
+`grounding.format_pr_section(report)` renders "## ⚠ Verificación de grounding (advisory)"
+(errors first, up to 8 findings, remainder counted; "" when there are no findings). The
+engine passes it as `review_notes` to `PROrchestrator.create_pr`, which appends it to the
+PR body. Skipped/erroring checks add nothing. The recovery path (`attempt_recovery`) does
+not re-run grounding and keeps the original body. Verified by engine tests (finding reaches
+`create_pull_request` body; short source -> no section), orchestrator and formatter tests.
