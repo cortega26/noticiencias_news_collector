@@ -283,9 +283,30 @@ class CognitiveScorer(BasicScorer):
                     llm_results = await self._call_llm_batch(batch_inputs)
 
                     if llm_results:
-                        llm_run_stats.record("scoring", "llm", len(chunk))
+                        # A parseable reply can still omit items: those get a
+                        # zero-score placeholder (details.error) that is NOT
+                        # LLM work and must not be cached as if it were.
+                        incomplete = sum(
+                            1
+                            for r in llm_results
+                            if isinstance(r.get("details"), dict)
+                            and r["details"].get("error")
+                        )
+                        llm_run_stats.record("scoring", "llm", len(chunk) - incomplete)
+                        llm_run_stats.record(
+                            "scoring", "heuristic.incomplete_response", incomplete
+                        )
+                        omitted = []
                         for j, res in enumerate(llm_results):
                             original_idx, art, _ = chunk[j]
+
+                            if isinstance(res.get("details"), dict) and res[
+                                "details"
+                            ].get("error"):
+                                # Not answered by the LLM: score it heuristically
+                                # (a real score, not the zero placeholder).
+                                omitted.append(chunk[j])
+                                continue
 
                             key = self._get_cache_key(art)
                             self._save_to_cache(key, res)
@@ -295,6 +316,8 @@ class CognitiveScorer(BasicScorer):
                                 res,
                                 payload_list[original_idx].get("source_config"),
                             )
+                        if omitted:
+                            self._heuristic_fallback(omitted, payload_list, results_map)
                     else:
                         # This chunk failed completely -> fall back to
                         # heuristic for just this chunk's articles; other

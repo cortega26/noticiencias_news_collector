@@ -483,6 +483,9 @@ def run_publication_pipeline(  # noqa: C901
     Returns:
         dict: Execution capabilities summary or status.
     """
+    from news_collector.observability import llm_run_stats
+
+    llm_scope = llm_run_stats.begin_scope()  # this publication only (see RunScope)
     logger.info(f"Starting Noticiencias Refinery... (Dry Run={dry_run})")
 
     def merge_manual_ingest_context(base_result: dict[str, Any]) -> dict[str, Any]:
@@ -820,7 +823,7 @@ def run_publication_pipeline(  # noqa: C901
     # LLM health of the editing phase (same report as the collection run).
     from news_collector.observability.llm_run_report import emit_run_report
 
-    emit_run_report(emit=logger.info, export_path=None)
+    emit_run_report(emit=logger.info, export_path=None, scope=llm_scope)
 
     if processed_count == 0 and last_error:
         message = (

@@ -156,8 +156,9 @@ class _Store:
         self.rows = rows
         self.run_id = None
 
-    def summary(self, by_purpose=False, run_id=None):
+    def summary(self, by_purpose=False, run_id=None, since_ts=None):
         self.run_id = run_id
+        self.since_ts = since_ts
         return self.rows
 
 
@@ -264,3 +265,62 @@ def test_prescorer_records_open_breaker(monkeypatch):
 
 def test_failure_kinds_import_is_stable():
     assert FailureKind.TIMEOUT.value == "timeout"
+
+
+# ------------------------------------------------ review follow-ups (PR #284)
+
+
+def test_scope_limits_counters_and_store_query_to_one_workflow(tmp_path):
+    llm_run_stats.record("scoring", "llm", 50)  # an earlier publication
+    scope = llm_run_stats.begin_scope()
+    llm_run_stats.record("scoring", "llm", 3)
+    llm_run_stats.record("scoring", "heuristic.chunk_failed", 1)
+    assert llm_run_stats.delta_since(scope) == {
+        "scoring.llm": 3,
+        "scoring.heuristic.chunk_failed": 1,
+    }
+
+    store = _Store([_provider()])
+    out: list[str] = []
+    report = rr.emit_run_report(
+        _cfg(), emit=out.append, export_path=None, store=store, scope=scope
+    )
+    scoring = next(s for s in report.stages if s.stage == "scoring")
+    assert (scoring.llm, scoring.heuristic) == (3, 1)  # not the cumulative 53
+    assert store.since_ts == scope.started_at
+
+
+def test_total_provider_outage_is_reported_not_hidden():
+    """Every provider skipped (circuit open/cooldown): 0 calls but not 'no activity'."""
+    outage = ProviderSummary("groq", "m", "scoring", calls=0, ok=0, skips=6)
+    counts = {"scoring.heuristic.llm_unavailable": 40}
+    report = rr.build_run_report(counts, [outage])
+    assert report.llm_activity is True and report.degraded is True
+    assert any("all providers unavailable" in r for r in report.reasons)
+    assert "Sin actividad" not in rr.format_run_report(report)
+
+
+def test_record_failure_is_logged_once_with_context(monkeypatch):
+    warnings: list[str] = []
+    monkeypatch.setattr(llm_run_stats, "_RECORD_ERROR_LOGGED", False)
+    monkeypatch.setattr(
+        llm_run_stats.logger,
+        "warning",
+        lambda msg, *a, **_k: warnings.append(msg.format(*a)),
+    )
+
+    class _BadLock:
+        def __enter__(self):
+            raise RuntimeError("lock broken")
+
+        def __exit__(self, *_a):
+            return False
+
+    monkeypatch.setattr(llm_run_stats, "_LOCK", _BadLock())
+    llm_run_stats.record("scoring", "llm", 2)
+    llm_run_stats.record("scoring", "llm", 2)
+    assert (
+        len(warnings) == 1
+        and "scoring.llm" in warnings[0]
+        and "lock broken" in warnings[0]
+    )

@@ -13,11 +13,18 @@ to affect the stage it observes.
 from __future__ import annotations
 
 import threading
+import time
 from collections import Counter
+from dataclasses import dataclass, field
 from typing import Dict
+
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger(__name__)
 
 _LOCK = threading.Lock()
 _COUNTS: "Counter[str]" = Counter()
+_RECORD_ERROR_LOGGED = False
 
 
 def record(stage: str, outcome: str, n: int = 1) -> None:
@@ -27,8 +34,18 @@ def record(stage: str, outcome: str, n: int = 1) -> None:
     try:
         with _LOCK:
             _COUNTS[f"{stage}.{outcome}"] += n
-    except Exception:  # noqa: BLE001 - observability must never break a stage
-        return
+    except Exception as err:  # noqa: BLE001 - observability must never break a stage
+        global _RECORD_ERROR_LOGGED
+        if not _RECORD_ERROR_LOGGED:  # once: this can be hit on every article
+            _RECORD_ERROR_LOGGED = True
+            logger.warning(
+                "LLM run stats could not record {}.{} (n={}): {}; the run "
+                "report may undercount.",
+                stage,
+                outcome,
+                n,
+                err,
+            )
 
 
 def snapshot() -> Dict[str, int]:
@@ -40,3 +57,31 @@ def snapshot() -> Dict[str, int]:
 def reset() -> None:
     with _LOCK:
         _COUNTS.clear()
+
+
+@dataclass(frozen=True)
+class RunScope:
+    """Marks the start of one workflow run inside a long-lived process.
+
+    The serving process handles many publications with the same process-wide
+    counters; a scope lets each report cover only what happened since it began
+    (counter deltas + ``started_at`` for the persisted attempt metrics).
+    Concurrent workflows in the same process still share counters.
+    """
+
+    started_at: float
+    baseline: Dict[str, int] = field(default_factory=dict)
+
+
+def begin_scope() -> RunScope:
+    return RunScope(started_at=time.time(), baseline=snapshot())
+
+
+def delta_since(scope: RunScope) -> Dict[str, int]:
+    """Counters accumulated since ``scope`` began."""
+    now = snapshot()
+    return {
+        key: n - scope.baseline.get(key, 0)
+        for key, n in now.items()
+        if n - scope.baseline.get(key, 0) > 0
+    }
