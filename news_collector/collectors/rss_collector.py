@@ -28,6 +28,7 @@ from news_collector.utils.pydantic_compat import get_pydantic_module
 ValidationError = get_pydantic_module().ValidationError
 
 
+from news_collector.collectors.admission import effective_max_age_days
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 from news_collector.enrichment import enrichment_pipeline
@@ -774,7 +775,7 @@ class RSSCollector(BaseCollector):
         # We need to filter by recent_days_threshold and duplication here (Collector responsibility)
         filtered_candidates = []
         recent_threshold = datetime.now(timezone.utc) - timedelta(
-            days=cfg.collection_config["recent_days_threshold"]
+            days=effective_max_age_days(cfg)
         )
 
         max_articles = cfg.collection_config["max_articles_per_source"]

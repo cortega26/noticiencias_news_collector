@@ -32,7 +32,7 @@ def _shift_fixture_dates(events: List[ReplayEvent]) -> List[ReplayEvent]:
     """Shift fixture publish dates to land within the recency window.
 
     Smoke fixtures use absolute publish dates (e.g. 2024-01-01) for
-    determinism, but ``recent_days_threshold`` in config.toml (365) would
+    determinism, but ``recent_days_threshold`` in config.toml (30) would
     age them out of collection. Mirror pipeline_e2e._relative_fixture_dates:
     shift every article so the newest one lands ~2h before now, preserving
     relative gaps.

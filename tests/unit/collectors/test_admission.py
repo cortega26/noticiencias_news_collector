@@ -11,10 +11,16 @@ rather than a silent regression.
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from news_collector.collectors.admission import AdmissionReason, evaluate_admission
+from news_collector.collectors.admission import (
+    AdmissionReason,
+    effective_max_age_days,
+    evaluate_admission,
+    is_too_old,
+)
 from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 
@@ -30,7 +36,8 @@ def _article(**overrides) -> CollectorArticleModel:
         "source_id": "src-1",
         "source_name": "Source One",
         "category": "science",
-        "published_date": "2026-01-01T00:00:00Z",
+        # Relative: the admission policy now rejects items past the age cutoff.
+        "published_date": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
     }
     fields.update(overrides)
     return CollectorArticleModel(**fields)
@@ -126,3 +133,62 @@ def test_non_http_scheme_is_rejected_by_contract():
     checking; the scheme rejection lives in the contract boundary."""
     with pytest.raises(Exception):
         _article(url="ftp://example.com/article")
+
+
+# ------------------------------------------------------------- age cutoff
+
+
+def test_effective_cutoff_is_the_smaller_of_collection_and_candidacy(config):
+    def snap(collection, candidacy):
+        return dataclasses.replace(
+            config,
+            collection_config={
+                **config.collection_config,
+                "recent_days_threshold": collection,
+            },
+            scoring_config={
+                **config.scoring_config,
+                "candidate_max_age_days": candidacy,
+            },
+        )
+
+    assert effective_max_age_days(snap(365, 30)) == 30  # collection never looser
+    assert effective_max_age_days(snap(7, 30)) == 7
+    assert effective_max_age_days(snap(90, 90)) == 90
+    assert effective_max_age_days(config) == 30  # shipped config.toml
+
+
+def test_is_too_old_boundaries_naive_and_missing_dates():
+    now = datetime(2026, 9, 20, tzinfo=timezone.utc)
+    assert is_too_old(now - timedelta(days=29), 30, now) is False
+    assert is_too_old(now - timedelta(days=31), 30, now) is True
+    assert is_too_old(now + timedelta(days=2), 30, now) is False  # future-dated
+    assert is_too_old((now - timedelta(days=40)).replace(tzinfo=None), 30, now) is True
+    assert is_too_old(None, 30, now) is False
+    assert is_too_old("2020-01-01", 30, now) is False  # not a datetime: unjudgeable
+
+
+def test_old_article_is_rejected_with_too_old_reason(config):
+    old = (datetime.now(timezone.utc) - timedelta(days=45)).isoformat()
+    decision = evaluate_admission(_article(published_date=old), config)
+    assert decision.accepted is False and decision.reason is AdmissionReason.TOO_OLD
+    assert decision.details["max_age_days"] == 30
+
+
+def test_article_just_inside_the_window_is_accepted(config):
+    recent = (datetime.now(timezone.utc) - timedelta(days=29)).isoformat()
+    assert evaluate_admission(_article(published_date=recent), config).accepted is True
+
+
+def test_collection_cutoff_never_exceeds_default_retention(config):
+    """Seen-tracking relies on stored rows: retention must outlive the cutoff."""
+    import inspect
+
+    from news_collector.storage.analytics_repository import AnalyticsRepository
+
+    keep = (
+        inspect.signature(AnalyticsRepository.cleanup_old_data)
+        .parameters["days_to_keep"]
+        .default
+    )
+    assert keep >= effective_max_age_days(config)
