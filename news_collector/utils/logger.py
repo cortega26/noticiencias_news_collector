@@ -13,14 +13,52 @@ de Python, proporcionando formato automático bonito, rotación de archivos,
 y filtrado inteligente.
 """
 
+import re
 import sys
 import time
+import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from loguru import logger
 
 from news_collector.config.settings import get_runtime_config
+
+if TYPE_CHECKING:
+    from loguru import Record
+
+# API secrets that HTTP client errors embed in their message (Gemini puts the key in
+# the query string; ``requests`` includes the full URL in ``HTTPError`` text).
+_SECRET_PATTERN = re.compile(
+    r"(?i)([?&](?:key|api_key|apikey|access_token)=)[^&\s\"')]+|(bearer\s+)[\w.\-~+/]{16,}"
+)
+
+
+def redact_secrets(text: str) -> str:
+    """Mask ``?key=...``-style query secrets and bearer tokens in a message."""
+    return _SECRET_PATTERN.sub(
+        lambda m: (
+            f"{m.group(1)}[REDACTED]" if m.group(1) else f"{m.group(2)}[REDACTED]"
+        ),
+        text,
+    )
+
+
+def redact_record(record: "Record") -> None:
+    """loguru patcher: no log record leaves the process with an API secret."""
+    message = record["message"]
+    exception = record["exception"]
+    if exception is not None:
+        # loguru renders the exception (and, with diagnose, frame locals) separately
+        # from the message, beyond this patcher's reach: fold a redacted plain
+        # traceback into the message and drop the exception object.
+        message += "\n" + "".join(
+            traceback.format_exception(
+                exception.type, exception.value, exception.traceback
+            )
+        )
+        record["exception"] = None
+    record["message"] = redact_secrets(message)
 
 
 class NewsCollectorLogger:
@@ -95,6 +133,8 @@ class NewsCollectorLogger:
 
         # Remover configuración por defecto de loguru
         logger.remove()
+        # Every sink sees redacted messages (one central place, not per call site).
+        logger.configure(patcher=redact_record)
 
         # Configurar handler para consola (siempre activo)
         self._configure_console_handler(config)

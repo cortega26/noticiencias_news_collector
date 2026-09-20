@@ -53,7 +53,9 @@ class GeminiProvider:
         max_retries: int = 3,
     ):
         self.api_key = api_key
-        self.model = model or "gemini-2.5-flash"
+        self.model = (self._safe_model_name(model) if model else None) or (
+            "gemini-2.5-flash"
+        )
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -70,16 +72,16 @@ class GeminiProvider:
 
     @staticmethod
     def _safe_model_name(model: str) -> str | None:
-        """Strip Ollama-style tags and local model names before hitting Gemini."""
-        if (
-            "llama" in model.lower()
-            or "qwen" in model.lower()
-            or "mistral" in model.lower()
-        ):
+        """Accept only Gemini-family names (Ollama-style tags stripped).
+
+        The chain forwards the caller's model override to every provider; a name
+        that belongs to another provider ("nvidia/nemotron-...", "llama3.2") would
+        404 here, so anything that is not Gemini/Gemma falls back to ``self.model``.
+        """
+        name = model.lower().removeprefix("models/")
+        if not name.startswith(("gemini", "gemma")):
             return None  # caller should fall back to self.model
-        if ":" in model:
-            return model.split(":")[0]
-        return model
+        return model.split(":")[0] if ":" in model else model
 
     def _resolve_model(self, model: Optional[str]) -> str:
         if model:

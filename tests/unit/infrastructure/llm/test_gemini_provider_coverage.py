@@ -100,7 +100,8 @@ def test_model_resolution_and_urls():
     assert p._resolve_model("gemini-3.1-flash-lite") == "gemini-3.1-flash-lite"
     assert p._resolve_model("qwen3:80b") == "gemini-2.5-flash"  # local name -> default
     assert p._resolve_model("gemini-x:tag") == "gemini-x"
-    assert _provider(model="llama3")._resolve_model(None) == "llama3"
+    # a foreign constructor model no longer sticks (it used to 404 every call)
+    assert _provider(model="llama3")._resolve_model(None) == "gemini-2.5-flash"
     assert p._endpoint_url("m").endswith("/models/m:generateContent?key=k")
 
 
@@ -348,3 +349,25 @@ def test_async_zero_retries_raises_runtime_error(monkeypatch):
 
 def test_unused_names_are_importable():
     assert SimpleNamespace and gp.RateLimitError is RateLimitError
+
+
+def test_foreign_provider_model_names_fall_back_to_the_gemini_default():
+    """The chain forwards the caller's override to every provider: an NVIDIA/other
+    name used to reach Gemini and 404 (wasted attempt before every failover)."""
+    p = _provider()
+    for foreign in ("nvidia/nemotron-3-super-120b-a12b", "gpt-oss-120b", "llama3.2"):
+        assert p._resolve_model(foreign) == "gemini-2.5-flash"
+    assert p._resolve_model("models/gemini-3.1-flash-lite") == (
+        "models/gemini-3.1-flash-lite"
+    )
+    assert p._resolve_model("gemma-3-27b:it") == "gemma-3-27b"
+
+
+def test_foreign_constructor_model_never_becomes_the_gemini_model():
+    """get_provider(model="nvidia/...") used to make the chain's Gemini request
+    /models/nvidia/... even after the runtime override was rejected."""
+    assert GeminiProvider(api_key="k", model="nvidia/x").model == "gemini-2.5-flash"
+    assert GeminiProvider(api_key="k", model="gemini-3.1-flash-lite").model == (
+        "gemini-3.1-flash-lite"
+    )
+    assert _provider(model="nvidia/x")._resolve_model("nvidia/x") == "gemini-2.5-flash"

@@ -647,14 +647,11 @@ def get_provider(
     if gemini_api_key:
         use_model = getattr(gemini_cfg, "model", "gemini-2.5-flash")
 
-        # Override with Gemini defaults if the provided model is Ollama-specific
-        use_gemini_model = model or use_model
-        if use_gemini_model and (
-            "llama" in use_gemini_model.lower()
-            or "qwen" in use_gemini_model.lower()
-            or ":" in use_gemini_model
-        ):
-            use_gemini_model = use_model
+        # The caller's override belongs to whichever provider is first in the chain
+        # (NVIDIA, Ollama...): only a Gemini/Gemma name is usable here.
+        use_gemini_model = (
+            GeminiProvider._safe_model_name(model) if model else None
+        ) or use_model
 
         logger.info("Configuring GeminiProvider with model {}", use_gemini_model)
         providers.append(
