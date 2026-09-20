@@ -264,22 +264,36 @@ class TestRefineryEngine(unittest.TestCase):
             stages["grounding"]["details"]["skipped_reason"], "source_too_short"
         )
 
-    def test_grounding_failure_is_ignored(self):
+    def test_grounding_failure_never_blocks_and_is_recorded(self):
         from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
         calls = []
-        with patch(
-            "news_collector.logic.workflows.refinery_engine.check_grounding",
-            side_effect=ValueError("boom"),
-        ):
-            RefineryEngine._record_grounding_stage(
-                {"content": "x"}, "texto", lambda *a, **k: calls.append(a)
-            )
-        self.assertEqual(calls, [])
-        # non-string refined content (mock editors) is skipped silently
+
+        def record(name, success, **details):
+            calls.append((name, success, details))
+
+        for exc in (ValueError("boom"), RuntimeError("checker defect")):
+            calls.clear()
+            with patch(
+                "news_collector.logic.workflows.refinery_engine.check_grounding",
+                side_effect=exc,
+            ):
+                RefineryEngine._record_grounding_stage({"id": 7}, "texto", record)
+            self.assertEqual(calls[0][:2], ("grounding", True))
+            self.assertEqual(calls[0][2]["skipped_reason"], "checker_error")
+            self.assertIn(type(exc).__name__, calls[0][2]["error"])
+
+        # a failure while *recording* the stage is swallowed too
+        def bad_record(*a, **k):
+            raise RuntimeError("persist failed")
+
         RefineryEngine._record_grounding_stage(
-            {}, None, lambda *a, **k: calls.append(a)
+            {"id": 7, "content": "x" * 2000}, "texto", bad_record
         )
+
+        # non-string refined content (mock editors) is skipped silently
+        calls.clear()
+        RefineryEngine._record_grounding_stage({}, None, record)
         self.assertEqual(calls, [])
 
     def test_interrupted_attempt_persists_recorded_stages(self):

@@ -300,20 +300,34 @@ class RefineryEngine:
     def _record_grounding_stage(
         article: Dict[str, Any], refined_content: Any, record_stage: Any
     ) -> None:
-        """Advisory grounding stage. Fail-open: any error is logged, not raised."""
+        """Advisory grounding stage: NO failure here may abort a publication.
+
+        Any error (checker defect, stage serialization) is logged with the article
+        context and preserved as a structured skipped/error stage instead.
+        """
         if not isinstance(refined_content, str):
             return
+        article_id = article.get("id")
         try:
             report = check_grounding(refined_content, build_source_text(article))
-        except (ValueError, TypeError, AttributeError) as exc:
-            logger.warning(f"Grounding check failed (advisory, ignored): {exc}")
-            return
-        if report.errors or report.warnings:
+            details = report.stage_details()
+            success = not report.errors
+            if report.errors or report.warnings:
+                logger.warning(
+                    f"Grounding [{article_id}]: {len(report.errors)} errors, "
+                    f"{len(report.warnings)} warnings {report.by_kind()}"
+                )
+            record_stage("grounding", success, **details)
+        except Exception as exc:  # noqa: BLE001 - advisory stage must never block
             logger.warning(
-                f"Grounding: {len(report.errors)} errors, "
-                f"{len(report.warnings)} warnings {report.by_kind()}"
+                f"Grounding check failed for {article_id} (advisory, ignored): {exc!r}"
             )
-        record_stage("grounding", not report.errors, **report.stage_details())
+            try:
+                record_stage(
+                    "grounding", True, skipped_reason="checker_error", error=repr(exc)
+                )
+            except Exception as stage_exc:  # noqa: BLE001 - still advisory
+                logger.warning(f"Could not record grounding error stage: {stage_exc!r}")
 
     def process_single_article(  # noqa: C901
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
