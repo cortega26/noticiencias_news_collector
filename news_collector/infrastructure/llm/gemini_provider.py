@@ -53,7 +53,9 @@ class GeminiProvider:
         max_retries: int = 3,
     ):
         self.api_key = api_key
-        self.model = model or "gemini-2.5-flash"
+        self.model = (self._safe_model_name(model) if model else None) or (
+            "gemini-2.5-flash"
+        )
         self.timeout = timeout
         self.max_retries = max_retries
 

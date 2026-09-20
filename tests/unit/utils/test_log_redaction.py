@@ -37,3 +37,26 @@ def test_patcher_redacts_every_sink():
         logger.configure(patcher=lambda r: None)
         logger.remove(handler_id)
     assert seen and "SECRET" not in seen[0] and "[REDACTED]" in seen[0]
+
+
+def test_exceptions_are_redacted_and_frame_locals_are_not_rendered():
+    seen = []
+    handler_id = logger.add(
+        lambda m: seen.append((m.record["message"], m.record["exception"])),
+        level="DEBUG",
+        diagnose=True,
+    )
+    logger.configure(patcher=redact_record)
+    try:
+        secret_local = "AQ.SECRETLOCAL999"  # noqa: F841 - what diagnose would print
+        try:
+            raise RuntimeError(_URL)
+        except RuntimeError:
+            logger.exception("call failed")
+    finally:
+        logger.configure(patcher=lambda r: None)
+        logger.remove(handler_id)
+    message, exception = seen[0]
+    assert exception is None
+    assert "call failed" in message and "RuntimeError" in message
+    assert "SECRET" not in message and "?key=[REDACTED]" in message

@@ -16,6 +16,7 @@ y filtrado inteligente.
 import re
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -45,7 +46,19 @@ def redact_secrets(text: str) -> str:
 
 def redact_record(record: "Record") -> None:
     """loguru patcher: no log record leaves the process with an API secret."""
-    record["message"] = redact_secrets(record["message"])
+    message = record["message"]
+    exception = record["exception"]
+    if exception is not None:
+        # loguru renders the exception (and, with diagnose, frame locals) separately
+        # from the message, beyond this patcher's reach: fold a redacted plain
+        # traceback into the message and drop the exception object.
+        message += "\n" + "".join(
+            traceback.format_exception(
+                exception.type, exception.value, exception.traceback
+            )
+        )
+        record["exception"] = None
+    record["message"] = redact_secrets(message)
 
 
 class NewsCollectorLogger:
