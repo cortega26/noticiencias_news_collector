@@ -344,6 +344,26 @@ make config-docs-check
 make quality
 ```
 
+- LLM chain, scoring, budget or rate-limit changes (unit tests use fakes and cannot see free-tier limits, cascades or budget starvation):
+
+```bash
+make llm-canary ARGS="--require-keys"   # real bounded run; must pass before calling the change "resolved"
+```
+
+- Suspected date-dependent tests (or before a release after a long quiet period):
+
+```bash
+make test-timeshift   # whole suite with the clock +120 days (TIME_SHIFT_DAYS); expiry-gate tests such as the pip-audit allowlist may fail legitimately
+```
+
+### 5.1) Process rules for behavior changes
+
+1. **Real-run evidence.** A behavior change (scoring, collection, LLM chain, publication) is not "resolved" until a real run (worktree + DB copy, or `make llm-canary`) shows the effect; put the numbers in the PR description.
+2. **Read reviews before merging.** List and read Codex/Codacy/human comments on the PR *before* running the merge; never merge in the same command that lists them. Address or explicitly answer each P1/P2.
+3. **Spec before behavior.** Update `spec-*.md`/`todo-*.md` in the same PR as the behavior (reviewers check it).
+4. **No absolute dates in tests** that are compared against "now"; use relative dates (`now - timedelta(...)`).
+5. **Verify diffs** of docs/config edits done with scripts (regex/slice edits have silently deleted content before).
+
 Run only the commands relevant to the change, but do not under-run the gate. If the touched code affects multiple areas, run the union of their checks.
 
 ## 6) Anti-Patterns Blocked in Review

@@ -384,6 +384,13 @@ config-dump: bootstrap ## Print the built-in default configuration
 llm-report: bootstrap ## LLM provider behaviour report (ARGS="--days 7 --by-purpose")
 	@$(PYTHON_BIN) scripts/llm_health_report.py $(ARGS)
 
+llm-canary: bootstrap ## Real bounded LLM canary (needs keys; ARGS="--items 20 --require-keys")
+	@$(PYTHON_BIN) scripts/llm_canary.py $(ARGS)
+
+test-timeshift: bootstrap ## Run tests with the clock +120 days to expose time-bomb tests (installs time-machine)
+	@$(PYTHON_BIN) -m pip install -q time-machine
+	@PYTHONPATH=tests/_plugins:. $(PYTHON_BIN) -m pytest tests -q --no-cov -p time_shift_plugin --ignore=tests/e2e_pipeline
+
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
