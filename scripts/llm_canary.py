@@ -26,8 +26,10 @@ from pathlib import Path
 from typing import Any, List
 from unittest.mock import patch
 
-from news_collector.observability import llm_run_stats
-from news_collector.observability.llm_canary import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root, not scripts/
+
+from news_collector.observability import llm_run_stats  # noqa: E402
+from news_collector.observability.llm_canary import (  # noqa: E402
     CanaryThresholds,
     evaluate,
     format_verdict,
@@ -52,7 +54,7 @@ def synthetic_articles(n: int) -> List[Any]:
         title, topic = _TOPICS[i % len(_TOPICS)]
         out.append(
             Article(
-                id=f"canary-{stamp}-{i}",
+                id=stamp * 1000 + i,
                 url=f"https://canary.invalid/{stamp}/{i}",
                 title=f"{title} (#{i})",
                 summary=f"Investigadores reportan avances en {topic}. Caso {i}.",
@@ -62,6 +64,8 @@ def synthetic_articles(n: int) -> List[Any]:
                     f"limitaciones del trabajo número {i}. " * 6
                 ),
                 source_id="canary",
+                word_count=120,
+                duplication_confidence=0.0,
                 published_date=datetime.now(timezone.utc),
                 article_metadata={},
             )
@@ -81,6 +85,7 @@ def _llm_configured() -> bool:
 
 
 def run_canary(items: int, thresholds: CanaryThresholds):
+    from news_collector.contracts.adapters import adapt_to_scoring_input
     from news_collector.scoring.cognitive_scorer import CognitiveScorer
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -89,8 +94,9 @@ def run_canary(items: int, thresholds: CanaryThresholds):
             Path(tmp) / "canary_cache.db",
         ):
             scorer = CognitiveScorer()
+            # Same adapter as the production coordinator (keeps content).
             payloads = [
-                {"article": a.to_dict(), "source_config": {}}
+                adapt_to_scoring_input(a, None).model_dump()
                 for a in synthetic_articles(items)
             ]
             llm_run_stats.reset()

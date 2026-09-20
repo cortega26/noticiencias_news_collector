@@ -92,3 +92,11 @@ def test_synthetic_articles_are_distinct():
     mod = _load_script()
     arts = mod.synthetic_articles(7)
     assert len({a.id for a in arts}) == 7 and len({a.title for a in arts}) == 7
+
+
+def test_canary_payloads_keep_content_via_production_adapter():
+    from news_collector.contracts.adapters import adapt_to_scoring_input
+
+    mod = _load_script()
+    payload = adapt_to_scoring_input(mod.synthetic_articles(1)[0], None).model_dump()
+    assert "Un equipo internacional" in str(payload)
