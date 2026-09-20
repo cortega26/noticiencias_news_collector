@@ -905,3 +905,83 @@ def test_compat_endpoint_async_429_fails_fast_without_sleeping(monkeypatch):
         asyncio.run(provider.generate_async(prompt="p"))
     LLMRateLimiter._instance = None
     assert calls["n"] == 1 and slept == []
+
+
+# ------------------------------------------------ short rate-limit wait + retry
+
+
+def _no_real_sleep(monkeypatch):
+    slept: list[float] = []
+
+    async def fake_sleep(delay):
+        slept.append(delay)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    return slept
+
+
+def test_short_retry_after_waits_and_retries_same_provider(monkeypatch):
+    slept = _no_real_sleep(monkeypatch)
+    limited = FakeProvider("groq", RateLimitError("429", retry_after=5.0), "second-try")
+    other = FakeProvider("nvidia", "never")
+    out = asyncio.run(FallbackProvider([limited, other]).generate_async("p", budget=60))
+    assert out == "second-try"
+    assert (limited.calls, other.calls) == (2, 0)
+    assert slept == [5.0]
+    assert attempts.blocked_reason(limited) is None  # not put on cooldown
+
+
+def test_long_retry_after_fails_over_immediately(monkeypatch):
+    slept = _no_real_sleep(monkeypatch)
+    limited = FakeProvider("groq", RateLimitError("429", retry_after=120.0))
+    other = FakeProvider("nvidia", "served")
+    out = asyncio.run(FallbackProvider([limited, other]).generate_async("p", budget=60))
+    assert out == "served" and limited.calls == 1 and slept == []
+    assert "cooldown" in attempts.blocked_reason(limited)
+
+
+def test_rate_limit_without_budget_or_retry_after_does_not_wait(monkeypatch):
+    slept = _no_real_sleep(monkeypatch)
+    a = FakeProvider("a", RateLimitError("429", retry_after=5.0))
+    assert (
+        asyncio.run(FallbackProvider([a, FakeProvider("b", "ok")]).generate_async("p"))
+        == "ok"
+    )
+    attempts.reset_state()
+    c = FakeProvider("c", RateLimitError("429"))  # no Retry-After
+    assert (
+        asyncio.run(
+            FallbackProvider([c, FakeProvider("d", "ok")]).generate_async(
+                "p", budget=60
+            )
+        )
+        == "ok"
+    )
+    assert slept == [] and (a.calls, c.calls) == (1, 1)
+
+
+def test_wait_that_does_not_fit_in_the_budget_is_skipped(monkeypatch):
+    slept = _no_real_sleep(monkeypatch)
+    limited = FakeProvider("groq", RateLimitError("429", retry_after=20.0))
+    out = asyncio.run(
+        FallbackProvider([limited, FakeProvider("b", "ok")]).generate_async(
+            "p", budget=22
+        )
+    )
+    assert out == "ok" and slept == [] and limited.calls == 1
+
+
+def test_second_rate_limit_after_retry_fails_over_with_cooldown(monkeypatch):
+    slept = _no_real_sleep(monkeypatch)
+    limited = FakeProvider(
+        "groq",
+        RateLimitError("429", retry_after=3.0),
+        RateLimitError("429", retry_after=3.0),
+    )
+    out = asyncio.run(
+        FallbackProvider([limited, FakeProvider("b", "served")]).generate_async(
+            "p", budget=60
+        )
+    )
+    assert out == "served" and limited.calls == 2 and slept == [3.0]  # only one wait
+    assert "cooldown" in attempts.blocked_reason(limited)

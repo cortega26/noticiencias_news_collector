@@ -100,6 +100,9 @@ class FallbackProvider:
     # share of what is left: geometric shares starved every fallback), and the
     # smallest slice worth starting another attempt for.
     MAX_ATTEMPT_S = 25.0
+    # Longest Retry-After worth waiting out (then retrying once) instead of
+    # failing over, when the call has a budget.
+    SHORT_RATE_LIMIT_WAIT_S = 30.0
     MIN_ATTEMPT_S = 2.0
 
     def __init__(self, providers: list[Any], purpose: str = "unspecified"):
@@ -182,8 +185,32 @@ class FallbackProvider:
                 index,
             )
 
+    def _short_rate_limit_wait(
+        self, exc: BaseException, deadline: Optional[float]
+    ) -> Optional[float]:
+        """Seconds to wait before retrying the same provider, or ``None``.
+
+        Only for a rate limit whose ``Retry-After`` is short and still leaves
+        room in the caller's budget for the retry: e.g. Groq refills its
+        per-minute token cap in ~25 s, far quicker than falling over to a
+        provider that needs 50 s+ for the same batch.
+        """
+        if deadline is None or classify_exception(exc) is not FailureKind.RATE_LIMITED:
+            return None
+        wait = retry_after_seconds(exc)
+        if wait is None or wait <= 0 or wait > self.SHORT_RATE_LIMIT_WAIT_S:
+            return None
+        if deadline - time.monotonic() < wait + self.MIN_ATTEMPT_S * 2:
+            return None
+        return wait
+
     def _record_failure(
-        self, provider: Any, index: int, started: float, exc: BaseException
+        self,
+        provider: Any,
+        index: int,
+        started: float,
+        exc: BaseException,
+        cooldown: bool = True,
     ) -> FailureKind:
         kind = classify_exception(exc)
         emit_attempt(
@@ -203,6 +230,8 @@ class FallbackProvider:
                 name,
                 exc.__class__.__name__,
             )
+        elif kind is FailureKind.RATE_LIMITED and not cooldown:
+            pass  # caller waits Retry-After and retries this provider itself
         elif kind is FailureKind.RATE_LIMITED:
             delay = cool_down_provider(provider, retry_after_seconds(exc))
             logger.warning(
@@ -298,7 +327,7 @@ class FallbackProvider:
                     provider.timeout = old_timeout
         return self._exhausted(last_error, kinds)
 
-    async def generate_async(
+    async def generate_async(  # noqa: C901
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -324,50 +353,73 @@ class FallbackProvider:
             "model": model,
         }
         deadline = None if budget is None else time.monotonic() + budget
+        out_of_budget = False
         for i, provider in enumerate(self.providers):
             skipped = self._skip_reason(provider, "generate_async")
             if skipped:
                 kinds.append(self._record_skip(provider, i, skipped))
                 continue
-            old_timeout = getattr(provider, "timeout", None)
-            current_timeout = self._timeout_for(i, timeout, provider)
-            attempt_cap: Optional[float] = None
-            if deadline is not None:
-                remaining = deadline - time.monotonic()
-                if remaining < self.MIN_ATTEMPT_S:
-                    kinds.append(f"{provider_name(provider)}=skipped(budget)")
+            # A rate-limited provider is retried once when the wait is short
+            # (see _short_rate_limit_wait); otherwise the chain moves on.
+            for try_no in range(2):
+                old_timeout = getattr(provider, "timeout", None)
+                current_timeout = self._timeout_for(i, timeout, provider)
+                attempt_cap: Optional[float] = None
+                if deadline is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining < self.MIN_ATTEMPT_S:
+                        kinds.append(f"{provider_name(provider)}=skipped(budget)")
+                        out_of_budget = True
+                        break
+                    is_last = i >= len(self.providers) - 1
+                    attempt_cap = (
+                        remaining if is_last else min(remaining, self.MAX_ATTEMPT_S)
+                    )
+                    current_timeout = max(1, int(min(current_timeout, attempt_cap)))
+                reset_queue_wait()
+                started = time.monotonic()
+                try:
+                    if old_timeout is not None:
+                        provider.timeout = current_timeout
+                    kwargs = self._call_kwargs(provider, current_timeout, base)
+                    logger.info(
+                        "FallbackProvider attempting generate_async with {} (timeout={})...",
+                        provider.__class__.__name__,
+                        current_timeout,
+                    )
+                    call = provider.generate_async(**kwargs)
+                    if attempt_cap is not None:
+                        call = asyncio.wait_for(call, timeout=attempt_cap)
+                    res = cast(Union[str, Dict[str, Any]], await call)
+                    self._check_result(res, i)
+                    self._record_success(provider, i, started, _is_empty_response(res))
+                    return res
+                except Exception as e:
+                    wait = (
+                        self._short_rate_limit_wait(e, deadline)
+                        if try_no == 0
+                        else None
+                    )
+                    kind = self._record_failure(
+                        provider, i, started, e, cooldown=wait is None
+                    )
+                    if wait is not None:
+                        logger.info(
+                            "LLM provider {} rate-limited; waiting {:.0f}s and retrying "
+                            "once (faster than failing over)",
+                            provider_name(provider),
+                            wait,
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+                    kinds.append(f"{provider_name(provider)}={kind.value}")
+                    last_error = e
                     break
-                is_last = i >= len(self.providers) - 1
-                attempt_cap = (
-                    remaining if is_last else min(remaining, self.MAX_ATTEMPT_S)
-                )
-                current_timeout = max(1, int(min(current_timeout, attempt_cap)))
-            reset_queue_wait()
-            started = time.monotonic()
-            try:
-                if old_timeout is not None:
-                    provider.timeout = current_timeout
-                kwargs = self._call_kwargs(provider, current_timeout, base)
-                logger.info(
-                    "FallbackProvider attempting generate_async with {} (timeout={})...",
-                    provider.__class__.__name__,
-                    current_timeout,
-                )
-                call = provider.generate_async(**kwargs)
-                if attempt_cap is not None:
-                    call = asyncio.wait_for(call, timeout=attempt_cap)
-                res = cast(Union[str, Dict[str, Any]], await call)
-                self._check_result(res, i)
-                self._record_success(provider, i, started, _is_empty_response(res))
-                return res
-            except Exception as e:
-                kinds.append(
-                    f"{provider_name(provider)}={self._record_failure(provider, i, started, e).value}"
-                )
-                last_error = e
-            finally:
-                if old_timeout is not None:
-                    provider.timeout = old_timeout
+                finally:
+                    if old_timeout is not None:
+                        provider.timeout = old_timeout
+            if out_of_budget:
+                break
         return self._exhausted(last_error, kinds)
 
     def check_health(self, timeout_seconds: float = 2.0) -> tuple[bool, str]:

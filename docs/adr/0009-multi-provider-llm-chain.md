@@ -91,6 +91,15 @@ was effectively a single point of failure; every failure was an untyped
     for a limiter slot (`queue_wait_ms` is stored separately); before, prescoring
     showed a 171 s median that was mostly queueing.
 
+13. **Short rate-limit wait (budgeted async calls only).** A 20-item scoring batch
+    is ~5000 tokens and Groq's free cap (8000/min) refills continuously (~25 s to
+    free that much). When a provider answers 429 with `Retry-After` <= 30 s and
+    the wait fits the caller's budget, the chain waits and retries that provider
+    once (no cooldown) instead of failing over to a provider that needs 50 s+.
+    Measured: 429 -> wait 14-18 s -> success in ~5 s. With ~4 batches per cycle
+    (~20k tokens/min) the free cap is still a hard ceiling; some batches still
+    fall back to heuristics.
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain
