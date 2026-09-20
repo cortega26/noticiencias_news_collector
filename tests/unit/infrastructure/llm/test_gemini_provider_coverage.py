@@ -348,3 +348,15 @@ def test_async_zero_retries_raises_runtime_error(monkeypatch):
 
 def test_unused_names_are_importable():
     assert SimpleNamespace and gp.RateLimitError is RateLimitError
+
+
+def test_foreign_provider_model_names_fall_back_to_the_gemini_default():
+    """The chain forwards the caller's override to every provider: an NVIDIA/other
+    name used to reach Gemini and 404 (wasted attempt before every failover)."""
+    p = _provider()
+    for foreign in ("nvidia/nemotron-3-super-120b-a12b", "gpt-oss-120b", "llama3.2"):
+        assert p._resolve_model(foreign) == "gemini-2.5-flash"
+    assert p._resolve_model("models/gemini-3.1-flash-lite") == (
+        "models/gemini-3.1-flash-lite"
+    )
+    assert p._resolve_model("gemma-3-27b:it") == "gemma-3-27b"
