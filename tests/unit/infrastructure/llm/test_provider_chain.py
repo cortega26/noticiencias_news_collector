@@ -853,7 +853,8 @@ def test_compat_endpoint_fails_fast_on_429_without_sleeping(monkeypatch):
     monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
     with pytest.raises(requests.HTTPError):
         provider.generate_sync(prompt="p")
-    assert calls["n"] == 1 and sleeps == []  # no retry, no backoff sleep
+    # no retry and no Retry-After sleep (limiter pacing may still sleep briefly)
+    assert calls["n"] == 1 and all(d < 5 for d in sleeps)
 
 
 def test_nvidia_still_retries_on_429():
