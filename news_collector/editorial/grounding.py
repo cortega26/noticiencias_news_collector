@@ -499,6 +499,36 @@ def _check_hygiene(field_name: str, text: str) -> List[GroundingFinding]:
     return out
 
 
+def _code_span(text: str) -> str:
+    """Inline code span: generated text is inert in it (no @mentions, links,
+    HTML or comment openers); backticks and newlines are neutralised."""
+    return "`" + re.sub(r"\s+", " ", text.replace("`", "'")).strip() + "`"
+
+
+def format_pr_section(report: GroundingReport, limit: int = 8) -> str:
+    """Markdown section for the content PR body ("" when there is nothing to
+    review), so the human reviewer sees the advisory findings at merge time."""
+    if not report.findings:
+        return ""
+    ranked = sorted(report.findings, key=lambda f: f.severity != ERROR)
+    lines = [
+        "## ⚠ Verificación de grounding (advisory)",
+        "",
+        f"{len(report.errors)} errores y {len(report.warnings)} avisos al comparar el "
+        "artículo con el texto fuente. Revisar antes de mergear; no bloquea.",
+        "",
+    ]
+    for f in ranked[:limit]:
+        lines.append(
+            f"- **{f.kind}** ({f.severity}, `{f.field}`): {f.detail} — "
+            f"{_code_span(f.snippet)}"
+        )
+    hidden = len(ranked) - limit
+    if hidden > 0:
+        lines.append(f"- … y {hidden} hallazgos más no listados.")
+    return "\n".join(lines)
+
+
 def build_source_text(article: Mapping[str, Any]) -> str:
     """Source text the editor wrote from: title + content, plus the summary only
     when the content does not already contain it."""

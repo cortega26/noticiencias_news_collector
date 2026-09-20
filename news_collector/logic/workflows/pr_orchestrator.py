@@ -59,6 +59,7 @@ class PROrchestrator:
         output_filename: str,
         git_handler: Any = None,
         recovered: bool = False,
+        review_notes: str = "",
     ) -> PRResult:
         """
         Create a pull request for a published article.
@@ -68,6 +69,8 @@ class PROrchestrator:
 
         Args:
             recovered: When True, the PR body notes this is a publishing recovery.
+            review_notes: Optional Markdown appended to the PR body (advisory
+                findings for the human reviewer).
 
         Returns a PRResult with pr_url set if successful, or pr_url=None on failure.
         """
@@ -106,6 +109,8 @@ class PROrchestrator:
             "- Content Guard\n"
             "- Deploy to GitHub Pages"
         )
+        if review_notes.strip():
+            pr_body += f"\n\n{review_notes.strip()}"
 
         pr_url = git.create_pull_request(
             repo_url=repo_url,

@@ -1,6 +1,6 @@
 # Editorial grounding check
 
-**Status:** phase C1 implemented (pure module + backtest, not wired into the flow); C2 (advisory stage, hygiene repair, PR-body section) pending. **Found:** 2026-09-19, reviewing front-end PR #188
+**Status:** implemented, advisory only. C1 (pure module + backtest), C2a (typography repair, stage `text_hygiene`), C2b (stage `grounding`), C2c (PR-body section). Blocking is deliberately not enabled (see backtest). **Found:** 2026-09-19, reviewing front-end PR #188
 (article 2315, a bioRxiv preprint on alginate-encapsulated SC-islets).
 
 ## Problem
@@ -85,3 +85,11 @@ vague_quantifier 1.4, number 0.9. Reading the findings:
 Conclusion: keep advisory. Blocking would need the unit-conversion FPs handled and a
 larger backtest (the 2315 original text is not preserved; it is reproduced as a
 fixture from the defects listed above).
+
+## Phase C2 — wired into the refinery (advisory)
+Order in `refinery_engine`: `editor_refinement` -> `text_hygiene` (repair, only if it changed
+something) -> `grounding` (advisory stage; findings persisted in the attempt summary) ->
+`readability`. Findings also appear in the content PR body under "Verificación de grounding"
+so the human merge review sees them. First real e2e (article 2372, LLM real, Git/PR simulated):
+14 stages OK in 42 s, 28 characters repaired, 0 grounding findings (all body figures present in
+the source, verified by hand).
