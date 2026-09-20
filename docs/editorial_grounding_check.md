@@ -1,6 +1,6 @@
-# Editorial grounding check — parked
+# Editorial grounding check
 
-**Status:** parked (not a priority). **Found:** 2026-09-19, reviewing front-end PR #188
+**Status:** phase C1 implemented (pure module + backtest, not wired into the flow); C2 (advisory stage, hygiene repair, PR-body section) pending. **Found:** 2026-09-19, reviewing front-end PR #188
 (article 2315, a bioRxiv preprint on alginate-encapsulated SC-islets).
 
 ## Problem
@@ -54,3 +54,34 @@ needs the LLM chain and belongs in the editorial council/auditor flow.
   before enabling anything blocking.
 - Should `why_it_matters` be allowed to add context beyond the source (labelled
   as editorial context) instead of being forbidden from it?
+
+## Phase C1 — implemented (advisory, not wired)
+
+`news_collector/editorial/grounding.py` (`check_grounding(markdown, source_text)`,
+pure, fail-open) and `scripts/grounding_backtest.py` (read-only). Rules:
+`number` (error), `vague_quantifier` (error), `scope_claim`, `overclaim`,
+`hygiene`, `fact_check` (warn). Checked fields: title, excerpt, summary_points,
+why_it_matters, fact_check, headlines_variants, confidence, uncertainty_note, body
+(glossary/sources are reference material). Sources under 1500 chars are skipped
+(`skipped_reason="source_too_short"`): a feed teaser is not what the article was
+written from. América Latina framing is allowed in `why_it_matters` (editorial voice).
+
+### Backtest (2026-09-20, local DB)
+Of 26 posts with a `refinery_id`, only **7** could be checked: older posts' ids no
+longer point at the same rows (the stored URL must match `source_url`), and short
+teaser sources are skipped. On those 7: 5 have >=1 `error`; per post: hygiene 5.1,
+vague_quantifier 1.4, number 0.9. Reading the findings:
+
+- **hygiene is the clearest win**: U+202F/U+2011 appear in nearly every recent post
+  (thin space before `%`/units, non-breaking hyphens) -> deterministic repair in C2.
+- `vague_quantifier` hits are mostly real generalisations ("cientos de miles de
+  años", "millones de personas en todo el mundo") — the defect class of 2315.
+- `number` false-positive class: unit conversions ("30B" in the source vs
+  "30 000 millones" in the text) and rounding ("~60"). Not blocking-grade.
+- Not detectable by these rules (known gaps): metaphors that misstate the subject
+  ("Perla de alginato"), duration paraphrases ("meses in vivo" for 98 days),
+  "tamaño de un grano de arena", "decenas de personas" when the source has no count.
+
+Conclusion: keep advisory. Blocking would need the unit-conversion FPs handled and a
+larger backtest (the 2315 original text is not preserved; it is reproduced as a
+fixture from the defects listed above).

@@ -14,7 +14,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 |---|---|
 | Set up the full system locally (both repos) | [`RUNBOOK_LOCAL_DEV.md`](RUNBOOK_LOCAL_DEV.md) |
 | Local Ollama model evaluation (parked) | [`local_llm_evaluation.md`](local_llm_evaluation.md) |
-| Editorial grounding check (parked) | [`editorial_grounding_check.md`](editorial_grounding_check.md) |
+| Editorial grounding check (C1 implemented, advisory) | [`editorial_grounding_check.md`](editorial_grounding_check.md) |
 | Understand engineering governance and change rules | [`AGENTS.md`](AGENTS.md) |
 | Trace an article from RSS to live page | [`PRODUCT_FLOW.md`](PRODUCT_FLOW.md) |
 | Understand cross-repo contract shapes and failure semantics | [`PIPELINE_CONTRACTS.md`](PIPELINE_CONTRACTS.md) |
