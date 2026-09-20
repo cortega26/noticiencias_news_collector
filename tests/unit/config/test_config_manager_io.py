@@ -6,11 +6,26 @@ Real temp files, no mocks: these functions write the sealed config contract and 
 
 from __future__ import annotations
 
+import os
 import tomllib
 from pathlib import Path
 
 import pytest
 from noticiencias import config_manager as cm
+
+
+@pytest.fixture(autouse=True)
+def _isolated_config_environment(tmp_path, monkeypatch):
+    """No ambient override (process env, repo-root .env) may leak into these tests."""
+    for name in list(os.environ):
+        if name.startswith("NOTICIENCIAS__") or name in cm._legacy_env_key_map():
+            monkeypatch.delenv(name)
+    monkeypatch.setattr(
+        cm,
+        "_default_paths",
+        lambda: (tmp_path / "no-default.toml", tmp_path / "no-default.env"),
+    )
+
 
 TIMEOUT_PATH = "collection.request_timeout_seconds"
 TIMEOUT_ENV = "NOTICIENCIAS__COLLECTION__REQUEST_TIMEOUT_SECONDS"
@@ -311,3 +326,8 @@ def test_cli_invalid_config_returns_1(tmp_path, capsys):
     path = _write(tmp_path, "[collection]\nrequest_timeout_seconds = 'x'\n")
     rc, _, err = _run(capsys, "--config", str(path), "--validate")
     assert rc == 1 and "request_timeout_seconds" in err
+
+
+def test_default_repo_paths_are_never_consulted_by_the_suite(tmp_path):
+    assert cm.default_config_path().name == "no-default.toml"
+    assert cm.default_env_path().name == "no-default.env"
