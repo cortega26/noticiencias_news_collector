@@ -119,6 +119,14 @@ was effectively a single point of failure; every failure was an untyped
     items fell back, 307 of 314 as `llm_unavailable` (one failed chunk marks the
     LLM unhealthy for the rest of the cycle).
 
+16. **Scorer failure cascade and cycle budget.** The first real report showed
+    307 of 314 scoring items skipped: one failed chunk marked the LLM unhealthy
+    for the whole cycle, and a hard-coded 200 s budget ended LLM use after ~4
+    chunks of a 370-item cycle. Now 2 consecutive chunk failures disable it (a
+    success resets the streak), the budget is `[scoring] llm_cycle_budget_seconds`
+    (600) and unavailability reasons are reported separately. Measured on the
+    same DB copy: LLM-scored 15 % -> 60 % (+15 % cached).
+
 ## Consequences
 
 - Free-tier models can be weaker in Spanish editorial tasks: order the chain

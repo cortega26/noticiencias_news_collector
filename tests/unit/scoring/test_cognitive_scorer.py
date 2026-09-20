@@ -123,7 +123,9 @@ def test_score_batch_llm_failure_fallback(cognitive_scorer, mock_llm, sample_art
     assert len(results) == 1
     # Should be heuristic fallback
     assert results[0]["cognitive_details"].get("heuristic") is True
-    assert cognitive_scorer.is_llm_healthy is False
+    assert (
+        cognitive_scorer.is_llm_healthy is True
+    )  # one failure alone does not disable it
 
 
 def test_score_batch_budget_exhausted(cognitive_scorer, mock_llm, sample_article):
@@ -282,51 +284,71 @@ def test_one_failed_chunk_falls_back_only_for_that_chunk(cognitive_scorer, mock_
     # Second chunk (indices 2-3) fell back to heuristic, not repeated LLM calls.
     assert results[2]["cognitive_details"].get("heuristic") is True
     assert results[3]["cognitive_details"].get("heuristic") is True
-    assert cognitive_scorer.is_llm_healthy is False
+    # One failed chunk no longer disables the LLM for the cycle (threshold is 2
+    # consecutive failures).
+    assert cognitive_scorer.is_llm_healthy is True
 
 
-def test_chunk_failure_cascades_to_later_untried_chunks(cognitive_scorer, mock_llm):
-    """Characterizes inherited (pre-chunking) circuit-breaker behavior,
-    surfaced by a subagent review of plan 036: `is_llm_healthy` is a
-    per-cycle flag, not per-chunk. Once any chunk's `_call_llm_batch`
-    returns falsy, every later chunk in the *same* score_batch_async call
-    skips the LLM entirely via `_check_budget()` and goes straight to
-    heuristic — it is not retried, even though it never itself failed.
-    This predates plan 036 (the flag existed for the old single-prompt
-    path); chunking just gives one transient failure a larger blast
-    radius within one cycle. Not changed by plan 036 — characterized here
-    so the behavior is explicit rather than silently assumed."""
+def test_llm_is_disabled_only_after_consecutive_chunk_failures(
+    cognitive_scorer, mock_llm
+):
+    """Regression (real run: 307 of 314 articles `llm_unavailable`): a single
+    failed chunk used to flip a cycle-wide flag so every later chunk skipped the
+    LLM untried. Now only `max_consecutive_chunk_failures` failures in a row
+    disable it; anything after that goes straight to heuristics."""
     cognitive_scorer.max_prompt_items = 2
-    articles = _articles(6)  # three chunks of 2
-    payloads = [{"article": a.to_dict(), "source_config": {}} for a in articles]
-
-    call_count = 0
+    payloads = [
+        {"article": a.to_dict(), "source_config": {}} for a in _articles(8)
+    ]  # 4 chunks
+    calls = 0
 
     async def _generate(prompt, system=None, json_mode=None):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            return _uniform_generate_async(prompt)  # chunk 1: succeeds
-        return None  # chunk 2 and beyond: total LLM failure
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _uniform_generate_async(prompt)  # chunk 1 ok
+        return None  # chunks 2, 3 fail; chunk 4 is never attempted
 
     mock_llm.generate_async = AsyncMock(side_effect=_generate)
-
     results = asyncio.run(cognitive_scorer.score_batch_async(payloads))
 
-    assert len(results) == 6
-    # Chunk 1 (indices 0-1) succeeded via the LLM.
+    assert len(results) == 8
     assert results[0]["cognitive_details"].get("heuristic") is not True
-    assert results[1]["cognitive_details"].get("heuristic") is not True
-    # Chunk 2 (indices 2-3) genuinely failed and fell back.
-    assert results[2]["cognitive_details"].get("heuristic") is True
-    assert results[3]["cognitive_details"].get("heuristic") is True
-    # Chunk 3 (indices 4-5) never failed itself, but is cascaded to
-    # heuristic anyway because is_llm_healthy is a cycle-wide flag.
-    assert results[4]["cognitive_details"].get("heuristic") is True
-    assert results[5]["cognitive_details"].get("heuristic") is True
-    # Only 2 real LLM calls happened: chunk 3's was never attempted.
-    assert mock_llm.generate_async.call_count == 2
+    assert all(r["cognitive_details"].get("heuristic") is True for r in results[2:])
+    assert mock_llm.generate_async.call_count == 3  # chunk 4 skipped after 2 in a row
     assert cognitive_scorer.is_llm_healthy is False
+
+
+def test_a_success_resets_the_consecutive_failure_count(cognitive_scorer, mock_llm):
+    """fail, ok, fail, ok: never two in a row, so every chunk is attempted and the
+    LLM stays enabled; the OK chunks are scored by the LLM."""
+    cognitive_scorer.max_prompt_items = 2
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(8)]
+    calls = 0
+
+    async def _generate(prompt, system=None, json_mode=None):
+        nonlocal calls
+        calls += 1
+        return None if calls % 2 == 1 else _uniform_generate_async(prompt)
+
+    mock_llm.generate_async = AsyncMock(side_effect=_generate)
+    results = asyncio.run(cognitive_scorer.score_batch_async(payloads))
+
+    assert mock_llm.generate_async.call_count == 4  # all chunks attempted
+    assert cognitive_scorer.is_llm_healthy is True
+    llm_scored = [
+        i
+        for i, r in enumerate(results)
+        if r["cognitive_details"].get("heuristic") is not True
+    ]
+    assert llm_scored == [2, 3, 6, 7]
+
+
+def test_reset_cycle_metrics_clears_the_failure_streak(cognitive_scorer, mock_llm):
+    cognitive_scorer._consecutive_chunk_failures = 1
+    mock_llm.check_health = MagicMock(return_value=(True, "ok"))
+    cognitive_scorer.reset_cycle_metrics()
+    assert cognitive_scorer._consecutive_chunk_failures == 0
 
 
 def test_no_missing_or_duplicate_item_across_chunks(cognitive_scorer, mock_llm):
@@ -445,7 +467,7 @@ def test_batch_results_without_reasoning_are_accepted(cognitive_scorer, mock_llm
 
 
 def test_scoring_outcomes_are_recorded_for_the_run_report(cognitive_scorer, mock_llm):
-    """Chunk 1 by LLM, chunk 2 fails, chunk 3 is skipped (LLM marked unhealthy)."""
+    """Chunk 1 by LLM, chunks 2-3 fail (2 in a row), chunk 4 is skipped."""
     from news_collector.observability import llm_run_stats
 
     llm_run_stats.reset()
@@ -460,12 +482,12 @@ def test_scoring_outcomes_are_recorded_for_the_run_report(cognitive_scorer, mock
         raise RuntimeError("provider down")
 
     mock_llm.generate_async = AsyncMock(side_effect=flaky)
-    payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(6)]
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(8)]
     asyncio.run(cognitive_scorer.score_batch_async(payloads))
     assert llm_run_stats.snapshot() == {
         "scoring.llm": 2,
-        "scoring.heuristic.chunk_failed": 2,
-        "scoring.heuristic.llm_unavailable": 2,
+        "scoring.heuristic.chunk_failed": 4,
+        "scoring.heuristic.llm_unhealthy": 2,
     }
     llm_run_stats.reset()
 
@@ -477,7 +499,7 @@ def test_scoring_records_unavailable_llm_and_cache_hits(cognitive_scorer, mock_l
     cognitive_scorer.is_llm_healthy = False
     payloads = [{"article": a.to_dict(), "source_config": {}} for a in _articles(3)]
     asyncio.run(cognitive_scorer.score_batch_async(payloads))
-    assert llm_run_stats.snapshot() == {"scoring.heuristic.llm_unavailable": 3}
+    assert llm_run_stats.snapshot() == {"scoring.heuristic.llm_unhealthy": 3}
 
     llm_run_stats.reset()
     cognitive_scorer.is_llm_healthy = True
@@ -523,3 +545,27 @@ def test_incomplete_batch_reply_is_not_counted_or_cached_as_llm_work(
         is None
     )
     llm_run_stats.reset()
+
+
+def test_exhausted_cycle_budget_is_reported_as_its_own_reason(
+    cognitive_scorer, mock_llm
+):
+    """Budget exhaustion used to be lumped into 'llm_unavailable'."""
+    from news_collector.observability import llm_run_stats
+
+    llm_run_stats.reset()
+    cognitive_scorer.max_cycle_budget_sec = 0.0
+    payloads = [
+        {"article": a.to_dict(), "source_config": {}} for a in _articles(3, "Budget")
+    ]
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))
+    assert llm_run_stats.snapshot() == {"scoring.heuristic.budget_exhausted": 3}
+    assert mock_llm.generate_async.call_count == 0
+    llm_run_stats.reset()
+
+
+def test_cycle_budget_comes_from_config():
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config()
+    assert cfg.scoring.llm_cycle_budget_seconds == 600

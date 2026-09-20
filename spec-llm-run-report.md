@@ -26,9 +26,19 @@
 
 ## Known limits
 - Concurrent workflows in the same process share counters.
-- A single failed scoring chunk still marks the LLM unhealthy for the rest of
-  the cycle (`is_llm_healthy`); the report exposes it (first real run: 307 of
-  314 items `llm_unavailable`). Addressed separately.
+- (Fixed in the follow-up below.) A single failed chunk used to mark the LLM
+  unhealthy for the whole cycle (first real run: 307 of 314 items unavailable).
+
+## Follow-up: scorer failure cascade and budget
+- `CognitiveScorer` disables the LLM only after `max_consecutive_chunk_failures`
+  (2) failed chunks in a row; any success resets the streak (also reset per cycle).
+- Unavailability reasons are reported separately: `budget_exhausted`,
+  `llm_unhealthy`, `breaker_open` (previously all `llm_unavailable`).
+- `[scoring] llm_cycle_budget_seconds` (default 600; was a hard-coded 200): the
+  first real run scored 371 items (incl. the 14-day re-score) and the 200 s cap
+  ended LLM use after ~4 chunks.
+- Measured (same DB copy): LLM-scored share 57/371 (15 %) -> 221/370 (60 %) +
+  54 cached; residual 26 % = `budget_exhausted` 60 + `chunk_failed` 35.
 
 ## Verification
 - Unit: aggregation, thresholds, no-activity, outage-as-activity, scope,

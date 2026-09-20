@@ -98,6 +98,7 @@
 | scoring.topic_cap_percentage | float | 0.6 |  |  |  |
 | scoring.llm_model | str | "qwen2.5:32b" | Ollama model to use for cognitive scoring. |  | qwen2.5:14b, qwen2.5:32b |
 | scoring.rescore_days_back | int | 14 | Lookback window in days to re-score completed unpublished articles. |  |  |
+| scoring.llm_cycle_budget_seconds | int | 600 | Total wall-clock seconds the cognitive scorer may spend on LLM batches per cycle; once spent, remaining items are scored heuristically (reported as heuristic.budget_exhausted). A 20-item batch takes ~5-25 s on the free tiers and Groq refills its token cap at ~3 batches/min, so ~370 items need several minutes. |  |  |
 | scoring.candidate_max_age_days | int | 30 | Maximum age in days of an article's reference date (published_date, else collected_date) for it to remain a candidate. Applied by candidate/selection/export queries and by the recency decay tail, which reaches 0.0 exactly at this cutoff. |  |  |
 | scoring.page_size | int | 200 | Number of articles fetched per repository page during a scoring cycle, instead of loading the entire pending/rescore backlog into memory at once. |  |  |
 | scoring.max_prompt_items | int | 20 | Max articles bundled into a single CognitiveScorer LLM prompt chunk. Provider context limits cannot be reliably determined without a live model probe, so this is a conservative, documented estimate rather than a measured limit. |  |  |
