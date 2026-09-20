@@ -185,7 +185,19 @@ def test_pr_section_lists_errors_first_and_truncates():
     section = format_pr_section(check_grounding(md, SOURCE), limit=3)
     assert section.startswith("## ⚠ Verificación de grounding (advisory)")
     assert "12 errores y 1 avisos" in section
-    assert section.count("\n- **number**") == 3 and "y 10 más" in section
+    assert section.count("\n- **number**") == 3 and "10 hallazgos más" in section
     assert (
         "overclaim" not in section.split("y 10 más")[0]
     )  # warnings ranked after errors
+
+
+def test_pr_section_neutralises_markdown_from_generated_text():
+    from news_collector.editorial.grounding import format_pr_section
+
+    md = _post(body="Contacto @alguien <!-- oculto [x](http://evil) 777 `tick`\nsalto.")
+    section = format_pr_section(check_grounding(md, SOURCE))
+    line = next(x for x in section.splitlines() if x.startswith("- **number**"))
+    snippet = line.split(" — ", 1)[1]
+    assert snippet.startswith("`") and snippet.endswith("`")  # inert code span
+    assert "`tick`" not in snippet and "\n" not in snippet
+    assert "<!--" in snippet and "](http://evil)" in snippet  # kept, but inert

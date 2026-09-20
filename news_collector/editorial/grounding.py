@@ -499,6 +499,12 @@ def _check_hygiene(field_name: str, text: str) -> List[GroundingFinding]:
     return out
 
 
+def _code_span(text: str) -> str:
+    """Inline code span: generated text is inert in it (no @mentions, links,
+    HTML or comment openers); backticks and newlines are neutralised."""
+    return "`" + re.sub(r"\s+", " ", text.replace("`", "'")).strip() + "`"
+
+
 def format_pr_section(report: GroundingReport, limit: int = 8) -> str:
     """Markdown section for the content PR body ("" when there is nothing to
     review), so the human reviewer sees the advisory findings at merge time."""
@@ -513,13 +519,13 @@ def format_pr_section(report: GroundingReport, limit: int = 8) -> str:
         "",
     ]
     for f in ranked[:limit]:
-        snippet = f.snippet.replace("`", "'")
         lines.append(
-            f"- **{f.kind}** ({f.severity}, `{f.field}`): {f.detail} — «{snippet}»"
+            f"- **{f.kind}** ({f.severity}, `{f.field}`): {f.detail} — "
+            f"{_code_span(f.snippet)}"
         )
     hidden = len(ranked) - limit
     if hidden > 0:
-        lines.append(f"- … y {hidden} más (ver la etapa `grounding` del intento).")
+        lines.append(f"- … y {hidden} hallazgos más no listados.")
     return "\n".join(lines)
 
 
