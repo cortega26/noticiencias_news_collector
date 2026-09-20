@@ -959,6 +959,15 @@ class NvidiaConfig(StrictModel):
             "or empty to disable latency-based degradation."
         ),
     )
+    purpose_extra_body: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description=(
+            "Per-purpose top-level request fields merged into NVIDIA calls "
+            "(never overriding model/messages/stream), keyed by the purpose "
+            "label (e.g. 'prescoring'). Used to lower NIM reasoning effort for "
+            "cheap selection tasks while editing keeps full reasoning."
+        ),
+    )
 
     @field_validator("api_key", mode="before")
     @classmethod

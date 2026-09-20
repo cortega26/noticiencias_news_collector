@@ -637,6 +637,7 @@ def get_provider(
                 degraded_probe_timeout_seconds=use_degraded_probe_timeout,
                 degraded_window_size=use_degraded_window,
                 slow_response_seconds=use_slow_response_seconds,
+                extra_body=getattr(nvidia_cfg, "purpose_extra_body", {}).get(purpose),
             )
         )
 

@@ -133,6 +133,21 @@ was effectively a single point of failure; every failure was an untyped
     score the rest heuristically (`rescoring.heuristic.no_llm_by_policy`); the
     `rescoring` stage is informational in the run report and never raises the
     degraded alert. Set the flag to `true` to also upgrade heuristic items.
+18. **Prescoring: NVIDIA at low reasoning effort (`[nvidia.purpose_extra_body]`).**
+    Prescoring emits only `{"selected_indices": [...]}` yet each NIM call took
+    28-38 s, i.e. hidden reasoning (2-4k tokens). Benchmarked 2026-09-20 on 8 real
+    50-item batches (same batches for every variant, retries on 503): default
+    p50 28-38 s; `reasoning_effort=low` p50 3-6 s (~100-800 tokens);
+    `enable_thinking=false` p50 1 s. Top-5 agreement: default vs itself 63 %,
+    low vs default 45-49 %, no-think vs default 28 %; manual review of 3 batches
+    found low's picks editorially equivalent. Adopted `low` for `prescoring` only
+    (per-purpose top-level body merge in `NvidiaProvider`, never overriding
+    model/messages/stream); no-think rejected on agreement; editing keeps full
+    reasoning. Gemini `thinkingBudget=0` (1-2 s) is not viable: the free plan
+    429s on ~23 back-to-back calls. OpenRouter `:free` was slow/unstable (26-95 s,
+    empty replies). The 80 % agreement bar in the plan was unreachable (the
+    baseline itself only agrees 63 % with itself); selection is a coarse
+    pre-filter before full scoring, so equivalence was judged manually.
 
 ## Consequences
 

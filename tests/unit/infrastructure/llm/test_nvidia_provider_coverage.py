@@ -581,3 +581,51 @@ class TestGenerateSync:
         )
         with pytest.raises(RuntimeError, match="Retry loop"):
             _provider(max_retries=0).generate_sync("hello")
+
+
+def test_extra_body_merged_without_overriding_skeleton():
+    p = _provider(
+        extra_body={"reasoning_effort": "low", "model": "evil", "stream": True}
+    )
+    payload = p._prepare_payload("x")
+    assert payload["reasoning_effort"] == "low"
+    assert payload["model"] == "nvidia/nemotron-3-super-120b-a12b"
+    assert payload["stream"] is False
+
+
+def test_non_dict_extra_body_is_ignored():
+    assert "reasoning_effort" not in _provider(extra_body="junk")._prepare_payload("x")
+
+
+def test_shipped_config_lowers_reasoning_only_for_prescoring():
+    from pathlib import Path
+
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
+    assert cfg.nvidia.purpose_extra_body == {"prescoring": {"reasoning_effort": "low"}}
+
+
+def test_factory_passes_purpose_extra_body_to_nvidia(monkeypatch):
+    from types import SimpleNamespace
+
+    from news_collector.infrastructure.llm import factory
+
+    cfg = SimpleNamespace(
+        nvidia=SimpleNamespace(
+            api_key="nvapi-x",
+            purpose_extra_body={"prescoring": {"reasoning_effort": "low"}},
+        ),
+        gemini=None,
+        llm_endpoints=[],
+        llm=None,
+        ollama=None,
+    )
+    monkeypatch.setattr(factory, "_ensure_rate_limiter", lambda c: None)
+    monkeypatch.setattr(factory, "_install_metrics_sink", lambda: None)
+    chain = factory.get_provider(config=cfg, purpose="prescoring")
+    nv = next(p for p in chain.providers if isinstance(p, NvidiaProvider))
+    assert nv.extra_body == {"reasoning_effort": "low"}
+    edit = factory.get_provider(config=cfg, purpose="edit")
+    nv2 = next(p for p in edit.providers if isinstance(p, NvidiaProvider))
+    assert nv2.extra_body == {}

@@ -8,5 +8,5 @@
       (2 consecutive failures, reset on success); budget/health/breaker reasons
       reported separately; `[scoring] llm_cycle_budget_seconds` configurable (600)
 - [x] Re-scoring skips the LLM by default (`rescore_uses_llm`), reported as its own informational `rescoring` stage
-- [ ] PR-B: prescoring token/latency diet (measure first)
+- [x] PR-B: prescoring diet: NVIDIA `reasoning_effort=low` for prescoring only (`[nvidia.purpose_extra_body]`, ADR-0009 §18; benchmark in the ADR)
 - [ ] PR-C: editorial grounding check (advisory first)

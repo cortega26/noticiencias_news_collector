@@ -154,8 +154,13 @@ class NvidiaProvider:
         degraded_probe_timeout_seconds: float = 5.0,
         degraded_window_size: int = 5,
         slow_response_seconds: Optional[float] = None,
+        extra_body: Optional[Dict[str, Any]] = None,
     ):
         self.api_key = api_key
+        if isinstance(extra_body, dict) and extra_body:
+            self.extra_body = dict(extra_body)
+        elif not hasattr(self, "extra_body"):  # subclasses set it before super()
+            self.extra_body = {}
         self._log = _LabeledLogger(self._label)
         self.model = model or "qwen/qwen3-next-80b-a3b-instruct"
         self.base_url = base_url.rstrip("/")
@@ -268,6 +273,9 @@ class NvidiaProvider:
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        for key, value in self.extra_body.items():
+            # Provider-specific knobs only: the request skeleton stays ours.
+            payload.setdefault(key, value)
         return payload
 
     # ---- Retry helpers ----
