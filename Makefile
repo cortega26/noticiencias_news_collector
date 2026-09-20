@@ -391,6 +391,12 @@ test-timeshift: bootstrap ## Run tests with the clock +120 days to expose time-b
 	@$(PYTHON_BIN) -m pip install -q time-machine
 	@PYTHONPATH=tests/_plugins:. $(PYTHON_BIN) -m pytest tests -q --no-cov -p time_shift_plugin --ignore=tests/e2e_pipeline
 
+test-audit: bootstrap ## Audit the test suite: coverage incl. noticiencias+scripts, weak tests, tests touching no code (slow: full run)
+	@mkdir -p reports/audit
+	@$(PYTHON_BIN) -m pytest tests --ignore=tests/e2e_pipeline --collect-only -q --no-cov -p no:randomly 2>/dev/null | grep "::" > reports/audit/collected.txt
+	@$(PYTHON_BIN) -m pytest tests --ignore=tests/e2e_pipeline -q -p no:randomly --cov=news_collector --cov=apps --cov=noticiencias --cov=scripts --cov-config=scripts/audit.coveragerc --cov-context=test --cov-report=json:reports/audit/cov.json --cov-report=
+	@$(PYTHON_BIN) scripts/test_suite_audit.py --coverage reports/audit/cov.json --collected reports/audit/collected.txt
+
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 

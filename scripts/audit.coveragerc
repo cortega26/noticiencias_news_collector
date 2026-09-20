@@ -1,0 +1,5 @@
+# Coverage config for `make test-audit`: per-test contexts in the JSON report.
+[run]
+branch = True
+[json]
+show_contexts = True

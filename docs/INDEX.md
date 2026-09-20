@@ -61,6 +61,7 @@ The development reports below are historical snapshots, not current measured bas
 | Topic | Document |
 |---|---|
 | Historical development backlog | [`dev/BACKLOG.md`](dev/BACKLOG.md) |
+| Test-suite audit (baseline 2026-09-20; `make test-audit`) | [`dev/TEST_SUITE_AUDIT.md`](dev/TEST_SUITE_AUDIT.md) |
 | Historical quality baseline | [`dev/QUALITY_BASELINE.md`](dev/QUALITY_BASELINE.md) |
 | Quality checklist | [`dev/QUALITY.md`](dev/QUALITY.md) |
 | Refactor plan | [`dev/REFACTOR_PLAN.md`](dev/REFACTOR_PLAN.md) |
