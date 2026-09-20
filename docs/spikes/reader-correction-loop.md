@@ -4,6 +4,10 @@
 > queue, content, or real reporter record is changed. This document and the
 > accompanying contract prototype are decision artifacts only.
 
+> **Prototype removed (2026-09-20):** the executable prototype (`tests/spikes/…`) was deleted in the
+> test-suite audit: it was self-contained (imported nothing from this repo) and only re-tested itself.
+> Recover it with `git show 45763e0:tests/spikes/test_reader_correction_contract.py` if this decision is revisited.
+
 ## Owner and current workflow (Step 1)
 
 - **Triage owner**: Operator (editorial team). Reports arrive via the
