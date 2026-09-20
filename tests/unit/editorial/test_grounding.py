@@ -141,3 +141,18 @@ def test_glossary_and_sources_are_not_checked():
         "sources:\n  - title: t\n    date: '2026-09-12'\n---\nCuerpo."
     )
     assert check_grounding(md, SOURCE).findings == []
+
+
+def test_grouped_thousands_do_not_ground_a_decimal_reading():
+    src = SOURCE + " There were 1,500 patients."
+    md = _post(body="Participaron 1,5 pacientes.")
+    assert any(f.kind == "number" for f in check_grounding(md, src).errors)
+    assert "number" not in kinds(check_grounding(_post(body="Hubo 1.500."), src))
+
+
+def test_overclaim_translated_from_the_source_is_not_flagged():
+    md = _post(body="Un resultado sin precedentes.")
+    assert "overclaim" not in kinds(
+        check_grounding(md, SOURCE + " an unprecedented result")
+    )
+    assert "overclaim" in kinds(check_grounding(md, SOURCE))

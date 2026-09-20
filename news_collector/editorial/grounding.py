@@ -170,15 +170,20 @@ _SCOPE = (
     ),
 )
 
+# (Spanish regex, English source equivalents): a faithful translation of hype
+# that the source itself uses is not the writer's overclaim.
 _OVERCLAIMS = (
-    r"revolucionari[oa]s?",
-    r"sin precedentes",
-    r"milagros[oa]s?",
-    r"cambiar[aá] (?:para siempre|el mundo)",
-    r"soluci[oó]n definitiva",
-    r"soluci[oó]n de salud p[uú]blica",
-    r"(?:paso|momento|d[ií]a|hito) hist[oó]rico",
-    r"gran avance",
+    (r"revolucionari[oa]s?", ("revolutionary", "revolutionize", "revolutionise")),
+    (r"sin precedentes", ("unprecedented", "never before", "first of its kind")),
+    (r"milagros[oa]s?", ("miracle", "miraculous")),
+    (r"cambiar[aá] (?:para siempre|el mundo)", ("change the world", "forever")),
+    (r"soluci[oó]n definitiva", ("ultimate solution", "definitive solution", "cure")),
+    (r"soluci[oó]n de salud p[uú]blica", ("public health solution",)),
+    (
+        r"(?:paso|momento|d[ií]a|hito) hist[oó]rico",
+        ("historic", "milestone", "landmark"),
+    ),
+    (r"gran avance", ("breakthrough", "major advance", "major step")),
 )
 
 _HYGIENE_CHARS = {
@@ -284,9 +289,11 @@ def _fold(text: str) -> str:
 
 def _number_forms(token: str) -> set[str]:
     """Readings of a numeric token (Spanish and English separators)."""
-    forms = {token, token.replace(",", ".")}
     if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", token):
-        forms.add(re.sub(r"[.,]", "", token))
+        # Grouped thousands ("1,500" / "1.500"): only the integer reading, or
+        # "1,500" in a source would also ground an unsupported "1,5".
+        return {token, re.sub(r"[.,]", "", token)}
+    forms = {token, token.replace(",", ".")}
     return {f.rstrip("0").rstrip(".") if "." in f else f for f in forms}
 
 
@@ -437,9 +444,13 @@ def _check_overclaims(
 ) -> List[GroundingFinding]:
     out = []
     folded = _fold(text)
-    for pattern in _OVERCLAIMS:
+    for pattern, alternatives in _OVERCLAIMS:
         m = re.search(pattern, folded)
-        if m and m.group(0) not in source:
+        if (
+            m
+            and m.group(0) not in source
+            and not any(a in source for a in alternatives)
+        ):
             out.append(
                 GroundingFinding(
                     "overclaim",

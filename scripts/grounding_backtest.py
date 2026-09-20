@@ -34,10 +34,11 @@ _SOURCE_URL_RE = re.compile(r"^source_url:\s*['\"]?(\S+?)['\"]?\s*$", re.MULTILI
 
 
 def _url_key(url: str) -> str:
-    """Scheme/query/trailing-slash-insensitive identity of a URL."""
-    return re.sub(r"^https?://(www\.)?", "", url.split("?")[0].split("#")[0]).rstrip(
-        "/"
-    )
+    """Identity of a URL: the repository canonicalizer (tracking params dropped,
+    identity-bearing query values kept) minus feed-only ``rss=`` markers."""
+    from news_collector.utils.url_canonicalizer import canonicalize_url
+
+    return re.sub(r"[?&]rss=[^&#]*", "", canonicalize_url(url or "")).rstrip("/")
 
 
 def source_text(conn: sqlite3.Connection, article_id: int, post_url: str = "") -> str:
@@ -48,8 +49,8 @@ def source_text(conn: sqlite3.Connection, article_id: int, post_url: str = "") -
         "select title, summary, content, url from articles where id = ?",
         (article_id,),
     ).fetchone()
-    if row and post_url and _url_key(row[3] or "") != _url_key(post_url):
-        return ""
+    if row and (not post_url or _url_key(row[3] or "") != _url_key(post_url)):
+        return ""  # no verifiable URL -> cannot trust the id
     row = row[:3] if row else None
     title, summary, content = row or (None, None, None)
     parts = [p for p in (title, content) if p]
