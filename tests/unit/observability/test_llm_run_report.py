@@ -324,3 +324,10 @@ def test_record_failure_is_logged_once_with_context(monkeypatch):
         and "scoring.llm" in warnings[0]
         and "lock broken" in warnings[0]
     )
+
+
+def test_rescoring_stage_is_informational_and_never_alerts():
+    from news_collector.observability import llm_run_report as r
+
+    assert "rescoring" in r.STAGES
+    assert "rescoring" not in r.ALERTING_STAGES

@@ -11,6 +11,7 @@ instead of scheduling one coroutine per article.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, cast
@@ -253,7 +254,10 @@ class ScoringCoordinator:
         the whole page as not committed."""
         payloads = self._adapt_payloads(articles)
         results = await self._score_payloads(
-            payloads, max_fallback_concurrency, module_logger
+            payloads,
+            max_fallback_concurrency,
+            module_logger,
+            is_pending=is_pending,
         )
 
         bulk_score_updates: List[tuple] = []
@@ -319,9 +323,16 @@ class ScoringCoordinator:
         payloads: List[Dict[str, Any]],
         max_fallback_concurrency: int,
         module_logger: Any,
+        is_pending: bool = True,
     ) -> List[Any]:
         """Score one page's payloads: batch if available, else a
         semaphore-bounded per-article fallback (never unbounded gather).
+
+        New (pending) articles may use the LLM; re-scoring of completed ones
+        only does so when ``[scoring] rescore_uses_llm`` is on (default off):
+        ~80 % of a cycle's items are re-scores whose cognitive part is served
+        by the score cache or scored heuristically, keeping LLM capacity for
+        first-time scoring.
         """
         if not payloads:
             return []
@@ -330,7 +341,20 @@ class ScoringCoordinator:
 
         if use_batch:
             try:
-                return cast(List[Any], await self.scorer.score_batch_async(payloads))
+                kwargs: Dict[str, Any] = {}
+                if (
+                    "phase"
+                    in inspect.signature(self.scorer.score_batch_async).parameters
+                ):
+                    kwargs["phase"] = "scoring" if is_pending else "rescoring"
+                    kwargs["allow_llm"] = is_pending or bool(
+                        get_runtime_config().scoring_config.get(
+                            "rescore_uses_llm", False
+                        )
+                    )
+                return cast(
+                    List[Any], await self.scorer.score_batch_async(payloads, **kwargs)
+                )
             except Exception as batch_error:
                 module_logger.error(
                     f"Batch scoring failed ({len(payloads)} items): {batch_error}"

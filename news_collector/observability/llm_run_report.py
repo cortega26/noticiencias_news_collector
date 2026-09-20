@@ -21,7 +21,10 @@ from news_collector.observability.llm_metrics_store import (
     format_report,
 )
 
-STAGES = ("prescoring", "scoring")
+STAGES = ("prescoring", "scoring", "rescoring")
+# Stages that can raise a degraded alert. Re-scoring is informational: it is
+# served by the cache/heuristics by policy, so its heuristic share is expected.
+ALERTING_STAGES = ("prescoring", "scoring")
 
 
 @dataclass
@@ -103,6 +106,8 @@ def build_run_report(
     reasons: List[str] = []
     if activity:
         for s in stages:
+            if s.stage not in ALERTING_STAGES:
+                continue
             ratio = s.heuristic_ratio
             if ratio is not None and ratio > warn_heuristic_ratio:
                 top = max(s.heuristic_reasons, key=s.heuristic_reasons.get)  # type: ignore[arg-type]

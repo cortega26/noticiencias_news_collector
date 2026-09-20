@@ -81,6 +81,7 @@ llm_model = "llama3.2"
 rescore_days_back = 14
 candidate_max_age_days = 30
 llm_cycle_budget_seconds = 600
+rescore_uses_llm = false
 
 [scoring.weights]
 source_credibility = 0.1

@@ -527,3 +527,42 @@ class TestRescoring:
             coordinator.db_manager.get_completed_articles_for_rescoring_page.call_args
         )
         assert kwargs["days_back"] == 7
+
+
+class TestRescoreLlmPolicy:
+    """Re-scoring only uses the LLM when [scoring] rescore_uses_llm is on."""
+
+    class _Scorer:
+        def __init__(self):
+            self.calls = []
+
+        async def score_batch_async(self, payloads, *, phase="scoring", allow_llm=True):
+            self.calls.append((phase, allow_llm))
+            return [{"final_score": 0.5} for _ in payloads]
+
+    def _patch_cfg(self, monkeypatch, rescore_uses_llm):
+        class _Snap:
+            scoring_config = {"rescore_uses_llm": rescore_uses_llm}
+
+        monkeypatch.setattr(
+            "news_collector.scoring.coordinator.get_runtime_config", lambda: _Snap()
+        )
+
+    @pytest.mark.parametrize(
+        "is_pending,flag,expected",
+        [
+            (True, False, ("scoring", True)),
+            (False, False, ("rescoring", False)),
+            (False, True, ("rescoring", True)),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_phase_and_allow_llm(
+        self, coordinator, monkeypatch, is_pending, flag, expected
+    ):
+        self._patch_cfg(monkeypatch, flag)
+        coordinator.scorer = self._Scorer()
+        await coordinator._score_payloads(
+            [{"a": 1}], 2, MagicMock(), is_pending=is_pending
+        )
+        assert coordinator.scorer.calls == [expected]
