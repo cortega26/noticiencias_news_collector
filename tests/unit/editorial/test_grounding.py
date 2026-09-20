@@ -163,3 +163,13 @@ def test_repair_text_hygiene_counts_replaced_characters():
 
     assert repair_text_hygiene("5 % y co‑op​") == ("5 % y co-op", 3)
     assert repair_text_hygiene("limpio") == ("limpio", 0)
+
+
+def test_build_source_text_dedupes_summary_contained_in_content():
+    from news_collector.editorial.grounding import build_source_text
+
+    a = {"title": "T", "content": "cuerpo con resumen", "summary": "resumen"}
+    assert build_source_text(a) == "T\ncuerpo con resumen"
+    b = {"title": "T", "content": "cuerpo", "summary": "otro"}
+    assert build_source_text(b) == "T\ncuerpo\notro"
+    assert build_source_text({}) == ""

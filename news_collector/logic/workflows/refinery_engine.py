@@ -45,7 +45,11 @@ from news_collector.contracts import (
     PublicationAttemptSummary,
 )
 from news_collector.contracts.publication_validation import PublicationFailureClass
-from news_collector.editorial.grounding import repair_text_hygiene
+from news_collector.editorial.grounding import (
+    build_source_text,
+    check_grounding,
+    repair_text_hygiene,
+)
 from news_collector.editorial.readability import analyze_body_readability
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
@@ -292,6 +296,25 @@ class RefineryEngine:
 
         return {"processed_count": processed_count, "errors": errors}
 
+    @staticmethod
+    def _record_grounding_stage(
+        article: Dict[str, Any], refined_content: Any, record_stage: Any
+    ) -> None:
+        """Advisory grounding stage. Fail-open: any error is logged, not raised."""
+        if not isinstance(refined_content, str):
+            return
+        try:
+            report = check_grounding(refined_content, build_source_text(article))
+        except (ValueError, TypeError, AttributeError) as exc:
+            logger.warning(f"Grounding check failed (advisory, ignored): {exc}")
+            return
+        if report.errors or report.warnings:
+            logger.warning(
+                f"Grounding: {len(report.errors)} errors, "
+                f"{len(report.warnings)} warnings {report.by_kind()}"
+            )
+        record_stage("grounding", not report.errors, **report.stage_details())
+
     def process_single_article(  # noqa: C901
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
     ) -> bool:
@@ -491,6 +514,11 @@ class RefineryEngine:
                 bool(critic_verdict.get("approved", False)),
                 average=float(critic_verdict["average"]),
             )
+
+        # Editorial grounding (advisory, never blocks): compares figures, vague
+        # quantities and scope claims of the refined file with the source text the
+        # editor wrote from. Findings persist in the attempt summary for review.
+        self._record_grounding_stage(article, refined_content, record_stage)
 
         # Deterministic audience-readability snapshot (plan 065): pure
         # computation over the refined body, advisory only — it never blocks.

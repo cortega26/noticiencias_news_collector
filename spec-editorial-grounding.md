@@ -34,3 +34,12 @@ body) right after `editor_refinement`, and records a `text_hygiene` stage with
 `repaired_chars` only when it changed something. Pure replacement, never blocks.
 Verified by an engine test (repair written to the file, stage recorded; clean input
 records no stage) and unit tests of the helper.
+
+## C2b: advisory stage (implemented)
+After `text_hygiene`, `refinery_engine._record_grounding_stage` runs `check_grounding`
+against `build_source_text(article)` and records a `grounding` stage
+(`success = no errors`; details: errors, warnings, by_kind, source_chars,
+skipped_reason, top-5 findings). It never blocks publication and swallows (logs) checker
+errors. Verified by engine tests (unsupported figure -> failed stage but PR still
+created; short source -> skipped; checker failure ignored; non-string content skipped).
+Remaining: "Verificación de grounding" section in the content PR body.

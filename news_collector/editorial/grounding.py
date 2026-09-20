@@ -499,6 +499,18 @@ def _check_hygiene(field_name: str, text: str) -> List[GroundingFinding]:
     return out
 
 
+def build_source_text(article: Mapping[str, Any]) -> str:
+    """Source text the editor wrote from: title + content, plus the summary only
+    when the content does not already contain it."""
+    title = str(article.get("title") or "")
+    content = str(article.get("content") or "")
+    summary = str(article.get("summary") or "")
+    parts = [p for p in (title, content) if p]
+    if summary and summary not in content:
+        parts.append(summary)
+    return "\n".join(parts)
+
+
 def check_grounding(
     markdown: str,
     source_text: str,

@@ -213,6 +213,75 @@ class TestRefineryEngine(unittest.TestCase):
         )
         self.assertNotIn("text_hygiene", clean_stages)
 
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_grounding_stage_is_advisory_and_persists_findings(self, mock_dt_refinery):
+        """An unsupported figure is recorded as a failed `grounding` stage but the
+        publication still succeeds; a short source records a skipped stage."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+
+        def run(content):
+            article = {
+                "id": "123",
+                "title": "Test valid title",
+                "url": "http://x",
+                "summary": "This is a sufficiently long summary for refinery validation.",
+                "content": content,
+                "image_url": "https://example.com/test-image.png",
+                "source_id": "src",
+                "source_name": "src",
+                "category": "cat",
+                "published_date": __import__("datetime").datetime(2024, 1, 1),
+                "source_metadata": {},
+            }
+            self.mock_editor.process_article.return_value = (
+                "---\nslug: test-slug\n---\nLa recuperación fue del 95 %. Otra frase."
+            )
+            self.mock_db.get_canonical_slug.return_value = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                self.engine.publication_attempts_dir = Path(tmpdir)
+                target_dir = Path(tmpdir) / "target"
+                target_dir.mkdir()
+                ok = self.engine.process_single_article(
+                    article, MagicMock(), target_dir
+                )
+                summary = json.loads((Path(tmpdir) / "123.json").read_text())
+                return ok, {s["name"]: s for s in summary["stages"]}
+
+        long_source = "Cell recovery was 91 percent after 25 days of culture. " * 40
+        ok, stages = run(long_source)
+        self.assertTrue(ok)  # advisory: never blocks
+        self.assertFalse(stages["grounding"]["success"])
+        details = stages["grounding"]["details"]
+        self.assertEqual(details["errors"], 1)
+        self.assertEqual(details["findings"][0]["kind"], "number")
+        self.assertIn("95", details["findings"][0]["detail"])
+
+        ok, stages = run("fuente corta")
+        self.assertTrue(ok)
+        self.assertTrue(stages["grounding"]["success"])
+        self.assertEqual(
+            stages["grounding"]["details"]["skipped_reason"], "source_too_short"
+        )
+
+    def test_grounding_failure_is_ignored(self):
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        calls = []
+        with patch(
+            "news_collector.logic.workflows.refinery_engine.check_grounding",
+            side_effect=ValueError("boom"),
+        ):
+            RefineryEngine._record_grounding_stage(
+                {"content": "x"}, "texto", lambda *a, **k: calls.append(a)
+            )
+        self.assertEqual(calls, [])
+        # non-string refined content (mock editors) is skipped silently
+        RefineryEngine._record_grounding_stage(
+            {}, None, lambda *a, **k: calls.append(a)
+        )
+        self.assertEqual(calls, [])
+
     def test_interrupted_attempt_persists_recorded_stages(self):
         """Plan 069: an unexpected mid-pipeline raise still persists the
         stages recorded so far (success=False); the error entry is intact."""
