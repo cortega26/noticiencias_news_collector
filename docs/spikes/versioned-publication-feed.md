@@ -4,6 +4,10 @@
 > publication path remains the production control. This document and the
 > accompanying prototype are decision artifacts only.
 
+> **Prototype removed (2026-09-20):** the executable prototype (`tests/spikes/test_publication_feed.py`) was
+> deleted in the test-suite audit: it was self-contained (imported nothing from this repo) and only re-tested
+> itself. Recover it with `git show 45763e0:tests/spikes/test_publication_feed.py` if this decision is revisited.
+
 ## Decision-driving use cases (Step 1)
 
 | Use case | Current Git/PR path | Feed would help? |
@@ -73,8 +77,8 @@ Rationale:
 - **Dependencies**: plan 041 (workspace verification) must be complete
   before any production feed could be considered, but the decision is
   DO NOT BUILD regardless.
-- **Deletion date for prototype code**: retained as `tests/spikes/` for
-  reference; no production code to delete.
+- **Deletion date for prototype code**: the prototype was removed on 2026-09-20 (see the note at the top;
+  recoverable from git history); no production code to delete.
 - **Architecture owner**: Operator (editorial team).
 - **Review date**: Revisit only if a second consumer is identified or
   multi-article atomicity proves insufficient with batch-PR approach.
