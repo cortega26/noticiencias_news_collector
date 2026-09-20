@@ -283,12 +283,28 @@ class CognitiveScorer(BasicScorer):
                     llm_results = await self._call_llm_batch(batch_inputs)
 
                     if llm_results:
-                        llm_run_stats.record("scoring", "llm", len(chunk))
+                        # A parseable reply can still omit items: those get a
+                        # zero-score placeholder (details.error) that is NOT
+                        # LLM work and must not be cached as if it were.
+                        incomplete = sum(
+                            1
+                            for r in llm_results
+                            if isinstance(r.get("details"), dict)
+                            and r["details"].get("error")
+                        )
+                        llm_run_stats.record("scoring", "llm", len(chunk) - incomplete)
+                        llm_run_stats.record(
+                            "scoring", "heuristic.incomplete_response", incomplete
+                        )
                         for j, res in enumerate(llm_results):
                             original_idx, art, _ = chunk[j]
 
-                            key = self._get_cache_key(art)
-                            self._save_to_cache(key, res)
+                            if not (
+                                isinstance(res.get("details"), dict)
+                                and res["details"].get("error")
+                            ):
+                                key = self._get_cache_key(art)
+                                self._save_to_cache(key, res)
 
                             results_map[original_idx] = self._finalize_score(
                                 art,

@@ -95,7 +95,10 @@ def build_run_report(
     """Aggregate a run. ``degraded`` never fires when the LLM was not in use."""
     stages = _stage_outcomes(counts)
     real_calls = sum(p.calls for p in providers)
-    activity = real_calls > 0 or any(s.llm for s in stages)
+    skips = sum(p.skips for p in providers)
+    # Skips count as activity: with every provider circuit-open/degraded there
+    # are zero calls but that is exactly the outage this report must surface.
+    activity = real_calls > 0 or skips > 0 or any(s.llm for s in stages)
 
     reasons: List[str] = []
     if activity:
@@ -107,6 +110,11 @@ def build_run_report(
                     f"{s.stage}: {ratio:.0%} of items fell back to heuristics "
                     f"(main reason: {top})"
                 )
+        if real_calls == 0 and skips > 0:
+            reasons.append(
+                "all providers unavailable (every attempt was skipped: "
+                "circuit open, cooling down or disabled)"
+            )
         by_purpose: Dict[str, List[ProviderSummary]] = {}
         for p in providers:
             by_purpose.setdefault(p.purpose or "all", []).append(p)
@@ -173,12 +181,15 @@ def emit_run_report(
     emit: Any = print,
     export_path: str | Path | None = "data/exports/llm_run_report.json",
     store: Any = None,
+    scope: Any = None,
 ) -> Optional[LLMRunReport]:
     """Build, show, log and export the current run's LLM health report.
 
     Fail-open by design: an observability failure must never fail a run, so any
-    error is logged and swallowed. Returns the report (``None`` if disabled or
-    on failure). ``emit`` receives the text block (``print`` by default; pass a
+    error is logged and swallowed. ``scope`` (``llm_run_stats.begin_scope()``)
+    limits the report to one workflow inside a long-lived process (e.g. one
+    publication among many in the serving process). Returns the report
+    (``None`` if disabled or on failure). ``emit`` receives the text block (``print`` by default; pass a
     logger method for non-interactive callers).
     """
     from news_collector.infrastructure.run_context import run_context
@@ -196,9 +207,18 @@ def emit_run_report(
         if not health.enabled:
             return None
         run_id = run_context.get_context().get("run_id")
-        providers = (store or LLMMetricsStore()).summary(by_purpose=True, run_id=run_id)
+        providers = (store or LLMMetricsStore()).summary(
+            by_purpose=True,
+            run_id=run_id,
+            since_ts=scope.started_at if scope is not None else None,
+        )
+        counts = (
+            llm_run_stats.delta_since(scope)
+            if scope is not None
+            else llm_run_stats.snapshot()
+        )
         report = build_run_report(
-            llm_run_stats.snapshot(),
+            counts,
             providers,
             run_id=run_id,
             warn_heuristic_ratio=health.warn_heuristic_ratio,

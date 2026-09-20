@@ -489,3 +489,37 @@ def test_scoring_records_unavailable_llm_and_cache_hits(cognitive_scorer, mock_l
     asyncio.run(cognitive_scorer.score_batch_async(payloads))  # served from cache
     assert llm_run_stats.snapshot() == {"scoring.cached": 2}
     llm_run_stats.reset()
+
+
+def test_incomplete_batch_reply_is_not_counted_or_cached_as_llm_work(
+    cognitive_scorer, mock_llm
+):
+    """A parseable reply that omits items yields error placeholders: those are
+    failures for the report and must not be written to the score cache."""
+    from news_collector.observability import llm_run_stats
+
+    llm_run_stats.reset()
+    cognitive_scorer.max_prompt_items = 10
+
+    def partial(prompt, system=None, json_mode=None):
+        full = _uniform_generate_async(prompt)
+        full["results"] = full["results"][:2]  # 2 of 4 items answered
+        return full
+
+    mock_llm.generate_async = AsyncMock(side_effect=partial)
+    arts = _articles(4, "Partial")
+    payloads = [{"article": a.to_dict(), "source_config": {}} for a in arts]
+    asyncio.run(cognitive_scorer.score_batch_async(payloads))
+    assert llm_run_stats.snapshot() == {
+        "scoring.llm": 2,
+        "scoring.heuristic.incomplete_response": 2,
+    }
+    assert (
+        cognitive_scorer._get_from_cache(cognitive_scorer._get_cache_key(arts[0]))
+        is not None
+    )
+    assert (
+        cognitive_scorer._get_from_cache(cognitive_scorer._get_cache_key(arts[3]))
+        is None
+    )
+    llm_run_stats.reset()
