@@ -523,8 +523,19 @@ slow_response_seconds = 60.0
 # put keys here). An endpoint whose variable is unset is skipped with a warning.
 # Verify each model id against the provider's /models before enabling it.
 #
+# Global order override (optional). Default: nvidia, gemini, endpoints, ollama.
 # [llm]
 # chain = ["nvidia", "gemini", "groq", "openrouter", "cloudflare", "ollama"]
+
+# Per-purpose order. Measured 2026-09-19 on a real 20-item scoring batch
+# (~10k chars): groq 6s, openrouter 18s, gemini 48s, nvidia 53s, cloudflare 67s.
+# The scoring batch runs once per cycle under a 40s deadline, so NVIDIA first can
+# never finish in time; it goes to the fast providers. NOT applied to
+# `prescoring`: it fires ~20 calls back to back and Groq's free tier caps at
+# ~8000 tokens/minute (429s). Article editing keeps NVIDIA first (quality, no
+# tight deadline). Unlisted purposes use the default order.
+[llm.purpose_chains]
+scoring = ["groq", "openrouter", "nvidia", "gemini", "cloudflare"]
 #
 # Validated 2026-09-19 (JSON mode, Spanish, p50 ~2s vs NIM 4-21s). Skipped
 # (one warning) when GROQ_API_KEY is not set, e.g. in CI.

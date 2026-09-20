@@ -64,13 +64,16 @@ class _FakeLimiter:
     def circuit_breaker(self):
         return self.breaker
 
-    def acquire_sync(self):
+    def breaker_for(self, key):
+        return self.circuit_breaker
+
+    def acquire_sync(self, breaker=None):
         return True
 
     def release_sync(self):
         return None
 
-    async def acquire_async(self):
+    async def acquire_async(self, breaker=None):
         return True
 
     def release_async(self):

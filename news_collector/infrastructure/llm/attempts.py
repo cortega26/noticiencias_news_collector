@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 from news_collector.infrastructure.llm.failure_kinds import FailureKind
-from news_collector.infrastructure.llm.rate_limiter import redact_message
+from news_collector.infrastructure.llm.rate_limiter import queue_wait_s, redact_message
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("infrastructure.llm.attempts")
@@ -116,10 +116,11 @@ class AttemptRecord:
     purpose: str
     ok: bool
     kind: Optional[FailureKind]
-    latency_ms: int
+    latency_ms: int  # service time (queue wait excluded)
     failover_index: int
     error: Optional[str] = None
     ts: float = 0.0
+    queue_wait_ms: int = 0
 
     def as_event(self) -> Dict[str, Any]:
         data = asdict(self)
@@ -152,16 +153,19 @@ def emit_attempt(
     error: Optional[BaseException] = None,
 ) -> AttemptRecord:
     """Log the attempt as a structured event and fan out to sinks (fail-open)."""
+    total_ms = int((time.monotonic() - started) * 1000)
+    wait_ms = min(int(queue_wait_s() * 1000), total_ms)
     record = AttemptRecord(
         provider=provider_name(provider),
         model=getattr(provider, "model", None),
         purpose=purpose,
         ok=ok,
         kind=kind,
-        latency_ms=int((time.monotonic() - started) * 1000),
+        latency_ms=total_ms - wait_ms,
         failover_index=failover_index,
         error=redact_message(str(error))[:300] if error is not None else None,
         ts=time.time(),
+        queue_wait_ms=wait_ms,
     )
     quiet = ok or kind is FailureKind.DEGRADED_SKIP  # skips repeat per call
     (logger.info if quiet else logger.warning)(record.as_event())

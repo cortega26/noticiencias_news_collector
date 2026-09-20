@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     kind TEXT,
     latency_ms INTEGER NOT NULL,
     failover_index INTEGER NOT NULL,
-    error TEXT
+    error TEXT,
+    queue_wait_ms INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_llm_calls_ts ON llm_calls(ts);
 CREATE INDEX IF NOT EXISTS idx_llm_calls_provider_ts ON llm_calls(provider, ts);
@@ -159,6 +160,13 @@ class LLMMetricsStore:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             with self._session() as conn:
                 conn.executescript(_SCHEMA)
+                # Additive migration for databases created before queue_wait_ms.
+                cols = {r[1] for r in conn.execute("PRAGMA table_info(llm_calls)")}
+                if "queue_wait_ms" not in cols:
+                    conn.execute(
+                        "ALTER TABLE llm_calls ADD COLUMN queue_wait_ms "
+                        "INTEGER NOT NULL DEFAULT 0"
+                    )
                 conn.execute(
                     "DELETE FROM llm_calls WHERE ts < ?",
                     (time.time() - self.retention_days * 86400,),
@@ -190,8 +198,8 @@ class LLMMetricsStore:
             with self._lock, self._session() as conn:
                 conn.execute(
                     "INSERT INTO llm_calls (ts, run_id, environment, provider, "
-                    "model, purpose, ok, kind, latency_ms, failover_index, error) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    "model, purpose, ok, kind, latency_ms, failover_index, error, "
+                    "queue_wait_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         rec.ts or time.time(),
                         ctx.get("run_id"),
@@ -204,6 +212,7 @@ class LLMMetricsStore:
                         rec.latency_ms,
                         rec.failover_index,
                         rec.error,
+                        rec.queue_wait_ms,
                     ),
                 )
         except (sqlite3.Error, OSError) as err:

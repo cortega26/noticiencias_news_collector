@@ -70,12 +70,26 @@ was effectively a single point of failure; every failure was an untyped
    make it free for a continuous workload).
 
 9. **Call budget (`generate_async(budget=...)`).** The CognitiveScorer wrapped
-   the whole chain in one `asyncio.wait_for(40s)`; a slow first provider (NIM
-   p90 ≈ 62 s) consumed it and cancelled the call before failover was ever
-   tried (observed 2026-09-19: every scoring batch fell back to heuristics).
-   With a budget, each non-final attempt is capped at 60 % of the time left
-   (really cancelled) and the last provider gets the remainder, so failover fits
-   inside the caller's deadline. Without a budget behavior is unchanged.
+   the whole chain in one `asyncio.wait_for`; a slow first provider consumed it
+   and cancelled the call before failover was ever tried (every scoring batch
+   fell back to heuristics). With a budget each non-final attempt is capped at
+   `MAX_ATTEMPT_S` (25 s, really cancelled) and the last provider gets the
+   remainder. A first version used 60 % of the time left; measured on a real run
+   that gave 24/9.6/3.8/1.5 s, starving every fallback, so it is a fixed cap.
+10. **Per-purpose order (`[llm.purpose_chains]`).** Measured on a real 20-item
+    scoring batch (2026-09-19): groq 6 s, openrouter 18 s, gemini 48 s, nvidia
+    53 s, cloudflare 67 s. `scoring` (one batch per cycle, under a deadline)
+    goes groq-first. `prescoring` is NOT groq-first: ~20 back-to-back calls
+    exceed Groq's ~8000 tokens/min free cap. Editing keeps NVIDIA first.
+11. **Per-provider circuit breakers.** The breaker was a process-wide singleton:
+    Groq's 429s opened it for every provider, so all fallbacks failed with the
+    first (observed: every provider `rate_limited`, LLM unusable for the cycle).
+    `LLMRateLimiter.breaker_for(key)` gives each provider/endpoint its own.
+    Endpoints fail fast on 429 (no sleeping through `Retry-After`; the chain
+    fails over and cools the provider down) and default to 2 attempts.
+12. **Metrics record service time.** `latency_ms` excludes the time spent waiting
+    for a limiter slot (`queue_wait_ms` is stored separately); before, prescoring
+    showed a 171 s median that was mostly queueing.
 
 ## Consequences
 

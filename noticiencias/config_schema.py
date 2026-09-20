@@ -996,6 +996,13 @@ class LLMEndpointConfig(StrictModel):
     max_tokens: PositiveInt = Field(
         default=4096, description="Maximum number of tokens to generate per request."
     )
+    max_retries: PositiveInt = Field(
+        default=2,
+        description=(
+            "Total attempts per call on this endpoint. Low on purpose: inside the "
+            "provider chain, failing over beats sleeping through a 429 backoff."
+        ),
+    )
     json_mode_supported: bool = Field(
         default=True,
         description=(
@@ -1035,6 +1042,14 @@ class LLMChainConfig(StrictModel):
             "Explicit provider order using 'nvidia', 'gemini' and endpoint "
             "names. Empty = nvidia, gemini, endpoints (declared order). "
             "Ollama is always appended last."
+        ),
+    )
+    purpose_chains: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Per-purpose override of `chain` (purposes: prescoring, scoring, "
+            "classification, council, editing...). Same rules as `chain`. Lets "
+            "latency-bound batch work use the fastest provider first."
         ),
     )
 

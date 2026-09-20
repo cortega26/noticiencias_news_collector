@@ -164,6 +164,7 @@
 | llm_rate_limiting.retry_jitter_max | float | 2.0 | Maximum jitter added to backoff delay. |  |  |
 | llm | LLMChainConfig |  |  |  |  |
 | llm.chain | list | [] | Explicit provider order using 'nvidia', 'gemini' and endpoint names. Empty = nvidia, gemini, endpoints (declared order). Ollama is always appended last. |  |  |
+| llm.purpose_chains | dict | {} | Per-purpose override of `chain` (purposes: prescoring, scoring, classification, council, editing...). Same rules as `chain`. Lets latency-bound batch work use the fastest provider first. |  |  |
 | llm_endpoints | list | [] | Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig). |  |  |
 | editorial_auditor | EditorialAuditorConfig |  |  |  |  |
 | editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |

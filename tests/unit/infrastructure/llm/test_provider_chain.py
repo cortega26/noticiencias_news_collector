@@ -26,7 +26,8 @@ from news_collector.infrastructure.llm.failure_kinds import (
     is_provider_fault,
     retry_after_seconds,
 )
-from news_collector.infrastructure.llm.nvidia_provider import (
+from news_collector.infrastructure.llm.nvidia_provider import (  # noqa: F401
+    NvidiaProvider,
     ProviderDegradedError,
     RateLimitError,
 )
@@ -658,6 +659,7 @@ class SlowProvider(FakeProvider):
 
 def _fast_budget(monkeypatch):
     monkeypatch.setattr(FallbackProvider, "MIN_ATTEMPT_S", 0.05)
+    monkeypatch.setattr(FallbackProvider, "MAX_ATTEMPT_S", 0.5)
 
 
 def test_budget_caps_slow_first_provider_so_failover_fits(monkeypatch):
@@ -667,7 +669,7 @@ def test_budget_caps_slow_first_provider_so_failover_fits(monkeypatch):
     started = time.monotonic()
     out = asyncio.run(chain.generate_async("p", budget=1.0))
     assert out == "rescued"
-    assert time.monotonic() - started < 1.0  # slow one cancelled at ~0.6s
+    assert time.monotonic() - started < 1.0  # slow one cancelled at MAX_ATTEMPT_S
     assert (slow.calls, fast.calls) == (1, 1)
     assert slow.timeout == 300  # restored
 
@@ -701,6 +703,7 @@ def test_budget_exhausted_raises_last_error(monkeypatch):
 
 def test_budget_too_small_for_another_attempt_stops_the_chain(monkeypatch):
     monkeypatch.setattr(FallbackProvider, "MIN_ATTEMPT_S", 0.5)
+    monkeypatch.setattr(FallbackProvider, "MAX_ATTEMPT_S", 0.6)
     first, second = SlowProvider("a", 30), FakeProvider("b", "never")
     chain = FallbackProvider([first, second])
     with pytest.raises((TimeoutError, asyncio.TimeoutError)):
@@ -714,3 +717,191 @@ def test_no_budget_keeps_previous_behaviour():
         asyncio.run(FallbackProvider([slow, FakeProvider("b")]).generate_async("p"))
         == "done"
     )
+
+
+def test_fixed_attempt_cap_does_not_starve_later_providers(monkeypatch):
+    """Regression (2026-09-19 run): geometric shares gave 24s/9.6s/3.8s/1.5s, so
+    no fallback could ever finish. With a fixed cap every provider gets the same
+    slice while budget remains."""
+    monkeypatch.setattr(FallbackProvider, "MIN_ATTEMPT_S", 0.05)
+    monkeypatch.setattr(FallbackProvider, "MAX_ATTEMPT_S", 0.3)
+    a, b, c = (
+        SlowProvider("a", 30),
+        SlowProvider("b", 30),
+        SlowProvider("c", 0.1, "third"),
+    )
+    out = asyncio.run(FallbackProvider([a, b, c]).generate_async("p", budget=2.0))
+    assert out == "third"  # c could run because a and b each burned only 0.3s
+
+
+def test_purpose_chain_overrides_global_order(monkeypatch):
+    monkeypatch.setenv("GROQ_TEST_KEY", "k")
+    monkeypatch.setenv("CEREBRAS_TEST_KEY", "k")
+    cfg = _cfg(
+        [_endpoint(), _endpoint(name="fast", api_key_env="CEREBRAS_TEST_KEY")],
+        nvidia_key="nv",
+    )
+    cfg.llm.purpose_chains = {"scoring": ["fast", "nvidia"]}
+    names = lambda ch: [attempts.provider_name(p) for p in ch.providers]  # noqa: E731
+    assert names(get_provider(config=cfg, purpose="scoring")) == [
+        "fast",
+        "nvidia",
+        "ollama",
+    ]
+    # other purposes keep the default order
+    assert names(get_provider(config=cfg, purpose="editing"))[:3] == [
+        "nvidia",
+        "groq",
+        "fast",
+    ]
+
+
+def test_shipped_config_puts_groq_first_for_batch_purposes():
+    from pathlib import Path
+
+    from noticiencias.config_manager import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
+    assert cfg.llm.purpose_chains["scoring"][0] == "groq"
+    # prescoring bursts ~20 calls; Groq's ~8000 tokens/min free cap would 429.
+    assert "prescoring" not in cfg.llm.purpose_chains
+    assert "editing" not in cfg.llm.purpose_chains
+
+
+def test_recorded_latency_excludes_rate_limiter_queue_wait():
+    from news_collector.infrastructure.llm import rate_limiter
+
+    seen: list[attempts.AttemptRecord] = []
+    attempts.register_attempt_sink(seen.append)
+
+    class Queued(FakeProvider):
+        def generate_sync(self, **_kwargs):
+            time.sleep(0.3)  # 0.2s queueing + 0.1s service
+            rate_limiter._QUEUE_WAIT.set(rate_limiter._QUEUE_WAIT.get() + 0.2)
+            return "ok"
+
+    real = attempts.emit_attempt
+    try:
+        chain = FallbackProvider([Queued("q")])
+        started = time.monotonic()
+        chain.generate_sync("p")
+    finally:
+        attempts.unregister_attempt_sink(seen.append)
+    rec = seen[0]
+    assert rec.queue_wait_ms == 200
+    assert 50 <= rec.latency_ms < 200  # ~100ms service; the 200ms wait was subtracted
+    assert real is attempts.emit_attempt and started
+
+
+def test_rate_limit_breakers_are_per_provider():
+    """Regression (2026-09-19 run): a process-wide breaker let Groq's 429s open
+    the circuit for NVIDIA, Gemini, OpenRouter... so every fallback failed too."""
+    from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+
+    limiter = LLMRateLimiter()
+    groq, nvidia = limiter.breaker_for("groq"), limiter.breaker_for("nvidia")
+    assert limiter.breaker_for("groq") is groq and groq is not nvidia
+    for _ in range(limiter.config.circuit_breaker_threshold):
+        groq.record_rate_limit()
+    assert groq.is_open is True
+    assert nvidia.is_open is False
+    assert limiter.circuit_breaker.is_open is False
+    assert limiter.acquire_sync(nvidia) is True
+    limiter.release_sync()
+    assert limiter.acquire_sync(groq) is False
+
+
+def test_provider_breaker_keys_are_distinct_per_endpoint():
+    a = OpenAICompatProvider(
+        name="a", api_key="k", base_url="https://a.test/v1", model="m"
+    )
+    b = OpenAICompatProvider(
+        name="b", api_key="k", base_url="https://b.test/v1", model="m"
+    )
+    assert a._breaker_key != b._breaker_key
+
+
+def test_endpoint_max_retries_is_low_by_default_and_configurable(monkeypatch):
+    monkeypatch.setenv("GROQ_TEST_KEY", "k")
+    (default,) = _build_endpoint_providers(_cfg([_endpoint()]), None)
+    assert default.max_retries == 2
+    (custom,) = _build_endpoint_providers(_cfg([_endpoint(max_retries=5)]), None)
+    assert custom.max_retries == 5
+
+
+def test_compat_endpoint_fails_fast_on_429_without_sleeping(monkeypatch):
+    from news_collector.infrastructure.llm import nvidia_provider as nv
+
+    provider = OpenAICompatProvider(
+        name="groq",
+        api_key="k",
+        base_url="https://sync429.test/v1",
+        model="m",
+        max_retries=3,
+    )
+    sleeps: list[float] = []
+    monkeypatch.setattr(nv.time, "sleep", sleeps.append)
+    calls = {"n": 0}
+
+    def rate_limited(*_a, **_k):
+        calls["n"] += 1
+        raise _http_error(429, {"Retry-After": "20"})
+
+    monkeypatch.setattr(nv.requests, "post", rate_limited)
+    from news_collector.config import settings
+
+    monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
+    with pytest.raises(requests.HTTPError):
+        provider.generate_sync(prompt="p")
+    # no retry and no Retry-After sleep (limiter pacing may still sleep briefly)
+    assert calls["n"] == 1 and all(d < 5 for d in sleeps)
+
+
+def test_nvidia_still_retries_on_429():
+    assert NvidiaProvider._fail_fast_on_429 is False
+
+
+def test_compat_endpoint_async_429_fails_fast_without_sleeping(monkeypatch):
+    import httpx
+
+    from news_collector.config import settings
+    from news_collector.infrastructure.llm import nvidia_provider as nv
+    from news_collector.infrastructure.llm.rate_limiter import LLMRateLimiter
+
+    provider = OpenAICompatProvider(
+        name="groq",
+        api_key="k",
+        base_url="https://async429.test/v1",
+        model="m",
+        max_retries=3,
+    )
+    calls = {"n": 0}
+
+    class _Client:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def post(self, *_a, **_k):
+            calls["n"] += 1
+            request = httpx.Request("POST", "https://async429.test/v1/chat/completions")
+            response = httpx.Response(
+                429, request=request, headers={"Retry-After": "20"}
+            )
+            raise httpx.HTTPStatusError("429", request=request, response=response)
+
+        async def aclose(self):
+            return None
+
+    slept: list[float] = []
+
+    async def fake_sleep(delay):
+        slept.append(delay)
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(settings, "LLM_SYSTEM_AVAILABLE", True)
+    LLMRateLimiter._instance = None
+    with pytest.raises(nv.RateLimitError):
+        asyncio.run(provider.generate_async(prompt="p"))
+    LLMRateLimiter._instance = None
+    assert calls["n"] == 1 and slept == []

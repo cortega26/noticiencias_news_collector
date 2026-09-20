@@ -344,7 +344,7 @@ def test_no_missing_or_duplicate_item_across_chunks(cognitive_scorer, mock_llm):
 
 def test_batch_timeout_budget_and_fallback(cognitive_scorer, mock_llm):
     """A slow LLM batch returns None (heuristic fallback); budget exceeds it."""
-    assert cognitive_scorer.batch_timeout_sec == 40.0
+    assert cognitive_scorer.batch_timeout_sec == 75.0
     assert cognitive_scorer.max_cycle_budget_sec > cognitive_scorer.batch_timeout_sec
 
     mock_llm.generate_async.side_effect = asyncio.TimeoutError()

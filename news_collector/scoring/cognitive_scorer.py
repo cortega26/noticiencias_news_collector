@@ -79,10 +79,13 @@ class CognitiveScorer(BasicScorer):
         self.version = "2.2-hybrid-unified"
 
         # 3. Budget Config
-        # NIM latency is p50≈21s / p90≈62s; a 20s cap timed out (heuristic
-        # fallback) on every recent run. Keep the cycle budget above one batch.
-        self.max_cycle_budget_sec = 90.0
-        self.batch_timeout_sec = 40.0
+        # Measured 2026-09-19 for a 20-item batch: groq 6s, openrouter 18s,
+        # gemini 48s, nvidia 53s, cloudflare 67s. Free tiers 429 after one big
+        # batch (Groq ~8000 tokens/min), so a later batch may have to reach a
+        # slower provider: the budget must fit one NVIDIA-class completion after
+        # a fast failure. Scoring runs once per cycle, so the wait is bounded.
+        self.max_cycle_budget_sec = 200.0
+        self.batch_timeout_sec = 75.0
         self.cycle_start_time = time.time()
         self.llm_calls_count = 0
         self.heuristic_used_count = 0
