@@ -30,6 +30,7 @@ from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
     LLMRateLimiter,
+    reset_queue_wait,
 )
 from news_collector.utils.logger import get_logger
 
@@ -95,9 +96,10 @@ class FallbackProvider:
 
     # Non-final providers get a short leash so failover happens quickly.
     FAILOVER_TIMEOUT_S = 60
-    # With a call budget: share of the remaining time a non-final attempt may
-    # use, and the smallest slice worth starting another attempt for.
-    ATTEMPT_BUDGET_SHARE = 0.6
+    # With a call budget: hard cap for a non-final attempt (a fixed cap, not a
+    # share of what is left: geometric shares starved every fallback), and the
+    # smallest slice worth starting another attempt for.
+    MAX_ATTEMPT_S = 25.0
     MIN_ATTEMPT_S = 2.0
 
     def __init__(self, providers: list[Any], purpose: str = "unspecified"):
@@ -256,6 +258,7 @@ class FallbackProvider:
                 continue
             old_timeout = getattr(provider, "timeout", None)
             current_timeout = self._timeout_for(i, timeout, provider)
+            reset_queue_wait()
             started = time.monotonic()
             try:
                 if old_timeout is not None:
@@ -308,8 +311,8 @@ class FallbackProvider:
 
         Without a budget each attempt only has its own timeout. With one, a
         slow provider can no longer starve the rest of the chain: every
-        non-final attempt is capped at ``ATTEMPT_BUDGET_SHARE`` of what is left
-        (and cancelled for real), so failover still fits inside the caller's
+        non-final attempt is capped at ``MAX_ATTEMPT_S`` (and cancelled for
+        real), so failover still fits inside the caller's
         deadline. The final provider gets whatever remains.
         """
         last_error: Optional[BaseException] = None
@@ -336,9 +339,10 @@ class FallbackProvider:
                     break
                 is_last = i >= len(self.providers) - 1
                 attempt_cap = (
-                    remaining if is_last else remaining * self.ATTEMPT_BUDGET_SHARE
+                    remaining if is_last else min(remaining, self.MAX_ATTEMPT_S)
                 )
                 current_timeout = max(1, int(min(current_timeout, attempt_cap)))
+            reset_queue_wait()
             started = time.monotonic()
             try:
                 if old_timeout is not None:
@@ -489,6 +493,7 @@ def _build_endpoint_providers(cfg: Any, nvidia_cfg: Any) -> list[Any]:
                 json_mode_supported=ep.json_mode_supported,
                 timeout=ep.timeout,
                 max_tokens=ep.max_tokens,
+                max_retries=ep.max_retries,
                 degraded_failure_threshold=threshold,
                 degraded_cooldown_seconds=cooldown,
             )
@@ -609,9 +614,12 @@ def get_provider(
 
     # Priority 3: extra OpenAI-compatible endpoints, then optional reordering
     providers.extend(_build_endpoint_providers(cfg, nvidia_cfg))
-    providers = _apply_chain_order(
-        providers, getattr(getattr(cfg, "llm", None), "chain", None)
-    )
+    llm_cfg = getattr(cfg, "llm", None)
+    purpose_chains = getattr(llm_cfg, "purpose_chains", None)
+    chain_order = getattr(llm_cfg, "chain", None)
+    if isinstance(purpose_chains, dict) and purpose_chains.get(purpose):
+        chain_order = purpose_chains[purpose]
+    providers = _apply_chain_order(providers, chain_order)
 
     # Priority 4: Ollama (local)
     # Always include Ollama as the final fallback

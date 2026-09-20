@@ -40,6 +40,11 @@ class GeminiProvider:
     - Never logs the API key.
     """
 
+    @property
+    def _breaker_key(self) -> str:
+        """Identity of this provider's own circuit breaker (never shared)."""
+        return str("gemini")
+
     def __init__(
         self,
         api_key: str,
@@ -157,9 +162,10 @@ class GeminiProvider:
         url = self._endpoint_url(use_model)
 
         limiter = LLMRateLimiter.get_instance()
+        breaker = limiter.breaker_for(self._breaker_key)
 
         for attempt_num in range(1, self.max_retries + 1):
-            acquired = await limiter.acquire_async()
+            acquired = await limiter.acquire_async(breaker)
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
@@ -186,7 +192,7 @@ class GeminiProvider:
 
                 logger.debug("Async Gemini complete in {:.2f}s", time.time() - start)
 
-                limiter.circuit_breaker.record_success()
+                breaker.record_success()
 
                 if json_mode:
                     return self._extract_json(text)
@@ -198,23 +204,20 @@ class GeminiProvider:
 
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
-                    limiter.circuit_breaker.record_rate_limit(retry_after)
+                    breaker.record_rate_limit(retry_after)
                     logger.warning(
                         "Gemini 429 (attempt {}/{}): {}",
                         attempt_num,
                         self.max_retries,
                         safe_msg,
                     )
-                    if (
-                        attempt_num < self.max_retries
-                        and not limiter.circuit_breaker.is_open
-                    ):
+                    if attempt_num < self.max_retries and not breaker.is_open:
                         delay = retry_after or self._backoff_delay(attempt_num)
                         await __import__("asyncio").sleep(delay)
                         continue
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
                 else:
-                    limiter.circuit_breaker.record_error()
+                    breaker.record_error()
                     logger.error(
                         "Async Gemini error (attempt {}/{}): {}",
                         attempt_num,
@@ -259,9 +262,10 @@ class GeminiProvider:
             raise ValueError("LLM System is marked as unavailable (Disabled).")
 
         limiter = LLMRateLimiter.get_instance()
+        breaker = limiter.breaker_for(self._breaker_key)
 
         for attempt_num in range(1, self.max_retries + 1):
-            acquired = limiter.acquire_sync()
+            acquired = limiter.acquire_sync(breaker)
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
@@ -288,7 +292,7 @@ class GeminiProvider:
                     if parts:
                         text = parts[0].get("text", "")
 
-                limiter.circuit_breaker.record_success()
+                breaker.record_success()
 
                 if json_mode:
                     return self._extract_json(text)
@@ -300,10 +304,10 @@ class GeminiProvider:
 
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
-                    limiter.circuit_breaker.record_rate_limit(retry_after)
+                    breaker.record_rate_limit(retry_after)
                     log_fn = logger.warning
                 else:
-                    limiter.circuit_breaker.record_error()
+                    breaker.record_error()
                     log_fn = logger.warning if log_errors_as_warning else logger.error
 
                 log_fn(
@@ -314,7 +318,7 @@ class GeminiProvider:
                     safe_msg,
                 )
 
-                if is_rate_limit and limiter.circuit_breaker.is_open:
+                if is_rate_limit and breaker.is_open:
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
 
                 if attempt_num < self.max_retries:

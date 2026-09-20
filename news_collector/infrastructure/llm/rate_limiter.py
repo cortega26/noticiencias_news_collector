@@ -13,11 +13,12 @@ It prevents request storms by:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import re
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 from news_collector.utils.logger import get_logger
 
@@ -43,6 +44,21 @@ def redact_message(message: str) -> str:
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
+
+# Time the current call spent waiting for a slot (semaphore + pacing). The
+# provider chain subtracts it so recorded latency is *service* time, not queueing.
+_QUEUE_WAIT: contextvars.ContextVar[float] = contextvars.ContextVar(
+    "llm_queue_wait_s", default=0.0
+)
+
+
+def reset_queue_wait() -> None:
+    _QUEUE_WAIT.set(0.0)
+
+
+def queue_wait_s() -> float:
+    return _QUEUE_WAIT.get()
 
 
 @dataclass
@@ -161,11 +177,28 @@ class LLMRateLimiter:
         self._last_request_time: float = 0.0
         self._pacing_lock = threading.Lock()
 
-        # Circuit breaker
+        # Circuit breakers. ``circuit_breaker`` is the legacy shared one; each
+        # provider should use ``breaker_for(key)`` so one provider's 429s
+        # (e.g. Groq's per-minute token cap) cannot open the circuit for the
+        # others — a shared breaker made every fallback fail with the first.
         self.circuit_breaker = CircuitBreaker(
             threshold=cfg.circuit_breaker_threshold,
             cooldown=cfg.circuit_breaker_cooldown,
         )
+        self._breakers: Dict[str, CircuitBreaker] = {}
+        self._breakers_lock = threading.Lock()
+
+    def breaker_for(self, key: str) -> CircuitBreaker:
+        """Circuit breaker dedicated to one provider/endpoint (created on demand)."""
+        with self._breakers_lock:
+            breaker = self._breakers.get(key)
+            if breaker is None:
+                breaker = CircuitBreaker(
+                    threshold=self._config.circuit_breaker_threshold,
+                    cooldown=self._config.circuit_breaker_cooldown,
+                )
+                self._breakers[key] = breaker
+            return breaker
 
     @classmethod
     def get_instance(
@@ -198,16 +231,18 @@ class LLMRateLimiter:
 
     # -- Sync API --
 
-    def acquire_sync(self) -> bool:
+    def acquire_sync(self, breaker: Optional[CircuitBreaker] = None) -> bool:
         """
         Acquire permission to make an LLM request (blocking).
-        Returns False if the circuit breaker is open.
+        Returns False if the (provider's) circuit breaker is open.
         """
-        if self.circuit_breaker.is_open:
+        if (breaker or self.circuit_breaker).is_open:
             return False
 
+        started = time.monotonic()
         self._semaphore.acquire()
         self._pace_sync()
+        _QUEUE_WAIT.set(_QUEUE_WAIT.get() + time.monotonic() - started)
         return True
 
     def release_sync(self) -> None:
@@ -223,16 +258,18 @@ class LLMRateLimiter:
 
     # -- Async API --
 
-    async def acquire_async(self) -> bool:
+    async def acquire_async(self, breaker: Optional[CircuitBreaker] = None) -> bool:
         """
         Acquire permission to make an LLM request (async).
-        Returns False if the circuit breaker is open.
+        Returns False if the (provider's) circuit breaker is open.
         """
-        if self.circuit_breaker.is_open:
+        if (breaker or self.circuit_breaker).is_open:
             return False
 
+        started = time.monotonic()
         await self._async_semaphore.acquire()
         await self._pace_async()
+        _QUEUE_WAIT.set(_QUEUE_WAIT.get() + time.monotonic() - started)
         return True
 
     def release_async(self) -> None:

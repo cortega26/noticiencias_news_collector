@@ -223,3 +223,19 @@ def test_report_script_text_json_and_probe(store, capsys, monkeypatch):
     assert script.main(["--probe"]) == 1
     out = capsys.readouterr().out
     assert "OK " in out and "FAIL" in out and "unreachable" in out
+
+
+def test_queue_wait_is_persisted_and_old_databases_are_migrated(tmp_path):
+    db = tmp_path / "old.db"
+    with sqlite3.connect(db) as conn:  # schema from before queue_wait_ms
+        conn.executescript(
+            "CREATE TABLE llm_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL,"
+            " run_id TEXT, environment TEXT, provider TEXT NOT NULL, model TEXT,"
+            " purpose TEXT NOT NULL, ok INTEGER NOT NULL, kind TEXT, latency_ms INTEGER NOT NULL,"
+            " failover_index INTEGER NOT NULL, error TEXT);"
+        )
+    store = LLMMetricsStore(db, environment="test")
+    rec = _rec()
+    store.record(attempts.AttemptRecord(**{**rec.__dict__, "queue_wait_ms": 1234}))
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT queue_wait_ms FROM llm_calls").fetchone() == (1234,)

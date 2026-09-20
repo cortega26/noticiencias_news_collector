@@ -23,6 +23,10 @@ from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
 class OpenAICompatProvider(NvidiaProvider):
     """Provider for any OpenAI-compatible ``/chat/completions`` endpoint."""
 
+    # Free-tier endpoints 429 with long Retry-After windows (e.g. per-minute
+    # token caps); the chain fails over and cools the provider down instead.
+    _fail_fast_on_429 = True
+
     def __init__(
         self,
         *,

@@ -132,6 +132,14 @@ class NvidiaProvider:
     # Human-readable provider name used in log messages (overridden by
     # OpenAI-compatible subclasses).
     _label: str = "NVIDIA NIM"
+    # When True a 429 is raised immediately instead of sleeping through
+    # Retry-After: inside a provider chain, failing over is faster.
+    _fail_fast_on_429: bool = False
+
+    @property
+    def _breaker_key(self) -> str:
+        """Identity of this provider's own circuit breaker (never shared)."""
+        return str(self.base_url)
 
     def __init__(
         self,
@@ -409,9 +417,10 @@ class NvidiaProvider:
         self._fail_fast_if_degraded()
 
         limiter = LLMRateLimiter.get_instance()
+        breaker = limiter.breaker_for(self._breaker_key)
 
         for attempt_num in range(1, self.max_retries + 1):
-            acquired = await limiter.acquire_async()
+            acquired = await limiter.acquire_async(breaker)
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
@@ -442,7 +451,7 @@ class NvidiaProvider:
                 self._log.debug(
                     "Async NVIDIA NIM complete in {:.2f}s", time.time() - start
                 )
-                limiter.circuit_breaker.record_success()
+                breaker.record_success()
                 self._record_success(elapsed=time.time() - start)
 
                 if json_mode:
@@ -455,7 +464,7 @@ class NvidiaProvider:
 
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
-                    limiter.circuit_breaker.record_rate_limit(retry_after)
+                    breaker.record_rate_limit(retry_after)
                     self._log.warning(
                         "NVIDIA NIM 429 (attempt {}/{}): {}",
                         attempt_num,
@@ -464,7 +473,8 @@ class NvidiaProvider:
                     )
                     if (
                         attempt_num < self.max_retries
-                        and not limiter.circuit_breaker.is_open
+                        and not breaker.is_open
+                        and not self._fail_fast_on_429
                     ):
                         delay = retry_after or self._backoff_delay(attempt_num)
                         await __import__("asyncio").sleep(delay)
@@ -472,14 +482,18 @@ class NvidiaProvider:
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
                 else:
                     self._record_failure()
-                    limiter.circuit_breaker.record_error()
+                    breaker.record_error()
                     self._log.error(
                         "Async NVIDIA NIM error (attempt {}/{}): {}",
                         attempt_num,
                         self.max_retries,
                         safe_msg,
                     )
-                    if attempt_num < self.max_retries and self._should_retry(e):
+                    if (
+                        attempt_num < self.max_retries
+                        and self._should_retry(e)
+                        and not (is_rate_limit and self._fail_fast_on_429)
+                    ):
                         delay = self._backoff_delay(attempt_num)
                         await __import__("asyncio").sleep(delay)
                         continue
@@ -515,9 +529,10 @@ class NvidiaProvider:
         self._fail_fast_if_degraded()
 
         limiter = LLMRateLimiter.get_instance()
+        breaker = limiter.breaker_for(self._breaker_key)
 
         for attempt_num in range(1, self.max_retries + 1):
-            acquired = limiter.acquire_sync()
+            acquired = limiter.acquire_sync(breaker)
             if not acquired:
                 raise RateLimitError("LLM circuit breaker is open — skipping request")
 
@@ -545,7 +560,7 @@ class NvidiaProvider:
                 data = response.json()
                 text = self._extract_text(data)
 
-                limiter.circuit_breaker.record_success()
+                breaker.record_success()
                 self._record_success(elapsed=time.time() - start)
 
                 if json_mode:
@@ -558,11 +573,11 @@ class NvidiaProvider:
 
                 if is_rate_limit:
                     retry_after = self._get_retry_after_from_exc(e)
-                    limiter.circuit_breaker.record_rate_limit(retry_after)
+                    breaker.record_rate_limit(retry_after)
                     log_fn = self._log.warning
                 else:
                     self._record_failure()
-                    limiter.circuit_breaker.record_error()
+                    breaker.record_error()
                     log_fn = (
                         self._log.warning if log_errors_as_warning else self._log.error
                     )
@@ -575,10 +590,14 @@ class NvidiaProvider:
                     safe_msg,
                 )
 
-                if is_rate_limit and limiter.circuit_breaker.is_open:
+                if is_rate_limit and breaker.is_open:
                     raise RateLimitError(safe_msg, retry_after=retry_after) from e
 
-                if attempt_num < self.max_retries and self._should_retry(e):
+                if (
+                    attempt_num < self.max_retries
+                    and self._should_retry(e)
+                    and not (is_rate_limit and self._fail_fast_on_429)
+                ):
                     delay = (
                         retry_after or self._backoff_delay(attempt_num)
                         if is_rate_limit
