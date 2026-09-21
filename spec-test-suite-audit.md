@@ -99,6 +99,7 @@ noise margin (line 91.25 / branch 80.92; measured 91.75 / 81.92). The script's h
 `coverage_ratcheter.sh check` OK against the new baseline, ratchet unit tests unchanged.
 
 ## Phase 5 (done): permanent guardrails
+
 `.github/workflows/test-health-weekly.yml` runs the suite weekly with the clock moved +14 days
 (`TIME_SHIFT_DAYS`, `time_shift_plugin`): it fails first on time-dependent tests and on accepted-risk
 exceptions expiring within two weeks (pip-audit allowlist). `docs/AGENTS.md` §4.1 states the review criteria for
