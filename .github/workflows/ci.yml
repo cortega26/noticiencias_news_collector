@@ -162,7 +162,12 @@ jobs:
           path: reports/coverage
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
-        run: git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.ref }}"
+        # Full history (NOT --depth=1): a shallow base severs ancestry, so
+        # git merge-base fails and the coverage ratchet falls back to checking
+        # every module (spurious failures, e.g. PR #304). The checkout above
+        # already fetched full history; this only ensures the base ref itself
+        # is current.
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
       - name: Verify coverage thresholds
         env:
           COVERAGE_XML: reports/coverage/coverage.xml
