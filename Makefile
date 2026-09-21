@@ -118,7 +118,7 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 
 .PHONY: serve admin admin-install admin-dev admin-build admin-test
 serve: ## Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `make serve API_PORT=9000` (default 8000, honored strictly)
-	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(API_PORT),8000)" $(PYTHON_BIN) -m news_collector.serving
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(SERVING_PORT),$(or $(API_PORT),8000))" $(PYTHON_BIN) -m news_collector.serving
 
 admin-install: ## Install the new Refinery admin GUI (Astro app in apps/admin/)
 	@cd apps/admin && npm install

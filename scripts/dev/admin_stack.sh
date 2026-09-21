@@ -82,6 +82,24 @@ API_PORT=$(resolve_port "API" "$API_PORT" "$API_EXPLICIT") \
 GUI_PORT=$(resolve_port "GUI" "$GUI_PORT" "$GUI_EXPLICIT") \
   || die "GUI port $GUI_PORT is already in use — stop it first (Ctrl+C in its terminal, or 'cd apps/admin && npx astro dev stop')."
 
+# The two services must never share a port. Overlapping overrides (e.g.
+# API_PORT=4321) resolve identically because nothing listens yet, so the
+# API would claim the port and the GUI would fail to bind. Bump the
+# non-explicit side; two explicitly equal ports are unsatisfiable.
+while [[ "$GUI_PORT" == "$API_PORT" ]]; do
+  if (( API_EXPLICIT && GUI_EXPLICIT )); then
+    die "API_PORT and GUI_PORT both resolve to $API_PORT — give each service its own port."
+  elif (( GUI_EXPLICIT )); then
+    API_PORT=$(pick_free_port $(( API_PORT + 1 ))) \
+      || die "no free API port above $API_PORT (GUI pinned to $GUI_PORT)."
+    echo "[admin-stack] NOTE: API port collided with pinned GUI port — using $API_PORT" >&2
+  else
+    GUI_PORT=$(pick_free_port $(( GUI_PORT + 1 ))) \
+      || die "no free GUI port above $GUI_PORT (API on $API_PORT)."
+    echo "[admin-stack] NOTE: GUI port collided with API port $API_PORT — using $GUI_PORT" >&2
+  fi
+done
+
 # The GUI proxy must follow the chosen API port, unless the operator pinned
 # ADMIN_API_TARGET themselves (then it is their wiring — just show it).
 if [[ -z "${ADMIN_API_TARGET+x}" ]]; then
