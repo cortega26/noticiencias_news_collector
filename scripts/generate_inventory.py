@@ -8,6 +8,7 @@ import ast
 import difflib
 import json
 import platform
+import subprocess
 import tomllib
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -18,6 +19,37 @@ from typing import Iterable, Iterator, List, Mapping, MutableMapping, Optional
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _tracked_paths(root: Path) -> Optional[set]:
+    """Posix paths tracked by git under `root`, or None when git is
+    unavailable (fail-open: callers fall back to listing the workdir).
+
+    The weekly inventory audit compares a committed baseline against a fresh
+    CI checkout. Listing the workdir verbatim folds environment-dependent
+    runtime state (`data/image-uploads/`, `data/data/`, `.test_venv/`, …)
+    into the snapshot, so any baseline generated from a lived-in workdir
+    drifts forever in CI (issue #264). Restricting the workdir-verbatim
+    sections to tracked paths keeps the audit's purpose — detecting committed
+    layout evolution — while ignoring runtime noise in every environment.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    return {entry for entry in completed.stdout.split("\0") if entry}
+
+
+def _has_tracked_beneath(tracked: set, prefix: str) -> bool:
+    """Whether any tracked path equals `prefix` or lives beneath `prefix/`."""
+    slash = prefix + "/"
+    return any(path == prefix or path.startswith(slash) for path in tracked)
+
+
 @dataclass(frozen=True)
 class InventoryOptions:
     """Configuration for inventory generation."""
@@ -26,18 +58,28 @@ class InventoryOptions:
     include_dirs: tuple[str, ...] = ("src", "scripts")
 
 
-def _list_top_level(root: Path) -> MutableMapping[str, Optional[List[str]]]:
+def _list_top_level(
+    root: Path, tracked: Optional[set] = None
+) -> MutableMapping[str, Optional[List[str]]]:
     inventory: "OrderedDict[str, Optional[List[str]]]" = OrderedDict()
+    if tracked is None:
+        tracked = _tracked_paths(root)
     for entry in sorted(root.iterdir(), key=lambda path: path.name):
         if entry.name in {".git", "__pycache__", ".venv"}:
             continue
         if entry.is_dir():
+            if tracked is not None and not _has_tracked_beneath(tracked, entry.name):
+                continue
             children = [
                 child.name
                 for child in sorted(entry.iterdir(), key=lambda path: path.name)
+                if tracked is None
+                or _has_tracked_beneath(tracked, f"{entry.name}/{child.name}")
             ]
             inventory[f"{entry.name}/"] = children
         else:
+            if tracked is not None and entry.name not in tracked:
+                continue
             inventory[entry.name] = None
     return inventory
 
@@ -76,11 +118,14 @@ def _optional_security(pyproject: Path) -> List[str]:
     return list(security)
 
 
-def _markdown_files(root: Path) -> List[str]:
+def _markdown_files(root: Path, tracked: Optional[set] = None) -> List[str]:
     files = sorted(
         str(path.relative_to(root)).replace("\\", "/")
         for path in root.rglob("*.md")
         if ".venv" not in path.parts
+        and (
+            tracked is None or str(path.relative_to(root)).replace("\\", "/") in tracked
+        )
     )
     return files
 
@@ -136,13 +181,14 @@ def build_inventory(root: Path, options: InventoryOptions) -> Mapping[str, objec
     pyproject = root / "pyproject.toml"
     missing_md = root / "missing.md"
 
-    top_level = _list_top_level(root)
+    tracked = _tracked_paths(root)
+    top_level = _list_top_level(root, tracked)
     make_targets = _collect_make_targets(makefile) if makefile.exists() else []
     requirements = (
         _parse_requirements(requirements_txt) if requirements_txt.exists() else []
     )
     security_optional = _optional_security(pyproject) if pyproject.exists() else []
-    markdown_files = _markdown_files(root)
+    markdown_files = _markdown_files(root, tracked)
     module_paths = _python_modules(root, options)
     function_index = _module_inventory(module_paths, options.sample_size, root)
     open_questions = _open_questions(missing_md)
