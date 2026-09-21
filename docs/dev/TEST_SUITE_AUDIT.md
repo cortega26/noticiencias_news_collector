@@ -81,6 +81,7 @@ trampoline: deselected in the mutation run and flagged as a test smell to rewrit
 Floors raised accordingly (`failure_kinds` 88, `url_canonicalizer` 82). Remaining weak spots: `observability/llm_run_report.py` (67 %, mostly report formatting) and `editorial/grounding.py` (81 %).
 
 ### Update: survivors killed (Phase 3b, second pass)
+
 | module | before | after | notes |
 |---|---:|---:|---|
 | `editorial/grounding.py` | 79 % (grew with `replica_scope`/`hero_alt`) | 89 % | exact shapes: finding/stage-detail keys, snippet window, number forms, frontmatter fallbacks, hygiene/hero-alt/replica payloads |

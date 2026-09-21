@@ -106,6 +106,7 @@ exceptions expiring within two weeks (pip-audit allowlist). `docs/AGENTS.md` §4
 useful tests (real code, real assertions, mocks only at boundaries, no implementation pinning, no "today"),
 points to mutation testing as the regression-detection measure and requires a regression test per bug fix.
 Together with the ratchet baseline (2b) and mutation floors (3a) these are the standing guardrails.
+
 ## Phase 3b-2 (done): survivors in `grounding` and `llm_run_report`
 Same method as 3b-1 (`mutmut show` -> real gap vs equivalent). Files: `tests/unit/editorial/test_grounding_shapes.py`,
 `tests/unit/observability/test_llm_run_report_shapes.py`, a rewritten emit test, `[tool.mutmut]` selection and floors
