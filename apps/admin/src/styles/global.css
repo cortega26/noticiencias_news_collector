@@ -125,7 +125,6 @@ body {
 .btn-success:hover {
   background-color: var(--color-verdigris-400);
 }
-
 .kbd {
   display: inline-flex;
   min-width: 1.6rem;
@@ -139,6 +138,17 @@ body {
   font-size: 11px;
   color: var(--color-ink-200);
   box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink-950) 60%, transparent);
+}
+
+/* visible keyboard focus (desktop, keyboard-first desk) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-amber-400);
+  outline-offset: 2px;
 }
 
 .status-pill {
@@ -212,36 +222,6 @@ body {
   background-color: var(--color-ink-800);
   box-shadow: 0 0 0 1px
     color-mix(in srgb, var(--color-amber-500) 40%, transparent);
-}
-
-.queue-publish-btn {
-  display: block;
-  width: 100%;
-  margin-top: 0.375rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-amber-500);
-  background-color: var(--color-amber-500);
-  color: var(--color-ink-950);
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
-}
-.queue-publish-btn:hover:not(:disabled) {
-  background-color: var(--color-amber-400);
-  border-color: var(--color-amber-400);
-}
-.queue-publish-btn:disabled {
-  cursor: not-allowed;
-  border-color: var(--color-ink-600);
-  background-color: transparent;
-  color: var(--color-ink-400);
-  opacity: 0.8;
 }
 
 .score-chip {

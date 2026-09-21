@@ -3,22 +3,22 @@ import AuthGate from "../components/AuthGate.astro";
 import AdminLayout from "../layouts/AdminLayout.astro";
 ---
 
-<AdminLayout title="Config" current="/config">
+<AdminLayout title="Configuración" current="/config">
   <AuthGate>
     <header class="mb-8 flex items-end justify-between">
       <div>
-        <h1 class="display-title text-4xl text-paper-100">Configuration</h1>
-        <p class="data-label mt-2">SANITIZED READ · SECRETS NEVER SENT · SAVE VALIDATED</p>
+        <h1 class="display-title text-4xl text-paper-100">Configuración</h1>
+        <p class="data-label mt-2">LECTURA SANEADA · SIN SECRETOS · GUARDADO VALIDADO</p>
       </div>
-      <button id="save" class="btn-primary" type="button">Save config</button>
+      <button id="save" class="btn-primary" type="button">Guardar</button>
     </header>
 
     <div id="config" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div class="py-16 text-center font-mono text-sm text-ink-400 lg:col-span-2">
-        Loading…
+        Cargando…
       </div>
     </div>
-    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
@@ -108,16 +108,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       const github = Object.entries(cfg.github as Record<string, unknown>);
       const ollama = Object.entries(cfg.ollama as Record<string, unknown>);
       root.innerHTML =
-        editorSection("app", "ENVIRONMENT", [
+        editorSection("app", "ENTORNO", [
           ["environment", cfg.environment],
           ["debug", cfg.debug],
           ["timezone", cfg.timezone],
         ]) +
         editorSection("github", "GITHUB", github) +
-        editorSection("ollama", "OLLAMA MODELS", ollama) +
+        editorSection("ollama", "MODELOS OLLAMA", ollama) +
         editorSection(
           "scoring",
-          "SCORING",
+          "PUNTUACIÓN",
           Object.entries((cfg.scoring as Record<string, unknown>) ?? {}),
         );    } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -126,7 +126,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         return;
       }
       if (root) {
-        root.innerHTML = `<div class="card col-span-full px-5 py-10 text-center text-rose-400 lg:col-span-2">Failed: ${esc((e as Error).message)}</div>`;
+        root.innerHTML = `<div class="card col-span-full px-5 py-10 text-center text-rose-400 lg:col-span-2">Falló: ${esc((e as Error).message)}</div>`;
       }
     }
   }
@@ -170,7 +170,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const saved = await saveConfig(submit);
       showToast(
-        `Config saved (v${(saved.meta as Record<string, unknown>)?.version ?? "?"})`,
+        `Configuración guardada (v${(saved.meta as Record<string, unknown>)?.version ?? "?"})`,
       );
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -178,7 +178,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Save failed: " + (e as Error).message, "err");
+      showToast("No se pudo guardar: " + (e as Error).message, "err");
     }
   });
 

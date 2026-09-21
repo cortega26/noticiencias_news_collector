@@ -7,17 +7,17 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   <AuthGate>
     <header class="mb-8 flex items-end justify-between">
       <div>
-        <h1 class="display-title text-4xl text-paper-100">Prompt lab</h1>
-        <p class="data-label mt-2">EDIT SYSTEM PROMPTS · config/prompts.yaml</p>
+        <h1 class="display-title text-4xl text-paper-100">Prompts</h1>
+        <p class="data-label mt-2">EDITAR PROMPTS DE SISTEMA · config/prompts.yaml</p>
       </div>
-      <button id="save" class="btn-primary" type="button">Save prompts</button>
+      <button id="save" class="btn-primary" type="button">Guardar prompts</button>
     </header>
     <div id="prompts" class="grid grid-cols-1 gap-6">
       <div class="py-16 text-center font-mono text-sm text-ink-400">
-        Loading…
+        Cargando…
       </div>
     </div>
-    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
@@ -56,7 +56,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       if (!root) return;
       const keys = Object.keys(prompts).sort();
       if (!keys.length) {
-        root.innerHTML = `<div class="card p-8 text-center text-sm text-ink-400">No prompts.yaml found — add prompts and save.</div>`;
+        root.innerHTML = `<div class="card p-8 text-center text-sm text-ink-400">Sin prompts — añade y guarda.</div>`;
         return;
       }
       root.innerHTML = keys
@@ -65,7 +65,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <div class="card p-5">
             <div class="mb-3 flex items-center justify-between">
               <div class="data-label">${esc(key)}</div>
-              <span class="font-mono text-[11px] text-ink-400">${Object.keys(prompts[key] ?? {}).length} field(s)</span>
+              <span class="font-mono text-[11px] text-ink-400">${Object.keys(prompts[key] ?? {}).length} campo(s)</span>
             </div>
             ${Object.entries(prompts[key] ?? {})
               .map(
@@ -86,7 +86,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Failed to load prompts: " + (e as Error).message, "err");
+      showToast("No se pudieron cargar los prompts: " + (e as Error).message, "err");
     }
   }
 
@@ -104,14 +104,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       await savePrompts(updated);
 
-      showToast("Prompts saved to config/prompts.yaml");
+      showToast("Prompts guardados en config/prompts.yaml");
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("Save failed: " + (e as Error).message, "err");
+      showToast("No se pudo guardar: " + (e as Error).message, "err");
     }
   });
 

@@ -7,18 +7,18 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   <AuthGate>
     <header class="mb-8 flex items-end justify-between gap-4">
       <div>
-        <h1 class="display-title text-4xl text-paper-100">Curation desk</h1>
-        <p class="data-label mt-2">KEYBOARD-FIRST TRIAGE · J/K NAVIGATE · P PUBLISH · R REJECT · A/F AUDIT · O OPEN</p>
+        <h1 class="display-title text-4xl text-paper-100">Curaduría</h1>
+        <p class="data-label mt-2">TECLADO PRIMERO · J/K NAVEGAR · P PUBLICAR · R RECHAZAR · A/F AUDITORÍA · O ABRIR</p>
       </div>
       <div class="flex items-center gap-3">
         <label class="flex cursor-pointer items-center gap-2 font-mono text-xs text-ink-300">
           <input id="dry-run" type="checkbox" class="accent-amber-500" />
-          dry-run
+          simulación
         </label>
         <button id="collect-btn" class="btn-primary" type="button">
-          Fetch fresh news
+          Buscar noticias
         </button>
-        <button id="logout-btn" class="btn-ghost" type="button">Sign out</button>
+        <button id="logout-btn" class="btn-ghost" type="button">Salir</button>
       </div>
     </header>
 
@@ -26,16 +26,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       <input
         id="publish-url"
         type="url"
-        placeholder="Publish from URL — paste an article link to refine & open a PR"
+        placeholder="Pega un enlace para publicarlo"
         class="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-3.5 py-2 font-mono text-xs text-ink-100 outline-none transition-colors placeholder:text-ink-600 focus:border-amber-500"
       />
       <button id="publish-url-btn" class="btn-ghost whitespace-nowrap" type="submit">
-        Refine &amp; publish
+        Publicar
       </button>
     </form>
 
-    <div id="collect-status" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
-    <div id="publish-status" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
+    <div id="collect-status" role="status" aria-live="polite" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
+    <div id="publish-status" role="status" aria-live="polite" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
 
     <div id="status-filter" class="mb-6 flex flex-wrap gap-2"></div>
 
@@ -48,30 +48,30 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         </div>
         <div class="mb-3 flex items-center justify-between gap-2">
           <button id="batch-publish-btn" class="btn-ghost whitespace-nowrap" type="button" disabled>
-            Publish selected (<span id="batch-count">0</span>/5)
+            Publicar selección (<span id="batch-count">0</span>/5)
           </button>
-          <span class="font-mono text-[11px] text-ink-500">tick publishable rows · sequential, one slot</span>
+          <span class="font-mono text-[11px] text-ink-500">marca filas publicables · de una en una</span>
         </div>
         <div id="queue" class="max-h-[68vh] space-y-2 overflow-y-auto pr-1"></div>
         <button id="load-more" class="btn-ghost mt-4 hidden w-full justify-center" type="button">
-          Load more
+          Cargar más
         </button>
         <div id="queue-empty" class="hidden py-10 text-center text-sm text-ink-400">
-          No articles in this queue.
+          Cola vacía. Busca noticias nuevas o pega un enlace arriba.
         </div>
       </section>
 
       <!-- detail -->
       <section class="card min-h-[68vh] p-6">
         <div id="detail-empty" class="flex h-full flex-col items-center justify-center py-16 text-center">
-          <div class="display-title text-2xl text-ink-400">No article selected</div>
+          <div class="display-title text-2xl text-ink-400">Ningún artículo seleccionado</div>
           <p class="mt-2 max-w-sm text-sm text-ink-400">
-            Navigate the queue with <span class="kbd">j</span> /
-            <span class="kbd">k</span> or click a card to inspect it.
+            Navega la cola con <span class="kbd">j</span> /
+            <span class="kbd">k</span> o pulsa una tarjeta para verla.
           </p>
         </div>
         <div id="detail" class="hidden"></div>
-        <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+        <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
       </section>
     </div>
   </AuthGate>
@@ -92,35 +92,6 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   .queue-card.active {
     @apply border-amber-500/70 bg-ink-800;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-amber-500) 40%, transparent);
-  }
-  .queue-publish-btn {
-    display: block;
-    width: 100%;
-    margin-top: 0.375rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--color-amber-500);
-    background-color: var(--color-amber-500);
-    color: var(--color-ink-950);
-    padding: 0.5rem 0.75rem;
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
-  }
-  .queue-publish-btn:hover:not(:disabled) {
-    background-color: var(--color-amber-400);
-    border-color: var(--color-amber-400);
-  }
-  .queue-publish-btn:disabled {
-    cursor: not-allowed;
-    border-color: var(--color-ink-600);
-    background-color: transparent;
-    color: var(--color-ink-400);
-    opacity: 0.8;
   }
   .btn-primary:disabled {
     cursor: not-allowed;
@@ -166,6 +137,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     "rejected",
     "completed",
   ];
+
+  /** Operator labels for pipeline statuses (values stay API-contract). */
+  const STATUS_LABEL: Record<string, string> = {
+    publishable: "Listos",
+    pending: "Pendientes",
+    publishing: "Publicando",
+    rejected: "Rechazados",
+    completed: "Completados",
+    new: "Nuevo",
+  };
 
   let status: ArticleStatus = "publishable";
   let items: AdminArticleListItem[] = [];
@@ -214,17 +195,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     return `status-pill status-${esc(s ?? "new")}`;
   }
 
+  function statusLabel(s: string | null | undefined): string {
+    const key = esc(s ?? "new");
+    return STATUS_LABEL[key] ?? key;
+  }
+
   /** Why the publish affordance is disabled for this row, if it is. */
   function notPublishableReason(
     item: Pick<AdminArticleListItem, "processing_status" | "published_url">,
   ): string {
     if (item.processing_status === "publishing") {
-      return "Already in flight — a publication run is open for this article";
+      return "En curso — ya hay una publicación abierta para este artículo";
     }
     if (item.published_url) {
-      return "Already published — see the published URL in the detail panel";
+      return "Ya publicado — verás la URL en el panel de detalle";
     }
-    return "Not in the current export shortlist — run Fetch fresh news or use Publish from URL above";
+    return "Fuera de la lista actual — busca noticias nuevas o usa Publicar desde URL";
   }
 
   function showToast(message: string, kind: "ok" | "err" = "ok") {
@@ -249,7 +235,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     for (const s of STATUSES) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.textContent = s;
+      btn.textContent = STATUS_LABEL[s] ?? s;
       btn.className =
         "rounded-full border px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors " +
         (s === status
@@ -287,7 +273,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         clearToken();
         showAuthGate();
       } else {
-        showToast("Failed to load queue: " + (e as Error).message, "err");
+        showToast("No se pudo cargar la cola: " + (e as Error).message, "err");
       }
     } finally {
       loading = false;
@@ -297,7 +283,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function renderQueue() {
     if (!queueEl || !countEl || !queueEmptyEl) return;
     queueEmptyEl.classList.toggle("hidden", items.length > 0);
-    countEl.textContent = `${items.length}${cursor ? "+" : ""} · ${status}`;
+    countEl.textContent = `${items.length}${cursor ? "+" : ""} · ${STATUS_LABEL[status] ?? status}`;
     queueEl.innerHTML = "";
     items.forEach((item, index) => {
       const wrap = document.createElement("div");
@@ -311,13 +297,13 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         box.className = "batch-tick accent-amber-500";
         box.checked = batchSelected.has(item.id);
         box.disabled = publishInFlight;
-        box.setAttribute("aria-label", `Select article ${item.id} for batch publish`);
+        box.setAttribute("aria-label", `Seleccionar el artículo ${item.id} para el lote`);
         box.addEventListener("click", (event) => event.stopPropagation());
         box.addEventListener("change", () => {
           if (box.checked) {
             if (batchSelected.size >= BATCH_MAX && !batchSelected.has(item.id)) {
               box.checked = false;
-              showToast(`Batch is capped at ${BATCH_MAX} articles.`, "err");
+              showToast(`El lote admite ${BATCH_MAX} artículos como máximo.`, "err");
               return;
             }
             batchSelected.add(item.id);
@@ -327,7 +313,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           renderBatchBar();
         });
         const cap = document.createElement("span");
-        cap.textContent = "batch";
+        cap.textContent = "lote";
         tick.append(box, cap);
         wrap.appendChild(tick);
       }
@@ -336,20 +322,21 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       card.className = "queue-card" + (item.id === selectedId ? " active" : "");
       card.innerHTML = `
         <div class="mb-1.5 flex items-center justify-between gap-2">
-          <span class="${statusPillClass(item.processing_status)}">${esc(item.processing_status ?? "new")}</span>
-          <span class="score-chip">${item.final_score != null ? item.final_score.toFixed(3) : "—"}</span>
+          <span class="${statusPillClass(item.processing_status)}">${statusLabel(item.processing_status)}</span>
+          <span class="score-chip" title="${item.publishable ? "Sobre la línea de publicación" : "Bajo la línea de publicación"}">${item.final_score != null ? item.final_score.toFixed(3) : "—"}</span>
         </div>
-        ${item.similar_group_id ? `<div class="mb-1.5"><span class="rounded bg-indigo-900/50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300" title="Near-duplicate group ${esc(item.similar_group_id)} — keep the top-ranked, publish one">≈ similar ×${item.similar_group_size ?? "?"}</span></div>` : ""}
+        ${item.similar_group_id ? `<div class="mb-1.5"><span class="rounded bg-indigo-900/50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300" title="Grupo de casi-duplicados ${esc(item.similar_group_id)} — conserva el mejor, publica uno">≈ similares ×${item.similar_group_size ?? "?"}</span></div>` : ""}
         <div class="font-display text-[15px] leading-snug text-ink-100">${esc(item.title)}</div>
         <div class="mt-1.5 flex items-center gap-2 font-mono text-[11px] text-ink-400">
           <span>${esc(item.source.name)}</span>
           <span>·</span>
-          <span>${esc(item.category ?? "uncategorized")}</span>
+          <span>${esc(item.category ?? "sin categoría")}</span>
           ${item.refinery_id ? `<span>·</span><span>${esc(item.refinery_id)}</span>` : ""}
         </div>
-        <div class="mt-2 flex flex-wrap gap-1">
+        ${(item.why_ranked ?? []).length ? `<div class="mt-2 flex flex-wrap gap-1">
           ${(item.why_ranked ?? []).slice(0, 2).map((w) => `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`).join("")}
-        </div>
+          ${(item.why_ranked ?? []).length > 2 ? `<details class="inline"><summary class="cursor-pointer rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-400 hover:text-ink-200">+${(item.why_ranked ?? []).length - 2} más</summary><span class="contents">${(item.why_ranked ?? []).slice(2).map((w) => `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`).join("")}</span></details>` : ""}
+        </div>` : ""}
       `;
       card.addEventListener("click", () => {
         select(item.id);
@@ -359,31 +346,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       card.setAttribute("data-id", String(item.id));
       card.setAttribute("data-index", String(index));
       wrap.appendChild(card);
-
-      // The publish affordance always exists so editors can discover it;
-      // when the row is not a candidate it renders disabled with the reason.
-      {
-        const pub = document.createElement("button");
-        pub.type = "button";
-        pub.className = "queue-publish-btn";
-        pub.textContent = "Refine & publish →";
-        if (item.publishable) {
-          pub.dataset.armed = "1";
-          pub.title =
-            item.export_score != null
-              ? `In the current shortlist (score ${item.export_score.toFixed(3)}) — refine and open a PR`
-              : "In the current shortlist — refine and open a PR";
-          pub.disabled = publishInFlight;
-          pub.addEventListener("click", (event) => {
-            event.stopPropagation();
-            void doPublish({ articleId: item.id });
-          });
-        } else {
-          pub.disabled = true;
-          pub.title = notPublishableReason(item);
-        }
-        wrap.appendChild(pub);
-      }
+      // The +N expander lives inside the card button: stop its clicks from
+      // bubbling to the card handler, or select() re-renders and the expander
+      // can never stay open.
+      wrap.querySelector("details")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
 
       queueEl.appendChild(wrap);
     });
@@ -402,7 +370,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     selectedId = id;
     renderQueue();
     try {
-      detail = await getArticle(id);
+      const fresh = await getArticle(id);
+      // Escape, a filter change, or another selection may have landed
+      // mid-request: only adopt the response when it still matches the
+      // current selection, so hotkeys never act on a stale article.
+      if (selectedId !== id) return;
+      detail = fresh;
       renderDetail();
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -410,7 +383,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Failed to load article: " + (e as Error).message, "err");
+      showToast("No se pudo cargar el artículo: " + (e as Error).message, "err");
     }
   }
 
@@ -434,34 +407,44 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     detailEl.innerHTML = `
       <div class="mb-4 flex items-start justify-between gap-4">
         <div>
-          <span class="${statusPillClass(detail.processing_status)}">${esc(detail.processing_status ?? "new")}</span>
+          <span class="${statusPillClass(detail.processing_status)}">${statusLabel(detail.processing_status)}</span>
           <span class="ml-2 font-mono text-xs text-ink-400">#${detail.id}</span>
         </div>
-        <div class="flex flex-wrap justify-end gap-2">
-          <button class="btn-primary" data-action="publish" type="button">Refine &amp; publish <span class="kbd">P</span></button>
-          <button class="btn-ghost" data-action="open" type="button">Open original</button>
-          <button class="btn-ghost" data-action="full" type="button">Full view</button>
-          <button class="btn-ghost" data-action="reprocess" type="button">Reprocess</button>
-          <button class="btn-danger" data-action="reject" type="button">Reject <span class="kbd">R</span></button>
-          <button class="btn-success" data-action="audit-pass" type="button">Audit pass <span class="kbd">A</span></button>
-          <button class="btn-ghost" data-action="audit-fail" type="button">Audit fail <span class="kbd">F</span></button>
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <button class="btn-primary" data-action="publish" type="button">Publicar <span class="kbd">P</span></button>
+          <button class="btn-ghost" data-action="open" type="button">Abrir original</button>
+          <button class="btn-ghost" data-action="full" type="button">Vista completa</button>
+          <details class="relative">
+            <summary class="btn-ghost cursor-pointer list-none">···</summary>
+            <div class="absolute right-0 z-10 mt-1 w-44 card p-1">
+              <button class="block w-full rounded-md px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800" data-action="reprocess" type="button">Reprocesar</button>
+            </div>
+          </details>
+          <div class="flex overflow-hidden rounded-lg border border-ink-700" role="group" aria-label="Auditoría">
+            <button class="px-3 py-2 text-sm font-medium text-ink-300 hover:bg-ink-800 hover:text-ink-100" data-action="audit-pass" type="button">Aprobar <span class="kbd">A</span></button>
+            <span class="w-px bg-ink-700" aria-hidden="true"></span>
+            <button class="px-3 py-2 text-sm font-medium text-ink-300 hover:bg-ink-800 hover:text-ink-100" data-action="audit-fail" type="button">Suspender <span class="kbd">F</span></button>
+          </div>
+          <button class="px-2 py-2 text-sm font-medium text-rose-400/80 underline-offset-4 hover:text-rose-400 hover:underline" data-action="reject" type="button">Rechazar <span class="kbd">R</span></button>
         </div>
       </div>
+      ${detail.publishable ? "" : `<p class="mb-4 font-mono text-xs text-ink-400">No publicable: ${esc(notPublishableReason(detail))}</p>`}
 
       <h2 class="display-title text-3xl leading-tight text-paper-100">${esc(detail.title)}</h2>
       <div class="mt-2 font-mono text-xs text-ink-400">
-        ${esc(detail.source.name)} · ${esc(detail.category ?? "—")} · collected ${esc(detail.collected_at ?? "—")}
+        ${esc(detail.source.name)} · ${esc(detail.category ?? "—")} · recopilado ${esc(detail.collected_at ?? "—")}
       </div>
 
       ${detail.summary ? `<p class="mt-4 text-[15px] leading-relaxed text-ink-200">${esc(detail.summary)}</p>` : ""}
 
       <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="card p-4">
-          <div class="data-label mb-3">SCORE</div>
+          <div class="data-label mb-3">PUNTUACIÓN</div>
           <div class="mb-3 flex items-baseline gap-2">
             <span class="font-mono text-4xl font-bold text-amber-400">${detail.final_score != null ? detail.final_score.toFixed(3) : "—"}</span>
             <span class="text-xs text-ink-400">/ 1.0</span>
           </div>
+          <p class="mb-3 font-mono text-[11px] text-ink-400">${detail.publishable ? "Elegible para publicar" : "No elegible ahora"}</p>
           <div class="space-y-2">
             ${comps.map(([k, v]) => `
               <div>
@@ -474,21 +457,21 @@ import AdminLayout from "../layouts/AdminLayout.astro";
               </div>
             `).join("")}
           </div>
-          ${detail.latest_score != null ? `<div class="mt-3 font-mono text-[11px] text-ink-400">latest ScoreLog: ${detail.latest_score.toFixed(3)}</div>` : ""}
+          ${detail.latest_score != null ? `<div class="mt-3 font-mono text-[11px] text-ink-400">ScoreLog más reciente: ${detail.latest_score.toFixed(3)}</div>` : ""}
         </div>
 
         <div class="space-y-4">
           <div class="card p-4">
-            <div class="data-label mb-2">WHY RANKED</div>
-            ${(detail.why_ranked ?? []).length ? `<ul class="space-y-1.5 text-sm text-ink-200">${detail.why_ranked.map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join("")}</ul>` : `<p class="text-sm text-ink-400">No ranking notes.</p>`}
+            <div class="data-label mb-2">POR QUÉ DESTACA</div>
+            ${(detail.why_ranked ?? []).length ? `<ul class="space-y-1.5 text-sm text-ink-200">${detail.why_ranked.map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join("")}</ul>` : `<p class="text-sm text-ink-400">Sin motivos registrados.</p>`}
           </div>
           <div class="card p-4">
-            <div class="data-label mb-2">STATE</div>
+            <div class="data-label mb-2">ESTADO</div>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
-              <dt class="text-ink-400">publication</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? "—")}</dd>
-              <dt class="text-ink-400">refinery id</dt><dd class="text-ink-200">${esc(detail.refinery_id ?? "—")}</dd>
-              <dt class="text-ink-400">audit</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? "—")}</dd>
-              <dt class="text-ink-400">topics</dt><dd class="text-ink-200">${esc(detail.topics.join(", ") || "—")}</dd>
+              <dt class="text-ink-400">publicación</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? "—")}</dd>
+              <dt class="text-ink-400">id de refinería</dt><dd class="text-ink-200">${esc(detail.refinery_id ?? "—")}</dd>
+              <dt class="text-ink-400">auditoría</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? "—")}</dd>
+              <dt class="text-ink-400">temas</dt><dd class="text-ink-200">${esc(detail.topics.join(", ") || "—")}</dd>
             </dl>
           </div>
         </div>
@@ -496,7 +479,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
       ${detail.content ? `
         <div class="card mt-4 p-5">
-          <div class="data-label mb-3">CONTENT</div>
+          <div class="data-label mb-3">CONTENIDO</div>
           <div class="max-h-96 overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-ink-200">${esc(detail.content)}</div>
         </div>
       ` : ""}
@@ -513,7 +496,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       if (publishBtn && current) {
         if (current.publishable) {
           publishBtn.dataset.armed = "1";
-          publishBtn.title = "Refine this article and open a publication PR";
+          publishBtn.title = "Publicar este artículo y abrir el PR";
           publishBtn.toggleAttribute("disabled", publishInFlight);
           publishBtn.addEventListener("click", () => {
             void doPublish({ articleId: current.id });
@@ -552,12 +535,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         renderDetail();
       }
     } catch (e) {
-      showToast("Reprocess failed: " + (e as Error).message, "err");
+      showToast("No se pudo reprocesar: " + (e as Error).message, "err");
     }
   }
 
   async function doReject() {
     if (detail == null) return;
+    // Single confirmation gate for every entry point (button + R hotkey).
+    if (!window.confirm("¿Rechazar este artículo?")) return;
     try {
       const result = await rejectArticle(detail.id);
       showToast(result.detail);
@@ -566,7 +551,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         renderDetail();
       }
     } catch (e) {
-      showToast("Reject failed: " + (e as Error).message, "err");
+      showToast("No se pudo rechazar: " + (e as Error).message, "err");
     }
   }
 
@@ -580,7 +565,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         renderDetail();
       }
     } catch (e) {
-      showToast("Audit failed: " + (e as Error).message, "err");
+      showToast("No se pudo auditar: " + (e as Error).message, "err");
     }
   }
 
@@ -596,6 +581,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   document.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (event.key === "Escape") {
+      selectedId = null;
+      detail = null;
+      renderQueue();
+      detailEl?.classList.add("hidden");
+      detailEmptyEl?.classList.remove("hidden");
       return;
     }
     switch (event.key.toLowerCase()) {
@@ -668,7 +661,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const st = await getCollectStatus(runId);
         transientFailures = 0;
         if (st.status === "running" || st.status === "queued") {
-          renderCollectStatus(`Collecting… (${runId}) — started ${st.started_at ?? "now"}`);
+          renderCollectStatus(`Recopilando… (${runId}) — inicio ${st.started_at ?? "ahora"}`);
           return;
         }
         window.clearInterval(pollTimer);
@@ -676,7 +669,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           const processed =
             (st.summary?.collection_summary as Record<string, unknown> | undefined)
               ?.sources_processed ?? "?";
-          renderCollectStatus(`Collection finished: ${processed} sources processed. Refreshing queue…`);
+          renderCollectStatus(`Recopilación terminada: ${processed} fuentes procesadas. Actualizando la cola…`);
           setTimeout(() => {
             collectStatusEl?.classList.add("hidden");
             status = "pending";
@@ -685,13 +678,13 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             void loadQueue();
           }, 1200);
         } else if (st.status === "cancelled") {
-          renderCollectStatus(`Collection cancelled${st.error ? `: ${st.error}` : "."}`);
+          renderCollectStatus(`Recopilación cancelada${st.error ? `: ${st.error}` : "."}`);
         } else if (st.status === "interrupted") {
           renderCollectStatus(
-            `Collection interrupted (server restarted mid-run)${st.error ? `: ${st.error}` : "."}`,
+            `Recopilación interrumpida (el servidor se reinició)${st.error ? `: ${st.error}` : "."}`,
           );
         } else {
-          renderCollectStatus(`Collection failed: ${st.error ?? "unknown error"}`);
+          renderCollectStatus(`Falló la recopilación: ${st.error ?? "error desconocido"}`);
         }
       } catch (e) {
         if (e instanceof Error && e.name === "AuthError") {
@@ -703,12 +696,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
           transientFailures += 1;
           renderCollectStatus(
-            `Collecting… (${runId}) — API briefly unreachable, retrying (${transientFailures}/${MAX_TRANSIENT})`,
+            `Recopilando… (${runId}) — API fuera de alcance, reintentando (${transientFailures}/${MAX_TRANSIENT})`,
           );
           return;
         }
         window.clearInterval(pollTimer);
-        renderCollectStatus(`Status poll failed: ${(e as Error).message}`);
+        renderCollectStatus(`Falló la consulta de estado: ${(e as Error).message}`);
       }
     }, 2000);
   }
@@ -718,7 +711,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const started = await startCollect(dryRunInput?.checked ?? false);
       renderCollectStatus(
-        started.detail + ` (${started.run_id}) — refreshing queue when done.`,
+        started.detail + ` (${started.run_id}) — actualizando la cola al terminar.`,
       );
       await pollCollect(started.run_id);
     } catch (e) {
@@ -731,13 +724,13 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminCollectStarted>;
         if (existing.run_id) {
           renderCollectStatus(
-            `A collection run is already in progress (${existing.run_id}) — watching it instead.`,
+            `Ya hay una recopilación en curso (${existing.run_id}) — observándola.`,
           );
           await pollCollect(existing.run_id);
           return;
         }
       }
-      renderCollectStatus("Failed to start collection: " + (e as Error).message);
+      renderCollectStatus("No se pudo iniciar la recopilación: " + (e as Error).message);
     } finally {
       collectBtn.removeAttribute("disabled");
     }
@@ -766,11 +759,8 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     publishInFlight = active;
     publishUrlBtn?.toggleAttribute("disabled", active);
     batchBtn?.toggleAttribute("disabled", active || batchIds().length === 0);
-    // Only armed (publishable) buttons are toggled: disabled-by-state
-    // buttons must stay disabled when a run finishes.
-    document
-      .querySelectorAll('.queue-publish-btn[data-armed]')
-      .forEach((btn) => btn.toggleAttribute("disabled", active));
+    // Only the armed detail publish button is toggled: the queue publishes
+    // from the batch bar and the P hotkey.
     document
       .querySelectorAll('#detail [data-action="publish"][data-armed]')
       .forEach((btn) => btn.toggleAttribute("disabled", active));
@@ -791,7 +781,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       return `#${id} ✗ ${reason}`;
     });
     renderPublishStatus(
-      `Batch run ${esc(runId)} finished:<br>${lines.join("<br>")} <span class="text-ink-500">(refreshing queue…)</span>`,
+      `Lote ${esc(runId)} terminado:<br>${lines.join("<br>")} <span class="text-ink-500">(actualizando la cola…)</span>`,
     );
     return true;
   }
@@ -819,7 +809,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         transientFailures = 0;
         if (st.status === "running" || st.status === "queued") {
           renderPublishStatus(
-            `Refining… (run ${runId}) — editor → auditor → image → PR. This takes a few minutes.`,
+            `Procesando… (proceso ${runId}) — editor → auditoría → imagen → PR. Tarda unos minutos.`,
           );
           return;
         }
@@ -828,7 +818,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const batchItems = (st.summary as Record<string, unknown> | undefined)?.items;
         if (st.status === "succeeded" && st.pr_url) {
           renderPublishStatus(
-            `Published — PR opened: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Merge it to go live. Refreshing queue…`,
+            `Publicado — PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`,
           );
           scheduleQueueRefresh();
         } else if (st.status === "succeeded" && renderBatchItems(runId, batchItems)) {
@@ -836,17 +826,17 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           scheduleQueueRefresh();
         } else if (st.status === "succeeded") {
           renderPublishStatus(
-            `Refinery reported success but no PR URL was recorded (run ${runId}). Check the publication attempt summary.`,
+            `La refinería terminó sin registrar URL de PR (proceso ${runId}). Revisa el resumen del intento de publicación.`,
           );
         } else if (st.status === "interrupted") {
           renderPublishStatus(
-            `Publication interrupted (server restarted mid-run, run ${runId}).`,
+            `Publicación interrumpida (el servidor se reinició, proceso ${runId}).`,
           );
         } else {
           const reason = st.failure_class
-            ? `${st.failure_class} — ${st.error ?? "no detail"}`
-            : (st.error ?? "unknown error");
-          renderPublishStatus(`Not published (run ${runId}): ${esc(reason)}`);
+            ? `${st.failure_class} — ${st.error ?? "sin detalle"}`
+            : (st.error ?? "error desconocido");
+          renderPublishStatus(`No publicado (proceso ${runId}): ${esc(reason)}`);
         }
       } catch (e) {
         if (e instanceof Error && e.name === "AuthError") {
@@ -859,24 +849,24 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
           transientFailures += 1;
           renderPublishStatus(
-            `Refining… (run ${runId}) — API briefly unreachable, retrying (${transientFailures}/${MAX_TRANSIENT})`,
+            `Procesando… (proceso ${runId}) — API fuera de alcance, reintentando (${transientFailures}/${MAX_TRANSIENT})`,
           );
           return;
         }
         window.clearInterval(publishPollTimer);
         setPublishInFlight(false);
-        renderPublishStatus(`Status poll failed: ${esc((e as Error).message)}`);
+        renderPublishStatus(`Falló la consulta de estado: ${esc((e as Error).message)}`);
       }
     }, 3000);
   }
 
   async function doPublish(opts: { articleId?: number; articleUrl?: string }) {
     if (publishInFlight) {
-      showToast("A publication run is already in progress.", "err");
+      showToast("Ya hay una publicación en curso.", "err");
       return;
     }
     setPublishInFlight(true);
-    renderPublishStatus("Starting Refinery run…");
+    renderPublishStatus("Iniciando proceso…");
     try {
       const started: AdminPublishStarted = await startPublish({
         articleId: opts.articleId,
@@ -895,14 +885,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminPublishStarted>;
         if (existing.run_id) {
           renderPublishStatus(
-            `A publication run is already in progress (run ${existing.run_id}) — watching it instead.`,
+            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`,
           );
           pollPublish(existing.run_id);
           return;
         }
       }
       setPublishInFlight(false);
-      renderPublishStatus(`Failed to start publication: ${esc((e as Error).message)}`);
+      renderPublishStatus(`No se pudo iniciar la publicación: ${esc((e as Error).message)}`);
     }
   }
 
@@ -916,15 +906,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   async function doPublishBatch() {
     const ids = batchIds();
     if (publishInFlight) {
-      showToast("A publication run is already in progress.", "err");
+      showToast("Ya hay una publicación en curso.", "err");
       return;
     }
     if (ids.length === 0) {
-      showToast("Tick 1–5 publishable rows first.", "err");
+      showToast("Marca primero de 1 a 5 filas publicables.", "err");
       return;
     }
     setPublishInFlight(true);
-    renderPublishStatus(`Starting batch run for ${ids.length} articles…`);
+    renderPublishStatus(`Iniciando lote de ${ids.length} artículos…`);
     try {
       const started = await startPublishBatch(ids);
       renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
@@ -940,14 +930,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminPublishStarted>;
         if (existing.run_id) {
           renderPublishStatus(
-            `A publication run is already in progress (run ${existing.run_id}) — watching it instead.`,
+            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`,
           );
           pollPublish(existing.run_id);
           return;
         }
       }
       setPublishInFlight(false);
-      renderPublishStatus(`Failed to start batch publication: ${esc((e as Error).message)}`);
+      renderPublishStatus(`No se pudo iniciar el lote: ${esc((e as Error).message)}`);
     }
   }
 
