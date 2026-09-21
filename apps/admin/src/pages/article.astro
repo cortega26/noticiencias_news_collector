@@ -63,7 +63,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <span class="status-pill status-${esc(article.processing_status ?? "new")}">${esc(article.processing_status ?? "new")}</span>
           <span class="font-mono text-xs text-ink-400">#${article.id} · ${esc(article.refinery_id ?? "no refinery id")}</span>
           <span class="ml-auto flex flex-wrap items-center gap-2">
-            <button id="publish-btn" class="btn-primary" type="button">✨ Refine &amp; publish</button>
+            <button id="publish-btn" class="btn-primary" type="button">Refine &amp; publish</button>
             <a class="btn-ghost" href="${esc(article.url)}" target="_blank" rel="noopener">Open original ↗</a>
           </span>
         </div>

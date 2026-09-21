@@ -41,17 +41,6 @@ body {
 
 body {
   @apply bg-ink-950 text-ink-200 font-sans antialiased;
-  background-image:
-    radial-gradient(
-      ellipse 80% 50% at 20% -10%,
-      color-mix(in srgb, var(--color-amber-500) 6%, transparent),
-      transparent
-    ),
-    radial-gradient(
-      ellipse 60% 40% at 90% 110%,
-      color-mix(in srgb, var(--color-verdigris-500) 5%, transparent),
-      transparent
-    );
 }
 
 /* ---------- typography ---------- */
@@ -81,9 +70,14 @@ body {
     0 12px 32px -18px rgb(0 0 0 / 0.55);
 }
 
-.btn {
+.btn,
+.btn-primary,
+.btn-ghost,
+.btn-danger,
+.btn-success {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   border-radius: 0.5rem;
   padding: 0.5rem 0.875rem;
@@ -256,15 +250,4 @@ body {
 .btn-primary:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-}
-
-/* subtle noise overlay for depth */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  z-index: 50;
 }
