@@ -12,6 +12,7 @@ from news_collector.editorial.uncertainty import (
     GENERIC_UNCERTAINTY_NOTE,
     confidence_suggests_preliminary,
     find_capability_overclaims,
+    find_replica_scope_mismatches,
     find_unvalidated_capability_claims,
     hook_needs_counterweight,
     resolve_uncertainty_counterweight,
@@ -217,6 +218,98 @@ def test_claims_returns_empty_when_nothing_matches():
     assert (
         find_unvalidated_capability_claims(
             fields, requires_uncertainty_note=True, uncertainty_note=None
+        )
+        == []
+    )
+
+
+# --- Replica-scope mismatch (Codex P2 on frontend PR #191) -------------------
+
+_VESUVIUS_NOTE = (
+    "Los resultados se obtuvieron con pergaminos modernos elaborados en "
+    "laboratorio; aún no se ha probado la técnica en los auténticos rollos "
+    "de Herculano."
+)
+
+_VESUVIUS_BULLET_ORIGINAL = (
+    "Al escanear los rollos en busca de plomo y aplicar tomografía de rayos X "
+    "con software especializado, lograron separar virtualmente las láminas y "
+    "recuperar palabras legibles."
+)
+
+_VESUVIUS_BULLET_FIXED = (
+    "Al escanear las réplicas en busca de plomo y aplicar tomografía de rayos X "
+    "con software especializado, lograron separar virtualmente las láminas y "
+    "recuperar palabras legibles de los textos de prueba."
+)
+
+
+def test_replica_scope_flags_original_191_bullet():
+    fields = {"summary_points": [_VESUVIUS_BULLET_ORIGINAL]}
+    assert find_replica_scope_mismatches(
+        fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
+    ) == [f"summary_points[0]: {_VESUVIUS_BULLET_ORIGINAL}"]
+
+
+def test_replica_scope_clean_on_fixed_191_bullet():
+    fields = {"summary_points": [_VESUVIUS_BULLET_FIXED]}
+    assert (
+        find_replica_scope_mismatches(
+            fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
+        )
+        == []
+    )
+
+
+def test_replica_scope_clean_without_counterweight():
+    fields = {"summary_points": [_VESUVIUS_BULLET_ORIGINAL]}
+    assert (
+        find_replica_scope_mismatches(
+            fields, requires_uncertainty_note=False, uncertainty_note=None
+        )
+        == []
+    )
+
+
+def test_replica_scope_clean_when_note_has_no_replica_signal():
+    fields = {"summary_points": [_VESUVIUS_BULLET_ORIGINAL]}
+    assert (
+        find_replica_scope_mismatches(
+            fields,
+            requires_uncertainty_note=True,
+            uncertainty_note="Estudio preliminar con muestra pequeña.",
+        )
+        == []
+    )
+
+
+def test_replica_scope_skips_prospective_hedges():
+    fields = {
+        "excerpt": "Investigadores prueban que añadir plomo a la tinta permite "
+        "leer su contenido, abriendo camino a descifrar los rollos de Herculano."
+    }
+    assert (
+        find_replica_scope_mismatches(
+            fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
+        )
+        == []
+    )
+
+
+def test_replica_scope_flags_unhedged_excerpt():
+    excerpt = "Los científicos escanearon los rollos y recuperaron palabras legibles."
+    assert find_replica_scope_mismatches(
+        {"excerpt": excerpt},
+        requires_uncertainty_note=True,
+        uncertainty_note=_VESUVIUS_NOTE,
+    ) == [f"excerpt: {excerpt}"]
+
+
+def test_replica_scope_ignores_non_strings_and_empties():
+    fields = {"summary_points": [None, 123, "  "], "excerpt": None}
+    assert (
+        find_replica_scope_mismatches(
+            fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
         )
         == []
     )

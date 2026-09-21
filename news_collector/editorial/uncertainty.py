@@ -103,6 +103,144 @@ def resolve_uncertainty_counterweight(
     return requires, note
 
 
+# --- Replica-scope mismatch (Codex P2 on frontend PR #191) --------------------
+#
+# Article 2451 (Vesuvius scrolls) passed every gate with an `uncertainty_note`
+# stating the technique was tested on modern lab-made replicas and is untested
+# on the authentic Herculaneum scrolls — while `summary_points[2]` said the
+# team scanned "los rollos" and recovered legible words, which reads as an
+# archaeological recovery from the originals. Same bug class as plan 083
+# (reader-facing narrative vs declared counterweight) but non-clinical and in
+# the summary fields, which the capability-overclaim detector above
+# deliberately excludes.
+#
+# This is a DETECTOR, not a rewriter. It runs only when the counterweight
+# signals replica/preliminary-experimental scope, scans `summary_points` and
+# `excerpt`, and returns `"<field>: <sentence>"` strings for the caller to log
+# (and, via grounding, into the PR body). It never edits `fields`.
+# Fail-open: never raises.
+
+# The note confines the result to replicas/models when it mentions them, the
+# lab, or that the authentic object was not (yet) tested.
+_REPLICA_SCOPE_NOTE_RE = re.compile(
+    r"r[ée]plicas?|laboratorio|a[úu]n no se ha probado|no se ha probado|"
+    r"sin probar en|aut[ée]nticos?|modelos? experimentales?|in vitro|"
+    r"simulaci[óo]n",
+    re.IGNORECASE,
+)
+
+# Completed-result verbs (stems cover indicative forms): asserting that words,
+# signals or effects were obtained.
+_RESULT_VERB_STEMS = (
+    "recuper",
+    "logr",
+    "obtuv",
+    "obten",
+    "demostr",
+    "demuestra",
+    "demuestran",
+    "detect",
+    "revel",
+    "leyeron",
+    "identific",
+    "confirm",
+    "probaron",
+    "prueba",
+    "prueban",
+)
+_RESULT_VERB_RE = re.compile(
+    r"(?<!\w)(?:" + "|".join(_RESULT_VERB_STEMS) + r")",
+    re.IGNORECASE,
+)
+
+# The authentic object whose confusion with replicas/models is plausible.
+# Kept tight on purpose: bare "textos"/"fragmentos" alone do not count.
+_AUTHENTIC_OBJECT_RE = re.compile(
+    r"(?<!\w)(?:los|el|las|la)\s+"
+    r"(?:rollos?|pergaminos?|manuscritos?|papiros?|pacientes?|enfermos?)\b",
+    re.IGNORECASE,
+)
+
+# A scope qualifier in the same sentence means the result is correctly
+# attributed — not a bare authentic-object claim.
+_SCOPE_QUALIFIER_RE = re.compile(
+    r"r[ée]plicas?|modelos?|experimental(?:es)?|laboratorio|simula|artificial(?:es)?|"
+    r"de prueba|piloto|preliminar(?:es)?|referencia|muestras?",
+    re.IGNORECASE,
+)
+
+
+def _note_signals_replica_scope(uncertainty_note: Any) -> bool:
+    return isinstance(uncertainty_note, str) and bool(
+        _REPLICA_SCOPE_NOTE_RE.search(uncertainty_note)
+    )
+
+
+# A prospective hedge in the same sentence means the claim is framed as future
+# work, not as an obtained result — skip it (mirrors _PRE_HEDGE_RE above).
+_PROSPECTIVE_HEDGE_RE = re.compile(
+    r"podr[íi]a[n]?|posibilidad|posibles?|potencial(?:es)?|abriendo camino|"
+    r"abr\w+ la (?:posibilidad|puerta)|allan\w+|en el futuro|permitir[íi]a[n]?|"
+    r"hipot[ée]tic",
+    re.IGNORECASE,
+)
+
+
+def _sentence_has_bare_authentic_result(sentence: str) -> bool:
+    """True when a sentence asserts an obtained result on the authentic object
+    without replica/model qualification."""
+    if _PROSPECTIVE_HEDGE_RE.search(sentence):
+        return False
+    if not _RESULT_VERB_RE.search(sentence):
+        return False
+    if not _AUTHENTIC_OBJECT_RE.search(sentence):
+        return False
+    return not _SCOPE_QUALIFIER_RE.search(sentence)
+
+
+def _iter_scope_fields(fields: Mapping[str, Any]) -> Iterator[tuple[str, Any]]:
+    """Yield `(label, text)` for the summary-level strings a replica-scope
+    mismatch would surface in."""
+    raw_points = fields.get("summary_points")
+    if isinstance(raw_points, list):
+        for index, item in enumerate(raw_points):
+            yield f"summary_points[{index}]", item
+    yield "excerpt", fields.get("excerpt")
+
+
+def find_replica_scope_mismatches(
+    fields: Mapping[str, Any],
+    *,
+    requires_uncertainty_note: bool,
+    uncertainty_note: Any,
+) -> list[str]:
+    """Flag summary-level results presented on the authentic object while the
+    declared counterweight confines them to replicas/models.
+
+    Runs only when `requires_uncertainty_note` is true or a non-empty
+    `uncertainty_note` is present AND the note signals replica scope. Scans
+    `summary_points` (list) and `excerpt` (str) for result assertions on the
+    authentic object without replica qualification. Returns a list of
+    `"<field>: <sentence>"` strings for the caller to log — it never edits
+    `fields`. Never raises.
+    """
+    if not _has_counterweight(requires_uncertainty_note, uncertainty_note):
+        return []
+    if not _note_signals_replica_scope(uncertainty_note):
+        return []
+
+    out: list[str] = []
+    for label, text in _iter_scope_fields(fields):
+        if not isinstance(text, str) or not text.strip():
+            continue
+        sentences = _SENTENCE_SPLIT_RE.split(text.strip())
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and _sentence_has_bare_authentic_result(sentence):
+                out.append(f"{label}: {sentence}")
+    return out
+
+
 # --- Capability-overclaim counterweight (plan 083) -------------------------
 #
 # Codex P1 on PR #153: an article whose `uncertainty_note` said GlucoFM "aún

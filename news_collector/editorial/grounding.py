@@ -27,6 +27,9 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 import yaml
 
+from news_collector.editorial.hero_alt import is_boilerplate_alt
+from news_collector.editorial.uncertainty import find_replica_scope_mismatches
+
 # Below this many characters the stored source is usually a feed teaser, not the
 # text the article was written from: grounding against it would be all noise.
 MIN_SOURCE_CHARS = 1500
@@ -499,6 +502,54 @@ def _check_hygiene(field_name: str, text: str) -> List[GroundingFinding]:
     return out
 
 
+def _check_replica_scope(meta: Mapping[str, Any]) -> List[GroundingFinding]:
+    """Warn when summary-level results read as obtained on the authentic
+    object while the post's own `uncertainty_note` confines them to
+    replicas/models (Codex P2 on frontend PR #191). Advisory only."""
+    if not isinstance(meta, Mapping):
+        return []
+    mismatches = find_replica_scope_mismatches(
+        meta,
+        requires_uncertainty_note=bool(meta.get("requires_uncertainty_note")),
+        uncertainty_note=meta.get("uncertainty_note"),
+    )
+    return [
+        GroundingFinding(
+            "replica_scope",
+            WARN,
+            mismatch.split(":", 1)[0],
+            mismatch.split(":", 1)[1].strip()[:70],
+            "resultado presentado sobre el objeto auténtico mientras la nota "
+            "de incertidumbre lo limita a réplicas/modelos",
+        )
+        for mismatch in mismatches
+    ]
+
+
+def _check_hero_alt(meta: Mapping[str, Any]) -> List[GroundingFinding]:
+    """Warn when the hero alt is the pipeline boilerplate instead of a visual
+    description (Codex P2 on frontend PR #191): it hides the image from
+    screen-reader users and mislabels it in the visible caption. Advisory
+    only — the frontend `check-image-alt` gate is what blocks the merge."""
+    if not isinstance(meta, Mapping):
+        return []
+    alt = meta.get("image_alt")
+    if alt is None:
+        return []
+    if not is_boilerplate_alt(alt):
+        return []
+    text = str(alt).strip()
+    return [
+        GroundingFinding(
+            "hero_alt",
+            WARN,
+            "image_alt",
+            text[:70],
+            "alt genérico del pipeline; describir la imagen real antes de mergear",
+        )
+    ]
+
+
 def _code_span(text: str) -> str:
     """Inline code span: generated text is inert in it (no @mentions, links,
     HTML or comment openers); backticks and newlines are neutralised."""
@@ -586,4 +637,10 @@ def check_grounding(
                 "ítem de fact_check con cifras/cantidades no respaldadas",
             )
         )
+
+    # Internal-consistency checks (no source needed, but they ride along with
+    # this advisory stage so findings reach the PR body and terminal).
+    meta, _body = _split_frontmatter(markdown)
+    report.findings += _check_replica_scope(meta)
+    report.findings += _check_hero_alt(meta)
     return report
