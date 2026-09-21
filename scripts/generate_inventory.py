@@ -9,7 +9,7 @@ import difflib
 import json
 import platform
 import shutil
-import subprocess
+import subprocess  # nosec B404 - deliberate: fixed git ls-files argv (no user input), timeout+check
 import tomllib
 from collections import OrderedDict
 from dataclasses import dataclass
