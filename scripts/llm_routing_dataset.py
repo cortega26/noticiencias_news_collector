@@ -67,6 +67,8 @@ def _parse_frontmatter(path: Path) -> dict:
         m = re.search(rf"^{key}:\s*(.+)$", match.group(1), re.MULTILINE)
         if m:
             data[key] = m.group(1).strip().strip("'\"")
+    if data.get("date"):
+        data["date"] = data["date"][:10]
     cats = re.search(
         r"^categories:\s*\n((?:\s+-\s+.+\n)+)", match.group(1), re.MULTILINE
     )
@@ -117,7 +119,8 @@ def main(argv: list[str] | None = None) -> int:
     for row in con.execute(
         "SELECT id, title, summary, content, content_mode, url, source_id,"
         " source_name, is_preprint, peer_reviewed, journal, doi, category,"
-        " processing_status, language, LENGTH(content) AS nchars FROM articles"
+        " published_date, processing_status, language, LENGTH(content) AS nchars"
+        " FROM articles"
     ):
         d = dict(row)
         by_id[str(d["id"])] = d
@@ -145,11 +148,16 @@ def main(argv: list[str] | None = None) -> int:
             continue
         cats = post.get("categories") or ["Ciencia"]
         stratum = _slugify_category(cats[0])
+        # Canonical date for replay: the shipped post date when matched
+        # (production frontmatter fidelity), else the DB publication date.
+        # process_article requires it explicitly (LAW-B5: no runtime clock).
+        canonical_date = post.get("date") or str(row["published_date"] or "")[:10]
         matched.append(
             {
                 "db_id": str(row["id"]),
                 "stratum": stratum,
                 "hard": _is_hard(row, stratum),
+                "canonical_date": canonical_date,
                 "source_title": row["title"],
                 "source_url": row["url"],
                 "post_file": post["file"],
@@ -172,12 +180,11 @@ def main(argv: list[str] | None = None) -> int:
             dict(r)
             for r in con.execute(
                 "SELECT id, title, url, is_preprint, peer_reviewed, category,"
-                " LENGTH(content) AS nchars FROM articles"
+                " published_date, LENGTH(content) AS nchars FROM articles"
                 " WHERE processing_status IN ('completed','publishing')"
                 " AND language = 'en' AND LENGTH(content) >= ?",
                 (MIN_CONTENT_CHARS,),
             )
-            if str(r["id"]) not in have
         ]
         con.close()
         rng.shuffle(pool)
@@ -192,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
                     "db_id": str(row["id"]),
                     "stratum": stratum,
                     "hard": _is_hard(row, stratum),
+                    "canonical_date": str(row.get("published_date") or "")[:10],
                     "source_title": row["title"],
                     "source_url": row["url"],
                     "post_file": None,

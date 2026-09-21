@@ -282,7 +282,9 @@ def cmd_generate(max_cases: int | None) -> int:
                     t0 = time.time()
                     try:
                         output = agent.process_article(
-                            payload, explicit_article_id=run_id
+                            payload,
+                            explicit_article_id=run_id,
+                            override_date=case.get("canonical_date"),
                         )
                         rec["wall_s"] = round(time.time() - t0, 1)
                         rec["output_chars"] = len(output)
