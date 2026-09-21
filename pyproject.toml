@@ -195,27 +195,47 @@ skip_covered = false
 show_missing = true
 
 [tool.mutmut]
-paths_to_mutate = [
-    "news_collector/utils/text_cleaner.py",
+# Mutation testing (mutmut 3): source_paths are copied to ./mutants and mutated one
+# operator at a time; a surviving mutant is a behavior change no test notices.
+# Pilot scope = pure, critical policy modules; widen as scores are established.
+source_paths = [
+    "news_collector/collectors/admission.py",
+    "news_collector/infrastructure/llm/failure_kinds.py",
+    "news_collector/editorial/grounding.py",
+    "news_collector/observability/llm_run_report.py",
     "news_collector/utils/url_canonicalizer.py",
 ]
-tests_dir = [
-    "tests/mutation_smoke",
-    "tests/property",
-    "tests/test_text_cleaner.py",
+pytest_add_cli_args_test_selection = [
+    "tests/integration/test_database.py",
+    "tests/property/test_normalization_properties.py",
     "tests/test_url_canonicalizer.py",
+    "tests/unit/collectors/test_admission.py",
+    "tests/unit/collectors/test_admission_boundary.py",
+    "tests/unit/collectors/test_admission_defaults_and_details.py",
+    "tests/unit/collectors/test_rss_collector.py",
+    "tests/unit/collectors/test_rss_collector_coverage_101.py",
+    "tests/unit/editorial/test_grounding.py",
+    "tests/unit/infrastructure/llm/test_provider_chain.py",
+    "tests/unit/observability/test_llm_metrics_store.py",
+    "tests/unit/observability/test_llm_run_report.py",
+    "tests/unit/test_canonical_url_identity.py",
 ]
-also_copy = [
-    "news_collector/config",
-    "noticiencias",
-    "news_collector",
-    "tests",
-    "run_collector.py",
-    "news_collector/config/VERSION",
+pytest_add_cli_args = [
+    "-o", "addopts=", "-p", "no:randomly", "-x", "-q",
+    # introspects fn.__globals__, which mutmut's trampoline changes (test smell)
+    "--deselect=tests/unit/observability/test_llm_run_report.py::test_emit_logs_a_degraded_event_and_can_be_disabled",
 ]
-python_paths = ["news_collector"]
-runner = "python -m pytest"
-backup = false
+also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "config.toml"]
+
+# Per-module mutation-score floors (%), enforced by scripts/mutation_score.py --check.
+# A floor is the score achieved minus ~3 points of run-to-run noise (mutmut timeouts flap);
+# raise it when survivors are killed. admission is deterministic and pinned at 100.
+[tool.mutation.floors]
+"news_collector/collectors/admission.py" = 100
+"news_collector/editorial/grounding.py" = 78
+"news_collector/infrastructure/llm/failure_kinds.py" = 78
+"news_collector/observability/llm_run_report.py" = 64
+"news_collector/utils/url_canonicalizer.py" = 57
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]

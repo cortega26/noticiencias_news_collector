@@ -32,3 +32,10 @@ inventory (checked with `git grep` for `scripts/x`, `scripts.x`, `x.py` and impo
 0 % coverage, name/content of a diagnostic, demo, benchmark, one-time patch or duplicate check. Kept for the
 owner to decide: `audit_pipeline.py` (unified source-audit entry point that composes still-live pieces; restored after review), recently modified tools, `migrate_metrics_db.py` (a migration), and the two report generators.
 Acceptance: suite unchanged (2882 passed), ratchet OK, lint clean.
+
+## Phase 3a (done): mutation testing
+`[tool.mutmut]` (mutmut 3) over five pure critical modules with a curated test selection; `make mutation`
+installs mutmut in `.mutlib` (never in the venv) and runs `scripts/mutation_score.py --check`, which reads
+`mutants/**/*.meta`, prints a per-module score (detected / judged) and fails below `[tool.mutation.floors]`.
+`.github/workflows/mutation.yml` runs it weekly and writes the table to the step summary. Acceptance: score
+script unit-tested with synthetic meta files; admission survivors killed (102/102); baseline documented.

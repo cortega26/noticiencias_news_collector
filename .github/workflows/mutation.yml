@@ -25,6 +25,8 @@ jobs:
         run: .venv/bin/python -m pytest tests/mutation_smoke
 
       - name: Run MutMut
-        run: |
-          .venv/bin/mutmut run
-          .venv/bin/mutmut results
+        run: .venv/bin/mutmut run --max-children 2
+
+      - name: Mutation score per module (fails below the floors in pyproject.toml)
+        shell: bash  # explicit shell adds -o pipefail: a failing check must fail the job, not tee
+        run: .venv/bin/python scripts/mutation_score.py --check | tee "$GITHUB_STEP_SUMMARY"

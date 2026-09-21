@@ -169,3 +169,6 @@ frontend_publication_validation_summary.json
 mutants/
 .mutmut-cache/
 apps/admin/.astro/
+
+# mutmut isolated install (make mutation)
+.mutlib/

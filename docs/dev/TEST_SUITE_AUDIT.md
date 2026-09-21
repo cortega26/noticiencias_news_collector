@@ -51,3 +51,23 @@ sealed config contract). Zero-coverage scripts include CI-relevant ones (`sync_l
 Full run ~110-140 s; the slowest tests are real sleeps in backoff tests (5.0 s, 3.5 s, 2.0 s) — candidates
 to inject a fake clock. `pytest-randomly` shuffles every CI run; the suite passed with the clock +120 days
 in #288 (only the expiring pip-audit allowlist tests fail, by design). A multi-seed stability sweep is still to do (Phase 0 follow-up).
+
+## Mutation testing baseline (2026-09-20, `make mutation`, mutmut 3)
+Line coverage says a line ran; mutation score says a test would *notice* the line changing.
+First run over five critical pure modules (1 204 mutants, ~2 min):
+
+| module | detected | survived | score |
+|---|---:|---:|---:|
+| `collectors/admission.py` | 102 | 0 | 100 % (was 82 %: 18 survivors) |
+| `editorial/grounding.py` | 446 | 103 | 81 % |
+| `infrastructure/llm/failure_kinds.py` | 43 | 10 | 81 % |
+| `observability/llm_run_report.py` | 180 | 88 | 67 % |
+| `utils/url_canonicalizer.py` | 141 | 91 | 61 % |
+
+`admission.py` had 100 % line coverage yet 18 survivors: the built-in defaults (30 days / 10 / 1000), the
+exact age boundary, the window floor and the `details` payload were pinned by no test; 9 new tests
+(`test_admission_defaults_and_details.py`) kill them all. Floors per module live in
+`[tool.mutation.floors]` and are enforced by `scripts/mutation_score.py --check` in the weekly
+`mutation.yml`; raise them as survivors are killed. One test
+(`test_emit_logs_a_degraded_event_and_can_be_disabled`) reads `fn.__globals__`, which breaks under mutmut's
+trampoline: deselected in the mutation run and flagged as a test smell to rewrite.

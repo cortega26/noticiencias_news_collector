@@ -397,6 +397,12 @@ test-audit: bootstrap ## Audit the test suite: coverage incl. noticiencias+scrip
 	@$(PYTHON_BIN) -m pytest tests --ignore=tests/e2e_pipeline -q -p no:randomly --cov=news_collector --cov=apps --cov=noticiencias --cov=scripts --cov-config=scripts/audit.coveragerc --cov-context=test --cov-report=json:reports/audit/cov.json --cov-report=
 	@$(PYTHON_BIN) scripts/test_suite_audit.py --coverage reports/audit/cov.json --collected reports/audit/collected.txt
 
+mutation: bootstrap ## Mutation testing of the critical pure modules + per-module score vs floors (slow; installs mutmut in .mutlib, not in the venv)
+	@$(PYTHON_BIN) -m pip install -q --target .mutlib mutmut
+	@rm -rf mutants
+	@PYTHONPATH=.mutlib $(PYTHON_BIN) -m mutmut run --max-children 4
+	@$(PYTHON_BIN) scripts/mutation_score.py --check
+
 config-docs: bootstrap ## Regenerate docs/config_fields.md from the schema
 	@$(PYTHON_BIN) -m noticiencias.config_manager --print-schema > docs/config_fields.md
 
