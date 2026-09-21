@@ -161,6 +161,9 @@ filterwarnings = [
     # Message-regex form: the warning class isn't resolvable by name and the
     # warning can fire from importlib frames with no module attribute.
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+    # starlette 1.6 TestClient still uses the anyio.abc.BlockingPortal alias that anyio 4.15
+    # deprecated; third-party, no action until starlette updates (found in dependency group 1).
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated",
 ]
 
 [tool.coverage.run]

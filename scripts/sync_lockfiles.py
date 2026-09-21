@@ -82,6 +82,16 @@ def parse_args() -> argparse.Namespace:
         help="Force (re)installation of pip-tools before syncing the lockfiles.",
     )
     parser.add_argument(
+        "--upgrade-package",
+        action="append",
+        default=[],
+        metavar="NAME[==VERSION]",
+        help=(
+            "Upgrade only this package (repeatable) in every lockfile; everything "
+            "else keeps its current pin. Use it to bump dependencies group by group."
+        ),
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable verbose logging output.",
@@ -124,10 +134,24 @@ def run_command(command: Sequence[str], description: str | None = None) -> None:
     subprocess.run(command, cwd=ROOT_DIR, check=True)  # noqa: S603
 
 
-def sync_lockfiles() -> None:  # noqa: C901
-    """Regenerate both lockfiles using pip-tools."""
+def build_compile_args(
+    args: Sequence[str], upgrade_packages: Sequence[str] = ()
+) -> tuple[str, ...]:
+    """``pip-compile`` arguments with one ``--upgrade-package`` per requested package.
+
+    The flags go right before the positional input file (last argument), so pip-tools
+    sees them as options of the compile command.
+    """
+    upgrades = tuple(
+        part for name in upgrade_packages for part in ("--upgrade-package", name)
+    )
+    return (*args[:-1], *upgrades, args[-1])
+
+
+def sync_lockfiles(upgrade_packages: Sequence[str] = ()) -> None:  # noqa: C901
+    """Regenerate the lockfiles using pip-tools (optionally upgrading some packages)."""
     for lockfile, args in LOCK_TARGETS:
-        command = (sys.executable, *args)
+        command = (sys.executable, *build_compile_args(args, upgrade_packages))
         run_command(command, description=f"Regenerating {lockfile}")
 
         # Post-process: Strip 'pip' package lines to prevent CI instability due to version mismatches
@@ -213,7 +237,7 @@ def main() -> None:
     args = parse_args()
     configure_logging(args.verbose)
     ensure_piptools_installed(force=args.install_pip_tools)
-    sync_lockfiles()
+    sync_lockfiles(args.upgrade_package)
     if args.check:
         ensure_lockfiles_clean()
 
