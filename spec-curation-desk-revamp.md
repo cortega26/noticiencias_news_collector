@@ -5,6 +5,7 @@ pages, deps, or component library. Design system (global.css palette, Fraunces/
 Manrope/JetBrains Mono) stays; only decorative layers go.
 
 ## Phase 0 — kill list
+
 - Remove ✨ from 4 publish buttons (triage x3, article x1); ⚙ nav glyph ->
   text-consistent glyph; remove jargon (Refine/export shortlist/publication
   run -> Publicar/lista/envío); publish CTA wording -> "Publicar".
@@ -13,6 +14,7 @@ Manrope/JetBrains Mono) stays; only decorative layers go.
   radius) — compose base into variants in global.css.
 
 ## Phase 1 — hierarchy (one primary per context)
+
 - Detail panel 7 buttons -> Publish (primary) + View split (ghost) + overflow
   for Reprocess + Reject as quiet danger link w/ confirm + Audit segmented
   [Pass|Fail]. Hotkeys j/k/p/r/a/f/o unchanged.
@@ -22,6 +24,7 @@ Manrope/JetBrains Mono) stays; only decorative layers go.
   during a run.
 
 ## Phase 2 — comprehension
+
 - Score + threshold caption (above/below publish line, derived from
   publishable flag + min threshold already in envelope).
 - why_ranked expandable (+N more).
@@ -31,6 +34,7 @@ Manrope/JetBrains Mono) stays; only decorative layers go.
 - Teaching empty states.
 
 ## Phase 3 — language / access / entry
+
 - Full Spanish UI (hardcoded, single operator; English technical nouns only
   where the API/backend names them: run id, PR, slug).
 - `/` redirects to `/triage` (drop splash).
@@ -38,6 +42,7 @@ Manrope/JetBrains Mono) stays; only decorative layers go.
 - A11y: focus-visible on cards, Esc clears selection, live-region status.
 
 ## Verification
+
 - `make admin-test` (vitest), `make admin-build` (astro build = syntax gate),
   `astro check` (types), backend `make lint` scope for apps/admin if covered.
 - Screenshots 1280px (+375px notice check) before/after per PR.
