@@ -8,7 +8,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     <header class="mb-8 flex items-end justify-between gap-4">
       <div>
         <h1 class="display-title text-4xl text-paper-100">Contenido publicado</h1>
-        <p class="data-label mt-2">CMS EN VIVO · DESPUBLICAR USA GIT (CONFIRM + PUSH)</p>
+        <p class="data-label mt-2">CMS EN VIVO · DESPUBLICAR CREA UN COMMIT Y LO SUBE</p>
       </div>
       <div class="flex items-center gap-3">
         <button id="bulk-reset" class="btn-danger hidden" type="button">
@@ -143,7 +143,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     const target = (event.target as HTMLElement).closest("button");
     if (!target?.dataset.unpublish) return;
     const id = target.dataset.unpublish;
-    if (!window.confirm(`¿Despublicar "${id}"? Esto confirma y sube la eliminación.`)) return;
+    if (!window.confirm(`¿Despublicar "${id}"? Esto crea un commit y lo sube.`)) return;
     try {
       const result = await unpublishArticle(id);
       showToast(result.detail);
@@ -161,7 +161,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   bulkBtn?.addEventListener("click", async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    if (!window.confirm(`¿Despublicar ${ids.length} artículo(s)? Esto confirma y sube los cambios.`)) return;
+    if (!window.confirm(`¿Despublicar ${ids.length} artículo(s)? Esto crea un commit y lo sube.`)) return;
     try {
       const result = await bulkResetContent(ids);
       showToast(result.summary);
