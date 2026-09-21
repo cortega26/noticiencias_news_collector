@@ -10,5 +10,6 @@
 - [x] Phase 3b-1: `failure_kinds` 81 -> 91 %, `url_canonicalizer` 61 -> 85 % (remaining survivors are equivalent/dead code)
 - [ ] Phase 3b-2: kill survivors in `llm_run_report` (67 %) and `grounding` (81 %); widen scope (coordinator, factory, rate_limiter, readability, uncertainty)
 - [ ] Phase 3c: assertion-less/mock-heavy tests; hypothesis invariants (`check_grounding`, `evaluate_admission`, `redact_secrets`)
-- [ ] Phase 4: dependency minors/patches by group
+- [x] Phase 4a: removed unused `nltk`/`textblob` (+ `regex`, `tqdm`, `defusedxml`): retires the NLTK CVE exception that expired 2026-09-30; suite verified in a venv built strictly from the new lock
+- [ ] Phase 4b: dependency minors/patches by group (49 outdated in lock: 32 minor, 15 patch, 2 major transitive)
 - [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules

@@ -22,10 +22,18 @@ enforces the same exception set.
 
 ## Implemented allowlist and retired exceptions
 
-As checked on 2026-09-04, `scripts/security_gate.py` contains an exception for
-`GHSA-8mgp-746c-j5xp` expiring **2026-09-30**. The script owns its precise
-rationale and validates expiry. This document records configured policy;
-it does not independently verify current upstream fix availability.
+As checked on 2026-09-21, `scripts/security_gate.py` contains one exception, for
+`GHSA-7gcm-g887-7qv7` (protobuf, dev tooling only) expiring **2026-10-31**. The
+script owns its precise rationale and validates expiry. This document records
+configured policy; it does not independently verify current upstream fix
+availability.
+
+The NLTK exception `GHSA-8mgp-746c-j5xp` (no upstream fix; last affected 3.10.3)
+was **retired on 2026-09-21 by removing the dependency**: `nltk` and `textblob`
+were declared in `pyproject.toml` but imported nowhere in this repository, so
+there was nothing to protect and the exception would otherwise have needed
+renewal every month. Their exclusive transitive dependencies (`regex`, `tqdm`,
+`defusedxml`) left the locks with them.
 
 The former `make security-dev` inline flag `--ignore-vuln GHSA-7gcm-g887-7qv7`
 (protobuf), whose documented authorization expired **2026-03-01**, was retired
