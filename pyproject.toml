@@ -216,9 +216,11 @@ pytest_add_cli_args_test_selection = [
     "tests/unit/collectors/test_rss_collector_coverage_101.py",
     "tests/unit/editorial/test_grounding.py",
     "tests/unit/infrastructure/llm/test_provider_chain.py",
+    "tests/unit/infrastructure/llm/test_failure_kinds_boundaries.py",
     "tests/unit/observability/test_llm_metrics_store.py",
     "tests/unit/observability/test_llm_run_report.py",
     "tests/unit/test_canonical_url_identity.py",
+    "tests/unit/utils/test_url_canonicalizer_table.py",
 ]
 pytest_add_cli_args = [
     "-o", "addopts=", "-p", "no:randomly", "-x", "-q",
@@ -233,9 +235,9 @@ also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "conf
 [tool.mutation.floors]
 "news_collector/collectors/admission.py" = 100
 "news_collector/editorial/grounding.py" = 78
-"news_collector/infrastructure/llm/failure_kinds.py" = 78
+"news_collector/infrastructure/llm/failure_kinds.py" = 88
 "news_collector/observability/llm_run_report.py" = 64
-"news_collector/utils/url_canonicalizer.py" = 57
+"news_collector/utils/url_canonicalizer.py" = 82
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]

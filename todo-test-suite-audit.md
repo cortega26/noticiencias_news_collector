@@ -7,7 +7,8 @@
 - [x] Phase 2a: `noticiencias/config_manager.py` 50 % -> 94 % (`tests/unit/config/test_config_manager_io.py`, real temp files, no mocks). `requests_client.py` was already 96 % (the audit XML was stale).
 - [ ] Phase 2: gaps (requests_client, llm/health, auditor, router, basic_scorer, config_manager, CI scripts); widen --cov; re-record baseline
 - [x] Phase 3a: mutation testing on 5 critical modules (`make mutation`, score script + floors, weekly workflow); `admission.py` 82 % -> 100 %
-- [ ] Phase 3b: kill survivors in `url_canonicalizer` (61 %), `llm_run_report` (67 %), `grounding`/`failure_kinds` (81 %); widen scope (coordinator, factory, rate_limiter, readability, uncertainty)
+- [x] Phase 3b-1: `failure_kinds` 81 -> 91 %, `url_canonicalizer` 61 -> 85 % (remaining survivors are equivalent/dead code)
+- [ ] Phase 3b-2: kill survivors in `llm_run_report` (67 %) and `grounding` (81 %); widen scope (coordinator, factory, rate_limiter, readability, uncertainty)
 - [ ] Phase 3c: assertion-less/mock-heavy tests; hypothesis invariants (`check_grounding`, `evaluate_admission`, `redact_secrets`)
 - [ ] Phase 4: dependency minors/patches by group
 - [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules

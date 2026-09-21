@@ -71,3 +71,11 @@ exact age boundary, the window floor and the `details` payload were pinned by no
 `mutation.yml`; raise them as survivors are killed. One test
 (`test_emit_logs_a_degraded_event_and_can_be_disabled`) reads `fn.__globals__`, which breaks under mutmut's
 trampoline: deselected in the mutation run and flagged as a test smell to rewrite.
+
+### Update: survivors killed (Phase 3b, first pass)
+| module | before | after | notes |
+|---|---:|---:|---|
+| `infrastructure/llm/failure_kinds.py` | 81 % | 91 % | status-code edges (399/400/499/500/501), `HTTPError` without response, `Retry-After` parsing, error message. The 5 survivors are equivalent mutants (`<= 500` after the `>= 500` branch; header case with `requests`' case-insensitive dict; `float(None)` caught). |
+| `utils/url_canonicalizer.py` | 61 % | 85 % | 59-row reviewed characterization table (also checked for idempotence) + helper/cache tests. Survivors: dead code (`amp` branch after `amp` is already a tracking param; `value == ""` after `keep_blank_values=False`; `port_match` else) and equivalent mutants — candidates for a small production cleanup. |
+
+Floors raised accordingly (`failure_kinds` 88, `url_canonicalizer` 82). Remaining weak spots: `observability/llm_run_report.py` (67 %, mostly report formatting) and `editorial/grounding.py` (81 %).
