@@ -140,7 +140,7 @@ ignore_errors = true
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = [".", "news_collector"]
-addopts = "-ra --timeout=10 --cov=news_collector --cov=apps --cov-branch --cov-report=term-missing -p randomly"
+addopts = "-ra --timeout=10 --cov=news_collector --cov=apps --cov=noticiencias --cov-branch --cov-report=term-missing -p randomly"
 markers = [
     "e2e: end-to-end scenarios that exercise the pipeline",
     "perf: performance-focused regression tests",
@@ -168,7 +168,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-source = ["news_collector"]
+source = ["news_collector", "noticiencias"]
 omit = [
     "news_collector/utils/logger.py",
     "news_collector/utils/metrics.py",
@@ -188,6 +188,10 @@ omit = [
     # test_pipeline_e2e_seams.py; excluded from measurement for the same
     # reason as admin_panel.py.
     "news_collector/logic/workflows/pipeline_e2e.py",
+    # Legacy Streamlit config GUI (`make refinery` fallback): needs Streamlit, which the test
+    # venv does not install. Same treatment as apps/refinery/admin_panel.py; candidate for
+    # removal once apps/admin is confirmed to replace it.
+    "noticiencias/gui_config.py",
 ]
 
 [tool.coverage.report]

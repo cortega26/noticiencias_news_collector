@@ -90,3 +90,10 @@ unit-tested). Result: only `bandit` 1.9.3->1.9.4 and `hypothesis` 6.165.5->6.168
 Acceptance: venv built strictly from `requirements-security.lock`: suite 3099 passed, bandit findings identical
 (same counts as 1.9.3), `sync_lockfiles.py --check` clean. `semgrep` cannot move (its rich/protobuf pins);
 ruff/mypy/coverage/black/isort/pytest-randomly are not in any lock (installed by bootstrap) - left to the owner.
+## Phase 2b (done): measure `noticiencias` and raise the ratchet floor
+`--cov`/`[tool.coverage.run] source` now include `noticiencias` (config schema/manager = the sealed
+cross-repo contract); `noticiencias/gui_config.py` (legacy Streamlit GUI, needs Streamlit) is omitted like
+`apps/refinery/admin_panel.py`. `.coverage-baseline` re-recorded with `coverage_ratcheter.sh record` and a
+noise margin (line 91.25 / branch 80.92; measured 91.75 / 81.92). The script's hard-coded minimums stay
+(their tests use synthetic totals); the baseline is the effective floor. Acceptance: full suite 3097 passed,
+`coverage_ratcheter.sh check` OK against the new baseline, ratchet unit tests unchanged.
