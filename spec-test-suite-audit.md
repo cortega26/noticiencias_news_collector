@@ -39,3 +39,13 @@ installs mutmut in `.mutlib` (never in the venv) and runs `scripts/mutation_scor
 `mutants/**/*.meta`, prints a per-module score (detected / judged) and fails below `[tool.mutation.floors]`.
 `.github/workflows/mutation.yml` runs it weekly and writes the table to the step summary. Acceptance: score
 script unit-tested with synthetic meta files; admission survivors killed (102/102); baseline documented.
+
+## Phase 3b-1 (done): kill mutation survivors in `failure_kinds` and `url_canonicalizer`
+Files: `tests/unit/infrastructure/llm/test_failure_kinds_boundaries.py`,
+`tests/unit/utils/test_url_canonicalizer_table.py`, `[tool.mutmut]` selection and `[tool.mutation.floors]`
+in `pyproject.toml`. Design: read each surviving mutant (`mutmut show`), decide real gap vs equivalent/dead
+code, and pin the behavior with a test (status-code edges, error message, `Retry-After`; a 59-row hand-reviewed
+URL table also checked for idempotence, plus helper and LRU-cache tests). Production code is not touched.
+Acceptance: `failure_kinds` 81 -> 91 %, `url_canonicalizer` 61 -> 85 % (same mutmut run conditions);
+remaining survivors documented as equivalent/dead code; floors raised to 88 / 82. Verification: `make mutation`
+score check, `make lint && make type && make test`.
