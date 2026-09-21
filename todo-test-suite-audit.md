@@ -13,5 +13,6 @@
 - [x] Phase 4a: removed unused `nltk`/`textblob` (+ `regex`, `tqdm`, `defusedxml`): retires the NLTK CVE exception that expired 2026-09-30; suite verified in a venv built strictly from the new lock
 - [x] Phase 4b-1: group "web/http/validation" (starlette 1.6, pydantic 2.13.5 + core, anyio, urllib3 2.8, certifi, idna, charset-normalizer, typing-extensions, annotated-types, click) via new `sync_lockfiles.py --upgrade-package`
 - [x] Phase 4b-2: group "data/ML" (alembic 1.20, sqlalchemy 2.0.54, numpy 2.5.3, scikit-learn 1.9.1, scipy 1.18.1, joblib, threadpoolctl, greenlet, mako, orjson; new transitive cloudpickle + narwhals)
-- [ ] Phase 4b-3..: remaining groups (scraping: playwright/scrapling/curl-cffi/bs4/lxml/feedparser; tooling: ruff/mypy/coverage/hypothesis/pytest plugins)
+- [x] Phase 4b-3: group "scraping" (playwright/patchright 1.63, curl-cffi 0.16, beautifulsoup4 4.15, lxml 6.1.3, feedparser 6.0.14, cssselect, cffi, apify-fingerprint-datapoints); rich/pygments/markdown-it-py/mdurl/sgmllib3k leave the runtime lock, feedparser-sgmllib joins
+- [ ] Phase 4b-4: tooling (ruff/mypy/coverage/hypothesis/pytest plugins, semgrep/bandit) + review of pytest-randomly 5 / isort 9 majors
 - [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules

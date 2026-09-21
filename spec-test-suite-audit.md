@@ -72,3 +72,12 @@ scikit-learn 1.9.1, scipy 1.18.1, joblib 1.6.0, threadpoolctl 3.7.0, greenlet 3.
 (scikit-learn/scipy add `cloudpickle` and `narwhals` as transitive deps). Acceptance in a venv built strictly
 from the lock: full suite 3097 passed (incl. Alembic migration tests), `make llm-canary --require-keys` 20/20,
 time-shifted suite only fails the expiring pip-audit tests by design, `sync_lockfiles.py --check` clean.
+
+## Phase 4b-3 (done): dependency group "scraping"
+playwright/patchright 1.63.0, curl-cffi 0.16.3, beautifulsoup4 4.15.0, lxml 6.1.3, feedparser 6.0.14,
+cssselect 1.5.0, cffi 2.1.1, apify-fingerprint-datapoints 0.15.0. `curl-cffi` 0.16 no longer requires `rich`
+(so `rich`, `pygments`, `markdown-it-py`, `mdurl` leave the runtime lock; the repo imports none of them);
+feedparser swaps `sgmllib3k` for `feedparser-sgmllib`. Acceptance: suite 3097 passed and canary 20/20 in a
+venv built strictly from the lock; imports of playwright/scrapling/feedparser/bs4/lxml OK; **live parse of 8
+configured feeds is byte-for-byte equivalent between feedparser 6.0.12 and 6.0.14** (entry count + content
+hash); `sync_lockfiles.py --check` clean.
