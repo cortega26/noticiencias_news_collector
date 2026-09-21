@@ -11,5 +11,6 @@
 - [ ] Phase 3b-2: kill survivors in `llm_run_report` (67 %) and `grounding` (81 %); widen scope (coordinator, factory, rate_limiter, readability, uncertainty)
 - [ ] Phase 3c: assertion-less/mock-heavy tests; hypothesis invariants (`check_grounding`, `evaluate_admission`, `redact_secrets`)
 - [x] Phase 4a: removed unused `nltk`/`textblob` (+ `regex`, `tqdm`, `defusedxml`): retires the NLTK CVE exception that expired 2026-09-30; suite verified in a venv built strictly from the new lock
-- [ ] Phase 4b: dependency minors/patches by group (49 outdated in lock: 32 minor, 15 patch, 2 major transitive)
+- [x] Phase 4b-1: group "web/http/validation" (starlette 1.6, pydantic 2.13.5 + core, anyio, urllib3 2.8, certifi, idna, charset-normalizer, typing-extensions, annotated-types, click) via new `sync_lockfiles.py --upgrade-package`
+- [ ] Phase 4b-2..: remaining groups (data: alembic/sqlalchemy; ML: numpy/scikit-learn/scipy; scraping: playwright/scrapling/curl-cffi/bs4/lxml; tooling)
 - [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules

@@ -56,3 +56,12 @@ score check, `make lint && make type && make test`.
 (only nltk, textblob, regex, tqdm, defusedxml left the locks); the allowlist entry, its test and `SECURITY.md`
 are updated. Acceptance: suite passes in a venv built strictly from `requirements.lock`, `pip-audit` reports no
 vulnerabilities, `sync_lockfiles.py --check` clean after commit. Phase 4b (minor/patch upgrades by group) follows.
+
+## Phase 4b-1 (done): dependency group "web/http/validation"
+`scripts/sync_lockfiles.py` gains `--upgrade-package NAME[==VER]` (repeatable; `build_compile_args` puts one
+`--upgrade-package` per name before the input file; everything else keeps its pin), unit-tested. Used to bump
+starlette, pydantic(+core), anyio, urllib3, certifi, idna, charset-normalizer, typing-extensions,
+annotated-types and click in all three locks (nothing else moved). Acceptance, in a venv built strictly
+from the new lock: full suite 3078 passed; `make llm-canary --require-keys` 20/20; time-shifted suite only
+fails the two expiring pip-audit tests by design; `sync_lockfiles.py --check` clean. New third-party
+deprecation (starlette TestClient x anyio 4.15) filtered in `pyproject.toml`.
