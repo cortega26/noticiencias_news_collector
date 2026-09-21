@@ -28,6 +28,7 @@ ImageBriefReason = Literal[
     "missing_source_image",
     "image_download_failed",
     "placeholder_image_debt",
+    "missing_alt_text",
 ]
 
 

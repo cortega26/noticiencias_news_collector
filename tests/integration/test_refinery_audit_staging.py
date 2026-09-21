@@ -71,6 +71,7 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
         "summary": "Valid summary for audit timeout staging test.",
         "content": "Valid content " * 200,
         "image_url": "https://example.com/article-1087.png",
+        "image_alt": "Fotografía de prueba para la suite.",
         "source_id": "test-source",
         "source_name": "Test Source",
         "category": "science",

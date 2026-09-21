@@ -219,13 +219,15 @@ class TestResolve:
         assert result.queued_brief is False
 
     def test_img_05_http_url_downloaded(self, handler, image_briefs_stub, target_dir):
-        """IMG-05: HTTP URL present → download called → resolved=True."""
+        """IMG-05: HTTP URL present + descriptive source alt → download called → resolved=True."""
         image_briefs_stub.find_for_article.return_value = None
         response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
 
         with _patch_http_client(response):
+            article = self._make_article("https://example.com/photo.jpg")
+            article["image_alt"] = "Fotografía de un laboratorio con microscopios."
             result = handler.resolve(
-                article=self._make_article("https://example.com/photo.jpg"),
+                article=article,
                 article_id="42",
                 canonical_date="2024-01-25",
                 preferred_slug=None,
@@ -235,6 +237,7 @@ class TestResolve:
         assert result.resolved is True
         assert result.image_url is not None
         assert result.image_url.startswith("~/assets/images/")
+        assert result.image_alt == "Fotografía de un laboratorio con microscopios."
         assert result.queued_brief is False
 
     def test_img_06_download_failure_queues_brief(
@@ -300,7 +303,8 @@ class TestResolve:
     def test_img_auto_alt_text_set_when_missing(
         self, handler, image_briefs_stub, target_dir
     ):
-        """resolve sets a fallback alt text when image resolved but no alt provided."""
+        """Missing source alt no longer stamps boilerplate: a missing_alt_text
+        brief is queued and resolution fails with the Images-desk message."""
         image_briefs_stub.find_for_article.return_value = None
         response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
 
@@ -313,10 +317,9 @@ class TestResolve:
                 target_dir=target_dir,
             )
 
-        assert result.resolved is True
-        assert result.image_alt == (
-            "Ilustración editorial relacionada con Test Article"
-        )
+        assert result.resolved is False
+        assert result.queued_brief is True
+        assert result.message is not None and "Images" in result.message
 
     def test_site_logo_image_skips_download_and_queues_brief(
         self, handler, image_briefs_stub, target_dir
@@ -339,3 +342,76 @@ class TestResolve:
         assert result.resolved is False
         assert result.queued_brief is True
         download.assert_not_called()
+
+    def _alt_brief(self, alt="Fotografía real del experimento."):
+        brief = MagicMock()
+        brief.reason = "missing_alt_text"
+        brief.draft_alt_text = alt
+        return brief
+
+    def test_img_09_boilerplate_alt_with_usable_alt_brief_resolves(
+        self, handler, image_briefs_stub, target_dir
+    ):
+        """Boilerplate source alt + descriptive alt-brief → downloaded URL with the brief alt."""
+        image_briefs_stub.find_for_article.return_value = self._alt_brief()
+        response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
+
+        with _patch_http_client(response):
+            result = handler.resolve(
+                article=self._make_article("https://example.com/photo.jpg"),
+                article_id="42",
+                canonical_date="2024-01-25",
+                preferred_slug=None,
+                target_dir=target_dir,
+            )
+
+        assert result.resolved is True
+        assert result.image_url.startswith("~/assets/images/")
+        assert result.image_alt == "Fotografía real del experimento."
+        assert result.queued_brief is False
+        image_briefs_stub.save_brief.assert_not_called()
+
+    def test_img_10_boilerplate_alt_without_brief_queues_and_fails_actionable(
+        self, handler, image_briefs_stub, target_dir
+    ):
+        """Boilerplate source alt + no brief → missing_alt_text brief queued,
+        unresolved, message naming the Images-desk slug."""
+        image_briefs_stub.find_for_article.return_value = None
+        response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
+
+        with _patch_http_client(response):
+            result = handler.resolve(
+                article=self._make_article("https://example.com/photo.jpg"),
+                article_id="42",
+                canonical_date="2024-01-25",
+                preferred_slug=None,
+                target_dir=target_dir,
+            )
+
+        assert result.resolved is False
+        assert result.queued_brief is True
+        assert result.message is not None and "Images" in result.message
+        saved = image_briefs_stub.build_brief.call_args
+        assert saved is not None and saved.kwargs.get("reason") == "missing_alt_text"
+
+    def test_img_11_boilerplate_brief_alt_does_not_self_accept(
+        self, handler, image_briefs_stub, target_dir
+    ):
+        """An alt-brief carrying boilerplate text is unusable: queue + fail, never resolve."""
+        image_briefs_stub.find_for_article.return_value = self._alt_brief(
+            alt="Ilustración editorial relacionada con Algo"
+        )
+        response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
+
+        with _patch_http_client(response):
+            result = handler.resolve(
+                article=self._make_article("https://example.com/photo.jpg"),
+                article_id="42",
+                canonical_date="2024-01-25",
+                preferred_slug=None,
+                target_dir=target_dir,
+            )
+
+        assert result.resolved is False
+        assert result.queued_brief is True
+        assert result.message is not None

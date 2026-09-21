@@ -460,6 +460,12 @@ class RefineryEngine:
         )
         if not img_resolution.resolved:
             record_stage("image_resolution", False)
+            if img_resolution.message:
+                self._last_blocked_error = {
+                    "error": img_resolution.message,
+                    "message": img_resolution.message,
+                }
+                logger.warning(f"Blocked before publish: {img_resolution.message}")
             persist_attempt(False)
             return False
         record_stage("image_resolution", True, image_url=img_resolution.image_url)
