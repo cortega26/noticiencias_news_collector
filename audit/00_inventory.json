@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-13T14:54:32.429642+00:00",
+  "generated_at": "2026-09-21T01:59:53.690860+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -58,7 +58,10 @@
       "refinery"
     ],
     "archive/": [
-      "historical-reports"
+      "082-pending-plans-review-handoff",
+      "083-codex-p1-uncertainty-overclaim",
+      "historical-reports",
+      "social-distribution"
     ],
     "audit/": [
       "00_inventory.json",
@@ -100,11 +103,9 @@
     ],
     "data/": [
       "audit",
-      "data",
       "editorial_policy_enforcement_log.jsonl",
       "exports",
       "image-briefs",
-      "image-uploads",
       "mock_article.md",
       "reports"
     ],
@@ -133,9 +134,11 @@
       "contracts_inventory.md",
       "database_deployment.md",
       "dev",
+      "editorial_grounding_check.md",
       "editorial_quality_system.md",
       "faq.md",
       "fixtures.md",
+      "local_llm_evaluation.md",
       "operations.md",
       "ops",
       "performance_baselines.md",
@@ -211,12 +214,18 @@
       "060",
       "080",
       "081",
-      "082-pending-plans-review-handoff",
-      "083-codex-p1-uncertainty-overclaim",
       "084-vision-hero-alt",
+      "107",
+      "108",
+      "109",
+      "110",
+      "111",
+      "112",
+      "113",
+      "114",
       "README.md",
-      "archive",
-      "social-distribution"
+      "ROADMAP.md",
+      "archive"
     ],
     "pyproject.toml": null,
     "quality_gate/": [
@@ -238,68 +247,52 @@
     ],
     "scripts/": [
       "__init__.py",
-      "analyze_enrichment_failures.py",
-      "analyze_journal_enrichment.py",
-      "analyze_quality.py",
-      "audit_duplicates.py",
+      "audit.coveragerc",
       "audit_pipeline.py",
       "audit_published_categories.py",
       "audit_sources.py",
       "backfill_lifecycle_tables.py",
       "bench_qwen35_json.py",
-      "bench_stage1_sanity.py",
       "benchmark_bulk_persistence.py",
-      "benchmark_canonicalize.py",
-      "benchmark_llm.py",
       "benchmark_metrics.py",
       "benchmark_scoring.py",
       "benchmark_serving_api.py",
       "bump_version.py",
-      "canonicalization_dupe_demo.py",
-      "check_config.py",
       "check_doc_drift.py",
       "check_doc_review.py",
       "check_migration_revision.py",
-      "check_parents.py",
       "coverage_ratcheter.sh",
       "debug",
       "debug_proxy.py",
       "debugging",
-      "dedupe_tuning.py",
       "dev",
       "enrichment_candidate.py",
-      "enrichment_sanity.py",
       "evaluate_enrichment_registry.py",
-      "evaluate_ranking.py",
-      "find_config_source.py",
-      "generate_adaptive_report.py",
       "generate_admin_openapi_snapshot.py",
       "generate_api_docs.py",
       "generate_autonomous_report.py",
       "generate_fixture_post.py",
       "generate_inventory.py",
       "generate_production_report.py",
+      "grounding_backtest.py",
       "healthcheck.py",
       "label_enrichment_corpus.py",
       "lifecycle_reconciliation_report.py",
       "lint_changed.py",
-      "load_test.py",
+      "llm_canary.py",
+      "llm_health_report.py",
       "mark_published.py",
       "migrate.py",
       "migrate_metrics_db.py",
       "migrations",
+      "mutation_score.py",
       "open_pr.py",
       "ops",
-      "patch_json_scores.py",
       "profile_pipeline.py",
-      "publish_article_206.py",
       "quality_gate.py",
       "quality_gate_refresh.py",
-      "recluster_articles.py",
       "repair_images.py",
-      "replay_outage.py",
       "reproduce_scoring_bug.py",
-      "reranker_distribution.py",
       "reset_canary_sources.py",
       "run_collector.py",
       "run_collector_continuous.py",
@@ -311,8 +304,7 @@
       "security_gate.py",
       "setup",
       "sync_lockfiles.py",
-      "test_cognitive_scoring.py",
-      "test_export_v2.py",
+      "test_suite_audit.py",
       "train_production.sh",
       "update_changelog.py",
       "validate_context.py",
@@ -320,23 +312,24 @@
       "validate_export.py",
       "validate_frontend_publication.py",
       "validate_plans_ledger.py",
-      "verify_auditor.py",
-      "verify_auditor_regressions.py",
       "verify_canary_a_vs_b.py",
       "verify_canary_b.py",
       "verify_fix.py",
       "verify_gitleaks_checksum_test.sh",
       "verify_imports.py",
-      "verify_nonblocking_proof.py",
       "verify_prompt.py",
       "verify_workspace.sh",
       "weekly_quality_report.py"
     ],
     "security_status.txt": null,
     "spec-admin-api-surface.md": null,
+    "spec-editorial-grounding.md": null,
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
+    "spec-llm-canary.md": null,
     "spec-llm-health-weights-fix.md": null,
+    "spec-llm-provider-chain.md": null,
+    "spec-llm-run-report.md": null,
     "spec-logs-warnings-concurrency.md": null,
     "spec-nvidia-routing-fix.md": null,
     "spec-plans-ledger-hygiene.md": null,
@@ -344,6 +337,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md": null,
     "spec-refinery-gui-phase4.md": null,
     "spec-refinery-gui.md": null,
+    "spec-test-suite-audit.md": null,
     "spec.md": null,
     "temp_auditor_regressions/": [
       "article_metadata"
@@ -358,13 +352,12 @@
       "article_metadata"
     ],
     "tests/": [
+      "_plugins",
       "audit",
       "collectors",
       "conftest.py",
       "contracts",
       "data",
-      "debug_admin_scoring.py",
-      "debug_cognitive.py",
       "decompose_refinery",
       "e2e_cross_repo",
       "e2e_editorial_guardrails",
@@ -372,7 +365,6 @@
       "editorial",
       "fixtures",
       "integration",
-      "legacy",
       "mutation_smoke",
       "perf",
       "placeholder_audit",
@@ -380,7 +372,6 @@
       "regression",
       "scripts",
       "security",
-      "spikes",
       "test_ai_editor_tags.py",
       "test_async_scoring.py",
       "test_cli_config.py",
@@ -401,6 +392,7 @@
       "test_feature_scorer_config.py",
       "test_feed_reliability.py",
       "test_full_text.py",
+      "test_generate_inventory.py",
       "test_healthcheck.py",
       "test_hybrid_scorer.py",
       "test_llm_rate_limiter.py",
@@ -447,9 +439,7 @@
       "test_xml_escaping.py",
       "tools",
       "unit",
-      "validation",
-      "verify_async.py",
-      "verify_phase1.py"
+      "validation"
     ],
     "tests_refinery/": [
       "conftest.py",
@@ -457,9 +447,13 @@
       "test_admin_panel_weights.py"
     ],
     "todo-admin-api-surface.md": null,
+    "todo-editorial-grounding.md": null,
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
+    "todo-llm-canary.md": null,
     "todo-llm-health-weights-fix.md": null,
+    "todo-llm-provider-chain.md": null,
+    "todo-llm-run-report.md": null,
     "todo-logs-warnings-concurrency.md": null,
     "todo-nvidia-routing-fix.md": null,
     "todo-plans-ledger-hygiene.md": null,
@@ -467,6 +461,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md": null,
     "todo-refinery-gui-phase4.md": null,
     "todo-refinery-gui.md": null,
+    "todo-test-suite-audit.md": null,
     "todo.md": null,
     "tools/": [
       "audit_to_issues.sh",
@@ -713,6 +708,26 @@
       "description": "Print the built-in default configuration"
     },
     {
+      "target": "llm-report",
+      "description": "LLM provider behaviour report (ARGS=\"--days 7 --by-purpose\")"
+    },
+    {
+      "target": "llm-canary",
+      "description": "Real bounded LLM canary (needs keys; ARGS=\"--items 20 --require-keys\")"
+    },
+    {
+      "target": "test-timeshift",
+      "description": "Run tests with the clock +120 days to expose time-bomb tests (installs time-machine)"
+    },
+    {
+      "target": "test-audit",
+      "description": "Audit the test suite: coverage incl. noticiencias+scripts, weak tests, tests touching no code (slow: full run)"
+    },
+    {
+      "target": "mutation",
+      "description": "Mutation testing of the critical pure modules + per-module score vs floors (slow; installs mutmut in .mutlib, not in the venv)"
+    },
+    {
       "target": "config-docs",
       "description": "Regenerate docs/config_fields.md from the schema"
     },
@@ -741,6 +756,10 @@
       "description": "Bump project version (PART=major|minor|patch or VERSION=X.Y.Z)"
     },
     {
+      "target": "audit-placeholders",
+      "description": "Alias: diff-aware placeholder audit (CONTRIBUTING entry point)"
+    },
+    {
       "target": "check-deprecated",
       "description": "Check for deprecated Streamlit arguments"
     }
@@ -756,7 +775,6 @@
       "httpx>=0.28.1",
       "loguru>=0.7.3",
       "lxml>=6.0.2",
-      "nltk>=3.9.2",
       "numpy>=2.3.3,!=2.4.0",
       "playwright>=1.58.0",
       "pydantic>=2.11.9",
@@ -771,7 +789,6 @@
       "sqlalchemy>=2.0.43",
       "starlette>=0.49.1",
       "tenacity>=8.1.0",
-      "textblob>=0.19.0",
       "toml>=0.10.2",
       "tomli-w>=1.0.0",
       "types-python-dateutil==2.9.0.20260124",
@@ -788,30 +805,6 @@
   "function_index_sample": {
     "scripts/__init__.py": {
       "functions": [],
-      "classes": []
-    },
-    "scripts/analyze_enrichment_failures.py": {
-      "functions": [
-        "analyze_failures"
-      ],
-      "classes": []
-    },
-    "scripts/analyze_journal_enrichment.py": {
-      "functions": [
-        "analyze_logs"
-      ],
-      "classes": []
-    },
-    "scripts/analyze_quality.py": {
-      "functions": [
-        "analyze_logs"
-      ],
-      "classes": []
-    },
-    "scripts/audit_duplicates.py": {
-      "functions": [
-        "audit_duplicates"
-      ],
       "classes": []
     },
     "scripts/audit_pipeline.py": {
@@ -862,6 +855,45 @@
         "run_json_benchmark"
       ],
       "classes": []
+    },
+    "scripts/benchmark_bulk_persistence.py": {
+      "functions": [
+        "_payload",
+        "_generate_batch",
+        "main"
+      ],
+      "classes": []
+    },
+    "scripts/benchmark_metrics.py": {
+      "functions": [
+        "_generate_events",
+        "_replay",
+        "main"
+      ],
+      "classes": []
+    },
+    "scripts/benchmark_scoring.py": {
+      "functions": [
+        "main"
+      ],
+      "classes": [
+        "_FakeArticle",
+        "_FakeRepository",
+        "_FakeScorer",
+        "_FakeLogger"
+      ]
+    },
+    "scripts/benchmark_serving_api.py": {
+      "functions": [
+        "_cursor_params",
+        "seed_database",
+        "explain_fingerprint",
+        "measure_case",
+        "main",
+        "_all_engines",
+        "_dataset_checksum"
+      ],
+      "classes": []
     }
   },
   "markdown_files": [
@@ -878,6 +910,10 @@
     "README.md",
     "SECURITY.md",
     "apps/refinery/config/editor_formatting.md",
+    "archive/082-pending-plans-review-handoff/spec.md",
+    "archive/082-pending-plans-review-handoff/todo.md",
+    "archive/083-codex-p1-uncertainty-overclaim/spec.md",
+    "archive/083-codex-p1-uncertainty-overclaim/todo.md",
     "archive/historical-reports/ADAPTIVE_ENRICHMENT_REPORT.md",
     "archive/historical-reports/ENRICHMENT_FAILURE_REPORT.md",
     "archive/historical-reports/ENRICHMENT_ROUTING_REPORT.md",
@@ -893,6 +929,8 @@
     "archive/historical-reports/benchmark_report_summary.md",
     "archive/historical-reports/labels.md",
     "archive/historical-reports/pipeline_map.md",
+    "archive/social-distribution/spec.md",
+    "archive/social-distribution/todo.md",
     "audit/00_inventory.md",
     "audit/01_docs_code_diff.md",
     "audit/02_readme_checklist.md",
@@ -966,6 +1004,7 @@
     "docs/adr/0006-durable-workflow-lifecycle-state.md",
     "docs/adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md",
     "docs/adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md",
+    "docs/adr/0009-multi-provider-llm-chain.md",
     "docs/api_examples.md",
     "docs/archive/s1_refactor/S1C_AUDIT.md",
     "docs/archive/s1_refactor/historical_walkthrough.md",
@@ -1004,11 +1043,14 @@
     "docs/dev/REFACTOR_PLAN.md",
     "docs/dev/STATIC_ANALYSIS.md",
     "docs/dev/TEST_GAPS.md",
+    "docs/dev/TEST_SUITE_AUDIT.md",
     "docs/dev/pr_plan.md",
     "docs/dev/source-of-truth-backlog.md",
+    "docs/editorial_grounding_check.md",
     "docs/editorial_quality_system.md",
     "docs/faq.md",
     "docs/fixtures.md",
+    "docs/local_llm_evaluation.md",
     "docs/operations.md",
     "docs/ops/RUNBOOK.md",
     "docs/performance_baselines.md",
@@ -1047,6 +1089,7 @@
     "plans/060/phase-2a-v2-failclosed/todo.md",
     "plans/060/phase-2b-corpus-cutover/inventory/README.md",
     "plans/060/phase-2b-corpus-cutover/inventory/adversarial-audit/noticiencias-v2-adversarial-audit.md",
+    "plans/060/phase-2b-corpus-cutover/review/step2-review-outcomes-2026-09-14.md",
     "plans/060/phase-2b-corpus-cutover/review/step2-review-outcomes.md",
     "plans/060/phase-2b-corpus-cutover/spec.md",
     "plans/060/phase-2b-corpus-cutover/todo.md",
@@ -1073,18 +1116,33 @@
     "plans/080/04-verification-and-deferred.md",
     "plans/080/spec.md",
     "plans/080/tests/README.md",
+    "plans/080/tests/baseline.md",
+    "plans/080/tests/phase-1-results.md",
     "plans/080/tests/planning-results.md",
     "plans/080/todo.md",
     "plans/081/spec.md",
     "plans/081/tests/results.md",
     "plans/081/todo.md",
-    "plans/082-pending-plans-review-handoff/spec.md",
-    "plans/082-pending-plans-review-handoff/todo.md",
-    "plans/083-codex-p1-uncertainty-overclaim/spec.md",
-    "plans/083-codex-p1-uncertainty-overclaim/todo.md",
     "plans/084-vision-hero-alt/spec.md",
     "plans/084-vision-hero-alt/todo.md",
+    "plans/107/spec.md",
+    "plans/107/todo.md",
+    "plans/108/spec.md",
+    "plans/108/todo.md",
+    "plans/109/spec.md",
+    "plans/109/todo.md",
+    "plans/110/spec.md",
+    "plans/110/todo.md",
+    "plans/111/spec.md",
+    "plans/111/todo.md",
+    "plans/112/spec.md",
+    "plans/112/todo.md",
+    "plans/113/spec.md",
+    "plans/113/todo.md",
+    "plans/114/spec.md",
+    "plans/114/todo.md",
     "plans/README.md",
+    "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
     "plans/archive/002-publication-identity-deterministic-recovery-date.md",
     "plans/archive/003-council-exact-approval-match.md",
@@ -1218,17 +1276,41 @@
     "plans/archive/078-startup-less-lease-recovery/todo.md",
     "plans/archive/079-codex-p2-root-fixes/spec.md",
     "plans/archive/079-codex-p2-root-fixes/todo.md",
-    "plans/social-distribution/spec.md",
-    "plans/social-distribution/todo.md",
+    "plans/archive/085-bulk-reset-cap-reporting.md",
+    "plans/archive/086-pr-without-tracking.md",
+    "plans/archive/087-image-brief-hardening.md",
+    "plans/archive/088-cursor-precision.md",
+    "plans/archive/089-whitespace-dates.md",
+    "plans/archive/090-remove-status-new.md",
+    "plans/archive/091-public-list-422.md",
+    "plans/archive/092-batch-existence-check.md",
+    "plans/archive/093-dedupe-image-download.md",
+    "plans/archive/094-unify-slug-extraction.md",
+    "plans/archive/095-workflow-ui-decoupling.md",
+    "plans/archive/096-audit-exception-hygiene.md",
+    "plans/archive/097-perf-fail-open.md",
+    "plans/archive/098-audit-placeholders-alias.md",
+    "plans/archive/099-fail-open-warning.md",
+    "plans/archive/100-manual-ingest-policy.md",
+    "plans/archive/101-explicit-config-injection.md",
+    "plans/archive/102-quality-gate-success-path.md",
+    "plans/archive/103-critic-fail-open.md",
+    "plans/archive/104-lifecycle-strip-validation.md",
+    "plans/archive/105-bair-source-resolution.md",
+    "plans/archive/106-publication-pipeline.md",
     "quality_gate/README.md",
     "quality_gate/snapshots/01_frog/output.md",
     "quality_gate/snapshots/02_printing/output.md",
     "quality_gate/snapshots/03_battery/output.md",
     "scripts/debugging/README.md",
     "spec-admin-api-surface.md",
+    "spec-editorial-grounding.md",
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
+    "spec-llm-canary.md",
     "spec-llm-health-weights-fix.md",
+    "spec-llm-provider-chain.md",
+    "spec-llm-run-report.md",
     "spec-logs-warnings-concurrency.md",
     "spec-nvidia-routing-fix.md",
     "spec-plans-ledger-hygiene.md",
@@ -1236,6 +1318,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md",
     "spec-refinery-gui-phase4.md",
     "spec-refinery-gui.md",
+    "spec-test-suite-audit.md",
     "spec.md",
     "tests/fixtures/doc-drift/broken/README.md",
     "tests/fixtures/doc-drift/make-target/AGENTS.md",
@@ -1248,9 +1331,13 @@
     "tests/fixtures/doc-drift/valid/README.md",
     "tests/placeholder_audit/fixtures/doc_page.md",
     "todo-admin-api-surface.md",
+    "todo-editorial-grounding.md",
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
+    "todo-llm-canary.md",
     "todo-llm-health-weights-fix.md",
+    "todo-llm-provider-chain.md",
+    "todo-llm-run-report.md",
     "todo-logs-warnings-concurrency.md",
     "todo-nvidia-routing-fix.md",
     "todo-plans-ledger-hygiene.md",
@@ -1258,6 +1345,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md",
     "todo-refinery-gui-phase4.md",
     "todo-refinery-gui.md",
+    "todo-test-suite-audit.md",
     "todo.md"
   ],
   "open_questions": []
