@@ -281,6 +281,10 @@ def cmd_generate(max_cases: int | None) -> int:
                     }
                     t0 = time.time()
                     try:
+                        # Reset: the agent only assigns last_critic_verdict on
+                        # judged paths, so a stale verdict from a previous run
+                        # would otherwise leak into an abstaining run.
+                        agent.last_critic_verdict = None
                         output = agent.process_article(
                             payload,
                             explicit_article_id=run_id,
@@ -528,11 +532,9 @@ def cmd_analyze() -> int:
         if ok:
             schema = sum(1 for r in ok if r.get("schema_ok")) / len(ok)
             walls = [r["wall_s"] for r in ok if r.get("wall_s") is not None]
-            approved = [
-                r["critic_verdict"].get("approved")
-                for r in ok
-                if isinstance(r.get("critic_verdict"), dict)
-            ]
+            verdicts = [r.get("critic_verdict") for r in ok]
+            judged = [v for v in verdicts if isinstance(v, dict)]
+            approved = [v for v in judged if v.get("approved")]
             calls = sum(len(r.get("served", [])) for r in ok)
             foreign = sum(
                 1
@@ -541,8 +543,9 @@ def cmd_analyze() -> int:
                 if s.get("failover_index", 0) > 0
             )
             lines.append(
-                f"- schema_ok: {schema:.0%}  |  critic approved: "
-                f"{sum(1 for a in approved if a)}/{len(approved)}"
+                f"- schema_ok: {schema:.0%}  |  critic: "
+                f"{len(approved)} approved / {len(judged)} judged / "
+                f"{len(ok)} ok (abstain = critic fail-open, tracked separately)"
             )
             lines.append(
                 f"- wall p50/p95: {_pct(walls, 50)}s / {_pct(walls, 95)}s  |  "
