@@ -48,7 +48,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         </div>
         <div class="mb-3 flex items-center justify-between gap-2">
           <button id="batch-publish-btn" class="btn-ghost whitespace-nowrap" type="button" disabled>
-            ✨ Publish selected (<span id="batch-count">0</span>/5)
+            Publish selected (<span id="batch-count">0</span>/5)
           </button>
           <span class="font-mono text-[11px] text-ink-500">tick publishable rows · sequential, one slot</span>
         </div>
@@ -366,7 +366,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const pub = document.createElement("button");
         pub.type = "button";
         pub.className = "queue-publish-btn";
-        pub.textContent = "✨ Refine & publish →";
+        pub.textContent = "Refine & publish →";
         if (item.publishable) {
           pub.dataset.armed = "1";
           pub.title =
@@ -438,7 +438,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <span class="ml-2 font-mono text-xs text-ink-400">#${detail.id}</span>
         </div>
         <div class="flex flex-wrap justify-end gap-2">
-          <button class="btn-primary" data-action="publish" type="button">✨ Refine &amp; publish <span class="kbd">P</span></button>
+          <button class="btn-primary" data-action="publish" type="button">Refine &amp; publish <span class="kbd">P</span></button>
           <button class="btn-ghost" data-action="open" type="button">Open original</button>
           <button class="btn-ghost" data-action="full" type="button">Full view</button>
           <button class="btn-ghost" data-action="reprocess" type="button">Reprocess</button>
