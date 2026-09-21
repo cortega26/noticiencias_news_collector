@@ -220,17 +220,17 @@ pytest_add_cli_args_test_selection = [
     "tests/unit/collectors/test_rss_collector.py",
     "tests/unit/collectors/test_rss_collector_coverage_101.py",
     "tests/unit/editorial/test_grounding.py",
+    "tests/unit/editorial/test_grounding_shapes.py",
     "tests/unit/infrastructure/llm/test_provider_chain.py",
     "tests/unit/infrastructure/llm/test_failure_kinds_boundaries.py",
     "tests/unit/observability/test_llm_metrics_store.py",
     "tests/unit/observability/test_llm_run_report.py",
+    "tests/unit/observability/test_llm_run_report_shapes.py",
     "tests/unit/test_canonical_url_identity.py",
     "tests/unit/utils/test_url_canonicalizer_table.py",
 ]
 pytest_add_cli_args = [
     "-o", "addopts=", "-p", "no:randomly", "-x", "-q",
-    # introspects fn.__globals__, which mutmut's trampoline changes (test smell)
-    "--deselect=tests/unit/observability/test_llm_run_report.py::test_emit_logs_a_degraded_event_and_can_be_disabled",
 ]
 also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "config.toml"]
 
@@ -239,9 +239,9 @@ also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "conf
 # raise it when survivors are killed. admission is deterministic and pinned at 100.
 [tool.mutation.floors]
 "news_collector/collectors/admission.py" = 100
-"news_collector/editorial/grounding.py" = 78
+"news_collector/editorial/grounding.py" = 85
 "news_collector/infrastructure/llm/failure_kinds.py" = 88
-"news_collector/observability/llm_run_report.py" = 64
+"news_collector/observability/llm_run_report.py" = 85
 "news_collector/utils/url_canonicalizer.py" = 82
 
 [tool.ruff.lint.per-file-ignores]

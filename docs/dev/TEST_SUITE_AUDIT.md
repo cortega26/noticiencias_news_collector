@@ -79,3 +79,13 @@ trampoline: deselected in the mutation run and flagged as a test smell to rewrit
 | `utils/url_canonicalizer.py` | 61 % | 85 % | 59-row reviewed characterization table (also checked for idempotence) + helper/cache tests. Survivors: dead code (`amp` branch after `amp` is already a tracking param; `value == ""` after `keep_blank_values=False`; `port_match` else) and equivalent mutants — candidates for a small production cleanup. |
 
 Floors raised accordingly (`failure_kinds` 88, `url_canonicalizer` 82). Remaining weak spots: `observability/llm_run_report.py` (67 %, mostly report formatting) and `editorial/grounding.py` (81 %).
+
+### Update: survivors killed (Phase 3b, second pass)
+| module | before | after | notes |
+|---|---:|---:|---|
+| `editorial/grounding.py` | 79 % (grew with `replica_scope`/`hero_alt`) | 89 % | exact shapes: finding/stage-detail keys, snippet window, number forms, frontmatter fallbacks, hygiene/hero-alt/replica payloads |
+| `observability/llm_run_report.py` | 67 % | 88 % | thresholds (strict `>`, activity/outage edges), exact report text, JSON keys, write/emit behavior |
+
+Total over the five modules: 75.7 % -> **88.9 %** (1 287 mutants). Floors: admission 100, failure_kinds 88, url_canonicalizer 82,
+grounding 85, llm_run_report 85. The fragile `test_emit_logs_a_degraded_event_and_can_be_disabled` (introspected
+`fn.__globals__`) was rewritten as a behavior test and its mutmut deselection removed.
