@@ -370,10 +370,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     selectedId = id;
     renderQueue();
     try {
-      detail = await getArticle(id);
-      // Escape (or another selection) may have landed mid-request: only
-      // render when this response still matches the current selection.
+      const fresh = await getArticle(id);
+      // Escape, a filter change, or another selection may have landed
+      // mid-request: only adopt the response when it still matches the
+      // current selection, so hotkeys never act on a stale article.
       if (selectedId !== id) return;
+      detail = fresh;
       renderDetail();
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -442,7 +444,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             <span class="font-mono text-4xl font-bold text-amber-400">${detail.final_score != null ? detail.final_score.toFixed(3) : "—"}</span>
             <span class="text-xs text-ink-400">/ 1.0</span>
           </div>
-          <p class="mb-3 font-mono text-[11px] text-ink-400">${detail.publishable ? "Sobre la línea de publicación" : "Bajo la línea de publicación"}</p>
+          <p class="mb-3 font-mono text-[11px] text-ink-400">${detail.publishable ? "Elegible para publicar" : "No elegible ahora"}</p>
           <div class="space-y-2">
             ${comps.map(([k, v]) => `
               <div>

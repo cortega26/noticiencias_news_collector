@@ -91,7 +91,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <div class="card p-5">
             <div class="data-label mb-3">COMPONENTES</div>
             <div class="mb-3 font-mono text-3xl font-bold text-amber-400">${article.final_score?.toFixed(3) ?? "—"}</div>
-            <p class="mb-3 font-mono text-[11px] text-ink-400">${article.publishable ? "Sobre la línea de publicación" : "Bajo la línea de publicación"}</p>
+            <p class="mb-3 font-mono text-[11px] text-ink-400">${article.publishable ? "Elegible para publicar" : "No elegible ahora"}</p>
             ${comps.length ? comps.map(([k, v]) => `
               <div class="mb-2">
                 <div class="mb-1 flex justify-between font-mono text-[11px] text-ink-400"><span>${esc(k)}</span><span>${v.toFixed(3)}</span></div>
