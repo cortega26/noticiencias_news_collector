@@ -262,12 +262,14 @@ def validate_sources():  # noqa: C901
 
     if errors:
         error_msg = (
-            f"Configuration Validation Failed ({len(errors)} errors):\n"
+            f"❌ Configuration Validation Failed ({len(errors)} errors):\n"
             + "\n".join([f"  - {e}" for e in errors])
         )
         raise ValueError(error_msg)
 
-    print(f"{len(ALL_SOURCES)} sources validated successfully against strict schema.")
+    print(
+        f"✅ {len(ALL_SOURCES)} sources validated successfully against strict schema."
+    )
 
 
 def get_sources_by_tier(tier: str) -> Dict[str, Any]:

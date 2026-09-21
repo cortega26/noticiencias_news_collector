@@ -81,7 +81,7 @@ class BasicScorer(AsyncScorer):
         # Cache para optimizar cálculos repetitivos
         self._keyword_cache: Dict[str, float] = {}
 
-        logger.info(f"Scorer inicializado con pesos: {self.weights}")
+        logger.info(f"🧠 Scorer inicializado con pesos: {self.weights}")
 
     def score_article(
         self, article: Article, source_config: Dict[str, Any] | None = None
@@ -151,7 +151,7 @@ class BasicScorer(AsyncScorer):
             }
 
             logger.debug(
-                f"Artículo scored: {final_score:.3f} - {article.title[:50]}..."
+                f"📊 Artículo scored: {final_score:.3f} - {article.title[:50]}..."
             )
 
             try:
