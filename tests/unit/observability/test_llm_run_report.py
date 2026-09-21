@@ -173,16 +173,10 @@ def test_emit_prints_exports_and_scopes_the_store_to_this_run(tmp_path):
     assert store.run_id  # filtered to the current run
 
 
-def test_emit_logs_a_degraded_event_and_can_be_disabled(tmp_path, monkeypatch):
+def test_emit_logs_a_degraded_event_exports_and_can_be_disabled(tmp_path, monkeypatch):
     llm_run_stats.record("scoring", "llm", 1)
     llm_run_stats.record("scoring", "heuristic.chunk_failed", 9)
     seen: list = []
-    from news_collector.observability import llm_run_report as mod
-
-    monkeypatch.setattr(mod, "write_run_report", lambda *_a, **_k: None)
-    real = mod.emit_run_report.__globals__["build_run_report"]
-    assert real  # sanity: module wiring intact
-    out: list[str] = []
     import news_collector.utils.logger as logmod
 
     class _L:
@@ -194,16 +188,59 @@ def test_emit_logs_a_degraded_event_and_can_be_disabled(tmp_path, monkeypatch):
         "get_logger",
         lambda: SimpleNamespace(create_module_logger=lambda *_a, **_k: _L()),
     )
+    out: list[str] = []
+    target = tmp_path / "degraded.json"
+    store = _Store([_provider()])
     report = rr.emit_run_report(
+        _cfg(), emit=out.append, export_path=target, store=store
+    )
+
+    assert report.degraded and "DEGRADADO" in out[0]
+    (event,) = [m for m in seen if isinstance(m, dict)]
+    assert event["event"] == "llm.run.degraded"
+    assert event["run_id"] == report.run_id and event["reasons"] == report.reasons
+    assert (
+        json.loads(target.read_text(encoding="utf-8"))["degraded"] is True
+    )  # exported
+    # healthy run: no degraded event, no export without a path
+    seen.clear()
+    llm_run_stats.reset()
+    llm_run_stats.record("scoring", "llm", 5)
+    ok = rr.emit_run_report(
         _cfg(), emit=out.append, export_path=None, store=_Store([_provider()])
     )
-    assert report.degraded and any(
-        isinstance(m, dict) and m["event"] == "llm.run.degraded" for m in seen
-    )
+    assert ok.degraded is False and not [m for m in seen if isinstance(m, dict)]
+    # disabled: nothing printed, store never queried
+    printed = len(out)
+    untouched = _Store([])
     assert (
-        rr.emit_run_report(_cfg(enabled=False), emit=out.append, store=_Store([]))
+        rr.emit_run_report(_cfg(enabled=False), emit=out.append, store=untouched)
         is None
     )
+    assert (
+        len(out) == printed
+        and untouched.run_id is None
+        and not hasattr(untouched, "since_ts")
+    )
+
+
+def test_emit_uses_the_configured_threshold_and_scope_window(tmp_path):
+    llm_run_stats.record("scoring", "llm", 3)
+    llm_run_stats.record("scoring", "heuristic.chunk_failed", 5)  # 62.5 % heuristic
+    strict = rr.emit_run_report(
+        _cfg(ratio=0.5), emit=lambda _t: None, store=_Store([_provider()])
+    )
+    lax = rr.emit_run_report(
+        _cfg(ratio=0.9), emit=lambda _t: None, store=_Store([_provider()])
+    )
+    assert strict.degraded is True and lax.degraded is False
+    scope = llm_run_stats.begin_scope()
+    store = _Store([_provider()])
+    scoped = rr.emit_run_report(_cfg(), emit=lambda _t: None, store=store, scope=scope)
+    assert store.since_ts == scope.started_at
+    assert all(
+        s.total == 0 for s in scoped.stages
+    )  # counters from before the scope are excluded
 
 
 def test_emit_is_fail_open():

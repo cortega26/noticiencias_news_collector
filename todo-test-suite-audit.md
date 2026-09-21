@@ -9,7 +9,8 @@
 - [ ] Phase 2c: remaining gaps by risk: `llm/health`, `auditor`, `enrichment/router`, `basic_scorer`, `published_content`, `html_collector`, CI scripts (`sync_lockfiles`, `bump_version`, `validate_plans_ledger`, `quality_gate_refresh`)
 - [x] Phase 3a: mutation testing on 5 critical modules (`make mutation`, score script + floors, weekly workflow); `admission.py` 82 % -> 100 %
 - [x] Phase 3b-1: `failure_kinds` 81 -> 91 %, `url_canonicalizer` 61 -> 85 % (remaining survivors are equivalent/dead code)
-- [ ] Phase 3b-2: kill survivors in `llm_run_report` (67 %) and `grounding` (81 %); widen scope (coordinator, factory, rate_limiter, readability, uncertainty)
+- [x] Phase 3b-2: `llm_run_report` 67 -> 88 %, `grounding` 79 -> 89 % (total 75.7 -> 88.9 %); introspective test rewritten
+- [ ] Phase 3b-3: widen mutation scope (coordinator, factory, rate_limiter, readability, uncertainty, hero_alt)
 - [ ] Phase 3c: assertion-less/mock-heavy tests; hypothesis invariants (`check_grounding`, `evaluate_admission`, `redact_secrets`)
 - [x] Phase 4a: removed unused `nltk`/`textblob` (+ `regex`, `tqdm`, `defusedxml`): retires the NLTK CVE exception that expired 2026-09-30; suite verified in a venv built strictly from the new lock
 - [x] Phase 4b-1: group "web/http/validation" (starlette 1.6, pydantic 2.13.5 + core, anyio, urllib3 2.8, certifi, idna, charset-normalizer, typing-extensions, annotated-types, click) via new `sync_lockfiles.py --upgrade-package`
