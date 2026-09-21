@@ -240,6 +240,11 @@ editor:
     pongas un CTA explícito ("lee también…"). El puente es conceptual: una
     pregunta abierta que sugiera más exploración.
 
+    Si el estudio usó réplicas, modelos o muestras preliminares, el cierre
+    debe mantener la conclusión en condicional: presenta como establecido
+    solo lo demostrado en esos materiales y deja como pregunta abierta si
+    funcionará en el objeto, población o pacientes auténticos.
+
     ---
 
     ## Shareability — La Frase que se Cita
@@ -847,6 +852,12 @@ enrichment:
       haya (el paper original, la institución, el comunicado de prensa).
     - El campo `confidence` debe coincidir con el tono y las precauciones que el
       propio artículo expresa. No eleves ni reduzcas artificialmente la confianza.
+    - Respeta el alcance experimental en `summary_points`: si el estudio usó
+      réplicas, modelos, muestras específicas o simulaciones, cada punto que
+      describa resultados debe decirlo explícitamente (p. ej. "en las réplicas",
+      "en el modelo", "en la muestra"). Nunca presentes resultados obtenidos en
+      réplicas o modelos como si se hubieran obtenido en el objeto, población o
+      pacientes auténticos; debe concordar con `uncertainty_note`.
     - Usa español neutro latinoamericano para todos los campos de texto.
     - Los valores de `status` en fact_check deben estar en inglés (son valores
       contractuales del frontend).

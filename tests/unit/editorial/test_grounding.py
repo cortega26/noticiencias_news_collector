@@ -201,3 +201,55 @@ def test_pr_section_neutralises_markdown_from_generated_text():
     assert snippet.startswith("`") and snippet.endswith("`")  # inert code span
     assert "`tick`" not in snippet and "\n" not in snippet
     assert "<!--" in snippet and "](http://evil)" in snippet  # kept, but inert
+
+
+def test_replica_scope_and_boilerplate_alt_warn_on_2451_shape():
+    md = (
+        "---\n"
+        "title: Pergaminos y plomo\n"
+        "image_alt: Ilustración editorial relacionada con Pergaminos y plomo\n"
+        "requires_uncertainty_note: true\n"
+        "uncertainty_note: Los resultados se obtuvieron con pergaminos modernos "
+        "elaborados en laboratorio; aún no se ha probado la técnica en los "
+        "auténticos rollos de Herculano.\n"
+        "summary_points:\n"
+        "  - Al escanear los rollos en busca de plomo, lograron separar las "
+        "láminas y recuperar palabras legibles.\n"
+        "---\n\nTexto neutro sin cifras.\n"
+    )
+    r = check_grounding(md, SOURCE)
+    assert r.errors == []
+    by_kind = {}
+    for f in r.warnings:
+        by_kind.setdefault(f.kind, []).append(f.field)
+    assert by_kind.get("replica_scope") == ["summary_points[0]"]
+    assert by_kind.get("hero_alt") == ["image_alt"]
+
+
+def test_replica_scope_and_alt_silent_when_fixed():
+    md = (
+        "---\n"
+        "title: Pergaminos y plomo\n"
+        "image_alt: Fotografía comparativa de dos rollos réplica de papiro, "
+        "sin carbonizar (a) y carbonizado (b).\n"
+        "requires_uncertainty_note: true\n"
+        "uncertainty_note: Los resultados se obtuvieron con pergaminos modernos "
+        "elaborados en laboratorio; aún no se ha probado la técnica en los "
+        "auténticos rollos de Herculano.\n"
+        "summary_points:\n"
+        "  - Al escanear las réplicas en busca de plomo, lograron separar las "
+        "láminas y recuperar palabras de los textos de prueba.\n"
+        "---\n\nTexto neutro sin cifras.\n"
+    )
+    assert check_grounding(md, SOURCE).findings == []
+
+
+def test_good_alt_is_not_flagged():
+    md = _post(
+        meta={
+            "title": "Algo",
+            "image_alt": "Microfotografía de islotes encapsulados en beads de alginato.",
+        },
+        body="Texto neutro sin cifras.",
+    )
+    assert check_grounding(md, SOURCE).findings == []
