@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import subprocess  # nosec
 import sys
 from pathlib import Path
@@ -148,10 +149,38 @@ def build_compile_args(
     return (*args[:-1], *upgrades, args[-1])
 
 
+def _norm(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name.split("==")[0].strip()).lower()
+
+
+def pinned_names(lock_text: str) -> set[str]:
+    """Normalized names pinned (``name==version``) in a lockfile's text."""
+    return {
+        _norm(m.group(1))
+        for m in re.finditer(
+            r"^([A-Za-z0-9][A-Za-z0-9._-]*)==", lock_text, re.MULTILINE
+        )
+    }
+
+
+def upgrades_for_lock(lockfile: str, upgrade_packages: Sequence[str]) -> list[str]:
+    """Only the requested packages that this lock already pins.
+
+    ``pip-compile --upgrade-package X`` *adds* X when the lock does not contain it, which
+    would drag e.g. the whole security toolchain into the runtime lock.
+    """
+    path = ROOT_DIR / lockfile
+    present = pinned_names(path.read_text(encoding="utf-8")) if path.exists() else set()
+    return [name for name in upgrade_packages if _norm(name) in present]
+
+
 def sync_lockfiles(upgrade_packages: Sequence[str] = ()) -> None:  # noqa: C901
     """Regenerate the lockfiles using pip-tools (optionally upgrading some packages)."""
     for lockfile, args in LOCK_TARGETS:
-        command = (sys.executable, *build_compile_args(args, upgrade_packages))
+        command = (
+            sys.executable,
+            *build_compile_args(args, upgrades_for_lock(lockfile, upgrade_packages)),
+        )
         run_command(command, description=f"Regenerating {lockfile}")
 
         # Post-process: Strip 'pip' package lines to prevent CI instability due to version mismatches
