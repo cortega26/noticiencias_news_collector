@@ -105,6 +105,7 @@ def _make_article(
         "url": "https://example.com/article",
         "summary": "A sufficiently long summary for the article being processed.",
         "image_url": image_url,
+        "image_alt": "Fotografía de prueba para la suite.",
         "published_date": published_date or datetime(2024, 1, 25),
         "source_id": "src",
         "source_name": "Source Name",

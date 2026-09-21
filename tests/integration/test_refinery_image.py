@@ -61,6 +61,7 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
         "source_metadata": {},
         "published_date": __import__("datetime").datetime(2024, 1, 1),
         "image_url": "https://example.com/image.jpg",
+        "image_alt": "Fotografía de prueba para la suite.",
     }
 
     # Mock Requests Client
