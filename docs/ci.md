@@ -102,7 +102,8 @@ make verify-ci
 - `.github/workflows/dependency-lock-check.yml` — lockfile freshness
 - `.github/workflows/manual-lock-sync.yml` — manual lockfile refresh
 - `.github/workflows/daily_collector.yml` — scheduled collection
-- `.github/workflows/mutation.yml` — mutation testing (nightly)
+- `.github/workflows/mutation.yml` — mutation testing (weekly, Mon 06:00 UTC): `mutmut run` over the critical pure modules, then `scripts/mutation_score.py --check` fails below the per-module floors in `[tool.mutation.floors]` (local: `make mutation`)
+- `.github/workflows/test-health-weekly.yml` — test health (weekly, Mon 07:00 UTC; manual input `days`, default 14): the whole suite with the clock moved forward (`TIME_SHIFT_DAYS`, `tests/_plugins/time_shift_plugin.py`) so time-dependent tests and accepted-risk exceptions about to expire (pip-audit allowlist) fail here first; not a PR gate (local: `TIME_SHIFT_DAYS=14 make test-timeshift`)
 - `.github/workflows/live-source-drift.yml` — live feed cohort sweep
 - `.github/workflows/placeholder-audit-pr.yml` / `placeholder-audit-nightly.yml`
 - `.github/workflows/release.yml` — release build/publish

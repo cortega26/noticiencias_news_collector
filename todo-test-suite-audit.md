@@ -17,4 +17,4 @@
 - [x] Phase 4b-3: group "scraping" (playwright/patchright 1.63, curl-cffi 0.16, beautifulsoup4 4.15, lxml 6.1.3, feedparser 6.0.14, cssselect, cffi, apify-fingerprint-datapoints); rich/pygments/markdown-it-py/mdurl/sgmllib3k leave the runtime lock, feedparser-sgmllib joins
 - [x] Phase 4b-4: tooling locked in the security lock (bandit 1.9.4, hypothesis 6.168.0); `sync_lockfiles --upgrade-package` now only touches locks that already pin the package
 - [ ] Phase 4c (owner decision): tools not in any lock (ruff 0.16, mypy 2.3.1, coverage, black, isort 9 major, pytest-randomly 5 major, semgrep 1.177 blocked by its rich/protobuf pins) are installed by `make bootstrap` outside the locks
-- [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules
+- [x] Phase 5: weekly `test-health-weekly.yml` (clock +14 d: time bombs and allowlist expiries early warning), `docs/AGENTS.md` §4.1 test-usefulness criteria; ratchet baseline and mutation floors already enforced (2b, 3a)

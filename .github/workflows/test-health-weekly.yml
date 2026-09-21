@@ -1,0 +1,39 @@
+name: Test health (weekly)
+
+# Early warning, not a PR gate: runs the whole suite with the clock moved forward so that
+# (a) tests that silently depend on "today" and (b) accepted-risk exceptions about to expire
+# (pip-audit allowlist) fail here first instead of on the day they break the main CI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days to move the clock forward"
+        default: "14"
+  schedule:
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  timeshift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-python-env
+        with:
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+
+      - name: Install time-machine
+        run: .venv/bin/pip install time-machine
+
+      - name: Suite with the clock moved forward
+        env:
+          TIME_SHIFT_DAYS: ${{ github.event.inputs.days || '14' }}
+        run: >
+          PYTHONPATH=tests/_plugins:. .venv/bin/python -m pytest tests
+          --ignore=tests/e2e_pipeline -q --no-cov -p time_shift_plugin

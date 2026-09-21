@@ -302,6 +302,28 @@ Prefer the narrowest test that proves the invariant:
 - boundary tests for orchestration
 - integration tests for storage and workflow coupling
 
+### 4.1) What makes a test useful (review criteria)
+
+A test earns its place when it can fail for a real reason. Reviewers should reject, and authors should delete or
+rewrite, tests that:
+
+1. **Do not exercise repository code** (prototypes re-testing themselves, scripts that only `print`, tests of a
+   helper defined inside the test). `make test-audit` lists tests that execute no measured line.
+2. **Assert nothing** (or only "did not raise") where a behavior can be stated. Use an explicit assertion on the
+   outcome; keep bare smoke tests rare and named as such.
+3. **Assert on the fakes**: mock only at the boundary (network, LLM, clock, filesystem outside `tmp_path`), never the
+   subject under test. Real SQLite and real temp files are preferred over mocked storage.
+4. **Pin implementation instead of behavior** (introspecting `fn.__globals__`, call counts of private helpers).
+5. **Depend on "today"**: use relative dates; `make test-timeshift` and the weekly `test-health-weekly` workflow catch
+   regressions of this kind.
+
+Coverage says a line ran; **mutation testing says a test would notice it changing** (`make mutation`, per-module
+floors in `[tool.mutation.floors]`). New pure policy modules that decide admission, identity, classification or
+grounding should be added to `[tool.mutmut]` with a floor once their score is known.
+
+Every bug fix adds a regression test that fails on the original defect, named after the behavior it protects. A
+behavior change is not "resolved" until a real run (or `make llm-canary` for the LLM chain) shows the effect (§5.1).
+
 ## 5) Operational Validation
 
 Baseline commands for meaningful code changes:
