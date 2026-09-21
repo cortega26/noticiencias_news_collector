@@ -43,6 +43,10 @@ body {
   @apply bg-ink-950 text-ink-200 font-sans antialiased;
 }
 
+/* Component classes live in the `components` layer so Tailwind's `utilities`
+ * layer (e.g. `.hidden`) always wins over them — an unlayered display rule
+ * would otherwise keep hidden buttons visible. */
+@layer components {
 /* ---------- typography ---------- */
 
 .display-title {
@@ -221,3 +225,5 @@ body {
   cursor: not-allowed;
   opacity: 0.45;
 }
+
+} /* @layer components */
