@@ -36,3 +36,21 @@ def test_cli_accepts_repeated_upgrade_package(monkeypatch):
     assert sl.parse_args().upgrade_package == ["a", "b==1"]
     monkeypatch.setattr(sys, "argv", ["sync"])
     assert sl.parse_args().upgrade_package == []
+
+
+def test_pinned_names_are_normalized_and_only_top_level_pins_count():
+    text = (
+        "foo-bar==1.0 \\\n    --hash=sha256:aa\n"
+        "Some_Pkg==2 \\\n    # via x\n"
+        "    indented==3\n"
+        "# comment==4\n"
+    )
+    assert sl.pinned_names(text) == {"foo-bar", "some-pkg"}
+
+
+def test_upgrade_packages_are_limited_to_locks_that_pin_them(tmp_path, monkeypatch):
+    (tmp_path / "runtime.lock").write_text("urllib3==2.7.0 \\\n    --hash=sha256:aa\n")
+    monkeypatch.setattr(sl, "ROOT_DIR", tmp_path)
+    got = sl.upgrades_for_lock("runtime.lock", ["URLLIB3==2.8", "semgrep", "urllib3"])
+    assert got == ["URLLIB3==2.8", "urllib3"]  # semgrep would be *added* -> excluded
+    assert sl.upgrades_for_lock("missing.lock", ["urllib3"]) == []

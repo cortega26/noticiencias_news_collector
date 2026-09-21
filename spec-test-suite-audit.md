@@ -81,3 +81,12 @@ feedparser swaps `sgmllib3k` for `feedparser-sgmllib`. Acceptance: suite 3097 pa
 venv built strictly from the lock; imports of playwright/scrapling/feedparser/bs4/lxml OK; **live parse of 8
 configured feeds is byte-for-byte equivalent between feedparser 6.0.12 and 6.0.14** (entry count + content
 hash); `sync_lockfiles.py --check` clean.
+
+## Phase 4b-4 (done): tooling group + fix of `--upgrade-package`
+Bug found while upgrading: `pip-compile --upgrade-package X` **adds** X when a lock does not contain it, so passing
+`semgrep` pulled the whole security toolchain (and a protobuf downgrade) into the runtime lock. `sync_lockfiles.py`
+now applies each requested package only to the locks that already pin it (`pinned_names`, `upgrades_for_lock`,
+unit-tested). Result: only `bandit` 1.9.3->1.9.4 and `hypothesis` 6.165.5->6.168.0 move (security lock).
+Acceptance: venv built strictly from `requirements-security.lock`: suite 3099 passed, bandit findings identical
+(same counts as 1.9.3), `sync_lockfiles.py --check` clean. `semgrep` cannot move (its rich/protobuf pins);
+ruff/mypy/coverage/black/isort/pytest-randomly are not in any lock (installed by bootstrap) - left to the owner.
