@@ -12,5 +12,6 @@
 - [ ] Phase 3c: assertion-less/mock-heavy tests; hypothesis invariants (`check_grounding`, `evaluate_admission`, `redact_secrets`)
 - [x] Phase 4a: removed unused `nltk`/`textblob` (+ `regex`, `tqdm`, `defusedxml`): retires the NLTK CVE exception that expired 2026-09-30; suite verified in a venv built strictly from the new lock
 - [x] Phase 4b-1: group "web/http/validation" (starlette 1.6, pydantic 2.13.5 + core, anyio, urllib3 2.8, certifi, idna, charset-normalizer, typing-extensions, annotated-types, click) via new `sync_lockfiles.py --upgrade-package`
-- [ ] Phase 4b-2..: remaining groups (data: alembic/sqlalchemy; ML: numpy/scikit-learn/scipy; scraping: playwright/scrapling/curl-cffi/bs4/lxml; tooling)
+- [x] Phase 4b-2: group "data/ML" (alembic 1.20, sqlalchemy 2.0.54, numpy 2.5.3, scikit-learn 1.9.1, scipy 1.18.1, joblib, threadpoolctl, greenlet, mako, orjson; new transitive cloudpickle + narwhals)
+- [ ] Phase 4b-3..: remaining groups (scraping: playwright/scrapling/curl-cffi/bs4/lxml/feedparser; tooling: ruff/mypy/coverage/hypothesis/pytest plugins)
 - [ ] Phase 5: CI guardrails + docs/AGENTS.md test-quality rules

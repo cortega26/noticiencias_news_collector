@@ -65,3 +65,10 @@ annotated-types and click in all three locks (nothing else moved). Acceptance, i
 from the new lock: full suite 3078 passed; `make llm-canary --require-keys` 20/20; time-shifted suite only
 fails the two expiring pip-audit tests by design; `sync_lockfiles.py --check` clean. New third-party
 deprecation (starlette TestClient x anyio 4.15) filtered in `pyproject.toml`.
+
+## Phase 4b-2 (done): dependency group "data/ML"
+Same procedure as 4b-1 (`sync_lockfiles.py --upgrade-package`): alembic 1.20.0, sqlalchemy 2.0.54, numpy 2.5.3,
+scikit-learn 1.9.1, scipy 1.18.1, joblib 1.6.0, threadpoolctl 3.7.0, greenlet 3.5.6, mako 1.4.1, orjson 3.12.0
+(scikit-learn/scipy add `cloudpickle` and `narwhals` as transitive deps). Acceptance in a venv built strictly
+from the lock: full suite 3097 passed (incl. Alembic migration tests), `make llm-canary --require-keys` 20/20,
+time-shifted suite only fails the expiring pip-audit tests by design, `sync_lockfiles.py --check` clean.
