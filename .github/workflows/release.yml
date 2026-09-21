@@ -13,7 +13,7 @@ permissions:
 jobs:
   changelog:
     name: Update changelog and draft release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -79,7 +79,7 @@ jobs:
 
   container:
     name: Build release container image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: changelog
     permissions:

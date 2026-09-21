@@ -110,6 +110,13 @@ make verify-ci
 - `.github/workflows/fix-makefile-tabs.yml` — self-heal workflow
 - `.github/workflows/sync-master.yml` — master mirror sync
 
+## Runner baseline
+
+All workflows pin `runs-on: ubuntu-24.04` (pinned ahead of GitHub's
+`ubuntu-latest` → Ubuntu 26 migration on 2026-10-19). Acceptance: full CI green
+on the pin PR. Rollback: revert the pin commit. Unpin deliberately only after a
+trial run validates the suite on Ubuntu 26.
+
 ## Fork And Dependabot Behavior
 
 - Frontend `content-guard.yml` can use a committed backend schema snapshot
