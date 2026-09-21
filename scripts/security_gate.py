@@ -31,17 +31,6 @@ SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Each entry must include an expiry date so suppressions cannot become permanent.
 PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
-    # NLTK model-artifact path-sandbox bypass (CVE-2026-81726): no upstream
-    # fix exists — OSV lists 3.10.3 (latest) as last_affected with empty
-    # fix_versions. NLTK is only a transitive dependency here (via textblob)
-    # and none of the affected model-artifact APIs (TransitionParser,
-    # AveragedPerceptron/PerceptronTagger save/load) are called anywhere in
-    # this repo, so this is an accepted risk until NLTK ships a fix.
-    # Re-check on expiry.
-    "GHSA-8mgp-746c-j5xp": {
-        "reason": "NLTK 3.10.3 path-sandbox bypass with no upstream fix yet; affected model-artifact APIs unused (transitive dep via textblob).",
-        "expires_on": "2026-09-30",
-    },
     # protobuf ParseDict/Any-recursion DoS (PYSEC-2026-1805, aliases
     # CVE-2026-0994 + GHSA-7gcm-g887-7qv7): requirements-security.lock pins
     # protobuf 4.25.9 via the semgrep dev-tool chain while fixes exist

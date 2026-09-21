@@ -49,3 +49,10 @@ URL table also checked for idempotence, plus helper and LRU-cache tests). Produc
 Acceptance: `failure_kinds` 81 -> 91 %, `url_canonicalizer` 61 -> 85 % (same mutmut run conditions);
 remaining survivors documented as equivalent/dead code; floors raised to 88 / 82. Verification: `make mutation`
 score check, `make lint && make type && make test`.
+## Phase 4a (done): remove unused dependencies (`nltk`, `textblob`)
+`pip-audit` flagged `GHSA-8mgp-746c-j5xp` (nltk, no upstream fix) and its allowlist entry expired
+2026-09-30. `git grep` shows neither package is imported anywhere in the repo, so both are removed from
+`pyproject.toml`/`requirements.txt`; locks regenerated with `scripts/sync_lockfiles.py --install-pip-tools`
+(only nltk, textblob, regex, tqdm, defusedxml left the locks); the allowlist entry, its test and `SECURITY.md`
+are updated. Acceptance: suite passes in a venv built strictly from `requirements.lock`, `pip-audit` reports no
+vulnerabilities, `sync_lockfiles.py --check` clean after commit. Phase 4b (minor/patch upgrades by group) follows.
