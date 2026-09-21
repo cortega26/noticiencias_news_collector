@@ -18,6 +18,7 @@ import pytest
 from news_collector.components.editorial.ai_editor import (
     _HEADLINE_FORMAT_MAX_ATTEMPTS,
     EditorAgent,
+    EnrichmentSchema,
     GeneratedArticleValidationError,
     HeadlinesSchema,
     _collect_heading_structure_issues,
@@ -26,6 +27,7 @@ from news_collector.components.editorial.ai_editor import (
     _sample_for_critic,
     _strip_llm_epilogue,
     _strip_llm_preamble,
+    sanitize_enrichment_payload,
     validate_generated_article_markdown,
 )
 from news_collector.editorial.uncertainty import GENERIC_UNCERTAINTY_NOTE
@@ -1118,3 +1120,60 @@ class TestConstructorFallbacks:
         ):
             agent = EditorAgent("http://example", "model", config=None)
         assert agent.critic_threshold == 70
+
+
+class TestSanitizeEnrichmentPayload:
+    """Run-39 regression: sources=[{..., url: \"\"}] discarded five valid
+    fields with it (editorial_v2_incomplete). The sanitizer closes the
+    empty-string hole; genuinely missing data still blocks."""
+
+    def test_run39_shape_sanitizes_to_empty_sources(self):
+        # The sanitizer alone leaves sources: [] (still schema-invalid);
+        # the feed-source backfill inside _generate_enrichment_fields
+        # repairs it before validation (covered in test_enrichment_fields).
+        raw = {
+            "summary_points": ["a", "b"],
+            "glossary": [{"term": "x", "definition": "y"}],
+            "fact_check": [{"label": "c", "status": "confirmed"}],
+            "why_it_matters": ["d"],
+            "confidence": "Alta — sólida.",
+            "sources": [{"title": "WIRED", "url": "", "publisher": "WIRED"}],
+        }
+        cleaned = sanitize_enrichment_payload(raw)
+        assert cleaned["sources"] == []
+        assert cleaned["summary_points"] == ["a", "b"]
+        assert cleaned["confidence"] == "Alta — sólida."
+
+    def test_blank_strings_and_items_dropped_valid_kept(self):
+        raw = {
+            "summary_points": ["ok", "fine", "  ", ""],
+            "why_it_matters": ["  útil  "],
+            "glossary": [
+                {"term": "t", "definition": "d"},
+                {"term": "  ", "definition": "d"},
+            ],
+            "fact_check": [{"label": "l", "status": "confirmed"}],
+            "confidence": "  Moderada — preliminar.  ",
+            "sources": [
+                {"title": "t", "url": "https://x.example/", "publisher": "  "},
+            ],
+        }
+        cleaned = sanitize_enrichment_payload(raw)
+        assert cleaned["summary_points"] == ["ok", "fine"]
+        assert cleaned["why_it_matters"] == ["útil"]
+        assert cleaned["glossary"] == [{"term": "t", "definition": "d"}]
+        assert cleaned["confidence"] == "Moderada — preliminar."
+        assert cleaned["sources"] == [
+            {"title": "t", "url": "https://x.example/", "publisher": None}
+        ]
+        EnrichmentSchema(**cleaned)  # must not raise
+
+    def test_genuinely_missing_data_still_blocks(self):
+        cleaned = sanitize_enrichment_payload({"summary_points": ["  "], "sources": []})
+        with pytest.raises(Exception):
+            EnrichmentSchema(**cleaned)
+
+    def test_non_dict_input_yields_empty(self):
+        assert sanitize_enrichment_payload(None) == {}
+        assert sanitize_enrichment_payload("nope") == {}
+        assert sanitize_enrichment_payload([1, 2]) == {}

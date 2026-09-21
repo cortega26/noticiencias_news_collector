@@ -5,7 +5,7 @@ import time
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Mapping, cast
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
@@ -206,6 +206,105 @@ class SourceItem(BaseModel):
     url: str = Field(..., min_length=1)
     publisher: str | None = None
     date: str | None = None
+
+
+# Required string fields per enrichment list-of-dict type. Items missing any
+# of these are dropped by the sanitizer below (the model emits "" or
+# whitespace when it cannot derive a value — run 39 died on
+# sources=[{..., url: ""}], discarding five valid fields with it).
+_ENRICHMENT_ITEM_REQUIRED_FIELDS = {
+    "glossary": ("term", "definition"),
+    "fact_check": ("label", "status"),
+    "sources": ("title", "url"),
+}
+
+# Optional string fields normalized to None when blank (schema accepts None).
+_ENRICHMENT_ITEM_OPTIONAL_FIELDS = {
+    "sources": ("publisher", "date"),
+}
+
+
+def _clean_enrichment_text(value: Any) -> Any:
+    return value.strip() if isinstance(value, str) else value
+
+
+def _normalize_optional_fields(
+    entry: dict[str, Any], optionals: tuple[str, ...]
+) -> dict[str, Any]:
+    for opt in optionals:
+        if opt in entry and not entry[opt]:
+            entry[opt] = None
+    return entry
+
+
+def _has_required_fields(entry: Mapping[str, Any], required: tuple[str, ...]) -> bool:
+    return all(entry.get(field) for field in required)
+
+
+def _clean_enrichment_item(
+    item: Any, required: tuple[str, ...], optionals: tuple[str, ...]
+) -> tuple[bool, Any]:
+    """Return ``(keep, cleaned)`` for one enrichment list entry."""
+    if isinstance(item, str):
+        text = item.strip()
+        return bool(text), text
+    if isinstance(item, dict):
+        entry = _normalize_optional_fields(
+            {k: _clean_enrichment_text(v) for k, v in item.items()}, optionals
+        )
+        if _has_required_fields(entry, required):
+            return True, entry
+        return False, None
+    if item is None:
+        return False, None
+    return True, item
+
+
+def _clean_enrichment_value(
+    key: str, value: Any, dropped: dict[str, int]
+) -> tuple[bool, Any]:
+    """Return ``(keep, cleaned)`` for one top-level enrichment field."""
+    if isinstance(value, str):
+        text = value.strip()
+        return bool(text), text
+    if isinstance(value, list):
+        required = _ENRICHMENT_ITEM_REQUIRED_FIELDS.get(key, ())
+        optionals = _ENRICHMENT_ITEM_OPTIONAL_FIELDS.get(key, ())
+        kept: list[Any] = []
+        for item in value:
+            keep, cleaned_item = _clean_enrichment_item(item, required, optionals)
+            if keep:
+                kept.append(cleaned_item)
+            else:
+                dropped[key] = dropped.get(key, 0) + 1
+        return True, kept
+    return True, value
+
+
+def sanitize_enrichment_payload(data: Any) -> dict[str, Any]:
+    """Repair a raw Stage 6 JSON dict before Pydantic validation.
+
+    Drops blank strings, blank string-items, and dict-items missing a
+    required field; normalizes blank optionals to None. Genuinely missing
+    data stays missing (the V2 gate still blocks it) — only the
+    empty-string hole is closed. Never raises; non-dict input yields {}.
+    """
+    if not isinstance(data, dict):
+        return {}
+    cleaned: dict[str, Any] = {}
+    dropped: dict[str, int] = {}
+    for key, value in data.items():
+        keep, cleaned_value = _clean_enrichment_value(key, value, dropped)
+        if keep:
+            cleaned[key] = cleaned_value
+        else:
+            dropped[key] = dropped.get(key, 0) + 1
+    if dropped:
+        logger.warning(
+            "Enrichment sanitizer dropped blank values: {}",
+            ", ".join(f"{k}×{n}" for k, n in sorted(dropped.items())),
+        )
+    return cleaned
 
 
 class EnrichmentSchema(BaseModel):
@@ -1106,12 +1205,12 @@ class EditorAgent:
 
             if score < self.critic_threshold:
                 logger.warning(
-                    f"⛔ CRITIC REJECTED: Score {score}/{self.critic_threshold}. "
+                    f"CRITIC REJECTED: Score {score}/{self.critic_threshold}. "
                     f"Reason: {reason}. Recoverable: {recoverable}"
                 )
                 return False, reason, recoverable
 
-            logger.info(f"✅ Critic Pass Passed (Score: {score})")
+            logger.info(f"Critic Pass Passed (Score: {score})")
             return True, None, True
         except Exception as e:
             logger.warning(f"Critic Pass Failed (Error): {e} - Failing Closed")
@@ -1238,7 +1337,7 @@ class EditorAgent:
 
         if approved:
             logger.info(
-                f"✅ Editorial Critic Approved (avg={average:.1f}, scores={scores})"
+                f"Editorial Critic Approved (avg={average:.1f}, scores={scores})"
             )
             self.last_critic_verdict = {
                 "approved": True,
@@ -1260,7 +1359,7 @@ class EditorAgent:
                 feedback = "Calidad editorial insuficiente."
 
         logger.warning(
-            f"⛔ EDITORIAL CRITIC REJECTED (avg={average:.1f}, scores={scores}, "
+            f"EDITORIAL CRITIC REJECTED (avg={average:.1f}, scores={scores}, "
             f"recoverable={recoverable}). Feedback: {feedback}"
         )
         self.last_critic_verdict = {
@@ -1383,7 +1482,7 @@ class EditorAgent:
 
         if approved:
             logger.info(
-                f"✅ Headline Critic Approved "
+                f"Headline Critic Approved "
                 f"(fidelity={fidelity_pass}, sensationalism={sensationalism_pass})"
             )
             return True, None
@@ -1396,7 +1495,7 @@ class EditorAgent:
             )
 
         logger.warning(
-            f"⛔ HEADLINE CRITIC REJECTED "
+            f"HEADLINE CRITIC REJECTED "
             f"(fidelity={fidelity_pass}, sensationalism={sensationalism_pass}). "
             f"Instruction: {regenerate_instruction}"
         )
@@ -1437,7 +1536,7 @@ class EditorAgent:
                 return headlines
             if attempt < max_headline_retries:
                 logger.warning(
-                    f"⚠️ Headline Critic rejected "
+                    f"Headline Critic rejected "
                     f"(Attempt {attempt + 1}/{max_headline_retries + 1}). "
                     f"Regenerating with instruction: {regen_instruction}"
                 )
@@ -1515,25 +1614,35 @@ class EditorAgent:
             response = self._send_prompt(
                 context, system=system_prompt, model=self.enrichment_model
             )
-            data = self._extract_json(response)
-            validated = EnrichmentSchema(**data)
-            result = validated.model_dump()
-            if not result.get("sources") and (source_url or source_name):
+            data = sanitize_enrichment_payload(self._extract_json(response))
+            if not data.get("sources") and (source_url or source_name):
+                # Backfill BEFORE validation: a sanitized-away blank-url
+                # source (run 39) leaves an empty list, which would fail
+                # min_length=1 below and discard the other five valid
+                # fields with it.
                 logger.warning(
                     "Enrichment returned no sources; falling back to the "
                     "article's original source (url={}).",
                     source_url,
                 )
-                result["sources"] = [
+                data["sources"] = [
                     {
                         "title": source_name or article_title or "Fuente original",
                         "url": source_url,
                         "publisher": source_name or None,
                     }
                 ]
-            return result
+            validated = EnrichmentSchema(**data)
+            return validated.model_dump()
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
-            logger.error(f"Enrichment Schema Validation Failed: {e}")
+            failed_fields = ""
+            if isinstance(e, ValidationError):
+                locs = sorted(
+                    {str(err["loc"][0]) for err in e.errors() if err.get("loc")}
+                )
+                if locs:
+                    failed_fields = f" campos=[{', '.join(locs)}]"
+            logger.error(f"Enrichment Schema Validation Failed{failed_fields}: {e}")
             if response:
                 logger.debug(
                     f"Raw enrichment response (first 500 chars): " f"{response[:500]}"
@@ -1692,7 +1801,7 @@ class EditorAgent:
         Re-injects situational context so the rewrite stays grounded in the
         original article's intent and source.
         """
-        logger.info(f"🔧 Repairing Editorial Content based on feedback: {feedback}")
+        logger.info(f"Repairing Editorial Content based on feedback: {feedback}")
         system_prompt = self.prompts.get("editor", {}).get("system", "")
 
         # Inject Technical Glossary
@@ -1825,13 +1934,13 @@ class EditorAgent:
                 if isinstance(data, dict) and data:
                     last_partial = data
                 logger.warning(
-                    "⚠️ Headline generation attempt "
+                    "Headline generation attempt "
                     f"{attempt}/{_HEADLINE_FORMAT_MAX_ATTEMPTS} failed: {e} | "
                     f"Response snippet: {response[:200]}..."
                 )
 
         logger.error(
-            "❌ Headline generation exhausted all "
+            "Headline generation exhausted all "
             f"{_HEADLINE_FORMAT_MAX_ATTEMPTS} attempts; returning last partial "
             "payload for the deterministic repair layer instead of failing "
             "the article."
@@ -2124,7 +2233,7 @@ class EditorAgent:
 
                 if attempt < max_retries:
                     print(
-                        f"⚠️ Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
+                        f"Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
                     )
                     print(f"   Reason: {reason}")
                     # Repair using the rejected editorial content as base.
@@ -2189,7 +2298,7 @@ class EditorAgent:
 
                 if attempt < max_editorial_retries:
                     print(
-                        f"⚠️ Editorial Critic rejected (Attempt {attempt+1}/{max_editorial_retries + 1}). "
+                        f"Editorial Critic rejected (Attempt {attempt+1}/{max_editorial_retries + 1}). "
                         f"Reason: {ed_reason}"
                     )
                     repair_base = (
@@ -2361,7 +2470,7 @@ class EditorAgent:
             # VALIDATE
             val_result = normalizer.validate_tags(final_tags)
             if val_result.needs_review:
-                logger.warning(f"⚠️ Tags require review: {val_result.errors}")
+                logger.warning(f"Tags require review: {val_result.errors}")
                 # We could add a frontmatter flag 'needs_tag_review: true' here if desired
                 # for now, we just log it.
 
@@ -2603,12 +2712,12 @@ class EditorAgent:
             full_article = f"---\n{yaml_frontmatter}\n---\n\n{final_content}"
 
         except ValidationError as ve:
-            logger.error(f"❌ AstroPost Contract Validation Failed: {ve}")
+            logger.error(f"AstroPost Contract Validation Failed: {ve}")
             # Fallback to manual construction or raise?
             # FAIL CLOSED: Raise error to prevent invalid content
             raise ValueError(f"Content Contract Violation: {ve}") from ve
         except Exception as e:
-            logger.error(f"❌ Error generating frontmatter: {e}")
+            logger.error(f"Error generating frontmatter: {e}")
             raise
 
         # Persist source identity metadata as a hidden comment to keep provenance

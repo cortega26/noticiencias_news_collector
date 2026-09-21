@@ -140,9 +140,7 @@ class RefineryEngine:
         integrity_mode = getattr(self.config.app, "policy_integrity_mode", "enforced")
 
         if integrity_mode == "disabled":
-            logger.info(
-                "⚠️ Policy Integrity Check DISABLED by configuration (Test Mode)"
-            )
+            logger.info("Policy Integrity Check DISABLED by configuration (Test Mode)")
         else:
             try:
                 import news_collector.editorial
@@ -157,7 +155,7 @@ class RefineryEngine:
                 except Exception as e:
                     if integrity_mode == "warn":
                         logger.warning(
-                            f"⚠️ Policy Integrity Check Failed (Mode: Warn): {e}"
+                            f"Policy Integrity Check Failed (Mode: Warn): {e}"
                         )
                     else:
                         # Enforced (Default)
@@ -492,7 +490,7 @@ class RefineryEngine:
                     "message": str(ve),
                     "error_code": error_code,
                 }
-                logger.warning(f"⛔ Blocked before publish ({error_code}): {ve}")
+                logger.warning(f"Blocked before publish ({error_code}): {ve}")
                 record_stage(
                     "editor_refinement",
                     False,
@@ -502,7 +500,7 @@ class RefineryEngine:
                 persist_attempt(False)
                 return False
             if "Translation Guardrail" in str(ve):
-                logger.warning(f"⛔ Blocked by Editorial Policy (Critic): {ve}")
+                logger.warning(f"Blocked by Editorial Policy (Critic): {ve}")
                 record_stage("editor_refinement", False, error=str(ve))
                 persist_attempt(False)
                 return False
@@ -585,7 +583,7 @@ class RefineryEngine:
 
         if not self._enforce_editorial_policy(article_id, cached_score):
             logger.warning(
-                f"⛔ Article {article_id} rejected by Editorial Policy (Auditor/Strictness)."
+                f"Article {article_id} rejected by Editorial Policy (Auditor/Strictness)."
             )
             record_stage("policy_gate", False)
             persist_attempt(False)
@@ -644,7 +642,7 @@ class RefineryEngine:
                 target_dir=target_dir,
             )
         except ValueError as e:
-            logger.error("🚨 S0 GUARD: {}", e)
+            logger.error("S0 GUARD: {}", e)
             record_stage("file_written", False, error=str(e))
             persist_attempt(False)
             return False
@@ -1079,7 +1077,7 @@ class RefineryEngine:
             # 1. Check Threshold
             if epistemic < self.policy.auditor_threshold:
                 reason = f"Auditor Score {epistemic} < Threshold {self.policy.auditor_threshold}"
-                logger.warning(f"⛔ Blocked by Editorial Policy (Auditor): {reason}")
+                logger.warning(f"Blocked by Editorial Policy (Auditor): {reason}")
                 decision = "blocked"
                 return False
 
@@ -1090,9 +1088,7 @@ class RefineryEngine:
                 has_caveats = cached_score.get("has_proper_caveats", False)
                 if has_caveats is not True:  # Strict bool check
                     reason = "Caveats Required but missing/false"
-                    logger.warning(
-                        f"⛔ Blocked by Editorial Policy (Caveats): {reason}"
-                    )
+                    logger.warning(f"Blocked by Editorial Policy (Caveats): {reason}")
                     decision = "blocked"
                     return False
 

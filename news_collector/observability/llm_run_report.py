@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from news_collector.observability.llm_metrics_store import (
     ProviderSummary,
@@ -22,6 +22,10 @@ from news_collector.observability.llm_metrics_store import (
 )
 
 STAGES = ("prescoring", "scoring", "rescoring")
+# Blank-rate advisory floor: at least this many calls with at least this
+# share of empty responses before the run-end block notes the provider.
+_BLANK_RATE_MIN_CALLS = 3
+_BLANK_RATE_WARN_THRESHOLD = 0.25
 # Stages that can raise a degraded alert. Re-scoring is informational: it is
 # served by the cache/heuristics by policy, so its heuristic share is expected.
 ALERTING_STAGES = ("prescoring", "scoring")
@@ -147,9 +151,26 @@ def _format_stage(s: StageOutcome) -> str:
     )
 
 
+def _blank_rate_notes(providers: Iterable[ProviderSummary]) -> list[str]:
+    """Advisory notes for providers with a high empty-response rate.
+
+    Text-only: a blanked primary that failed over cleanly (run 39: nvidia
+    3/9) is worth watching, not worth degrading the run over.
+    """
+    notes = []
+    for p in providers:
+        rate = p.blank_rate or 0.0
+        if p.calls >= _BLANK_RATE_MIN_CALLS and rate >= _BLANK_RATE_WARN_THRESHOLD:
+            notes.append(
+                f"{p.provider}: {p.blank}/{p.calls} respuestas vacías "
+                f"({rate:.0%}) — vigilar salud del proveedor"
+            )
+    return notes
+
+
 def format_run_report(report: LLMRunReport) -> str:
     """Plain-text block for the end of a run."""
-    lines = ["", "🤖 LLM DE ESTA CORRIDA:", "-" * 40]
+    lines = ["", "LLM DE ESTA CORRIDA:", "-" * 40]
     if not report.llm_activity:
         lines.append("Sin actividad de LLM (¿no configurado? scoring heurístico).")
         # Re-scoring is heuristic/cached by policy: still worth showing.
@@ -163,11 +184,13 @@ def format_run_report(report: LLMRunReport) -> str:
         lines.append(_format_stage(s))
     if report.providers:
         lines += ["", format_report(list(report.providers))]
+        for note in _blank_rate_notes(report.providers):
+            lines.append(f"Nota: {note}.")
     lines.append("")
     lines.append(
-        "⚠️  DEGRADADO: " + "; ".join(report.reasons)
+        "DEGRADADO: " + "; ".join(report.reasons)
         if report.degraded
-        else "✅ LLM saludable en esta corrida."
+        else "LLM saludable en esta corrida."
     )
     return "\n".join(lines)
 

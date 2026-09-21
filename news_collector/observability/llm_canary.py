@@ -73,7 +73,7 @@ def evaluate(
 
 
 def format_verdict(v: CanaryVerdict) -> str:
-    head = "✅ CANARY OK" if v.ok else "❌ CANARY FAILED"
+    head = "CANARY OK" if v.ok else "CANARY FAILED"
     lines = [
         f"{head}: {v.llm}/{v.total} items by LLM ({v.llm_ratio:.0%}) in "
         f"{v.elapsed_s:.1f}s"

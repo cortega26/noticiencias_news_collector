@@ -89,9 +89,7 @@ class StrategyOptimizer:
                     "headless_fallback",
                     f"Auto-Lock: Headless Yield {headless_rate:.1f}% vs HTTP {http_rate:.1f}% (>5 attempts)",
                 )
-                logger.info(
-                    f"🔒 Auto-Lock suggested for {source_id}: headless_fallback"
-                )
+                logger.info(f"Auto-Lock suggested for {source_id}: headless_fallback")
             except Exception as e:
                 logger.error(f"Failed to suggest auto-lock for {source_id}: {e}")
 

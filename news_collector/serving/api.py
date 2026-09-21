@@ -28,6 +28,7 @@ import base64
 import contextlib
 import hmac
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -765,11 +766,59 @@ def verify_admin_token(
         )
 
 
+def _access_status(args: tuple[Any, ...]) -> int | None:
+    """First integer-looking status code in uvicorn access-record args."""
+    for candidate in args:
+        if isinstance(candidate, bool):
+            continue
+        if isinstance(candidate, int):
+            return candidate
+        if isinstance(candidate, str) and candidate.isdigit():
+            return int(candidate)
+    return None
+
+
+class _StatusPollAccessFilter(logging.Filter):
+    """Drop successful uvicorn access lines for the GUI's status polls."""
+
+    _QUIET_PATHS = (
+        "/v1/admin/publish/status",
+        "/v1/admin/collect/status",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Uvicorn access records carry (client, method, path, version,
+        # status, ...): drop only positively-identified successful
+        # polls; errors and unknown shapes always pass through.
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 3:
+            path = str(args[2]).split("?", 1)[0]
+            if path in self._QUIET_PATHS:
+                status = _access_status(args[3:])
+                return status is None or status >= 400
+        return True
+
+
+def _install_status_poll_access_filter() -> None:
+    """Silence uvicorn access lines for the GUI's status polls.
+
+    The desk polls ``/v1/admin/*/status`` every few seconds per active run;
+    each poll is a healthy 200 that drowns real traffic in the access log.
+    Errors still surface (non-2xx pass through; the app logs failures
+    itself). Idempotent: TestClient-based suites call ``create_app`` often.
+    """
+
+    access_log = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, _StatusPollAccessFilter) for f in access_log.filters):
+        access_log.addFilter(_StatusPollAccessFilter())
+
+
 def create_app(  # noqa: C901
     database_manager: Optional[DatabaseManager] = None,
 ) -> FastAPI:
     """Create a configured FastAPI application."""
 
+    _install_status_poll_access_filter()
     db_manager = database_manager or get_database_manager()
     collection_run_workflow = CollectionRunWorkflow(db_manager)
     publication_run_workflow = PublicationRunWorkflow(db_manager)

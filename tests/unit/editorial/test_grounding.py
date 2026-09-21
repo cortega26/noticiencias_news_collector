@@ -183,7 +183,7 @@ def test_pr_section_lists_errors_first_and_truncates():
         body=" ".join(f"Cifra {n}00." for n in range(1, 13)) + " Avance revolucionario."
     )
     section = format_pr_section(check_grounding(md, SOURCE), limit=3)
-    assert section.startswith("## ⚠ Verificación de grounding (advisory)")
+    assert section.startswith("## Verificación de grounding (advisory)")
     assert "12 errores y 1 avisos" in section
     assert section.count("\n- **number**") == 3 and "10 hallazgos más" in section
     assert (

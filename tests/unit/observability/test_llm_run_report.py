@@ -409,3 +409,28 @@ def test_rescore_only_report_still_shows_the_rescoring_row():
     )
     text = r.format_run_report(rep)
     assert "rescoring" in text and "no_llm_by_policy=5" in text
+
+
+def test_blank_rate_note_flags_run39_shape():
+    # Run 39: nvidia 3 blanks / 9 calls (33%) failed over cleanly — advisory
+    # note, not a degraded verdict.
+    provider = ProviderSummary("nvidia", "m", "editing", calls=9, ok=6, blank=3)
+    report = rr.build_run_report({"scoring.llm": 9}, [provider], run_id="r39")
+    text = rr.format_run_report(report)
+    assert "nvidia: 3/9 respuestas vacías (33%)" in text
+    assert report.degraded is False
+
+
+def test_blank_rate_note_silent_below_floor():
+    assert (
+        rr._blank_rate_notes([ProviderSummary("n", "m", calls=2, ok=0, blank=2)]) == []
+    )
+    assert (
+        rr._blank_rate_notes([ProviderSummary("n", "m", calls=8, ok=7, blank=1)]) == []
+    )
+    assert rr._blank_rate_notes([]) == []
+
+
+def test_format_without_providers_has_no_note():
+    report = rr.build_run_report({"scoring.llm": 1}, [], run_id="r1")
+    assert "respuestas vacías" not in rr.format_run_report(report)

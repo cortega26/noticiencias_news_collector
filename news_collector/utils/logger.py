@@ -149,7 +149,7 @@ class NewsCollectorLogger:
         # Marcar como configurado
         self.is_configured = True
 
-        logger.info("🎯 Sistema de logging configurado exitosamente")
+        logger.info("Sistema de logging configurado exitosamente")
         logger.debug(f"Configuración aplicada: {config}")
 
     def log_system_health(self) -> None:
@@ -300,7 +300,7 @@ class NewsCollectorLogger:
         del sistema, útil para debugging y auditoría.
         """
         logger.info("=" * 60)
-        logger.info("🚀 NEWS COLLECTOR SYSTEM INICIADO")
+        logger.info("NEWS COLLECTOR SYSTEM INICIADO")
         logger.info("=" * 60)
         logger.info(f"Versión: {version}")
         logger.info(f"Modo debug: {get_runtime_config().debug}")
@@ -321,7 +321,7 @@ class NewsCollectorLogger:
 
         Esto es útil para monitoreo y optimización del sistema.
         """
-        logger.info(f"📊 MÉTRICAS DE PERFORMANCE {context}")
+        logger.info(f"MÉTRICAS DE PERFORMANCE {context}")
         for metric, value in metrics.items():
             if isinstance(value, float):
                 logger.info(f"  {metric}: {value:.3f}")
@@ -337,7 +337,7 @@ class NewsCollectorLogger:
         Esta función enriquece los logs de error con información que
         puede ser crucial para entender y resolver problemas.
         """
-        logger.error(f"💥 ERROR: {str(error)}")
+        logger.error(f"ERROR: {str(error)}")
 
         if context:
             logger.error("Contexto del error:")
@@ -364,7 +364,7 @@ class CollectionSessionLogger:
 
     def log_session_start(self, sources_count: int):
         """Registra el inicio de una sesión de recolección."""
-        self.logger.info(f"🎯 SESIÓN INICIADA: {sources_count} fuentes programadas")
+        self.logger.info(f"SESIÓN INICIADA: {sources_count} fuentes programadas")
 
     def log_source_processing(
         self,
@@ -379,20 +379,20 @@ class CollectionSessionLogger:
                 if stats
                 else ""
             )
-            self.logger.info(f"✅ {source_id}: {articles_info}")
+            self.logger.info(f"{source_id}: {articles_info}")
         elif status == "error":
             error_msg = (
                 stats.get("error_message", "Error desconocido")
                 if stats
                 else "Error desconocido"
             )
-            self.logger.warning(f"❌ {source_id}: {error_msg}")
+            self.logger.warning(f"{source_id}: {error_msg}")
         else:
-            self.logger.info(f"📋 {source_id}: {status}")
+            self.logger.info(f"{source_id}: {status}")
 
     def log_session_summary(self, summary: Dict[str, Any]):
         """Registra el resumen final de la sesión."""
-        self.logger.info("📈 RESUMEN DE SESIÓN:")
+        self.logger.info("RESUMEN DE SESIÓN:")
         self.logger.info(
             f"  • Fuentes procesadas: {summary.get('sources_processed', 0)}"
         )
@@ -455,7 +455,7 @@ def log_function_calls(logger_instance=None):
             func_logger = logger_instance or logger
 
             # Log entrada a la función
-            func_logger.debug(f"🔄 Ejecutando {func.__name__}")
+            func_logger.debug(f"Ejecutando {func.__name__}")
 
             start_time = time.time()
             try:
@@ -463,7 +463,7 @@ def log_function_calls(logger_instance=None):
                 duration = time.time() - start_time
 
                 # Log éxito
-                func_logger.debug(f"✅ {func.__name__} completada en {duration:.3f}s")
+                func_logger.debug(f"{func.__name__} completada en {duration:.3f}s")
                 return result
 
             except Exception as e:
@@ -471,7 +471,7 @@ def log_function_calls(logger_instance=None):
 
                 # Log error
                 func_logger.error(
-                    f"❌ {func.__name__} falló después de {duration:.3f}s: {str(e)}"
+                    f"{func.__name__} falló después de {duration:.3f}s: {str(e)}"
                 )
                 raise
 
@@ -497,7 +497,7 @@ def log_memory_usage():
         process = psutil.Process(os.getpid())
         memory_info = process.memory_info()
 
-        logger.info("💾 Uso de memoria:")
+        logger.info("Uso de memoria:")
         logger.info(f"  • RSS: {memory_info.rss / 1024 / 1024:.1f} MB")
         logger.info(f"  • VMS: {memory_info.vms / 1024 / 1024:.1f} MB")
 
@@ -515,7 +515,7 @@ def _log_system_health():
         import platform
         import sys
 
-        logger.info("🏥 ESTADO DEL SISTEMA:")
+        logger.info("ESTADO DEL SISTEMA:")
         logger.info(f"  • Python: {sys.version.split()[0]}")
         logger.info(f"  • Plataforma: {platform.platform()}")
         logger.info(f"  • CPU cores: {platform.processor()}")

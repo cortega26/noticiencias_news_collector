@@ -919,7 +919,7 @@ def create_all_tables(engine):
     de nuestra biblioteca digital.
     """
     Base.metadata.create_all(engine)
-    print("✅ Todas las tablas creadas exitosamente")
+    print("Todas las tablas creadas exitosamente")
 
 
 def get_model_info():
