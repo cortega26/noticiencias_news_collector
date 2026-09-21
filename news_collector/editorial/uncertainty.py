@@ -200,12 +200,19 @@ def _sentence_has_bare_authentic_result(sentence: str) -> bool:
 
 def _iter_scope_fields(fields: Mapping[str, Any]) -> Iterator[tuple[str, Any]]:
     """Yield `(label, text)` for the summary-level strings a replica-scope
-    mismatch would surface in."""
+    mismatch would surface in: `summary_points`, `excerpt`, and the
+    reader-facing `fact_check` labels (Codex P2 on frontend PR #191, second
+    pass: a `confirmed` label presented replica-ink lead as authentic)."""
     raw_points = fields.get("summary_points")
     if isinstance(raw_points, list):
         for index, item in enumerate(raw_points):
             yield f"summary_points[{index}]", item
     yield "excerpt", fields.get("excerpt")
+    raw_checks = fields.get("fact_check")
+    if isinstance(raw_checks, list):
+        for index, item in enumerate(raw_checks):
+            label = item.get("label") if isinstance(item, Mapping) else None
+            yield f"fact_check[{index}]", label
 
 
 def find_replica_scope_mismatches(
@@ -219,10 +226,10 @@ def find_replica_scope_mismatches(
 
     Runs only when `requires_uncertainty_note` is true or a non-empty
     `uncertainty_note` is present AND the note signals replica scope. Scans
-    `summary_points` (list) and `excerpt` (str) for result assertions on the
-    authentic object without replica qualification. Returns a list of
-    `"<field>: <sentence>"` strings for the caller to log — it never edits
-    `fields`. Never raises.
+    `summary_points` (list), `excerpt` (str) and `fact_check` labels for
+    result assertions on the authentic object without replica qualification.
+    Returns a list of `"<field>: <sentence>"` strings for the caller to log
+    — it never edits `fields`. Never raises.
     """
     if not _has_counterweight(requires_uncertainty_note, uncertainty_note):
         return []

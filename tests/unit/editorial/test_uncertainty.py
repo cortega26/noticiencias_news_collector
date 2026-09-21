@@ -313,3 +313,41 @@ def test_replica_scope_ignores_non_strings_and_empties():
         )
         == []
     )
+
+
+def test_replica_scope_flags_confirmed_fact_check_on_authentic_object():
+    # Codex P2 on frontend PR #191, second pass: a `confirmed` fact_check
+    # label presented replica-ink lead as lead in the authentic scrolls.
+    fields = {
+        "fact_check": [
+            {
+                "label": "La tinta de los rollos contiene plomo detectable "
+                "mediante fluorescencia de rayos X.",
+                "status": "confirmed",
+            }
+        ]
+    }
+    assert find_replica_scope_mismatches(
+        fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
+    ) == [
+        "fact_check[0]: La tinta de los rollos contiene plomo detectable "
+        "mediante fluorescencia de rayos X."
+    ]
+
+
+def test_replica_scope_clean_on_replica_qualified_fact_check():
+    fields = {
+        "fact_check": [
+            {
+                "label": "La tinta con plomo de las réplicas elaboradas en el "
+                "estudio sigue detectable tras la carbonización.",
+                "status": "confirmed",
+            }
+        ]
+    }
+    assert (
+        find_replica_scope_mismatches(
+            fields, requires_uncertainty_note=True, uncertainty_note=_VESUVIUS_NOTE
+        )
+        == []
+    )
