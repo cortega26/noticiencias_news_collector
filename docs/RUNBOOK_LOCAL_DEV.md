@@ -39,8 +39,14 @@ make admin
 ```
 
 This launches FastAPI at `http://localhost:8000` and the current Astro admin
-at `http://localhost:4321`. One Ctrl+C stops the stack it started. Split
-operation uses `make serve` and `make admin-dev` in separate terminals.
+at `http://localhost:4321`. One Ctrl+C stops the stack it started. If a
+default port is busy, the stack bumps to the next free one (API `8000→…`,
+GUI `4321→…`) and points the GUI proxy at the chosen API port, so a
+leftover `make serve` never blocks `make admin`. Pin ports explicitly when
+you mean it — `API_PORT=9000 make admin` dies instead of running elsewhere
+if 9000 is taken. Split operation uses `make serve` and `make admin-dev`
+in separate terminals (both accept the same `API_PORT=`/`GUI_PORT=`
+overrides; `ADMIN_API_TARGET=` overrides the GUI proxy target).
 Migrate before starting: these targets do not depend on `make migrate`.
 
 Admin authentication and dev bypass are defined by `apps/admin/src/lib/api.ts`

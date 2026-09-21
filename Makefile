@@ -117,21 +117,21 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 
 
 .PHONY: serve admin admin-install admin-dev admin-build admin-test
-serve: ## Run the serving API (FastAPI on :8000, autoreload) — the admin GUI's backend
-	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_BIN) -m news_collector.serving
+serve: ## Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `make serve API_PORT=9000` (default 8000, honored strictly)
+	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(SERVING_PORT),$(or $(API_PORT),8000))" $(PYTHON_BIN) -m news_collector.serving
 
 admin-install: ## Install the new Refinery admin GUI (Astro app in apps/admin/)
 	@cd apps/admin && npm install
 
-admin-dev: ## Run ONLY the admin GUI (Astro :4321). You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`.
-	@bash -c 'if ! (exec 3<>/dev/tcp/127.0.0.1/8000) 2>/dev/null; then \
-	  echo "WARNING: nothing is listening on :8000 — the serving API is not running."; \
+admin-dev: ## Run ONLY the admin GUI (default :4321, proxying /v1/* at the API port). Overrides: `make admin-dev API_PORT=8001 GUI_PORT=4330`. You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`.
+	@bash -c 'if ! (exec 3<>/dev/tcp/127.0.0.1/$(or $(API_PORT),8000)) 2>/dev/null; then \
+	  echo "WARNING: nothing is listening on :$(or $(API_PORT),8000) — the serving API is not running."; \
 	  echo "         Run \`make serve\` in another terminal, or just use \`make admin\` (runs both)."; \
 	  echo; \
 	fi'
-	@cd apps/admin && npm run dev
+	@cd apps/admin && ADMIN_API_TARGET="$(or $(ADMIN_API_TARGET),http://localhost:$(or $(API_PORT),8000))" npm run dev -- --port $(or $(GUI_PORT),4321)
 
-admin: ## Run the full Refinery admin stack: serving API (:8000) + GUI (:4321). One Ctrl+C stops both.
+admin: ## Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both.
 	@PYTHON_BIN="$(PYTHON_BIN)" bash scripts/dev/admin_stack.sh
 
 admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
