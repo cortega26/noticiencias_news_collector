@@ -346,6 +346,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       card.setAttribute("data-id", String(item.id));
       card.setAttribute("data-index", String(index));
       wrap.appendChild(card);
+      // The +N expander lives inside the card button: stop its clicks from
+      // bubbling to the card handler, or select() re-renders and the expander
+      // can never stay open.
+      wrap.querySelector("details")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
 
       queueEl.appendChild(wrap);
     });
@@ -365,6 +371,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     renderQueue();
     try {
       detail = await getArticle(id);
+      // Escape (or another selection) may have landed mid-request: only
+      // render when this response still matches the current selection.
+      if (selectedId !== id) return;
       renderDetail();
     } catch (e) {
       if (e instanceof Error && e.name === "AuthError") {
@@ -503,7 +512,6 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       void doReprocess();
     });
     detailEl.querySelector('[data-action="reject"]')?.addEventListener("click", () => {
-      if (!window.confirm("¿Rechazar este artículo?")) return;
       void doReject();
     });
     detailEl.querySelector('[data-action="audit-pass"]')?.addEventListener("click", () => {
@@ -531,6 +539,8 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   async function doReject() {
     if (detail == null) return;
+    // Single confirmation gate for every entry point (button + R hotkey).
+    if (!window.confirm("¿Rechazar este artículo?")) return;
     try {
       const result = await rejectArticle(detail.id);
       showToast(result.detail);
