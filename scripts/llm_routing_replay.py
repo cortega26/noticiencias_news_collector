@@ -98,7 +98,13 @@ def build_arm_config(arm: str, base_cfg):
             base_url=NVIDIA_BASE,
             model=ARM_MODEL["C"],
             api_key_env=NVIDIA_KEY_ENV,
-            timeout=300,
+            # 60s, not the editing-standard 300s: the hosted GLM endpoint
+            # is timing out wholesale (verified 120s+ on minimal probes
+            # 2026-09-21). A healthy endpoint answers in well under a
+            # minute; hanging longer only burns wall-clock before the
+            # recorded failover. Documented deviation, quality-neutral:
+            # it cannot make GLM look better, only fail faster.
+            timeout=60,
             max_tokens=32768,
             extra_body={"reasoning_effort": "low", "clear_thinking": True},
         )
@@ -250,7 +256,7 @@ def cmd_generate(max_cases: int | None) -> int:
 
     logger = _bench_logger()
     EVAL_DIR.mkdir(parents=True, exist_ok=True)
-    pending, resolved = _run_state(RUNS_PATH)
+    pending, resolved_ok = _run_state(RUNS_PATH)
     base_cfg = _load_config()
     agents = {}
     for arm in ARMS:
@@ -275,7 +281,8 @@ def cmd_generate(max_cases: int | None) -> int:
             payload = _case_input(case["db_id"])
             for arm in ARMS:
                 key = (case["db_id"], arm)
-                if key in resolved:
+                if key in resolved_ok:
+                    print(f"skip {key[0]}-{key[1]} (ok recorded)")
                     continue
                 prior = pending.get(key, 0)
                 if prior >= MAX_ATTEMPTS:
