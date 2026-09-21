@@ -790,7 +790,11 @@ def _install_status_poll_access_filter() -> None:
                 path = str(args[2]).split("?", 1)[0]
                 if path in self._QUIET_PATHS:
                     for candidate in args[3:]:
-                        if str(candidate).isdigit():
+                        if isinstance(candidate, bool):
+                            continue
+                        if isinstance(candidate, int):
+                            return candidate >= 400
+                        if isinstance(candidate, str) and candidate.isdigit():
                             return int(candidate) >= 400
             return True
 
