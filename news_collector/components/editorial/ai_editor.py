@@ -5,7 +5,7 @@ import time
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Mapping, cast
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
@@ -228,6 +228,19 @@ def _clean_enrichment_text(value: Any) -> Any:
     return value.strip() if isinstance(value, str) else value
 
 
+def _normalize_optional_fields(
+    entry: dict[str, Any], optionals: tuple[str, ...]
+) -> dict[str, Any]:
+    for opt in optionals:
+        if opt in entry and not entry[opt]:
+            entry[opt] = None
+    return entry
+
+
+def _has_required_fields(entry: Mapping[str, Any], required: tuple[str, ...]) -> bool:
+    return all(entry.get(field) for field in required)
+
+
 def _clean_enrichment_item(
     item: Any, required: tuple[str, ...], optionals: tuple[str, ...]
 ) -> tuple[bool, Any]:
@@ -236,16 +249,36 @@ def _clean_enrichment_item(
         text = item.strip()
         return bool(text), text
     if isinstance(item, dict):
-        entry = {k: _clean_enrichment_text(v) for k, v in item.items()}
-        for opt in optionals:
-            if opt in entry and not entry[opt]:
-                entry[opt] = None
-        if all(entry.get(field) for field in required):
+        entry = _normalize_optional_fields(
+            {k: _clean_enrichment_text(v) for k, v in item.items()}, optionals
+        )
+        if _has_required_fields(entry, required):
             return True, entry
         return False, None
     if item is None:
         return False, None
     return True, item
+
+
+def _clean_enrichment_value(
+    key: str, value: Any, dropped: dict[str, int]
+) -> tuple[bool, Any]:
+    """Return ``(keep, cleaned)`` for one top-level enrichment field."""
+    if isinstance(value, str):
+        text = value.strip()
+        return bool(text), text
+    if isinstance(value, list):
+        required = _ENRICHMENT_ITEM_REQUIRED_FIELDS.get(key, ())
+        optionals = _ENRICHMENT_ITEM_OPTIONAL_FIELDS.get(key, ())
+        kept: list[Any] = []
+        for item in value:
+            keep, cleaned_item = _clean_enrichment_item(item, required, optionals)
+            if keep:
+                kept.append(cleaned_item)
+            else:
+                dropped[key] = dropped.get(key, 0) + 1
+        return True, kept
+    return True, value
 
 
 def sanitize_enrichment_payload(data: Any) -> dict[str, Any]:
@@ -261,25 +294,11 @@ def sanitize_enrichment_payload(data: Any) -> dict[str, Any]:
     cleaned: dict[str, Any] = {}
     dropped: dict[str, int] = {}
     for key, value in data.items():
-        if isinstance(value, str):
-            text = value.strip()
-            if text:
-                cleaned[key] = text
-            else:
-                dropped[key] = dropped.get(key, 0) + 1
-        elif isinstance(value, list):
-            required = _ENRICHMENT_ITEM_REQUIRED_FIELDS.get(key, ())
-            optionals = _ENRICHMENT_ITEM_OPTIONAL_FIELDS.get(key, ())
-            kept: list[Any] = []
-            for item in value:
-                keep, cleaned_item = _clean_enrichment_item(item, required, optionals)
-                if keep:
-                    kept.append(cleaned_item)
-                else:
-                    dropped[key] = dropped.get(key, 0) + 1
-            cleaned[key] = kept
+        keep, cleaned_value = _clean_enrichment_value(key, value, dropped)
+        if keep:
+            cleaned[key] = cleaned_value
         else:
-            cleaned[key] = value
+            dropped[key] = dropped.get(key, 0) + 1
     if dropped:
         logger.warning(
             "Enrichment sanitizer dropped blank values: {}",

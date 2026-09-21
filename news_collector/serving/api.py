@@ -766,6 +766,18 @@ def verify_admin_token(
         )
 
 
+def _access_status(args: tuple[Any, ...]) -> int | None:
+    """First integer-looking status code in uvicorn access-record args."""
+    for candidate in args:
+        if isinstance(candidate, bool):
+            continue
+        if isinstance(candidate, int):
+            return candidate
+        if isinstance(candidate, str) and candidate.isdigit():
+            return int(candidate)
+    return None
+
+
 def _install_status_poll_access_filter() -> None:
     """Silence uvicorn access lines for the GUI's status polls.
 
@@ -789,13 +801,8 @@ def _install_status_poll_access_filter() -> None:
             if isinstance(args, tuple) and len(args) >= 3:
                 path = str(args[2]).split("?", 1)[0]
                 if path in self._QUIET_PATHS:
-                    for candidate in args[3:]:
-                        if isinstance(candidate, bool):
-                            continue
-                        if isinstance(candidate, int):
-                            return candidate >= 400
-                        if isinstance(candidate, str) and candidate.isdigit():
-                            return int(candidate) >= 400
+                    status = _access_status(args[3:])
+                    return status is None or status >= 400
             return True
 
     access_log = logging.getLogger("uvicorn.access")
