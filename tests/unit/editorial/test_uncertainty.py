@@ -351,3 +351,36 @@ def test_replica_scope_clean_on_replica_qualified_fact_check():
         )
         == []
     )
+
+
+def test_replica_scope_flags_discovery_claim_on_authentic_ink():
+    # Codex P2 on frontend PR #191, fourth pass: "descubrieron que la tinta
+    # contiene plomo" reads as lead discovered in the authentic scrolls,
+    # while the study dosed replica inks and the source only reports lead
+    # in some letters of collection fragments.
+    original = (
+        "Investigadores descubrieron que la tinta contiene plomo, detectable "
+        "mediante fluorescencia de rayos X, lo que crea contraste con el "
+        "soporte de carbono."
+    )
+    assert find_replica_scope_mismatches(
+        {"summary_points": [original]},
+        requires_uncertainty_note=True,
+        uncertainty_note=_VESUVIUS_NOTE,
+    ) == [f"summary_points[0]: {original}"]
+
+
+def test_replica_scope_clean_on_fragment_scoped_lead_claim():
+    fixed = (
+        "Se ha detectado plomo en algunas letras de fragmentos de la "
+        "colección, visible mediante fluorescencia de rayos X, lo que ofrece "
+        "contraste frente al soporte de carbono."
+    )
+    assert (
+        find_replica_scope_mismatches(
+            {"summary_points": [fixed]},
+            requires_uncertainty_note=True,
+            uncertainty_note=_VESUVIUS_NOTE,
+        )
+        == []
+    )

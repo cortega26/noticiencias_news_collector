@@ -147,6 +147,9 @@ _RESULT_VERB_STEMS = (
     "probaron",
     "prueba",
     "prueban",
+    "descubr",
+    "encontr",
+    "hall",
 )
 _RESULT_VERB_RE = re.compile(
     r"(?<!\w)(?:" + "|".join(_RESULT_VERB_STEMS) + r")",
@@ -157,7 +160,7 @@ _RESULT_VERB_RE = re.compile(
 # Kept tight on purpose: bare "textos"/"fragmentos" alone do not count.
 _AUTHENTIC_OBJECT_RE = re.compile(
     r"(?<!\w)(?:los|el|las|la)\s+"
-    r"(?:rollos?|pergaminos?|manuscritos?|papiros?|pacientes?|enfermos?)\b",
+    r"(?:rollos?|pergaminos?|manuscritos?|papiros?|tintas?|pacientes?|enfermos?)\b",
     re.IGNORECASE,
 )
 
