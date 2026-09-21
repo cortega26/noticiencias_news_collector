@@ -175,11 +175,11 @@ class TestEnrichmentGeneration:
         assert result["sources"][0]["url"] == "https://example.com/original"
         assert result["sources"][0]["publisher"] == "Example Journal"
 
-    def test_sources_empty_list_rejected_by_schema(self) -> None:
-        """Explicit ``sources: []`` in the LLM response fails pydantic's
-        ``min_length=1`` and falls back to empty defaults (fail-closed: no
-        fabricated source is invented). The real production bug is the
-        OMITTED key, covered by test_sources_fallback_when_omitted_by_llm."""
+    def test_sources_empty_list_backfilled_from_feed_source(self) -> None:
+        """Explicit ``sources: []`` (or a list whose items sanitized away,
+        e.g. run 39's ``[{url: ''}]``) is backfilled from the article's own
+        feed source BEFORE validation — an empty list is the model saying
+        'no sources', not data worth failing six valid fields over."""
         response_empty_sources = json.dumps(
             {
                 "summary_points": ["Punto uno", "Punto dos"],
@@ -196,12 +196,42 @@ class TestEnrichmentGeneration:
         result = agent._generate_enrichment_fields(
             "Article body",
             "Test Title",
-            source_url="https://feed.example/item/1",
-            source_name="Example Feed",
+            source_url="https://example.com/original",
+            source_name="Example Journal",
         )
 
-        # Validation rejected the empty list: fail-closed, no fabricated source
-        assert result["sources"] == []
+        assert len(result["sources"]) == 1
+        assert result["sources"][0]["url"] == "https://example.com/original"
+        assert result["summary_points"] == ["Punto uno", "Punto dos"]
+
+    def test_run39_blank_url_source_backfilled_not_dropped(self) -> None:
+        """Run-39 regression: the model returned one source with an empty
+        URL. The sanitizer drops the item, the feed-source backfill repairs
+        the list, and the other five valid fields survive to publication."""
+        run39_response = json.dumps(
+            {
+                "summary_points": ["Punto uno.", "Punto dos."],
+                "glossary": [{"term": "Plasma", "definition": "Estado."}],
+                "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
+                "why_it_matters": ["Impacto."],
+                "confidence": "Alta.",
+                "sources": [{"title": "WIRED", "url": "", "publisher": "WIRED"}],
+            }
+        )
+        agent = EditorAgent("http://example", "model")
+        agent._send_prompt = MagicMock(return_value=run39_response)
+
+        result = agent._generate_enrichment_fields(
+            "Article body",
+            "Test Title",
+            source_url="https://www.wired.com/original",
+            source_name="WIRED",
+        )
+
+        assert len(result["sources"]) == 1
+        assert result["sources"][0]["url"] == "https://www.wired.com/original"
+        assert result["summary_points"] == ["Punto uno.", "Punto dos."]
+        assert result["confidence"] == "Alta."
 
     def test_no_fallback_without_source_metadata(self) -> None:
         """Without source metadata there is nothing truthful to fall back to:

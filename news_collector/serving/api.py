@@ -778,6 +778,27 @@ def _access_status(args: tuple[Any, ...]) -> int | None:
     return None
 
 
+class _StatusPollAccessFilter(logging.Filter):
+    """Drop successful uvicorn access lines for the GUI's status polls."""
+
+    _QUIET_PATHS = (
+        "/v1/admin/publish/status",
+        "/v1/admin/collect/status",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Uvicorn access records carry (client, method, path, version,
+        # status, ...): drop only positively-identified successful
+        # polls; errors and unknown shapes always pass through.
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 3:
+            path = str(args[2]).split("?", 1)[0]
+            if path in self._QUIET_PATHS:
+                status = _access_status(args[3:])
+                return status is None or status >= 400
+        return True
+
+
 def _install_status_poll_access_filter() -> None:
     """Silence uvicorn access lines for the GUI's status polls.
 
@@ -786,24 +807,6 @@ def _install_status_poll_access_filter() -> None:
     Errors still surface (non-2xx pass through; the app logs failures
     itself). Idempotent: TestClient-based suites call ``create_app`` often.
     """
-
-    class _StatusPollAccessFilter(logging.Filter):
-        _QUIET_PATHS = (
-            "/v1/admin/publish/status",
-            "/v1/admin/collect/status",
-        )
-
-        def filter(self, record: logging.LogRecord) -> bool:
-            # Uvicorn access records carry (client, method, path, version,
-            # status, ...): drop only positively-identified successful
-            # polls; errors and unknown shapes always pass through.
-            args = record.args
-            if isinstance(args, tuple) and len(args) >= 3:
-                path = str(args[2]).split("?", 1)[0]
-                if path in self._QUIET_PATHS:
-                    status = _access_status(args[3:])
-                    return status is None or status >= 400
-            return True
 
     access_log = logging.getLogger("uvicorn.access")
     if not any(isinstance(f, _StatusPollAccessFilter) for f in access_log.filters):

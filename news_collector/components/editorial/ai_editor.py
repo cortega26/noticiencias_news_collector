@@ -1615,22 +1615,25 @@ class EditorAgent:
                 context, system=system_prompt, model=self.enrichment_model
             )
             data = sanitize_enrichment_payload(self._extract_json(response))
-            validated = EnrichmentSchema(**data)
-            result = validated.model_dump()
-            if not result.get("sources") and (source_url or source_name):
+            if not data.get("sources") and (source_url or source_name):
+                # Backfill BEFORE validation: a sanitized-away blank-url
+                # source (run 39) leaves an empty list, which would fail
+                # min_length=1 below and discard the other five valid
+                # fields with it.
                 logger.warning(
                     "Enrichment returned no sources; falling back to the "
                     "article's original source (url={}).",
                     source_url,
                 )
-                result["sources"] = [
+                data["sources"] = [
                     {
                         "title": source_name or article_title or "Fuente original",
                         "url": source_url,
                         "publisher": source_name or None,
                     }
                 ]
-            return result
+            validated = EnrichmentSchema(**data)
+            return validated.model_dump()
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
             failed_fields = ""
             if isinstance(e, ValidationError):

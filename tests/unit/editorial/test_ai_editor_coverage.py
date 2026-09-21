@@ -1127,7 +1127,10 @@ class TestSanitizeEnrichmentPayload:
     fields with it (editorial_v2_incomplete). The sanitizer closes the
     empty-string hole; genuinely missing data still blocks."""
 
-    def test_run39_shape_validates_after_sanitizing(self):
+    def test_run39_shape_sanitizes_to_empty_sources(self):
+        # The sanitizer alone leaves sources: [] (still schema-invalid);
+        # the feed-source backfill inside _generate_enrichment_fields
+        # repairs it before validation (covered in test_enrichment_fields).
         raw = {
             "summary_points": ["a", "b"],
             "glossary": [{"term": "x", "definition": "y"}],
@@ -1138,12 +1141,8 @@ class TestSanitizeEnrichmentPayload:
         }
         cleaned = sanitize_enrichment_payload(raw)
         assert cleaned["sources"] == []
-        # The empty list then triggers the existing feed-source fallback
-        # path instead of a schema ValidationError:
-        validated = EnrichmentSchema(
-            **{**cleaned, "sources": [{"title": "WIRED", "url": "https://x.example/"}]}
-        )
-        assert validated.sources[0].url == "https://x.example/"
+        assert cleaned["summary_points"] == ["a", "b"]
+        assert cleaned["confidence"] == "Alta — sólida."
 
     def test_blank_strings_and_items_dropped_valid_kept(self):
         raw = {
