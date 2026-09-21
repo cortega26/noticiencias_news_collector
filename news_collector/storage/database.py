@@ -273,11 +273,11 @@ class DatabaseManager:
             # self._run_schema_migrations()
 
             logger.info(
-                f"✅ Base de datos configurada exitosamente: {self.config['type']}"
+                f"Base de datos configurada exitosamente: {self.config['type']}"
             )
 
         except Exception as e:
-            logger.error(f"❌ Error configurando base de datos: {e}")
+            logger.error(f"Error configurando base de datos: {e}")
             raise
 
     @contextmanager
@@ -804,6 +804,6 @@ def get_database_manager() -> DatabaseManager:
         _db_manager = DatabaseManager()
     elif _db_manager.SessionLocal is None:
         # Instance exists but was closed (zombie). Re-initialize.
-        logger.warning("♻️ Detectada instancia de DB cerrada. Reinicializando...")
+        logger.warning("Detectada instancia de DB cerrada. Reinicializando...")
         _db_manager = DatabaseManager()
     return _db_manager

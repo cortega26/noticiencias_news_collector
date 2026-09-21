@@ -1076,7 +1076,7 @@ class BaseCollector(ABC):
         failed_sources = [s for s, r in source_results.items() if not r["success"]]
         if len(failed_sources) > len(source_results) * 0.2:  # Más del 20% falló
             recommendations.append(
-                f"🔧 Revisar configuración de fuentes - {len(failed_sources)} fuentes fallaron"
+                f"Revisar configuración de fuentes - {len(failed_sources)} fuentes fallaron"
             )
 
         # Analizar eficiencia de guardado
@@ -1087,7 +1087,7 @@ class BaseCollector(ABC):
             total_found > 0 and (total_saved / total_found) < 0.5
         ):  # Menos del 50% guardado
             recommendations.append(
-                "📊 Baja tasa de guardado - revisar criterios de filtrado y deduplicación"
+                "Baja tasa de guardado - revisar criterios de filtrado y deduplicación"
             )
 
         # Analizar fuentes sin nuevos artículos
@@ -1098,13 +1098,13 @@ class BaseCollector(ABC):
         ]
         if empty_sources:
             recommendations.append(
-                f"📭 {len(empty_sources)} fuentes sin artículos nuevos - considerar ajustar frecuencia"
+                f"{len(empty_sources)} fuentes sin artículos nuevos - considerar ajustar frecuencia"
             )
 
         # Analizar tiempo de procesamiento
         if self.stats["processing_time_seconds"] > 300:  # Más de 5 minutos
             recommendations.append(
-                "⏱️ Tiempo de procesamiento alto - considerar paralelización o optimización"
+                "Tiempo de procesamiento alto - considerar paralelización o optimización"
             )
 
         return recommendations

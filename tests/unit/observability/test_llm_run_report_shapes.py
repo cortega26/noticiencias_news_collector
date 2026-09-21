@@ -143,7 +143,7 @@ def test_format_run_report_no_activity_and_rescore_only():
     report = rr.build_run_report({}, [])
     assert rr.format_run_report(report).split("\n") == [
         "",
-        "🤖 LLM DE ESTA CORRIDA:",
+        "LLM DE ESTA CORRIDA:",
         "-" * 40,
         "Sin actividad de LLM (¿no configurado? scoring heurístico).",
     ]
@@ -157,16 +157,14 @@ def test_format_run_report_healthy_and_degraded_blocks():
     healthy = rr.build_run_report({"scoring.llm": 4}, [_p()])
     text = rr.format_run_report(healthy)
     lines = text.split("\n")
-    assert lines[:3] == ["", "🤖 LLM DE ESTA CORRIDA:", "-" * 40]
+    assert lines[:3] == ["", "LLM DE ESTA CORRIDA:", "-" * 40]
     assert lines[3].startswith("scoring     LLM    4")
     assert "prescoring" not in text  # empty stages are not printed
-    assert lines[-2] == "" and lines[-1] == "✅ LLM saludable en esta corrida."
+    assert lines[-2] == "" and lines[-1] == "LLM saludable en esta corrida."
 
     degraded = rr.build_run_report({"scoring.heuristic.chunk_failed": 4}, [_p()])
     tail = rr.format_run_report(degraded).split("\n")
-    assert tail[-2] == "" and tail[-1].startswith(
-        "⚠️  DEGRADADO: scoring: 100% of items"
-    )
+    assert tail[-2] == "" and tail[-1].startswith("DEGRADADO: scoring: 100% of items")
     assert "groq" in rr.format_run_report(degraded)  # provider table included
 
 

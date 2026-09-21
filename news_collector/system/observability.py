@@ -190,5 +190,5 @@ def log_user_summary(logger_factory: Any, collection_results: Dict[str, Any]) ->
     # "system" logger creation: logger.create_module_logger("system")
     system_logger = logger_factory.create_module_logger("system")
     system_logger.info(
-        f"📊 Reporte de Recolección: {sources_with_data}/{total_sources} fuentes produjeron información con éxito (artículos guardados)."
+        f"Reporte de Recolección: {sources_with_data}/{total_sources} fuentes produjeron información con éxito (artículos guardados)."
     )

@@ -171,14 +171,14 @@ class TargetRepoWriter:
             filename = self._manifest_cache[article_id]
             file_path = posts_dir / filename
             if file_path.exists():
-                logger.info("⚡ Manifest hit: {} -> {}", article_id, filename)
+                logger.info("Manifest hit: {} -> {}", article_id, filename)
                 return file_path
             else:
                 logger.warning("Manifest stale: {} not found on disk.", filename)
                 # fall through to slow scan
 
         # 2. Linear scan (slow path)
-        logger.info("🐢 Slow scan triggered for {}", article_id)
+        logger.info("Slow scan triggered for {}", article_id)
         try:
             for file_path in posts_dir.glob("*.md"):
                 try:

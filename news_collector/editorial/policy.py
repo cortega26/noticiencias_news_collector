@@ -120,7 +120,7 @@ class EditorialPolicy:
                 raise IntegrityError(error_msg)
 
             self.policy_sha256 = computed_hash
-            logger.info(f"✅ Policy Integrity Verified: {computed_hash[:8]}...")
+            logger.info(f"Policy Integrity Verified: {computed_hash[:8]}...")
 
         except Exception as e:
             if isinstance(e, IntegrityError):

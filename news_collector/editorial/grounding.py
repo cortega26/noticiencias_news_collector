@@ -563,7 +563,7 @@ def format_pr_section(report: GroundingReport, limit: int = 8) -> str:
         return ""
     ranked = sorted(report.findings, key=lambda f: f.severity != ERROR)
     lines = [
-        "## ⚠ Verificación de grounding (advisory)",
+        "## Verificación de grounding (advisory)",
         "",
         f"{len(report.errors)} errores y {len(report.warnings)} avisos al comparar el "
         "artículo con el texto fuente. Revisar antes de mergear; no bloquea.",

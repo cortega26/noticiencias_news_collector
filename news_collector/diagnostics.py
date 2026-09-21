@@ -191,7 +191,7 @@ class SourceHealthTracker:
 
     def print_summary_table(self):
         self.finalize_status()
-        print("\n🏥 REPORTE DE SALUD DE FUENTES")
+        print("\nREPORTE DE SALUD DE FUENTES")
         print("=" * 100)
         print(
             f"{'FUENTE':<20} | {'ESTADO':<8} | {'FOUND':<5} | {'SAVED':<5} | {'FILT:LEN':<8} | {'FILT:DEDUP':<10} | {'DIAGNOSIS'}"
@@ -199,7 +199,7 @@ class SourceHealthTracker:
         print("-" * 100)
 
         for sid, data in self.sources.items():
-            status_icon = "✅" if data.status == "WORKING" else "❌"
+            status_icon = "OK" if data.status == "WORKING" else "FAIL"
             diagnosis = ""
             if data.status == "FAILING":
                 diagnosis = (

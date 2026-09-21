@@ -97,7 +97,7 @@ class NewsCollectorSystem:
                     config_override
                 ).model_dump(exclude_none=True)
             except ValidationError as e:
-                print(f"⚠️ Invalid system configuration override provided: {e}")
+                print(f"Invalid system configuration override provided: {e}")
                 self.config_override = {}  # Fallback to empty if validation fails
         else:
             self.config_override = {}
@@ -120,7 +120,7 @@ class NewsCollectorSystem:
         self.is_initialized = False
         self.current_session = None
 
-        print(f"🎯 Inicializando News Collector System (ID: {self.system_id})")
+        print(f"Inicializando News Collector System (ID: {self.system_id})")
 
     def initialize(self) -> bool:
         """

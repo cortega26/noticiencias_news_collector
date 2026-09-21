@@ -385,7 +385,7 @@ def run_collector_script(
         # 1. Configuration
         config_override = {}
         if fast_mode:
-            logger.info("⚡ FAST MODE: Desactivando análisis cognitivo profundo.")
+            logger.info("FAST MODE: Desactivando análisis cognitivo profundo.")
             config_override["scoring_weights"] = {
                 "source_credibility": 0.30,
                 "recency": 0.30,
