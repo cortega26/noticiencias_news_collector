@@ -8,6 +8,7 @@ import ast
 import difflib
 import json
 import platform
+import shutil
 import subprocess
 import tomllib
 from collections import OrderedDict
@@ -31,9 +32,12 @@ def _tracked_paths(root: Path) -> Optional[set]:
     sections to tracked paths keeps the audit's purpose — detecting committed
     layout evolution — while ignoring runtime noise in every environment.
     """
+    git = shutil.which("git")
+    if git is None:
+        return None
     try:
         completed = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-z"],
+            [git, "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             text=True,
             timeout=30,
@@ -58,6 +62,19 @@ class InventoryOptions:
     include_dirs: tuple[str, ...] = ("src", "scripts")
 
 
+def _visible_children(entry: Path, tracked: Optional[set]) -> Optional[List[str]]:
+    """Tracked children names of a top-level directory, or None when the
+    directory holds nothing tracked (caller skips it)."""
+    if tracked is not None and not _has_tracked_beneath(tracked, entry.name):
+        return None
+    return [
+        child.name
+        for child in sorted(entry.iterdir(), key=lambda path: path.name)
+        if tracked is None
+        or _has_tracked_beneath(tracked, f"{entry.name}/{child.name}")
+    ]
+
+
 def _list_top_level(
     root: Path, tracked: Optional[set] = None
 ) -> MutableMapping[str, Optional[List[str]]]:
@@ -68,14 +85,9 @@ def _list_top_level(
         if entry.name in {".git", "__pycache__", ".venv"}:
             continue
         if entry.is_dir():
-            if tracked is not None and not _has_tracked_beneath(tracked, entry.name):
+            children = _visible_children(entry, tracked)
+            if children is None:
                 continue
-            children = [
-                child.name
-                for child in sorted(entry.iterdir(), key=lambda path: path.name)
-                if tracked is None
-                or _has_tracked_beneath(tracked, f"{entry.name}/{child.name}")
-            ]
             inventory[f"{entry.name}/"] = children
         else:
             if tracked is not None and entry.name not in tracked:
