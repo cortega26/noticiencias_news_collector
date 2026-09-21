@@ -173,9 +173,8 @@ def test_emit_prints_exports_and_scopes_the_store_to_this_run(tmp_path):
     assert store.run_id  # filtered to the current run
 
 
-def test_emit_logs_a_degraded_event_exports_and_can_be_disabled(tmp_path, monkeypatch):
-    llm_run_stats.record("scoring", "llm", 1)
-    llm_run_stats.record("scoring", "heuristic.chunk_failed", 9)
+def _capture_warnings(monkeypatch):
+    """Capture structured logger warnings, returning the `seen` list."""
     seen: list = []
     import news_collector.utils.logger as logmod
 
@@ -188,6 +187,17 @@ def test_emit_logs_a_degraded_event_exports_and_can_be_disabled(tmp_path, monkey
         "get_logger",
         lambda: SimpleNamespace(create_module_logger=lambda *_a, **_k: _L()),
     )
+    return seen
+
+
+def _dict_events(seen):
+    return [m for m in seen if isinstance(m, dict)]
+
+
+def test_emit_logs_a_degraded_event_and_exports(tmp_path, monkeypatch):
+    llm_run_stats.record("scoring", "llm", 1)
+    llm_run_stats.record("scoring", "heuristic.chunk_failed", 9)
+    seen = _capture_warnings(monkeypatch)
     out: list[str] = []
     target = tmp_path / "degraded.json"
     store = _Store([_provider()])
@@ -196,21 +206,29 @@ def test_emit_logs_a_degraded_event_exports_and_can_be_disabled(tmp_path, monkey
     )
 
     assert report.degraded and "DEGRADADO" in out[0]
-    (event,) = [m for m in seen if isinstance(m, dict)]
+    (event,) = _dict_events(seen)
     assert event["event"] == "llm.run.degraded"
     assert event["run_id"] == report.run_id and event["reasons"] == report.reasons
     assert (
         json.loads(target.read_text(encoding="utf-8"))["degraded"] is True
     )  # exported
-    # healthy run: no degraded event, no export without a path
-    seen.clear()
-    llm_run_stats.reset()
+
+
+def test_emit_healthy_run_logs_no_event_and_skips_export_without_path(
+    tmp_path, monkeypatch
+):
+    seen = _capture_warnings(monkeypatch)
+    out: list[str] = []
     llm_run_stats.record("scoring", "llm", 5)
     ok = rr.emit_run_report(
         _cfg(), emit=out.append, export_path=None, store=_Store([_provider()])
     )
-    assert ok.degraded is False and not [m for m in seen if isinstance(m, dict)]
-    # disabled: nothing printed, store never queried
+    assert ok.degraded is False and not _dict_events(seen)
+
+
+def test_emit_disabled_prints_nothing_and_never_queries_store(monkeypatch):
+    _capture_warnings(monkeypatch)
+    out: list[str] = []
     printed = len(out)
     untouched = _Store([])
     assert (
