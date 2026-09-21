@@ -183,18 +183,33 @@ def _case_input(db_id: str) -> dict:
     }
 
 
-def _completed_keys(path: Path) -> set[tuple[str, str]]:
-    if not path.exists():
-        return set()
-    keys = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        try:
-            rec = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if rec.get("status") in {"ok", "mixed-excluded", "failed"}:
-            keys.add((rec["db_id"], rec["arm"]))
-    return keys
+MAX_ATTEMPTS = 3
+
+
+def _run_state(path: Path) -> tuple[dict[tuple[str, str], int], set[tuple[str, str]]]:
+    """Prior attempt counts per (db_id, arm), plus keys with an ok row.
+
+    A key needs work when it has no ok row and fewer than MAX_ATTEMPTS.
+    Re-invoking generate therefore acts as the revisit pass: cooldowns and
+    tripped breakers have cleared, so mixed cases get a fair retry instead
+    of an immediate doomed one.
+    """
+    counts: dict[tuple[str, str], int] = {}
+    oks: set[tuple[str, str]] = set()
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            key = (rec.get("db_id", ""), rec.get("arm", ""))
+            counts[key] = counts.get(key, 0) + 1
+            if rec.get("status") == "ok":
+                oks.add(key)
+    pending = {
+        key: n for key, n in counts.items() if key not in oks and n < MAX_ATTEMPTS
+    }
+    return pending, oks
 
 
 def cmd_dry_run() -> int:
@@ -235,7 +250,7 @@ def cmd_generate(max_cases: int | None) -> int:
 
     logger = _bench_logger()
     EVAL_DIR.mkdir(parents=True, exist_ok=True)
-    done = _completed_keys(RUNS_PATH)
+    pending, resolved = _run_state(RUNS_PATH)
     base_cfg = _load_config()
     agents = {}
     for arm in ARMS:
@@ -259,74 +274,68 @@ def cmd_generate(max_cases: int | None) -> int:
         for case in cases:
             payload = _case_input(case["db_id"])
             for arm in ARMS:
-                if (case["db_id"], arm) in done:
+                key = (case["db_id"], arm)
+                if key in resolved:
+                    continue
+                prior = pending.get(key, 0)
+                if prior >= MAX_ATTEMPTS:
                     continue
                 agent, fp = agents[arm]
-                # One retry on mixed serving (non-primary served some calls).
-                # Every attempt is recorded; analysis uses ok rows for means
-                # and counts mixed/failed rows in robustness stats. A case-arm
-                # with no ok attempt is excluded from means (still counted).
-                for attempt in (1, 2):
-                    run_id = f"bench-{arm}-{case['db_id']}" + (
-                        "" if attempt == 1 else "-r2"
+                attempt = prior + 1
+                run_id = f"bench-{arm}-{case['db_id']}" + (
+                    "" if attempt == 1 else f"-r{attempt}"
+                )
+                rec: dict = {
+                    "run_id": run_id,
+                    "db_id": case["db_id"],
+                    "arm": arm,
+                    "attempt": attempt,
+                    "stratum": case["stratum"],
+                    "hard": case["hard"],
+                    "fingerprint": fp,
+                }
+                t0 = time.time()
+                try:
+                    # Reset: the agent only assigns last_critic_verdict on
+                    # judged paths, so a stale verdict from a previous run
+                    # would otherwise leak into an abstaining run.
+                    agent.last_critic_verdict = None
+                    output = agent.process_article(
+                        payload,
+                        explicit_article_id=run_id,
+                        override_date=case.get("canonical_date"),
                     )
-                    rec: dict = {
-                        "run_id": run_id,
-                        "db_id": case["db_id"],
-                        "arm": arm,
-                        "attempt": attempt,
-                        "stratum": case["stratum"],
-                        "hard": case["hard"],
-                        "fingerprint": fp,
-                    }
-                    t0 = time.time()
+                    rec["wall_s"] = round(time.time() - t0, 1)
+                    rec["output_chars"] = len(output)
+                    rec["output"] = output
+                    rec["critic_verdict"] = _copy.deepcopy(agent.last_critic_verdict)
                     try:
-                        # Reset: the agent only assigns last_critic_verdict on
-                        # judged paths, so a stale verdict from a previous run
-                        # would otherwise leak into an abstaining run.
-                        agent.last_critic_verdict = None
-                        output = agent.process_article(
-                            payload,
-                            explicit_article_id=run_id,
-                            override_date=case.get("canonical_date"),
-                        )
-                        rec["wall_s"] = round(time.time() - t0, 1)
-                        rec["output_chars"] = len(output)
-                        rec["output"] = output
-                        rec["critic_verdict"] = _copy.deepcopy(
-                            agent.last_critic_verdict
-                        )
-                        try:
-                            validate_generated_article_markdown(output)
-                            rec["schema_ok"] = True
-                            rec["schema_error"] = None
-                        except Exception as exc:  # noqa: BLE001 - recorded, not raised
-                            rec["schema_ok"] = False
-                            rec["schema_error"] = f"{type(exc).__name__}: {exc}"[:300]
-                        rows = _metrics_rows(t0, time.time())
-                        rec["served"] = rows
-                        foreign = [
-                            r for r in rows if (r["model"] or "") != ARM_MODEL[arm]
-                        ]
-                        if foreign:
-                            rec["status"] = "mixed"
-                            rec["mixed_rows"] = foreign
-                        else:
-                            rec["status"] = "ok"
-                    except Exception as exc:  # noqa: BLE001 - failures are data
-                        rec["wall_s"] = round(time.time() - t0, 1)
-                        rec["status"] = "failed"
-                        rec["error"] = f"{type(exc).__name__}: {exc}"[:500]
-                        rec["served"] = _metrics_rows(t0, time.time())
-                    out.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                    out.flush()
-                    print(
-                        f"{run_id}: {rec['status']} "
-                        f"({rec.get('wall_s', '?')}s, "
-                        f"{len(rec.get('served', []))} calls)"
-                    )
-                    if rec["status"] != "mixed":
-                        break
+                        validate_generated_article_markdown(output)
+                        rec["schema_ok"] = True
+                        rec["schema_error"] = None
+                    except Exception as exc:  # noqa: BLE001 - recorded, not raised
+                        rec["schema_ok"] = False
+                        rec["schema_error"] = f"{type(exc).__name__}: {exc}"[:300]
+                    rows = _metrics_rows(t0, time.time())
+                    rec["served"] = rows
+                    foreign = [r for r in rows if (r["model"] or "") != ARM_MODEL[arm]]
+                    if foreign:
+                        rec["status"] = "mixed"
+                        rec["mixed_rows"] = foreign
+                    else:
+                        rec["status"] = "ok"
+                except Exception as exc:  # noqa: BLE001 - failures are data
+                    rec["wall_s"] = round(time.time() - t0, 1)
+                    rec["status"] = "failed"
+                    rec["error"] = f"{type(exc).__name__}: {exc}"[:500]
+                    rec["served"] = _metrics_rows(t0, time.time())
+                out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                out.flush()
+                print(
+                    f"{run_id}: {rec['status']} "
+                    f"({rec.get('wall_s', '?')}s, "
+                    f"{len(rec.get('served', []))} calls)"
+                )
     return 0
 
 
