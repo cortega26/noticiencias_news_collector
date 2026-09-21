@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
+from news_collector.editorial.hero_alt import is_boilerplate_alt
 from news_collector.logic.parsers.image_extractor import is_site_logo_url
 from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify_text
 from news_collector.utils.logger import get_logger
@@ -45,6 +46,7 @@ class ImageResolution:
     image_url: str | None = None
     image_alt: str | None = None
     queued_brief: bool = False
+    message: str | None = None
 
 
 def publication_safe_image_alt(value: object, title: object) -> str:
@@ -144,15 +146,8 @@ class ArticleImageHandler:
             _dl = download_fn if download_fn is not None else self.download
             local_ref = _dl(raw_image_url, image_slug, target_dir)
             if local_ref:
-                logger.info("Updated article image to local asset: {}", local_ref)
-                alt = publication_safe_image_alt(
-                    article.get("image_alt"), article.get("title", article_id)
-                )
-                return ImageResolution(
-                    resolved=True,
-                    image_url=local_ref,
-                    image_alt=alt,
-                    queued_brief=False,
+                return self._resolve_downloaded(
+                    article, article_id, image_slug, local_ref, existing_brief
                 )
             # Download failed → queue brief
             logger.warning(
@@ -263,6 +258,69 @@ class ArticleImageHandler:
         title = str(article.get("title") or "").strip()
         base_slug = slugify_text(title, fallback=f"article-{article_id}")
         return f"{canonical_date}-{base_slug}"
+
+    def _resolve_downloaded(
+        self,
+        article: Dict[str, Any],
+        article_id: str,
+        image_slug: str,
+        local_ref: str,
+        existing_brief: Any,
+    ) -> ImageResolution:
+        """Resolve a successfully downloaded source image.
+
+        Descriptive source alts pass through. Boilerplate alts need a
+        human-written alt-brief; without one the brief is queued and the
+        run fails fast with an actionable message instead of dying later
+        at frontend lint on the boilerplate alt.
+        """
+        logger.info("Updated article image to local asset: {}", local_ref)
+        alt = publication_safe_image_alt(
+            article.get("image_alt"), article.get("title", article_id)
+        )
+        if not is_boilerplate_alt(alt):
+            return ImageResolution(
+                resolved=True,
+                image_url=local_ref,
+                image_alt=alt,
+                queued_brief=False,
+            )
+        brief_alt = self._resolve_alt_brief(article_id, image_slug)
+        if brief_alt:
+            return ImageResolution(
+                resolved=True,
+                image_url=local_ref,
+                image_alt=brief_alt,
+                queued_brief=False,
+            )
+        self._queue_brief(
+            article, article_id, image_slug, "missing_alt_text", existing_brief
+        )
+        return ImageResolution(
+            resolved=False,
+            queued_brief=True,
+            message=(
+                f"Hero alt text required for article {article_id}: open "
+                f"the Images desk, write a descriptive alt in brief "
+                f"'{image_slug}', then retry publish."
+            ),
+        )
+
+    def _resolve_alt_brief(self, article_id: str, image_slug: str) -> str | None:
+        """Descriptive alt from a `missing_alt_text` brief, if usable.
+
+        No asset staging required: the source image already downloaded.
+        Boilerplate alts never self-accept (that would re-stamp the defect).
+        """
+        existing_brief = self._briefs.find_for_article(article_id, [image_slug])
+        if existing_brief is None:
+            return None
+        if existing_brief.reason != "missing_alt_text":
+            return None
+        alt = (existing_brief.draft_alt_text or "").strip()
+        if not alt or is_boilerplate_alt(alt) or len(alt) < 5:
+            return None
+        return alt
 
     def _resolve_brief_image(self, brief: Any, target_dir: Path) -> str | None:
         if brief is None:

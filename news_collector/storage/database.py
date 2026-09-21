@@ -294,6 +294,12 @@ class DatabaseManager:
                 # Hacer operaciones con la base de datos
                 article = session.query(Article).first()
         """
+        if self.SessionLocal is None:
+            raise RuntimeError(
+                "DatabaseManager is closed — get_session() called after "
+                "close(). The caller (often a background thread outliving "
+                "its test or process) must stop using this manager."
+            )
         session = self.SessionLocal()
         try:
             yield session

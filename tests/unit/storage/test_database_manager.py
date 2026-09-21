@@ -66,3 +66,14 @@ def test_database_manager_close_is_idempotent(tmp_path):
     # Second close: engine is already None — must not raise.
     manager.close()
     assert manager.engine is None
+
+
+def test_get_session_after_close_raises_clear_error(tmp_path):
+    """A background thread outliving close() used to die with a cryptic
+    ``TypeError: 'NoneType' object is not callable``; the guard names the
+    real cause instead."""
+    manager = DatabaseManager({"type": "sqlite", "path": tmp_path / "t.db"})
+    manager.close()
+    with pytest.raises(RuntimeError, match="closed"):
+        with manager.get_session():
+            pass  # pragma: no cover - must raise before yielding
