@@ -128,6 +128,11 @@ data/cache/
 data/article_metadata/
 data/exports/*
 !data/exports/latest_articles.json
+# Refinery image-staging queue (runtime state, like article_metadata above).
+# The single tracked brief from May is an orphaned precedent and unreferenced;
+# briefs resolve at runtime via ImageBriefStore, never from git.
+data/image-briefs/
+data/image-uploads/
 temp/
 MagicMock/
 debug_output.txt
