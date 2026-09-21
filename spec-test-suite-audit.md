@@ -108,6 +108,7 @@ points to mutation testing as the regression-detection measure and requires a re
 Together with the ratchet baseline (2b) and mutation floors (3a) these are the standing guardrails.
 
 ## Phase 3b-2 (done): survivors in `grounding` and `llm_run_report`
+
 Same method as 3b-1 (`mutmut show` -> real gap vs equivalent). Files: `tests/unit/editorial/test_grounding_shapes.py`,
 `tests/unit/observability/test_llm_run_report_shapes.py`, a rewritten emit test, `[tool.mutmut]` selection and floors
 (grounding 85, llm_run_report 85). Production code untouched. Acceptance: grounding 79 -> 89 %, llm_run_report
