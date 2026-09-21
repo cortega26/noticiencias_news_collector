@@ -3,15 +3,15 @@ import AuthGate from "../components/AuthGate.astro";
 import AdminLayout from "../layouts/AdminLayout.astro";
 ---
 
-<AdminLayout title="Quality" current="/quality">
+<AdminLayout title="Calidad" current="/quality">
   <AuthGate>
     <header class="mb-8 flex items-end justify-between gap-4">
       <div>
-        <h1 class="display-title text-4xl text-paper-100">Quality review</h1>
-        <p class="data-label mt-2">PUBLISHED ARTICLE HEALTH · READABILITY + STAGE SIGNALS</p>
+        <h1 class="display-title text-4xl text-paper-100">Revisión de calidad</h1>
+        <p class="data-label mt-2">SALUD DE PUBLICADOS · LEGIBILIDAD + ETAPAS</p>
       </div>
       <div class="flex items-center gap-3">
-        <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+        <button id="refresh" class="btn-ghost" type="button">Actualizar</button>
       </div>
     </header>
     <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
@@ -19,22 +19,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       <table class="w-full min-w-[980px] text-left">
         <thead>
           <tr class="border-b border-ink-700">
-            <th class="data-label px-5 py-3">RUN</th>
-            <th class="data-label px-5 py-3">WHEN</th>
-            <th class="data-label px-5 py-3">ARTICLE</th>
-            <th class="data-label px-5 py-3">OUTCOME</th>
-            <th class="data-label px-5 py-3">READABILITY</th>
-            <th class="data-label px-5 py-3">AUDIT</th>
-            <th class="data-label px-5 py-3">STAGES</th>
+            <th class="data-label px-5 py-3">PROCESO</th>
+            <th class="data-label px-5 py-3">CUÁNDO</th>
+            <th class="data-label px-5 py-3">ARTÍCULO</th>
+            <th class="data-label px-5 py-3">RESULTADO</th>
+            <th class="data-label px-5 py-3">LEGIBILIDAD</th>
+            <th class="data-label px-5 py-3">AUDITORÍA</th>
+            <th class="data-label px-5 py-3">ETAPAS</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
-        No publication runs found.
+        Sin procesos de publicación.
       </div>
     </div>
-    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
@@ -72,7 +72,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function readabilityBadge(run: AdminQualityRunItem): string {
     const r = run.readability;
     if (!r || r.ifsz == null) {
-      return `<span class="font-mono text-xs text-ink-600" title="Run predates readability signals">—</span>`;
+      return `<span class="font-mono text-xs text-ink-600" title="El proceso es anterior a legibilidad">—</span>`;
     }
     const suit = r.suitability ?? 0;
     const color =
@@ -82,9 +82,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           ? "border-amber-500/40 text-amber-400"
           : "border-rose-500/40 text-rose-400";
     const detail = [
-      r.grade ? `grade: ${r.grade}` : null,
-      r.words != null ? `${r.words} words` : null,
-      r.sentences != null ? `${r.sentences} sentences` : null,
+      r.grade ? `nivel: ${r.grade}` : null,
+      r.words != null ? `${r.words} palabras` : null,
+      r.sentences != null ? `${r.sentences} frases` : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -137,6 +137,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     if (!state) {
       return `<span class="font-mono text-xs text-ink-600">—</span>`;
     }
+    const label =
+      state === "passed"
+        ? "aprobada"
+        : state === "failed"
+          ? "suspendida"
+          : state === "pending"
+            ? "pendiente"
+            : state;
     const color =
       state === "passed"
         ? "border-verdigris-500/40 text-verdigris-400"
@@ -145,7 +153,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           : state === "pending"
             ? "border-amber-500/40 text-amber-400"
             : "border-ink-600 text-ink-300";
-    return `<span class="inline-flex items-center rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs">${esc(state)}</span>`;
+    return `<span class="inline-flex items-center rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs">${esc(label)}</span>`;
   }
 
   async function load() {
@@ -155,11 +163,11 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       const agg = envelope.aggregate;
       if (metaEl) {
         metaEl.innerHTML = `
-          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">runs ${agg.count}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">succeeded ${agg.succeeded}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs ${agg.failed ? "text-rose-400" : "text-ink-200"}">failed ${agg.failed}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">with readability ${agg.with_readability}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">avg suitability ${agg.avg_suitability != null ? agg.avg_suitability.toFixed(3) : "—"}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">procesos ${agg.count}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">conseguidos ${agg.succeeded}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs ${agg.failed ? "text-rose-400" : "text-ink-200"}">fallidos ${agg.failed}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">con legibilidad ${agg.with_readability}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">aptitud media ${agg.avg_suitability != null ? agg.avg_suitability.toFixed(3) : "—"}</div>
         `;
       }
       if (!rowsEl) return;
@@ -183,7 +191,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Failed to load quality review: " + (e as Error).message, "err");
+      showToast("No se pudo cargar la revisión: " + (e as Error).message, "err");
     }
   }
 

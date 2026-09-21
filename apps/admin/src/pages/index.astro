@@ -1,11 +1,19 @@
 ---
-import AdminLayout from "../layouts/AdminLayout.astro";
+// The desk lives at /triage; no splash page. Static output: instant redirect.
 ---
 
-<AdminLayout title="Noticiencias Refinery">
-  <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
-    <div class="display-title text-5xl text-paper-100">Noticiencias</div>
-    <p class="data-label mt-4 text-amber-400/90">REFINERY · ADMIN CONSOLE</p>
-    <a href="/triage" class="btn-primary mt-8">Open the curation desk →</a>
-  </div>
-</AdminLayout>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=/triage" />
+    <meta name="robots" content="noindex" />
+    <title>Redirigiendo…</title>
+  </head>
+  <body>
+    <script>
+      window.location.replace("/triage");
+    </script>
+    <p><a href="/triage">Ir a Curaduría</a></p>
+  </body>
+</html>

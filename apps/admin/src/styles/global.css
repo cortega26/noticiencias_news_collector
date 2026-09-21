@@ -121,7 +121,6 @@ body {
 .btn-success:hover {
   background-color: var(--color-verdigris-400);
 }
-
 .kbd {
   display: inline-flex;
   min-width: 1.6rem;
@@ -135,6 +134,17 @@ body {
   font-size: 11px;
   color: var(--color-ink-200);
   box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink-950) 60%, transparent);
+}
+
+/* visible keyboard focus (desktop, keyboard-first desk) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-amber-400);
+  outline-offset: 2px;
 }
 
 .status-pill {

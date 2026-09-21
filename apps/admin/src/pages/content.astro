@@ -3,18 +3,18 @@ import AuthGate from "../components/AuthGate.astro";
 import AdminLayout from "../layouts/AdminLayout.astro";
 ---
 
-<AdminLayout title="Content" current="/content">
+<AdminLayout title="Contenido" current="/content">
   <AuthGate>
     <header class="mb-8 flex items-end justify-between gap-4">
       <div>
-        <h1 class="display-title text-4xl text-paper-100">Published content</h1>
-        <p class="data-label mt-2">LIVE CMS · UNPUBLISH IS GIT-BACKED (COMMIT + PUSH)</p>
+        <h1 class="display-title text-4xl text-paper-100">Contenido publicado</h1>
+        <p class="data-label mt-2">CMS EN VIVO · DESPUBLICAR USA GIT (CONFIRM + PUSH)</p>
       </div>
       <div class="flex items-center gap-3">
         <button id="bulk-reset" class="btn-danger hidden" type="button">
-          Bulk unpublish (<span id="bulk-count">0</span>)
+          Despublicar selección (<span id="bulk-count">0</span>)
         </button>
-        <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+        <button id="refresh" class="btn-ghost" type="button">Actualizar</button>
       </div>
     </header>
     <div id="meta" class="mb-6 flex flex-wrap gap-3"></div>
@@ -23,19 +23,19 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         <thead>
           <tr class="border-b border-ink-700">
             <th class="px-5 py-3"><input id="select-all" type="checkbox" class="accent-amber-500" /></th>
-            <th class="data-label px-5 py-3">TITLE</th>
-            <th class="data-label px-5 py-3">REFINERY ID</th>
-            <th class="data-label px-5 py-3">MODIFIED</th>
-            <th class="data-label px-5 py-3 text-right">ACTIONS</th>
+            <th class="data-label px-5 py-3">TÍTULO</th>
+            <th class="data-label px-5 py-3">ID REFINERÍA</th>
+            <th class="data-label px-5 py-3">MODIFICADO</th>
+            <th class="data-label px-5 py-3 text-right">ACCIONES</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
-        No published articles found.
+        Sin artículos publicados.
       </div>
     </div>
-    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
   </AuthGate>
 </AdminLayout>
 
@@ -93,7 +93,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         metaEl.innerHTML = `
           <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">${esc(content.source_label)}</div>
           <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">${esc(content.freshness_label)}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">articles ${content.articles.length}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">artículos ${content.articles.length}</div>
         `;
       }
       if (!rowsEl) return;
@@ -113,7 +113,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             <td class="px-5 py-3 font-mono text-xs text-ink-300">${esc(a.refinery_id ?? "—")}</td>
             <td class="px-5 py-3 font-mono text-xs text-ink-400">${esc(a.modified_at)}</td>
             <td class="px-5 py-3 text-right">
-              <button class="btn-danger !px-2.5 !py-1 text-xs" data-unpublish="${esc(id)}" type="button">Unpublish</button>
+              <button class="btn-danger !px-2.5 !py-1 text-xs" data-unpublish="${esc(id)}" type="button">Despublicar</button>
             </td>
           </tr>`;
         })
@@ -125,7 +125,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         return;
       }
       if (rowsEl) {
-        rowsEl.innerHTML = `<tr><td colspan="5" class="px-5 py-10 text-center text-rose-400">Failed: ${esc((e as Error).message)}</td></tr>`;
+        rowsEl.innerHTML = `<tr><td colspan="5" class="px-5 py-10 text-center text-rose-400">Falló: ${esc((e as Error).message)}</td></tr>`;
       }
     }
   }
@@ -143,7 +143,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     const target = (event.target as HTMLElement).closest("button");
     if (!target?.dataset.unpublish) return;
     const id = target.dataset.unpublish;
-    if (!window.confirm(`Unpublish "${id}"? This commits and pushes the removal.`)) return;
+    if (!window.confirm(`¿Despublicar "${id}"? Esto confirma y sube la eliminación.`)) return;
     try {
       const result = await unpublishArticle(id);
       showToast(result.detail);
@@ -154,14 +154,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Unpublish failed: " + (e as Error).message, "err");
+      showToast("No se pudo despublicar: " + (e as Error).message, "err");
     }
   });
 
   bulkBtn?.addEventListener("click", async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    if (!window.confirm(`Bulk unpublish ${ids.length} article(s)? This commits and pushes.`)) return;
+    if (!window.confirm(`¿Despublicar ${ids.length} artículo(s)? Esto confirma y sube los cambios.`)) return;
     try {
       const result = await bulkResetContent(ids);
       showToast(result.summary);
@@ -174,7 +174,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         showAuthGate();
         return;
       }
-      showToast("Bulk unpublish failed: " + (e as Error).message, "err");
+      showToast("No se pudo despublicar el lote: " + (e as Error).message, "err");
     }
   });
 

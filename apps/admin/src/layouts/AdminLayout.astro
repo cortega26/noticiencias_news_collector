@@ -9,14 +9,14 @@ interface Props {
 const { title, current } = Astro.props;
 
 const NAV = [
-  { href: "/triage", label: "Triage", glyph: "▸" },
-  { href: "/sources", label: "Sources", glyph: "◫" },
-  { href: "/content", label: "Content", glyph: "▤" },
-  { href: "/images", label: "Images", glyph: "◱" },
-  { href: "/analytics", label: "Analytics", glyph: "◔" },
-  { href: "/quality", label: "Quality", glyph: "◈" },
+  { href: "/triage", label: "Curaduría", glyph: "▸" },
+  { href: "/sources", label: "Fuentes", glyph: "◫" },
+  { href: "/content", label: "Contenido", glyph: "▤" },
+  { href: "/images", label: "Imágenes", glyph: "◱" },
+  { href: "/analytics", label: "Analítica", glyph: "◔" },
+  { href: "/quality", label: "Calidad", glyph: "◈" },
   { href: "/prompts", label: "Prompts", glyph: "✎" },
-  { href: "/config", label: "Config", glyph: "◍" },
+  { href: "/config", label: "Configuración", glyph: "◍" },
 ];
 ---
 
@@ -28,7 +28,13 @@ const NAV = [
     <title>{title} · Noticiencias Refinery</title>
   </head>
   <body>
-    <div class="flex min-h-screen">
+    <div class="hidden min-h-screen flex-col items-center justify-center px-6 text-center max-lg:flex">
+      <div class="display-title text-2xl text-paper-100">Consola de escritorio</div>
+      <p class="mt-3 max-w-sm text-sm text-ink-400">
+        La curaduría necesita una pantalla grande — ábrela en un equipo de escritorio.
+      </p>
+    </div>
+    <div class="flex min-h-screen max-lg:hidden">
       <aside
         class="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-ink-800 bg-ink-900/80 px-4 py-6 backdrop-blur"
       >
