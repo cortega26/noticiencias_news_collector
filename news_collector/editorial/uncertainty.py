@@ -218,6 +218,18 @@ def _iter_scope_fields(fields: Mapping[str, Any]) -> Iterator[tuple[str, Any]]:
             yield f"fact_check[{index}]", label
 
 
+def _scan_text_for_scope(label: str, text: Any) -> list[str]:
+    """`<label>: <sentence>` entries for the bare authentic-result sentences
+    in one scope field. Empty for non-strings and clean text."""
+    if not isinstance(text, str) or not text.strip():
+        return []
+    return [
+        f"{label}: {sentence.strip()}"
+        for sentence in _SENTENCE_SPLIT_RE.split(text.strip())
+        if sentence.strip() and _sentence_has_bare_authentic_result(sentence.strip())
+    ]
+
+
 def find_replica_scope_mismatches(
     fields: Mapping[str, Any],
     *,
@@ -241,13 +253,7 @@ def find_replica_scope_mismatches(
 
     out: list[str] = []
     for label, text in _iter_scope_fields(fields):
-        if not isinstance(text, str) or not text.strip():
-            continue
-        sentences = _SENTENCE_SPLIT_RE.split(text.strip())
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence and _sentence_has_bare_authentic_result(sentence):
-                out.append(f"{label}: {sentence}")
+        out.extend(_scan_text_for_scope(label, text))
     return out
 
 
