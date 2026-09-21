@@ -3,8 +3,15 @@ Entry point to run the Noticiencias HTTP serving layer.
 
 Usage:
     python -m news_collector.serving
+
+Env:
+    SERVING_PORT  TCP port to bind (default: 8000). Honored strictly: an
+                  invalid value fails closed, and a busy port surfaces
+                  uvicorn's bind error. Port *selection* (next-free fallback)
+                  belongs to the caller — see scripts/dev/admin_stack.sh.
 """
 
+import os
 from pathlib import Path
 
 from news_collector.serving.api import create_app
@@ -33,6 +40,25 @@ for _runtime_dir in ("temp", "data", "logs"):
 RELOAD_EXCLUDES = [str(_REPO_ROOT / name) for name in ("temp", "data", "logs")]
 
 
+DEFAULT_PORT = 8000
+
+
+def _resolve_port() -> int:
+    """Resolve the bind port from SERVING_PORT, failing closed on garbage."""
+    raw = os.environ.get("SERVING_PORT", str(DEFAULT_PORT)).strip()
+    try:
+        port = int(raw)
+    except ValueError:
+        raise SystemExit(
+            f"news_collector.serving: invalid SERVING_PORT={raw!r} (must be an integer 1-65535)"
+        ) from None
+    if not 1 <= port <= 65535:
+        raise SystemExit(
+            f"news_collector.serving: invalid SERVING_PORT={raw!r} (must be an integer 1-65535)"
+        )
+    return port
+
+
 def main() -> None:
     """Launch the dev server (auto-reload, runtime dirs excluded)."""
     import uvicorn
@@ -40,7 +66,7 @@ def main() -> None:
     uvicorn.run(
         "news_collector.serving.__main__:app",
         host="0.0.0.0",  # noqa: S104 # nosec B104 — local dev server only
-        port=8000,
+        port=_resolve_port(),
         reload=True,
         reload_excludes=RELOAD_EXCLUDES,
     )
