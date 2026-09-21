@@ -108,6 +108,7 @@ make verify-ci
 - `.github/workflows/release.yml` — release build/publish
 - `.github/workflows/fix-makefile-tabs.yml` — self-heal workflow
 - `.github/workflows/sync-master.yml` — master mirror sync
+- `.github/workflows/test-health-weekly.yml` — weekly time-shifted suite (manual `days` input)
 
 ## Fork And Dependabot Behavior
 
