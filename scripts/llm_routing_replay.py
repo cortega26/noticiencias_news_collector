@@ -34,6 +34,7 @@ import argparse
 import copy
 import hashlib
 import json
+import os
 import random
 import sqlite3
 import sys
@@ -52,6 +53,14 @@ MAPPING_PATH = EVAL_DIR / "blind_mapping.sealed.json"
 INTERIM_PATH = EVAL_DIR / "interim_automated.md"
 
 ARMS = ("A", "B", "C")
+# BENCH_SKIP_ARMS="C" pauses an arm without touching recorded rows
+# (used when a host endpoint is down for the whole window: no point
+# burning wall-clock on guaranteed failovers; revisit at the end).
+SKIP_ARMS = {
+    a.strip().upper()
+    for a in (os.environ.get("BENCH_SKIP_ARMS", "") or "").split(",")
+    if a.strip()
+} & set(ARMS)
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 NVIDIA_KEY_ENV = "NOTICIENCIAS__NVIDIA__API_KEY"
 
@@ -280,6 +289,8 @@ def cmd_generate(max_cases: int | None) -> int:
         for case in cases:
             payload = _case_input(case["db_id"])
             for arm in ARMS:
+                if arm in SKIP_ARMS:
+                    continue
                 key = (case["db_id"], arm)
                 if key in resolved_ok:
                     print(f"skip {key[0]}-{key[1]} (ok recorded)")
