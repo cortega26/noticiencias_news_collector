@@ -387,6 +387,9 @@ llm-report: bootstrap ## LLM provider behaviour report (ARGS="--days 7 --by-purp
 llm-canary: bootstrap ## Real bounded LLM canary (needs keys; ARGS="--items 20 --require-keys")
 	@$(PYTHON_BIN) scripts/llm_canary.py $(ARGS)
 
+review-local: bootstrap ## Local adversarial review of the working diff (Ollama, unlimited, advisory). NOT in CI. Usage: make review-local [ARGS="--ref origin/main --out /tmp/rev.md"]
+	@$(PYTHON_BIN) scripts/adversarial_review.py $(ARGS)
+
 test-timeshift: bootstrap ## Run tests with the clock +120 days to expose time-bomb tests (installs time-machine)
 	@$(PYTHON_BIN) -m pip install -q time-machine
 	@PYTHONPATH=tests/_plugins:. $(PYTHON_BIN) -m pytest tests -q --no-cov -p time_shift_plugin --ignore=tests/e2e_pipeline
