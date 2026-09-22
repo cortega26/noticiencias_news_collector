@@ -63,10 +63,16 @@ reviewed diff before any run.
   astronomy+physics, v1 and v2, including a deliberately **hard stratum**
   (~10 items: conflicting sources, preprints, consequential health claims).
   Selection procedure + RNG seed recorded in the report for reproducibility.
-- **44 gold enrichment records** at `tests/data/enrichment_eval.jsonl`
-  (plan 048 corpus) for the classification/extraction slice.
 - Exclusion: retracted or corrected-since items (they would reward
   reproducing known-bad output).
+
+> Dropped from scope (Codex P2 on PR #322): the 44 gold enrichment
+> records at `tests/data/enrichment_eval.jsonl`. They test
+> topic/entity extraction owned by plan 048's non-LLM track, while
+> classification stages are explicitly out of scope here (§2) and no
+> benchmark task consumes them. Declaring them as data while running
+> nothing on them would let an implementation satisfy every run item
+> while silently ignoring half the dataset.
 
 ## 5. Tasks per candidate (identical inputs, identical prompts)
 
@@ -75,6 +81,24 @@ reviewed diff before any run.
    (`editor_critic` 7 criteria, `headline_critic`), plus 5. an auditor
    pass over the final body. Record: outputs, critic scores, schema
    validation results, per-call latency, in/out tokens, failures/429s.
+
+5b. Fixed judges (Codex P1 on PR #322 — the in-flow critic is
+self-grading: each arm's outputs are judged by its own model).
+
+- **Cross-critic matrix** (bundle 12-article subset): every arm's output
+  judged by every arm's critic (`_critic_editorial_pass` through fixed
+  per-arm agents). The 3×3 approval matrix separates output quality
+  from grader leniency — diagonal inflation means self-leniency, and
+  output-arm quality is read down the fixed-critic columns.
+- **Grounded fact-check judge** (all ok outputs): each arm's drafted
+  `fact_check` labels verified against the DB source content through
+  the dedicated always-Ollama verifier (`_verify_fact_check_claims` —
+  same independence property as production Phase 2c, independent of
+  all drafting arms).
+- The production auditor path still runs (prose-level signal), but its
+  finding counts are demoted to **prose-caution flags**: the auditor
+  receives title + URL + generated body only, never source contents,
+  so it cannot count contradictions against sources.
 
 ## 6. Blind protocol
 
@@ -95,23 +119,36 @@ reviewed diff before any run.
 ## 7. Metrics (all reported with distributions, not point estimates)
 
 Schema compliance %, critic mean ± sd per criterion, human mean rank,
-hallucination-flag rate, p50/p95 latency per task, mean in/out tokens per
-call, failure + 429 rate, quota burn per candidate (via `llm_metrics`
-sink + `make llm-report --days`). Free-tier flakes are data: a candidate
-that is brilliant but 429s is brilliant-but-unusable — report both.
+hallucination-flag rate, p50/p95 latency per task, failure + 429 rate,
+quota burn. Token counts are NOT available: `AttemptRecord` and the
+`llm_calls` schema persist provider/model, success/failure, latency,
+failover index, error, and queue wait only (Codex P1 on PR #322). Cost
+is therefore measured through recorded proxies: per-call output
+characters, call counts per flow, wall latency, and failure/429 rates.
+Threshold §8.2's "burn" means these proxies, not token counts. Free-tier
+flakes are data: a candidate that is brilliant but 429s is
+brilliant-but-unusable — report both.
+
+Quota windows use `make llm-report ARGS="--days 7 --by-purpose"`
+(the target forwards script arguments through `ARGS`, not directly).
 
 ## 8. Pre-registered decision thresholds
 
-Adopted **before** the runs; the ADR applies them mechanically:
+Adopted **before** the runs; the ADR applies them mechanically. All
+critic comparisons below use the §5b cross-critic matrix (fixed graders),
+never the in-flow self-critic scores; a threshold counts as met when it
+holds under at least 2 of the 3 fixed critics:
 
-1. **Ultra escalation** iff hard-stratum critic win-rate ≥ +15pp over
-   control AND p50 latency < 2× control AND failure rate ≤ control + 2pp.
-   Else: no Ultra wiring (revisit in 6 months or on price/limit changes).
+1. **Ultra escalation** iff hard-stratum cross-critic win-rate ≥ +15pp
+   over control AND grounded dispute rate ≤ control AND p50 latency < 2×
+   control AND failure rate ≤ control + 2pp. Else: no Ultra wiring
+   (revisit in 6 months or on price/limit changes).
 2. **GLM text entry** iff Spanish human-rank parity (±0.25 mean rank) AND
-   critic within ±3pts AND burn ≤ control. Else: GLM parked until plan 084.
-3. **Default change** iff a challenger beats control on critic mean by
-   ≥ +5pts with parity-or-better everywhere else. (Prior: unlikely; Super
-   is the measured incumbent.)
+   cross-critic within ±3pts AND grounded dispute rate ≤ control AND
+   burn proxies ≤ control. Else: GLM parked until plan 084.
+3. **Default change** iff a challenger beats control on cross-critic mean
+   by ≥ +5pts with parity-or-better everywhere else. (Prior: unlikely;
+   Super is the measured incumbent.)
 4. **"No change" is a valid, complete outcome** — recorded in the ADR with
    the numbers, not as a failure.
 
@@ -122,10 +159,13 @@ Adopted **before** the runs; the ADR applies them mechanically:
 - At ~2 articles/day the full 3-arm benchmark is a few hundred calls —
   no quota anxiety, but record burn anyway (habit for the day volume grows).
 - Sequence vs plan 080 Phase 3 (offline replay pilot, currently TODO):
-  check its status at execution time. If landed, reuse its harness; if
-  not, a standalone replay script under `scripts/` (no Promptfoo, no new
-  dependencies — `get_provider` + `prompts.yaml` + existing validators).
-  Never build two harnesses.
+  check its status at execution time. The standalone replay runner in
+  `scripts/llm_routing_replay.py` is the plan of record regardless: the
+  080 pilot evaluates already-captured Markdown through an echo provider
+  and forbids live provider wrappers, so it cannot execute
+  translate/edit/headline calls or capture latency, failures, and
+  serving attribution (Codex P2 on PR #322). If 080 lands, reuse at most
+  its comparison/reporting layer — never substitute it for generation.
 - Side probe (same window, not part of the main benchmark): Ultra's
   effective hosted context (reported 262k–1M depending on host) — needed
   before any future long-context synthesis design.

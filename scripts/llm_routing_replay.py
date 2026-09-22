@@ -179,7 +179,7 @@ def _case_input(db_id: str) -> dict:
     con.row_factory = sqlite3.Row
     row = con.execute(
         "SELECT id, title, summary, content, content_mode, url, source_id,"
-        " source_name FROM articles WHERE id = ?",
+        " source_name, category FROM articles WHERE id = ?",
         (int(db_id),),
     ).fetchone()
     con.close()
@@ -195,6 +195,7 @@ def _case_input(db_id: str) -> dict:
         "url": d["url"] or "",
         "source_id": d["source_id"] or "",
         "source_name": d["source_name"] or "",
+        "category": d.get("category") or "",
     }
 
 
@@ -589,17 +590,300 @@ def cmd_analyze() -> int:
             ok_recs = [j for j in arm_recs if j.get("status") == "ok"]
             lines.append(f"- arm {arm}: {len(ok_recs)}/{len(arm_recs)} ok")
         lines.append("")
+    if CROSS_PATH.exists():
+        lines.append("## Cross-critic matrix (output-arm x critic-arm approval)")
+        cross = [
+            json.loads(line)
+            for line in CROSS_PATH.read_text(encoding="utf-8").splitlines()
+        ]
+        header = "out\\critic | " + " | ".join(ARMS) + " |"
+        lines.append(header)
+        for output_arm in ARMS:
+            cells = []
+            for critic_arm in ARMS:
+                recs = [
+                    c
+                    for c in cross
+                    if c.get("output_arm") == output_arm
+                    and c.get("critic_arm") == critic_arm
+                    and c.get("status") == "ok"
+                ]
+                if recs:
+                    cells.append(
+                        f"{sum(1 for c in recs if c.get('approved'))}/{len(recs)}"
+                    )
+                else:
+                    cells.append("-")
+            lines.append(f"{output_arm} | " + " | ".join(cells) + " |")
+        lines.append("")
+        lines.append(
+            "_Diagonal inflation (self-approval >> cross-approval) "
+            "means the critic is lenient to its own model; read "
+            "output-arm quality down the fixed-critic columns._"
+        )
+    if GROUNDED_PATH.exists():
+        lines.append("## Grounded fact-check (claims vs source content)")
+        for arm in ARMS:
+            recs = [
+                json.loads(line)
+                for line in GROUNDED_PATH.read_text(encoding="utf-8").splitlines()
+                if json.loads(line).get("arm") == arm
+            ]
+            ok_recs = [r for r in recs if r.get("status") == "ok"]
+            lines.append(
+                f"- arm {arm}: {len(ok_recs)}/{len(recs)} judged, "
+                f"{sum(r.get('n_claims', 0) for r in ok_recs)} claims total"
+            )
+        lines.append("")
     lines.append("_Human blind ranks merged separately before thresholds apply._")
     INTERIM_PATH.write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+CROSS_PATH = EVAL_DIR / "cross_critic.jsonl"
+GROUNDED_PATH = EVAL_DIR / "grounded.jsonl"
+
+
+def _parse_output_frontmatter(markdown: str) -> dict:
+    """Frontmatter dict from a generated article ({} when unparseable)."""
+    import yaml
+
+    parts = (markdown or "").split("---")
+    if len(parts) < 3 or parts[0].strip():
+        return {}
+    try:
+        data = yaml.safe_load(parts[1])
+    except Exception:  # noqa: BLE001 - recorded as absent, not raised
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _bundle_subset() -> list[dict]:
+    """The 12 bundle cases (recomputed identically to cmd_bundle)."""
+    import random as _random
+
+    ok: dict[str, set[str]] = {}
+    for line in RUNS_PATH.read_text(encoding="utf-8").splitlines():
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("status") == "ok" and rec.get("output"):
+            ok.setdefault(rec["db_id"], set()).add(rec["arm"])
+    eligible = [db for db, arms in ok.items() if arms == set(ARMS)]
+    cases = {
+        json.loads(line)["db_id"]: json.loads(line)
+        for line in CASES_PATH.read_text(encoding="utf-8").splitlines()
+    }
+    hard = sorted(d for d in eligible if cases.get(d, {}).get("hard"))
+    easy = sorted(d for d in eligible if not cases.get(d, {}).get("hard"))
+    rng = _random.Random(BUNDLE_SEED)
+    rng.shuffle(hard)
+    rng.shuffle(easy)
+    return [
+        {"db_id": db, **cases.get(db, {})}
+        for db in (hard[:BUNDLE_HARD_N] + easy[: BUNDLE_N - BUNDLE_HARD_N])[:BUNDLE_N]
+    ]
+
+
+def _fixed_critic_agents():
+    """One EditorAgent per arm config, used ONLY for critic calls.
+
+    Generation already happened; these agents never draft. Calling the
+    critic through arm X's model over every arm's outputs yields the
+    full output-arm x critic-arm approval matrix, which separates
+    output quality from grader leniency (Codex P1 on PR #322).
+    """
+    from news_collector.components.editorial.ai_editor import EditorAgent
+    from news_collector.infrastructure.llm.model_registry import (
+        resolve_ollama_stage_models,
+    )
+
+    base_cfg = _load_config()
+    agents = {}
+    for arm in ARMS:
+        cfg = build_arm_config(arm, base_cfg)
+        resolved = resolve_ollama_stage_models(cfg, logger=_bench_logger())
+        agents[arm] = EditorAgent(
+            api_url=cfg.ollama.api_url,
+            model=resolved["default"],
+            translator_model=resolved["translator"],
+            editor_model=resolved["editor"],
+            headlines_model=resolved["headlines"],
+            enrichment_model=resolved["enrichment"],
+            config=cfg,
+        )
+    return agents
+
+
+def cmd_cross_critic() -> int:
+    """3x3 critic matrix on the bundle subset (post-hoc, no regeneration)."""
+    import copy as _copy
+
+    if not RUNS_PATH.exists():
+        print("no runs.jsonl — run --phase generate first")
+        return 2
+    outputs: dict[tuple[str, str], dict] = {}
+    for line in RUNS_PATH.read_text(encoding="utf-8").splitlines():
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("status") == "ok" and rec.get("output"):
+            outputs[(rec["db_id"], rec["arm"])] = rec
+    subset = _bundle_subset()
+    if not subset:
+        print("no fully-ok cases yet — run generate first")
+        return 2
+    agents = _fixed_critic_agents()
+    done = set()
+    if CROSS_PATH.exists():
+        for line in CROSS_PATH.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+                done.add((rec["db_id"], rec["output_arm"], rec["critic_arm"]))
+            except (json.JSONDecodeError, KeyError):
+                continue
+    with CROSS_PATH.open("a", encoding="utf-8") as out:
+        for case in subset:
+            db_id = case["db_id"]
+            row = _case_input(db_id)
+            for output_arm in ARMS:
+                rec = outputs.get((db_id, output_arm))
+                if rec is None:
+                    continue
+                fm = _parse_output_frontmatter(rec["output"])
+                body = _extract_body(rec["output"])
+                context = {
+                    "title": fm.get("title", ""),
+                    "summary": fm.get("excerpt", ""),
+                    "source_url": row["url"],
+                    "source_name": row["source_name"],
+                    "category": row.get("category", ""),
+                }
+                for critic_arm in ARMS:
+                    if (db_id, output_arm, critic_arm) in done:
+                        continue
+                    agent = agents[critic_arm]
+                    agent.last_critic_verdict = None
+                    t0 = time.time()
+                    try:
+                        valid, reason, _ = agent._critic_editorial_pass(body, context)
+                        verdict = _copy.deepcopy(agent.last_critic_verdict)
+                        status, error = "ok", None
+                    except Exception as exc:  # noqa: BLE001 - failures are data
+                        valid, reason, verdict = None, None, None
+                        status, error = "failed", str(exc)[:300]
+                    out.write(
+                        json.dumps(
+                            {
+                                "db_id": db_id,
+                                "output_arm": output_arm,
+                                "critic_arm": critic_arm,
+                                "status": status,
+                                "error": error,
+                                "approved": valid,
+                                "reason": (reason or "")[:300],
+                                "verdict": verdict,
+                                "wall_s": round(time.time() - t0, 1),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+                    out.flush()
+                    print(
+                        f"cross {db_id} out={output_arm} critic={critic_arm}: "
+                        f"{status} approved={valid}"
+                    )
+    return 0
+
+
+def cmd_grounded() -> int:
+    """Source-grounded fact-check judging over every ok output (post-hoc).
+
+    Uses each arm's own drafted fact_check labels against the DB source
+    content, verified through a dedicated always-Ollama provider — the
+    same independence property as production Phase 2c, and the fixed
+    grounded judge Codex P1 (PR #322) requires. The production auditor
+    never sees source contents, so its counts stay demoted to
+    prose-caution flags (spec §6).
+    """
+    if not RUNS_PATH.exists():
+        print("no runs.jsonl — run --phase generate first")
+        return 2
+    agents = _fixed_critic_agents()
+    done = set()
+    if GROUNDED_PATH.exists():
+        for line in GROUNDED_PATH.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+                done.add((rec["db_id"], rec["arm"]))
+            except (json.JSONDecodeError, KeyError):
+                continue
+    with GROUNDED_PATH.open("a", encoding="utf-8") as out:
+        for line in RUNS_PATH.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("status") != "ok" or not rec.get("output"):
+                continue
+            key = (rec["db_id"], rec["arm"])
+            if key in done:
+                continue
+            row = _case_input(rec["db_id"])
+            fm = _parse_output_frontmatter(rec["output"])
+            labels = [
+                item.get("label")
+                for item in (fm.get("fact_check") or [])
+                if isinstance(item, dict) and item.get("label")
+            ]
+            claims = [{"label": label} for label in labels]
+            t0 = time.time()
+            try:
+                verdicts = agents["A"]._verify_fact_check_claims(
+                    claims,
+                    row["content"] or "",
+                    fm.get("title", ""),
+                    row.get("content_mode", "full_text"),
+                )
+                status, error = "ok", None
+            except Exception as exc:  # noqa: BLE001 - failures are data
+                verdicts, status, error = None, "failed", str(exc)[:300]
+            out.write(
+                json.dumps(
+                    {
+                        "run_id": rec["run_id"],
+                        "db_id": rec["db_id"],
+                        "arm": rec["arm"],
+                        "status": status,
+                        "error": error,
+                        "n_claims": len(claims),
+                        "verdicts": verdicts,
+                        "wall_s": round(time.time() - t0, 1),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+            out.flush()
+            print(f"grounded {rec['run_id']}: {status} ({len(claims)} claims)")
+            done.add(key)
+    return 0
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--phase",
-        choices=["dry-run", "generate", "judge", "bundle", "analyze"],
+        choices=[
+            "dry-run",
+            "generate",
+            "judge",
+            "cross-critic",
+            "grounded",
+            "bundle",
+            "analyze",
+        ],
         required=True,
     )
     parser.add_argument("--max-cases", type=int, default=None)
@@ -610,6 +894,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_generate(args.max_cases)
     if args.phase == "judge":
         return cmd_judge()
+    if args.phase == "cross-critic":
+        return cmd_cross_critic()
+    if args.phase == "grounded":
+        return cmd_grounded()
     if args.phase == "bundle":
         return cmd_bundle()
     if args.phase == "analyze":

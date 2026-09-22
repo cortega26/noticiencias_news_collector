@@ -5,36 +5,36 @@ until the ADR lands; arms B/C are harness-only.
 
 ## Setup
 
-- [ ] Check plan 080 Phase 3 status: reuse its replay harness if landed,
-  else scaffold the standalone replay script (`get_provider` +
-  `config/prompts.yaml` + existing validators, no new dependencies)
-- [ ] Verify candidate model ids against provider `/models` endpoints;
-  record exact ids (Ultra + GLM ids are TBD until this step)
-- [ ] Build harness-only endpoint config for arms B/C (same NVIDIA base
-  URL for Ultra; `extra_body = { reasoning_effort = "low" }` +
-  `clear_thinking = true` for GLM). Review the diff to prove neither arm
-  can join a live default chain
+- [x] Plan 080 Phase 3 checked (TODO): standalone runner is plan of record
+- [x] Candidate model ids verified against NVIDIA `/models`
+  (81 models; ultra + glm-flash ids confirmed live)
+- [x] Harness-only endpoint config for arms B/C (same NVIDIA base URL;
+  GLM pinned low-reasoning; dry-run proves neither joins a live chain)
 
 ## Dataset
 
-- [ ] Select 40 stratified articles (science/health/tech/astro+physics,
-  v1+v2, ~10 hard) with recorded RNG seed; exclude retracted/corrected
-- [ ] Confirm `tests/data/enrichment_eval.jsonl` (44 gold records) current
-- [ ] Pin + record prompt hashes for translator/editor/headline/critics
+- [x] 40 stratified cases (seed 20260921) + prompt hash recorded
+- [x] Prompt pins: full-file sha256 recorded in dataset manifest
+- [ ] Blind bundle assembly (12 items, sealed mapping) after generate
 
 ## Runs
 
-- [ ] Run arms A/B/C (+ local reference D for audit tasks) over all tasks;
-  record outputs, critic scores, schema results, latency, tokens,
-  failures/429s, quota burn
-- [ ] Relabel outputs A/B/C, seal the mapping; assemble the blind review
-  bundle (12-article stratified subset for human ranking)
+- [x] Dataset manifest: 40 seeded cases (19 published-match, 21 backfill,
+  11 hard, strata 17/6/12/5) + prompt hash (`scripts/llm_routing_dataset.py`)
+- [x] Standalone replay harness with per-arm wiring, mixed-run rule,
+  metrics-window attribution (`scripts/llm_routing_replay.py`)
+- [ ] Full generate runs (40×3, background, resumable) — in progress
+- [ ] Cross-critic matrix on the bundle subset (post-hoc, no regeneration)
+- [ ] Grounded fact-check judging over all ok outputs (post-hoc)
+- [ ] Production-auditor + forced-local judging (post-hoc)
 - [ ] Side probe: Ultra effective hosted context (262k vs 1M)
 
 ## Analysis + decision
 
-- [ ] Compute §7 metrics with distributions; human blind ranking (operator)
-- [ ] Apply pre-registered §8 thresholds mechanically
+- [ ] Compute §7 metrics with distributions (proxies, not tokens); human
+  blind ranking (operator) on the 12-item bundle
+- [ ] Apply pre-registered §8 thresholds mechanically (cross-critic
+  columns, grounded dispute rates, human ranks)
 - [ ] Write `reports/evaluation/llm-routing-2026-##.md` with all numbers
 - [ ] Write `docs/adr/0010-llm-routing.md` (decision + license restatement),
   including "no change" if thresholds are not met
