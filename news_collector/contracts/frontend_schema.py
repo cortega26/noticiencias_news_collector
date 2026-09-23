@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
+from enum import Enum
 from typing import List, Optional, Union
 
 from pydantic import (
@@ -41,6 +42,35 @@ class FactCheckItem(BaseModel):
     status: str
 
 
+class SourceRole(str, Enum):
+    """Primary vs secondary source role (frontend P0-01)."""
+
+    PRIMARY = "primary"
+    SECONDARY = "secondary"
+
+
+class EvidenceSubjectType(str, Enum):
+    """Structured evidence-subject type (frontend P0-02)."""
+
+    HUMANS = "humans"
+    ANIMALS = "animals"
+    IN_VITRO = "in_vitro"
+    COMPUTATIONAL = "computational"
+    OBSERVATIONAL = "observational"
+    EXPERIMENTAL = "experimental"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
+class PublicationStatus(str, Enum):
+    """Publication record status (frontend Wave 3 P0-03)."""
+
+    PEER_REVIEWED = "peer_reviewed"
+    PREPRINT = "preprint"
+    CONFERENCE = "conference"
+    OTHER = "other"
+
+
 class SourceItem(BaseModel):
     """Source citation item."""
 
@@ -48,6 +78,14 @@ class SourceItem(BaseModel):
     url: HttpUrl
     publisher: Optional[str] = None
     date: Optional[str] = None
+    role: Optional[SourceRole] = None
+    doi: Optional[str] = Field(default=None, pattern=r"^10\.\d{4,}/.+")
+
+    @model_validator(mode="after")
+    def _doi_requires_primary_role(self):
+        if self.doi is not None and self.role is not SourceRole.PRIMARY:
+            raise ValueError("sources with doi must declare role: primary")
+        return self
 
 
 class GlossaryItem(BaseModel):
@@ -147,7 +185,9 @@ class AstroPost(BaseModel):
     requires_uncertainty_note: bool = Field(default=False)
 
     fact_check: Optional[List[FactCheckItem]] = None
-    why_it_matters: Optional[List[str]] = None
+    why_it_matters: Optional[List[str]] = Field(default=None, max_length=3)
+    evidence_subject_type: Optional[EvidenceSubjectType] = None
+    evidence_detail: Optional[str] = Field(default=None, min_length=1, max_length=280)
     series: Optional[str] = None
     sources: Optional[List[SourceItem]] = None
 
@@ -155,6 +195,28 @@ class AstroPost(BaseModel):
     # default; an explicit `social: null` is rejected (the Zod contract is
     # `.optional()`, not `.nullish()`).
     social: Optional[SocialConfig] = None
+
+    # Wave 3 accountability contract (frontend P0-03/P0-09/P2-02/P2-07).
+    # All optional; absent = omit at render, never placeholder. Reviewer
+    # identity is stamped only for real human reviews, never invented.
+    institution: Optional[str] = Field(default=None, min_length=1, max_length=160)
+    publication_status: Optional[PublicationStatus] = None
+    reviewer_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    reviewer_role: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    reviewer_profile_url: Optional[HttpUrl] = None
+    review_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    known_points: Optional[List[str]] = Field(default=None, max_length=3)
+    open_questions: Optional[List[str]] = Field(default=None, max_length=3)
+    corrected_at: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    correction_summary: Optional[str] = Field(
+        default=None, min_length=1, max_length=500
+    )
+
+    @model_validator(mode="after")
+    def _correction_travels_together(self):
+        if bool(self.corrected_at) != bool(self.correction_summary):
+            raise ValueError("corrected_at and correction_summary must be set together")
+        return self
 
     @field_validator("social", mode="before")
     @classmethod
