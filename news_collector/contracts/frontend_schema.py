@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
+from enum import Enum
 from typing import List, Optional, Union
 
 from pydantic import (
@@ -41,6 +42,26 @@ class FactCheckItem(BaseModel):
     status: str
 
 
+class SourceRole(str, Enum):
+    """Primary vs secondary source role (frontend P0-01)."""
+
+    PRIMARY = "primary"
+    SECONDARY = "secondary"
+
+
+class EvidenceSubjectType(str, Enum):
+    """Structured evidence-subject type (frontend P0-02)."""
+
+    HUMANS = "humans"
+    ANIMALS = "animals"
+    IN_VITRO = "in_vitro"
+    COMPUTATIONAL = "computational"
+    OBSERVATIONAL = "observational"
+    EXPERIMENTAL = "experimental"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
 class SourceItem(BaseModel):
     """Source citation item."""
 
@@ -48,6 +69,8 @@ class SourceItem(BaseModel):
     url: HttpUrl
     publisher: Optional[str] = None
     date: Optional[str] = None
+    role: Optional[SourceRole] = None
+    doi: Optional[str] = Field(default=None, pattern=r"^10\.\d{4,}/.+")
 
 
 class GlossaryItem(BaseModel):
@@ -147,7 +170,9 @@ class AstroPost(BaseModel):
     requires_uncertainty_note: bool = Field(default=False)
 
     fact_check: Optional[List[FactCheckItem]] = None
-    why_it_matters: Optional[List[str]] = None
+    why_it_matters: Optional[List[str]] = Field(default=None, max_length=3)
+    evidence_subject_type: Optional[EvidenceSubjectType] = None
+    evidence_detail: Optional[str] = Field(default=None, min_length=1, max_length=280)
     series: Optional[str] = None
     sources: Optional[List[SourceItem]] = None
 
