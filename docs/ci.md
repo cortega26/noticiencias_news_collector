@@ -79,6 +79,18 @@ make verify-ci
   - link-checks `README.md` and `docs/**`; it does not run `make docs-check`
 - `make docs-check` validates selected active docs locally and in `make verify-ci`; it is not a job in the main CI workflow.
 
+### Admin contracts
+
+- `.github/workflows/ci.yml` (job `admin-contracts`, on every push/PR): installs
+  Python + Node 24 and `npm ci` in `apps/admin`, then runs
+  `make admin-contracts-check` (fresh OpenAPI export compared against
+  `apps/admin/openapi.json`, then `openapi-typescript --check` on the committed
+  types), `make admin-test` and `make admin-build`.
+- Local regeneration: `make admin-contracts-generate`.
+- Ownership: Pydantic models in `news_collector/contracts/admin.py` are the
+  source; the exporter is the only writer of `apps/admin/openapi.json`; the
+  generated `api.d.ts` is never edited by hand (plan 080 Phase 2).
+
 ### Architecture And Contract Focus
 
 - `.github/workflows/system-verification.yml`

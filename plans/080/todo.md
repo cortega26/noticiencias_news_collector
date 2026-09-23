@@ -37,12 +37,12 @@ only after its acceptance evidence and required review exist.
 
 ## Phase 2 — generated admin response contracts
 
-- [ ] Add/test isolated deterministic schema export and nonmutating check modes.
-- [ ] Pin generator, commit schema/types, replace four response interfaces.
-- [ ] Add Make/npm commands and dedicated CI job with correct triggers.
-- [ ] Prove A1–A5 including separate stale-schema and stale-types failures.
-- [ ] Update active docs and exact Plan 060 partial progress.
-- [ ] Run required gates; record `tests/phase-2-results.md`; resolve fresh review.
+- [x] Add/test isolated deterministic schema export and nonmutating check modes.
+- [x] Pin generator, commit schema/types, replace four response interfaces.
+- [x] Add Make/npm commands and dedicated CI job with correct triggers.
+- [x] Prove A1–A5 including separate stale-schema and stale-types failures.
+- [x] Update active docs and exact Plan 060 partial progress.
+- [x] Run required gates; record `tests/phase-2-results.md`; resolve fresh review.
 
 ## Phase 3 — offline editorial replay pilot
 

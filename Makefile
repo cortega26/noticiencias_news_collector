@@ -140,6 +140,14 @@ admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
 admin-test: ## Run the Refinery admin GUI client unit tests (vitest)
 	@cd apps/admin && npm test
 
+admin-contracts-generate: bootstrap ## Regenerate the admin OpenAPI artifact and generated TS types (plan 080 Phase 2)
+	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --output apps/admin/openapi.json
+	@cd apps/admin && npm run contracts:generate
+
+admin-contracts-check: bootstrap ## Fail if the admin OpenAPI artifact or generated TS types are stale (plan 080 Phase 2)
+	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --check apps/admin/openapi.json
+	@cd apps/admin && npm run contracts:check
+
 
 enrichment-eval: bootstrap ## Plan 048: evaluate production pattern_v1 + curated candidate against the reviewed corpus (reports/evaluation/)
 	@mkdir -p reports/evaluation
