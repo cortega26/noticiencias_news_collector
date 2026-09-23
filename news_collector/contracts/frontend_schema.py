@@ -72,6 +72,12 @@ class SourceItem(BaseModel):
     role: Optional[SourceRole] = None
     doi: Optional[str] = Field(default=None, pattern=r"^10\.\d{4,}/.+")
 
+    @model_validator(mode="after")
+    def _doi_requires_primary_role(self):
+        if self.doi is not None and self.role is not SourceRole.PRIMARY:
+            raise ValueError("sources with doi must declare role: primary")
+        return self
+
 
 class GlossaryItem(BaseModel):
     """Glossary term and definition."""
