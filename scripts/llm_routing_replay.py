@@ -872,6 +872,9 @@ def cmd_grounded() -> int:
             print(f"grounded {rec['run_id']}: {status} ({len(claims)} claims)")
             done.add(key)
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--phase",
