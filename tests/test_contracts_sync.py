@@ -109,6 +109,57 @@ def test_astro_post_serialization():
         AstroPost(title="Short", excerpt="Short", date=date(2023, 1, 1))  # Too short
 
 
+def test_wave2_editorial_mirror_fields():
+    """Wave 2 (P0-01/P0-02/P0-06): role/doi/evidence fields round-trip.
+
+    Mirrors the frontend schema additions. Legacy payloads without the new
+    keys must still validate; malformed DOI and over-long why_it_matters
+    must fail closed.
+    """
+    post = AstroPost(
+        title="Test Title for Wave2",
+        excerpt="This is a test excerpt that is long enough.",
+        date=date(2023, 1, 1),
+        image="http://example.com/image.jpg",
+        image_alt="Imagen editorial de prueba",
+        sources=[
+            {
+                "title": "Primary paper",
+                "url": "https://doi.org/10.1371/journal.pone.0353485",
+                "role": "primary",
+                "doi": "10.1371/journal.pone.0353485",
+            },
+            {"title": "Coverage", "url": "http://source.com"},
+        ],
+        evidence_subject_type="mixed",
+        evidence_detail="Cultivo celular y ratones.",
+        why_it_matters=["One", "Two", "Three"],
+    )
+    dumped = post.model_dump(exclude_none=True)
+    assert dumped["sources"][0]["role"] == "primary"
+    assert dumped["evidence_subject_type"] == "mixed"
+
+    with pytest.raises(ValueError):
+        AstroPost(
+            title="Test Title for Wave2",
+            excerpt="This is a test excerpt that is long enough.",
+            date=date(2023, 1, 1),
+            image="http://example.com/image.jpg",
+            image_alt="Imagen editorial de prueba",
+            sources=[{"title": "S", "url": "http://source.com", "doi": "bad"}],
+        )
+
+    with pytest.raises(ValueError):
+        AstroPost(
+            title="Test Title for Wave2",
+            excerpt="This is a test excerpt that is long enough.",
+            date=date(2023, 1, 1),
+            image="http://example.com/image.jpg",
+            image_alt="Imagen editorial de prueba",
+            why_it_matters=["1", "2", "3", "4"],
+        )
+
+
 def test_frontend_schema_is_available_in_ci():
     """In CI the frontend schema copy step must succeed before parity runs."""
     if not _is_ci_with_expected_schema():

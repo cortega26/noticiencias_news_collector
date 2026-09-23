@@ -150,6 +150,13 @@ reports/*
 !reports/perf/postgres_write_profile.json
 !reports/ops/
 !reports/ops/monitoring_outage_report.json
+!reports/evaluation/
+!reports/evaluation/routing_benchmark_cases.jsonl
+!reports/evaluation/routing/
+!reports/evaluation/routing/runs.jsonl
+!reports/evaluation/routing/judgments.jsonl
+!reports/evaluation/routing/blind_bundle.md
+!reports/evaluation/routing/llm-routing-*.md
 # Config editor runtime artifacts
 backups/
 logs/config_editor.log

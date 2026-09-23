@@ -60,6 +60,9 @@ The render authority is:
 - refinery-generated posts must publish exactly one primary category from the current editorial taxonomy
 - `Editorial` is reserved for first-party Noticiencias-authored pieces; translated third-party articles must resolve to a non-`Editorial` category
 - optional `social` object (`{publish: bool = false, id?: 64-char lowercase hex}`): social-distribution opt-in stamped deterministically by `contracts/social_publication.py` at Markdown write time (absent by default; explicit `null` rejected on both sides; the LLM never decides it)
+- `sources[]` items accept optional `role` (`primary` | `secondary`) and `doi` (`10.xxxx/...`): producer stamps `role: primary` + DOI only for a verified primary paper/preprint; absent role renders as secondary (frontend Wave 2 P0-01; no backfill required)
+- optional `evidence_subject_type` (humans | animals | in_vitro | computational | observational | experimental | mixed | unknown) + `evidence_detail` (≤280 chars): producer records the verified experimental model, never inferred (frontend Wave 2 P0-02)
+- `why_it_matters` allows 0–3 items with no minimum: producer omits implications rather than fabricating them (frontend Wave 2 P0-06 / DEC-003; `max_length=3` enforced on both sides)
 
 ### Current Identity Reuse Order
 
