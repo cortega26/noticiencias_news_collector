@@ -138,7 +138,6 @@ def test_wave2_editorial_mirror_fields():
     dumped = post.model_dump(exclude_none=True)
     assert dumped["sources"][0]["role"] == "primary"
     assert dumped["evidence_subject_type"] == "mixed"
-
     with pytest.raises(ValueError):
         AstroPost(
             title="Test Title for Wave2",
@@ -157,6 +156,39 @@ def test_wave2_editorial_mirror_fields():
             image="http://example.com/image.jpg",
             image_alt="Imagen editorial de prueba",
             why_it_matters=["1", "2", "3", "4"],
+        )
+
+
+def test_wave3_accountability_mirror_fields():
+    """Wave 3 (P0-03/P0-09/P2-02/P2-07): accountability fields round-trip.
+
+    All optional; a half-correction must fail closed.
+    """
+    post = AstroPost(
+        title="Test Title for Wave3",
+        excerpt="This is a test excerpt that is long enough.",
+        date=date(2023, 1, 1),
+        image="http://example.com/image.jpg",
+        image_alt="Imagen editorial de prueba",
+        institution="McGill University",
+        publication_status="preprint",
+        known_points=["a", "b"],
+        open_questions=["c"],
+        corrected_at="2026-09-02",
+        correction_summary="Se corrigio una cifra.",
+    )
+    dumped = post.model_dump(exclude_none=True)
+    assert dumped["publication_status"] == "preprint"
+    assert dumped["corrected_at"] == "2026-09-02"
+
+    with pytest.raises(ValueError):
+        AstroPost(
+            title="Test Title for Wave3",
+            excerpt="This is a test excerpt that is long enough.",
+            date=date(2023, 1, 1),
+            image="http://example.com/image.jpg",
+            image_alt="Imagen editorial de prueba",
+            corrected_at="2026-09-02",
         )
 
 

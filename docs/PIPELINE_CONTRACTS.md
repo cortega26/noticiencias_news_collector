@@ -63,6 +63,7 @@ The render authority is:
 - `sources[]` items accept optional `role` (`primary` | `secondary`) and `doi` (`10.xxxx/...`): producer stamps `role: primary` + DOI only for a verified primary paper/preprint; absent role renders as secondary (frontend Wave 2 P0-01; no backfill required)
 - optional `evidence_subject_type` (humans | animals | in_vitro | computational | observational | experimental | mixed | unknown) + `evidence_detail` (≤280 chars): producer records the verified experimental model, never inferred (frontend Wave 2 P0-02)
 - `why_it_matters` allows 0–3 items with no minimum: producer omits implications rather than fabricating them (frontend Wave 2 P0-06 / DEC-003; `max_length=3` enforced on both sides)
+- Wave 3 accountability fields (all optional; producer stamps only verified data, reviewer identity never invented): `institution`, `publication_status` (peer_reviewed | preprint | conference | other), `reviewer_name`/`reviewer_role`/`reviewer_profile_url`/`review_date`, `known_points`/`open_questions` (≤3 each), `corrected_at` + `correction_summary` (travel together)
 
 ### Current Identity Reuse Order
 
