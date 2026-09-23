@@ -19,7 +19,7 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
 | Admin API (Phase 1) | `news_collector/serving/api.py` | Astro admin GUI | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing storage/workflow modules |
-| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py` | token in localStorage with `PUBLIC_ADMIN_API_KEY` build-time fallback; Bearer header; CORS allowlist via `ADMIN_CORS_ORIGINS` |
+| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py`; the four workflow run models are generated from `apps/admin/openapi.json` (plan 080 Phase 2) | token in localStorage with `PUBLIC_ADMIN_API_KEY` build-time fallback; Bearer header; CORS allowlist via `ADMIN_CORS_ORIGINS` |
 
 ## Export To Refinery
 
