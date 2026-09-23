@@ -1,6 +1,8 @@
 # Spec — LLM routing benchmark: Super (control) vs Ultra vs GLM-5.3-Flash
 
-Status: proposed. Decides the model-routing question in
+Status: executed (partial) — closed 2026-09-23 with **no change** (GLM
+endpoint unusable; see `reports/evaluation/llm-routing-2026-09.md` and
+`docs/adr/0010-llm-routing.md`). Decides the model-routing question in
 `spec-llm-provider-chain.md` follow-ups and the external assessment of
 2026-09-21 (Nemotron-3-Super vs Ultra vs GLM-5.3-Flash). No production
 behavior changes in this spec — it produces evidence and an ADR.
