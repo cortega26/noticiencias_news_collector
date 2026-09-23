@@ -1,0 +1,8 @@
+---
+# Codacy code analysis exclusions.
+#
+# `apps/admin/src/lib/generated/` is produced by `openapi-typescript` from
+# `apps/admin/openapi.json` (plan 080 Phase 2) and is never edited by hand;
+# analyzing generated declarations only produces noise.
+exclude_paths:
+  - 'apps/admin/src/lib/generated/**'
