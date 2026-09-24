@@ -194,8 +194,23 @@ def db_manager(tmp_path) -> DatabaseManager:
 
 
 @pytest.fixture()
-def api_client(db_manager: DatabaseManager) -> TestClient:
-    app = create_app(database_manager=db_manager)
+def sources_yaml_path(tmp_path: Path) -> Path:
+    """Isolated copy of the real catalog.
+
+    Plan 060 / Phase 4b: source-mutation routes go through
+    `SourceCatalogWorkflow`, which reads/writes a real file. Tests must
+    never touch the tracked `news_collector/config/sources.yaml`.
+    """
+    from news_collector.config.sources import SOURCES_YAML_PATH
+
+    target = tmp_path / "sources.yaml"
+    target.write_text(SOURCES_YAML_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    return target
+
+
+@pytest.fixture()
+def api_client(db_manager: DatabaseManager, sources_yaml_path: Path) -> TestClient:
+    app = create_app(database_manager=db_manager, sources_yaml_path=sources_yaml_path)
     return TestClient(app)
 
 
@@ -2153,30 +2168,39 @@ def test_read_upload_capped_rejects_over_cap() -> None:
     assert exc_info.value.status_code == 413
 
 
-def test_admin_delete_source_removes_yaml_and_db(
-    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
-) -> None:
-    from news_collector.config import sources as sources_mod
-    from news_collector.serving import api as serving_api
+def _write_catalog(path: Path, catalog: dict) -> None:
+    import yaml
 
-    # Point ALL_SOURCES at a tmp yaml so we don't touch the real config.
-    fake_sources = {
-        "delete_me": {
-            "name": "Delete Me",
-            "url": "https://example.com/feed",
-            "category": "science",
-        }
-    }
-    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
-    yaml_path = tmp_path / "sources.yaml"
-    monkeypatch.setattr(
-        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
+    path.write_text(
+        yaml.safe_dump(catalog, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
     )
-    # The endpoint imports ALL_SOURCES/save_sources from
-    # news_collector.config.sources at call time — patch there.
-    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
-    monkeypatch.setattr(
-        "news_collector.config.sources.save_sources", sources_mod.save_sources
+
+
+def _read_catalog(path: Path) -> dict:
+    import yaml
+
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def test_admin_delete_source_removes_yaml_and_db(
+    api_client: TestClient, db_manager: DatabaseManager, sources_yaml_path: Path
+) -> None:
+    # Plan 060 / Phase 4b: the route mutates the isolated catalog file
+    # through SourceCatalogWorkflow (lock + atomic write + DB sync).
+    _write_catalog(
+        sources_yaml_path,
+        {
+            "delete_me": {
+                "name": "Delete Me",
+                "url": "https://example.com/feed",
+                "credibility_score": 0.5,
+                "category": "science",
+                "tier": "D",
+                "fetchability_score": 50,
+                "crawl_interval_seconds": 86400,
+            }
+        },
     )
 
     with db_manager.get_session() as session:
@@ -2197,7 +2221,7 @@ def test_admin_delete_source_removes_yaml_and_db(
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
-    assert "delete_me" not in sources_mod.ALL_SOURCES
+    assert "delete_me" not in _read_catalog(sources_yaml_path)
     with db_manager.get_session() as session:
         assert session.query(Source).filter(Source.id == "delete_me").first() is None
 
@@ -2234,22 +2258,9 @@ def _make_brief(slug: str):
 
 
 def test_admin_upsert_source_creates(
-    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
+    api_client: TestClient, db_manager: DatabaseManager, sources_yaml_path: Path
 ) -> None:
-    from news_collector.config import sources as sources_mod
-    from news_collector.serving import api as serving_api
-
-    fake_sources: dict = {}
-    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
-    yaml_path = tmp_path / "sources.yaml"
-    monkeypatch.setattr(
-        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
-    )
-    # The endpoint imports from news_collector.config.sources at call time.
-    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
-    monkeypatch.setattr(
-        "news_collector.config.sources.save_sources", sources_mod.save_sources
-    )
+    _write_catalog(sources_yaml_path, {})
 
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.post(
@@ -2269,10 +2280,20 @@ def test_admin_upsert_source_creates(
         assert response.json()["status"] == "ok"
         assert "created" in response.json()["detail"]
 
-    entry = fake_sources["new_source"]
+    catalog = _read_catalog(sources_yaml_path)
+    entry = catalog["new_source"]
     assert entry["name"] == "New Source"
     assert entry["language"] == "en"  # create defaults
     assert entry["_group"] == "CUSTOM"
+    # Phase 4b: required catalog fields are seeded so the entry passes the
+    # same validation the pipeline runs at startup.
+    assert entry["tier"] == "D"
+    assert entry["fetchability_score"] == 50
+    assert entry["crawl_interval_seconds"] == 86400
+
+    from news_collector.config.sources import validate_source_catalog
+
+    assert validate_source_catalog(catalog) == []
 
     with db_manager.get_session() as session:
         row = session.query(Source).filter(Source.id == "new_source").first()
@@ -2281,30 +2302,25 @@ def test_admin_upsert_source_creates(
 
 
 def test_admin_upsert_source_update_preserves_existing_keys(
-    api_client: TestClient, db_manager: DatabaseManager, tmp_path, monkeypatch
+    api_client: TestClient, db_manager: DatabaseManager, sources_yaml_path: Path
 ) -> None:
-    from news_collector.config import sources as sources_mod
-    from news_collector.serving import api as serving_api
-
-    fake_sources = {
-        "existing": {
-            "name": "Old Name",
-            "url": "https://old.example.com/feed",
-            "credibility_score": 0.5,
-            "category": "technology",
-            "blacklisted": True,
-            "blacklist_reason": "spam",
-            "etag": "abc123",
-        }
-    }
-    monkeypatch.setattr(sources_mod, "ALL_SOURCES", fake_sources)
-    yaml_path = tmp_path / "sources.yaml"
-    monkeypatch.setattr(
-        sources_mod, "save_sources", lambda srcs: yaml_path.write_text(str(srcs))
-    )
-    monkeypatch.setattr("news_collector.config.sources.ALL_SOURCES", fake_sources)
-    monkeypatch.setattr(
-        "news_collector.config.sources.save_sources", sources_mod.save_sources
+    _write_catalog(
+        sources_yaml_path,
+        {
+            "existing": {
+                "name": "Old Name",
+                "url": "https://old.example.com/feed",
+                "credibility_score": 0.5,
+                "category": "technology",
+                "blacklisted": True,
+                "blacklist_reason": "spam",
+                "blacklisted_date": "2026-08-01",
+                "etag": "abc123",
+                "tier": "B",
+                "fetchability_score": 80,
+                "crawl_interval_seconds": 3600,
+            }
+        },
     )
 
     with db_manager.get_session() as session:
@@ -2333,11 +2349,12 @@ def test_admin_upsert_source_update_preserves_existing_keys(
         assert response.status_code == 200
         assert "updated" in response.json()["detail"]
 
-    entry = fake_sources["existing"]
+    entry = _read_catalog(sources_yaml_path)["existing"]
     assert entry["name"] == "New Name"
     assert entry["url"] == "https://new.example.com/feed"
     assert entry["blacklisted"] is True  # preserved
     assert entry["etag"] == "abc123"  # preserved
+    assert entry["tier"] == "B"  # preserved (not re-seeded on update)
 
     with db_manager.get_session() as session:
         row = session.query(Source).filter(Source.id == "existing").first()
@@ -2345,12 +2362,8 @@ def test_admin_upsert_source_update_preserves_existing_keys(
 
 
 def test_admin_upsert_source_validation_422(
-    api_client: TestClient, monkeypatch
+    api_client: TestClient,
 ) -> None:
-    from news_collector.config import sources as sources_mod
-
-    monkeypatch.setattr(sources_mod, "ALL_SOURCES", {})
-
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         # Missing name
         response = api_client.post(

@@ -125,8 +125,17 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   upload (multipart), source delete (sources.yaml + DB)
 - source editor (Phase 4 addendum): add/update sources via
   POST /v1/admin/sources (merge preserves blacklist/etag keys; create
-  seeds the old GUI defaults); CORS now allows PUT/DELETE for the
-  unpublish/upload/delete flows
+  seeds the old GUI defaults plus the catalog-required
+  `tier`/`fetchability_score`/`crawl_interval_seconds`); CORS now allows
+  PUT/DELETE for the unpublish/upload/delete flows. Catalog writes
+  (upsert/delete) are now serialized and atomic via
+  `SourceCatalogWorkflow` (Plan 060 Phase 4b) under a documented
+  single-writer assumption (`docs/database_deployment.md`); their new
+  failure contracts are `409` (catalog locked by a concurrent mutation)
+  and `500` with a `reconciliation_required` marker row in
+  `workflow_runs` when a DB-sync failure could not be compensated.
+  Toggle/reset are DB-only (active/circuit state never lives in
+  `sources.yaml`).
 
 The serving layer is not the owner of editorial mutation workflows.
 

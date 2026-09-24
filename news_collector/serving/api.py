@@ -109,6 +109,10 @@ from news_collector.logic.workflows.collection_run_workflow import CollectionRun
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
 )
+from news_collector.logic.workflows.source_catalog_workflow import (
+    SourceCatalogMutationRejected,
+    SourceCatalogWorkflow,
+)
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog, WorkflowRun
 from news_collector.utils.logger import get_logger
@@ -813,15 +817,44 @@ def _install_status_poll_access_filter() -> None:
         access_log.addFilter(_StatusPollAccessFilter())
 
 
+def _raise_for_source_catalog_result(result: Any) -> None:
+    """Map a SourceCatalogMutationResult to its HTTP contract (Phase 4b).
+
+    `ok` returns; the new failure paths are `catalog_locked` (409, retry),
+    `validation_failed` (422, same contract as request-model validation),
+    `not_found` (404) and the server-side `db_sync_failed` /
+    `reconciliation_required` (500).
+    """
+    if result.status == "ok":
+        return
+    if result.status == "not_found":
+        raise HTTPException(status_code=404, detail=result.detail or "Source not found")
+    if result.status == "validation_failed":
+        raise HTTPException(status_code=422, detail=result.detail)
+    if result.status == "catalog_locked":
+        raise HTTPException(status_code=409, detail=result.detail)
+    raise HTTPException(status_code=500, detail=result.detail)
+
+
 def create_app(  # noqa: C901
     database_manager: Optional[DatabaseManager] = None,
+    *,
+    sources_yaml_path: Optional[Path] = None,
 ) -> FastAPI:
-    """Create a configured FastAPI application."""
+    """Create a configured FastAPI application.
+
+    `sources_yaml_path` exists so tests (and any future operator tooling)
+    can point catalog mutations at an isolated file; production uses the
+    real `news_collector/config/sources.yaml`.
+    """
 
     _install_status_poll_access_filter()
     db_manager = database_manager or get_database_manager()
     collection_run_workflow = CollectionRunWorkflow(db_manager)
     publication_run_workflow = PublicationRunWorkflow(db_manager)
+    source_catalog_workflow = SourceCatalogWorkflow(
+        db_manager, sources_yaml_path=sources_yaml_path
+    )
 
     @contextlib.asynccontextmanager
     async def _lifespan(_app: FastAPI):
@@ -1781,12 +1814,14 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminSourceListEnvelope:
-        from news_collector.config.sources import ALL_SOURCES
+        # Phase 4b: one fresh catalog read + one batched circuit-state query
+        # (plan 110 already replaced the old per-source loop).
+        catalog = source_catalog_workflow.load()
 
         circuits = manager.get_all_circuit_states()
         items: List[AdminSourceListItem] = []
-        for source_id in sorted(ALL_SOURCES):
-            config = ALL_SOURCES[source_id] or {}
+        for source_id in sorted(catalog):
+            config = catalog[source_id] or {}
             circuit = circuits.get(source_id)
             items.append(
                 AdminSourceListItem(
@@ -1812,6 +1847,8 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminMutationResult:
+        # DB-only mutation: active/circuit state lives in SQLite, never in
+        # sources.yaml, so it does not go through SourceCatalogWorkflow.
         ok = manager.set_source_active(source_id, payload.active)
         if not ok:
             raise HTTPException(status_code=404, detail="Source not found")
@@ -1830,6 +1867,7 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminMutationResult:
+        # DB-only mutation: see admin_toggle_source.
         state = manager.get_source_circuit_state(source_id)
         if state is None:
             raise HTTPException(status_code=404, detail="Source not found")
@@ -2242,17 +2280,26 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminMutationResult:
-        """Delete a source: remove from sources.yaml AND drop the DB row."""
-        from news_collector.config.sources import ALL_SOURCES, save_sources
+        """Delete a source: remove from sources.yaml AND drop the DB row.
 
-        if source_id not in ALL_SOURCES:
-            raise HTTPException(status_code=404, detail="Source not found")
+        The catalog mutation goes through SourceCatalogWorkflow (advisory
+        lock, atomic write, DB compensation — Phase 4b); the DB row is
+        dropped inside the same locked section.
+        """
 
-        del ALL_SOURCES[source_id]
-        save_sources(ALL_SOURCES)
-        ok = manager.delete_source(source_id)
-        if not ok:
-            logger.warning("Source {} removed from yaml but had no DB row.", source_id)
+        def _apply(catalog: Dict[str, Any]) -> Dict[str, Any]:
+            if source_id not in catalog:
+                raise SourceCatalogMutationRejected("Source not found")
+            return {key: value for key, value in catalog.items() if key != source_id}
+
+        def _sync(_catalog: Dict[str, Any]) -> None:
+            if not manager.delete_source(source_id):
+                logger.warning(
+                    "Source {} removed from yaml but had no DB row.", source_id
+                )
+
+        result = source_catalog_workflow.mutate(_apply, db_sync_fn=_sync)
+        _raise_for_source_catalog_result(result)
         return AdminMutationResult(
             status="ok",
             detail=f"Source {source_id} deleted",
@@ -2269,34 +2316,49 @@ def create_app(  # noqa: C901
 
         Merge semantics on update: start from the existing entry and overlay
         only the provided fields, so blacklist/etag/etag-metadata survive.
-        On create, seed the old GUI's defaults. Writes sources.yaml, then
-        upserts the DB row for circuit state.
+        On create, seed the old GUI's defaults plus the fields the catalog
+        validator requires (tier/fetchability/interval — conservative
+        defaults mirroring `manual_ingest`'s programmatic creation, since a
+        catalog entry without them would fail the pipeline's own startup
+        validation). The write goes through SourceCatalogWorkflow, then the
+        DB row is upserted for circuit state.
         """
-        from news_collector.config.sources import ALL_SOURCES, save_sources
+        outcome: Dict[str, bool] = {}
 
-        was_present = payload.source_id in ALL_SOURCES
-        existing = dict(ALL_SOURCES.get(payload.source_id, {}))
-        new_entry = dict(existing)
-        new_entry.update(
-            {
-                "name": payload.name,
-                "url": payload.url,
-                "credibility_score": payload.credibility_score,
-                "category": payload.category,
-                "update_frequency": payload.update_frequency,
-                "_group": payload.group,
-            }
-        )
-        if not was_present:
-            new_entry.setdefault("language", "en")
-            new_entry.setdefault("description", "Added via UI")
-            new_entry.setdefault("typical_delay", 0)
+        def _apply(catalog: Dict[str, Any]) -> Dict[str, Any]:
+            was_present = payload.source_id in catalog
+            outcome["created"] = not was_present
+            new_entry = dict(catalog.get(payload.source_id, {}))
+            new_entry.update(
+                {
+                    "name": payload.name,
+                    "url": payload.url,
+                    "credibility_score": payload.credibility_score,
+                    "category": payload.category,
+                    "update_frequency": payload.update_frequency,
+                    "_group": payload.group,
+                }
+            )
+            if not was_present:
+                new_entry.setdefault("language", "en")
+                new_entry.setdefault("description", "Added via UI")
+                new_entry.setdefault("typical_delay", 0)
+                new_entry.setdefault("tier", "D")
+                new_entry.setdefault("fetchability_score", 50)
+                new_entry.setdefault("crawl_interval_seconds", 86400)
+                new_entry.setdefault("enrichment_strategy", "http")
 
-        ALL_SOURCES[payload.source_id] = new_entry
-        save_sources(ALL_SOURCES)
-        manager.upsert_source(payload.source_id, new_entry)
+            updated = dict(catalog)
+            updated[payload.source_id] = new_entry
+            return updated
 
-        created = not was_present
+        def _sync(catalog: Dict[str, Any]) -> None:
+            manager.upsert_source(payload.source_id, catalog[payload.source_id])
+
+        result = source_catalog_workflow.mutate(_apply, db_sync_fn=_sync)
+        _raise_for_source_catalog_result(result)
+
+        created = outcome.get("created", False)
         return AdminMutationResult(
             status="ok",
             detail=(

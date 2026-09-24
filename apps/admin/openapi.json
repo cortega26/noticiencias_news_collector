@@ -3717,7 +3717,7 @@
         "summary": "Admin List Sources"
       },
       "post": {
-        "description": "Add or update a source (mirrors the old GUI's source editor).\n\nMerge semantics on update: start from the existing entry and overlay\nonly the provided fields, so blacklist/etag/etag-metadata survive.\nOn create, seed the old GUI's defaults. Writes sources.yaml, then\nupserts the DB row for circuit state.",
+        "description": "Add or update a source (mirrors the old GUI's source editor).\n\nMerge semantics on update: start from the existing entry and overlay\nonly the provided fields, so blacklist/etag/etag-metadata survive.\nOn create, seed the old GUI's defaults plus the fields the catalog\nvalidator requires (tier/fetchability/interval — conservative\ndefaults mirroring `manual_ingest`'s programmatic creation, since a\ncatalog entry without them would fail the pipeline's own startup\nvalidation). The write goes through SourceCatalogWorkflow, then the\nDB row is upserted for circuit state.",
         "operationId": "admin_upsert_source_v1_admin_sources_post",
         "parameters": [
           {
@@ -3820,7 +3820,7 @@
     },
     "/v1/admin/sources/{source_id}": {
       "delete": {
-        "description": "Delete a source: remove from sources.yaml AND drop the DB row.",
+        "description": "Delete a source: remove from sources.yaml AND drop the DB row.\n\nThe catalog mutation goes through SourceCatalogWorkflow (advisory\nlock, atomic write, DB compensation — Phase 4b); the DB row is\ndropped inside the same locked section.",
         "operationId": "admin_delete_source_v1_admin_sources__source_id__delete",
         "parameters": [
           {

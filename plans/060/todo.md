@@ -174,12 +174,18 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `scripts/ops/prune_workflow_runs.py`, on-demand ops script following
       `scripts/ops/purge_short_articles.py`'s shape; `queued`/`running` rows
       are never eligible regardless of age.)
-- [ ] Add atomic/locked `SourceCatalogWorkflow` with compensation and visible
-      reconciliation failure. (Phase 4b — not started.)
-- [ ] Batch source circuit-state reads. (Phase 4b — not started.)
-- [ ] Move workflow coordination out of HTTP routes and add concurrency/failure
+- [x] Add atomic/locked `SourceCatalogWorkflow` with compensation and visible
+      reconciliation failure. (Phase 4b — `news_collector/logic/workflows/source_catalog_workflow.py`;
+      N+1 was already fixed by plan 110 so the batch-half below needed no new
+      code; toggle/reset stay repository-direct as they are DB-only —
+      see `phase-4b-source-catalog-workflow/spec.md` implementation record.)
+- [x] Batch source circuit-state reads. (Satisfied by plan 110's
+      `get_all_circuit_states()`; proven equivalent to the per-source loop
+      by `test_bulk_states_match_per_source_lookup_for_the_same_inputs`.)
+- [x] Move workflow coordination out of HTTP routes and add concurrency/failure
       tests. (Collection-run half done in Phase 4a; the source-catalog half
-      of this bullet is Phase 4b — not started.)
+      done in Phase 4b — upsert/delete dispatch to the workflow, routes keep
+      only request parsing/response mapping.)
 
 ### Phase 5 — callback reconciliation and truthful health
 
