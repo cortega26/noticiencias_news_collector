@@ -3,7 +3,8 @@
 - **Date**: 2026-09-23
 - **Spec**: `spec-llm-routing-benchmark.md`
 - **ADR**: `docs/adr/0010-llm-routing.md`
-- **Raw evidence**: `reports/evaluation/routing/runs.jsonl` (140 rows)
+- **Raw evidence**: `reports/evaluation/routing/runs.jsonl` (140 rows),
+  `judgments.jsonl` (52), `grounded.jsonl` (26)
 - **Dataset**: `reports/evaluation/routing_benchmark_cases.jsonl` (40 cases)
 
 ## Outcome
@@ -48,23 +49,57 @@ Generate (`--phase generate`, resumable, retries up to 3 per case/arm):
 The outage is the finding: a candidate that cannot serve is not a routing
 candidate (§7: free-tier flakes are data).
 
-## Phases not executed
+## Local-LLM audit (executed 2026-09-23)
+
+Run after the closure, on the 26 pure-ok outputs (A: 8, B: 18), because the
+local reference is cheap and does not need the dead GLM arm.
+
+**Judge** (`--phase judge`; production auditor + forced-local auditor over
+every ok output):
+
+| Arm | Judge | Judgments | Result | wall p50 |
+| --- | --- | ---: | --- | ---: |
+| A | prod | 8 | 8/8 `audit_passed` | 11 s |
+| A | forced-local | 8 | 8/8 `audit_passed` | 65 s |
+| B | prod | 18 | 18/18 `audit_passed` | 7 s |
+| B | forced-local | 18 | 18/18 `audit_passed` | 79 s |
+
+**Grounded fact-check** (`--phase grounded`; claims checked against the
+article's own stored source content with the always-Ollama verifier):
+
+| Arm | Runs | Claims | confirmed / uncertain / disputed | Dispute rate |
+| --- | ---: | ---: | --- | ---: |
+| A | 8 | 36 | 29 / 7 / 0 | 0.0 % |
+| B | 18 | 106 | 82 / 24 / 0 | 0.0 % |
+
+Documented deviation: the forced-local auditor inherits the production 45 s
+timeout, which the local `qwen3-next:80b` cannot meet (p50 112 s on this
+host). The first local pass therefore recorded 26/26 `audit_failed`
+(timeout). Re-ran only the local half with
+`OLLAMA_TIMEOUT_SECONDS=600` (quality-neutral: a longer timeout can only let
+the auditor answer, never bias its verdict); all 26 completed.
+
+Reading: both auditors pass every output and both arms show 0 % grounded
+disputes — a ceiling effect, so this evidence discriminates nothing between
+A and B. It does fill the "grounded dispute rate ≤ control" condition for
+Ultra (0 % ≤ 0 %) and confirms neither arm's claims contradict their sources.
+
+## Remaining blocked phases
 
 | Phase | Status | Reason |
 | --- | --- | --- |
-| judge (prod + forced-local over ok outputs) | not executed | Stopped after generate: the ADR outcome does not depend on prose-level judge data, and the three-arm comparison below is impossible regardless |
 | cross-critic matrix (bundle subset) | blocked | Bundle requires ok runs in **all three** arms; C has none |
-| grounded fact-check judge | blocked | Same arm-set dependency |
 | blind bundle + operator ranking | blocked | Same |
-| §8 threshold application | not applicable | Thresholds compare challengers against control on the cross-critic matrix |
+| §8 threshold application | partial | Cross-critic columns remain unevaluable; latency/failure/grounded conditions are now recorded |
 | Ultra hosted-context side probe | not executed | Out of scope for the closure |
 
 ## Mechanical application of §8
 
 1. **Ultra escalation** — not met: the hard-stratum cross-critic win-rate
-   cannot be computed (bundle blocked); latency p50 was 1.88× control
-   (< 2×) and failure rate was not worse, but the required condition is
-   unevaluable. No Ultra wiring.
+   cannot be computed (bundle blocked). The other three conditions are now
+   recorded and neutral-or-better: latency p50 1.88× control (< 2×), failure
+   rate not worse, grounded dispute rate 0 % ≤ control 0 %. The decisive
+   condition remains unevaluable, so no Ultra wiring.
 2. **GLM text entry** — not met: zero ok outputs; endpoint unusable. GLM
    parked until plan 084.
 3. **Default change** — not met: no challenger can beat control on the
@@ -76,6 +111,9 @@ candidate (§7: free-tier flakes are data).
 ```bash
 PYTHONPATH=. .venv/bin/python scripts/llm_routing_replay.py --phase dry-run
 PYTHONPATH=. .venv/bin/python scripts/llm_routing_replay.py --phase generate   # resumable
+PYTHONPATH=. .venv/bin/python scripts/llm_routing_replay.py --phase judge      # resumable
+OLLAMA_TIMEOUT_SECONDS=600 PYTHONPATH=. .venv/bin/python scripts/llm_routing_replay.py --phase judge  # local half
+PYTHONPATH=. .venv/bin/python scripts/llm_routing_replay.py --phase grounded   # resumable
 ```
 
 `BENCH_SKIP_ARMS=C` pauses the dead arm without touching recorded rows.
@@ -85,7 +123,7 @@ A lost `def main` header (argparse unreachable) was fixed and is guarded by
 ## Follow-ups
 
 - Revisit when the GLM endpoint answers reliably, or when plan 084 (vision)
-  runs: rerun generate for C, then judge → cross-critic → grounded → bundle
-  → operator ranking, and apply §8 mechanically.
+  runs: rerun generate for C, then cross-critic → bundle → operator ranking
+  (judge and grounded are already recorded), and apply §8 mechanically.
 - `spec/llm-routing-benchmark` predates the Wave 2/3 contract mirrors; merge
   or rebase it before any further work on the harness.

@@ -53,3 +53,17 @@ not run. Numbers live in `reports/evaluation/llm-routing-2026-09.md`.
   not need to be rewritten unless thresholds are met.
 - `spec/llm-routing-benchmark` predates the Wave 2/3 contract mirrors; merge
   it before further harness work.
+
+## Addendum (2026-09-23, later the same day)
+
+The local-LLM half of the audit was executed after the closure, on the 26
+pure-ok outputs. The production auditor and the forced-local auditor passed
+every output (A 8/8, B 18/18 each) and the grounded verifier found 0 disputed
+claims in both arms (A 0/36, B 0/106) — a ceiling effect that discriminates
+nothing between A and B. The forced-local pass required a documented timeout
+override (`OLLAMA_TIMEOUT_SECONDS=600`): the production 45 s auditor timeout
+cannot be met by local `qwen3-next:80b` (p50 112 s on this host), so the first
+pass recorded 26/26 timeouts.
+
+This ADR's decision is unchanged: no default change, no Ultra wiring, GLM
+parked. Numbers and the full table: `reports/evaluation/llm-routing-2026-09.md`.
