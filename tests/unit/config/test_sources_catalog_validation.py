@@ -10,6 +10,7 @@ of the suite keeps seeing the real catalog.
 
 from __future__ import annotations
 
+import pytest
 import yaml
 
 from news_collector.config import sources as sources_mod
@@ -40,6 +41,15 @@ def _entry(**overrides):
     merged = dict(VALID_ENTRY)
     merged.update(overrides)
     return merged
+
+
+@pytest.fixture(autouse=True)
+def _restore_real_catalog():
+    """Tests here mutate the module globals via patched YAML paths; reload
+    the real catalog after each test. Fixture teardown runs after monkeypatch
+    is undone, so this reads the tracked file, not the fixture."""
+    yield
+    load_sources()
 
 
 def test_validate_source_catalog_accepts_a_complete_entry() -> None:
@@ -128,10 +138,7 @@ def test_load_sources_corrupt_file_prints_and_keeps_process_alive(
     corrupt = tmp_path / "sources.yaml"
     corrupt.write_text("{unclosed: [", encoding="utf-8")
     monkeypatch.setattr(sources_mod, "SOURCES_YAML_PATH", corrupt)
-    try:
-        load_sources()  # prints the error; must not raise
-    finally:
-        load_sources()  # restore the real catalog into the globals
+    load_sources()  # prints the error; must not raise
 
     assert "Error loading sources.yaml" in capsys.readouterr().out
 
@@ -141,15 +148,12 @@ def test_save_sources_round_trips_through_an_isolated_path(
 ) -> None:
     target = tmp_path / "sources.yaml"
     monkeypatch.setattr(sources_mod, "SOURCES_YAML_PATH", target)
-    try:
-        save_sources({"solo": _entry()})
+    save_sources({"solo": _entry()})
 
-        assert yaml.safe_load(target.read_text(encoding="utf-8"))["solo"]["name"] == (
-            "Example"
-        )
-        assert sources_mod.ALL_SOURCES["solo"]["name"] == "Example"
-    finally:
-        load_sources()  # restore the real catalog into the globals
+    assert yaml.safe_load(target.read_text(encoding="utf-8"))["solo"]["name"] == (
+        "Example"
+    )
+    assert sources_mod.ALL_SOURCES["solo"]["name"] == "Example"
 
 
 def test_load_sources_buckets_every_group(tmp_path, monkeypatch) -> None:
@@ -165,19 +169,16 @@ def test_load_sources_buckets_every_group(tmp_path, monkeypatch) -> None:
     target = tmp_path / "sources.yaml"
     target.write_text(yaml.safe_dump(catalog), encoding="utf-8")
     monkeypatch.setattr(sources_mod, "SOURCES_YAML_PATH", target)
-    try:
-        load_sources()
+    load_sources()
 
-        assert sources_mod.ELITE_JOURNALS
-        assert sources_mod.SCIENCE_MEDIA
-        assert sources_mod.INSTITUTIONAL_SOURCES
-        assert sources_mod.PREPRINT_SOURCES
-        assert sources_mod.COMMUNITY_FEEDS
-        assert sources_mod.AI_LABS
-        assert sources_mod.ALL_SOURCES["elite_journals"]["etag"] is None
-        assert sources_mod.ALL_SOURCES["elite_journals"]["last_modified"] is None
-    finally:
-        load_sources()  # restore the real catalog into the globals
+    assert sources_mod.ELITE_JOURNALS
+    assert sources_mod.SCIENCE_MEDIA
+    assert sources_mod.INSTITUTIONAL_SOURCES
+    assert sources_mod.PREPRINT_SOURCES
+    assert sources_mod.COMMUNITY_FEEDS
+    assert sources_mod.AI_LABS
+    assert sources_mod.ALL_SOURCES["elite_journals"]["etag"] is None
+    assert sources_mod.ALL_SOURCES["elite_journals"]["last_modified"] is None
 
 
 def test_query_helpers_read_the_live_catalog() -> None:

@@ -169,24 +169,13 @@ class SourceCatalogWorkflow:
             else ""
         )
         try:
-            current = self._parse_catalog(prior_text)
+            candidate, errors = self._build_validated_candidate(prior_text, mutation_fn)
+        except SourceCatalogMutationRejected as exc:
+            return SourceCatalogMutationResult("not_found", str(exc))
         except (yaml.YAMLError, ValueError) as exc:
             return SourceCatalogMutationResult(
                 "validation_failed", f"Catálogo ilegible: {exc}"
             )
-
-        try:
-            candidate = mutation_fn(current)
-        except SourceCatalogMutationRejected as exc:
-            return SourceCatalogMutationResult("not_found", str(exc))
-
-        if not isinstance(candidate, dict):
-            return SourceCatalogMutationResult(
-                "validation_failed",
-                "La mutación no devolvió un catálogo (mapping) válido.",
-            )
-
-        errors = validate_source_catalog(candidate)
         if errors:
             return SourceCatalogMutationResult(
                 "validation_failed",
@@ -200,6 +189,28 @@ class SourceCatalogWorkflow:
         if db_sync_fn is None:
             return SourceCatalogMutationResult("ok", catalog=candidate)
 
+        return self._sync_database(db_sync_fn, candidate, prior_text)
+
+    def _build_validated_candidate(
+        self,
+        prior_text: str,
+        mutation_fn: Callable[[dict[str, Any]], dict[str, Any]],
+    ) -> tuple[dict[str, Any], list[str]]:
+        """Apply the mutation to a fresh parse and validate the candidate."""
+        current = self._parse_catalog(prior_text)
+        candidate = mutation_fn(current)
+        if not isinstance(candidate, dict):
+            return {}, ["La mutación no devolvió un catálogo (mapping) válido."]
+        return candidate, validate_source_catalog(candidate)
+
+    def _sync_database(
+        self,
+        db_sync_fn: Callable[[dict[str, Any]], None],
+        candidate: dict[str, Any],
+        prior_text: str,
+    ) -> SourceCatalogMutationResult:
+        """Run the DB write; restore the YAML on failure, or record the
+        inconsistency when the restore itself fails."""
         try:
             db_sync_fn(candidate)
         except Exception as exc:  # noqa: BLE001 - any DB failure restores
