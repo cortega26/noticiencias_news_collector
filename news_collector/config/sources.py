@@ -121,10 +121,7 @@ load_sources()
 # Helper Functions
 def save_sources(new_sources: Dict[str, Any]):
     """Guarda el diccionario completo de fuentes en sources.yaml"""
-    current_dir = Path(__file__).parent
-    yaml_path = current_dir / "sources.yaml"
-
-    with open(yaml_path, "w", encoding="utf-8") as f:
+    with open(SOURCES_YAML_PATH, "w", encoding="utf-8") as f:
         yaml.dump(
             new_sources,
             f,
