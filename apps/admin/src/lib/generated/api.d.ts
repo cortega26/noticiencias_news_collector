@@ -482,8 +482,12 @@ export interface paths {
          *
          *     Merge semantics on update: start from the existing entry and overlay
          *     only the provided fields, so blacklist/etag/etag-metadata survive.
-         *     On create, seed the old GUI's defaults. Writes sources.yaml, then
-         *     upserts the DB row for circuit state.
+         *     On create, seed the old GUI's defaults plus the fields the catalog
+         *     validator requires (tier/fetchability/interval — conservative
+         *     defaults mirroring `manual_ingest`'s programmatic creation, since a
+         *     catalog entry without them would fail the pipeline's own startup
+         *     validation). The write goes through SourceCatalogWorkflow, then the
+         *     DB row is upserted for circuit state.
          */
         post: operations["admin_upsert_source_v1_admin_sources_post"];
         delete?: never;
@@ -522,6 +526,10 @@ export interface paths {
         /**
          * Admin Delete Source
          * @description Delete a source: remove from sources.yaml AND drop the DB row.
+         *
+         *     The catalog mutation goes through SourceCatalogWorkflow (advisory
+         *     lock, atomic write, DB compensation — Phase 4b); the DB row is
+         *     dropped inside the same locked section.
          */
         delete: operations["admin_delete_source_v1_admin_sources__source_id__delete"];
         options?: never;

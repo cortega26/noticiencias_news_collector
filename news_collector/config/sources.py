@@ -51,6 +51,8 @@ CATEGORY_CONFIG = {
     },
 }
 
+SOURCES_YAML_PATH = Path(__file__).parent / "sources.yaml"
+
 # Globals to be populated
 ELITE_JOURNALS: Dict[str, Any] = {}
 SCIENCE_MEDIA: Dict[str, Any] = {}
@@ -65,8 +67,7 @@ def load_sources():
     """Carga las fuentes desde sources.yaml y popula las variables globales."""
     global ELITE_JOURNALS, SCIENCE_MEDIA, INSTITUTIONAL_SOURCES, PREPRINT_SOURCES, COMMUNITY_FEEDS, AI_LABS, ALL_SOURCES
 
-    current_dir = Path(__file__).parent
-    yaml_path = current_dir / "sources.yaml"
+    yaml_path = SOURCES_YAML_PATH
 
     if not yaml_path.exists():
         # Fallback or error? For now, empty or raise
@@ -167,12 +168,14 @@ TIER_D_INTERVAL = 86400  # 24 hours (Manual/Restricted)
 VALID_TIERS = ["A", "B", "C", "D"]
 
 
-def validate_sources():  # noqa: C901
+def validate_source_catalog(sources: Dict[str, Any]) -> list[str]:  # noqa: C901
+    """Validate an arbitrary source catalog dict and return its errors.
+
+    Pure: reads no globals and touches no disk, so callers that build a
+    candidate catalog (e.g. `SourceCatalogWorkflow`) can validate it before
+    writing. `validate_sources()` keeps its original load-then-raise
+    behavior for the on-disk catalog.
     """
-    Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
-    Raises ValueError if any source is invalid.
-    """
-    load_sources()  # Ensure fresh check
     required_fields = [
         "name",
         "url",
@@ -185,7 +188,7 @@ def validate_sources():  # noqa: C901
 
     errors = []
 
-    for source_id, config in ALL_SOURCES.items():
+    for source_id, config in sources.items():
         # 1. Check required fields
         for field in required_fields:
             if field not in config:
@@ -259,6 +262,17 @@ def validate_sources():  # noqa: C901
                 )
 
         errors.extend(audit_source_strategy_consistency(source_id, config))
+
+    return errors
+
+
+def validate_sources():
+    """
+    Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
+    Raises ValueError if any source is invalid.
+    """
+    load_sources()  # Ensure fresh check
+    errors = validate_source_catalog(ALL_SOURCES)
 
     if errors:
         error_msg = (

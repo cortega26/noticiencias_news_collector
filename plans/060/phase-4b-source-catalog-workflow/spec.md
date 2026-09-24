@@ -265,3 +265,65 @@ operator's decision above). Multi-instance/distributed locking.
 - [ ] Every existing behavior the current tests assert (create defaults,
       update merge-preserve, delete removes both sides, unknown-id 404,
       validation 422) still holds under the new mechanism.
+
+## Implementation record (2026-09-23)
+
+Executed against backend main with frontend `noticiencias@db936ba` for the
+cross-repo e2e validation. All Done criteria hold; three reconciliations
+below diverge from the original mechanism text while preserving every
+stated objective.
+
+### Reconciliations
+
+1. **Toggle/reset stay repository-direct.** Their state (active/circuit)
+   lives in SQLite only — no `sources.yaml` write exists to serialize — so
+   routing them through `mutate()` would manufacture a catalog rewrite
+   for no safety gain. They keep `set_source_active` / circuit updates and
+   a one-line comment saying why. The catalog race the phase targets never
+   involved them.
+
+2. **No new `get_source_circuit_states(ids)`.** `admin_list_sources`
+   already composes one catalog read (`SourceCatalogWorkflow.load()`) plus
+   one DB query via plan 110's `get_all_circuit_states()`; a subset
+   variant would be dead code. Proven equivalent by
+   `test_bulk_states_match_per_source_lookup_for_the_same_inputs`.
+
+3. **Upsert seeds catalog-required fields on create** (`tier: "D"`,
+   `fetchability_score: 50`, `crawl_interval_seconds: 86400`,
+   `enrichment_strategy: "http"` — the `manual_ingest` precedent).
+   The HTTP contract never carried them, but `validate_sources()` requires
+   them and `system/bootstrap.py` runs that validation at startup, so a
+   created entry without them would brick the next boot. This also fixes
+   that latent startup-validation bug. Updates never re-seed.
+
+### STOP resolutions
+
+- `validate_sources()` signature: split cleanly into
+  `validate_source_catalog(sources) -> list[str]` (pure, no globals, no
+  disk) plus the original load-then-raise wrapper — a smaller adaptation
+  than a parallel validation path; `manual_ingest` itself keeps calling
+  `validate_sources()` unchanged.
+- Crash-safety between steps 5 and 6: accepted as request-scoped per the
+  spec's own judgment (atomic write already prevents mid-write corruption).
+- Reconciliation marker: reuses `workflow_runs` with
+  `run_type='source_catalog_reconciliation'` — Phase 4a's migration is
+  landed, so no new table.
+
+### Known remaining hazard (explicit punt)
+
+`manual_ingest` still writes the catalog via `save_sources()` directly.
+It is not an admin mutation route (this phase's scope) and its entry is
+fully seeded, so it cannot invalidate the catalog — but it lacks the lock
+and compensation. Route it through `SourceCatalogWorkflow.mutate()` in a
+follow-up when that module is next touched.
+
+### Gates for this execution
+
+`make lint`, `make type` (3196 passed, coverage ratchet OK), `make test`
+(3183 passed), `make test-boundaries`, `make test-contracts`,
+`make docs-check`, `make plans-ledger-check`, `make security` all green.
+`make quality` fails pre-existing on `main` (raw Bandit without the gate,
+11 findings in untouched files) — verified identical on a clean `main`
+checkout before starting. The two genuine test failures this phase
+produced (drift gate on docstrings, loguru `%s` style) were fixed, not
+waived.

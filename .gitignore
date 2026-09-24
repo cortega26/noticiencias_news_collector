@@ -184,3 +184,8 @@ apps/admin/.astro/
 
 # mutmut isolated install (make mutation)
 .mutlib/
+
+# Plan 060 / Phase 4b: the source-catalog advisory lock file is a runtime
+# artifact (created on first mutation, released per section); it must never
+# be committed.
+news_collector/config/sources.yaml.lock
