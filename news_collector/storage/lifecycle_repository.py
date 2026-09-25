@@ -560,6 +560,66 @@ class LifecycleRepository:
             return [_to_publication_event_view(r) for r in rows]
 
     # ------------------------------------------------------------------
+    # Aggregates for the dashboard evidence read (Plan 060 / Phase 5c)
+    # ------------------------------------------------------------------
+
+    def count_publication_attempts_by_state(self) -> dict[str, int]:
+        with self._session() as session:
+            rows = (
+                session.query(
+                    _PublicationAttemptModel.state,
+                    func.count(_PublicationAttemptModel.id),
+                )
+                .group_by(_PublicationAttemptModel.state)
+                .all()
+            )
+            return {str(state): int(count) for state, count in rows}
+
+    def oldest_attempt_started_at(self, state: str) -> datetime | None:
+        """Oldest ``started_at`` among attempts in ``state``, or ``None``."""
+        with self._session() as session:
+            oldest: datetime | None = (
+                session.query(func.min(_PublicationAttemptModel.started_at))
+                .filter(_PublicationAttemptModel.state == state)
+                .scalar()
+            )
+            return oldest
+
+    def latest_publication_attempt_created_at(self) -> datetime | None:
+        with self._session() as session:
+            latest: datetime | None = session.query(
+                func.max(_PublicationAttemptModel.created_at)
+            ).scalar()
+            return latest
+
+    def count_publication_events_by_type(
+        self, event_types: tuple[str, ...] | None = None
+    ) -> dict[str, int]:
+        with self._session() as session:
+            query = session.query(
+                _PublicationEventModel.event_type,
+                func.count(_PublicationEventModel.id),
+            )
+            if event_types is not None:
+                query = query.filter(_PublicationEventModel.event_type.in_(event_types))
+            return {
+                str(event_type): int(count)
+                for event_type, count in query.group_by(
+                    _PublicationEventModel.event_type
+                ).all()
+            }
+
+    def latest_publication_event_at(
+        self, event_types: tuple[str, ...] | None = None
+    ) -> datetime | None:
+        with self._session() as session:
+            query = session.query(func.max(_PublicationEventModel.occurred_at))
+            if event_types is not None:
+                query = query.filter(_PublicationEventModel.event_type.in_(event_types))
+            latest: datetime | None = query.scalar()
+            return latest
+
+    # ------------------------------------------------------------------
     # editorial_decisions — append-only inserts (no CAS: genuinely
     # append-only, nothing transitions a decision in place)
     # ------------------------------------------------------------------

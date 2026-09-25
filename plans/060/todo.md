@@ -215,7 +215,18 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       a legacy-terminal attempt only with deploy/rejection evidence, reports a
       stale open PR as actionable, and never creates a PR or marks an attempt
       COMPLETED without a deploy URL.)
-- [ ] Drive dashboard health from stored evidence; missing evidence is unknown.
+- [x] Drive dashboard health from stored evidence; missing evidence is unknown.
+      (Phase 5c, 2026-09-25 — backend `70d7137`:
+      `GET /v1/admin/dashboard/health` exposes publication/callback/validation
+      evidence with explicit unknown-on-no-evidence semantics. Phase 5d
+      (frontend, 2026-09-25): the metrics bot now derives schema/editorial/
+      hero-image/derivative/lint health from real local records and fetches
+      the backend sections when `BACKEND_ADMIN_URL`/`BACKEND_ADMIN_TOKEN` are
+      configured — otherwise every backend check stays `unknown`, never
+      `pass`. The new schema check also surfaced a stale contract snapshot
+      (pre-Wave-3), now regenerated. See
+      `plans/060/phase-5c-dashboard-health-api/` and
+      `plans/060/phase-5d-dashboard-wiring/`.)
 - [x] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
       (Phase 5a covered lost/duplicate/restart/error with integration tests;
       Phase 5b adds out-of-order repair and stale-open-PR integration tests in

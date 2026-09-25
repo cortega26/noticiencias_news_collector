@@ -174,3 +174,48 @@ class TestListUnprocessed:
 
     def test_empty_queue_returns_empty_list(self, db_manager: DatabaseManager):
         assert db_manager.webhook_receipts.list_unprocessed_receipts() == []
+
+
+class TestDashboardAggregates:
+    """Plan 060 / Phase 5c dashboard evidence aggregates."""
+
+    def test_empty_db_returns_empty_aggregates(self, db_manager: DatabaseManager):
+        repo = db_manager.webhook_receipts
+        assert repo.count_receipts_by_status() == {}
+        assert repo.oldest_unprocessed_received_at() is None
+        assert repo.latest_receipt_received_at() is None
+
+    def test_counts_and_pending_ages(self, db_manager: DatabaseManager):
+        repo = db_manager.webhook_receipts
+        _record(repo, key="agg-received")
+
+        _record(repo, key="agg-failed")
+        repo.mark_processing("agg-failed")
+        repo.mark_failed("agg-failed", "boom")
+
+        _record(repo, key="agg-processed")
+        repo.mark_processing("agg-processed")
+        repo.mark_processed("agg-processed", {"action": "noop"})
+
+        assert repo.count_receipts_by_status() == {
+            "received": 1,
+            "failed": 1,
+            "processed": 1,
+        }
+
+        oldest_pending = repo.oldest_unprocessed_received_at()
+        assert oldest_pending is not None
+        latest = repo.latest_receipt_received_at()
+        assert latest is not None
+        assert oldest_pending <= latest
+
+        loaded = repo.get_receipt("agg-received")
+        assert loaded is not None
+        # The oldest unprocessed receipt is the first one recorded; SQLite may
+        # return it naive, so compare the values after trimming tz.
+        assert oldest_pending.replace(tzinfo=None) == loaded.received_at.replace(
+            tzinfo=None
+        )
+        assert {"received", "failed"} <= set(
+            r.status for r in repo.list_unprocessed_receipts()
+        )

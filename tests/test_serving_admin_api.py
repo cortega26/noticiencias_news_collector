@@ -2881,3 +2881,83 @@ def test_admin_list_attaches_similar_groups(
     assert mars_1["similar_group_id"] == mars_2["similar_group_id"]
     assert mars_1["similar_group_size"] == 2
     assert fusion["similar_group_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Dashboard health evidence (plan 060 Phase 5c)
+# ---------------------------------------------------------------------------
+
+
+def test_admin_dashboard_health_requires_auth(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/dashboard/health")
+    assert response.status_code == 401
+
+
+def test_admin_dashboard_health_empty_db_is_unknown_never_pass(
+    api_client: TestClient,
+) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/dashboard/health", headers=_admin_headers()
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated_at"]
+    assert body["publication"]["status"] == "unknown"
+    assert body["publication"]["evidence"] == "none"
+    assert body["callbacks"]["status"] == "unknown"
+    assert body["callbacks"]["evidence"] == "none"
+    assert body["validation"]["status"] == "unknown"
+    assert body["validation"]["evidence"] == "none"
+    assert body["publication"]["counts"] == {
+        "PUBLISHING": 0,
+        "PR_CREATED": 0,
+        "REJECTED": 0,
+        "COMPLETED": 0,
+    }
+
+
+def test_admin_dashboard_health_reports_real_records(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        article = Article(
+            title="Dashboard evidence article",
+            url="https://example.com/dashboard-evidence",
+            source_id="nature",
+            source_name="Nature",
+            category="science",
+            processing_status="publishing",
+        )
+        session.add(article)
+        session.flush()
+        article_id = int(article.id)
+    db_manager.lifecycle.record_publication_attempt(
+        article_id,
+        refinery_id="dash-refinery-1",
+        state="PR_CREATED",
+        started_at=now - timedelta(hours=3),
+    )
+    view, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:dashboard-1",
+        event_type="publish_complete",
+        payload={"event": "publish_complete", "publication_ids": ["dash-refinery-1"]},
+    )
+    db_manager.webhook_receipts.mark_processing(view.delivery_key)
+    db_manager.webhook_receipts.mark_failed(view.delivery_key, "boom")
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/dashboard/health", headers=_admin_headers()
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["publication"]["status"] == "warning"
+    assert body["publication"]["oldest_pending_age_seconds"] >= 3600
+    assert body["callbacks"]["status"] == "fail"
+    assert body["callbacks"]["counts"]["failed"] == 1
+    assert body["validation"]["status"] == "unknown"

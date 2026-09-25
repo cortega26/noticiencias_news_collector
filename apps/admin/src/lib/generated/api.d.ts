@@ -302,6 +302,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/dashboard/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Dashboard Health
+         * @description Backend evidence for the dashboard health list (plan 060 Phase
+         *     5c): publication attempts, callback receipts, and Content Guard
+         *     outcomes, with an explicit ``evidence="none"`` (and ``status=
+         *     "unknown"``) whenever no record exists to judge from — a zero-row
+         *     query is never reported as ``pass``. Read-only.
+         */
+        get: operations["admin_dashboard_health_v1_admin_dashboard_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/images": {
         parameters: {
             query?: never;
@@ -960,6 +984,56 @@ export interface components {
              * @default
              */
             source_label: string;
+        };
+        /**
+         * AdminDashboardEvidence
+         * @description One dashboard health area, derived from durable records only.
+         *
+         *     ``evidence="none"`` means no record exists to judge from — the consumer
+         *     must render ``unknown``, never infer ``pass`` (plan 060 Phase 5c).
+         *     ``counts`` always carries the area's full known key set (zeros when a
+         *     key has no rows), so the unknown signal lives only in ``evidence``.
+         */
+        AdminDashboardEvidence: {
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            };
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Evidence
+             * @enum {string}
+             */
+            evidence: "present" | "none";
+            /** Measured At */
+            measured_at?: string | null;
+            /** Oldest Pending Age Seconds */
+            oldest_pending_age_seconds?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "warning" | "fail" | "unknown";
+        };
+        /**
+         * AdminDashboardHealthEnvelope
+         * @description Backend evidence for the admin dashboard health list (plan 060
+         *     Phase 5c). The frontend combines this with its own records (schema,
+         *     hero image, lint) in 5d; areas with no backend evidence stay unknown.
+         */
+        AdminDashboardHealthEnvelope: {
+            callbacks: components["schemas"]["AdminDashboardEvidence"];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            publication: components["schemas"]["AdminDashboardEvidence"];
+            validation: components["schemas"]["AdminDashboardEvidence"];
         };
         /**
          * AdminImageBriefItem
@@ -2003,6 +2077,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminMutationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_dashboard_health_v1_admin_dashboard_health_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDashboardHealthEnvelope"];
                 };
             };
             /** @description Validation Error */
