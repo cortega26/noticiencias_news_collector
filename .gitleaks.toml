@@ -54,3 +54,14 @@ description = "Generic API or secret token"
 regex = '''(?i)(api|token|secret|key)["'=:\s]+[A-Za-z0-9_\-]{16,}'''
 secretGroup = 0
 tags = ["secret", "generic"]
+
+# `delivery_key = compute_delivery_key(...)` (plan 060 Phases 5a/5b) matches
+# the generic rule as `key = compute_delivery_key`, but is a code identifier,
+# not a credential. Scoped to this rule and to the matched text — it must not
+# mask findings in other files or rules. Re-check if the helper is renamed.
+[rules.allowlist]
+description = "Publication delivery-key helper name, not a credential."
+regexTarget = "match"
+regexes = [
+  '''compute_delivery_key''',
+]
