@@ -13,10 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from news_collector.contracts.webhook import (
-    compute_delivery_key,
-    parse_webhook_payload,
-)
+from news_collector.contracts.webhook import compute_delivery_key, parse_webhook_payload
 from news_collector.serving.webhook_handler import handle_webhook_event
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
