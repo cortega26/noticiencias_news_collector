@@ -30,6 +30,7 @@ from typing import Any
 from news_collector.contracts.admin import (
     AdminDashboardEvidence,
     AdminDashboardHealthEnvelope,
+    DashboardHealthStatus,
 )
 from news_collector.logic.workflows.pr_orchestrator import PUBLISHING_TIMEOUT_SECONDS
 from news_collector.logic.workflows.publication_reconciliation import (
@@ -61,6 +62,35 @@ def _with_defaults(counts: dict[str, int], keys: tuple[str, ...]) -> dict[str, i
     return {key: int(counts.get(key, 0)) for key in keys}
 
 
+def _publication_status(
+    counts: dict[str, int],
+    publishing_age: int | None,
+    pr_age: int | None,
+) -> tuple[DashboardHealthStatus, str]:
+    """Status + detail from the two pending ages (fail beats warning)."""
+    if publishing_age is not None and publishing_age > PUBLISHING_TIMEOUT_SECONDS:
+        return (
+            "fail",
+            (
+                f"{counts['PUBLISHING']} intento(s) atascado(s) en PUBLISHING "
+                f"por más de {PUBLISHING_TIMEOUT_SECONDS // 60} min."
+            ),
+        )
+    if pr_age is not None and pr_age > DEFAULT_STALE_MINUTES * 60:
+        return (
+            "warning",
+            (
+                f"{counts['PR_CREATED']} intento(s) en PR_CREATED sin callback "
+                f"por más de {DEFAULT_STALE_MINUTES} min; ejecutar el "
+                "reconciliador."
+            ),
+        )
+    return (
+        "pass",
+        f"{sum(counts.values())} intento(s) registrados, ninguno atascado.",
+    )
+
+
 def _publication_evidence(db: Any, now: datetime) -> AdminDashboardEvidence:
     counts = db.lifecycle.count_publication_attempts_by_state()
     defaults = _with_defaults(counts, _ATTEMPT_STATES)
@@ -77,39 +107,14 @@ def _publication_evidence(db: Any, now: datetime) -> AdminDashboardEvidence:
     )
     pr_age = _age_seconds(now, db.lifecycle.oldest_attempt_started_at("PR_CREATED"))
     pending_ages = [age for age in (publishing_age, pr_age) if age is not None]
-    oldest_pending = max(pending_ages) if pending_ages else None
+    status, detail = _publication_status(defaults, publishing_age, pr_age)
 
-    if publishing_age is not None and publishing_age > PUBLISHING_TIMEOUT_SECONDS:
-        return AdminDashboardEvidence(
-            status="fail",
-            evidence="present",
-            detail=(
-                f"{defaults['PUBLISHING']} intento(s) atascado(s) en PUBLISHING "
-                f"por más de {PUBLISHING_TIMEOUT_SECONDS // 60} min."
-            ),
-            measured_at=db.lifecycle.latest_publication_attempt_created_at(),
-            oldest_pending_age_seconds=oldest_pending,
-            counts=defaults,
-        )
-    if pr_age is not None and pr_age > DEFAULT_STALE_MINUTES * 60:
-        return AdminDashboardEvidence(
-            status="warning",
-            evidence="present",
-            detail=(
-                f"{defaults['PR_CREATED']} intento(s) en PR_CREATED sin callback "
-                f"por más de {DEFAULT_STALE_MINUTES} min; ejecutar el "
-                "reconciliador."
-            ),
-            measured_at=db.lifecycle.latest_publication_attempt_created_at(),
-            oldest_pending_age_seconds=oldest_pending,
-            counts=defaults,
-        )
     return AdminDashboardEvidence(
-        status="pass",
+        status=status,
         evidence="present",
-        detail=f"{sum(defaults.values())} intento(s) registrados, ninguno atascado.",
+        detail=detail,
         measured_at=db.lifecycle.latest_publication_attempt_created_at(),
-        oldest_pending_age_seconds=oldest_pending,
+        oldest_pending_age_seconds=max(pending_ages) if pending_ages else None,
         counts=defaults,
     )
 
