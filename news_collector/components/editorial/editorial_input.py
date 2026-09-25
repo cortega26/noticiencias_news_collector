@@ -48,55 +48,62 @@ class EditorialInput:
         """
         article_id = explicit_article_id or "unknown"
         if isinstance(raw_text, dict):
-            title = raw_text.get("title", "") or ""
-            summary = raw_text.get("summary", "") or ""
-            content = raw_text.get("content", "") or ""
-            content_mode = raw_text.get("content_mode") or "full_text"
+            return cls._from_dict(raw_text, article_id)
+        return cls._from_string(raw_text, article_id)
 
-            # Fallback for RSS feeds where "content" is often in "summary"
-            if not content and summary:
-                content = summary
+    @staticmethod
+    def _text_field(raw: dict, key: str) -> str:
+        return raw.get(key, "") or ""
 
-            metadata = raw_text.get("metadata") or {}
-            image_url = raw_text.get("image_url")
-            image_alt = raw_text.get("image_alt")
-            source_id = raw_text.get("source_id")
-            source_name = raw_text.get("source_name")
-            source_url = (
-                raw_text.get("url")
-                or metadata.get("original_url")
-                or (metadata.get("source_metadata") or {}).get("entry_id")
-            )
-            raw_category = raw_text.get("category")
-            metadata_category = metadata.get("category")
-            if article_id == "unknown":
-                article_id = str(raw_text.get("id") or "unknown")
-        else:
-            content = raw_text
-            if article_id == "unknown":
-                article_id = hashlib.sha256(content.encode()).hexdigest()[:8]
-            title = ""
-            summary = ""
-            content_mode = "full_text"
-            image_url = None
-            image_alt = None
-            source_id = None
-            source_name = None
-            source_url = None
-            raw_category = None
-            metadata_category = None
+    @staticmethod
+    def _dict_article_id(raw: dict, article_id: str) -> str:
+        if article_id != "unknown":
+            return article_id
+        return str(raw.get("id") or "unknown")
 
+    @staticmethod
+    def _source_url(raw: dict, metadata: dict) -> Optional[str]:
+        entry_id = (metadata.get("source_metadata") or {}).get("entry_id")
+        return raw.get("url") or metadata.get("original_url") or entry_id
+
+    @classmethod
+    def _from_dict(cls, raw: dict, article_id: str) -> "EditorialInput":
+        content = cls._text_field(raw, "content")
+        summary = cls._text_field(raw, "summary")
+        # Fallback for RSS feeds where "content" is often in "summary"
+        if not content and summary:
+            content = summary
+        metadata = raw.get("metadata") or {}
         return cls(
-            article_id=article_id,
-            title=title,
+            article_id=cls._dict_article_id(raw, article_id),
+            title=cls._text_field(raw, "title"),
             summary=summary,
             content=content,
-            content_mode=content_mode,
-            image_url=image_url,
-            image_alt=image_alt,
-            source_id=source_id,
-            source_name=source_name,
-            source_url=source_url,
-            raw_category=raw_category,
-            metadata_category=metadata_category,
+            content_mode=raw.get("content_mode") or "full_text",
+            image_url=raw.get("image_url"),
+            image_alt=raw.get("image_alt"),
+            source_id=raw.get("source_id"),
+            source_name=raw.get("source_name"),
+            source_url=cls._source_url(raw, metadata),
+            raw_category=raw.get("category"),
+            metadata_category=metadata.get("category"),
+        )
+
+    @classmethod
+    def _from_string(cls, content: str, article_id: str) -> "EditorialInput":
+        if article_id == "unknown":
+            article_id = hashlib.sha256(content.encode()).hexdigest()[:8]
+        return cls(
+            article_id=article_id,
+            title="",
+            summary="",
+            content=content,
+            content_mode="full_text",
+            image_url=None,
+            image_alt=None,
+            source_id=None,
+            source_name=None,
+            source_url=None,
+            raw_category=None,
+            metadata_category=None,
         )
