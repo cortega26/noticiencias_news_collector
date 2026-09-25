@@ -42,6 +42,7 @@ from news_collector.logic.workflows.publication_reconciliation import (  # noqa:
     DEFAULT_RECEIPT_LIMIT,
     DEFAULT_STALE_MINUTES,
     PublicationReconciliationWorkflow,
+    ReconciliationSummary,
 )
 from news_collector.storage.database import DatabaseManager  # noqa: E402
 from news_collector.utils.logger import get_logger  # noqa: E402
@@ -49,7 +50,7 @@ from news_collector.utils.logger import get_logger  # noqa: E402
 logger = get_logger().create_module_logger(__name__)
 
 
-def main() -> int:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Reconcile stale PR_CREATED publication attempts by replaying "
@@ -87,21 +88,10 @@ def main() -> int:
         action="store_true",
         help="Report what would happen without writing anything.",
     )
-    args = parser.parse_args()
+    return parser
 
-    db = DatabaseManager()
-    try:
-        workflow = PublicationReconciliationWorkflow(db)
-        summary = workflow.run(
-            stale_minutes=args.stale_minutes,
-            limit=args.limit,
-            receipt_limit=args.receipt_limit,
-            dry_run=args.dry_run,
-        )
-    finally:
-        db.close()
 
-    prefix = "[reconcile-publications]"
+def _print_summary(summary: ReconciliationSummary, *, prefix: str) -> None:
     print(f"{prefix} scanned={summary.scanned}")
     print(f"{prefix} replayable_receipts={summary.replayable_receipts}")
     print(f"{prefix} replayed={summary.replayed}")
@@ -111,8 +101,25 @@ def main() -> int:
     print(f"{prefix} missing_deploy_evidence={summary.missing_deploy_evidence}")
     print(f"{prefix} malformed_payloads={summary.malformed_payloads}")
     print(f"{prefix} unmatched_receipts={summary.unmatched_receipts}")
-    if args.dry_run:
+    if summary.dry_run:
         print(f"{prefix} dry-run: no rows were written")
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+
+    db = DatabaseManager()
+    try:
+        summary = PublicationReconciliationWorkflow(db).run(
+            stale_minutes=args.stale_minutes,
+            limit=args.limit,
+            receipt_limit=args.receipt_limit,
+            dry_run=args.dry_run,
+        )
+    finally:
+        db.close()
+
+    _print_summary(summary, prefix="[reconcile-publications]")
     return 0
 
 

@@ -344,13 +344,34 @@ class LifecycleRepository:
 
         Returns ``True`` iff both the transition and the event were written.
         An unknown ``event_type`` or an illegal ``from_state -> to_state``
-        pair is refused up front (logged, no write at all), so a bad audit
-        call can never leave a state change without its event or an event
-        without its state change. A CAS miss (already transitioned or
-        nonexistent row) is a normal ``False``, exactly like
-        :meth:`transition_publication_attempt` — and appends no event,
-        because nothing changed.
+        pair is refused up front (logged, no write at all). A CAS miss is a
+        normal ``False`` that appends no event, because nothing changed.
         """
+        if not self._audited_transition_is_legal(
+            attempt_id,
+            from_state=from_state,
+            to_state=to_state,
+            event_type=event_type,
+        ):
+            return False
+        return self._write_audited_transition(
+            attempt_id,
+            from_state=from_state,
+            to_state=to_state,
+            event_type=event_type,
+            details=details,
+            occurred_at=occurred_at,
+            **fields,
+        )
+
+    @staticmethod
+    def _audited_transition_is_legal(
+        attempt_id: int,
+        *,
+        from_state: str,
+        to_state: str,
+        event_type: str,
+    ) -> bool:
         if event_type not in PUBLICATION_EVENT_TYPE_VALUES:
             logger.error(
                 "Refusing audited transition of attempt {} ({} -> {}): "
@@ -371,7 +392,19 @@ class LifecycleRepository:
                 event_type,
             )
             return False
+        return True
 
+    def _write_audited_transition(
+        self,
+        attempt_id: int,
+        *,
+        from_state: str,
+        to_state: str,
+        event_type: str,
+        details: dict[str, Any] | None,
+        occurred_at: datetime | None,
+        **fields: Any,
+    ) -> bool:
         with self._session() as session:
             values: dict[str, Any] = {"state": to_state, **fields}
             result = session.execute(
